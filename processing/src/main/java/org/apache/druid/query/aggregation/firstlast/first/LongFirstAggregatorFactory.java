@@ -58,31 +58,37 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(SerializablePairLongLongComplexMetricSerde.TYPE_NAME);
 
-  private static final Aggregator NIL_AGGREGATOR = new LongFirstAggregator(
-      NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance(),
-      false
-  )
+  private static final Aggregator NIL_AGGREGATOR = new NilLongFirstAggregator();
+
+  private static class NilLongFirstAggregator extends LongFirstAggregator
   {
+    NilLongFirstAggregator()
+    {
+      super(NilColumnValueSelector.instance(), NilColumnValueSelector.instance(), false);
+    }
+
     @Override
     public void aggregate()
     {
       // no-op
     }
-  };
+  }
 
-  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new LongFirstBufferAggregator(
-      NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance(),
-      false
-  )
+  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new NilLongFirstBufferAggregator();
+
+  private static class NilLongFirstBufferAggregator extends LongFirstBufferAggregator
   {
+    NilLongFirstBufferAggregator()
+    {
+      super(NilColumnValueSelector.instance(), NilColumnValueSelector.instance(), false);
+    }
+
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
       // no-op
     }
-  };
+  }
 
   public static final Comparator<SerializablePair<Long, Long>> VALUE_COMPARATOR =
       SerializablePair.createNullHandlingComparator(Long::compare, true);
