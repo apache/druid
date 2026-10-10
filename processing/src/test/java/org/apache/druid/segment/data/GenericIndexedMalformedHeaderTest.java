@@ -141,4 +141,36 @@ public class GenericIndexedMalformedHeaderTest
     Assertions.assertEquals(1, first.remaining());
     Assertions.assertEquals((byte) 'a', first.get());
   }
+
+  @Test
+  public void testIntermediateOffsetGapRejected()
+  {
+    GenericIndexed<String> indexed = GenericIndexed.read(
+        buildV1(2, new int[]{0, 10}, new byte[]{0, 0, 0, 2, 'x', 'y', 0, 0, 0, 2, 'p', 'q'}, -1),
+        GenericIndexed.STRING_STRATEGY,
+        null
+    );
+    // offsets[0] == 0 leaves the first value without its four-byte size marker,
+    // so a direct get(1) must reject the header instead of decoding outside the element.
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> indexed.get(1)
+    );
+    Assertions.assertTrue(e.getMessage().contains("out of bounds"), e.getMessage());
+  }
+
+  @Test
+  public void testSingleThreadedIntermediateOffsetGapRejected()
+  {
+    GenericIndexed<String> indexed = GenericIndexed.read(
+        buildV1(2, new int[]{0, 10}, new byte[]{0, 0, 0, 2, 'x', 'y', 0, 0, 0, 2, 'p', 'q'}, -1),
+        GenericIndexed.STRING_STRATEGY,
+        null
+    );
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> indexed.singleThreaded().getByteBuffer(1)
+    );
+    Assertions.assertTrue(e.getMessage().contains("out of bounds"), e.getMessage());
+  }
 }

@@ -312,6 +312,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
         startOffset = theBuffer.getInt(headerOffset + headerPosition) + Integer.BYTES;
         endOffset = theBuffer.getInt(headerOffset + headerPosition + Integer.BYTES);
       }
+      validateRelativeOffsets(index != 0, startOffset, endOffset);
       return copyBufferAndGet(theBuffer, valuesOffset + startOffset, valuesOffset + endOffset);
     }
 
@@ -339,6 +340,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
             startOffset = theBuffer.getInt(headerOffset + headerPosition) + Integer.BYTES;
             endOffset = theBuffer.getInt(headerOffset + headerPosition + Integer.BYTES);
           }
+          validateRelativeOffsets(index != 0, startOffset, endOffset);
           return bufferedIndexedGetByteBuffer(copyBuffer, valuesOffset + startOffset, valuesOffset + endOffset, bufferLimit);
         }
 
@@ -416,6 +418,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
         startOffset = headerBuffer.getInt(headerPosition) + Integer.BYTES;
         endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
       }
+      validateRelativeOffsets(relativePositionOfIndex != 0, startOffset, endOffset);
       int fileNum = index >> logBaseTwoOfElementsPerValueFile;
       return copyBufferAndGet(valueBuffers[fileNum], startOffset, endOffset);
     }
@@ -451,6 +454,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
             startOffset = headerBuffer.getInt(headerPosition) + Integer.BYTES;
             endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
           }
+          validateRelativeOffsets(relativePositionOfIndex != 0, startOffset, endOffset);
           int fileNum = index >> logBaseTwoOfElementsPerValueFile;
           return bufferedIndexedGetByteBuffer(copyValueBuffers[fileNum], startOffset, endOffset, valueBufferLimits[fileNum]);
         }
@@ -568,6 +572,17 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
   public Iterator<T> iterator()
   {
     return IndexedIterable.create(this).iterator();
+  }
+
+  private static void validateRelativeOffsets(boolean hasPrevious, int startOffset, int endOffset)
+  {
+    if (endOffset < startOffset || (hasPrevious && startOffset - Integer.BYTES < Integer.BYTES)) {
+      throw new IAE(
+          "value offsets out of bounds: startOffset[%s], endOffset[%s]",
+          startOffset,
+          endOffset
+      );
+    }
   }
 
   @Nullable
