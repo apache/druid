@@ -43,6 +43,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
@@ -2115,11 +2116,13 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            expressionVirtualColumn(
+                            new ListFilteredVirtualColumn(
                                 "v0",
-                                "filter((x) -> array_contains(array(null), x), lookup(\"dim3\",'lookyloo'))",
-                                ColumnType.STRING
-                            )
+                                DefaultDimensionSpec.of("v1"),
+                                Collections.singleton(null),
+                                true
+                            ),
+                            expressionVirtualColumn("v1", "lookup(\"dim3\",'lookyloo')", ColumnType.STRING)
                         )
                         .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
@@ -2170,6 +2173,171 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .build())
         .expectedResults(
             ImmutableList.of(new Object[]{null, 7L}))
+        .run();
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyLookup()
+  {
+    testGroupByFilteredMultiValueExpression(
+        "SELECT MV_FILTER_ONLY(LOOKUP(dim3, 'lookyloo'), ARRAY['xa']), COUNT(*) FROM druid.foo GROUP BY 1",
+        VirtualColumns.create(
+            new ListFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), ImmutableSet.of("xa"), true),
+            expressionVirtualColumn("v1", "lookup(\"dim3\",'lookyloo')", ColumnType.STRING)
+        ),
+        ImmutableList.of(
+            new Object[]{null, 5L},
+            new Object[]{"xa", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterNoneLookup()
+  {
+    testGroupByFilteredMultiValueExpression(
+        "SELECT MV_FILTER_NONE(LOOKUP(dim3, 'lookyloo'), ARRAY['xa']), COUNT(*) FROM druid.foo GROUP BY 1",
+        VirtualColumns.create(
+            new ListFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), ImmutableSet.of("xa"), false),
+            expressionVirtualColumn("v1", "lookup(\"dim3\",'lookyloo')", ColumnType.STRING)
+        ),
+        ImmutableList.of(
+            new Object[]{null, 7L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterRegexLookup()
+  {
+    testGroupByFilteredMultiValueExpression(
+        "SELECT MV_FILTER_REGEX(LOOKUP(dim3, 'lookyloo'), '^x.*'), COUNT(*) FROM druid.foo GROUP BY 1",
+        VirtualColumns.create(
+            new RegexFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), "^x.*"),
+            expressionVirtualColumn("v1", "lookup(\"dim3\",'lookyloo')", ColumnType.STRING)
+        ),
+        ImmutableList.of(
+            new Object[]{null, 5L},
+            new Object[]{"xa", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterPrefixLookup()
+  {
+    testGroupByFilteredMultiValueExpression(
+        "SELECT MV_FILTER_PREFIX(LOOKUP(dim3, 'lookyloo'), 'x'), COUNT(*) FROM druid.foo GROUP BY 1",
+        VirtualColumns.create(
+            new PrefixFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), "x"),
+            expressionVirtualColumn("v1", "lookup(\"dim3\",'lookyloo')", ColumnType.STRING)
+        ),
+        ImmutableList.of(
+            new Object[]{null, 5L},
+            new Object[]{"xa", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlySingleInputExpression()
+  {
+    testGroupByFilteredMultiValueExpression(
+        "SELECT MV_FILTER_ONLY(UPPER(dim3), ARRAY['B']), COUNT(*) FROM druid.foo GROUP BY 1",
+        VirtualColumns.create(
+            new ListFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), ImmutableSet.of("B"), true),
+            expressionVirtualColumn("v1", "upper(\"dim3\")", ColumnType.STRING)
+        ),
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"B", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlySubstring()
+  {
+    testGroupByFilteredMultiValueExpression(
+        "SELECT MV_FILTER_ONLY(SUBSTRING(dim3, 1, 1), ARRAY['b']), COUNT(*) FROM druid.foo GROUP BY 1",
+        VirtualColumns.create(
+            new ListFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), ImmutableSet.of("b"), true),
+            expressionVirtualColumn("v1", "substring(\"dim3\", 0, 1)", ColumnType.STRING)
+        ),
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"b", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyRegexpExtract()
+  {
+    testGroupByFilteredMultiValueExpression(
+        "SELECT MV_FILTER_ONLY(REGEXP_EXTRACT(dim3, '^[a-b]'), ARRAY['b']), COUNT(*) FROM druid.foo GROUP BY 1",
+        VirtualColumns.create(
+            new ListFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), ImmutableSet.of("b"), true),
+            expressionVirtualColumn("v1", "regexp_extract(\"dim3\",'^[a-b]')", ColumnType.STRING)
+        ),
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"b", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyMultiInputExpression()
+  {
+    // expressions with more than one input cannot use a dictionary backed delegate, so plan to a plain expression
+    testGroupByFilteredMultiValueExpression(
+        "SELECT MV_FILTER_ONLY(CONCAT(dim3, dim2), ARRAY['aa']), COUNT(*) FROM druid.foo GROUP BY 1",
+        VirtualColumns.create(
+            expressionVirtualColumn(
+                "v0",
+                "filter((x) -> array_contains(array('aa'), x), concat(\"dim3\",\"dim2\"))",
+                ColumnType.STRING
+            )
+        ),
+        ImmutableList.of(
+            new Object[]{null, 5L},
+            new Object[]{"aa", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyLookupFilter()
+  {
+    cannotVectorize();
+    final String sql = "SELECT COUNT(*) FROM druid.foo WHERE MV_FILTER_ONLY(LOOKUP(dim3, 'lookyloo'), ARRAY['xa']) = 'xa'";
+    final List<Object[]> expectedResults = ImmutableList.of(new Object[]{1L});
+    testBuilder()
+        .sql(sql)
+        .expectedQuery(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ListFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), ImmutableSet.of("xa"), true),
+                      expressionVirtualColumn("v1", "lookup(\"dim3\",'lookyloo')", ColumnType.STRING)
+                  )
+                  .filters(equality("v0", "xa", ColumnType.STRING))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        )
+        .expectedResults(expectedResults)
+        .run();
+
+    testBuilder()
+        .sql(sql)
+        .queryContext(
+            QueryContexts.override(QUERY_CONTEXT_DEFAULT, ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true))
+        )
+        .expectedResults(expectedResults)
         .run();
   }
 
@@ -2631,6 +2799,43 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 new Object[]{null}
             )
         )
+        .run();
+  }
+
+  /**
+   * Tests a query grouping on a multi-value string filtering function, verifying the native query using the default
+   * query context, and that results match those of the same query with {@link PlannerContext#CTX_SQL_USE_EXTRACTION_FNS}
+   * enabled.
+   */
+  private void testGroupByFilteredMultiValueExpression(
+      String sql,
+      VirtualColumns expectedVirtualColumns,
+      List<Object[]> expectedResults
+  )
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(sql)
+        .expectedQuery(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expectedVirtualColumns)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        )
+        .expectedResults(expectedResults)
+        .run();
+
+    testBuilder()
+        .sql(sql)
+        .queryContext(
+            QueryContexts.override(QUERY_CONTEXT_DEFAULT, ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true))
+        )
+        .expectedResults(expectedResults)
         .run();
   }
 }
