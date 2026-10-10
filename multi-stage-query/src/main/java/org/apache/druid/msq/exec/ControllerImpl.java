@@ -437,6 +437,7 @@ public class ControllerImpl implements Controller
           MultiStageQueryContext.getSketchEncoding(querySpec.getContext())
       );
       closer.register(workerSketchFetcher::close);
+      closer.register(() -> workerManager.stop(true));
 
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory = makeInputSpecSlicerFactory(
@@ -2542,7 +2543,6 @@ public class ControllerImpl implements Controller
       log.debug("Query [%s] starting task launcher.", queryDef.getQueryId());
 
       workerTaskLauncherFuture = workerManager.start();
-      closer.register(() -> workerManager.stop(true));
 
       workerTaskLauncherFuture.addListener(
           () ->
