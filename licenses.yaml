@@ -1049,9 +1049,10 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.9.0
+version: 8.0.0
 libraries:
   - io.fabric8: kubernetes-client-api
+  - io.fabric8: kubernetes-client
   - io.fabric8: kubernetes-model-batch
   - io.fabric8: kubernetes-model-core
   - io.fabric8: kubernetes-model-admissionregistration
@@ -1077,6 +1078,66 @@ libraries:
   - io.fabric8: kubernetes-httpclient-vertx
   - io.fabric8: kubernetes-httpclient-jdk
   - io.fabric8: kubernetes-httpclient-okhttp
+  - io.fabric8: zjsonpatch
+---
+
+name: Jackson 3
+license_category: binary
+module: extensions/druid-kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 3.2.3
+additional_license_statement: includes FastDoubleParser and Schubfach code under MIT, Boost Software License 1.0, and BSD-2-Clause licenses
+license_file_path:
+  - licenses/bin/jackson3-FastDoubleParser.LICENSE
+  - licenses/bin/jackson3-FastDoubleParser-ThirdParty.LICENSE
+  - licenses/bin/jackson3-Schubfach.LICENSE
+libraries:
+  - tools.jackson.core: jackson-core
+  - tools.jackson.core: jackson-databind
+  - tools.jackson.dataformat: jackson-dataformat-yaml
+notice: |
+  # Jackson JSON processor
+
+  Jackson is a high-performance, Free/Open Source JSON processing library.
+  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+  been in development since 2007.
+  It is currently developed by a community of developers.
+
+  ## Copyright
+
+  Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+
+  ## Licensing
+
+  Jackson 3.x core and extension components are licensed under Apache License 2.0
+  To find the details that apply to this artifact see the accompanying LICENSE file.
+
+  ## Credits
+
+  A list of contributors may be found from CREDITS file, which is included
+  in some artifacts (usually source distributions); but is always available
+  from the source code management (SCM) system project uses.
+
+  ## FastDoubleParser
+
+  jackson-core bundles a shaded copy of FastDoubleParser <https://github.com/wrandelshofer/FastDoubleParser>.
+  That code is available under an MIT license <https://github.com/wrandelshofer/FastDoubleParser/blob/main/LICENSE>
+  under the following copyright.
+
+  Copyright © 2023 Werner Randelshofer, Switzerland. MIT License.
+
+  See FastDoubleParser-LICENSE and also FastDoubleParser-ThirdParty-LICENSE for details of other source code
+  included in FastDoubleParser and the licenses and copyrights that apply to that code.
+
+  ## Schubfach
+
+  jackson-core bundles a copy of the Schubfach number writing code <https://github.com/c4f7fcce9cb06515/Schubfach>.
+  That code is available under an MIT license <https://github.com/c4f7fcce9cb06515/Schubfach/blob/master/todec/LICENSE>
+  under the following copyright.
+
+  Copyright 2018-2020 Raffaello Giulietti
+
+  See Schubfach-LICENSE.
 ---
 
 name: Jackson
@@ -1114,7 +1175,7 @@ name: vertx
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 4.5.31
+version: 4.5.34
 libraries:
   - io.vertx: vertx-auth-common
   - io.vertx: vertx-core
@@ -1333,7 +1394,7 @@ name: org.snakeyaml snakeyaml-engine
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 3.0.1
+version: 3.1.1
 libraries:
   - org.snakeyaml: snakeyaml-engine
 
