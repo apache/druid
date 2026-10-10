@@ -134,6 +134,40 @@ public class NativeSysServerPropertiesQueryTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("6,6,6,6,6", result);
   }
 
+  /**
+   * A filtered window-function query is planned as a {@code WindowOperatorQuery} over a system-table Scan, whose
+   * filter is pushed into the node scans.
+   */
+  @ParameterizedTest(name = "plannerStrategy = {0}")
+  @ValueSource(strings = {
+      QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED,
+      QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+  })
+  public void testNativeWindowFunction(final String plannerStrategy)
+  {
+    final String result = cluster.runSql(
+        "SELECT service_name, ROW_NUMBER() OVER (ORDER BY service_name) "
+        + "FROM sys.server_properties "
+        + "WHERE property IN ('" + COORDINATOR_PROPERTY + "', '" + OVERLORD_PROPERTY + "', '" + BROKER_PROPERTY
+        + "', '" + HISTORICAL_PROPERTY + "', '" + INDEXER_PROPERTY + "', '" + ROUTER_PROPERTY + "') "
+        + "ORDER BY service_name",
+        nativeQueryContext(plannerStrategy)
+    );
+
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "druid/coordinator,1",
+            "druid/historical,2",
+            "druid/indexer,3",
+            "druid/overlord,4",
+            "druid/router,5",
+            SERVICE_NAME + ",6"
+        ),
+        result
+    );
+  }
+
   private static Map<String, Object> nativeQueryContext(final String plannerStrategy)
   {
     return Map.of(
