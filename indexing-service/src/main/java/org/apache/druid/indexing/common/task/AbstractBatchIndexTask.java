@@ -23,8 +23,11 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.data.input.BatchInputSourceReader;
+import org.apache.druid.data.input.BatchToInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -63,6 +66,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
@@ -78,6 +82,7 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -222,15 +227,20 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       ParseExceptionHandler parseExceptionHandler
   ) throws IOException
   {
-    final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
-        inputSource.reader(
-            InputRowSchemas.fromDataSchema(dataSchema),
-            inputFormat,
-            tmpDir
-        )
-    );
+    final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
+    final InputSourceReader inputSourceReader = inputSource.reader(inputRowSchema, inputFormat, tmpDir);
+    final CloseableIterator<InputRow> inputRows;
+    if (inputSourceReader instanceof BatchInputSourceReader
+        && TransformSpec.NONE.equals(dataSchema.getTransformSpec())) {
+      inputRows = new BatchToInputRowIterator(
+          ((BatchInputSourceReader) inputSourceReader).readBatches(ingestionMeters),
+          inputRowSchema
+      );
+    } else {
+      inputRows = dataSchema.getTransformSpec().decorate(inputSourceReader).read(ingestionMeters);
+    }
     return new FilteringCloseableInputRowIterator(
-        inputSourceReader.read(ingestionMeters),
+        inputRows,
         InputRowFilter.fromPredicate(rowFilter),
         ingestionMeters,
         parseExceptionHandler
