@@ -66,6 +66,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -154,6 +155,10 @@ public class DirectDruidClientTest
     Assertions.assertFalse(requests.isEmpty());
     Assertions.assertEquals(url, requests.get(0).getUrl());
     Assertions.assertEquals(HttpMethod.POST, requests.get(0).getMethod());
+    Assertions.assertEquals(
+        QueryResource.NATIVE_QUERY_ROUTE_LOCAL,
+        requests.get(0).getHeaders().get(QueryResource.HEADER_NATIVE_QUERY_ROUTE).iterator().next()
+    );
     Assertions.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout on second request

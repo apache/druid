@@ -120,6 +120,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     // Can't use '/*' here because of Guice and Jetty static content conflicts
     root.addFilter(guiceFilterHolder, "/info/*", null);
     root.addFilter(guiceFilterHolder, "/druid/coordinator/*", null);
+    root.addFilter(guiceFilterHolder, "/druid/v2/*", null);
     if (beOverlord) {
       root.addFilter(guiceFilterHolder, "/druid/indexer/*", null);
     }
