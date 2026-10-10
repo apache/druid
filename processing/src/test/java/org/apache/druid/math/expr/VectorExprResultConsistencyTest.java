@@ -33,8 +33,21 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.vector.CastToDoubleVectorProcessor;
+import org.apache.druid.math.expr.vector.CastToLongVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleBivariateDoubleLongFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleBivariateDoublesConstantProcessor;
+import org.apache.druid.math.expr.vector.DoubleBivariateDoublesFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleBivariateLongDoubleFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleUnivariateDoubleFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleUnivariateLongFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.LongBivariateLongsConstantProcessor;
+import org.apache.druid.math.expr.vector.LongBivariateLongsFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateDoubleFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -199,6 +212,30 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testNumericCastBuffersAreReused()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("l", new long[]{1, 2, 3, 4}, new boolean[4])
+        .addDouble("d", new double[]{1.2, 2.3, 3.4, 4.5}, new boolean[4]);
+    final CastToDoubleVectorProcessor toDouble = new CastToDoubleVectorProcessor(
+        VectorProcessors.identifier(bindings, "l")
+    );
+    final CastToLongVectorProcessor toLong = new CastToLongVectorProcessor(
+        VectorProcessors.identifier(bindings, "d")
+    );
+
+    final double[] firstDoubles = toDouble.evalVector(bindings).values();
+    final double[] secondDoubles = toDouble.evalVector(bindings).values();
+    final long[] firstLongs = toLong.evalVector(bindings).values();
+    final long[] secondLongs = toLong.evalVector(bindings).values();
+
+    // Result correctness is covered by testCast. Identity verifies the allocation optimization: each processor must
+    // reuse its output buffer across batches instead of allocating a new primitive array for every evaluation.
+    Assertions.assertSame(firstDoubles, secondDoubles);
+    Assertions.assertSame(firstLongs, secondLongs);
+  }
+
+  @Test
   public void testCastArraysRoundTrip()
   {
     testExpression("cast(cast(s1, 'ARRAY<STRING>'), 'STRING')", types);
@@ -230,6 +267,151 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final List<String> args = List.of("+", "-", "*", "/", "^", "%");
 
     testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testBinaryMathOperatorsWithInvalidNumericStringLiteral()
+  {
+    // Invalid numeric strings must retain numeric-null semantics when they appear on either side of an operation.
+    for (String expression : List.of(
+        "d1 + 'invalid'",
+        "'invalid' + d1",
+        "d1 - 'invalid'",
+        "'invalid' - d1",
+        "d1 * 'invalid'",
+        "'invalid' * d1",
+        "d1 / 'invalid'",
+        "'invalid' / d1",
+        "l1 + 'invalid'",
+        "'invalid' + l1",
+        "l1 - 'invalid'",
+        "'invalid' - l1",
+        "l1 * 'invalid'",
+        "'invalid' * l1",
+        "l1 / 'invalid'",
+        "'invalid' / l1"
+    )) {
+      testExpression(expression, types);
+    }
+  }
+
+  @Test
+  public void testOrdinaryProcessorFamiliesElideEmptyNullVector()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("l1", new long[]{1, 2, 3, 4}, new boolean[4])
+        .addLong("l2", new long[]{2, 3, 4, 5}, new boolean[4])
+        .addDouble("d1", new double[]{1, 2, 3, 4}, new boolean[4])
+        .addDouble("d2", new double[]{2, 3, 4, 5}, new boolean[4]);
+
+    // These operations do not have SIMD specializations, so they exercise the ordinary processor families even when
+    // inherited by VectorExprResultConsistencyVectorApiTest. The non-null, all-false arrays model nullable inputs for
+    // a batch that happens to contain no null rows.
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "l1 % l2",
+        LongBivariateLongsFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "d1 % d2",
+        DoubleBivariateDoublesFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "l1 % d1",
+        DoubleBivariateLongDoubleFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "d1 % l1",
+        DoubleBivariateDoubleLongFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "bitwiseComplement(l1)",
+        LongUnivariateLongFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "bitwiseComplement(d1)",
+        LongUnivariateDoubleFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "cos(l1)",
+        DoubleUnivariateLongFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "cos(d1)",
+        DoubleUnivariateDoubleFunctionVectorProcessor.class
+    );
+  }
+
+  @Test
+  public void testOrdinaryProcessorPreservesActualNulls()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("x", new long[]{1, 0, 3, 4}, new boolean[]{false, true, false, false});
+    // An empty null vector may be elided, but a vector containing an actual null must still be returned.
+    final ExprVectorProcessor<long[]> processor = Parser.parse("x % 2", ExprMacroTable.nil())
+                                                        .asVectorProcessor(bindings);
+
+    final ExprEvalVector<long[]> result = processor.evalVector(bindings);
+
+    Assertions.assertArrayEquals(new boolean[]{false, true, false, false}, result.getNullVector());
+  }
+
+  @Test
+  public void testConstantArithmeticProcessorSelection()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("x", new long[]{1, 2, 3, 4}, new boolean[4])
+        .addDouble("d", new double[]{1, 2, 3, 4}, new boolean[4]);
+
+    // This base test also runs in VectorExprResultConsistencyVectorApiTest, where SIMD takes precedence over the
+    // scalar bound-constant processors. Assert the scalar selection only when the Vector API is disabled.
+    if (!ExpressionProcessing.useVectorApi()) {
+      Assertions.assertInstanceOf(
+          LongBivariateLongsConstantProcessor.class,
+          Parser.parse("x + 7", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+      Assertions.assertInstanceOf(
+          LongBivariateLongsConstantProcessor.class,
+          Parser.parse("7 - x", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+      Assertions.assertInstanceOf(
+          DoubleBivariateDoublesConstantProcessor.class,
+          Parser.parse("d * 2.5", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+      Assertions.assertInstanceOf(
+          DoubleBivariateDoublesConstantProcessor.class,
+          Parser.parse("d + '2.5'", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+      Assertions.assertInstanceOf(
+          DoubleBivariateDoublesFunctionVectorProcessor.class,
+          Parser.parse("d + 'invalid'", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+    }
+    // Unsupported operations must continue to use the generic processor rather than enter the specialized
+    // bound-constant switch.
+    Assertions.assertInstanceOf(
+        LongBivariateLongsFunctionVectorProcessor.class,
+        Parser.parse("x % 7", ExprMacroTable.nil()).asVectorProcessor(bindings)
+    );
+  }
+
+  private static void assertProcessorElidesEmptyNullVector(
+      Expr.VectorInputBinding bindings,
+      String expression,
+      Class<? extends ExprVectorProcessor<?>> processorClass
+  )
+  {
+    final ExprVectorProcessor<?> processor = Parser.parse(expression, ExprMacroTable.nil())
+                                                   .asVectorProcessor(bindings);
+    Assertions.assertInstanceOf(processorClass, processor);
+    Assertions.assertNull(processor.evalVector(bindings).getNullVector());
   }
 
   @Test
