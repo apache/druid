@@ -77,6 +77,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -1247,7 +1248,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public <V> Builder overrideContext(final QueryContextParameter<V> parameter, @Nullable final V value)
     {
-      return overrideContext(QueryContext.ofMap(parameter, value));
+      // QueryContext.ofMap drops nulls; keep an explicit null so the override replaces any existing value.
+      return overrideContext(Collections.singletonMap(parameter.getName(), parameter.validate(value)));
     }
 
     public Builder setHavingSpec(@Nullable HavingSpec havingSpec)

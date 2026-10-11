@@ -58,10 +58,10 @@ class ParameterDocumentationGeneratorTest
 
     final String general = Files.readString(temporaryFolder.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8);
     assertTrue(general.startsWith("general header\n"));
-    assertTrue(general.contains("|`useResultLevelCache`| `true` |"));
+    assertTrue(general.contains("|`useResultLevelCache`| `true`                                 |"));
     assertTrue(
         general.contains(
-            "|`priority`| The default priority is one of the following: <ul><li>Value of `priority` in the query context, if set"
+            "|`priority`         | The default priority is one of the following: <ul><li>Value of `priority` in the query context, if set"
         )
     );
     assertTrue(general.contains(GENERAL_MARKER));

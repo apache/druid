@@ -493,7 +493,7 @@ public final class QueryContextParameters
           )
           .since("0.22.0")
           .defaultDescription("`null`")
-          .query(Query.JSON)
+          .query(Query.JSON, Query.SQL)
           .engine(Engine.NATIVE)
           .build();
 
