@@ -22,6 +22,11 @@ package org.apache.druid.common.exception;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,6 +82,56 @@ public class PersonaBasedErrorTransformStrategyTest
             "general"
         ).expectMessageContains("please contact your administrator with Error ID [")
     );
+  }
+
+  @Test
+  public void testUserQueryExceptionRemainsUnchanged()
+  {
+    final QueryTimeoutException exception = new QueryTimeoutException("Query timed out");
+    Assertions.assertSame(exception, target.transformIfNeeded(exception));
+  }
+
+  @Test
+  public void testOperatorQueryExceptionIsTransformed()
+  {
+    final Exception transformed =
+        target.transformIfNeeded(new QueryInterruptedException(new RuntimeException("internal detail")));
+
+    final QueryException queryException = Assertions.assertInstanceOf(QueryException.class, transformed);
+    Assertions.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, queryException.getErrorCode());
+    Assertions.assertTrue(
+        queryException.getMessage().contains("please contact your administrator with Error ID ["),
+        queryException.getMessage()
+    );
+    Assertions.assertNull(queryException.getErrorClass());
+    Assertions.assertNull(queryException.getHost());
+  }
+
+  @Test
+  public void testQueryExceptionWrappingUserDruidExceptionRemainsUnchanged()
+  {
+    final QueryInterruptedException exception = QueryInterruptedException.wrapIfNeeded(
+        DruidException.forPersona(DruidException.Persona.USER)
+                      .ofCategory(DruidException.Category.INVALID_INPUT)
+                      .build("bad interval")
+    );
+    Assertions.assertSame(exception, target.transformIfNeeded(exception));
+  }
+
+  @Test
+  public void testIllegalStateExceptionIsTransformed()
+  {
+    final Exception transformed = target.transformIfNeeded(new ISE("internal detail"));
+
+    final ISE ise = Assertions.assertInstanceOf(ISE.class, transformed);
+    Assertions.assertTrue(ise.getMessage().contains("please contact your administrator with Error ID ["), ise.getMessage());
+  }
+
+  @Test
+  public void testUnsupportedOperationExceptionRemainsUnchanged()
+  {
+    final UOE exception = new UOE("Batch statements not supported");
+    Assertions.assertSame(exception, target.transformIfNeeded(exception));
   }
 
   @Test

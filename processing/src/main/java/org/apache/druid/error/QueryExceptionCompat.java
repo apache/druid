@@ -45,12 +45,26 @@ public class QueryExceptionCompat extends DruidException.Failure
   @Override
   protected DruidException makeException(DruidException.DruidExceptionBuilder bob)
   {
-    return bob.forPersona(DruidException.Persona.OPERATOR)
+    return bob.forPersona(getPersona(exception.getFailType()))
               .ofCategory(convertFailType(exception.getFailType()))
               .build(exception, "%s", exception.getMessage())
               .withContext("host", exception.getHost())
               .withContext("errorClass", exception.getErrorClass())
               .withContext("legacyErrorCode", exception.getErrorCode());
+  }
+
+  /**
+   * Returns the persona that a {@link QueryException} with the given {@link QueryException.FailType} targets. Failures
+   * the user can act on, such as invalid queries, timeouts and capacity limits, target
+   * {@link DruidException.Persona#USER}. Runtime failures and unknown errors target
+   * {@link DruidException.Persona#OPERATOR}.
+   */
+  public static DruidException.Persona getPersona(QueryException.FailType failType)
+  {
+    return switch (failType) {
+      case USER_ERROR, UNAUTHORIZED, CAPACITY_EXCEEDED, CANCELED, UNSUPPORTED, TIMEOUT -> DruidException.Persona.USER;
+      default -> DruidException.Persona.OPERATOR;
+    };
   }
 
   private DruidException.Category convertFailType(QueryException.FailType failType)

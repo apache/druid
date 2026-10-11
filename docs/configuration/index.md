@@ -631,7 +631,7 @@ On the other hand, if `druid.server.http.errorResponseTransform.allowedRegex` is
 
 ##### Persona based error response transform strategy
 
-In this mode, Druid transforms any exceptions which are targeted at non-users personas. Instead of returning such exception directly, the strategy logs the exception against a random id and returns the id along with a generic error message to the user.
+In this mode, Druid transforms any exceptions which are targeted at non-users personas. Instead of returning such exception directly, Druid logs the exception against an error ID, and returns the ID along with a generic error message to the user. A user could then share the ID with an operator to assist in troubleshooting further. Errors that users can reasonably understand and potentially act on, such as invalid queries, query timeouts, and capacity limits, are returned unchanged.
 
 To enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `persona`.
 

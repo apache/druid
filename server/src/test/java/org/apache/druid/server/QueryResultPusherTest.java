@@ -19,9 +19,16 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.PersonaBasedErrorTransformStrategy;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.server.QueryResource.QueryMetricCounter;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.apache.druid.server.QueryResultPusher.Writer;
@@ -29,15 +36,14 @@ import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import java.io.OutputStream;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class QueryResultPusherTest
 {
@@ -49,28 +55,85 @@ public class QueryResultPusherTest
       null,
       true,
       false);
+  private static final String QUERY_ID = "someQuery";
+  private static final DruidExceptionMatcher HIDDEN_ERROR =
+      new DruidExceptionMatcher(DruidException.Persona.USER, DruidException.Category.RUNTIME_FAILURE, "general")
+          .expectMessageIs(
+              "Internal server error, please contact your administrator with Error ID [" + QUERY_ID
+              + "] if the issue persists."
+          );
 
   @Test
   public void testResultPusherRetainsNestedExceptionBacktraces()
   {
+    final String embeddedExceptionMessage = "Embedded Exception Message!";
+    final RuntimeException topException =
+        new RuntimeException("Where's the party?", new RuntimeException(embeddedExceptionMessage));
+    final AtomicReference<Exception> recordedFailure = new AtomicReference<>();
 
-    HttpServletRequest request = new MockHttpServletRequest();
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
-    ResponseContextConfig responseContextConfig = ResponseContextConfig.newConfig(true);
-    DruidNode selfNode = DRUID_NODE;
-    QueryResource.QueryMetricCounter counter = new NoopQueryMetricCounter();
-    String queryId = "someQuery";
-    MediaType contentType = MediaType.APPLICATION_JSON_TYPE;
-    Map<String, String> extraHeaders = new HashMap<>();
-    AtomicBoolean recordFailureInvoked = new AtomicBoolean();
+    makeFailingPusher(topException, recordedFailure, NoErrorResponseTransformStrategy.INSTANCE).push();
 
-    String embeddedExceptionMessage = "Embedded Exception Message!";
-    RuntimeException embeddedException = new RuntimeException(embeddedExceptionMessage);
-    RuntimeException topException = new RuntimeException("Where's the party?", embeddedException);
+    Assertions.assertNotNull(recordedFailure.get(), "recordFailure(e) should have been invoked!");
+    Assertions.assertTrue(Throwables.getStackTraceAsString(recordedFailure.get()).contains(embeddedExceptionMessage));
+  }
 
-    ResultsWriter resultWriter = new ResultsWriter()
+  @Test
+  public void testExecutionFailureIsTransformedForClient()
+  {
+    final DruidException original = DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                                  .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                                  .build("internal detail");
+    final AtomicReference<Exception> recordedFailure = new AtomicReference<>();
+
+    final Response response =
+        makeFailingPusher(original, recordedFailure, PersonaBasedErrorTransformStrategy.INSTANCE).push();
+
+    Assertions.assertEquals(500, response.getStatus());
+    DruidExceptionMatcher.assertThat(((ErrorResponse) response.getEntity()).getUnderlyingException(), HIDDEN_ERROR);
+    Assertions.assertSame(original, recordedFailure.get());
+  }
+
+  @Test
+  public void testUnexpectedExecutionFailureIsTransformedForClient()
+  {
+    final Response response = makeFailingPusher(
+        new IllegalStateException("internal detail"),
+        new AtomicReference<>(),
+        PersonaBasedErrorTransformStrategy.INSTANCE
+    ).push();
+
+    Assertions.assertEquals(500, response.getStatus());
+    DruidExceptionMatcher.assertThat(((ErrorResponse) response.getEntity()).getUnderlyingException(), HIDDEN_ERROR);
+  }
+
+  @Test
+  public void testExecutionTimeoutIsNotTransformed()
+  {
+    final Response response = makeFailingPusher(
+        new QueryTimeoutException("Query timed out"),
+        new AtomicReference<>(),
+        PersonaBasedErrorTransformStrategy.INSTANCE
+    ).push();
+
+    Assertions.assertEquals(504, response.getStatus());
+    DruidExceptionMatcher.assertThat(
+        ((ErrorResponse) response.getEntity()).getUnderlyingException(),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.TIMEOUT,
+            QueryExceptionCompat.ERROR_CODE
+        ).expectMessageIs("Query timed out")
+    );
+  }
+
+  private static QueryResultPusher makeFailingPusher(
+      final RuntimeException failure,
+      final AtomicReference<Exception> recordedFailure,
+      final ErrorResponseTransformStrategy strategy
+  )
+  {
+    final ResultsWriter resultsWriter = new ResultsWriter()
     {
-
       @Override
       public void close()
       {
@@ -79,7 +142,7 @@ public class QueryResultPusherTest
       @Override
       public ResponseBuilder start()
       {
-        throw topException;
+        throw failure;
       }
 
       @Override
@@ -90,8 +153,7 @@ public class QueryResultPusherTest
       @Override
       public void recordFailure(Exception e, long bytesWritten)
       {
-        Assertions.assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
-        recordFailureInvoked.set(true);
+        recordedFailure.set(e);
       }
 
       @Override
@@ -106,18 +168,20 @@ public class QueryResultPusherTest
         return null;
       }
     };
-    QueryResultPusher pusher = new QueryResultPusher(
-        request,
-        jsonMapper,
-        responseContextConfig,
-        selfNode,
-        counter,
-        queryId,
-        contentType,
-        extraHeaders,
-        Collections.emptyMap())
-    {
 
+    return new QueryResultPusher(
+        new MockHttpServletRequest(),
+        new DefaultObjectMapper(),
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE,
+        new NoopQueryMetricCounter(),
+        QUERY_ID,
+        MediaType.APPLICATION_JSON_TYPE,
+        new HashMap<>(),
+        Collections.emptyMap(),
+        strategy
+    )
+    {
       @Override
       public void writeException(Exception e, OutputStream out)
       {
@@ -126,13 +190,9 @@ public class QueryResultPusherTest
       @Override
       public ResultsWriter start()
       {
-        return resultWriter;
+        return resultsWriter;
       }
     };
-
-    pusher.push();
-
-    Assertions.assertTrue(recordFailureInvoked.get(), "recordFailure(e) should have been invoked!");
   }
 
   static class NoopQueryMetricCounter implements QueryMetricCounter

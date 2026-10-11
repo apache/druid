@@ -71,7 +71,8 @@ class SqlResourceQueryResultPusher extends QueryResultPusher
         stmt.sqlQueryId(),
         MediaType.APPLICATION_JSON_TYPE,
         headers,
-        sqlQuery.getContext()
+        sqlQuery.getContext(),
+        serverConfig.getErrorResponseTransformStrategy()
     );
     this.serverConfig = serverConfig;
     this.jsonMapper = jsonMapper;

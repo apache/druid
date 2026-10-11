@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.PersonaBasedErrorTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -1814,6 +1815,50 @@ public class SqlResourceTest extends CalciteTestBase
     Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
+  @Test
+  public void testExecutionFailureIsTransformedByStrategy() throws Exception
+  {
+    resource = new SqlResource(
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
+        new SqlResourceQueryResultPusherFactory(
+            JSON_MAPPER,
+            new ServerConfig(PersonaBasedErrorTransformStrategy.INSTANCE),
+            TEST_RESPONSE_CONTEXT_CONFIG,
+            DUMMY_DRUID_NODE
+        ),
+        DefaultQueryConfig.NIL,
+        new ServerConfig(PersonaBasedErrorTransformStrategy.INSTANCE)
+    );
+
+    onExecute = s -> {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("internal detail");
+    };
+    final ErrorResponse response = postSyncForException(
+        new SqlQuery(
+            "SELECT 1",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            ImmutableMap.of("sqlQueryId", "id"),
+            null
+        ),
+        500
+    );
+
+    validateErrorResponse(
+        response,
+        "general",
+        DruidException.Persona.USER,
+        DruidException.Category.RUNTIME_FAILURE,
+        "Internal server error, please contact your administrator with Error ID [id] if the issue persists."
+    );
+  }
+
   /**
    * See class-level javadoc for {@link org.apache.druid.sql.calcite.util.testoperator.AssertionErrorOperatorConversion}
    * for rationale as to why this test exists.
@@ -2607,7 +2652,7 @@ public class SqlResourceTest extends CalciteTestBase
     DruidException exception = validateErrorResponse(
         errorResponse,
         QueryExceptionCompat.ERROR_CODE,
-        DruidException.Persona.OPERATOR,
+        convertToPersona(legacyCode),
         convertToCategory(legacyCode),
         messageContainsString
     );
@@ -2616,6 +2661,22 @@ public class SqlResourceTest extends CalciteTestBase
     Assertions.assertEquals(errorClass, exception.getContextValue("errorClass"));
 
     return exception;
+  }
+
+  private static DruidException.Persona convertToPersona(String legacyErrorCode)
+  {
+    // Copied from QueryExceptionCompat for the same reason as convertToCategory.
+    switch (QueryException.fromErrorCode(legacyErrorCode)) {
+      case USER_ERROR:
+      case UNAUTHORIZED:
+      case CAPACITY_EXCEEDED:
+      case CANCELED:
+      case UNSUPPORTED:
+      case TIMEOUT:
+        return DruidException.Persona.USER;
+      default:
+        return DruidException.Persona.OPERATOR;
+    }
   }
 
   private static DruidException.Category convertToCategory(String legacyErrorCode)
