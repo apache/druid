@@ -19,6 +19,8 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.DynamicMessage;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
 import org.apache.druid.data.input.avro.AvroStreamInputFormat;
@@ -243,6 +245,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
   }
 
   @Test
+  @Timeout(30)
   public void test_protobufDataFormat()
   {
     streamResource.createTopicWithPartitions(dataSource, 3);
@@ -251,8 +254,8 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
     FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
-        MoreResources.ProbufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
-        MoreResources.ProbufData.WIKI_PROTO_MESSAGE_TYPE
+        MoreResources.ProtobufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
+        MoreResources.ProtobufData.WIKI_PROTO_MESSAGE_TYPE
     );
 
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
@@ -288,6 +291,50 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(supervisorSpec);
+  }
+
+  @Test
+  @Timeout(30)
+  public void test_protobufProto3DefaultValues()
+  {
+    streamResource.createTopicWithPartitions(dataSource, 3);
+    final FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
+        MoreResources.ProtobufData.PROTO3_EVENT_BYTES_DECODER_RESOURCE,
+        MoreResources.ProtobufData.PROTO3_EVENT_MESSAGE_TYPE
+    );
+    final Descriptors.Descriptor descriptor = protobufBytesDecoder.getDescriptor();
+
+    // The first record leaves every field but the timestamp at its proto3 default, which is not written to the wire
+    final List<byte[]> records = List.of(
+        DynamicMessage.newBuilder(descriptor)
+                      .setField(descriptor.findFieldByName("timestamp"), "2026-01-01T00:00:00Z")
+                      .build()
+                      .toByteArray(),
+        DynamicMessage.newBuilder(descriptor)
+                      .setField(descriptor.findFieldByName("timestamp"), "2026-01-01T00:00:01Z")
+                      .setField(descriptor.findFieldByName("someInt"), 5)
+                      .setField(descriptor.findFieldByName("someString"), "x")
+                      .setField(descriptor.findFieldByName("someBool"), true)
+                      .setField(
+                          descriptor.findFieldByName("category"),
+                          descriptor.findEnumTypeByName("Category").findValueByName("ONE")
+                      )
+                      .build()
+                      .toByteArray()
+    );
+    streamResource.publishRecordsToTopic(dataSource, records);
+
+    final ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
+    final SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
+    Assertions.assertEquals(dataSource, cluster.callApi().postSupervisor(supervisorSpec));
+
+    waitForDataAndVerifyIngestedEvents(dataSource, records.size());
+    cluster.callApi().verifySqlQuery(
+        "SELECT someInt, someString IS NULL, someBool, category FROM %s ORDER BY __time",
+        dataSource,
+        "0,false,false,ZERO\n5,false,true,ONE"
+    );
     stopSupervisor(supervisorSpec);
   }
 

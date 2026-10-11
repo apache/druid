@@ -174,5 +174,17 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     {
       return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA).setHasNulls(true);
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      return o != null && getClass() == o.getClass();
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return NestedColumnFormatV4.class.hashCode();
+    }
   }
 }

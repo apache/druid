@@ -5,14 +5,16 @@ exports[`FlexibleQueryInput matches snapshot 1`] = `
   class="flexible-query-input"
 >
   <div
-    class="ace-container query-idle"
+    class="editor-container"
   >
     <div
-      class=" ace_editor ace_hidpi ace-solarized-dark ace_dark placeholder-padding no-background ace_focus"
-      id="ace-editor"
-      style="width: 100%; height: 200px; font-size: 12px;"
+      class="code-editor"
     >
-      <!-- Ace editor, mode: ace/mode/dsql, value: "hello world" -->
+      <div
+        class="cm-editor"
+      >
+        <!-- Code editor, language: dsql, value: "hello world" -->
+      </div>
     </div>
   </div>
 </div>

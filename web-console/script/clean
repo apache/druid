@@ -18,7 +18,6 @@
 
 rm -rf \
   coverage \
-  lib/sql-docs.* \
+  src/editor-languages/dsql-docs.ts \
   node_modules \
-  public \
-  index.html
+  public

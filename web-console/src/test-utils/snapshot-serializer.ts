@@ -16,33 +16,33 @@
  * limitations under the License.
  */
 
-import type { Ace } from 'ace-builds';
+import { language } from '@codemirror/language';
+import { EditorView } from '@codemirror/view';
 
 // Removes noise from DOM snapshots so that they stay small and a change shows up as a small diff:
 // - the empty padding rows that ConsoleTable always renders are collapsed into a single comment
 // - icon <svg>s are reduced to their icon name (the path data changes whenever an icon is redrawn)
-// - the inside of Ace editors (Ace's own DOM, which changes with every Ace version) is replaced with a comment
-//   describing what the console configured: the mode, the value and the placeholder
+// - the inside of code editors (CodeMirror's own DOM, which changes with every CodeMirror version) is replaced with a
+//   comment describing what the console configured: the language, the value and the placeholder
 
 const cleaned = new WeakSet<Node>();
 
-function describeAceEditor(editor: Ace.Editor): string {
-  const parts = [`mode: ${(editor.session.getMode() as any).$id}`];
-  parts.push(`value: ${JSON.stringify(editor.getValue())}`);
-  const placeholder: string | undefined = (editor.renderer as any).placeholderNode?.textContent;
+function describeEditor(view: EditorView): string {
+  const parts = [`language: ${view.state.facet(language)?.name || 'text'}`];
+  parts.push(`value: ${JSON.stringify(view.state.doc.toString())}`);
+  const placeholder = view.dom.querySelector('.cm-placeholder')?.textContent;
   if (placeholder) parts.push(`placeholder: ${JSON.stringify(placeholder)}`);
-  if (editor.getReadOnly()) parts.push('read only');
-  return ` Ace editor, ${parts.join(', ')} `;
+  if (view.state.readOnly) parts.push('read only');
+  return ` Code editor, ${parts.join(', ')} `;
 }
 
 function simplifyDom(root: Element, original: Element): void {
-  const originalEditors = Array.from(original.querySelectorAll('.ace_editor'));
-  Array.from(root.querySelectorAll('.ace_editor')).forEach((editorElement, i) => {
-    const editor: Ace.Editor | undefined = (originalEditors[i] as any)?.env?.editor;
-    if (!editor) return;
-    editorElement.replaceChildren(
-      editorElement.ownerDocument.createComment(describeAceEditor(editor)),
-    );
+  const originalEditors = Array.from(original.querySelectorAll('.cm-editor'));
+  Array.from(root.querySelectorAll('.cm-editor')).forEach((editorElement, i) => {
+    const view = originalEditors[i] && EditorView.findFromDOM(originalEditors[i] as HTMLElement);
+    if (!view) return;
+    editorElement.className = 'cm-editor'; // Drop the generated theme classes
+    editorElement.replaceChildren(editorElement.ownerDocument.createComment(describeEditor(view)));
   });
 
   for (const tbody of Array.from(root.querySelectorAll('.ct-tbody'))) {
