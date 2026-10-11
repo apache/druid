@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 class S3ServerSideEncryption implements ServerSideEncryption
@@ -35,6 +36,12 @@ class S3ServerSideEncryption implements ServerSideEncryption
 
   @Override
   public CopyObjectRequest.Builder decorate(CopyObjectRequest.Builder builder)
+  {
+    return builder.serverSideEncryption(SSE_AES256);
+  }
+
+  @Override
+  public CreateMultipartUploadRequest.Builder decorate(CreateMultipartUploadRequest.Builder builder)
   {
     return builder.serverSideEncryption(SSE_AES256);
   }
