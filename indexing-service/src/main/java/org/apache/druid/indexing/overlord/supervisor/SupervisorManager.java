@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.Configs;
@@ -597,14 +598,13 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
-   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
-   * that is currently waiting to publish offsets for the given partitions.
+   * Checks if the given {@code supervisorId} represents a {@link SeekableStreamSupervisor}
+   * and if the {@code taskId} is ready to publish its segments.
    *
-   * @return true only if the given {@param supervisorId} represents a
-   * {@link SeekableStreamSupervisor} and the supervisor has other tasks that
-   * are currently publishing offsets to an overlapping set of partitions.
+   * @return A future that completes successfully with true when the given
+   * {@code taskId} can proceed with publishing its segments.
    */
-  public boolean isAnotherTaskGroupPublishingToPartitions(
+  public ListenableFuture<Boolean> isTaskReadyToPublishSegments(
       String supervisorId,
       String taskId,
       DataSourceMetadata startMetadata
@@ -616,7 +616,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       throw NotFound.exception("Could not find supervisor[%s]", supervisorId);
     }
     if (!(supervisor.lhs instanceof SeekableStreamSupervisor<?, ?, ?>)) {
-      return false;
+      return Futures.immediateFuture(true);
     }
 
     if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
@@ -626,24 +626,14 @@ public class SupervisorManager implements SupervisorStatsProvider
       );
     }
 
-    try {
-      final Set<Object> partitionIds = Set.copyOf(
-          ((SeekableStreamDataSourceMetadata<?, ?>) startMetadata)
-              .getSeekableStreamSequenceNumbers()
-              .getPartitionSequenceNumberMap()
-              .keySet()
-      );
-      return ((SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs)
-          .isAnotherTaskGroupPublishingToPartitions(taskId, partitionIds);
-    }
-    catch (Exception e) {
-      log.error(
-          e,
-          "Failed to check if a publish is pending for supervisor[%s], metadata[%s]",
-          supervisorId, startMetadata
-      );
-      return false;
-    }
+    final Set<Object> partitionIds = Set.copyOf(
+        ((SeekableStreamDataSourceMetadata<?, ?>) startMetadata)
+            .getSeekableStreamSequenceNumbers()
+            .getPartitionSequenceNumberMap()
+            .keySet()
+    );
+    return ((SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs)
+        .isTaskReadyToPublishSegments(taskId, partitionIds);
   }
 
   /**

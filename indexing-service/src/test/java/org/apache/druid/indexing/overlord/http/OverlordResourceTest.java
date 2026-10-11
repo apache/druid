@@ -25,6 +25,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.SettableFuture;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
@@ -40,6 +42,9 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -55,6 +60,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.UOE;
@@ -64,6 +70,8 @@ import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.mocks.MockAsyncContext;
+import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -86,6 +94,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
@@ -184,7 +194,8 @@ public class OverlordResourceTest
         auditManager,
         authMapper,
         workerTaskRunnerQueryAdapter,
-        authConfig
+        authConfig,
+        TestHelper.JSON_MAPPER
     );
   }
 
@@ -1463,7 +1474,7 @@ public class OverlordResourceTest
   {
     replayAll();
     OverlordResource overlordResource =
-        new OverlordResource(null, null, null, null, null, null, null, null, null, null);
+        new OverlordResource(null, null, null, null, null, null, null, null, null, null, null);
     final Response response = overlordResource.getTaskSegments("taskId");
     Assertions.assertEquals(404, response.getStatus());
     Assertions.assertEquals(
@@ -1474,6 +1485,149 @@ public class OverlordResourceTest
         ),
         response.getEntity()
     );
+  }
+
+  @Test
+  public void test_performTaskAction_returnsOk_whenFutureCompletes()
+  {
+    final NoopTask task = NoopTask.create();
+    final TaskActionHolder holder = new TaskActionHolder(task, new LockListAction());
+    final List<TaskLock> result = List.of(
+        new TimeChunkLock(TaskLockType.EXCLUSIVE, "groupId", "ds", Intervals.ETERNITY, "v1", 0)
+    );
+
+    final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
+    EasyMock.expect(taskMaster.getTaskActionClient(task))
+            .andReturn(Optional.of(taskActionClient))
+            .once();
+    EasyMock.expect(taskActionClient.submitAsync(holder.getAction()))
+            .andReturn(Futures.immediateFuture(result))
+            .once();
+
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+    EasyMock.expect(req.startAsync()).andReturn(asyncContext).once();
+
+    EasyMock.replay(taskActionClient);
+    replayAll();
+
+    overlordResource.performTaskAction(holder, req);
+
+    Assertions.assertEquals(Status.OK.getStatusCode(), asyncResponse.getStatus());
+    Assertions.assertTrue(asyncContext.isCompleted());
+
+    EasyMock.verify(taskActionClient);
+  }
+
+  @Test
+  public void test_performTaskAction_returnsGatewayTimeout_whenRequestTimesOut() throws Exception
+  {
+    final NoopTask task = NoopTask.create();
+    final TaskActionHolder holder = new TaskActionHolder(task, new LockListAction());
+
+    final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
+    final SettableFuture<Object> future = SettableFuture.create();
+
+    EasyMock.expect(taskMaster.getTaskActionClient(task))
+            .andReturn(Optional.of(taskActionClient))
+            .once();
+    EasyMock.expect(taskActionClient.submitAsync(holder.getAction()))
+            .andReturn(future)
+            .once();
+
+    final Capture<AsyncListener> listenerCapture = Capture.newInstance();
+    final MockAsyncContext asyncContext = new MockAsyncContext()
+    {
+      @Override
+      public void addListener(AsyncListener listener)
+      {
+        listenerCapture.setValue(listener);
+      }
+    };
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+    EasyMock.expect(req.startAsync()).andReturn(asyncContext).once();
+
+    EasyMock.replay(taskActionClient);
+    replayAll();
+
+    // Perform the action and then invoke timeout on the async context
+    overlordResource.performTaskAction(holder, req);
+
+    Assertions.assertTrue(listenerCapture.hasCaptured());
+    final AsyncEvent timeoutEvent = EasyMock.createMock(AsyncEvent.class);
+    EasyMock.expect(timeoutEvent.getAsyncContext()).andReturn(asyncContext).anyTimes();
+    EasyMock.replay(timeoutEvent);
+
+    listenerCapture.getValue().onTimeout(timeoutEvent);
+
+    Assertions.assertEquals(HttpResponseStatus.GATEWAY_TIMEOUT.code(), asyncResponse.getStatus());
+    Assertions.assertTrue(asyncContext.isCompleted());
+    Assertions.assertTrue(future.isCancelled());
+
+    EasyMock.verify(taskActionClient);
+  }
+
+  @Test
+  public void test_performTaskAction_returnsErrorStatusCode_whenFutureFailsWithDruidException()
+  {
+    final NoopTask task = NoopTask.create();
+    final TaskActionHolder holder = new TaskActionHolder(task, new LockListAction());
+    final DruidException druidException = InvalidInput.exception("Task[%s] not found", task.getId());
+
+    final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
+    EasyMock.expect(taskMaster.getTaskActionClient(task))
+            .andReturn(Optional.of(taskActionClient))
+            .once();
+    EasyMock.expect(taskActionClient.submitAsync(holder.getAction()))
+            .andReturn(Futures.immediateFailedFuture(druidException))
+            .once();
+
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+    EasyMock.expect(req.startAsync()).andReturn(asyncContext).once();
+
+    EasyMock.replay(taskActionClient);
+    replayAll();
+
+    overlordResource.performTaskAction(holder, req);
+
+    Assertions.assertEquals(druidException.getStatusCode(), asyncResponse.getStatus());
+    Assertions.assertTrue(asyncContext.isCompleted());
+
+    EasyMock.verify(taskActionClient);
+  }
+
+  @Test
+  public void test_performTaskAction_returns500_whenFutureFailsWithGenericException()
+  {
+    final NoopTask task = NoopTask.create();
+    final TaskActionHolder holder = new TaskActionHolder(task, new LockListAction());
+
+    final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
+    EasyMock.expect(taskMaster.getTaskActionClient(task))
+            .andReturn(Optional.of(taskActionClient))
+            .once();
+    EasyMock.expect(taskActionClient.submitAsync(holder.getAction()))
+            .andReturn(Futures.immediateFailedFuture(new ISE("Something went wrong")))
+            .once();
+
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+    EasyMock.expect(req.startAsync()).andReturn(asyncContext).once();
+
+    EasyMock.replay(taskActionClient);
+    replayAll();
+
+    overlordResource.performTaskAction(holder, req);
+
+    Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    Assertions.assertTrue(asyncContext.isCompleted());
+
+    EasyMock.verify(taskActionClient);
   }
 
   private void expectAuthorizationTokenCheck()

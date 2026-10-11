@@ -2401,7 +2401,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Offsets stored in startMetadata is greater than the last committed metadata.
       // This can happen because the previous task is still publishing its segments and can resolve once
       // the previous task finishes publishing.
-      return SegmentPublishResult.retryableFailure(
+      return SegmentPublishResult.retryableOffsetMismatchFailure(
           "The new start metadata state[%s] is ahead of the last committed"
           + " end state[%s]. Try resetting the supervisor.",
           startMetadata, oldCommitMetadataFromDb
