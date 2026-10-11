@@ -31,6 +31,7 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
+import org.apache.druid.storage.s3.S3IntermediateRoleConfig;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
@@ -50,6 +51,7 @@ public class S3InputSourceFactory implements InputSourceFactory
   private final AWSProxyConfig awsProxyConfig;
   private final AWSClientConfig awsClientConfig;
   private final AWSEndpointConfig awsEndpointConfig;
+  private final S3IntermediateRoleConfig intermediateRoleConfig;
 
   @JsonCreator
   public S3InputSourceFactory(
@@ -60,7 +62,8 @@ public class S3InputSourceFactory implements InputSourceFactory
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig,
       @JsonProperty("proxyConfig") @Nullable AWSProxyConfig awsProxyConfig,
       @JsonProperty("endpointConfig") @Nullable AWSEndpointConfig awsEndpointConfig,
-      @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig
+      @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig,
+      @JacksonInject @Nullable S3IntermediateRoleConfig intermediateRoleConfig
   )
   {
     this.s3Client = s3Client;
@@ -71,6 +74,7 @@ public class S3InputSourceFactory implements InputSourceFactory
     this.awsProxyConfig = awsProxyConfig;
     this.awsEndpointConfig = awsEndpointConfig;
     this.awsClientConfig = awsClientConfig;
+    this.intermediateRoleConfig = intermediateRoleConfig;
   }
 
   @Override
@@ -97,7 +101,8 @@ public class S3InputSourceFactory implements InputSourceFactory
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
-        awsClientConfig
+        awsClientConfig,
+        intermediateRoleConfig
     );
   }
 

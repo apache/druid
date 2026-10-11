@@ -116,6 +116,7 @@ public class S3StorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.storage", S3StorageConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.kms", S3SSEKmsConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.custom", S3SSECustomConfig.class);
+    JsonConfigProvider.bind(binder, "druid.s3", S3IntermediateRoleConfig.class);
 
     Binders.bindTaskLogs(binder, SCHEME, S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
@@ -130,7 +131,8 @@ public class S3StorageDruidModule implements DruidModule
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
       AWSClientConfig clientConfig,
-      S3StorageConfig storageConfig
+      S3StorageConfig storageConfig,
+      S3IntermediateRoleConfig intermediateRoleConfig
   )
   {
     if (clientConfig.isForceGlobalBucketAccessEnabled() != null) {
@@ -149,7 +151,8 @@ public class S3StorageDruidModule implements DruidModule
         endpointConfig,
         clientConfig,
         null,
-        null
+        null,
+        intermediateRoleConfig
     );
   }
 

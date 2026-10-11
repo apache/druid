@@ -212,7 +212,7 @@ Properties Object:
 
 :::info
 
-If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used. If the Druid process sets `druid.s3.intermediateAssumeRoleArn`, the resolved credentials assume that role before assuming `assumeRoleArn`.
 
 :::
 
