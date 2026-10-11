@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -83,6 +84,8 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   private boolean closed;
 
   private final boolean multiTopic;
+  @Nullable
+  private final Set<Integer> partitionIds;
 
   @Nullable
   private final KafkaHeaderBasedFilterEvaluator headerFilterEvaluator;
@@ -101,7 +104,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
-    this(consumerProperties, sortingMapper, configOverrides, multiTopic, metricBuilderSupplier, null);
+    this(consumerProperties, sortingMapper, configOverrides, multiTopic, metricBuilderSupplier, null, null);
   }
 
   public KafkaRecordSupplier(
@@ -110,14 +113,16 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       KafkaConfigOverrides configOverrides,
       boolean multiTopic,
       @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier,
-      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
+      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig,
+      @Nullable Set<Integer> partitionIds
   )
   {
     this(
         getKafkaConsumer(sortingMapper, consumerProperties, configOverrides),
         multiTopic,
         metricBuilderSupplier,
-        headerBasedFilterConfig
+        headerBasedFilterConfig,
+        partitionIds
     );
   }
 
@@ -128,7 +133,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
-    this(consumer, multiTopic, metricBuilderSupplier, null);
+    this(consumer, multiTopic, metricBuilderSupplier, null, null);
   }
 
   @VisibleForTesting
@@ -136,11 +141,13 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       KafkaConsumer<byte[], byte[]> consumer,
       boolean multiTopic,
       @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier,
-      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
+      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig,
+      @Nullable Set<Integer> partitionIds
   )
   {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
+    this.partitionIds = partitionIds == null ? null : Set.copyOf(partitionIds);
     this.monitor = new KafkaConsumerMonitor(consumer, metricBuilderSupplier);
     this.headerFilterEvaluator = headerBasedFilterConfig != null
         ? new KafkaHeaderBasedFilterEvaluator(headerBasedFilterConfig) : null;
@@ -327,7 +334,17 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
                                      + " Check that the topic exists in Kafka cluster", stream);
         }
       }
+
+      if (partitionIds != null) {
+        final Set<Integer> missing = new TreeSet<>(partitionIds);
+        allPartitions.forEach(partition -> missing.remove(partition.partition()));
+        if (!missing.isEmpty()) {
+          throw InvalidInput.exception("Requested partition IDs [%s] do not exist in topic [%s]", missing, stream);
+        }
+      }
       return allPartitions.stream()
+                          // Keep all discovered partitions unless a fixed selection is configured.
+                          .filter(p -> partitionIds == null || partitionIds.contains(p.partition()))
                           .map(p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition()))
                           .collect(Collectors.toSet());
     });
