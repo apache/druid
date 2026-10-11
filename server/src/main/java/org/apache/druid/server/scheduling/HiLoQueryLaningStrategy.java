@@ -28,7 +28,6 @@ import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryLaningStrategy;
 
 import java.util.Optional;
@@ -69,12 +68,8 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   {
     final Query<T> theQuery = query.getQuery();
     final QueryContext queryContext = theQuery.context();
-    // has() distinguishes an omitted parameter from a supplied one, while get() preserves explicit-null-as-unset.
-    final Integer priority = queryContext.has(QueryContextParameters.PRIORITY)
-                             ? queryContext.get(QueryContextParameters.PRIORITY)
-                             : null;
     final String lane = queryContext.getLane();
-    if (lane == null && priority != null && priority < 0) {
+    if (lane == null && queryContext.getPriority() < 0) {
       return Optional.of(LOW);
     }
     return Optional.ofNullable(lane);

@@ -81,6 +81,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -537,7 +538,7 @@ public class QueryLifecycleTest
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
-    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey(QueryContextParameters.QUERY_ID.getName()));
+    Assertions.assertTrue(lifecycle.getQuery().context().has(QueryContextParameters.QUERY_ID));
     revisedContext.remove(QueryContextParameters.QUERY_ID.getName());
     Assertions.assertEquals(
         userContext,
@@ -627,7 +628,7 @@ public class QueryLifecycleTest
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
-    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey(QueryContextParameters.QUERY_ID.getName()));
+    Assertions.assertTrue(lifecycle.getQuery().context().has(QueryContextParameters.QUERY_ID));
     revisedContext.remove(QueryContextParameters.QUERY_ID.getName());
     Assertions.assertEquals(
         userContext,
@@ -678,7 +679,7 @@ public class QueryLifecycleTest
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
-    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey(QueryContextParameters.QUERY_ID.getName()));
+    Assertions.assertTrue(lifecycle.getQuery().context().has(QueryContextParameters.QUERY_ID));
     revisedContext.remove(QueryContextParameters.QUERY_ID.getName());
     Assertions.assertEquals(
         userContext,
@@ -792,7 +793,7 @@ public class QueryLifecycleTest
     Assertions.assertNotNull(revisedContext);
     Assertions.assertTrue(revisedContext.containsKey("foo"));
     Assertions.assertTrue(revisedContext.containsKey("baz"));
-    Assertions.assertTrue(revisedContext.containsKey(QueryContextParameters.QUERY_ID.getName()));
+    Assertions.assertTrue(lifecycle.getQuery().context().has(QueryContextParameters.QUERY_ID));
 
     Assertions.assertTrue(lifecycle.authorize(mockRequest()).allowBasicAccess());
 

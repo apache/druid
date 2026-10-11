@@ -82,14 +82,14 @@ public class DataSourceMetadataQueryTest
                                                 .dataSource("foo")
                                                 .intervals("2013/2014")
                                                 .context(
-                                                    ImmutableMap.of(
-                                                        QueryContextParameters.PRIORITY.getName(),
+                                                    QueryContext.ofMap(
+                                                        QueryContextParameters.PRIORITY,
                                                         1,
-                                                        QueryContextParameters.USE_CACHE.getName(),
+                                                        QueryContextParameters.USE_CACHE,
                                                         true,
-                                                        QueryContextParameters.POPULATE_CACHE.getName(),
-                                                        "true",
-                                                        QueryContextParameters.FINALIZE.getName(),
+                                                        QueryContextParameters.POPULATE_CACHE,
+                                                        true,
+                                                        QueryContextParameters.FINALIZE,
                                                         true
                                                     )
                                                 ).build();
@@ -109,7 +109,7 @@ public class DataSourceMetadataQueryTest
     final QueryContext queryContext = serdeQuery.context();
     Assertions.assertEquals(1, (int) queryContext.getInt(QueryContextParameters.PRIORITY.getName()));
     Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.USE_CACHE.getName()));
-    Assertions.assertEquals("true", queryContext.getString(QueryContextParameters.POPULATE_CACHE.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.POPULATE_CACHE.getName()));
     Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.FINALIZE.getName()));
     Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.USE_CACHE.getName(), false));
     Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.POPULATE_CACHE.getName(), false));
