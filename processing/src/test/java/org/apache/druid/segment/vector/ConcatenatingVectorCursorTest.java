@@ -26,6 +26,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -43,6 +44,25 @@ class ConcatenatingVectorCursorTest
 {
   private static final RowSignature CLUSTER_SIGNATURE = RowSignature.builder().add("tenant", ColumnType.STRING).build();
 
+  /**
+   * Creates a wrapper with no query virtual columns, whose capabilities cover only the clustering columns.
+   */
+  private static ClusteringVectorColumnSelectorFactory makeWrapper(
+      VectorColumnSelectorFactory delegate,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues
+  )
+  {
+    return new ClusteringVectorColumnSelectorFactory(
+        delegate,
+        clusteringColumns,
+        clusteringValues,
+        delegate.getMaxVectorSize(),
+        VirtualColumns.EMPTY,
+        column -> null
+    );
+  }
+
   private final Closer closer = Closer.create();
 
   @Test
@@ -51,7 +71,7 @@ class ConcatenatingVectorCursorTest
     FakeVectorCursorHolder a = new FakeVectorCursorHolder(List.of("a1", "a2"), 4);
     FakeVectorCursorHolder b = new FakeVectorCursorHolder(List.of("b1"), 4);
 
-    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory wrapper = makeWrapper(
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -99,7 +119,7 @@ class ConcatenatingVectorCursorTest
     FakeVectorCursorHolder empty = new FakeVectorCursorHolder(List.of(), 4);
     FakeVectorCursorHolder full = new FakeVectorCursorHolder(List.of("x"), 4);
 
-    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory wrapper = makeWrapper(
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"placeholder"}
@@ -128,7 +148,7 @@ class ConcatenatingVectorCursorTest
     FakeVectorCursorHolder full = new FakeVectorCursorHolder(List.of("x"), 4);
     FakeVectorCursorHolder empty = new FakeVectorCursorHolder(List.of(), 4);
 
-    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory wrapper = makeWrapper(
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -154,7 +174,7 @@ class ConcatenatingVectorCursorTest
     FakeVectorCursorHolder e1 = new FakeVectorCursorHolder(List.of(), 4);
     FakeVectorCursorHolder e2 = new FakeVectorCursorHolder(List.of(), 4);
 
-    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory wrapper = makeWrapper(
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"placeholder"}
@@ -183,7 +203,9 @@ class ConcatenatingVectorCursorTest
         }),
         CLUSTER_SIGNATURE,
         new Object[]{"a"},
-        4
+        4,
+        VirtualColumns.EMPTY,
+        column -> null
     );
 
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
@@ -204,7 +226,7 @@ class ConcatenatingVectorCursorTest
   {
     FakeVectorCursorHolder only = new FakeVectorCursorHolder(List.of("x", "y"), 4);
 
-    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory wrapper = makeWrapper(
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -236,7 +258,7 @@ class ConcatenatingVectorCursorTest
     FakeVectorCursorHolder a = new FakeVectorCursorHolder(List.of("a1", "a2", "a3"), 4);
     FakeVectorCursorHolder b = new FakeVectorCursorHolder(List.of("b1", "b2"), 4);
 
-    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory wrapper = makeWrapper(
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -272,7 +294,7 @@ class ConcatenatingVectorCursorTest
     FakeVectorCursorHolder a = new FakeVectorCursorHolder(List.of("a1"), 4);
     FakeVectorCursorHolder b = new FakeVectorCursorHolder(List.of("b1"), 4);
 
-    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory wrapper = makeWrapper(
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"x"}
@@ -300,7 +322,7 @@ class ConcatenatingVectorCursorTest
     final boolean[] secondOpened = {false};
     FakeVectorCursorHolder first = new FakeVectorCursorHolder(List.of("x"), 4);
 
-    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory wrapper = makeWrapper(
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -339,7 +361,9 @@ class ConcatenatingVectorCursorTest
         new FakeVectorFactory(List.of(), new int[]{0}, 4),
         CLUSTER_SIGNATURE,
         new Object[]{"acme"},
-        configuredMaxVectorSize
+        configuredMaxVectorSize,
+        VirtualColumns.EMPTY,
+        column -> null
     );
 
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(

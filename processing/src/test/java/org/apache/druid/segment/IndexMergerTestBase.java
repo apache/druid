@@ -52,6 +52,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -65,6 +66,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IncrementalIndexTest;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -3176,6 +3178,99 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
           ).size()
       );
     }
+  }
+
+  @Test
+  public void testProjectionOnMultiValueColumn() throws IOException
+  {
+    // A projection grouping on a string column must keep every value of multi-value rows, both when persisting an
+    // incremental index and when merging segments of which only a later one has multiple values.
+    final IncrementalIndexSchema schema =
+        IncrementalIndexSchema.builder()
+                              .withDimensionsSpec(
+                                  DimensionsSpec.builder()
+                                                .setDimensions(List.of(new StringDimensionSchema("tags")))
+                                                .build()
+                              )
+                              .withRollup(false)
+                              .withProjections(
+                                  List.of(
+                                      AggregateProjectionSpec.builder("tags_count")
+                                                             .groupingColumns(new StringDimensionSchema("tags"))
+                                                             .aggregators(new CountAggregatorFactory("count"))
+                                                             .build()
+                                  )
+                              )
+                              .build();
+    final DateTime timestamp = DateTimes.of("2025-01-01");
+
+    final IncrementalIndex singleValued = closer.closeLater(
+        IndexBuilder.create().schema(schema).rows(List.of(tagsRow(timestamp, "x"))).buildIncrementalIndex()
+    );
+    final IncrementalIndex multiValued = closer.closeLater(
+        IndexBuilder.create()
+                    .schema(schema)
+                    .rows(List.of(tagsRow(timestamp.plusMinutes(1), List.of("y", "z"))))
+                    .buildIncrementalIndex()
+    );
+    final QueryableIndex persisted1 = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(singleValued, temporaryFolder.newFolder(), indexSpec, null))
+    );
+    final QueryableIndex persisted2 = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(multiValued, temporaryFolder.newFolder(), indexSpec, null))
+    );
+    Assertions.assertEquals(List.of(List.of("y", "z")), readTagsThroughProjection(persisted2));
+
+    final QueryableIndex merged = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                List.of(persisted1, persisted2),
+                true,
+                new AggregatorFactory[0],
+                temporaryFolder.newFolder(),
+                indexSpec,
+                null,
+                -1
+            )
+        )
+    );
+    Assertions.assertEquals(List.of(List.of("x"), List.of("y", "z")), readTagsThroughProjection(merged));
+  }
+
+  private static InputRow tagsRow(DateTime timestamp, Object tags)
+  {
+    return new MapBasedInputRow(timestamp, List.of("tags"), Map.of("tags", tags));
+  }
+
+  /**
+   * Returns the {@code tags} values of each row, read through the {@code tags_count} projection.
+   */
+  private static List<List<String>> readTagsThroughProjection(QueryableIndex index)
+  {
+    final CursorBuildSpec spec =
+        CursorBuildSpec.builder()
+                       .setQueryContext(QueryContext.of(Map.of(QueryContexts.USE_PROJECTION, "tags_count")))
+                       .setPhysicalColumns(Set.of("tags"))
+                       .setGroupingColumns(List.of("tags"))
+                       .setAggregators(List.of(new CountAggregatorFactory("count")))
+                       .build();
+    final List<List<String>> rows = new ArrayList<>();
+    try (CursorHolder holder = new QueryableIndexCursorFactory(index).makeCursorHolder(spec)) {
+      Assertions.assertTrue(holder.isPreAggregated());
+      final Cursor cursor = holder.asCursor();
+      final DimensionSelector selector =
+          cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("tags"));
+      while (!cursor.isDone()) {
+        final IndexedInts row = selector.getRow();
+        final List<String> values = new ArrayList<>(row.size());
+        for (int i = 0; i < row.size(); i++) {
+          values.add(selector.lookupName(row.get(i)));
+        }
+        rows.add(values);
+        cursor.advance();
+      }
+    }
+    return rows;
   }
 
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException

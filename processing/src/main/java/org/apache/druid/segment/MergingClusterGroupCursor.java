@@ -62,6 +62,7 @@ public final class MergingClusterGroupCursor implements Cursor
   private final List<Object[]> clusteringValuesByGroup;
   private final boolean descending;
   private final VirtualColumns queryVirtualColumns;
+  private final ColumnInspector allGroupsInspector;
   private final Map<String, String> virtualColumnRemap;
 
   private boolean initialized;
@@ -85,6 +86,7 @@ public final class MergingClusterGroupCursor implements Cursor
       List<Object[]> clusteringValuesByGroup,
       boolean descending,
       VirtualColumns queryVirtualColumns,
+      ColumnInspector allGroupsInspector,
       Map<String, String> virtualColumnRemap
   )
   {
@@ -103,6 +105,7 @@ public final class MergingClusterGroupCursor implements Cursor
     this.clusteringValuesByGroup = clusteringValuesByGroup;
     this.descending = descending;
     this.queryVirtualColumns = queryVirtualColumns;
+    this.allGroupsInspector = allGroupsInspector;
     this.virtualColumnRemap = virtualColumnRemap;
   }
 
@@ -117,6 +120,7 @@ public final class MergingClusterGroupCursor implements Cursor
       List<Object[]> clusteringValuesByGroup,
       boolean descending,
       VirtualColumns queryVirtualColumns,
+      ColumnInspector allGroupsInspector,
       Map<String, String> virtualColumnRemap,
       Closer closer
   )
@@ -127,6 +131,7 @@ public final class MergingClusterGroupCursor implements Cursor
         clusteringValuesByGroup,
         descending,
         queryVirtualColumns,
+        allGroupsInspector,
         virtualColumnRemap
     );
     final List<OrderBy> ordering = descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder();
@@ -187,6 +192,7 @@ public final class MergingClusterGroupCursor implements Cursor
         clusteringColumns,
         clusteringValuesByGroup,
         queryVirtualColumns,
+        allGroupsInspector,
         () -> currentGroup,
         () -> outputRowId
     );

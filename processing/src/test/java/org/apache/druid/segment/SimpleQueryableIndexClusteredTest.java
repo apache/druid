@@ -27,6 +27,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.projections.ClusterGroupSchemaTestHelpers;
+import org.apache.druid.segment.projections.ClusteredColumnInspector;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.junit.jupiter.api.Assertions;
@@ -97,7 +98,8 @@ class SimpleQueryableIndexClusteredTest
         reconstructed,
         projectionColumns,
         summary,
-        clusterGroupColumns
+        clusterGroupColumns,
+        new ClusteredColumnInspector(summary, Map.of())
     )
     {
       @Override
