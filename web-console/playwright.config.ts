@@ -16,18 +16,28 @@
  * limitations under the License.
  */
 
-/**
- * Represents row in ingestion overview task table.
- */
-export class IngestionTask {
-  constructor(props: IngestionTaskProps) {
-    Object.assign(this, props);
-  }
-}
+import { defineConfig } from '@playwright/test';
 
-interface IngestionTaskProps {
-  readonly datasource: string;
-  readonly status: string;
-}
+const UNIFIED_CONSOLE_PORT = process.env['DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT'] || '8888';
 
-export interface IngestionTask extends IngestionTaskProps {}
+export default defineConfig({
+  testDir: 'e2e-tests',
+  // The tests share one Druid cluster (and its task slots)
+  workers: 1,
+  timeout: 5 * 60 * 1000,
+  expect: {
+    timeout: 30 * 1000,
+    // For polling the cluster state: a task finishing, segments loading
+    toPass: { timeout: 2 * 60 * 1000, intervals: [1000] },
+  },
+  globalSetup: './e2e-tests/util/global-setup.ts',
+  reporter: 'list',
+  use: {
+    browserName: 'chromium',
+    baseURL: `http://localhost:${UNIFIED_CONSOLE_PORT}`,
+    viewport: { width: 1250, height: 760 },
+    actionTimeout: 30 * 1000,
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
+  },
+});

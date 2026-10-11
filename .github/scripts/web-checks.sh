@@ -20,7 +20,8 @@ set -x
 
 # Install node.js via maven frontend plugin (same approach as jacoco script)
 ./mvnw -B com.github.eirslett:frontend-maven-plugin:install-node-and-npm@install-node-and-npm -pl web-console/
-PATH+=:web-console/target/node/
+# Absolute, as the web console end-to-end tests run npx from another directory
+PATH+=:$(pwd)/web-console/target/node/
 
 # docs
 (cd website && npm ci)
@@ -30,12 +31,9 @@ npm run link-lint
 npm run spellcheck
 cd ..
 
-# web console
-./mvnw -B test -pl 'web-console'
+# web console (installed with the console built, for the Router of the end-to-end tests to serve)
+./mvnw -B install -pl 'web-console'
 
-# web console end-to-end test
-./.github/scripts/setup_generate_license.sh
-web-console/script/druid build
-web-console/script/druid start
-(cd web-console && npm run test-e2e)
-web-console/script/druid stop
+# web console end-to-end tests, on embedded clusters (builds the modules embedded-tests needs, not web-console again)
+./mvnw -B verify -pl 'embedded-tests,!web-console' -am -Pweb-console-tests,skip-static-checks -DskipUTs \
+  -Dmaven.javadoc.skip=true -Danimal.sniffer.skip=true -Denforcer.skip=true -Dcyclonedx.skip=true

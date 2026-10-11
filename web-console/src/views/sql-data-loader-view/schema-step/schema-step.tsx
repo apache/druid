@@ -1004,7 +1004,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               <Button
                 className="next"
                 icon={IconNames.CLOUD_UPLOAD}
-                text="Start loading data"
+                text="Start ingesting data"
                 intent={Intent.PRIMARY}
                 onClick={() => void onDone()}
               />

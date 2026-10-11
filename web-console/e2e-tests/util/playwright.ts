@@ -16,129 +16,125 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type { Locator, Page } from '@playwright/test';
 
-const TRUE = 'true';
-const WIDTH = 1250;
-const HEIGHT = 760;
-const PADDING = 128;
+const CONSOLE_PATH = '/unified-console.html';
 
-export async function createBrowser(): Promise<playwright.Browser> {
-  const headless = process.env['DRUID_E2E_TEST_HEADLESS'] || TRUE;
-  const debug = headless !== TRUE;
-  const launchOptions: any = {
-    args: [`--window-size=${WIDTH},${HEIGHT + PADDING}`, `--disable-local-storage`],
-  };
-  if (debug) {
-    launchOptions.headless = false;
-    launchOptions.slowMo = 20;
-  }
-  return playwright.chromium.launch(launchOptions);
+/**
+ * Opens a view of the console (`view` is its hash route, like 'datasources'), optionally with its table filtered to
+ * the rows where each `filter` column equals the given value. If the console is already open it is reloaded, so that
+ * the view shows fresh data.
+ */
+export async function openView(
+  page: Page,
+  view: string,
+  filter?: Record<string, string>,
+): Promise<void> {
+  // Encoded like TableFilters.eq(filter).toString() in src/utils/table-filters (which can't be imported here as it
+  // brings in the whole of src/utils)
+  const filterParam = Object.entries(filter ?? {})
+    .map(
+      ([column, value]) =>
+        `${column}=${value.replace(/[\\|]/g, '\\$&').replace(/[#%&/?]/g, encodeURIComponent)}`,
+    )
+    .join('&');
+  const wasOpen = page.url().includes(CONSOLE_PATH);
+  await page.goto(`${CONSOLE_PATH}#${view}${filterParam ? `/${filterParam}` : ''}`);
+  if (wasOpen) await page.reload();
 }
 
-export async function createPage(browser: playwright.Browser): Promise<playwright.Page> {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.setViewportSize({ width: WIDTH, height: HEIGHT });
+function escapeRegExp(text: string): string {
+  return text.replace(/[$()*+.?[\\\]^{|}]/g, '\\$&');
+}
 
-  page.on('response', async response => {
-    if (response.status() < 400) return;
-
-    const request = response.request();
-    let bodyText: string;
-    try {
-      bodyText = await response.text();
-    } catch (e) {
-      bodyText = `Could not get the body of the error message due to: ${e.message}`;
-    }
-
-    console.log(`==============================================`);
-    console.log(`Request failed on ${request.url()} (with status ${response.status()})`);
-    console.log(`Body: ${bodyText}`);
-    console.log(`==============================================`);
+/**
+ * The form group (a Blueprint FormGroup, as rendered by AutoForm and FormGroupWithInfo) labeled `label`. The labels
+ * are not linked to their inputs, so `getByLabel` can not find them.
+ */
+export function formGroup(scope: Page | Locator, label: string): Locator {
+  // The `has` locator is matched relative to each form group, so it must not start from `scope`
+  const page = 'page' in scope ? scope.page() : scope;
+  return scope.locator('.bp6-form-group').filter({
+    has: page.locator(':scope > .bp6-label', {
+      hasText: new RegExp(`^\\s*${escapeRegExp(label)}\\s*$`),
+    }),
   });
-
-  return page;
 }
 
-export async function getLabeledInput(page: playwright.Page, label: string): Promise<string> {
-  return await page.$eval(
-    `//*[text()="${label}"]/following-sibling::div//input`,
-    el => (el as HTMLInputElement).value,
-  );
+export function labeledInput(scope: Page | Locator, label: string): Locator {
+  return formGroup(scope, label).locator('input');
 }
 
-export async function getLabeledTextarea(page: playwright.Page, label: string): Promise<string> {
-  return await page.$eval(
-    `//*[text()="${label}"]/following-sibling::div//textarea`,
-    el => (el as HTMLInputElement).value,
-  );
+export function labeledTextarea(scope: Page | Locator, label: string): Locator {
+  return formGroup(scope, label).locator('textarea');
+}
+
+/**
+ * Sets a labeled boolean field of an AutoForm (its False / True buttons).
+ */
+export async function setLabeledBoolean(
+  scope: Page | Locator,
+  label: string,
+  value: boolean,
+): Promise<void> {
+  await formGroup(scope, label)
+    .getByText(value ? 'True' : 'False', { exact: true })
+    .click();
+}
+
+export async function getLabeledInput(scope: Page | Locator, label: string): Promise<string> {
+  return await labeledInput(scope, label).inputValue();
+}
+
+export async function getLabeledTextarea(scope: Page | Locator, label: string): Promise<string> {
+  return await labeledTextarea(scope, label).inputValue();
 }
 
 export async function setLabeledInput(
-  page: playwright.Page,
+  scope: Page | Locator,
   label: string,
   value: string,
 ): Promise<void> {
-  return setLabeledElement(page, 'input', label, value);
+  await labeledInput(scope, label).fill(value);
 }
 
 export async function setLabeledTextarea(
-  page: playwright.Page,
+  scope: Page | Locator,
   label: string,
   value: string,
 ): Promise<void> {
-  return setLabeledElement(page, 'textarea', label, value);
+  await labeledTextarea(scope, label).fill(value);
 }
 
-async function setLabeledElement(
-  page: playwright.Page,
-  type: string,
-  label: string,
-  value: string,
-): Promise<void> {
-  const element = await page.$(`//*[text()="${label}"]/following-sibling::div//${type}`);
-  await setInput(element!, value);
-}
-
-export async function setInput(
-  input: playwright.ElementHandle<Element>,
-  value: string,
-): Promise<void> {
-  await input.fill(value);
-}
-
-export async function setQueryInput(page: playwright.Page, value: string): Promise<void> {
-  // The query input is a CodeMirror editor, its editable surface is a contenteditable div
-  const editor = await page.waitForSelector('div.flexible-query-input .cm-content');
-  await editor.fill(value);
-}
-
-function buttonSelector(text: string) {
-  return `//button/*[contains(text(),"${text}")]`;
-}
-
-export async function clickButton(page: playwright.Page, text: string): Promise<void> {
-  await page.click(buttonSelector(text));
-}
-
-export async function clickLabeledButton(
-  page: playwright.Page,
-  label: string,
-  text: string,
-): Promise<void> {
-  await page.click(`//*[text()="${label}"]/following-sibling::div${buttonSelector(text)}`);
-}
-
-export async function clickText(page: playwright.Page, text: string): Promise<void> {
-  await page.click(`//*[text()="${text}"]`);
-}
-
+/**
+ * Picks `value` from the suggestions of a labeled SuggestibleInput.
+ */
 export async function selectSuggestibleInput(
-  page: playwright.Page,
+  page: Page,
   label: string,
   value: string,
 ): Promise<void> {
-  await page.click(`//*[text()="${label}"]/following-sibling::div//button`);
-  await page.click(`"${value}"`);
+  await formGroup(page, label).getByRole('button').click();
+  await page.getByRole('menuitem', { name: value, exact: true }).click();
+}
+
+export async function setQueryInput(page: Page, value: string): Promise<void> {
+  // The query input is a CodeMirror editor, its editable surface is a contenteditable div
+  const input = page.locator('.flexible-query-input .cm-content');
+  await input.fill(value);
+  // Closes the autocomplete that typing opens, which would cover the query (and its results)
+  await input.press('Escape');
+}
+
+export function button(scope: Page | Locator, text: string): Locator {
+  return scope.getByRole('button', { name: text, exact: true });
+}
+
+export async function clickButton(scope: Page | Locator, text: string): Promise<void> {
+  await button(scope, text).click();
+}
+
+export async function clickMenuItem(page: Page, text: string): Promise<void> {
+  // Not exact: a menu item's label (like "(debug)") is part of its name
+  await page.getByRole('menuitem', { name: text }).click();
 }
