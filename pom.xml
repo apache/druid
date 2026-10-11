@@ -104,7 +104,7 @@
         <guava.version>33.7.1-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
-        <iceberg.core.version>1.11.0</iceberg.core.version>
+        <iceberg.core.version>1.12.0</iceberg.core.version>
         <arrow.version>19.0.0</arrow.version>
         <jetty.version>12.1.13</jetty.version>
         <jspecify.version>1.0.1</jspecify.version>
