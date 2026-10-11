@@ -137,11 +137,10 @@ public final class ParameterDocumentationGenerator
       );
     }
 
-    // Pad the first two cells to the column widths of the existing table header in query-context-reference.md.
     return StringUtils.format(
-        "|%-19s|%-40s| %s|",
-        "`" + parameter.getName() + "`",
-        " " + renderDefault(parameter, docs),
+        "|`%s`| %s | %s|",
+        parameter.getName(),
+        renderDefault(parameter, docs),
         escapeTableCell(docs.getDescription())
     );
   }
