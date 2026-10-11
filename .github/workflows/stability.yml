@@ -35,16 +35,35 @@ on:
         required: false
         type: string
         default: "25"
+      id:
+        description: "Distinguishes the check names of concurrent runs on the same commit"
+        required: false
+        type: string
+        default: ""
 
 jobs:
+  # The arguments may come from untrusted text (PR reviews, commit messages);
+  # base64 keeps them from being parsed by the shell running the script.
+  encode:
+    runs-on: ubuntu-latest
+    outputs:
+      args_b64: ${{ steps.encode.outputs.args_b64 }}
+    steps:
+      - name: Encode Maven arguments
+        id: encode
+        env:
+          RAW_ARGS: ${{ inputs.maven_args }}
+        run: echo "args_b64=$(printf '%s' "$RAW_ARGS" | base64 -w0)" >> "$GITHUB_OUTPUT"
+
   stability:
+    needs: encode
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
     uses: ./.github/workflows/worker.yml
     with:
-      script: ".github/scripts/run-stability ${{ inputs.maven_args }}"
+      script: ".github/scripts/run-stability ${{ needs.encode.outputs.args_b64 }}"
       artifact_prefix: "stability-jdk${{ inputs.jdk }}"
       jdk: ${{ inputs.jdk }}
-      key: "stability-shard-${{ matrix.shard }}"
+      key: "${{ inputs.id && format('stability-{0}-shard-{1}', inputs.id, matrix.shard) || format('stability-shard-{0}', matrix.shard) }}"

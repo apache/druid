@@ -15,7 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Usage: run-stability <base64 encoded maven arguments>
+#
+# The arguments arrive base64 encoded so that they are never parsed by a shell;
+# they are split on whitespace only - quotes are not interpreted.
+
 set -e
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <base64 encoded maven arguments>" >&2
+    exit 1
+fi
+read -ra ARGS <<< "$(base64 -d <<< "$1")"
+
 set -x
 
 RUNS=8
@@ -42,13 +54,13 @@ expand_archives() {
 trap expand_archives EXIT
 
 # Build the module under test and its dependencies without running tests.
-mvn -am -DskipTests $OPTS "$@" install
+mvn -am -DskipTests $OPTS "${ARGS[@]}" install
 
 for i in $(seq 1 "$RUNS"); do
     echo "=== Stability run ${i}/${RUNS} ==="
 
     mkdir -p "$TASK_LOGS"
-    mvn $OPTS "-Dtask.logs.dir=${TASK_LOGS}" "$@" test
+    mvn $OPTS "-Dtask.logs.dir=${TASK_LOGS}" "${ARGS[@]}" test
 
     mkdir -p "$RESULTS"
 

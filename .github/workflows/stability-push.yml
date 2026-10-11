@@ -32,12 +32,8 @@ jobs:
       - name: Extract STABILITY_MAVEN_ARGS from commit messages
         id: extract
         run: |
-          MAVEN_ARGS=$(git log --grep='STABILITY_MAVEN_ARGS=' -1 --format=%B | sed -n 's/^STABILITY_MAVEN_ARGS=//p')
-          if [ -z "$MAVEN_ARGS" ]; then
-            echo "No STABILITY_MAVEN_ARGS found in recent commits." >&2
-            exit 1
-          fi
-          echo "maven_args=$MAVEN_ARGS" >> "$GITHUB_OUTPUT"
+          ARGS=$(git log --grep='STABILITY_MAVEN_ARGS=' -1 --format=%B | .github/scripts/extract-stability-args)
+          echo "maven_args=$ARGS" >> "$GITHUB_OUTPUT"
 
   stability:
     needs: prepare
