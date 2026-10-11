@@ -1108,6 +1108,24 @@ public final class QueryContextParameters
           .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .build();
 
+  public static final QueryContextParameter<Long> MAX_PLANNING_TIME_MS =
+      longParameter("maxPlanningTimeMs")
+          .defaultValue(0L)
+          .description(
+              """
+              Maximum wall-clock time, in milliseconds, allowed for planning this query on the Broker.
+              When planning exceeds this budget, planning is aborted and the query fails with an HTTP 504 `Query timeout` error.
+              Use this to guard against pathological queries, such as one with a very large `IN` filter, whose planning time can spike.
+              A non-positive value disables the timeout.
+              To apply a cluster-wide default, set the `druid.query.default.context.maxPlanningTimeMs` runtime property (or the Broker's dynamic `queryContext` config); see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
+              """
+          )
+          .since("39.0.0")
+          .defaultDescription("`0` (disabled)")
+          .query(Query.SQL)
+          .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .build();
+
   public static final QueryContextParameter<Integer> IN_FUNCTION_THRESHOLD =
       integerParameter("inFunctionThreshold")
           .defaultValue(QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD)

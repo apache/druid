@@ -39,7 +39,6 @@ public class PlannerConfig
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_REQUIRE_TIME_CONDITION = "requireTimeCondition";
-  public static final String CTX_KEY_MAX_PLANNING_TIME_MS = "maxPlanningTimeMs";
   public static final int NUM_FILTER_NOT_USED = -1;
   /**
    * Sentinel value for {@link #maxPlanningTimeMs} meaning "no planning timeout".
@@ -503,11 +502,7 @@ public class PlannerConfig
           CTX_REQUIRE_TIME_CONDITION,
           requireTimeCondition
       );
-      maxPlanningTimeMs = QueryContexts.parseLong(
-          queryContext,
-          CTX_KEY_MAX_PLANNING_TIME_MS,
-          maxPlanningTimeMs
-      );
+      maxPlanningTimeMs = context.getOrDefault(QueryContextParameters.MAX_PLANNING_TIME_MS, maxPlanningTimeMs);
       return this;
     }
 
@@ -585,10 +580,7 @@ public class PlannerConfig
       );
     }
     if (def.maxPlanningTimeMs != maxPlanningTimeMs) {
-      overrides.put(
-          CTX_KEY_MAX_PLANNING_TIME_MS,
-          maxPlanningTimeMs
-      );
+      overrides.put(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), maxPlanningTimeMs);
     }
 
     PlannerConfig newConfig = PlannerConfig.builder().withOverrides(overrides).build();

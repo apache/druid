@@ -595,7 +595,7 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
-        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 100))
+        .queryContext(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 100))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
 
@@ -636,7 +636,7 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
-        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 50))
+        .queryContext(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 50))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
 
