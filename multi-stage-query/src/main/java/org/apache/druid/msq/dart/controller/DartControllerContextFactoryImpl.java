@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -56,7 +55,7 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
   protected final MemoryIntrospector memoryIntrospector;
   protected final List<InputSpecSlicerProvider> inputSpecSlicerProviders;
   protected final ServiceEmitter emitter;
-  protected final DruidNodeDiscovery dartWorkerDiscovery;
+  protected final DruidNodeDiscoveryProvider discoveryProvider;
 
   @Inject
   public DartControllerContextFactoryImpl(
@@ -81,8 +80,7 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
     this.memoryIntrospector = memoryIntrospector;
     this.inputSpecSlicerProviders = List.copyOf(inputSpecSlicerProviders);
     this.emitter = emitter;
-    this.dartWorkerDiscovery =
-        discoveryProvider.getForServiceAndRoles(DartWorkerService.NAME, Set.of(NodeRole.HISTORICAL));
+    this.discoveryProvider = discoveryProvider;
   }
 
   @Override
@@ -99,7 +97,7 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
         inputSpecSlicerProviders,
         emitter,
         context,
-        dartWorkerDiscovery
+        discoveryProvider.getForServiceAndRoles(DartWorkerService.NAME, Set.of(NodeRole.HISTORICAL))
     );
   }
 }
