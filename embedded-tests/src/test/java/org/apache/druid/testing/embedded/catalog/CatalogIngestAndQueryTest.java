@@ -42,7 +42,6 @@ import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 
 /**
  * Tests that expect succesfully ingestng data into catalog defined tables and querying the data

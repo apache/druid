@@ -51,7 +51,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
-import java.util.Map;
 
 /**
  * End-to-end test that ingests a projection segment and runs the exact GROUP BY the projection serves through an
