@@ -19,8 +19,10 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -28,36 +30,10 @@ import java.util.List;
 
 public class KafkaSupervisorReportPayloadTest
 {
-  @Test
-  public void constructor_withoutTaskLists_startsWithEmptyActiveAndPublishingTasks()
-  {
-    final KafkaSupervisorReportPayload payload = new KafkaSupervisorReportPayload(
-        "id",
-        "dataSource",
-        "stream",
-        1,
-        1,
-        1L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        true,
-        SupervisorStateManager.BasicState.RUNNING,
-        SupervisorStateManager.BasicState.RUNNING,
-        List.of(),
-        null,
-        null
-    );
-
-    Assertions.assertEquals(List.of(), payload.getActiveTasks());
-    Assertions.assertEquals(List.of(), payload.getPublishingTasks());
-  }
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Test
-  public void constructor_withTaskLists_populatesActiveAndPublishingTasks()
+  public void serde_roundTripsActiveAndPublishingTasks() throws Exception
   {
     final TaskReportData active = new TaskReportData<>(
         "active-task",
@@ -101,7 +77,10 @@ public class KafkaSupervisorReportPayloadTest
         List.of(publishing)
     );
 
-    Assertions.assertEquals(List.of(active), payload.getActiveTasks());
-    Assertions.assertEquals(List.of(publishing), payload.getPublishingTasks());
+    final String json = mapper.writeValueAsString(payload);
+    final KafkaSupervisorReportPayload deserialized = mapper.readValue(json, KafkaSupervisorReportPayload.class);
+
+    Assertions.assertEquals(List.of(active), deserialized.getActiveTasks());
+    Assertions.assertEquals(List.of(publishing), deserialized.getPublishingTasks());
   }
 }

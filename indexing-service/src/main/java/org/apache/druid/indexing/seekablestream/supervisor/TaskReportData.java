@@ -26,6 +26,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 public class TaskReportData<PartitionIdType, SequenceOffsetType>
 {
@@ -124,6 +125,32 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
            (lag != null ? ", lag=" + lag : "") +
            (lagMillis != null ? ", lagMillis=" + lagMillis : "") +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskReportData<?, ?> that = (TaskReportData<?, ?>) o;
+    return Objects.equals(id, that.id)
+           && Objects.equals(startingOffsets, that.startingOffsets)
+           && Objects.equals(currentOffsets, that.currentOffsets)
+           && Objects.equals(startTime, that.startTime)
+           && Objects.equals(remainingSeconds, that.remainingSeconds)
+           && type == that.type
+           && Objects.equals(lag, that.lag)
+           && Objects.equals(lagMillis, that.lagMillis);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(id, startingOffsets, currentOffsets, startTime, remainingSeconds, type, lag, lagMillis);
   }
 
   /**
