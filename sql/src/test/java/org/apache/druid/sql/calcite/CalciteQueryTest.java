@@ -13034,17 +13034,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
+  // Not parametrised under require-on/require-off: DecoupledPlanningCalciteQueryTest
+  // pins a frozen native plan via a quidem .iq recording keyed on the test's display
+  // name. @ParameterizedTest would make the harness look for per-config .iq files
+  // (e.g. testRequireTimeConditionPositive3@require-on.iq) that don't exist, and the
+  // plan is config-independent anyway (the guard runs post-plan construction).
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
-  @MethodSource("requireTimeConditionConfigs")
-  @ParameterizedTest(name = "{0}")
-  public void testRequireTimeConditionPositive3(PlannerConfig plannerConfig)
+  @Test
+  public void testRequireTimeConditionPositive3()
   {
     // Cannot vectorize next test due to substring function.
     cannotVectorize();
 
     // semi-join requires time condition on both left and right query
     testQuery(
-        plannerConfig,
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE __time >= '2000-01-01' AND SUBSTRING(dim2, 1, 1) IN (\n"
         + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
