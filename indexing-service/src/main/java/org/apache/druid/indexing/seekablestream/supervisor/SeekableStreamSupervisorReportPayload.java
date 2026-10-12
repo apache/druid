@@ -96,11 +96,6 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     );
   }
 
-  /**
-   * Same as the other constructor, but also accepts {@link #activeTasks}/{@link #publishingTasks} directly so a
-   * report payload deserialized from JSON (e.g. the status API response) round-trips them. Production code that
-   * builds a payload to serialize still goes through the other constructor and {@link #addTask}.
-   */
   public SeekableStreamSupervisorReportPayload(
       String id,
       String dataSource,
