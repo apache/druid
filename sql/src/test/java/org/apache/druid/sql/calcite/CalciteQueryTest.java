@@ -13339,6 +13339,55 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  // A CTE is inlined by Calcite into an equivalent nested subquery. When the CTE
+  // definition owns the __time bound, the resulting plan is a bounded inner query
+  // under an outer aggregate, which the guard must accept.
+  @Test
+  public void testRequireTimeConditionCtePositive()
+  {
+    try {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "WITH recent AS (\n"
+              + "  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1\n"
+              + "  FROM druid.foo\n"
+              + "  WHERE __time >= '2000-01-01' AND __time < '2001-01-01'\n"
+              + "  GROUP BY TIME_FLOOR(__time, 'PT1H'), dim1\n"
+              + ")\n"
+              + "SELECT __time, SUM(cnt) AS cnt, dim1 FROM recent GROUP BY __time, dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a CTE with a bounded inner __time filter: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  // A CTE with no __time filter anywhere inlines to an unbounded scan under the outer;
+  // the guard must reject with the specific "__time column" message.
+  @Test
+  public void testRequireTimeConditionCteNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "WITH recent AS (\n"
+              + "  SELECT dim1, cnt FROM druid.foo\n"
+              + ")\n"
+              + "SELECT dim1, SUM(cnt) FROM recent GROUP BY dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
   // The guard keys on query intervals, not filters. A __time predicate on a subquery
   // result stays a residual filter and never becomes a QuerySegmentSpec, so it must not
   // satisfy the guard. Preserved deliberately per RCA.
