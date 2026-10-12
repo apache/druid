@@ -64,10 +64,6 @@ public class ServerSideEncryptingAmazonS3Test
   private static final String INTERMEDIATE_ROLE_ARN = "arn:aws:iam::123456789012:role/intermediate";
   private static final String TARGET_ROLE_ARN = "arn:aws:iam::123456789012:role/target";
 
-  /**
-   * An STS client resolves a region when it is built, so a test that assumes a role has to name one rather than
-   * depend on whatever is in the environment running the test.
-   */
   private static final AWSEndpointConfig REGION_CONFIG = new AWSEndpointConfig()
   {
     @Override
