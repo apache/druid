@@ -2648,7 +2648,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
-  public void testRunUnTransactionMode() throws Exception
+  public void testRunInTransactionMode() throws Exception
   {
     Map<String, Object> configs = kafkaServer.consumerProperties();
     configs.put("isolation.level", "read_uncommitted");

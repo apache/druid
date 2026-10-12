@@ -109,6 +109,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -522,24 +523,24 @@ public class OverlordResource
       @Context HttpServletRequest request
   )
   {
-    final AsyncContext asyncContext = request.startAsync();
+    final AsyncRequest asyncRequest = new AsyncRequest(request);
     final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
     if (!taskActionClient.isPresent()) {
       // Encourage client to try again soon, when we'll likely have a redirect set up
-      completeAsyncRequest(asyncContext, Status.SERVICE_UNAVAILABLE.getStatusCode(), null);
+      asyncRequest.complete(Status.SERVICE_UNAVAILABLE.getStatusCode(), null);
       return;
     }
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
-    asyncContext.addListener(
-        ServletResourceUtils.createAsyncTimeoutListener(event -> {
+    asyncRequest.context.addListener(
+        ServletResourceUtils.createAsyncTimeoutListener(_ -> {
+          asyncRequest.complete(HttpResponseStatus.GATEWAY_TIMEOUT.code(), null);
           future.cancel(true);
-          completeAsyncRequest(event.getAsyncContext(), HttpResponseStatus.GATEWAY_TIMEOUT.code(), null);
         })
     );
 
     // Use a default timeout of 15 minutes
-    asyncContext.setTimeout(15 * 60_000);
+    asyncRequest.context.setTimeout(15 * 60_000);
 
     Futures.addCallback(
         future,
@@ -552,16 +553,16 @@ public class OverlordResource
             final Map<String, Object> payload = new HashMap<>();
             payload.put("result", result);
 
-            completeAsyncRequest(asyncContext, Status.OK.getStatusCode(), payload);
+            asyncRequest.complete(Status.OK.getStatusCode(), payload);
           }
 
           @Override
           public void onFailure(Throwable t)
           {
             if (t instanceof DruidException druidException) {
-              completeAsyncRequest(asyncContext, druidException.getStatusCode(), druidException.toErrorResponse());
+              asyncRequest.complete(druidException.getStatusCode(), druidException.toErrorResponse());
             } else {
-              completeAsyncRequest(asyncContext, Status.INTERNAL_SERVER_ERROR.getStatusCode(), null);
+              asyncRequest.complete(Status.INTERNAL_SERVER_ERROR.getStatusCode(), null);
             }
           }
         },
@@ -917,19 +918,35 @@ public class OverlordResource
     );
   }
 
-  private void completeAsyncRequest(AsyncContext context, int statusCode, Object result)
+  private class AsyncRequest
   {
-    try {
-      final HttpServletResponse response = (HttpServletResponse) context.getResponse();
-      response.setStatus(statusCode);
-      if (result != null) {
-        response.setContentType(MediaType.APPLICATION_JSON);
-        jsonMapper.writeValue(response.getOutputStream(), result);
-      }
-      context.complete();
+    final AtomicBoolean completed = new AtomicBoolean(false);
+    final AsyncContext context;
+
+    AsyncRequest(HttpServletRequest request)
+    {
+      this.context = request.startAsync();
     }
-    catch (Exception e) {
-      log.noStackTrace().warn(e, "Request timed out or is closed already");
+
+    void complete(int statusCode, @Nullable Object result)
+    {
+      if (!completed.compareAndSet(false, true)) {
+        log.warn("Request has already been completed");
+        return;
+      }
+
+      try {
+        final HttpServletResponse response = (HttpServletResponse) context.getResponse();
+        response.setStatus(statusCode);
+        if (result != null) {
+          response.setContentType(MediaType.APPLICATION_JSON);
+          jsonMapper.writeValue(response.getOutputStream(), result);
+        }
+        context.complete();
+      }
+      catch (Exception e) {
+        log.noStackTrace().warn(e, "Request timed out or is closed already");
+      }
     }
   }
 }
