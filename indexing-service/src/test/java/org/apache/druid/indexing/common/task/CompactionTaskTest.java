@@ -47,6 +47,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.RollupTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
@@ -352,6 +353,18 @@ public class CompactionTaskTest
               new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)
           )
           .clusteringColumns("string_dim_0")
+          .build();
+
+  /**
+   * A rollup base table over the same two columns, declaring no aggregators of its own so that the ones the segments
+   * carry have to be absorbed.
+   */
+  private static final RollupTableProjectionSpec ROLLUP_BASE_TABLE =
+      RollupTableProjectionSpec.builder()
+          .groupingColumns(
+              new StringDimensionSchema("string_dim_0"),
+              new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)
+          )
           .build();
 
   private static CompactionTask.CompactionTuningConfig createTuningConfig()
@@ -871,12 +884,13 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithUnsealedBaseTableAppendsUndeclaredColumns() throws IOException
+  public void testCreateIngestionSchemaWithUnsealedBaseTableRejectsSegmentMetrics()
   {
-    // The declaration is partial, so the columns the segments carry but the spec does not declare are discovered and
-    // appended after the declared ones rather than dropped on the floor.
-    final DataSchema dataSchema = Iterables.getOnlyElement(
-        CompactionTask.createInputDataSchemas(
+    // The segments store metric columns, but a clustered base table has nowhere to keep them. Dropping them would
+    // delete data the table never said it did not want, so the task refuses instead.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> CompactionTask.createInputDataSchemas(
             toolbox,
             LockGranularity.TIME_CHUNK,
             new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -889,27 +903,53 @@ public class CompactionTaskTest
             false,
             METRIC_BUILDER,
             false
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("agg_0"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("no metric columns to keep them in"), e.getMessage());
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithUnsealedRollupBaseTableAbsorbsColumnsAndMetrics() throws IOException
+  {
+    // A rollup base table can store metrics, so a partial declaration absorbs both the undeclared dimensions and the
+    // undeclared aggregators rather than refusing or silently dropping them.
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            ROLLUP_BASE_TABLE,
+            false,
+            METRIC_BUILDER,
+            false
         ).values()
     );
 
     final List<String> dimensions = dataSchema.getDimensionsSpec().getDimensionNames();
-    // The declared shape is untouched: the clustering prefix still leads and __time keeps its declared position.
+    // The declared grouping shape is untouched and leads.
     Assertions.assertEquals(
         ImmutableList.of("string_dim_0", ColumnHolder.TIME_COLUMN_NAME),
         dimensions.subList(0, 2)
     );
-    Assertions.assertEquals(
-        ImmutableList.of("string_dim_0"),
-        ((ClusteredValueGroupsBaseTableProjectionSpec) dataSchema.getBaseTable()).getClusteringColumnNames()
-    );
-    // Every other column of the existing segments came along, each exactly once.
+    // Every other dimension of the existing segments came along, each exactly once.
     for (String dimension : findDimensions(0, SEGMENT_INTERVALS.get(0))) {
       Assertions.assertTrue(dimensions.contains(dimension), dimension);
     }
     Assertions.assertEquals(new HashSet<>(dimensions).size(), dimensions.size(), dimensions.toString());
-    // Only dimensions are carried over; the source segments' aggregators are not, since a clustered base table has no
-    // metric columns to put them in.
-    Assertions.assertEquals(0, dataSchema.getAggregators().length);
+    // And so did the metric columns, which the clustered layout above has no room for.
+    final List<String> metricNames = Arrays.stream(dataSchema.getAggregators())
+                                           .map(AggregatorFactory::getName)
+                                           .collect(Collectors.toList());
+    Assertions.assertEquals(
+        AGGREGATORS.stream().map(AggregatorFactory::getName).collect(Collectors.toList()),
+        metricNames
+    );
   }
 
   @Test

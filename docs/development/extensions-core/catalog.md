@@ -357,6 +357,11 @@ Dropping a column trims it from storage only on a table that has both a `__base`
 That last row is the case to be careful with: on a sealed clustered table, `ALTER TABLE ... DROP COLUMN` eventually
 deletes data, just not at the moment the statement runs.
 
+A non-sealed [rollup table](#rollup-tables) appends metric columns not declared in the columns list as additional
+aggregators. Any other layout has no metric columns at all, so if the segments store metrics and the table's layout
+cannot, compaction fails rather than discarding them; seal the table to drop them deliberately, or declare a rollup
+layout to keep them.
+
 The other column statements behave the same way — nothing on a plain table, a background rewrite on a `__base` table:
 
 - `ADD COLUMN` changes nothing by itself either way. The column has no data in existing segments, and compaction does

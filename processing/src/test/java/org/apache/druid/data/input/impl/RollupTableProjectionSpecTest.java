@@ -36,6 +36,7 @@ import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
@@ -46,6 +47,50 @@ import java.util.stream.Collectors;
  */
 class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
 {
+  @Test
+  void testWithAdditionalMetricsAppendsAfterDeclaredAggregators()
+  {
+    final RollupTableProjectionSpec spec = pagesSpec().withAdditionalMetrics(
+        new AggregatorFactory[]{new LongSumAggregatorFactory("extra", "extra")}
+    );
+
+    Assertions.assertEquals(
+        ImmutableList.of("total", "rows", "extra"),
+        Arrays.stream(spec.getMetrics()).map(AggregatorFactory::getName).collect(Collectors.toList())
+    );
+    // Metric columns are stored after the grouping columns and are not part of the sort order, so neither the
+    // grouping columns nor the ordering move.
+    Assertions.assertEquals(pagesSpec().getGroupingColumns(), spec.getGroupingColumns());
+    Assertions.assertEquals(pagesSpec().getOrdering(), spec.getOrdering());
+  }
+
+  @Test
+  void testWithAdditionalMetricsNullAndEmptyAreNoOps()
+  {
+    final RollupTableProjectionSpec spec = pagesSpec();
+    Assertions.assertSame(spec, spec.withAdditionalMetrics(null));
+    Assertions.assertSame(spec, spec.withAdditionalMetrics(new AggregatorFactory[0]));
+  }
+
+  @Test
+  void testWithAdditionalMetricsRejectsDuplicateOfDeclaredName()
+  {
+    // 'page' is a grouping column and 'total' a declared aggregator; either collision is a real conflict rather than
+    // something to silently merge.
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> pagesSpec().withAdditionalMetrics(
+            new AggregatorFactory[]{new LongSumAggregatorFactory("total", "total")}
+        )
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> pagesSpec().withAdditionalMetrics(
+            new AggregatorFactory[]{new LongSumAggregatorFactory("page", "page")}
+        )
+    );
+  }
+
   @Test
   void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsAppendedColumns()
   {

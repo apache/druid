@@ -58,7 +58,7 @@ import java.util.Set;
  * the legacy {@code rollup=true} granularity spec without a {@code metricsSpec}.
  */
 @JsonTypeName(RollupTableProjectionSpec.TYPE_NAME)
-public final class RollupTableProjectionSpec implements BaseTableProjectionSpec
+public final class RollupTableProjectionSpec implements RollupBaseTableProjectionSpec
 {
   public static final String TYPE_NAME = "rollupTable";
 
@@ -212,6 +212,24 @@ public final class RollupTableProjectionSpec implements BaseTableProjectionSpec
            && Arrays.equals(mine.aggregators, theirs.aggregators)
            && theirs.groupingColumns.size() >= mine.groupingColumns.size()
            && theirs.groupingColumns.subList(0, mine.groupingColumns.size()).equals(mine.groupingColumns);
+  }
+
+  /**
+   * Appends the given aggregators after the declared ones, leaving the grouping columns and the segment ordering
+   * untouched: metric columns are stored after the grouping columns and are not part of the sort order.
+   */
+  @Override
+  public RollupTableProjectionSpec withAdditionalMetrics(@Nullable AggregatorFactory[] additionalMetrics)
+  {
+    if (additionalMetrics == null || additionalMetrics.length == 0) {
+      return this;
+    }
+    final AggregatorFactory[] revised = new AggregatorFactory[aggregators.length + additionalMetrics.length];
+    System.arraycopy(aggregators, 0, revised, 0, aggregators.length);
+    System.arraycopy(additionalMetrics, 0, revised, aggregators.length, additionalMetrics.length);
+    // Duplicates of a declared aggregator or grouping column, aggregators named for the query-granularity carrier, and
+    // aggregators that do not combine their own output are rejected by the constructor's validation.
+    return new RollupTableProjectionSpec(virtualColumns, groupingColumns, revised);
   }
 
   @Override

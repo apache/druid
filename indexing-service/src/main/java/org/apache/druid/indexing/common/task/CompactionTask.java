@@ -41,6 +41,7 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.RollupBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
@@ -135,6 +136,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -828,15 +830,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       BaseTableProjectionSpec baseTableSpec = baseTable.withQueryGranularity(granularitySpec.getQueryGranularity());
       if (!sealed) {
         // Otherwise the segments may carry columns the spec does not know about. Find them and append them after the
-        // declared columns, leaving the shape the operator asked for unchanged. Only dimensions are carried over; a
-        // spec that stores metrics does not exist yet, and asking the analyzer for them would fail compaction on
-        // segments whose aggregators cannot be merged even though nothing would store them.
+        // declared columns, leaving the shape the operator asked for unchanged.
         final ExistingSegmentAnalyzer analyzer = new ExistingSegmentAnalyzer(
             segments,
             false,
             false,
             true,
-            false,
+            true,
             false,
             false
         );
@@ -844,6 +844,23 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         baseTableSpec = baseTableSpec.withAdditionalColumns(
             undeclaredColumns(baseTableSpec, analyzer.getDimensionsSpec())
         );
+        if (baseTableSpec instanceof RollupBaseTableProjectionSpec) {
+          baseTableSpec = ((RollupBaseTableProjectionSpec) baseTableSpec).withAdditionalMetrics(
+              undeclaredMetrics(baseTableSpec, analyzer.getMetricsSpec())
+          );
+        } else {
+          // A spec with no metric columns has nowhere to put these, and dropping them would delete data the table
+          // never said it did not want. Sealing the table is how an operator asks for that.
+          final Set<String> metricNames = analyzer.getMetricNames();
+          if (!metricNames.isEmpty()) {
+            throw InvalidInput.exception(
+                "Segments of dataSource[%s] store metric column(s) %s, but its base table has no metric columns to"
+                + " keep them in. Declare a rollup base table, or seal the table to drop them.",
+                dataSource,
+                metricNames
+            );
+          }
+        }
       }
       return CombinedDataSchema.forBaseTable(
           dataSource,
@@ -941,6 +958,30 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                    .stream()
                    .filter(dimension -> !declared.contains(dimension.getName()))
                    .collect(Collectors.toList());
+  }
+
+  /**
+   * The analyzed aggregators that {@code baseTable} does not already declare. Aggregators recovered from segments are
+   * already in combining form, which is what a rollup spec requires.
+   */
+  private static AggregatorFactory[] undeclaredMetrics(
+      BaseTableProjectionSpec baseTable,
+      @Nullable AggregatorFactory[] analyzed
+  )
+  {
+    if (analyzed == null || analyzed.length == 0) {
+      return analyzed;
+    }
+    final Set<String> declared = new HashSet<>();
+    final AggregatorFactory[] declaredMetrics = baseTable.getMetrics();
+    if (declaredMetrics != null) {
+      for (AggregatorFactory declaredMetric : declaredMetrics) {
+        declared.add(declaredMetric.getName());
+      }
+    }
+    return Arrays.stream(analyzed)
+                 .filter(aggregator -> !declared.contains(aggregator.getName()))
+                 .toArray(AggregatorFactory[]::new);
   }
 
   /**
@@ -1200,6 +1241,25 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                            .setDimensions(dimensionSchemas)
                            .setForceSegmentSortByTime(forceSegmentSortByTime)
                            .build();
+    }
+
+    /**
+     * The distinct metric column names across the analyzed segments, without merging the aggregators that produce
+     * them. A spec that cannot store metrics only needs to know whether any are present, and
+     * {@link #getMetricsSpec()} can fail for reasons unrelated to that.
+     */
+    public Set<String> getMetricNames()
+    {
+      if (!needMetricsSpec) {
+        throw new ISE("Not computing metricsSpec");
+      }
+      final Set<String> names = new TreeSet<>();
+      for (List<AggregatorFactory> aggregators : aggregatorFactoryLists) {
+        for (AggregatorFactory aggregator : aggregators) {
+          names.add(aggregator.getName());
+        }
+      }
+      return names;
     }
 
     public AggregatorFactory[] getMetricsSpec()

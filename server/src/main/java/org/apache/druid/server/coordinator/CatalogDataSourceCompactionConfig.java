@@ -26,6 +26,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -42,6 +44,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
@@ -313,7 +316,51 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
   @Override
   public CompactionConfigValidationResult validate(ClusterCompactionConfig clusterCompactionConfig)
   {
+    final CompactionEngine effectiveEngine = engine == null ? clusterCompactionConfig.getEngine() : engine;
+    if (effectiveEngine == CompactionEngine.MSQ) {
+      // the validation below can only check partition column types when the config has a schema to read them from,
+      // which a catalog table without a baseTable layout does not, so check the declared types here instead
+      final CompactionConfigValidationResult clusterKeyTypes = validateClusterKeyTypes();
+      if (!clusterKeyTypes.isValid()) {
+        return clusterKeyTypes;
+      }
+    }
     return ClientCompactionRunnerInfo.validateCompactionConfig(this, clusterCompactionConfig.getEngine());
+  }
+
+  /**
+   * Checks that every cluster key names a declared {@code VARCHAR} column, the only type the MSQ engine range
+   * partitions by. A key naming a column the table does not declare is left alone: the table may still store it, and
+   * its type is not knowable from the catalog.
+   */
+  private CompactionConfigValidationResult validateClusterKeyTypes()
+  {
+    final ResolvedTable table = catalog.resolveTable(tableId);
+    final List<ClusterKeySpec> clusterKeys = getClusterKeys(table);
+    if (CollectionUtils.isNullOrEmpty(clusterKeys)) {
+      return CompactionConfigValidationResult.success();
+    }
+    final List<ColumnSpec> columns = table.spec().columns();
+    if (CollectionUtils.isNullOrEmpty(columns)) {
+      return CompactionConfigValidationResult.success();
+    }
+    for (ClusterKeySpec clusterKey : clusterKeys) {
+      final int position = CatalogUtils.findColumn(columns, clusterKey.expr());
+      if (position < 0) {
+        continue;
+      }
+      final ColumnType type = Columns.druidType(columns.get(position));
+      if (!ColumnType.STRING.equals(type)) {
+        return CompactionConfigValidationResult.failure(
+            "Cluster key[%s] of table[%s] is declared as[%s]; compaction partitions segments by range, which the MSQ"
+            + " engine supports for string columns only. Remove it from 'clusterKeys'.",
+            clusterKey.expr(),
+            dataSource,
+            type
+        );
+      }
+    }
+    return CompactionConfigValidationResult.success();
   }
 
   @Override

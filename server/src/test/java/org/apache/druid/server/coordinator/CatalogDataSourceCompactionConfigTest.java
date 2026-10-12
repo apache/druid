@@ -28,6 +28,7 @@ import org.apache.druid.catalog.MapMetadataCatalog;
 import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
@@ -38,6 +39,7 @@ import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -65,6 +67,9 @@ public class CatalogDataSourceCompactionConfigTest
   private static final String TEST_DS_CLUSTERED_UNSEALED = "test_clustered_unsealed";
   private static final String TEST_DS_NO_SEGMENT_GRANULARITY = "test_no_segment_granularity";
   private static final String TEST_DS_CLUSTER_KEYS = "test_cluster_keys";
+  private static final String TEST_DS_NUMERIC_CLUSTER_KEY = "test_numeric_cluster_key";
+  private static final String TEST_DS_UNDECLARED_CLUSTER_KEY = "test_undeclared_cluster_key";
+  private static final String TEST_DS_ARRAY_CLUSTER_KEY = "test_array_cluster_key";
   private static final String TEST_DS_CLUSTERED_WITH_KEYS = "test_clustered_with_keys";
 
   private static final List<ColumnSpec> CLUSTERED_COLUMNS = ImmutableList.of(
@@ -151,11 +156,49 @@ public class CatalogDataSourceCompactionConfigTest
                         ImmutableList.of(
                             new ColumnSpec(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG.asTypeString(), null),
                             new ColumnSpec("string", ColumnType.STRING.asTypeString(), null),
-                            new ColumnSpec("double", ColumnType.DOUBLE.asTypeString(), null)
+                            new ColumnSpec("string2", ColumnType.STRING.asTypeString(), null)
                         )
                     )
                     .property(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1000)
+                    .clusterColumns(new ClusterKeySpec("string", false), new ClusterKeySpec("string2", false))
+                    .buildSpec()
+    );
+    METADATA_CATALOG.addSpec(
+        TableId.datasource(TEST_DS_NUMERIC_CLUSTER_KEY),
+        TableBuilder.datasource(TEST_DS_NUMERIC_CLUSTER_KEY, "P1D")
+                    .columns(
+                        ImmutableList.of(
+                            new ColumnSpec(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG.asTypeString(), null),
+                            new ColumnSpec("string", ColumnType.STRING.asTypeString(), null),
+                            new ColumnSpec("double", ColumnType.DOUBLE.asTypeString(), null)
+                        )
+                    )
                     .clusterColumns(new ClusterKeySpec("string", false), new ClusterKeySpec("double", false))
+                    .buildSpec()
+    );
+    METADATA_CATALOG.addSpec(
+        TableId.datasource(TEST_DS_ARRAY_CLUSTER_KEY),
+        TableBuilder.datasource(TEST_DS_ARRAY_CLUSTER_KEY, "P1D")
+                    // declared with the SQL spellings a catalog table actually uses
+                    .columns(
+                        ImmutableList.of(
+                            new ColumnSpec(ColumnHolder.TIME_COLUMN_NAME, Columns.SQL_TIMESTAMP, null),
+                            new ColumnSpec("tags", Columns.SQL_VARCHAR_ARRAY, null)
+                        )
+                    )
+                    .clusterColumns(new ClusterKeySpec("tags", false))
+                    .buildSpec()
+    );
+    METADATA_CATALOG.addSpec(
+        TableId.datasource(TEST_DS_UNDECLARED_CLUSTER_KEY),
+        TableBuilder.datasource(TEST_DS_UNDECLARED_CLUSTER_KEY, "P1D")
+                    .columns(
+                        ImmutableList.of(
+                            new ColumnSpec(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG.asTypeString(), null),
+                            new ColumnSpec("string", ColumnType.STRING.asTypeString(), null)
+                        )
+                    )
+                    .clusterColumns(new ClusterKeySpec("not_declared", false))
                     .buildSpec()
     );
     METADATA_CATALOG.addSpec(
@@ -253,7 +296,7 @@ public class CatalogDataSourceCompactionConfigTest
 
     Assertions.assertInstanceOf(DimensionRangePartitionsSpec.class, partitionsSpec);
     Assertions.assertEquals(
-        ImmutableList.of("string", "double"),
+        ImmutableList.of("string", "string2"),
         ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions()
     );
     // targetSegmentRows is the segment size, carried as maxRowsPerSegment so it is used verbatim rather than scaled
@@ -285,6 +328,63 @@ public class CatalogDataSourceCompactionConfigTest
     Assertions.assertInstanceOf(DynamicPartitionsSpec.class, partitionsSpec);
     Assertions.assertNull(((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows());
     Assertions.assertNull(configFor("not_in_catalog").getTuningConfig());
+  }
+
+  @Test
+  public void testValidateRejectsNonStringClusterKeyForMsq()
+  {
+    // A catalog table with no baseTable carries no schema for the generic validation to read partition column types
+    // from, so without this check a numeric cluster key would be accepted here and fail on every submitted task.
+    final CompactionConfigValidationResult result = configFor(TEST_DS_NUMERIC_CLUSTER_KEY)
+        .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.MSQ, null));
+
+    Assertions.assertFalse(result.isValid());
+    Assertions.assertTrue(result.getReason().contains("[double]"), result.getReason());
+    Assertions.assertTrue(result.getReason().contains("string columns only"), result.getReason());
+  }
+
+  @Test
+  public void testValidateRejectsArrayClusterKeyForMsq()
+  {
+    final CompactionConfigValidationResult result = configFor(TEST_DS_ARRAY_CLUSTER_KEY)
+        .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.MSQ, null));
+
+    Assertions.assertFalse(result.isValid());
+    Assertions.assertTrue(result.getReason().contains("[tags]"), result.getReason());
+  }
+
+  @Test
+  public void testValidateAcceptsStringClusterKeys()
+  {
+    Assertions.assertTrue(
+        configFor(TEST_DS_CLUSTER_KEYS)
+            .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.MSQ, null))
+            .isValid()
+    );
+  }
+
+  @Test
+  public void testValidateIgnoresClusterKeyTypesForNativeEngine()
+  {
+    // Native range partitioning reads the string form of whatever column it is given, so the VARCHAR requirement is
+    // the MSQ engine's, not a property of every compaction.
+    Assertions.assertTrue(
+        configFor(TEST_DS_NUMERIC_CLUSTER_KEY)
+            .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.NATIVE, null))
+            .isValid()
+    );
+  }
+
+  @Test
+  public void testValidateAllowsClusterKeyOnUndeclaredColumn()
+  {
+    // A non-sealed table may store columns it does not declare, so a cluster key naming one is legitimate and its
+    // type is not knowable from the catalog.
+    Assertions.assertTrue(
+        configFor(TEST_DS_UNDECLARED_CLUSTER_KEY)
+            .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.MSQ, null))
+            .isValid()
+    );
   }
 
   @Test
