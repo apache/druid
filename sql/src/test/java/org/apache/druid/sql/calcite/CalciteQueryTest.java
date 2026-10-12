@@ -139,7 +139,11 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -148,6 +152,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -12938,12 +12943,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionPositive()
+  /**
+   * Pairs of planner configs for the {@code testRequireTimeCondition*} parameterised tests.
+   * Each test runs twice: once with {@code requireTimeCondition=true} (the guard enabled)
+   * and once with the default planner config (guard disabled). Positive tests must produce
+   * identical native plans and rows under both configs; negative tests must throw under the
+   * guard and plan successfully without it.
+   */
+  public static Stream<Arguments> requireTimeConditionConfigs()
+  {
+    return Stream.of(
+        Arguments.of(Named.of("require-on", PLANNER_CONFIG_REQUIRE_TIME_CONDITION)),
+        Arguments.of(Named.of("require-off", PLANNER_CONFIG_DEFAULT))
+    );
+  }
+
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionPositive(PlannerConfig plannerConfig)
   {
     // simple timeseries
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
         + "  cnt FROM druid.foo\n"
@@ -12968,12 +12989,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionPositive2()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionPositive2(PlannerConfig plannerConfig)
   {
     // nested GROUP BY only requires time condition for inner most query
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT\n"
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
@@ -13013,15 +13035,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // __time >= x remains in the join condition
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
-  @Test
-  public void testRequireTimeConditionPositive3()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionPositive3(PlannerConfig plannerConfig)
   {
     // Cannot vectorize next test due to substring function.
     cannotVectorize();
 
     // semi-join requires time condition on both left and right query
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE __time >= '2000-01-01' AND SUBSTRING(dim2, 1, 1) IN (\n"
         + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
@@ -13084,11 +13107,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionLogicalValuePositive()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionLogicalValuePositive(PlannerConfig plannerConfig)
   {
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT 2 + 2 AS a",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -13172,12 +13196,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // pre-fix behaviour (ExecutionVertex#getEffectiveQuerySegmentSpec), the outer join's
   // ETERNITY spec was surfaced and the guard rejected this. The analyzer descends both
   // legs and confirms every physical leaf is bounded.
-  @Test
-  public void testRequireTimeConditionExplicitJoinBothSidesFilteredPositive()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionExplicitJoinBothSidesFilteredPositive(PlannerConfig plannerConfig)
   {
     try {
       testQuery(
-          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          plannerConfig,
           "SELECT COUNT(*) FROM\n"
               + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') a\n"
               + "  INNER JOIN\n"
@@ -13240,12 +13265,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // A lookup on the right side is global: the walker short-circuits at isGlobal(), so we
   // only need the left (bounded) leg to satisfy the guard. Regression guard against a fix
   // that would over-eagerly demand a __time filter on globals.
-  @Test
-  public void testRequireTimeConditionLookupRightSidePositive()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionLookupRightSidePositive(PlannerConfig plannerConfig)
   {
     try {
       testQuery(
-          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          plannerConfig,
           "SELECT COUNT(*) FROM druid.foo\n"
               + "  INNER JOIN lookup.lookyloo l ON foo.dim1 = l.k\n"
               + "  WHERE foo.__time >= '2000-01-01'",
@@ -13288,12 +13314,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // at Query#mayCollapseQueryDataSource() (default false). LIMIT prevents the outer scan
   // from collapsing the inner query, so the pre-fix walker sees only the outer ETERNITY
   // spec and rejects. The analyzer descends the QueryDataSource unconditionally.
-  @Test
-  public void testRequireTimeConditionNonCollapsibleSubqueryPositive()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionNonCollapsibleSubqueryPositive(PlannerConfig plannerConfig)
   {
     try {
       testQuery(
-          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          plannerConfig,
           "SELECT COUNT(*) FROM (\n"
               + "  SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01' LIMIT 10\n"
               + ")",
@@ -13313,12 +13340,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // __time bound. The inner query is the innermost owner of the physical scan, so its
   // bound reaches the leaf and the guard is satisfied. Guards against regressions that
   // mistake the outer query's segment spec for the physical scan's bound.
-  @Test
-  public void testRequireTimeConditionNestedRollupPositive()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionNestedRollupPositive(PlannerConfig plannerConfig)
   {
     try {
       testQuery(
-          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          plannerConfig,
           "SELECT __time, SUM(cnt) AS cnt, dim1\n"
               + "FROM (\n"
               + "  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1\n"
@@ -13342,12 +13370,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // A CTE is inlined by Calcite into an equivalent nested subquery. When the CTE
   // definition owns the __time bound, the resulting plan is a bounded inner query
   // under an outer aggregate, which the guard must accept.
-  @Test
-  public void testRequireTimeConditionCtePositive()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionCtePositive(PlannerConfig plannerConfig)
   {
     try {
       testQuery(
-          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          plannerConfig,
           "WITH recent AS (\n"
               + "  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1\n"
               + "  FROM druid.foo\n"
