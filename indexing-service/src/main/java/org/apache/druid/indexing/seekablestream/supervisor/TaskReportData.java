@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
@@ -37,15 +38,16 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
   private final Map<PartitionIdType, Long> lag;
   private final Map<PartitionIdType, Long> lagMillis;
 
+  @JsonCreator
   public TaskReportData(
-      String id,
-      @Nullable Map<PartitionIdType, SequenceOffsetType> startingOffsets,
-      @Nullable Map<PartitionIdType, SequenceOffsetType> currentOffsets,
-      @Nullable DateTime startTime,
-      Long remainingSeconds,
-      TaskType type,
-      @Nullable Map<PartitionIdType, Long> lag,
-      @Nullable Map<PartitionIdType, Long> lagMillis
+      @JsonProperty("id") String id,
+      @JsonProperty("startingOffsets") @Nullable Map<PartitionIdType, SequenceOffsetType> startingOffsets,
+      @JsonProperty("currentOffsets") @Nullable Map<PartitionIdType, SequenceOffsetType> currentOffsets,
+      @JsonProperty("startTime") @Nullable DateTime startTime,
+      @JsonProperty("remainingSeconds") Long remainingSeconds,
+      @JsonProperty("type") TaskType type,
+      @JsonProperty("lag") @Nullable Map<PartitionIdType, Long> lag,
+      @JsonProperty("lagMillis") @Nullable Map<PartitionIdType, Long> lagMillis
   )
   {
     this.id = id;

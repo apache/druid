@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
+import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -49,7 +50,9 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       @JsonProperty("healthy") boolean healthy,
       @JsonProperty("ignored1") SupervisorStateManager.State state, // No serializer for State class
       @JsonProperty("ignored2") SupervisorStateManager.State detailedState,
-      @JsonProperty("recentErrors") List<SupervisorStateManager.ExceptionEvent> recentErrors
+      @JsonProperty("recentErrors") List<SupervisorStateManager.ExceptionEvent> recentErrors,
+      @JsonProperty("activeTasks") @Nullable List<TaskReportData> activeTasks,
+      @JsonProperty("publishingTasks") @Nullable List<TaskReportData> publishingTasks
   )
   {
     super(
@@ -69,7 +72,9 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
         healthy,
         state,
         detailedState,
-        recentErrors
+        recentErrors,
+        activeTasks,
+        publishingTasks
     );
   }
 
