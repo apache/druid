@@ -25,7 +25,10 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+
+import javax.annotation.Nullable;
 
 /**
  * Walks a query tree to decide whether every physical leaf datasource has an
@@ -46,27 +49,89 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
  * <p>Right-hand inputs of joins are intentionally not descended: a
  * {@code __time} filter there does not bound the base table (see
  * {@code CalciteQueryTest#testRequireTimeConditionSemiJoinNegative}).
+ *
+ * <p>On rejection the analyzer records the first offending physical leaf's
+ * datasource name and its structural position so callers can build a specific
+ * error message.
  */
 public final class RequireTimeConditionAnalyzer
 {
+  public enum Position
+  {
+    TOP_LEVEL,
+    NESTED_SUBQUERY,
+    JOIN_RIGHT
+  }
+
+  public static final class Result
+  {
+    private final boolean satisfied;
+    @Nullable
+    private final String leafName;
+    @Nullable
+    private final Position position;
+
+    private Result(boolean satisfied, @Nullable String leafName, @Nullable Position position)
+    {
+      this.satisfied = satisfied;
+      this.leafName = leafName;
+      this.position = position;
+    }
+
+    public boolean isSatisfied()
+    {
+      return satisfied;
+    }
+
+    @Nullable
+    public String getLeafName()
+    {
+      return leafName;
+    }
+
+    @Nullable
+    public Position getPosition()
+    {
+      return position;
+    }
+  }
+
   private RequireTimeConditionAnalyzer()
   {
   }
 
   /**
-   * @return true if every physical leaf datasource in {@code query} is
-   *         descended from an ancestor query with a bounded interval. Global
-   *         datasources (lookups, inline) always satisfy the check.
+   * @return a {@link Result} describing whether every physical leaf datasource
+   *         in {@code query} is descended from an ancestor query with a bounded
+   *         interval. If not, the result also carries the first offending
+   *         leaf's name and its structural position. Global datasources
+   *         (lookups, inline) always satisfy the check.
+   */
+  public static Result analyze(Query<?> query)
+  {
+    final TimeFilterExplorer explorer = new TimeFilterExplorer(query);
+    if (explorer.allLegsBounded) {
+      return new Result(true, null, null);
+    }
+    return new Result(false, explorer.firstOffenderName, explorer.firstOffenderPosition);
+  }
+
+  /**
+   * Boolean-only convenience over {@link #analyze(Query)} for callers that do
+   * not need the offending-leaf details.
    */
   public static boolean hasTimeFilterOnAllLegs(Query<?> query)
   {
-    TimeFilterExplorer explorer = new TimeFilterExplorer(query);
-    return explorer.allLegsBounded;
+    return analyze(query).isSatisfied();
   }
 
   private static class TimeFilterExplorer extends ExecutionVertexShuttle
   {
     boolean allLegsBounded = true;
+    @Nullable
+    String firstOffenderName;
+    @Nullable
+    Position firstOffenderPosition;
 
     TimeFilterExplorer(Query<?> query)
     {
@@ -107,24 +172,55 @@ public final class RequireTimeConditionAnalyzer
       // join right-leg boundary before reaching any Query ancestor, since the outer
       // query's interval only applies to its primary (left) input.
       for (int i = parents.size() - 1; i >= 0; i--) {
-        EVNode ancestor = parents.get(i);
+        final EVNode ancestor = parents.get(i);
         if (ancestor.isQuery()) {
           if (isBounded(ancestor.getQuery())) {
             return dataSource;
           }
+          recordRejection(dataSource, queryAncestorPosition());
           allLegsBounded = false;
           return dataSource;
         }
         if (ancestor.index != null && ancestor.index != 0 && i > 0) {
-          EVNode parentOfAncestor = parents.get(i - 1);
+          final EVNode parentOfAncestor = parents.get(i - 1);
           if (!parentOfAncestor.isQuery() && parentOfAncestor.dataSource instanceof JoinDataSource) {
+            recordRejection(dataSource, Position.JOIN_RIGHT);
             allLegsBounded = false;
             return dataSource;
           }
         }
       }
+      recordRejection(dataSource, queryAncestorPosition());
       allLegsBounded = false;
       return dataSource;
+    }
+
+    private void recordRejection(DataSource dataSource, Position position)
+    {
+      if (firstOffenderName != null) {
+        return;
+      }
+      firstOffenderName = describeLeaf(dataSource);
+      firstOffenderPosition = position;
+    }
+
+    private Position queryAncestorPosition()
+    {
+      int queryCount = 0;
+      for (EVNode a : parents) {
+        if (a.isQuery()) {
+          queryCount++;
+        }
+      }
+      return queryCount > 1 ? Position.NESTED_SUBQUERY : Position.TOP_LEVEL;
+    }
+
+    private static String describeLeaf(DataSource dataSource)
+    {
+      if (dataSource instanceof TableDataSource) {
+        return ((TableDataSource) dataSource).getName();
+      }
+      return dataSource.toString();
     }
 
     private static boolean isPhysicalLeaf(DataSource dataSource)
@@ -137,7 +233,7 @@ public final class RequireTimeConditionAnalyzer
       if (!(query instanceof BaseQuery)) {
         return false;
       }
-      QuerySegmentSpec spec = ((BaseQuery<?>) query).getQuerySegmentSpec();
+      final QuerySegmentSpec spec = ((BaseQuery<?>) query).getQuerySegmentSpec();
       return spec != null && !Intervals.ONLY_ETERNITY.equals(spec.getIntervals());
     }
   }

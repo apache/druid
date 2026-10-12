@@ -209,6 +209,47 @@ public class RequireTimeConditionAnalyzerTest
     Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
   }
 
+  @Test
+  public void testAnalyzeBoundedScanReportsSatisfied()
+  {
+    final RequireTimeConditionAnalyzer.Result result =
+        RequireTimeConditionAnalyzer.analyze(scan(TABLE_FOO, BOUNDED));
+    Assertions.assertTrue(result.isSatisfied());
+    Assertions.assertNull(result.getLeafName());
+    Assertions.assertNull(result.getPosition());
+  }
+
+  @Test
+  public void testAnalyzeEternityScanReportsTopLevelPosition()
+  {
+    final RequireTimeConditionAnalyzer.Result result =
+        RequireTimeConditionAnalyzer.analyze(scan(TABLE_FOO, ETERNITY));
+    Assertions.assertFalse(result.isSatisfied());
+    Assertions.assertEquals("foo", result.getLeafName());
+    Assertions.assertEquals(RequireTimeConditionAnalyzer.Position.TOP_LEVEL, result.getPosition());
+  }
+
+  @Test
+  public void testAnalyzeJoinRightLegRejectionReportsJoinRight()
+  {
+    final ScanQuery query = scan(join(TABLE_FOO, TABLE_BAR), BOUNDED);
+    final RequireTimeConditionAnalyzer.Result result = RequireTimeConditionAnalyzer.analyze(query);
+    Assertions.assertFalse(result.isSatisfied());
+    Assertions.assertEquals("bar", result.getLeafName());
+    Assertions.assertEquals(RequireTimeConditionAnalyzer.Position.JOIN_RIGHT, result.getPosition());
+  }
+
+  @Test
+  public void testAnalyzeNestedUnboundedInnerReportsNestedSubquery()
+  {
+    final ScanQuery inner = scan(TABLE_FOO, ETERNITY);
+    final ScanQuery outer = scan(new QueryDataSource(inner), BOUNDED);
+    final RequireTimeConditionAnalyzer.Result result = RequireTimeConditionAnalyzer.analyze(outer);
+    Assertions.assertFalse(result.isSatisfied());
+    Assertions.assertEquals("foo", result.getLeafName());
+    Assertions.assertEquals(RequireTimeConditionAnalyzer.Position.NESTED_SUBQUERY, result.getPosition());
+  }
+
   private static ScanQuery scan(DataSource ds, QuerySegmentSpec spec)
   {
     return Druids.newScanQueryBuilder().dataSource(ds).intervals(spec).build();

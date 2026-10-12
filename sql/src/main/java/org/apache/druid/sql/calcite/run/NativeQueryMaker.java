@@ -84,10 +84,9 @@ public class NativeQueryMaker implements QueryMaker
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      if (!RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query)) {
-        throw new CannotBuildQueryException(
-            "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
-        );
+      final RequireTimeConditionAnalyzer.Result result = RequireTimeConditionAnalyzer.analyze(query);
+      if (!result.isSatisfied()) {
+        throw new CannotBuildQueryException(buildRequireTimeConditionMessage(result));
       }
     }
     int numFilters = plannerContext.getPlannerConfig().getMaxNumericInFilters();
@@ -150,6 +149,28 @@ public class NativeQueryMaker implements QueryMaker
         query,
         mapColumnList(rowOrder, fieldMapping),
         mapColumnList(columnTypes, fieldMapping)
+    );
+  }
+
+  private static String buildRequireTimeConditionMessage(RequireTimeConditionAnalyzer.Result result)
+  {
+    final String leaf = result.getLeafName();
+    final RequireTimeConditionAnalyzer.Position position = result.getPosition();
+    if (position == RequireTimeConditionAnalyzer.Position.JOIN_RIGHT) {
+      return StringUtils.format(
+          "requireTimeCondition is enabled: datasource '%s' on the right side of a join has no filter on the __time column",
+          leaf
+      );
+    }
+    if (position == RequireTimeConditionAnalyzer.Position.NESTED_SUBQUERY) {
+      return StringUtils.format(
+          "requireTimeCondition is enabled: datasource '%s' inside a nested subquery has no filter on the __time column",
+          leaf
+      );
+    }
+    return StringUtils.format(
+        "requireTimeCondition is enabled: datasource '%s' has no filter on the __time column",
+        leaf
     );
   }
 
