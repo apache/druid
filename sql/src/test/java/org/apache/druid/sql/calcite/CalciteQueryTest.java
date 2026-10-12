@@ -13309,6 +13309,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  // Nested rollup: an outer GROUP BY over a subquery whose inner GROUP BY owns the
+  // __time bound. The inner query is the innermost owner of the physical scan, so its
+  // bound reaches the leaf and the guard is satisfied. Guards against regressions that
+  // mistake the outer query's segment spec for the physical scan's bound.
+  @Test
+  public void testRequireTimeConditionNestedRollupPositive()
+  {
+    try {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT __time, SUM(cnt) AS cnt, dim1\n"
+              + "FROM (\n"
+              + "  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1\n"
+              + "  FROM druid.foo\n"
+              + "  WHERE __time >= '2000-01-01' AND __time < '2001-01-01'\n"
+              + "  GROUP BY TIME_FLOOR(__time, 'PT1H'), dim1\n"
+              + ")\n"
+              + "GROUP BY __time, dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a nested-rollup with a bounded inner GROUP BY: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
   // The guard keys on query intervals, not filters. A __time predicate on a subquery
   // result stays a residual filter and never becomes a QuerySegmentSpec, so it must not
   // satisfy the guard. Preserved deliberately per RCA.
