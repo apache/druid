@@ -181,6 +181,36 @@ public class RequireTimeConditionAnalyzerTest
   }
 
   @Test
+  public void testFourLevelNestingBoundedAtDeepestIsSatisfied()
+  {
+    // outer(ETERNITY) -> QDS -> q3(ETERNITY) -> QDS -> q2(ETERNITY) -> QDS -> q1(BOUNDED, TABLE_FOO).
+    // Four layers of unbounded wrappers above a bounded innermost scan. The walker must descend
+    // all the way to q1 to find the bound; any premature stop would reject this.
+    final ScanQuery q1 = scan(TABLE_FOO, BOUNDED);
+    final ScanQuery q2 = scan(new QueryDataSource(q1), ETERNITY);
+    final ScanQuery q3 = scan(new QueryDataSource(q2), ETERNITY);
+    final ScanQuery outer = scan(new QueryDataSource(q3), ETERNITY);
+    Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(outer));
+  }
+
+  @Test
+  public void testFourLevelNestingBoundedOnlyAtMiddleIsNotSatisfied()
+  {
+    // outer(ETERNITY) -> QDS -> q3(BOUNDED) -> QDS -> q2(ETERNITY) -> QDS -> q1(ETERNITY, TABLE_FOO).
+    // A bound two layers up from the physical scan does not reach the leaf: only the innermost
+    // query owns the scan at runtime. Must be rejected, and the offender position must be
+    // NESTED_SUBQUERY (walker rejects at q1, which has multiple query ancestors).
+    final ScanQuery q1 = scan(TABLE_FOO, ETERNITY);
+    final ScanQuery q2 = scan(new QueryDataSource(q1), ETERNITY);
+    final ScanQuery q3 = scan(new QueryDataSource(q2), BOUNDED);
+    final ScanQuery outer = scan(new QueryDataSource(q3), ETERNITY);
+    final RequireTimeConditionAnalyzer.Result result = RequireTimeConditionAnalyzer.analyze(outer);
+    Assertions.assertFalse(result.isSatisfied());
+    Assertions.assertEquals("foo", result.getLeafName());
+    Assertions.assertEquals(RequireTimeConditionAnalyzer.Position.NESTED_SUBQUERY, result.getPosition());
+  }
+
+  @Test
   public void testIntermediateBoundedInnerUnderUnboundedOuterIsSatisfied()
   {
     // outer(ETERNITY) -> QDS -> inner(BOUNDED, scan on TABLE_FOO). The inner's bound
@@ -188,6 +218,45 @@ public class RequireTimeConditionAnalyzerTest
     ScanQuery inner = scan(TABLE_FOO, BOUNDED);
     ScanQuery outer = scan(new QueryDataSource(inner), ETERNITY);
     Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(outer));
+  }
+
+  @Test
+  public void testDeepSubqueryChainWithUnboundedJoinRightLegReportsJoinRight()
+  {
+    // Three bounded subquery layers wrap a Join whose right leg is a bare unbounded table.
+    // Shape: outer(BOUNDED) -> QDS -> q2(BOUNDED) -> QDS -> q1(BOUNDED) -> Join(TABLE_FOO, TABLE_BAR).
+    // The subquery bounds do not reach past the join's right-leg boundary at runtime, so the
+    // walker rejects at the right leg and reports JOIN_RIGHT with leaf 'bar'.
+    final ScanQuery q1 = scan(join(TABLE_FOO, TABLE_BAR), BOUNDED);
+    final ScanQuery q2 = scan(new QueryDataSource(q1), BOUNDED);
+    final ScanQuery outer = scan(new QueryDataSource(q2), BOUNDED);
+    final RequireTimeConditionAnalyzer.Result result = RequireTimeConditionAnalyzer.analyze(outer);
+    Assertions.assertFalse(result.isSatisfied());
+    Assertions.assertEquals("bar", result.getLeafName());
+    Assertions.assertEquals(RequireTimeConditionAnalyzer.Position.JOIN_RIGHT, result.getPosition());
+  }
+
+  @Test
+  public void testDeeplyNestedJoinWithUnboundedSubqueryOnRightLegReportsNestedSubquery()
+  {
+    // Five-layer mix: a bounded chain wraps a Join whose right leg is itself a subquery chain
+    // ending in an unbounded physical scan.
+    // Shape: outer(BOUNDED) -> QDS -> mid(BOUNDED) -> Join(
+    //          left:  TABLE_FOO
+    //          right: QDS -> r2(BOUNDED) -> QDS -> r1(ETERNITY) -> TABLE_BAR
+    //        ).
+    // The right-leg bound on r2 does not reach TABLE_BAR because only r1 (innermost query
+    // ancestor) owns the physical scan at runtime, and r1 is ETERNITY. The walker rejects at
+    // r1; because there are multiple Query ancestors, position is NESTED_SUBQUERY.
+    final ScanQuery r1 = scan(TABLE_BAR, ETERNITY);
+    final ScanQuery r2 = scan(new QueryDataSource(r1), BOUNDED);
+    final QueryDataSource rightLeg = new QueryDataSource(r2);
+    final ScanQuery mid = scan(join(TABLE_FOO, rightLeg), BOUNDED);
+    final ScanQuery outer = scan(new QueryDataSource(mid), BOUNDED);
+    final RequireTimeConditionAnalyzer.Result result = RequireTimeConditionAnalyzer.analyze(outer);
+    Assertions.assertFalse(result.isSatisfied());
+    Assertions.assertEquals("bar", result.getLeafName());
+    Assertions.assertEquals(RequireTimeConditionAnalyzer.Position.NESTED_SUBQUERY, result.getPosition());
   }
 
   @Test
