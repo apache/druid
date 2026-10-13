@@ -1592,7 +1592,10 @@ case_simple
 cbrt
 concat
 copysign
+cosh
 expm1
+sinh
+tanh
 expr
 expr1
 expr2

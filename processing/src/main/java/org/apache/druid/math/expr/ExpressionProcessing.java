@@ -107,10 +107,10 @@ public class ExpressionProcessing
    *
    * <p>These ops route through Intel SVML / Arm SLEEF once the JIT compiles the vector loop to C2; before that
    * compilation, they fall back to per-lane {@link Math} calls. The two paths can differ by a few ulps (bounded
-   * at 2 ulps by {@code SimdVoMathlibParityTest.MAX_ULPS}), so a long-running query can produce different bits
-   * for the same input across the C1→C2 tier transition. Bit-for-bit equality of floating-point results is
-   * fragile in general, but this flag is an escape hatch for legacy queries relying on the scalar {@link Math} bits
-   * directly.
+   * by {@code SimdVoMathlibParityTest} — 2 ulps for most ops, 5 for the hyperbolics sinh/cosh/tanh where {@link
+   * Math} itself is spec'd to 2.5 ulps), so a long-running query can produce different bits for the same input
+   * across the C1→C2 tier transition. Bit-for-bit equality of floating-point results is fragile in general, but
+   * this flag is an escape hatch for legacy queries relying on the scalar {@link Math} bits directly.
    */
   public static boolean useVectorMathApi()
   {

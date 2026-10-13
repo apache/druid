@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorTestAssertions;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedUnaryOp;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -50,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -58,6 +60,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * randomize inputs to various vector expressions and make sure the results match nonvectorized expressions
@@ -70,6 +74,46 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   private static final Logger log = new Logger(VectorExprResultConsistencyTest.class);
   private static final int NUM_ITERATIONS = 10;
   private static final List<Integer> VECTOR_SIZES = List.of(3, 8, 17, 67);
+
+  // Regexes for detecting VO_MATHLIB function calls in an expression string so the ulp tolerance below only kicks in
+  // where the SIMD path can actually diverge from scalar Math. Everything else stays on strict equality. Derived from
+  // SimdSupportedUnaryOp so future ops picked up by the enum's isMathLib() classification get covered automatically.
+  // This part could probably be done nicer if we exposed Simd stuff via the Expr itself instead of this semi-fragile
+  // regex.
+  private static final Set<String> HYPERBOLIC_FN_NAMES = Set.of("sinh", "cosh", "tanh");
+  private static final Pattern HYPERBOLIC_FN_PATTERN = functionNamePattern(HYPERBOLIC_FN_NAMES);
+  private static final Pattern MATH_LIB_FN_PATTERN = functionNamePattern(
+      Arrays.stream(SimdSupportedUnaryOp.values())
+            .filter(SimdSupportedUnaryOp::isMathLib)
+            .map(op -> op.name().toLowerCase(Locale.ROOT))
+            .collect(Collectors.toSet())
+  );
+
+  private static Pattern functionNamePattern(Set<String> names)
+  {
+    // Longest names first so e.g. LOG10 matches before LOG. Word-boundary + open-paren avoids matching
+    // substrings inside identifiers (e.g. "expression" won't match "exp").
+    final String alternation = names.stream()
+                                    .sorted((a, b) -> Integer.compare(b.length(), a.length()))
+                                    .collect(Collectors.joining("|"));
+    return Pattern.compile("\\b(" + alternation + ")\\s*\\(", Pattern.CASE_INSENSITIVE);
+  }
+
+  /**
+   * Ulp tolerance the vector-vs-scalar comparison should allow for the given expression. Returns 0 for
+   * expressions with no VO_MATHLIB ops (strict equality); the same per-op bounds SimdVoMathlibParityTest
+   * uses otherwise.
+   */
+  private static int allowedUlpsFor(String exprString)
+  {
+    if (HYPERBOLIC_FN_PATTERN.matcher(exprString).find()) {
+      return 5;
+    }
+    if (MATH_LIB_FN_PATTERN.matcher(exprString).find()) {
+      return 2;
+    }
+    return 0;
+  }
 
 
   private static final Map<String, String> LOOKUP = Map.of(
@@ -831,12 +875,13 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
         } else {
           final Object expected = nonVectorEval.valueOrThrow()[i];
           final Object actual = vectorEval.valueOrThrow()[i];
-          // Double values compared with ulp-tolerance so the VO_MATHLIB SIMD path can differ from the
-          // scalar Math.<op> by up to 2 ulps (see the useVectorMathApi javadoc and SimdVoMathlibParityTest).
-          // Scalar-vs-scalar comparisons are still bit-identical in practice, so the tolerance never
-          // triggers when useVectorApi is off.
-          if (expected instanceof Double && actual instanceof Double) {
-            VectorTestAssertions.assertDoublesEquivalent(message, (Double) expected, (Double) actual, 2);
+          // For expressions that don't use any VO_MATHLIB op the SIMD and scalar paths are bit-identical,
+          // so keep strict equality there and only loosen when at least one such op appears in the
+          // expression (see allowedUlpsFor + the useVectorMathApi javadoc). Two-tier bound matches
+          // SimdVoMathlibParityTest: 5 ulps if any hyperbolic (sinh/cosh/tanh) appears, otherwise 2.
+          final int allowedUlps = allowedUlpsFor(exprString);
+          if (allowedUlps > 0 && expected instanceof Double && actual instanceof Double) {
+            VectorTestAssertions.assertDoublesEquivalent(message, (Double) expected, (Double) actual, allowedUlps);
           } else {
             Assertions.assertEquals(expected, actual, message);
           }

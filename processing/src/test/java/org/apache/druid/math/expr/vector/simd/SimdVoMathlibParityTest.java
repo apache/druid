@@ -54,13 +54,22 @@ public class SimdVoMathlibParityTest
   // Small integer multiple of any reasonable DoubleVector.SPECIES_PREFERRED length (2/4/8) so the SIMD
   // loop takes multiple iterations per invocation.
   private static final int INPUT_LANES = 64;
-  // 2 ulps is spec-defensible for the SIMD-vs-scalar comparison: Java's Math is spec'd to be within 1 ulp
-  // of the correctly-rounded result for most transcendentals (sin/cos/tan/log/exp/asin/acos/atan/cbrt/...);
-  // the SIMD path targets the same tolerance, so the SIMD-vs-scalar delta can be up to 2 ulps just from
-  // both landing at opposite ends of their independent 1-ulp windows. sinh/cosh/tanh have no strict Math
-  // bound but historically fit within this too on the JVM/hardware combos we ship for. If a future
-  // JVM/hardware combo drifts past this, widen the bound (or split it per op) rather than deleting the test.
-  private static final int MAX_ULPS = 2;
+  // Per-op ulp bound for the SIMD-vs-scalar comparison. Most transcendentals are spec'd tight — Java's Math
+  // is within 1 ulp of the correctly-rounded result for sin/cos/tan/log/exp/asin/acos/atan/cbrt/etc., and
+  // the SIMD path targets the same, so the SIMD-vs-scalar delta can be up to 2 ulps from both landing at
+  // opposite ends of their independent 1-ulp windows. sinh/cosh/tanh however are only spec'd to 2.5 ulps in
+  // Math, and VectorOperators offers no tighter guarantee, so their SIMD-vs-scalar delta can plausibly reach
+  // ~5 ulps by the same triangle-inequality argument.
+  private static final int DEFAULT_MAX_ULPS = 2;
+  private static final int HYPERBOLIC_MAX_ULPS = 5;
+
+  private static int maxUlpsFor(SimdSupportedUnaryOp op)
+  {
+    return switch (op) {
+      case SINH, COSH, TANH -> HYPERBOLIC_MAX_ULPS;
+      default -> DEFAULT_MAX_ULPS;
+    };
+  }
 
   private static final Expr.VectorInputBinding STUB_BINDING = new StubBinding(INPUT_LANES);
 
@@ -178,7 +187,7 @@ public class SimdVoMathlibParityTest
           StringUtils.format("op=%s lane=%d input=%s SIMD-vs-Math", op, i, inputs[i]),
           scalar.process(inputs[i]),
           simd[i],
-          MAX_ULPS
+          maxUlpsFor(op)
       );
     }
   }
@@ -195,7 +204,7 @@ public class SimdVoMathlibParityTest
           StringUtils.format("op=%s lane=%d input=%s SIMD-vs-Math", op, i, inputs[i]),
           scalar.process(inputs[i]),
           simd[i],
-          MAX_ULPS
+          maxUlpsFor(op)
       );
     }
   }
