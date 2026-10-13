@@ -321,6 +321,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     {
       final ByteBuffer copyBuffer = theBuffer.asReadOnlyBuffer();
       final int bufferLimit = copyBuffer.limit();
+      final ByteBuffer markerView = theBuffer.asReadOnlyBuffer();
       return new BufferIndexed()
       {
         @Nullable
@@ -341,7 +342,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
             endOffset = theBuffer.getInt(headerOffset + headerPosition + Integer.BYTES);
           }
           validateRelativeOffsets(index != 0, startOffset, endOffset);
-          return bufferedIndexedGetByteBuffer(copyBuffer, valuesOffset + startOffset, valuesOffset + endOffset, bufferLimit);
+          return bufferedIndexedGetByteBuffer(copyBuffer, markerView, valuesOffset + startOffset, valuesOffset + endOffset, bufferLimit);
         }
 
         @Override
@@ -427,9 +428,11 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     public BufferIndexed singleThreaded()
     {
       final ByteBuffer[] copyValueBuffers = new ByteBuffer[valueBuffers.length];
+      final ByteBuffer[] markerViews = new ByteBuffer[valueBuffers.length];
       final int[] valueBufferLimits = new int[valueBuffers.length];
       for (int i = 0; i < valueBuffers.length; i++) {
         copyValueBuffers[i] = valueBuffers[i].asReadOnlyBuffer();
+        markerViews[i] = valueBuffers[i].asReadOnlyBuffer();
         valueBufferLimits[i] = copyValueBuffers[i].limit();
       }
 
@@ -456,7 +459,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
           }
           validateRelativeOffsets(relativePositionOfIndex != 0, startOffset, endOffset);
           int fileNum = index >> logBaseTwoOfElementsPerValueFile;
-          return bufferedIndexedGetByteBuffer(copyValueBuffers[fileNum], startOffset, endOffset, valueBufferLimits[fileNum]);
+          return bufferedIndexedGetByteBuffer(copyValueBuffers[fileNum], markerViews[fileNum], startOffset, endOffset, valueBufferLimits[fileNum]);
         }
 
         @Override
@@ -633,7 +636,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     }
 
     @Nullable
-    ByteBuffer bufferedIndexedGetByteBuffer(ByteBuffer copyValueBuffer, int startOffset, int endOffset, int bufferLimit)
+    ByteBuffer bufferedIndexedGetByteBuffer(ByteBuffer copyValueBuffer, ByteBuffer markerView, int startOffset, int endOffset, int bufferLimit)
     {
       int size = endOffset - startOffset;
       if (startOffset < Integer.BYTES || endOffset < startOffset || endOffset > bufferLimit) {
@@ -644,7 +647,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
             bufferLimit
         );
       }
-      if (size == 0 && (copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
+      if (size == 0 && (markerView.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
         return null;
       }
 

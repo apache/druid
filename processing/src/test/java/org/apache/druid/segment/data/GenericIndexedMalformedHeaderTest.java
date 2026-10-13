@@ -160,6 +160,23 @@ public class GenericIndexedMalformedHeaderTest
   }
 
   @Test
+  public void testSingleThreadedEmptyAndNullValues()
+  {
+    GenericIndexed<String> indexed = GenericIndexed.fromIterable(
+        java.util.Arrays.asList("a", "", null),
+        GenericIndexed.STRING_STRATEGY
+    );
+    GenericIndexed<String>.BufferIndexed bi = indexed.singleThreaded();
+
+    // An earlier direct lookup narrows the reused buffer's limit; later empty/null
+    // marker reads must not throw IndexOutOfBoundsException because of it.
+    Assertions.assertDoesNotThrow(() -> bi.getByteBuffer(0));
+    final ByteBuffer empty = bi.getByteBuffer(1);
+    Assertions.assertEquals(0, empty.remaining());
+    Assertions.assertNull(bi.getByteBuffer(2));
+  }
+
+  @Test
   public void testSingleThreadedIntermediateOffsetGapRejected()
   {
     GenericIndexed<String> indexed = GenericIndexed.read(
