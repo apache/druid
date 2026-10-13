@@ -132,6 +132,13 @@ public class QueryContexts
   public static final String FORCE_PROJECTION = "forceProjections";
   public static final String USE_PROJECTION = "useProjection";
 
+  /**
+   * Overrides the {@link org.apache.druid.segment.loading.AcquireMode} an engine uses to acquire segments from the
+   * segment cache; see {@link QueryContext#getSegmentAcquireMode}. Intended for testing, debugging, and performance
+   * comparison.
+   */
+  public static final String SEGMENT_ACQUIRE_MODE = "segmentAcquireMode";
+
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
   public static final String QUERY_RESOURCE_ID = "queryResourceId";
