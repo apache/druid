@@ -37,14 +37,13 @@ import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -253,8 +252,9 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Segmen
               new BroadcastTablesTooLargeFault(
                   memoryReservedForBroadcastJoin,
                   Optional.ofNullable(query)
-                          .map(q -> q.context().getString(PlannerContext.CTX_SQL_JOIN_ALGORITHM))
-                          .map(JoinAlgorithm::fromString)
+                          .map(Query::context)
+                          .filter(context -> context.has(QueryContextParameters.SQL_JOIN_ALGORITHM))
+                          .map(context -> context.get(QueryContextParameters.SQL_JOIN_ALGORITHM))
                           .orElse(null)
               )
           );

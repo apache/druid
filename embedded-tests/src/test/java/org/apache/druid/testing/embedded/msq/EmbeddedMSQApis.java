@@ -33,7 +33,8 @@ import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.HttpResponseException;
@@ -84,7 +85,7 @@ public class EmbeddedMSQApis
                 false,
                 false,
                 false,
-                Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+                QueryContext.ofMap(QueryContextParameters.ENGINE, DartSqlEngine.NAME),
                 null
             )
         )
@@ -211,7 +212,7 @@ public class EmbeddedMSQApis
   )
   {
     final Map<String, Object> fullContext = new HashMap<>(context);
-    fullContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
+    fullContext.put(QueryContextParameters.ENGINE.getName(), DartSqlEngine.NAME);
 
     return cluster.callApi().onTargetBrokerAsync(
         targetBroker,

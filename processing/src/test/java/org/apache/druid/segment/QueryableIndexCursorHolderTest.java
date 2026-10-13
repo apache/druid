@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
@@ -34,9 +33,9 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -216,7 +215,12 @@ public class QueryableIndexCursorHolderTest
                                                          new LongSumAggregatorFactory("c_sum", "c")
                                                      )
                                                  )
-                                                 .setQueryContext(QueryContext.of(ImmutableMap.of(QueryContexts.FORCE_PROJECTION, true)))
+                                                 .setQueryContext(
+                                                     QueryContext.of(
+                                                         QueryContextParameters.FORCE_PROJECTIONS,
+                                                         true
+                                                     )
+                                                 )
                                                  .build();
       final CursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
 

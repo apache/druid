@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -49,6 +48,7 @@ import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -290,10 +290,10 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testInsertWithTooManyPartitions() throws IOException
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    Map<String, Object> context = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
-                                              .build();
+                                              .putRaw(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
+                                              .toMap();
 
 
     RowSignature rowSignature = RowSignature.builder()
@@ -329,11 +329,17 @@ public class MSQFaultsTest extends MSQTestBase
     final int rowsPerSegment = 10;
     final int numRowsInInputFile = 50;
 
-    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> context = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("maxNumSegments", maxNumSegments)
-                                              .put("rowsPerSegment", rowsPerSegment)
-                                              .build();
+                                              .putRaw(
+                                                  "maxNumSegments",
+                                                  maxNumSegments
+                                              )
+                                              .putRaw(
+                                                  "rowsPerSegment",
+                                                  rowsPerSegment
+                                              )
+                                              .toMap();
 
 
     final File file = createNdJsonFile(newTempFile("ndjson30k"), numRowsInInputFile, 1);
@@ -447,10 +453,10 @@ public class MSQFaultsTest extends MSQTestBase
                                       .collect(Collectors.joining(", "));
 
     final Map<String, Object> context =
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(MultiStageQueryContext.CTX_MAX_CLUSTERED_BY_COLUMNS, maxClusteredByColumns)
-                    .build();
+                    .putRaw(MultiStageQueryContext.CTX_MAX_CLUSTERED_BY_COLUMNS, maxClusteredByColumns)
+                    .toMap();
 
     testIngestQuery()
         .setSql(StringUtils.format(
@@ -487,11 +493,10 @@ public class MSQFaultsTest extends MSQTestBase
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
     final String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
 
-    final Map<String, Object> context =
-        ImmutableMap.<String, Object>builder()
-                    .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 8)
-                    .put(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, maxInputFilesPerWorker)
-                    .build();
+    final Map<String, Object> context = Map.of(
+        MultiStageQueryContext.CTX_MAX_NUM_TASKS, 8,
+        MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, maxInputFilesPerWorker
+    );
 
     testIngestQuery()
         .setSql(StringUtils.format(
@@ -519,11 +524,17 @@ public class MSQFaultsTest extends MSQTestBase
     final int maxPartitions = 5;
 
     final Map<String, Object> context =
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
-                    .put(MultiStageQueryContext.CTX_MAX_PARTITIONS, maxPartitions)
-                    .build();
+                    .putRaw(
+                        MultiStageQueryContext.CTX_ROWS_PER_SEGMENT,
+                        1
+                    )
+                    .putRaw(
+                        MultiStageQueryContext.CTX_MAX_PARTITIONS,
+                        maxPartitions
+                    )
+                    .toMap();
 
     final RowSignature rowSignature = RowSignature.builder().addTimeColumn().build();
 
@@ -706,10 +717,10 @@ public class MSQFaultsTest extends MSQTestBase
   {
     // BITWISE_COMPLEMENT(m1 * 1e19) throws because the double value exceeds Long range. The expression engine
     // wraps this in DruidException, which getFaultFromException() converts to DruidExceptionFault.
-    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .put("vectorize", "false")
-                                                    .build();
+                                                    .putRaw("vectorize", "false")
+                                                    .toMap();
 
     testSelectQuery()
         .setSql("SELECT BITWISE_COMPLEMENT(m1 * 1e19) FROM foo")

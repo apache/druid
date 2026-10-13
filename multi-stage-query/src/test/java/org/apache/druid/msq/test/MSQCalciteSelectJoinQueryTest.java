@@ -19,14 +19,14 @@
 
 package org.apache.druid.msq.test;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.Map;
 
@@ -95,10 +95,10 @@ public class MSQCalciteSelectJoinQueryTest
     @Override
     protected QueryTestBuilder testBuilder()
     {
-      Map<String, Object> defaultCtx = ImmutableMap.<String, Object>builder()
+      Map<String, Object> defaultCtx = QueryContext.builder()
           .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-          .put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm().toString())
-          .build();
+          .put(QueryContextParameters.SQL_JOIN_ALGORITHM, joinAlgorithm())
+          .toMap();
       return new QueryTestBuilder(new CalciteTestConfig(defaultCtx, true))
           .addCustomRunner(
               new ExtractResultsFactory(

@@ -49,7 +49,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.loading.external.VirtualStorageManager;
@@ -219,7 +219,7 @@ public class DartWorkerContext implements WorkerContext
   public void emitMetric(MSQMetricEventBuilder metricBuilder)
   {
     metricBuilder.setDartDimensions(queryContext);
-    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryId());
+    metricBuilder.setDimension(QueryContextParameters.DART_QUERY_ID.getName(), queryId());
     emitter.emit(metricBuilder);
   }
 

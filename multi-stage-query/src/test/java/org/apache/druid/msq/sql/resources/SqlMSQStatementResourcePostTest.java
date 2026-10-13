@@ -44,7 +44,8 @@ import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -175,7 +176,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             false,
             false,
             false,
-            ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.SYNC.name()),
+            QueryContext.ofMap(QueryContextParameters.EXECUTION_MODE, ExecutionMode.SYNC),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
         "The sql statement api currently does not support the provided execution mode [SYNC]. "
@@ -193,9 +194,9 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(defaultAsyncContext())
-                    .build(),
+                    .toMap(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -223,9 +224,9 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(defaultAsyncContext())
-                    .build(),
+                    .toMap(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -253,10 +254,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(defaultAsyncContext())
-                    .put(MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT, true)
-                    .build(),
+                    .putRaw(MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT, true)
+                    .toMap(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -294,7 +295,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testExplain() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put("sqlQueryId", "queryId");
+    QueryContextParameters.SQL_QUERY_ID.set(context, "queryId");
     Response response = resource.doPost(new SqlQuery(
         "explain plan for select * from foo",
         null,
@@ -784,7 +785,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   private static Map<String, Object> defaultAsyncContext()
   {
     Map<String, Object> context = new HashMap<>();
-    context.put(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name());
+    context.put(QueryContextParameters.EXECUTION_MODE.getName(), ExecutionMode.ASYNC.name());
     return context;
   }
 

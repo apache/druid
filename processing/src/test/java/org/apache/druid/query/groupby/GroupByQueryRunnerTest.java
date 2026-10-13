@@ -3593,9 +3593,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
-    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
-    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
-        QueryContexts.USE_PROJECTION,
+    GroupByQuery queryNoProjection = queryBuilder
+        .setContext(QueryContext.ofMap(QueryContextParameters.NO_PROJECTIONS, true))
+        .build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(QueryContext.ofMap(
+        QueryContextParameters.USE_PROJECTION,
         "daily_countAndQualityCardinalityAndMaxLongNullable"
     )).build();
     // act
@@ -3628,9 +3630,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setInterval("2011-01-21T00:00:00.000Z/P1D")
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
-    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
-    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
-        QueryContexts.USE_PROJECTION,
+    GroupByQuery queryNoProjection = queryBuilder
+        .setContext(QueryContext.ofMap(QueryContextParameters.NO_PROJECTIONS, true))
+        .build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(QueryContext.ofMap(
+        QueryContextParameters.USE_PROJECTION,
         "daily_countAndQualityCardinalityAndMaxLongNullable"
     )).build();
 
@@ -14092,11 +14096,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
   private Map<String, Object> makeContext()
   {
-    return ImmutableMap.<String, Object>builder()
-                       .put(QueryContextParameters.VECTORIZE.getName(), vectorize ? "force" : "false")
-                       .put(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.getName(), vectorize ? "force" : "false")
-                       .put("vectorSize", 16) // Small vector size to ensure we use more than one.
-                       .build();
+    return QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        vectorize ? QueryContexts.Vectorize.FORCE : QueryContexts.Vectorize.FALSE,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorize ? QueryContexts.Vectorize.FORCE : QueryContexts.Vectorize.FALSE,
+        QueryContextParameters.VECTOR_SIZE,
+        16 // Small vector size to ensure we use more than one.
+    );
   }
 
   private void verifyGroupByMetricsForSmallBufferConfig(boolean skipMergeDictionaryMetric)

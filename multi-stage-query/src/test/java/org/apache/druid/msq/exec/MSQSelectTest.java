@@ -89,7 +89,6 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -1076,7 +1075,7 @@ public class MSQSelectTest extends MSQTestBase
     final Map<String, Object> queryContext =
         QueryContext.builder()
                     .putAll(context)
-                    .putRaw(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString())
+                    .putRaw(QueryContextParameters.SQL_JOIN_ALGORITHM.getName(), joinAlgorithm.toString())
                     .toMap();
 
     final RowSignature resultSignature = RowSignature.builder()

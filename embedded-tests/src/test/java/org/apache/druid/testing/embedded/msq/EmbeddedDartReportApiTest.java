@@ -21,7 +21,6 @@ package org.apache.druid.testing.embedded.msq;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -43,7 +42,8 @@ import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.security.Action;
@@ -213,9 +213,11 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
                 false,
                 false,
                 false,
-                ImmutableMap.of(
-                    QueryContexts.ENGINE, "msq-dart",
-                    QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId
+                QueryContext.ofMap(
+                    QueryContextParameters.ENGINE,
+                    "msq-dart",
+                    QueryContextParameters.SQL_QUERY_ID,
+                    sqlQueryId
                 ),
                 null
             )
@@ -313,9 +315,11 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
                 false,
                 false,
                 false,
-                ImmutableMap.of(
-                    QueryContexts.ENGINE, "msq-dart",
-                    QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId
+                QueryContext.ofMap(
+                    QueryContextParameters.ENGINE,
+                    "msq-dart",
+                    QueryContextParameters.SQL_QUERY_ID,
+                    sqlQueryId
                 ),
                 null
             )
@@ -361,7 +365,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
 
     // Step 1: Issue the query asynchronously.
     final ListenableFuture<String> queryFuture =
-        msqApis.submitDartSqlAsync(sql, Map.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId), broker1);
+        msqApis.submitDartSqlAsync(sql, QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, sqlQueryId), broker1);
 
     // Step 2: Get the report.
     final GetQueryReportResponse runningReport = waitForReport(sqlQueryId);

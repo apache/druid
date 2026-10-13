@@ -76,6 +76,7 @@ import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -200,10 +201,10 @@ public class SqlStatementResource
       sqlQueryPlus = SqlResource.makeSqlQueryPlus(
           sqlQuery,
           req,
-          ImmutableMap.<String, Object>builder()
+          QueryContext.builder()
                       .putAll(queryConfigProvider.getContext())
-                      .put(RESULT_FORMAT, sqlQuery.getResultFormat())
-                      .build()
+                      .putRaw(RESULT_FORMAT, sqlQuery.getResultFormat())
+                      .toMap()
       );
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
@@ -957,13 +958,13 @@ public class SqlStatementResource
 
   private void contextChecks(QueryContext queryContext)
   {
-    ExecutionMode executionMode = queryContext.getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, null);
+    final ExecutionMode executionMode = queryContext.get(QueryContextParameters.EXECUTION_MODE);
 
     if (executionMode == null) {
       throw InvalidInput.exception(
           "Execution mode is not provided to the sql statement api. "
           + "Please set [%s] to [%s] in the query context",
-          QueryContexts.CTX_EXECUTION_MODE,
+          QueryContextParameters.EXECUTION_MODE,
           ExecutionMode.ASYNC
       );
     }
@@ -973,7 +974,7 @@ public class SqlStatementResource
           "The sql statement api currently does not support the provided execution mode [%s]. "
           + "Please set [%s] to [%s] in the query context",
           executionMode,
-          QueryContexts.CTX_EXECUTION_MODE,
+          QueryContextParameters.EXECUTION_MODE,
           ExecutionMode.ASYNC
       );
     }
