@@ -51,10 +51,8 @@ updates:
     schedule:
       interval: "weekly"
     cooldown:
-      # Leave time for ASF Infra to allowlist new versions of third-party actions
-      # https://github.com/apache/infrastructure-actions#dependabot-cooldown-period
       default-days: 14
-      # codeql-action releases about weekly, so its moving major tag would rarely clear the cooldown
+      # Releases about weekly, and each release restarts the cooldown, which would hold back major bumps
       exclude:
         - "github/codeql-action"
     commit-message:
