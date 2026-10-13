@@ -185,7 +185,7 @@ public class TaskActionToolbox
             if (result.isOffsetMismatch() && !result.isSuccess() && result.isRetryable()) {
               // Do not retry offset mismatch failures since task is already
               // unblocked for publish and retrying will not fix the mismatch.
-              return SegmentPublishResult.fail(result.getErrorMsg());
+              return SegmentPublishResult.fail("Non-retryable metadata mismatch error: " + result.getErrorMsg());
             } else {
               return result;
             }
