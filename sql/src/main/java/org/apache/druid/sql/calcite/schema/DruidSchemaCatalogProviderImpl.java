@@ -36,8 +36,6 @@ import java.util.TreeMap;
 @LazySingleton
 public class DruidSchemaCatalogProviderImpl implements DruidSchemaCatalogProvider
 {
-  private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
-
   private final Set<NamedSchema> namedSchemas;
   private final Set<SchemaProvider> schemaProviders;
   private final DruidOperatorTable operatorTable;
@@ -82,8 +80,8 @@ public class DruidSchemaCatalogProviderImpl implements DruidSchemaCatalogProvide
       }
     }
 
-    if (allSchemas.containsKey(INFORMATION_SCHEMA_NAME)) {
-      throw new ISE("Cannot have schema named[%s]", INFORMATION_SCHEMA_NAME);
+    if (allSchemas.containsKey(InformationSchema.INFORMATION_SCHEMA_NAME)) {
+      throw new ISE("Cannot have schema named[%s]", InformationSchema.INFORMATION_SCHEMA_NAME);
     }
 
     // Add allSchemas to the rootSchema.
@@ -95,7 +93,7 @@ public class DruidSchemaCatalogProviderImpl implements DruidSchemaCatalogProvide
 
     // One more schema to add: INFORMATION_SCHEMA.
     rootSchema.add(
-        INFORMATION_SCHEMA_NAME,
+        InformationSchema.INFORMATION_SCHEMA_NAME,
         new InformationSchema(
             schemaCatalog,
             operatorTable,

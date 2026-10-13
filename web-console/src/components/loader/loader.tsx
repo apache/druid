@@ -23,7 +23,7 @@ import './loader.scss';
 
 export interface LoaderProps {
   className?: string;
-  loading?: boolean; // This is needed so that this component can be used as a LoadingComponent in react table
+  loading?: boolean; // Renders nothing when false (ConsoleTable always renders the loader)
   loadingText?: string;
   cancelText?: string;
   onCancel?: () => void;

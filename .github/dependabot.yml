@@ -9,6 +9,14 @@ updates:
       # Protect against not-yet-discovered regressions or security issues in new releases of dependencies
       # https://github.blog/changelog/2025-07-01-dependabot-supports-configuration-of-a-minimum-package-age/
       default-days: 14
+    groups:
+      # The individual org.apache.maven.resolver:* artifacts must move together: they are all
+      # pinned to the same version in services/pom.xml and server/pom.xml, and a 1.x -> 2.x major
+      # bump also requires coordinated source/bootstrap changes in PullDependencies (see the
+      # 2.0.23 upgrade PR). A single-artifact bump breaks the build with a mixed 1.x/2.x graph.
+      maven-resolver:
+        patterns:
+          - "org.apache.maven.resolver:*"
     ignore:
       # pin ZooKeeper dependencies to 3.5.x
       - dependency-name: "org.apache.zookeeper"
@@ -23,6 +31,8 @@ updates:
   # Don't run dependabot on website
   - package-ecosystem: "npm"
     directory: "/website/"
+    schedule:
+      interval: "weekly"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
@@ -30,6 +40,8 @@ updates:
   # Don't run dependabot on web-console
   - package-ecosystem: "npm"
     directory: "/web-console/"
+    schedule:
+      interval: "weekly"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]

@@ -25,17 +25,12 @@ function cp_if_not_exist(){
   fi
 }
 
-if [ $# != 1 ]
-  then
-    echo 'usage: program {$DRUID_ROOT}'
-    exit 1
-fi
+DRUID_ROOT="${1:-$(dirname "$0")/..}"
+GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-common-dir)/hooks"
 
-DRUID_ROOT=$1
-
-mkdir -p ${DRUID_ROOT}/.git/hooks
-cp_if_not_exist ${DRUID_ROOT}/hooks/run-all-in-dir.py ${DRUID_ROOT}/.git/hooks/run-all-in-dir.py
-cp_if_not_exist ${DRUID_ROOT}/hooks/pre-commit ${DRUID_ROOT}/.git/hooks/pre-commit
-cp_if_not_exist ${DRUID_ROOT}/hooks/pre-push ${DRUID_ROOT}/.git/hooks/pre-push
-cp_if_not_exist ${DRUID_ROOT}/hooks/pre-commits ${DRUID_ROOT}/.git/hooks/pre-commits
-cp_if_not_exist ${DRUID_ROOT}/hooks/pre-pushes ${DRUID_ROOT}/.git/hooks/pre-pushes
+mkdir -p "${GIT_HOOKS_DIR}"
+cp_if_not_exist "${DRUID_ROOT}/hooks/run-all-in-dir.py" "${GIT_HOOKS_DIR}/run-all-in-dir.py"
+cp_if_not_exist "${DRUID_ROOT}/hooks/pre-commit" "${GIT_HOOKS_DIR}/pre-commit"
+cp_if_not_exist "${DRUID_ROOT}/hooks/pre-push" "${GIT_HOOKS_DIR}/pre-push"
+cp_if_not_exist "${DRUID_ROOT}/hooks/pre-commits" "${GIT_HOOKS_DIR}/pre-commits"
+cp_if_not_exist "${DRUID_ROOT}/hooks/pre-pushes" "${GIT_HOOKS_DIR}/pre-pushes"

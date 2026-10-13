@@ -588,15 +588,19 @@ public class LoadRuleTest
         )
     );
 
-    // Required capacity is reported against the physical tier AND tagged with the alias
+    // Required storage is reported against the physical tier AND tagged with the alias
     final RowKey t2WithAlias = RowKey.with(Dimension.TIER, Tier.T2).and(Dimension.TIER_ALIAS, Tier.T1);
     final RowKey t3WithAlias = RowKey.with(Dimension.TIER, Tier.T3).and(Dimension.TIER_ALIAS, Tier.T1);
+    Assertions.assertEquals(segment.getSize(), stats.get(Stats.Tier.REQUIRED_STORAGE, t2WithAlias));
+    Assertions.assertEquals(segment.getSize(), stats.get(Stats.Tier.REQUIRED_STORAGE, t3WithAlias));
+
+    // The deprecated tier/required/capacity carries the same value while it is still emitted
     Assertions.assertEquals(segment.getSize(), stats.get(Stats.Tier.REQUIRED_CAPACITY, t2WithAlias));
     Assertions.assertEquals(segment.getSize(), stats.get(Stats.Tier.REQUIRED_CAPACITY, t3WithAlias));
 
     // The same stat without the alias dimension is a different row and must be absent
-    Assertions.assertEquals(0L, stats.get(Stats.Tier.REQUIRED_CAPACITY, RowKey.of(Dimension.TIER, Tier.T2)));
-    Assertions.assertEquals(0L, stats.get(Stats.Tier.REQUIRED_CAPACITY, RowKey.of(Dimension.TIER, Tier.T3)));
+    Assertions.assertEquals(0L, stats.get(Stats.Tier.REQUIRED_STORAGE, RowKey.of(Dimension.TIER, Tier.T2)));
+    Assertions.assertEquals(0L, stats.get(Stats.Tier.REQUIRED_STORAGE, RowKey.of(Dimension.TIER, Tier.T3)));
   }
 
   /**

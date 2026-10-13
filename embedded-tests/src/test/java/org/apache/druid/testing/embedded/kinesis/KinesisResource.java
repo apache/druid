@@ -37,7 +37,9 @@ import software.amazon.awssdk.services.kinesis.model.CreateStreamRequest;
 import software.amazon.awssdk.services.kinesis.model.DeleteStreamRequest;
 import software.amazon.awssdk.services.kinesis.model.DescribeStreamRequest;
 import software.amazon.awssdk.services.kinesis.model.DescribeStreamResponse;
-import software.amazon.awssdk.services.kinesis.model.PutRecordRequest;
+import software.amazon.awssdk.services.kinesis.model.PutRecordsRequest;
+import software.amazon.awssdk.services.kinesis.model.PutRecordsRequestEntry;
+import software.amazon.awssdk.services.kinesis.model.PutRecordsResponse;
 import software.amazon.awssdk.services.kinesis.model.ScalingType;
 import software.amazon.awssdk.services.kinesis.model.Shard;
 import software.amazon.awssdk.services.kinesis.model.StreamDescription;
@@ -49,6 +51,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +62,8 @@ import java.util.stream.Collectors;
 public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 {
   private static final String IMAGE = "localstack/localstack:4.13.1";
+  // Kinesis PutRecords accepts at most 500 records in a single request.
+  private static final int PUT_RECORDS_BATCH_SIZE = 500;
 
   private KinesisClient kinesisClient;
 
@@ -153,15 +158,7 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
   @Override
   public void publishRecordsToTopic(String topic, List<byte[]> records)
   {
-    for (byte[] record : records) {
-      kinesisClient.putRecord(
-          PutRecordRequest.builder()
-                          .streamName(topic)
-                          .partitionKey(DigestUtils.sha1Hex(record))
-                          .data(SdkBytes.fromByteArray(record))
-                          .build()
-      );
-    }
+    publishRecordsInBatches(topic, records, record -> DigestUtils.sha1Hex(record));
   }
 
   @Override
@@ -178,14 +175,33 @@ public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 
   public void publishRecordsToTopicPartition(String topic, String partitionKey, List<byte[]> records)
   {
-    for (byte[] record : records) {
-      kinesisClient.putRecord(
-          PutRecordRequest.builder()
-                          .streamName(topic)
-                          .partitionKey(partitionKey)
-                          .data(SdkBytes.fromByteArray(record))
-                          .build()
+    publishRecordsInBatches(topic, records, record -> partitionKey);
+  }
+
+  private void publishRecordsInBatches(
+      String topic,
+      List<byte[]> records,
+      Function<byte[], String> partitionKeyFunction
+  )
+  {
+    for (int start = 0; start < records.size(); start += PUT_RECORDS_BATCH_SIZE) {
+      final List<PutRecordsRequestEntry> entries = records.subList(
+          start,
+          Math.min(start + PUT_RECORDS_BATCH_SIZE, records.size())
+      ).stream().map(record -> PutRecordsRequestEntry.builder()
+                                                       .partitionKey(partitionKeyFunction.apply(record))
+                                                       .data(SdkBytes.fromByteArray(record))
+                                                       .build())
+                  .collect(Collectors.toList());
+      final PutRecordsResponse response = kinesisClient.putRecords(
+          PutRecordsRequest.builder()
+                           .streamName(topic)
+                           .records(entries)
+                           .build()
       );
+      if (response.failedRecordCount() > 0) {
+        throw new IllegalStateException("Failed to publish " + response.failedRecordCount() + " Kinesis records");
+      }
     }
   }
 

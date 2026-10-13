@@ -40,6 +40,7 @@ import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.StorageCounters;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
+import org.apache.druid.msq.dart.worker.DartWorkerService;
 import org.apache.druid.msq.indexing.IndexerControllerContextFactory;
 import org.apache.druid.msq.indexing.IndexerSegmentsInputSliceReaderProvider;
 import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicerProvider;
@@ -229,6 +230,10 @@ public class MSQIndexingModule implements DruidModule
 
     module.registerSubtypes(new NamedType(MSQCompactionRunner.class, MSQCompactionRunner.TYPE));
 
+    // Registered here rather than in DartWorkerModule so that every process that discovers Historicals can parse
+    // their DartWorkerService announcement.
+    module.registerSubtypes(new NamedType(DartWorkerService.class, DartWorkerService.NAME));
+
     FAULT_CLASSES.forEach(module::registerSubtypes);
     module.addSerializer(new CounterSnapshotsSerializer());
     return Collections.singletonList(module);
@@ -253,6 +258,9 @@ public class MSQIndexingModule implements DruidModule
               .addBinding(WindowOperatorQuery.class)
               .to(WindowOperatorQueryKit.class);
     binder.bind(WindowOperatorQueryKit.class).in(LazySingleton.class);
+
+    // Create the binder no matter what, to ensure we can at least get an empty map.
+    MSQBinders.dataSourcePlannerBinder(binder);
 
     MSQBinders.inputSpecSlicerProviderBinder(binder, IndexingService.class)
               .addBinding()

@@ -143,7 +143,8 @@ public class TaskReportSerdeTest
         "processedBytes", 0,
         "unparseable", 0,
         "thrownAway", 0,
-        "processedWithError", 0
+        "processedWithError", 0,
+        "filtered", 0
     );
 
     final Map<String, Object> emptyAverages = ImmutableMap.of(
@@ -273,6 +274,7 @@ public class TaskReportSerdeTest
             1000L,
             null,
             null,
+            null,
             null
         )
     );
@@ -311,7 +313,8 @@ public class TaskReportSerdeTest
             1000L,
             Collections.singletonMap("PartitionA", 5000L),
             5L,
-            10L
+            10L,
+            2L
         )
     );
   }
@@ -355,7 +358,8 @@ public class TaskReportSerdeTest
             "processedWithError", (int) determinePartitionTotalStats.getProcessedWithError(),
             "thrownAway", (int) determinePartitionTotalStats.getThrownAway(),
             "thrownAwayByReason", CollectionUtils.mapValues(determinePartitionTotalStats.getThrownAwayByReason(), Long::intValue),
-            "unparseable", (int) determinePartitionTotalStats.getUnparseable()
+            "unparseable", (int) determinePartitionTotalStats.getUnparseable(),
+            "filtered", (int) determinePartitionTotalStats.getFiltered()
         ),
         observedTotals.get("determinePartitions")
     );
@@ -366,7 +370,8 @@ public class TaskReportSerdeTest
             "processedWithError", (int) buildSegmentTotalStats.getProcessedWithError(),
             "thrownAway", (int) buildSegmentTotalStats.getThrownAway(),
             "thrownAwayByReason", CollectionUtils.mapValues(buildSegmentTotalStats.getThrownAwayByReason(), Long::intValue),
-            "unparseable", (int) buildSegmentTotalStats.getUnparseable()
+            "unparseable", (int) buildSegmentTotalStats.getUnparseable(),
+            "filtered", (int) buildSegmentTotalStats.getFiltered()
         ),
         observedTotals.get("buildSegments")
     );

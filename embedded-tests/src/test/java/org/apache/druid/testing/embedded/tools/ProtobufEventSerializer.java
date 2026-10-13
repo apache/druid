@@ -19,12 +19,11 @@
 
 package org.apache.druid.testing.embedded.tools;
 
-import com.github.os72.protobuf.dynamic.DynamicSchema;
-import com.github.os72.protobuf.dynamic.MessageDefinition;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
+import org.apache.druid.data.input.protobuf.FileBasedProtobufBytesDecoder;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 
 import java.util.List;
 
@@ -32,48 +31,17 @@ public class ProtobufEventSerializer implements EventSerializer
 {
   public static final String TYPE = "protobuf";
 
-  private static final Logger LOGGER = new Logger(ProtobufEventSerializer.class);
-
-  public static final DynamicSchema SCHEMA;
-
-  static {
-    DynamicSchema.Builder schemaBuilder = DynamicSchema.newBuilder();
-    MessageDefinition wikiDef = MessageDefinition.newBuilder("Wikipedia")
-        .addField("optional", "string", "timestamp", 1)
-        .addField("optional", "string", "page", 2)
-        .addField("optional", "string", "language", 3)
-        .addField("optional", "string", "user", 4)
-        .addField("optional", "string", "unpatrolled", 5)
-        .addField("optional", "string", "newPage", 6)
-        .addField("optional", "string", "robot", 7)
-        .addField("optional", "string", "anonymous", 8)
-        .addField("optional", "string", "namespace", 9)
-        .addField("optional", "string", "continent", 10)
-        .addField("optional", "string", "country", 11)
-        .addField("optional", "string", "region", 12)
-        .addField("optional", "string", "city", 13)
-        .addField("optional", "int32", "added", 14)
-        .addField("optional", "int32", "deleted", 15)
-        .addField("optional", "int32", "delta", 16)
-        .build();
-    schemaBuilder.addMessageDefinition(wikiDef);
-    DynamicSchema schema = null;
-    try {
-      schema = schemaBuilder.build();
-    }
-    catch (Descriptors.DescriptorValidationException e) {
-      LOGGER.error("Could not init protobuf schema.");
-    }
-    SCHEMA = schema;
-  }
+  public static final Descriptors.Descriptor DESCRIPTOR = new FileBasedProtobufBytesDecoder(
+      MoreResources.ProtobufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
+      MoreResources.ProtobufData.WIKI_PROTO_MESSAGE_TYPE
+  ).getDescriptor();
 
   @Override
   public byte[] serialize(List<Pair<String, Object>> event)
   {
-    DynamicMessage.Builder builder = SCHEMA.newMessageBuilder("Wikipedia");
-    Descriptors.Descriptor msgDesc = builder.getDescriptorForType();
+    final DynamicMessage.Builder builder = DynamicMessage.newBuilder(DESCRIPTOR);
     for (Pair<String, Object> pair : event) {
-      builder.setField(msgDesc.findFieldByName(pair.lhs), pair.rhs);
+      builder.setField(DESCRIPTOR.findFieldByName(pair.lhs), pair.rhs);
     }
     return builder.build().toByteArray();
   }

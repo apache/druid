@@ -29,7 +29,9 @@ import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
+import org.apache.druid.msq.querykit.DataSourcePlanner;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 
 import java.lang.annotation.Annotation;
@@ -58,6 +60,23 @@ public class MSQBinders
         new TypeLiteral<>() {},
         new TypeLiteral<>() {}
     );
+  }
+
+  /**
+   * Creates a MapBinder for {@link DataSourcePlanner} implementations, keyed on the exact {@link DataSource} class
+   * they plan. Extensions can use this to make their own {@link DataSource} types planable by {@link QueryKit}.
+   *
+   * Example usage:
+   * <pre>
+   * MSQBinders.dataSourcePlannerBinder(binder)
+   *     .addBinding(MyCustomDataSource.class)
+   *     .to(MyCustomDataSourcePlanner.class);
+   * </pre>
+   */
+  @SuppressWarnings("rawtypes")
+  public static MapBinder<Class<? extends DataSource>, DataSourcePlanner> dataSourcePlannerBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(binder, new TypeLiteral<>() {}, new TypeLiteral<>() {});
   }
 
   /**

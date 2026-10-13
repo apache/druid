@@ -17,13 +17,12 @@
  */
 
 import { AnchorButton, Button, ButtonGroup, Classes, Intent, Switch } from '@blueprintjs/core';
-import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { Loader } from '../../components';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
-import { QueryManager, QueryState } from '../../utils';
+import { copyToClipboard, QueryManager, QueryState } from '../../utils';
 
 import './show-log.scss';
 
@@ -166,16 +165,16 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
             {downloadFilename && (
               <AnchorButton
                 text="Download"
-                minimal
+                variant="minimal"
                 download={downloadFilename}
                 href={UrlBaser.base(endpoint)}
               />
             )}
             <Button
               text="Copy"
-              minimal
+              variant="minimal"
               onClick={() => {
-                copy(logState.data || '', { format: 'text/plain' });
+                copyToClipboard(logState.data || '');
                 AppToaster.show({
                   message: 'Log copied to clipboard',
                   intent: Intent.SUCCESS,
@@ -184,7 +183,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
             />
             <Button
               text="View full log"
-              minimal
+              variant="minimal"
               onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
             />
           </ButtonGroup>
@@ -193,14 +192,14 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           {logState.loading ? (
             <Loader />
           ) : (
-            showSpecialInstructions(endpoint, logState) ?? (
+            (showSpecialInstructions(endpoint, logState) ?? (
               <textarea
                 className={Classes.INPUT}
                 readOnly
                 value={logState.data || logState.getErrorMessage()}
                 ref={this.log}
               />
-            )
+            ))
           )}
         </div>
       </div>

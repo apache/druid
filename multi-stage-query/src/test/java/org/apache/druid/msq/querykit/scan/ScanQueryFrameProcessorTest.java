@@ -344,8 +344,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
             new SegmentReferenceHolder(
                 new SegmentReference(
                     SegmentId.dummy("test").toDescriptor(),
-                    segmentReferenceProvider.acquireReference(),
-                    null
+                    segmentReferenceProvider.acquireReference()
                 ),
                 null
             )
@@ -408,8 +407,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
             new SegmentReferenceHolder(
                 new SegmentReference(
                     SegmentId.dummy("test").toDescriptor(),
-                    segmentReferenceProvider.acquireReference(),
-                    null
+                    segmentReferenceProvider.acquireReference()
                 ),
                 null
             )

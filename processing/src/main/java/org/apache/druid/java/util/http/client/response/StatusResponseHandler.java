@@ -19,10 +19,8 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-
-import java.nio.charset.StandardCharsets;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 
 public class StatusResponseHandler implements HttpResponseHandler<StatusResponseHolder, StatusResponseHolder>
 {
@@ -42,34 +40,35 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
   public ClientResponse<StatusResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     return ClientResponse.unfinished(
-        new StatusResponseHolder(
-            response.getStatus(),
-            new StringBuilder(response.getContent().toString(StandardCharsets.UTF_8))
-        )
+        new StatusResponseHolder(response.status(), new StringBuilder())
     );
   }
 
   @Override
   public ClientResponse<StatusResponseHolder> handleChunk(
       ClientResponse<StatusResponseHolder> response,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    final StringBuilder builder = response.getObj().getBuilder();
+    final StatusResponseHolder holder = response.getObj();
 
-    if (builder == null) {
+    if (holder == null) {
       return ClientResponse.finished(null);
     }
 
-    builder.append(chunk.getContent().toString(StandardCharsets.UTF_8));
+    holder.addChunk(chunk.content());
     return response;
   }
 
   @Override
   public ClientResponse<StatusResponseHolder> done(ClientResponse<StatusResponseHolder> response)
   {
-    return ClientResponse.finished(response.getObj());
+    final StatusResponseHolder holder = response.getObj();
+    if (holder != null) {
+      holder.done();
+    }
+    return ClientResponse.finished(holder);
   }
 
   @Override

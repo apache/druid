@@ -34,7 +34,7 @@ make sure it has `/master/` in the URL.
 ### Installing Java and Maven
 
 - See the [Java documentation](../operations/java.md) for information about obtaining a supported JDK
-- [Maven version 3.9 or later](http://maven.apache.org/download.cgi)
+- [Maven version 3.9 or later](http://maven.apache.org/download.cgi), or use the Maven wrapper (`./mvnw`) in the repository root, which downloads the Maven version that CI uses
 
 ### Other Dependencies
 

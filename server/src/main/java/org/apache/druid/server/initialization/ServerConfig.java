@@ -89,6 +89,63 @@ public class ServerConfig
       boolean enforceStrictSNIHostChecking
   )
   {
+    this(
+        numThreads,
+        queueSize,
+        enableRequestLimit,
+        maxIdleTime,
+        defaultQueryTimeout,
+        maxScatterGatherBytes,
+        maxSubqueryRows,
+        maxSubqueryBytes,
+        useNestedForUnknownTypeInSubquery,
+        maxQueryTimeout,
+        maxRequestHeaderSize,
+        gracefulShutdownTimeout,
+        unannouncePropagationDelay,
+        inflateBufferSize,
+        compressionLevel,
+        enableForwardedRequestCustomizer,
+        allowedHttpMethods,
+        showDetailedJettyErrors,
+        errorResponseTransformStrategy,
+        contentSecurityPolicy,
+        enableHSTS,
+        false,
+        uriCompliance,
+        enforceStrictSNIHostChecking,
+        true
+    );
+  }
+
+  public ServerConfig(
+      int numThreads,
+      int queueSize,
+      boolean enableRequestLimit,
+      @NotNull Period maxIdleTime,
+      long defaultQueryTimeout,
+      long maxScatterGatherBytes,
+      int maxSubqueryRows,
+      String maxSubqueryBytes,
+      boolean useNestedForUnknownTypeInSubquery,
+      long maxQueryTimeout,
+      int maxRequestHeaderSize,
+      @NotNull Period gracefulShutdownTimeout,
+      @NotNull Period unannouncePropagationDelay,
+      int inflateBufferSize,
+      int compressionLevel,
+      boolean enableForwardedRequestCustomizer,
+      @NotNull List<String> allowedHttpMethods,
+      boolean showDetailedJettyErrors,
+      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
+      @Nullable String contentSecurityPolicy,
+      boolean enableHSTS,
+      boolean enableResponseIdentityHeaders,
+      @Nullable UriCompliance uriCompliance,
+      boolean enforceStrictSNIHostChecking,
+      boolean enableQueryRequestsQueuing
+  )
+  {
     this.numThreads = numThreads;
     this.queueSize = queueSize;
     this.enableRequestLimit = enableRequestLimit;
@@ -110,8 +167,10 @@ public class ServerConfig
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
     this.contentSecurityPolicy = contentSecurityPolicy;
     this.enableHSTS = enableHSTS;
+    this.enableResponseIdentityHeaders = enableResponseIdentityHeaders;
     this.uriCompliance = uriCompliance != null ? uriCompliance : UriCompliance.LEGACY;
     this.enforceStrictSNIHostChecking = enforceStrictSNIHostChecking;
+    this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
   }
 
   public ServerConfig()
@@ -207,6 +266,9 @@ public class ServerConfig
   private boolean enableHSTS = false;
 
   @JsonProperty
+  private boolean enableResponseIdentityHeaders = false;
+
+  @JsonProperty
   @JsonDeserialize(using = UriComplianceDeserializer.class)
   @JsonSerialize(using = UriComplianceSerializer.class)
   private UriCompliance uriCompliance = UriCompliance.LEGACY;
@@ -289,6 +351,40 @@ public class ServerConfig
     return unannouncePropagationDelay;
   }
 
+  /**
+   * Returns a copy of this config with {@link #getUnannouncePropagationDelay()} replaced by the given value.
+   */
+  public ServerConfig withUnannouncePropagationDelay(final Period newUnannouncePropagationDelay)
+  {
+    return new ServerConfig(
+        numThreads,
+        queueSize,
+        enableRequestLimit,
+        maxIdleTime,
+        defaultQueryTimeout,
+        maxScatterGatherBytes.getBytes(),
+        maxSubqueryRows,
+        maxSubqueryBytes,
+        useNestedForUnknownTypeInSubquery,
+        maxQueryTimeout,
+        maxRequestHeaderSize,
+        gracefulShutdownTimeout,
+        newUnannouncePropagationDelay,
+        inflateBufferSize,
+        compressionLevel,
+        enableForwardedRequestCustomizer,
+        allowedHttpMethods,
+        showDetailedJettyErrors,
+        errorResponseTransformStrategy,
+        contentSecurityPolicy,
+        enableHSTS,
+        enableResponseIdentityHeaders,
+        uriCompliance,
+        enforceStrictSNIHostChecking,
+        enableQueryRequestsQueuing
+    );
+  }
+
   public int getInflateBufferSize()
   {
     return inflateBufferSize;
@@ -328,6 +424,11 @@ public class ServerConfig
   public boolean isEnableHSTS()
   {
     return enableHSTS;
+  }
+
+  public boolean isEnableResponseIdentityHeaders()
+  {
+    return enableResponseIdentityHeaders;
   }
 
   public boolean isEnableQueryRequestsQueuing()
@@ -376,6 +477,7 @@ public class ServerConfig
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
            enableHSTS == that.enableHSTS &&
+           enableResponseIdentityHeaders == that.enableResponseIdentityHeaders &&
            enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
            Objects.equals(uriCompliance, that.uriCompliance) &&
            enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking;
@@ -406,6 +508,7 @@ public class ServerConfig
         showDetailedJettyErrors,
         contentSecurityPolicy,
         enableHSTS,
+        enableResponseIdentityHeaders,
         enableQueryRequestsQueuing,
         uriCompliance,
         enforceStrictSNIHostChecking
@@ -437,6 +540,7 @@ public class ServerConfig
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
+           ", enableResponseIdentityHeaders=" + enableResponseIdentityHeaders +
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
            ", uriCompliance=" + uriCompliance +
            ", enforceStrictSNIHostChecking=" + enforceStrictSNIHostChecking +

@@ -1535,6 +1535,22 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testInvalidSetParameterReturnsBadRequest() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SET maxRowsQueuedForOrdering = 0; SELECT 1",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
+    );
+    Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
   public void testCannotValidate() throws Exception
   {
     ErrorResponse errorResponse = postSyncForException(
@@ -1597,6 +1613,66 @@ public class SqlResourceTest extends CalciteTestBase
     Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
     Assertions.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+  }
+
+  @Test
+  public void testInvalidTimestampLiteral() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT * FROM druid.foo WHERE __time BETWEEN '2026-09-10 00:00:00' AND '20260-09-11 00:00:00' LIMIT 1",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [20260-09-11 00:00:00]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
+  public void testInvalidTimestampExpressionWithoutCast() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT MILLIS_TO_TIMESTAMP(253402300800000)",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [MILLIS_TO_TIMESTAMP(253402300800000:BIGINT)]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
+  public void testInvalidTimestampLiteralWithExplicitCast() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT CAST('20260-09-11 00:00:00' AS TIMESTAMP)",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [20260-09-11 00:00:00]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
   }
 
   @Test

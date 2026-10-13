@@ -54,6 +54,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.DataSourcePlanners;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -268,7 +269,7 @@ public class DartSqlResourceTest extends MSQTestBase
                 )
             )
         ),
-        new DartQueryKitSpecFactory(),
+        new DartQueryKitSpecFactory(new DataSourcePlanners(Map.of())),
         injector.getInstance(MultiQueryKit.class),
         new ServerConfig(),
         new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),

@@ -38,6 +38,11 @@ public class SegmentReplicaCount
   private int movingFrom;
 
   /**
+   * Subset of {@link #loading}.
+   */
+  private int replicating;
+
+  /**
    * Increments number of replicas loaded on historical servers.
    */
   void incrementLoaded()
@@ -71,6 +76,7 @@ public class SegmentReplicaCount
   {
     switch (action) {
       case REPLICATE:
+        ++replicating;
       case LOAD:
         ++loading;
         break;
@@ -121,6 +127,15 @@ public class SegmentReplicaCount
   int loading()
   {
     return loading;
+  }
+
+  /**
+   * Number of replicas that are currently being loaded in the tier with action
+   * REPLICATE. Always less than or equal to {@link #loading()}.
+   */
+  int replicating()
+  {
+    return replicating;
   }
 
   int moving()
@@ -211,5 +226,6 @@ public class SegmentReplicaCount
     this.dropping += other.dropping;
     this.movingTo += other.movingTo;
     this.movingFrom += other.movingFrom;
+    this.replicating += other.replicating;
   }
 }

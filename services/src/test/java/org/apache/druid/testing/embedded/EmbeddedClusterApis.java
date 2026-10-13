@@ -61,6 +61,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Contains various utility methods to interact with an {@link EmbeddedDruidCluster}.
@@ -281,21 +282,43 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void verifyNumVisibleSegmentsIs(int numExpectedSegments, String dataSource, EmbeddedOverlord overlord)
   {
-    int segmentCount = getVisibleUsedSegments(dataSource, overlord).size();
+    final Set<DataSegment> visibleSegments = getVisibleUsedSegments(dataSource, overlord);
+    final int segmentCount = visibleSegments.size();
     Assertions.assertEquals(
         numExpectedSegments,
         segmentCount,
         "Segment count mismatch"
     );
-    Assertions.assertEquals(
-        String.valueOf(segmentCount),
-        runSql(
-            "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'"
-            + " AND is_overshadowed = 0 AND is_available = 1",
-            dataSource
-        ),
-        "Segment count mismatch in sys.segments table"
-    );
+
+    // The Broker learns about segment changes asynchronously from the Coordinator, so the
+    // sys.segments table may briefly lag behind the metadata store. Match the segment IDs as well
+    // as the count because compaction can replace segments without changing their number.
+    final String expectedCount = String.valueOf(segmentCount);
+    final String expectedSegmentIds = visibleSegments
+        .stream()
+        .map(segment -> StringUtils.format("'%s'", StringUtils.escapeSql(segment.getId().toString())))
+        .collect(Collectors.joining(", "));
+    final String segmentIdFilter = expectedSegmentIds.isEmpty()
+                                   ? ""
+                                   : " AND segment_id IN (" + expectedSegmentIds + ")";
+    final String sql = "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'"
+                       + " AND is_overshadowed = 0 AND is_available = 1%s";
+    try {
+      waitForResult(() -> runSql(sql, StringUtils.escapeSql(dataSource), segmentIdFilter), expectedCount::equals)
+          .withTimeoutMillis(60_000)
+          .go();
+    }
+    catch (ISE e) {
+      throw new AssertionError(
+          StringUtils.format(
+              "Segment count mismatch in sys.segments table: expected[%s] segments for datasource[%s]. %s",
+              expectedCount,
+              dataSource,
+              e.getMessage()
+          ),
+          e
+      );
+    }
   }
 
   /**
@@ -330,6 +353,63 @@ public class EmbeddedClusterApis implements EmbeddedResource
         event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
+  }
+
+  /**
+   * Waits for all non-tombstone used segments of the given datasource to be
+   * reported as available in {@code sys.segments} and for the datasource to be
+   * present in the Broker SQL schema, by polling the Broker.
+   * <p>
+   * Unlike {@link #waitForAllSegmentsToBeAvailable}, this method does not depend
+   * on schema refresh metrics being emitted by the Broker and verifies the state
+   * that SQL queries actually observe.
+   *
+   * @param timeoutMillis maximum time to wait
+   */
+  public void waitForAllSegmentsToBeQueryable(
+      String dataSource,
+      EmbeddedCoordinator coordinator,
+      long timeoutMillis
+  )
+  {
+    final String escapedDataSource = StringUtils.escapeSql(dataSource);
+    final int numSegments = (int) coordinator
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
+        .stream()
+        .filter(segment -> !segment.isTombstone())
+        .count();
+
+    waitForResult(
+        () -> runSql(
+            "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s' AND is_available = 1",
+            escapedDataSource
+        ),
+        result -> parseCountOrZero(result) >= numSegments
+    ).withTimeoutMillis(timeoutMillis).go();
+
+    waitForResult(
+        () -> runSql(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '%s'",
+            escapedDataSource
+        ),
+        result -> "1".equals(result.trim())
+    ).withTimeoutMillis(timeoutMillis).go();
+  }
+
+  /**
+   * Parses a {@code COUNT(*)} result, treating an empty or non-numeric result
+   * (e.g. while the Broker is still initializing) as zero so that polling continues.
+   */
+  private static long parseCountOrZero(String result)
+  {
+    try {
+      return Long.parseLong(result.trim());
+    }
+    catch (NumberFormatException e) {
+      return 0L;
+    }
   }
 
   /**

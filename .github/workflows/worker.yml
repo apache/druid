@@ -72,6 +72,22 @@ jobs:
           java-version: ${{ inputs.jdk }}
           cache: 'maven'
 
+      # Keep parent-POM resolution separate and before the worker script so transient
+      # Maven Central failures are retried before job-specific build or test work starts.
+      - name: Resolve Apache parent POM
+        run: |
+          set -eu
+          for attempt in 1 2 3; do
+            if ./mvnw -B -U -N validate -Pskip-static-checks -Dweb.console.skip=true; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            echo "::warning ::Maven parent resolution failed (attempt $attempt); retrying in 10s"
+            sleep 10
+          done
+
       - name: Download required artifacts
         if: ${{ inputs.artifacts_to_download != '' }}
         uses: actions/download-artifact@v8
@@ -93,7 +109,7 @@ jobs:
           images=(
             apache/kafka:4.2.0
             postgres:16-alpine
-            minio/minio:latest
+            rustfs/rustfs:1.0.0
             hashicorp/consul:1.18
             tabulario/iceberg-rest:1.6.0
             localstack/localstack:4.13.1

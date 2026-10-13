@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.indexer.TaskLocation;
@@ -55,7 +56,6 @@ import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
 import org.apache.druid.utils.CollectionUtils;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.File;
 import java.io.IOException;
@@ -240,13 +240,13 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
           }
 
           @Override
-          public void locationChanged(final String taskId, final TaskLocation newLocation)
+          public void locationChanged(final Task task, final TaskLocation newLocation)
           {
-            submitNoticeToExec(new LocationNotice(taskId, newLocation));
+            submitNoticeToExec(new LocationNotice(task.getId(), newLocation));
           }
 
           @Override
-          public void statusChanged(final String taskId, final TaskStatus status)
+          public void statusChanged(final Task task, final TaskStatus status)
           {
             // do nothing
           }
@@ -631,7 +631,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     catch (ExecutionException e) {
       if (e.getCause() instanceof HttpResponseException) {
         final HttpResponseStatus status = ((HttpResponseException) e.getCause()).getResponse().getStatus();
-        if (status.getCode() == 404) {
+        if (status.code() == 404) {
           // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
           // this if clause should be removed in a future release.
           log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");

@@ -22,11 +22,11 @@ package org.apache.druid.rpc;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.segment.TestHelper;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -123,7 +123,7 @@ public class RequestBuilderTest
     Assertions.assertTrue(request.hasContent());
 
     // Read and verify content.
-    try (final ChannelBufferInputStream inputStream = new ChannelBufferInputStream(request.getContent())) {
+    try (final ByteBufInputStream inputStream = new ByteBufInputStream(request.getContent())) {
       Assertions.assertEquals(
           json,
           StringUtils.fromUtf8(ByteStreams.toByteArray(inputStream))
@@ -147,7 +147,7 @@ public class RequestBuilderTest
     Assertions.assertTrue(request.hasContent());
 
     // Read and verify content.
-    try (final ChannelBufferInputStream inputStream = new ChannelBufferInputStream(request.getContent())) {
+    try (final ByteBufInputStream inputStream = new ByteBufInputStream(request.getContent())) {
       Assertions.assertEquals(
           "{\"foo\":3}",
           StringUtils.fromUtf8(ByteStreams.toByteArray(inputStream))

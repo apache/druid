@@ -24,9 +24,9 @@ import org.apache.druid.collections.ResourceHolder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -53,13 +53,13 @@ public class StringUtilsTest
   );
 
   @Test
-  public void fromUtf8ConversionTest() throws UnsupportedEncodingException
+  public void fromUtf8ConversionTest()
   {
     byte[] bytes = new byte[]{'a', 'b', 'c', 'd'};
     Assertions.assertEquals("abcd", StringUtils.fromUtf8(bytes));
 
     String abcd = "abcd";
-    Assertions.assertEquals(abcd, StringUtils.fromUtf8(abcd.getBytes(StringUtils.UTF8_STRING)));
+    Assertions.assertEquals(abcd, StringUtils.fromUtf8(abcd.getBytes(StandardCharsets.UTF_8)));
   }
 
   @Test

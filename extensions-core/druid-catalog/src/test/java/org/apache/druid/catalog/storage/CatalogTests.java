@@ -27,6 +27,7 @@ import org.apache.druid.catalog.storage.sql.SQLCatalogManager;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -73,7 +74,7 @@ public class CatalogTests
   }
 
   public static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper().setInjectableValues(
-      new InjectableValues.Std().addValue(ExprMacroTable.class, ExprMacroTable.nil())
+      new InjectableValues.Std().addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
   );
 
   public static class DbFixture

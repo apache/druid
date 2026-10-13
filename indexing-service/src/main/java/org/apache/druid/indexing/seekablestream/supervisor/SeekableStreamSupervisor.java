@@ -1364,9 +1364,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     });
   }
 
+  protected void validatePartitionReset(@Nullable DataSourceMetadata metadata)
+  {
+    // Stream implementations may restrict which partitions can be reset.
+  }
+
   @Override
   public void reset(@Nullable final DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     log.info("Posting ResetNotice with datasource metadata [%s]", dataSourceMetadata);
     addNotice(new ResetNotice(dataSourceMetadata));
   }
@@ -1381,6 +1387,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @Override
   public void resetOffsets(@Nonnull DataSourceMetadata resetDataSourceMetadata)
   {
+    validatePartitionReset(resetDataSourceMetadata);
     if (resetDataSourceMetadata == null) {
       throw InvalidInput.exception("Reset dataSourceMetadata is required for resetOffsets.");
     }
@@ -1657,7 +1664,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       boolean includeOffsets
   )
   {
-    int numPartitions = partitionGroups.values().stream().mapToInt(Set::size).sum();
+    final int numPartitions = getKnownPartitionCount();
 
     final SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> payload = createReportPayload(
         numPartitions,
@@ -2099,13 +2106,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
 
             @Override
-            public void locationChanged(final String taskId, final TaskLocation newLocation)
+            public void locationChanged(final Task task, final TaskLocation newLocation)
             {
               // do nothing
             }
 
             @Override
-            public void statusChanged(String taskId, TaskStatus status)
+            public void statusChanged(Task task, TaskStatus status)
             {
               addNotice(new RunNotice());
             }
@@ -2135,6 +2142,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void resetInternal(DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     if (dataSourceMetadata == null) {
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(supervisorId);
@@ -2260,6 +2268,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     log.info("Reset offsets for supervisor[%s] for dataSource[%s] with metadata[%s]", supervisorId, dataSource, dataSourceMetadata);
 
     @SuppressWarnings("unchecked")
@@ -3087,6 +3096,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
+  /** Whether a task's partitions match what its group now owns; if not, the task is replaced. Default: always true. */
+  protected boolean isTaskPartitionSetCurrent(int taskGroupId, Set<PartitionIdType> taskPartitions)
+  {
+    return true;
+  }
+
   /**
    * Determines whether a given task was created by the current version of the supervisor.
    * Uses the Task object mapped to this taskId in the {@code activeTaskMap}.
@@ -3115,6 +3130,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @SuppressWarnings("unchecked")
     SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task =
         (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) genericTask;
+
+    if (!isTaskPartitionSetCurrent(
+        taskGroupId,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet()
+    )) {
+      return false;
+    }
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
@@ -3195,6 +3217,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  /**
+   * The number of partitions as last fetched from the underlying stream.
+   * This method differs from {@link #getPartitionCount()} as it does not
+   * refetch the current partition count from the stream, thus avoiding the
+   * need for locks or a network call.
+   */
+  public int getKnownPartitionCount()
+  {
+    return partitionIds.size();
+  }
+
+  /**
+   * Fetches the current partition count from the underlying stream using the
+   * {@link #recordSupplier}.
+   */
   public int getPartitionCount()
   {
     recordSupplierLock.lock();
@@ -4208,6 +4245,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Integer groupId = taskGroupEntry.getKey();
       TaskGroup taskGroup = taskGroupEntry.getValue();
 
+      if (!isTaskPartitionSetCurrent(groupId, taskGroup.startingSequences.keySet())) {
+        futures.add(stopTasksInGroup(taskGroup, "Task group partition selection has changed"));
+        iTaskGroups.remove();
+        continue;
+      }
+
       // Iterate the list of known tasks in this group and:
       //   1) Kill any tasks which are not "current" (have the partitions, starting sequences, and minimumMessageTime
       //      & maximumMessageTime (if applicable) in [activelyReadingTaskGroups])
@@ -4474,6 +4517,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
 
       if (ioConfig.getReplicas() > taskGroup.tasks.size()) {
+        // In bounded mode, do not top up replicas for a task group that has already reached its end offsets.
+        // Otherwise, as completed replicas exit, this loop keeps recreating replacement replicas whose start
+        // offsets are already at the bounded end, producing an endless churn of tasks that complete instantly.
+        // This mirrors the completion guard on the task-group recreation path in this method. The bounded-end
+        // check (a metadata-store lookup) is intentionally kept inside this branch so it only runs when a top-up
+        // would otherwise happen, not for every active group on every run.
+        if (ioConfig.isBounded() && hasTaskGroupReachedBoundedEnd(groupId)) {
+          log.info(
+              "Bounded taskGroup[%d] has reached end offsets, skipping replica top-up",
+              groupId
+          );
+          continue;
+        }
         log.info(
             "Number of tasks[%d] does not match configured numReplicas[%d] in taskGroup[%d], creating more tasks.",
             taskGroup.tasks.size(), ioConfig.getReplicas(), groupId
