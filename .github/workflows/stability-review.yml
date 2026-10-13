@@ -15,6 +15,7 @@
 
 # Runs the Stability Runner on a PR when a committer submits a review
 # containing a `STABILITY_MAVEN_ARGS=...` line.
+# See dev/stability-runner.md
 
 name: "Stability Runner (review)"
 run-name: "${{ contains(github.event.review.body, 'STABILITY_MAVEN_ARGS=') && format('Stability #{0} by {1}', github.event.pull_request.number, github.event.review.user.login) || 'Stability (not requested)' }}"
