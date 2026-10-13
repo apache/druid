@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -508,6 +509,59 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assertions.assertEquals(2, taskGroups.size());
     Assertions.assertEquals(3, taskGroups.get(0).tasks.size());
     Assertions.assertEquals(3, taskGroups.get(1).tasks.size());
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_returnsCompleted_ifNoConflictingTask()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
+        "task1",
+        Set.of("partition")
+    );
+
+    Assertions.assertTrue(future.isDone());
+    Assertions.assertEquals(Boolean.TRUE, FutureUtils.getUnchecked(future, true));
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_waitsForConflictingTask()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    final Map<String, String> startingPartitions = new HashMap<>();
+    startingPartitions.put("partition", "offset");
+
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "taskPendingCompletion", startingPartitions);
+
+    final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
+        "waitingTask",
+        Set.of("partition")
+    );
+    Assertions.assertFalse(future.isDone());
+
+    // Mark the earlier task group as completed
+    final SeekableStreamSupervisor<?, ?, ?>.TaskGroup conflictingTaskGroup =
+        supervisor.getPendingCompletionTaskGroups(0).get(0);
+    conflictingTaskGroup.onCompleted();
+
+    Assertions.assertTrue(future.isDone());
+    Assertions.assertEquals(Boolean.TRUE, FutureUtils.getUnchecked(future, true));
   }
 
   @Test

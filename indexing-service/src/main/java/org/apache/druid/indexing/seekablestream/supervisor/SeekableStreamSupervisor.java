@@ -366,7 +366,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     /**
      * Called when this TaskGroup is removed from {@link #pendingCompletionTaskGroups}.
      */
-    private void onCompleted()
+    public void onCompleted()
     {
       if (completed.compareAndSet(false, true)) {
         runCompletionListeners();
