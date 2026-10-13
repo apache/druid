@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Column } from 'druid-query-toolkit';
 import React, { useState } from 'react';
@@ -45,11 +45,12 @@ export const ColumnPicker = React.memo(function ColumnPicker(props: ColumnPicker
 
   const selectedColumn = availableColumns?.find(c => c.name === selectedColumnName);
   return (
-    <Popover
+    <PopoverNext
       className="column-picker"
-      position={Position.BOTTOM_LEFT}
+      placement="bottom-start"
       isOpen={isOpen}
-      minimal
+      animation="minimal"
+      arrow={false}
       fill={fill}
       disabled={disabled}
       content={
@@ -68,17 +69,19 @@ export const ColumnPicker = React.memo(function ColumnPicker(props: ColumnPicker
           )) || <MenuItem text="Loading..." />}
         </Menu>
       }
+      lazy
+      shouldReturnFocusOnClose={false}
     >
       <Button
         icon={selectedColumn ? columnToIcon(selectedColumn) : undefined}
         text={selectedColumnName}
-        rightIcon={IconNames.CARET_DOWN}
+        endIcon={IconNames.CARET_DOWN}
         fill={fill}
         disabled={disabled}
         onClick={() => {
           setIsOpen(true);
         }}
       />
-    </Popover>
+    </PopoverNext>
   );
 });

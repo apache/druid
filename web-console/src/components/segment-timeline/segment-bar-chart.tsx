@@ -33,11 +33,10 @@ import { SegmentBarChartRender } from './segment-bar-chart-render';
 
 import './segment-bar-chart.scss';
 
-export interface SegmentBarChartProps
-  extends Omit<
-    SegmentBarChartRenderProps,
-    'intervalRows' | 'datasourceRules' | 'datasourceRulesError'
-  > {
+export interface SegmentBarChartProps extends Omit<
+  SegmentBarChartRenderProps,
+  'intervalRows' | 'datasourceRules' | 'datasourceRulesError'
+> {
   capabilities: Capabilities;
 }
 

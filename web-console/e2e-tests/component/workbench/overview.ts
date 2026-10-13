@@ -18,7 +18,7 @@
 
 import type * as playwright from 'playwright-chromium';
 
-import { clickButton } from '../../util/playwright';
+import { clickButton, setQueryInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
@@ -37,8 +37,7 @@ export class WorkbenchOverview {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const input = await this.page.waitForSelector('div.flexible-query-input textarea');
-    await input.fill(query);
+    await setQueryInput(this.page, query);
     await clickButton(this.page, 'Run');
 
     const results = this.page.locator('div.result-table-pane');
@@ -54,6 +53,6 @@ export class WorkbenchOverview {
       await results.waitFor({ timeout: 4 * 60 * 1000 });
     }
 
-    return await extractTable(this.page, 'div.result-table-pane div.rt-tr-group', 'div.rt-td');
+    return await extractTable(this.page, 'div.result-table-pane div.ct-tr-group', 'div.ct-td');
   }
 }

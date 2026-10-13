@@ -18,7 +18,7 @@
 
 import type * as playwright from 'playwright-chromium';
 
-import { clickButton, clickText } from '../../util/playwright';
+import { clickButton, clickText, setQueryInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
@@ -37,21 +37,19 @@ export class QueryOverview {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const input = await this.page.waitForSelector('div.flexible-query-input textarea');
-    await input.fill(query);
+    await setQueryInput(this.page, query);
 
     await clickButton(this.page, 'Run');
     await this.page.waitForSelector('div.result-table-pane');
 
-    return await extractTable(this.page, 'div.result-table-pane div.rt-tr-group', 'div.rt-td');
+    return await extractTable(this.page, 'div.result-table-pane div.ct-tr-group', 'div.ct-td');
   }
 
   async cancelQuery(query: string): Promise<number> {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const input = await this.page.waitForSelector('div.flexible-query-input textarea');
-    await input.fill(query);
+    await setQueryInput(this.page, query);
 
     await Promise.all([
       this.page.waitForRequest(

@@ -270,7 +270,7 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
           useGroupingToOrderSubQueries: NEEDS_GROUPING_TO_ORDER,
         }),
       };
-    }, [querySource.query, timezone, where, parameterValues, pivotValueState.data]);
+    }, [querySource.query, timezone, where, moduleWhere, parameterValues, pivotValueState.data]);
 
     const [resultState, resultQueryManager] = useQueryManager({
       query: queryAndMore,

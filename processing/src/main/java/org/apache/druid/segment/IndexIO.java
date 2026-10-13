@@ -77,9 +77,11 @@ import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
+import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
+import org.apache.druid.segment.serde.NullColumnPartSerde;
 import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 import org.apache.druid.segment.serde.StringUtf8DictionaryEncodedColumnSupplier;
 import org.joda.time.Interval;
@@ -94,6 +96,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -631,13 +634,13 @@ public class IndexIO
         allDims = null;
       }
 
-      Map<String, Supplier<BaseColumnHolder>> columns = new LinkedHashMap<>();
+      final ColumnHolderTable.Builder columnsBuilder = ColumnHolderTable.builder();
 
       // Register the time column
       ByteBuffer timeBuffer = smooshedFiles.mapFile("__time");
       registerColumnHolder(
           lazy,
-          columns,
+          columnsBuilder,
           ColumnHolder.TIME_COLUMN_NAME,
           mapper,
           timeBuffer,
@@ -647,11 +650,18 @@ public class IndexIO
       );
 
       final Indexed<String> finalCols, finalDims;
+      final Set<String> nullOnlyCols = new HashSet<>();
 
       if (allCols != null) {
         // To restore original column order, we merge allCols/allDims and nonNullCols/nonNullDims, respectively.
         finalCols = new ListIndexed<>(restoreColumns(nonNullCols, allCols));
         finalDims = new ListIndexed<>(restoreColumns(nonNullDims, allDims));
+        // allCols has names only for null-only columns, and nulls elsewhere; see restoreColumns
+        for (String col : allCols) {
+          if (col != null) {
+            nullOnlyCols.add(col);
+          }
+        }
       } else {
         finalCols = nonNullCols;
         finalDims = nonNullDims;
@@ -659,17 +669,19 @@ public class IndexIO
       registerColumnHolders(
           inDir,
           finalCols,
+          nullOnlyCols,
           lazy,
-          columns,
+          columnsBuilder,
           mapper,
           smooshedFiles,
           loadFailed
       );
-      final Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
+      final ColumnHolderTable columns = columnsBuilder.build();
+      final Map<String, ColumnHolderTable> projectionsColumns = new LinkedHashMap<>();
       final Metadata metadata = getMetdata(smooshedFiles, mapper, inDir);
       if (metadata != null && metadata.getProjections() != null) {
         for (AggregateProjectionMetadata projectionSpec : metadata.getProjections()) {
-          final Map<String, Supplier<BaseColumnHolder>> projectionColumns = readProjectionColumns(
+          final ColumnHolderTable projectionColumns = readProjectionColumns(
               mapper,
               loadFailed,
               projectionSpec,
@@ -689,7 +701,9 @@ public class IndexIO
           columns,
           smooshedFiles,
           metadata,
-          projectionsColumns
+          projectionsColumns,
+          null,
+          null
       )
       {
         @Override
@@ -704,29 +718,24 @@ public class IndexIO
       return index;
     }
 
-    private Map<String, Supplier<BaseColumnHolder>> readProjectionColumns(
+    private ColumnHolderTable readProjectionColumns(
         ObjectMapper mapper,
         SegmentLazyLoadFailCallback loadFailed,
         AggregateProjectionMetadata projectionSpec,
         SmooshedFileMapper smooshedFiles,
-        Map<String, Supplier<BaseColumnHolder>> columns,
+        ColumnHolderTable columns,
         Interval dataInterval
     ) throws IOException
     {
       final String timeColumnName = projectionSpec.getSchema().getTimeColumnName();
       final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
-      final Map<String, Supplier<BaseColumnHolder>> projectionColumns = new LinkedHashMap<>();
+      final ColumnHolderTable.Builder projectionColumns = ColumnHolderTable.builder();
 
       for (String groupingColumn : projectionSpec.getSchema().getGroupingColumns()) {
         final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, groupingColumn);
         final ByteBuffer colBuffer = smooshedFiles.mapFile(smooshName);
 
-        final BaseColumnHolder parentColumn;
-        if (columns.containsKey(groupingColumn)) {
-          parentColumn = columns.get(groupingColumn).get();
-        } else {
-          parentColumn = null;
-        }
+        final BaseColumnHolder parentColumn = columns.get(groupingColumn);
         registerColumnHolder(
             true,
             projectionColumns,
@@ -739,8 +748,7 @@ public class IndexIO
         );
 
         if (groupingColumn.equals(timeColumnName) && renameTime) {
-          projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn));
-          projectionColumns.remove(groupingColumn);
+          projectionColumns.rename(groupingColumn, ColumnHolder.TIME_COLUMN_NAME);
         }
       }
       for (AggregatorFactory aggregator : projectionSpec.getSchema().getAggregators()) {
@@ -758,12 +766,12 @@ public class IndexIO
         );
       }
       if (timeColumnName == null) {
-        projectionColumns.put(
+        projectionColumns.putSupplier(
             ColumnHolder.TIME_COLUMN_NAME,
             ConstantTimeColumn.makeConstantTimeSupplier(projectionSpec.getNumRows(), dataInterval.getStartMillis())
         );
       }
-      return projectionColumns;
+      return projectionColumns.build();
     }
 
     @Nullable
@@ -823,16 +831,22 @@ public class IndexIO
       return mergedCols;
     }
 
+    /**
+     * Registers holders for the given columns. Columns in {@code nullOnlyCols} share holders; see
+     * {@link NullColumnHolders}.
+     */
     private void registerColumnHolders(
         File inDir,
         Indexed<String> cols,
+        Set<String> nullOnlyCols,
         boolean lazy,
-        Map<String, Supplier<BaseColumnHolder>> columns,
+        ColumnHolderTable.Builder columns,
         ObjectMapper mapper,
         SmooshedFileMapper smooshedFiles,
         SegmentLazyLoadFailCallback loadFailed
     ) throws IOException
     {
+      final NullColumnHolders nullColumnHolders = new NullColumnHolders(columnConfig, smooshedFiles);
       for (String columnName : cols) {
         if (Strings.isNullOrEmpty(columnName)) {
           log.warn("Null or Empty Dimension found in the file : " + inDir);
@@ -840,6 +854,16 @@ public class IndexIO
         }
 
         final ByteBuffer colBuffer = smooshedFiles.mapFile(columnName);
+        // null-only columns are read eagerly even if lazy, since they have no data beyond their descriptor
+        if (nullOnlyCols.contains(columnName)) {
+          final ByteBuffer descriptorBuffer = colBuffer.duplicate();
+          final ColumnDescriptor descriptor = readColumnDescriptor(mapper, descriptorBuffer);
+          final BaseColumnHolder nullColumnHolder = nullColumnHolders.get(descriptor, descriptorBuffer);
+          if (nullColumnHolder != null) {
+            columns.put(SmooshedFileMapper.STRING_INTERNER.intern(columnName), nullColumnHolder);
+            continue;
+          }
+        }
         registerColumnHolder(
             lazy,
             columns,
@@ -855,7 +879,7 @@ public class IndexIO
 
     private void registerColumnHolder(
         boolean lazy,
-        Map<String, Supplier<BaseColumnHolder>> columns,
+        ColumnHolderTable.Builder columns,
         String columnName,
         ObjectMapper mapper,
         ByteBuffer colBuffer,
@@ -869,7 +893,7 @@ public class IndexIO
       // only happens if there are some null columns
       final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(columnName);
       if (lazy) {
-        columns.put(internedColumnName, Suppliers.memoize(
+        columns.putSupplier(internedColumnName, Suppliers.memoize(
             () -> {
               try {
                 return deserializeColumn(
@@ -895,7 +919,7 @@ public class IndexIO
             smooshedFiles,
             parentColumn
         );
-        columns.put(internedColumnName, () -> columnHolder);
+        columns.put(internedColumnName, columnHolder);
       }
     }
 
@@ -912,8 +936,16 @@ public class IndexIO
         @Nullable ColumnHolder parentColumn
     ) throws IOException
     {
-      ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class);
+      ColumnDescriptor serde = readColumnDescriptor(mapper, byteBuffer);
       return serde.read(byteBuffer, columnConfig, smooshedFiles, parentColumn);
+    }
+
+    /**
+     * Reads the {@link ColumnDescriptor} at the start of a column's buffer, advancing the buffer past it.
+     */
+    private static ColumnDescriptor readColumnDescriptor(ObjectMapper mapper, ByteBuffer byteBuffer) throws IOException
+    {
+      return mapper.readValue(SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class);
     }
   }
 
@@ -958,12 +990,13 @@ public class IndexIO
       // For clustered base tables the columns are always accessed through cluster groups, skip reading any base
       // columns so we don't try to map files that don't exist
       final boolean isClusteredSummary = baseSchema instanceof ClusteredValueGroupsBaseTableSchema;
+      final NullColumnHolders nullColumnHolders = new NullColumnHolders(columnConfig, fileMapper);
       final ClusteredValueGroupsBaseTableSchema clusteredBaseSummary;
-      final Map<String, Supplier<BaseColumnHolder>> baseColumns;
+      final ColumnHolderTable baseColumns;
       if (isClusteredSummary) {
         clusteredBaseSummary = (ClusteredValueGroupsBaseTableSchema) baseSchema;
         if (clusteredBaseSummary.getSharedColumns().isEmpty()) {
-          baseColumns = Map.of();
+          baseColumns = ColumnHolderTable.builder().build();
         } else {
           throw DruidException.defensive(
               "Reading clustered segments with non-empty sharedColumns is not yet supported"
@@ -975,14 +1008,15 @@ public class IndexIO
             metadata,
             baseProjection,
             fileMapper,
-            Map.of(),
+            null,
+            nullColumnHolders,
             intervalStartMillis,
             lazy,
             loadFailed
         );
       }
 
-      final Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
+      final Map<String, ColumnHolderTable> projectionsColumns = new LinkedHashMap<>();
       final List<AggregateProjectionMetadata> aggProjections = new ArrayList<>(metadata.getProjections().size() - 1);
       boolean first = true;
       for (ProjectionMetadata projectionSpec : metadata.getProjections()) {
@@ -998,11 +1032,12 @@ public class IndexIO
               projectionSpec.getSchema().getClass()
           );
         }
-        final Map<String, Supplier<BaseColumnHolder>> projectionColumns = readProjectionColumns(
+        final ColumnHolderTable projectionColumns = readProjectionColumns(
             metadata,
             projectionSpec,
             fileMapper,
             baseColumns,
+            nullColumnHolders,
             intervalStartMillis,
             lazy,
             loadFailed
@@ -1017,7 +1052,7 @@ public class IndexIO
         );
       }
 
-      final List<Map<String, Supplier<BaseColumnHolder>>> clusterGroupColumnsList;
+      final List<ColumnHolderTable> clusterGroupColumnsList;
       if (isClusteredSummary) {
         final List<TableClusterGroupSpec> nestedGroups = clusteredBaseSummary.getClusterGroups();
         clusterGroupColumnsList = new ArrayList<>(nestedGroups.size());
@@ -1027,6 +1062,7 @@ public class IndexIO
               clusteredBaseSummary,
               i,
               fileMapper,
+              nullColumnHolders,
               intervalStartMillis,
               lazy,
               loadFailed
@@ -1036,7 +1072,7 @@ public class IndexIO
         clusterGroupColumnsList = List.of();
       }
 
-      final Metadata reconstructedMetadata = baseSchema.asMetadata(aggProjections);
+      final Metadata reconstructedMetadata = baseSchema.asMetadata(List.copyOf(aggProjections));
 
       // For clustered segments, the top-level index has no per-column data of its own, so pass an empty dimensions
       // list so the SimpleQueryableIndex precondition passes and dimension-handler init has nothing to materialize
@@ -1070,11 +1106,12 @@ public class IndexIO
       };
     }
 
-    private Map<String, Supplier<BaseColumnHolder>> readProjectionColumns(
+    private ColumnHolderTable readProjectionColumns(
         SegmentFileMetadata metadata,
         ProjectionMetadata projectionSpec,
         SegmentFileMapper segmentFileMapper,
-        Map<String, Supplier<BaseColumnHolder>> parentColumns,
+        @Nullable ColumnHolderTable parentColumns,
+        NullColumnHolders nullColumnHolders,
         long intervalStartMillis,
         boolean lazy,
         SegmentLazyLoadFailCallback loadFailed
@@ -1082,7 +1119,7 @@ public class IndexIO
     {
       final String timeColumnName = projectionSpec.getSchema().getTimeColumnName();
       final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
-      final Map<String, Supplier<BaseColumnHolder>> projectionColumns = new LinkedHashMap<>();
+      final ColumnHolderTable.Builder projectionColumns = ColumnHolderTable.builder();
 
       for (String column : projectionSpec.getSchema().getColumnNames()) {
         final String smooshName = Projections.getProjectionSegmentInternalFileName(projectionSpec.getSchema(), column);
@@ -1092,38 +1129,29 @@ public class IndexIO
         }
         final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
 
-        final BaseColumnHolder parentColumn;
-        if (parentColumns.containsKey(column)) {
-          parentColumn = parentColumns.get(column).get();
-        } else {
-          parentColumn = null;
-        }
-        final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(column);
-        projectionColumns.put(
-            internedColumnName,
-            makeColumnHolderSupplier(
-                internedColumnName,
-                columnDescriptor,
-                colBuffer,
-                segmentFileMapper,
-                parentColumn,
-                lazy,
-                loadFailed
-            )
+        registerColumnHolder(
+            projectionColumns,
+            SmooshedFileMapper.STRING_INTERNER.intern(column),
+            columnDescriptor,
+            colBuffer,
+            segmentFileMapper,
+            parentColumns,
+            nullColumnHolders,
+            lazy,
+            loadFailed
         );
 
         if (column.equals(timeColumnName) && renameTime) {
-          projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(column));
-          projectionColumns.remove(column);
+          projectionColumns.rename(column, ColumnHolder.TIME_COLUMN_NAME);
         }
       }
       if (timeColumnName == null) {
-        projectionColumns.put(
+        projectionColumns.putSupplier(
             ColumnHolder.TIME_COLUMN_NAME,
             ConstantTimeColumn.makeConstantTimeSupplier(projectionSpec.getNumRows(), intervalStartMillis)
         );
       }
-      return projectionColumns;
+      return projectionColumns.build();
     }
 
     /**
@@ -1131,11 +1159,12 @@ public class IndexIO
      * with the dictionary-id-tuple smoosh prefix {@code __base$<id0>_<id1>...<idK>/<col>}; the column set
      * excludes clustering columns (constants, injected at query time).
      */
-    private Map<String, Supplier<BaseColumnHolder>> readClusterGroupColumns(
+    private ColumnHolderTable readClusterGroupColumns(
         SegmentFileMetadata metadata,
         ClusteredValueGroupsBaseTableSchema summary,
         int groupIndex,
         SegmentFileMapper segmentFileMapper,
+        NullColumnHolders nullColumnHolders,
         long intervalStartMillis,
         boolean lazy,
         SegmentLazyLoadFailCallback loadFailed
@@ -1145,7 +1174,7 @@ public class IndexIO
       final List<Integer> clusteringValueIds = spec.getClusteringValueIds();
       final String timeColumnName = summary.getTimeColumnName();
       final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
-      final Map<String, Supplier<BaseColumnHolder>> groupColumns = new LinkedHashMap<>();
+      final ColumnHolderTable.Builder groupColumns = ColumnHolderTable.builder();
 
       for (String column : summary.getGroupColumnNames()) {
         final String smooshName = Projections.getClusterGroupSegmentInternalFileName(clusteringValueIds, column);
@@ -1155,66 +1184,109 @@ public class IndexIO
         }
         final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
 
-        final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(column);
-        groupColumns.put(
-            internedColumnName,
-            makeColumnHolderSupplier(
-                internedColumnName,
-                columnDescriptor,
-                colBuffer,
-                segmentFileMapper,
-                null,
-                lazy,
-                loadFailed
-            )
+        registerColumnHolder(
+            groupColumns,
+            SmooshedFileMapper.STRING_INTERNER.intern(column),
+            columnDescriptor,
+            colBuffer,
+            segmentFileMapper,
+            null,
+            nullColumnHolders,
+            lazy,
+            loadFailed
         );
 
         if (column.equals(timeColumnName) && renameTime) {
-          groupColumns.put(ColumnHolder.TIME_COLUMN_NAME, groupColumns.get(column));
-          groupColumns.remove(column);
+          groupColumns.rename(column, ColumnHolder.TIME_COLUMN_NAME);
         }
       }
       if (timeColumnName == null) {
-        groupColumns.put(
+        groupColumns.putSupplier(
             ColumnHolder.TIME_COLUMN_NAME,
             ConstantTimeColumn.makeConstantTimeSupplier(spec.getNumRows(), intervalStartMillis)
         );
       }
-      return groupColumns;
+      return groupColumns.build();
     }
 
-    private Supplier<BaseColumnHolder> makeColumnHolderSupplier(
+    /**
+     * Adds a holder for the given column to {@code columns}. Null-only columns get a shared holder from
+     * {@code nullColumnHolders}; other columns read through their same-named parent column, if any.
+     */
+    private void registerColumnHolder(
+        ColumnHolderTable.Builder columns,
         String columnName,
         ColumnDescriptor columnDescriptor,
         ByteBuffer colBuffer,
         SegmentFileMapper segmentFileMapper,
-        @Nullable BaseColumnHolder parentColumn,
+        @Nullable ColumnHolderTable parentColumns,
+        NullColumnHolders nullColumnHolders,
         boolean lazy,
         SegmentLazyLoadFailCallback loadFailed
     )
     {
+      final BaseColumnHolder nullColumnHolder = nullColumnHolders.get(columnDescriptor, colBuffer);
+      if (nullColumnHolder != null) {
+        columns.put(columnName, nullColumnHolder);
+        return;
+      }
+
+      final BaseColumnHolder parentColumn = parentColumns == null ? null : parentColumns.get(columnName);
       if (lazy) {
-        return Suppliers.memoize(
-            () -> {
-              try {
-                return columnDescriptor.read(colBuffer, columnConfig, segmentFileMapper, parentColumn);
-              }
-              catch (Throwable e) {
-                log.warn(e, "Failed to deserialize column[%s].", columnName);
-                loadFailed.execute();
-                throw e;
-              }
-            }
+        columns.putSupplier(
+            columnName,
+            Suppliers.memoize(
+                () -> {
+                  try {
+                    return columnDescriptor.read(colBuffer, columnConfig, segmentFileMapper, parentColumn);
+                  }
+                  catch (Throwable e) {
+                    log.warn(e, "Failed to deserialize column[%s].", columnName);
+                    loadFailed.execute();
+                    throw e;
+                  }
+                }
+            )
         );
       } else {
-        final BaseColumnHolder columnHolder = columnDescriptor.read(
-            colBuffer,
-            columnConfig,
-            segmentFileMapper,
-            parentColumn
-        );
-        return () -> columnHolder;
+        columns.put(columnName, columnDescriptor.read(colBuffer, columnConfig, segmentFileMapper, parentColumn));
       }
+    }
+  }
+
+  /**
+   * Holders for the null-only columns of one segment. Null-only columns store no data, so all null-only columns with
+   * equal descriptors can share one holder.
+   */
+  static class NullColumnHolders
+  {
+    private final ColumnConfig columnConfig;
+    private final SegmentFileMapper fileMapper;
+    private final Map<ColumnDescriptor, BaseColumnHolder> holders = new HashMap<>();
+
+    NullColumnHolders(ColumnConfig columnConfig, SegmentFileMapper fileMapper)
+    {
+      this.columnConfig = columnConfig;
+      this.fileMapper = fileMapper;
+    }
+
+    /**
+     * Returns the shared holder for a column with the given descriptor, or null if the descriptor is not for a
+     * null-only column. The buffer must be positioned after the descriptor, as for {@link ColumnDescriptor#read}.
+     */
+    @Nullable
+    BaseColumnHolder get(ColumnDescriptor descriptor, ByteBuffer buffer)
+    {
+      final List<ColumnPartSerde> parts = descriptor.getParts();
+      if (parts.size() != 1 || !(parts.get(0) instanceof NullColumnPartSerde)) {
+        return null;
+      }
+      BaseColumnHolder holder = holders.get(descriptor);
+      if (holder == null) {
+        holder = descriptor.read(buffer, columnConfig, fileMapper, null);
+        holders.put(descriptor, holder);
+      }
+      return holder;
     }
   }
 

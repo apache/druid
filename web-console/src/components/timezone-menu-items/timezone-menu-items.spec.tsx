@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { Menu } from '@blueprintjs/core';
+import { render } from '@testing-library/react';
 
 import { TimezoneMenuItems } from './timezone-menu-items';
 
@@ -28,14 +29,16 @@ describe('TimezoneMenuItems', () => {
   });
 
   it('matches snapshot', () => {
-    const comp = shallow(
-      <TimezoneMenuItems
-        sqlTimeZone="Blah"
-        setSqlTimeZone={() => {}}
-        defaultSqlTimeZone="Etc/UTC"
-      />,
+    const { container } = render(
+      <Menu>
+        <TimezoneMenuItems
+          sqlTimeZone="Blah"
+          setSqlTimeZone={() => {}}
+          defaultSqlTimeZone="Etc/UTC"
+        />
+      </Menu>,
     );
 
-    expect(comp).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

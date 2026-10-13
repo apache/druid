@@ -1,131 +1,28 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`MaxTasksButton matches snapshot 1`] = `
-<React.Fragment>
-  <Blueprint5.Popover
-    boundary="clippingParents"
-    captureDismiss={false}
-    className="max-tasks-button"
-    content={
-      <Blueprint5.Menu>
-        <Blueprint5.MenuDivider
-          title="Maximum number of tasks to launch"
-        />
-        <Blueprint5.MenuItem
-          icon="tick"
-          onClick={[Function]}
-          shouldDismissPopover={true}
-          text="6 (full cluster capacity)"
-        />
-        <Blueprint5.MenuItem
-          icon="blank"
-          label="(1 controller + 1 worker)"
-          onClick={[Function]}
-          shouldDismissPopover={true}
-          text="2"
-        />
-        <Blueprint5.MenuItem
-          icon="blank"
-          label="(1 controller + max 2 workers)"
-          onClick={[Function]}
-          shouldDismissPopover={true}
-          text="3"
-        />
-        <Blueprint5.MenuItem
-          icon="blank"
-          label="(1 controller + max 3 workers)"
-          onClick={[Function]}
-          shouldDismissPopover={true}
-          text="4"
-        />
-        <Blueprint5.MenuItem
-          icon="blank"
-          label="(1 controller + max 4 workers)"
-          onClick={[Function]}
-          shouldDismissPopover={true}
-          text="5"
-        />
-        <Blueprint5.MenuItem
-          icon="blank"
-          onClick={[Function]}
-          text="Custom"
-        />
-        <Blueprint5.MenuDivider />
-        <Blueprint5.MenuItem
-          icon="flow-branch"
-          label="Max"
-          submenuProps={
-            {
-              "style": {
-                "width": 300,
-              },
-            }
-          }
-          text="Task assignment"
-        >
-          <Blueprint5.MenuItem
-            icon="tick"
-            multiline={true}
-            onClick={[Function]}
-            text={
-              <React.Fragment>
-                <strong>
-                  Max
-                </strong>
-                : uses the maximum possible tasks up to the specified limit.
-              </React.Fragment>
-            }
-          />
-          <Blueprint5.MenuItem
-            icon="blank"
-            multiline={true}
-            onClick={[Function]}
-            text={
-              <React.Fragment>
-                <strong>
-                  Auto
-                </strong>
-                : uses the minimum number of tasks while
-                 
-                <span
-                  onClick={[Function]}
-                  style={
-                    {
-                      "color": "#3eadf9",
-                      "cursor": "pointer",
-                    }
-                  }
-                >
-                  staying within constraints.
-                </span>
-              </React.Fragment>
-            }
-          />
-        </Blueprint5.MenuItem>
-      </Blueprint5.Menu>
-    }
-    defaultIsOpen={false}
-    disabled={false}
-    fill={false}
-    hasBackdrop={false}
-    hoverCloseDelay={300}
-    hoverOpenDelay={150}
-    inheritDarkTheme={true}
-    interactionKind="click"
-    matchTargetWidth={false}
-    minimal={false}
-    openOnTargetFocus={true}
-    position="bottom-left"
-    positioningStrategy="absolute"
-    shouldReturnFocusOnClose={false}
-    targetTagName="span"
-    transitionDuration={300}
-    usePortal={true}
+<span
+  class="max-tasks-button bp6-popover-target"
+>
+  <button
+    aria-expanded="false"
+    aria-haspopup="menu"
+    class="bp6-button"
+    type="button"
   >
-    <Blueprint5.Button
-      rightIcon="caret-down"
-      text="Max tasks: 6 (full cluster capacity)"
-    />
-  </Blueprint5.Popover>
-</React.Fragment>
+    <span
+      class="bp6-button-text"
+    >
+      Max tasks: 6 (full cluster capacity)
+    </span>
+    <span
+      aria-hidden="true"
+      class="bp6-icon bp6-icon-caret-down"
+    >
+      <svg
+        data-icon="caret-down"
+      />
+    </span>
+  </button>
+</span>
 `;

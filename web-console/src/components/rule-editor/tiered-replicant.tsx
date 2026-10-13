@@ -47,7 +47,7 @@ export const TieredReplicant = React.memo(function TieredReplicant(props: Tiered
 
   return (
     <ControlGroup className="tiered-replicant">
-      <Button minimal disabled={disabled} style={{ pointerEvents: 'none' }}>
+      <Button variant="minimal" disabled={disabled} style={{ pointerEvents: 'none' }}>
         Tier:
       </Button>
       <SuggestibleInput
@@ -57,7 +57,7 @@ export const TieredReplicant = React.memo(function TieredReplicant(props: Tiered
         onValueChange={value => onChangeTier(value || '')}
         suggestions={tiers.filter(t => t === tier || !usedTiers.includes(t))}
       />
-      <Button minimal disabled={disabled} style={{ pointerEvents: 'none' }}>
+      <Button variant="minimal" disabled={disabled} style={{ pointerEvents: 'none' }}>
         Replicants:
       </Button>
       <NumericInput

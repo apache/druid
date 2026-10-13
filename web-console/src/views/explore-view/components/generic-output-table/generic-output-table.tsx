@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, PopoverNext } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import type { Timezone } from 'chronoshift';
@@ -25,12 +25,17 @@ import type { Column, QueryResult } from 'druid-query-toolkit';
 import { SqlColumn, SqlExpression, SqlLiteral, trimString } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
-import type { Column as TableColumn } from 'react-table';
-import ReactTable from 'react-table';
 
-import { BracedText, Deferred, TableCell } from '../../../../components';
+import type { ConsoleTableColumn } from '../../../../components';
+import {
+  BracedText,
+  ConsoleTable,
+  Deferred,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  TableCell,
+} from '../../../../components';
 import { ShowValueDialog } from '../../../../dialogs/show-value-dialog/show-value-dialog';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../../react-table';
 import type { ColumnHint, Pagination } from '../../../../utils';
 import {
   columnToIcon,
@@ -60,15 +65,15 @@ function isComparable(x: unknown): boolean {
 }
 
 function columnNester(
-  tableColumns: TableColumn[],
+  tableColumns: ConsoleTableColumn[],
   resultColumns: readonly Column[],
   columnHints: Map<string, ColumnHint> | undefined,
-): TableColumn[] {
+): ConsoleTableColumn[] {
   if (!columnHints) return tableColumns;
 
-  const ret: TableColumn[] = [];
+  const ret: ConsoleTableColumn[] = [];
   let currentGroupName: string | null = null;
-  let currentColumnGroup: TableColumn | null = null;
+  let currentColumnGroup: ConsoleTableColumn | null = null;
   for (let i = 0; i < tableColumns.length; i++) {
     const tableColumn = tableColumns[i];
     const group = columnHints.get(resultColumns[i].name)?.group;
@@ -131,8 +136,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
 
   // Reset page to 0 if number of results changes
   useEffect(() => {
-    if (!pagination?.page) return;
-    setPagination(undefined);
+    setPagination(pagination => (pagination?.page ? undefined : pagination));
   }, [queryResult.rows.length]);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
@@ -413,7 +417,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
           />
         </div>
       ) : (
-        <ReactTable
+        <ConsoleTable
           className="-striped -highlight"
           data={queryResult.rows as any[][]}
           ofText={hasMoreResults ? '' : 'of'}
@@ -437,7 +441,11 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               return {
                 Header() {
                   return (
-                    <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
+                    <PopoverNext
+                      content={<Deferred content={() => getHeaderMenu(column, i)} />}
+                      lazy
+                      shouldReturnFocusOnClose={false}
+                    >
                       <div className="clickable-cell">
                         <div className="output-name">
                           {icon && <Icon className="type-icon" icon={icon} size={12} />}
@@ -445,7 +453,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                           {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}
                         </div>
                       </div>
-                    </Popover>
+                    </PopoverNext>
                   );
                 },
                 headerClassName: getHeaderClassName(h),
@@ -456,7 +464,11 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                   const formatter = hint?.formatter || formatNumber;
                   return (
                     <div>
-                      <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                      <PopoverNext
+                        content={<Deferred content={() => getCellMenu(column, i, value)} />}
+                        lazy
+                        shouldReturnFocusOnClose={false}
+                      >
                         {numericColumnBraces[i] ? (
                           <BracedText
                             className="table-padding"
@@ -467,7 +479,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                         ) : (
                           <TableCell value={value} timezone={timezone} unlimited />
                         )}
-                      </Popover>
+                      </PopoverNext>
                     </div>
                   );
                 },

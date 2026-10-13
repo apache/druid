@@ -16,16 +16,13 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Popover } from '@blueprintjs/core';
+import { Button, Icon, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { Column, QueryResult } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
-import type { RowRenderProps } from 'react-table';
-import ReactTable from 'react-table';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import type { Pagination } from '../../utils';
 import {
   columnToIcon,
@@ -37,6 +34,12 @@ import {
 } from '../../utils';
 import { BracedText } from '../braced-text/braced-text';
 import { CellFilterMenu } from '../cell-filter-menu/cell-filter-menu';
+import type { ConsoleTableCellInfo } from '../console-table';
+import {
+  ConsoleTable,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+} from '../console-table';
 import { Deferred } from '../deferred/deferred';
 import { TableCell } from '../table-cell/table-cell';
 
@@ -117,7 +120,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
           />
         </div>
       ) : (
-        <ReactTable
+        <ConsoleTable
           className="-striped -highlight"
           data={queryResult.rows as any[][]}
           ofText={hasMoreResults ? '' : 'of'}
@@ -150,11 +153,15 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
               },
               headerClassName: getHeaderClassName(h),
               accessor: String(i),
-              Cell(row: RowRenderProps) {
+              Cell(row: ConsoleTableCellInfo<any>) {
                 const value = row.value;
                 return (
                   <div>
-                    <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                    <PopoverNext
+                      content={<Deferred content={() => getCellMenu(column, i, value)} />}
+                      lazy
+                      shouldReturnFocusOnClose={false}
+                    >
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
@@ -165,7 +172,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
                       ) : (
                         <TableCell value={value} unlimited />
                       )}
-                    </Popover>
+                    </PopoverNext>
                   </div>
                 );
               },

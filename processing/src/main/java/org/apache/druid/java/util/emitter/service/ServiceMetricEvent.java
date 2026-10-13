@@ -189,6 +189,17 @@ public class ServiceMetricEvent implements Event
       return userDims.get(dim);
     }
 
+    /**
+     * Removes a previously set dimension, if present, and returns this builder. Useful when a single
+     * builder is reused to emit multiple metrics and a dimension set for one metric must not leak into
+     * the others. Removing an absent dimension is a no-op.
+     */
+    public Builder removeDimension(String dim)
+    {
+      userDims.remove(dim);
+      return this;
+    }
+
     public Builder setMetric(String metric, Number value)
     {
       if (Double.isNaN(value.doubleValue())) {

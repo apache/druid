@@ -21,18 +21,20 @@ import {
   Classes,
   Dialog,
   Intent,
-  Popover,
+  PopoverNext,
   Tab,
   Tabs,
   TabsExpander,
 } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
-import React, { useState } from 'react';
-import AceEditor from 'react-ace';
+import React, { useMemo, useState } from 'react';
 
-import { CenterMessage } from '../../../components';
+import { CenterMessage, CodeEditor } from '../../../components';
+import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import type { WorkbenchQuery } from '../../../druid-models';
+import { dsql } from '../../../editor-languages/dsql';
+import { hjson } from '../../../editor-languages/hjson';
 import type { WorkbenchQueryHistoryEntry } from '../../../singletons/workbench-history';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
 import { pluralIfNeeded } from '../../../utils';
@@ -50,6 +52,8 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
   const { onSelectQuery, onClose } = props;
   const [activeTab, setActiveTab] = useState(0);
   const [queryRecords] = useState(() => WorkbenchHistory.getHistory());
+  const availableSqlFunctions = useAvailableSqlFunctions();
+  const sqlLanguage = useMemo(() => dsql({ availableSqlFunctions }), [availableSqlFunctions]);
 
   function handleSelect() {
     const queryRecord = queryRecords[activeTab];
@@ -64,34 +68,31 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
     return (
       <div className="query-entry">
         <div className="query-info-bar">
-          <Popover
+          <PopoverNext
             content={
               <pre className="json-popover-content">
                 {JSONBig.stringify(record.query.queryContext, undefined, 2)}
               </pre>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               text={`Context: ${pluralIfNeeded(
                 Object.keys(record.query.queryContext).length,
                 'key',
               )}`}
-              minimal
-              small
+              variant="minimal"
+              size="small"
             />
-          </Popover>
+          </PopoverNext>
         </div>
-        <AceEditor
-          mode={jsonMode ? 'hjson' : 'dsql'}
-          theme="solarized_dark"
+        <CodeEditor
+          language={jsonMode ? hjson() : sqlLanguage}
           className="query-string"
-          name="ace-editor"
-          fontSize={12}
-          width="100%"
-          showGutter
-          showPrintMargin={false}
-          value={queryString}
           readOnly
+          showLineNumbers
+          value={queryString}
         />
       </div>
     );

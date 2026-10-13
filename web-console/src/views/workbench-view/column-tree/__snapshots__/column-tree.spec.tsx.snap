@@ -2,251 +2,270 @@
 
 exports[`ColumnTree matches snapshot 1`] = `
 <div
-  className="column-tree"
+  class="column-tree"
 >
-  <Blueprint5.HTMLSelect
-    className="schema-selector"
-    fill={true}
-    large={true}
-    minimal={true}
-    onChange={[Function]}
-    value={0}
-  >
-    <option
-      value={0}
-    >
-      druid
-    </option>
-    <option
-      value={1}
-    >
-      sys
-    </option>
-  </Blueprint5.HTMLSelect>
-  <Blueprint5.InputGroup
-    className="search-box"
-    onChange={[Function]}
-    placeholder="Search"
-    rightElement={
-      <Blueprint5.ButtonGroup
-        minimal={true}
-      >
-        <Blueprint5.Popover
-          boundary="clippingParents"
-          captureDismiss={false}
-          content={
-            <Blueprint5.Menu>
-              <Blueprint5.MenuDivider
-                title="Search in"
-              />
-              <Blueprint5.MenuItem
-                icon="tick"
-                onClick={[Function]}
-                text="Tables and columns"
-              />
-              <Blueprint5.MenuItem
-                icon="blank"
-                onClick={[Function]}
-                text="Tables only"
-              />
-              <Blueprint5.MenuItem
-                icon="blank"
-                onClick={[Function]}
-                text="Columns only"
-              />
-            </Blueprint5.Menu>
-          }
-          defaultIsOpen={false}
-          disabled={false}
-          fill={false}
-          hasBackdrop={false}
-          hoverCloseDelay={300}
-          hoverOpenDelay={150}
-          inheritDarkTheme={true}
-          interactionKind="click"
-          matchTargetWidth={false}
-          minimal={false}
-          openOnTargetFocus={true}
-          position="bottom-left"
-          positioningStrategy="absolute"
-          shouldReturnFocusOnClose={false}
-          targetTagName="span"
-          transitionDuration={300}
-          usePortal={true}
-        >
-          <Blueprint5.Button
-            data-tooltip="Search settings"
-            icon="settings"
-          />
-        </Blueprint5.Popover>
-      </Blueprint5.ButtonGroup>
-    }
-    value=""
-  />
   <div
-    className="tree-container"
+    class="bp6-html-select bp6-fill bp6-large bp6-minimal schema-selector"
   >
-    <Blueprint5.Tree
-      contents={
-        [
-          {
-            "childNodes": [
-              {
-                "icon": <Blueprint5.Icon
-                  aria-hidden={true}
-                  className="bp5-tree-node-icon"
-                  data-tooltip="TIMESTAMP"
-                  icon="time"
-                  tabIndex={-1}
-                />,
-                "id": "__time",
-                "label": <Blueprint5.Popover
-                  autoFocus={false}
-                  boundary="clippingParents"
-                  captureDismiss={false}
-                  content={
-                    <Memo(Deferred)
-                      content={[Function]}
-                    />
-                  }
-                  defaultIsOpen={false}
-                  disabled={false}
-                  fill={false}
-                  hasBackdrop={false}
-                  hoverCloseDelay={300}
-                  hoverOpenDelay={150}
-                  inheritDarkTheme={true}
-                  interactionKind="click"
-                  matchTargetWidth={false}
-                  minimal={false}
-                  openOnTargetFocus={true}
-                  position="right"
-                  positioningStrategy="absolute"
-                  shouldReturnFocusOnClose={false}
-                  targetTagName="span"
-                  transitionDuration={300}
-                  usePortal={true}
-                >
-                  __time
-                </Blueprint5.Popover>,
-              },
-              {
-                "icon": <Blueprint5.Icon
-                  aria-hidden={true}
-                  className="bp5-tree-node-icon"
-                  data-tooltip="BIGINT"
-                  icon="numerical"
-                  tabIndex={-1}
-                />,
-                "id": "added",
-                "label": <Blueprint5.Popover
-                  autoFocus={false}
-                  boundary="clippingParents"
-                  captureDismiss={false}
-                  content={
-                    <Memo(Deferred)
-                      content={[Function]}
-                    />
-                  }
-                  defaultIsOpen={false}
-                  disabled={false}
-                  fill={false}
-                  hasBackdrop={false}
-                  hoverCloseDelay={300}
-                  hoverOpenDelay={150}
-                  inheritDarkTheme={true}
-                  interactionKind="click"
-                  matchTargetWidth={false}
-                  minimal={false}
-                  openOnTargetFocus={true}
-                  position="right"
-                  positioningStrategy="absolute"
-                  shouldReturnFocusOnClose={false}
-                  targetTagName="span"
-                  transitionDuration={300}
-                  usePortal={true}
-                >
-                  added
-                </Blueprint5.Popover>,
-              },
-              {
-                "icon": <Blueprint5.Icon
-                  aria-hidden={true}
-                  className="bp5-tree-node-icon"
-                  data-tooltip="FLOAT"
-                  icon="floating-point"
-                  tabIndex={-1}
-                />,
-                "id": "addedBy10",
-                "label": <Blueprint5.Popover
-                  autoFocus={false}
-                  boundary="clippingParents"
-                  captureDismiss={false}
-                  content={
-                    <Memo(Deferred)
-                      content={[Function]}
-                    />
-                  }
-                  defaultIsOpen={false}
-                  disabled={false}
-                  fill={false}
-                  hasBackdrop={false}
-                  hoverCloseDelay={300}
-                  hoverOpenDelay={150}
-                  inheritDarkTheme={true}
-                  interactionKind="click"
-                  matchTargetWidth={false}
-                  minimal={false}
-                  openOnTargetFocus={true}
-                  position="right"
-                  positioningStrategy="absolute"
-                  shouldReturnFocusOnClose={false}
-                  targetTagName="span"
-                  transitionDuration={300}
-                  usePortal={true}
-                >
-                  addedBy10
-                </Blueprint5.Popover>,
-              },
-            ],
-            "className": undefined,
-            "icon": "th",
-            "id": "wikipedia",
-            "isExpanded": true,
-            "label": <Blueprint5.Popover
-              boundary="clippingParents"
-              captureDismiss={false}
-              content={
-                <Memo(Deferred)
-                  content={[Function]}
-                />
-              }
-              defaultIsOpen={false}
-              disabled={false}
-              fill={false}
-              hasBackdrop={false}
-              hoverCloseDelay={300}
-              hoverOpenDelay={150}
-              inheritDarkTheme={true}
-              interactionKind="click"
-              matchTargetWidth={false}
-              minimal={false}
-              openOnTargetFocus={true}
-              position="right"
-              positioningStrategy="absolute"
-              shouldReturnFocusOnClose={false}
-              targetTagName="span"
-              transitionDuration={300}
-              usePortal={true}
-            >
-              wikipedia
-            </Blueprint5.Popover>,
-          },
-        ]
-      }
-      onNodeCollapse={[Function]}
-      onNodeExpand={[Function]}
+    <select>
+      <option
+        value="0"
+      >
+        druid
+      </option>
+      <option
+        value="1"
+      >
+        sys
+      </option>
+    </select>
+    <span
+      class="bp6-icon bp6-icon-double-caret-vertical"
+    >
+      <svg
+        data-icon="double-caret-vertical"
+      />
+    </span>
+  </div>
+  <div
+    class="bp6-input-group search-box"
+  >
+    <input
+      class="bp6-input"
+      placeholder="Search"
+      style="padding-right: 0px;"
+      type="text"
+      value=""
     />
+    <span
+      class="bp6-input-action"
+    >
+      <div
+        class="bp6-button-group bp6-minimal"
+      >
+        <span
+          class="bp6-popover-target"
+        >
+          <button
+            aria-expanded="false"
+            aria-haspopup="menu"
+            class="bp6-button"
+            data-tooltip="Search settings"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-settings"
+            >
+              <svg
+                data-icon="settings"
+              />
+            </span>
+          </button>
+        </span>
+      </div>
+    </span>
+  </div>
+  <div
+    class="tree-container"
+  >
+    <div
+      class="bp6-tree"
+    >
+      <ul
+        class="bp6-tree-node-list bp6-tree-root"
+      >
+        <li
+          class="bp6-tree-node bp6-tree-node-expanded"
+        >
+          <div
+            class="bp6-tree-node-content bp6-tree-node-content-0"
+          >
+            <span
+              class="bp6-icon bp6-icon-chevron-right bp6-tree-node-caret bp6-tree-node-caret-open"
+            >
+              <svg
+                data-icon="chevron-right"
+              />
+            </span>
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-th bp6-tree-node-icon"
+              tabindex="-1"
+            >
+              <svg
+                data-icon="th"
+              />
+            </span>
+            <span
+              class="bp6-tree-node-label"
+            >
+              <span
+                class="bp6-popover-target"
+              >
+                <span
+                  aria-expanded="false"
+                  aria-haspopup="menu"
+                  class=""
+                >
+                  wikipedia
+                </span>
+              </span>
+            </span>
+          </div>
+          <div
+            class="bp6-collapse"
+            style="height: auto; overflow-y: visible; transition: none;"
+          >
+            <div
+              aria-hidden="false"
+              class="bp6-collapse-body"
+              style="transform: translateY(0); transition: none;"
+            >
+              <ul
+                class="bp6-tree-node-list"
+              >
+                <li
+                  class="bp6-tree-node"
+                >
+                  <div
+                    class="bp6-tree-node-content bp6-tree-node-content-1"
+                  >
+                    <span
+                      class="bp6-tree-node-caret-none"
+                    />
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-time bp6-tree-node-icon bp6-tree-node-icon"
+                      data-tooltip="TIMESTAMP"
+                      tabindex="-1"
+                    >
+                      <svg
+                        data-icon="time"
+                      />
+                    </span>
+                    <span
+                      class="bp6-tree-node-label"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <span
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class=""
+                        >
+                          __time
+                        </span>
+                      </span>
+                    </span>
+                  </div>
+                  <div
+                    class="bp6-collapse"
+                  >
+                    <div
+                      aria-hidden="true"
+                      class="bp6-collapse-body"
+                      style="transform: translateY(-undefinedpx);"
+                    />
+                  </div>
+                </li>
+                <li
+                  class="bp6-tree-node"
+                >
+                  <div
+                    class="bp6-tree-node-content bp6-tree-node-content-1"
+                  >
+                    <span
+                      class="bp6-tree-node-caret-none"
+                    />
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-numerical bp6-tree-node-icon bp6-tree-node-icon"
+                      data-tooltip="BIGINT"
+                      tabindex="-1"
+                    >
+                      <svg
+                        data-icon="numerical"
+                      />
+                    </span>
+                    <span
+                      class="bp6-tree-node-label"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <span
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class=""
+                        >
+                          added
+                        </span>
+                      </span>
+                    </span>
+                  </div>
+                  <div
+                    class="bp6-collapse"
+                  >
+                    <div
+                      aria-hidden="true"
+                      class="bp6-collapse-body"
+                      style="transform: translateY(-undefinedpx);"
+                    />
+                  </div>
+                </li>
+                <li
+                  class="bp6-tree-node"
+                >
+                  <div
+                    class="bp6-tree-node-content bp6-tree-node-content-1"
+                  >
+                    <span
+                      class="bp6-tree-node-caret-none"
+                    />
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-floating-point bp6-tree-node-icon bp6-tree-node-icon"
+                      data-tooltip="FLOAT"
+                      tabindex="-1"
+                    >
+                      <svg
+                        data-icon="floating-point"
+                      />
+                    </span>
+                    <span
+                      class="bp6-tree-node-label"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <span
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class=""
+                        >
+                          addedBy10
+                        </span>
+                      </span>
+                    </span>
+                  </div>
+                  <div
+                    class="bp6-collapse"
+                  >
+                    <div
+                      aria-hidden="true"
+                      class="bp6-collapse-body"
+                      style="transform: translateY(-undefinedpx);"
+                    />
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
   </div>
 </div>
 `;

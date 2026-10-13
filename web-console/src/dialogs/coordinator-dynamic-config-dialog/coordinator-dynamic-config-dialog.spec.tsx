@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config-dialog';
 
 describe('CoordinatorDynamicConfigDialog', () => {
   it('matches snapshot', () => {
-    const coordinatorDynamicConfig = shallow(<CoordinatorDynamicConfigDialog onClose={() => {}} />);
+    render(<CoordinatorDynamicConfigDialog onClose={() => {}} />);
 
-    expect(coordinatorDynamicConfig).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

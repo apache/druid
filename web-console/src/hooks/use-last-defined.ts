@@ -16,15 +16,10 @@
  * limitations under the License.
  */
 
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
 
 export function useLastDefined<T>(cur: T | undefined): T | undefined {
-  const last = useRef<T>();
-
-  useEffect(() => {
-    if (typeof cur === 'undefined') return;
-    last.current = cur;
-  }, [cur]);
-
-  return typeof cur === 'undefined' ? last.current : cur;
+  const [last, setLast] = useState(cur);
+  if (typeof cur !== 'undefined' && cur !== last) setLast(cur);
+  return typeof cur === 'undefined' ? last : cur;
 }
