@@ -29,7 +29,7 @@ STABILITY_MAVEN_ARGS=-pl embedded-tests -Dtest=KafkaIndexFaultToleranceTest
 ```
 
 * One line; last one wins.
-* Split on whitespace — quotes are not interpreted.
+* Must be in shell-safe form (identical to its `shlex` re-quoting), else rejected with the form to use — e.g. `'-Dtest=Foo#bar'`.
 * Used for `install -am -DskipTests`, then for each `test` run.
 * Preset: `-Pci,skip-static-checks -Dweb.console.skip=true -Dsurefire.failIfNoSpecifiedTests=false`.
 
