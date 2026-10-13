@@ -709,7 +709,7 @@ export function changeLookupInExpressionsSampling(druidExpression: string): stri
 
   // If we can not parse the expression as SQL then bash it with a regexp
   return druidExpression.replace(/lookup\s*\(([^)]+)\)/g, (_, argString: string) => {
-    const args = argString.trim().split(/\s*,\s*/);
+    const args = argString.split(',').map(arg => arg.trim());
     if (args.length < 2 || args.length > 3) return 'null';
     const concat = `concat(${args[1]},'[',${args[0]},'] -- This is a placeholder, lookups are not supported in sampling')`;
     const replaceMissingValueWith = args[2];
