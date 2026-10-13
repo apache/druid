@@ -159,7 +159,15 @@ public final class RequireTimeConditionAnalyzer
     @Override
     protected DataSource visit(DataSource dataSource, boolean leaf)
     {
-      if (!isPhysicalLeaf(dataSource) || dataSource.isGlobal()) {
+      if (!isPhysicalLeaf(dataSource)) {
+        return dataSource;
+      }
+      // Lookups, inline, and frame-based inline datasources have no segments to scan,
+      // so they always satisfy the guard. GlobalTableDataSource is still segment-backed
+      // when queried directly or on a join's left leg (see GlobalTableDataSource javadoc:
+      // "when queried directly, or on the left hand side of a join, they will be treated
+      // as any normal table datasource"), so it is NOT exempted here.
+      if (!(dataSource instanceof TableDataSource) && dataSource.isGlobal()) {
         return dataSource;
       }
       // Only the innermost Query ancestor's segment spec reaches a physical leaf at
@@ -184,6 +192,12 @@ public final class RequireTimeConditionAnalyzer
         if (ancestor.index != null && ancestor.index != 0 && i > 0) {
           final EVNode parentOfAncestor = parents.get(i - 1);
           if (!parentOfAncestor.isQuery() && parentOfAncestor.dataSource instanceof JoinDataSource) {
+            // Right-leg broadcast join: a GlobalTableDataSource is materialized as an
+            // IndexedTable via JoinableFactory rather than scanned as segments, so the
+            // right-side join exemption still applies here even though it is a TableDataSource.
+            if (dataSource.isGlobal()) {
+              return dataSource;
+            }
             recordRejection(dataSource, Position.JOIN_RIGHT);
             allLegsBounded = false;
             return dataSource;

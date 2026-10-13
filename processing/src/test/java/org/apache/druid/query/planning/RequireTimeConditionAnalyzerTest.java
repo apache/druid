@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
@@ -51,6 +52,7 @@ public class RequireTimeConditionAnalyzerTest
   private static final QuerySegmentSpec ETERNITY = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
   private static final TableDataSource TABLE_FOO = new TableDataSource("foo");
   private static final TableDataSource TABLE_BAR = new TableDataSource("bar");
+  private static final GlobalTableDataSource GLOBAL_TABLE = new GlobalTableDataSource("broadcastFoo");
   private static final LookupDataSource LOOKUP_LOOKYLOO = new LookupDataSource("lookyloo");
   private static final InlineDataSource INLINE = InlineDataSource.fromIterable(
       ImmutableList.of(new Object[0]),
@@ -109,6 +111,51 @@ public class RequireTimeConditionAnalyzerTest
   public void testGlobalLookupIsSatisfied()
   {
     Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(scan(LOOKUP_LOOKYLOO, ETERNITY)));
+  }
+
+  @Test
+  public void testDirectGlobalTableWithEternityIsNotSatisfied()
+  {
+    // GlobalTableDataSource extends TableDataSource and remains segment-backed when queried
+    // directly (see GlobalTableDataSource javadoc). The isGlobal() flag only indicates the
+    // broadcast-join path is available on a join's right side; it does not mean there is no
+    // physical scan. An unbounded direct scan must still be rejected.
+    final RequireTimeConditionAnalyzer.Result result =
+        RequireTimeConditionAnalyzer.analyze(scan(GLOBAL_TABLE, ETERNITY));
+    Assertions.assertFalse(result.isSatisfied());
+    Assertions.assertEquals("broadcastFoo", result.getLeafName());
+    Assertions.assertEquals(RequireTimeConditionAnalyzer.Position.TOP_LEVEL, result.getPosition());
+  }
+
+  @Test
+  public void testDirectGlobalTableWithBoundedIsSatisfied()
+  {
+    // Bounded direct scan of a broadcast table is fine: the outer segment spec reaches the
+    // physical scan since there is no QueryDataSource or join leg between them.
+    Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(scan(GLOBAL_TABLE, BOUNDED)));
+  }
+
+  @Test
+  public void testJoinLeftLegGlobalTableUnderUnboundedOuterIsNotSatisfied()
+  {
+    // Left-leg GlobalTableDataSource under an ETERNITY outer: the broadcast table is scanned
+    // as segments on the left side (same as a regular TableDataSource) and the outer provides
+    // no bound. Must be rejected rather than exempted via isGlobal().
+    final ScanQuery query = scan(join(GLOBAL_TABLE, LOOKUP_LOOKYLOO), ETERNITY);
+    final RequireTimeConditionAnalyzer.Result result = RequireTimeConditionAnalyzer.analyze(query);
+    Assertions.assertFalse(result.isSatisfied());
+    Assertions.assertEquals("broadcastFoo", result.getLeafName());
+    Assertions.assertEquals(RequireTimeConditionAnalyzer.Position.TOP_LEVEL, result.getPosition());
+  }
+
+  @Test
+  public void testJoinRightLegGlobalTableIsSatisfied()
+  {
+    // Right-leg GlobalTableDataSource is materialized via JoinableFactory as an IndexedTable
+    // rather than scanned as segments, so the right-side-join exemption applies and the
+    // query is accepted even though isGlobal() no longer short-circuits at the leaf check.
+    final ScanQuery query = scan(join(TABLE_FOO, GLOBAL_TABLE), BOUNDED);
+    Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
   }
 
   @Test
