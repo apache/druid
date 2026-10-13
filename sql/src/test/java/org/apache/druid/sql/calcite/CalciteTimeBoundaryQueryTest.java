@@ -28,6 +28,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -47,7 +48,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(expectedContext, "a0");
     testQuery(
         "SELECT MAX(__time) AS maxTime FROM foo",
         queryContext,
@@ -68,7 +69,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(expectedContext, "a0");
     testQuery(
         "SELECT MIN(__time) AS minTime FROM foo",
         queryContext,
@@ -89,7 +90,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(expectedContext, "a0");
     testQuery(
         "SELECT MIN(__time) AS minTime FROM foo where __time >= '2001-01-01' and __time < '2003-01-01'",
         queryContext,
@@ -115,7 +116,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(expectedContext, "a0");
     testQuery(
         "SELECT MIN(__time) AS minTime FROM foo\n"
         + "where __time >= '2001-01-01' and __time < '2003-01-01'\n"

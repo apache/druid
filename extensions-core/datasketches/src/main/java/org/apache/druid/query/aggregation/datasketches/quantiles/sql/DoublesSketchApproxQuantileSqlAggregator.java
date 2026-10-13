@@ -34,6 +34,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToQuantilePostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
@@ -50,6 +51,10 @@ import java.util.List;
 
 public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#APPROX_QUANTILE_DS_MAX_STREAM_LENGTH} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH = "approxQuantileDsMaxStreamLength";
 
   private static final String NAME = "APPROX_QUANTILE_DS";
@@ -194,8 +199,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
   static long getMaxStreamLengthFromQueryContext(QueryContext queryContext)
   {
-    return queryContext.getLong(
-        CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
+    return queryContext.getOrDefault(
+        QueryContextParameters.APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
         DoublesSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH
     );
   }

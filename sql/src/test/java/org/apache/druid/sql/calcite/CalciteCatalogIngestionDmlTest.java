@@ -42,10 +42,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.VirtualColumns;
@@ -121,7 +123,10 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     ),
                     new TableSpec(
                         DatasourceDefn.TABLE_TYPE,
-                        ImmutableMap.of(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H"),
+                        ImmutableMap.of(
+                            DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
+                            DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+                        ),
                         ImmutableList.of(
                             new ColumnSpec("__time", Columns.TIME_COLUMN, null)
                         )
@@ -458,7 +463,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
 
   /**
    * If the segment grain is given in the catalog and absent in the PARTITIONED BY clause in the query, then use the
-   * value from the catalog.
+   * value from the catalog. The catalog's target segment rows becomes the {@code rowsPerSegment} context parameter.
    */
   @Test
   public void testInsertHourGrainPartitonedByFromCatalog()
@@ -475,7 +480,12 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
-                .context(queryContextWithGranularity(Granularities.HOUR))
+                .context(
+                    QueryContext.builder()
+                                .putAll(queryContextWithGranularity(Granularities.HOUR))
+                                .put(QueryContextParameters.ROWS_PER_SEGMENT, 1_000_000)
+                                .toMap()
+                )
                 .build()
         )
         .verify();
@@ -501,7 +511,12 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
-                .context(queryContextWithGranularity(Granularities.DAY))
+                .context(
+                    QueryContext.builder()
+                                .putAll(queryContextWithGranularity(Granularities.DAY))
+                                .put(QueryContextParameters.ROWS_PER_SEGMENT, 1_000_000)
+                                .toMap()
+                )
                 .build()
         )
         .verify();

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.joda.time.DateTimeZone;
 
 import java.util.HashMap;
@@ -37,10 +38,22 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_KEY_USE_LEXICOGRAPHIC_TOPN = "useLexicographicTopN";
+  /**
+   * @deprecated Use {@link QueryContextParameters#COMPUTE_INNER_JOIN_COST_AS_FILTER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
+  /**
+   * @deprecated Use {@link QueryContextParameters#FORCE_EXPRESSION_VIRTUAL_COLUMNS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  /**
+   * @deprecated Use {@link QueryContextParameters#REQUIRE_TIME_CONDITION} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_REQUIRE_TIME_CONDITION = "requireTimeCondition";
   public static final String CTX_KEY_MAX_PLANNING_TIME_MS = "maxPlanningTimeMs";
   public static final int NUM_FILTER_NOT_USED = -1;
@@ -462,6 +475,7 @@ public class PlannerConfig
 
     public Builder withOverrides(final Map<String, Object> queryContext)
     {
+      final QueryContext context = QueryContext.of(queryContext);
       useApproximateCountDistinct = QueryContexts.parseBoolean(
           queryContext,
           CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
@@ -482,9 +496,8 @@ public class PlannerConfig
           CTX_KEY_USE_LEXICOGRAPHIC_TOPN,
           useLexicographicTopN
       );
-      computeInnerJoinCostAsFilter = QueryContexts.parseBoolean(
-          queryContext,
-          CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
+      computeInnerJoinCostAsFilter = context.getOrDefault(
+          QueryContextParameters.COMPUTE_INNER_JOIN_COST_AS_FILTER,
           computeInnerJoinCostAsFilter
       );
       useNativeQueryExplain = QueryContexts.parseBoolean(
@@ -492,9 +505,8 @@ public class PlannerConfig
           CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
           useNativeQueryExplain
       );
-      forceExpressionVirtualColumns = QueryContexts.parseBoolean(
-          queryContext,
-          CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS,
+      forceExpressionVirtualColumns = context.getOrDefault(
+          QueryContextParameters.FORCE_EXPRESSION_VIRTUAL_COLUMNS,
           forceExpressionVirtualColumns
       );
       final int queryContextMaxNumericInFilters = QueryContexts.parseInt(
@@ -510,9 +522,8 @@ public class PlannerConfig
           QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
           nativeQuerySqlPlanningMode
       );
-      requireTimeCondition = QueryContexts.parseBoolean(
-          queryContext,
-          CTX_REQUIRE_TIME_CONDITION,
+      requireTimeCondition = context.getOrDefault(
+          QueryContextParameters.REQUIRE_TIME_CONDITION,
           requireTimeCondition
       );
       maxPlanningTimeMs = QueryContexts.parseLong(
@@ -592,7 +603,7 @@ public class PlannerConfig
     }
     if (def.requireTimeCondition != requireTimeCondition) {
       overrides.put(
-          CTX_REQUIRE_TIME_CONDITION,
+          QueryContextParameters.REQUIRE_TIME_CONDITION.getName(),
           String.valueOf(requireTimeCondition)
       );
     }

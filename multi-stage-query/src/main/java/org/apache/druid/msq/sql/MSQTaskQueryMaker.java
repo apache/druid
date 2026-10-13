@@ -61,15 +61,13 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
@@ -98,6 +96,10 @@ import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#USER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USER_KEY = "__user";
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
@@ -282,10 +284,10 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // Add task-specific overrides.
     if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination)) {
-      context.put(MultiStageQueryContext.CTX_IS_REINDEX, true);
+      QueryContextParameters.IS_REINDEX.set(context, true);
     }
 
-    context.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
+    QueryContextParameters.USER.set(context, plannerContext.getAuthenticationResult().getIdentity());
 
     return context;
   }
@@ -427,7 +429,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static Object getSegmentGranularity(PlannerContext plannerContext)
   {
     Object segmentGranularity =
-        Optional.ofNullable(plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY))
+        Optional.ofNullable(plannerContext.queryContext().get(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY))
                 .orElseGet(() -> {
                   try {
                     return plannerContext.getJsonMapper().writeValueAsString(DEFAULT_SEGMENT_GRANULARITY);
@@ -444,7 +446,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static List<Interval> getReplaceIntervals(QueryContext sqlQueryContext)
   {
     final List<Interval> replaceTimeChunks =
-        Optional.ofNullable(sqlQueryContext.get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
+        Optional.ofNullable(sqlQueryContext.get(QueryContextParameters.SQL_REPLACE_TIME_CHUNKS))
                 .map(
                     s -> {
                       if (s instanceof String && "all".equals(StringUtils.toLowerCase((String) s))) {
@@ -469,7 +471,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   {
     final MSQDestination destination;
     ExportDestination exportDestination = targetDataSource;
-    ResultFormat format = ResultFormat.fromString(sqlQueryContext.getString(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT));
+    ResultFormat format = ResultFormat.fromString(sqlQueryContext.get(QueryContextParameters.EXPORT_FILE_FORMAT));
 
     destination = new ExportMSQDestination(
         exportDestination.getStorageConnectorProvider(),
@@ -537,13 +539,6 @@ public class MSQTaskQueryMaker implements QueryMaker
   {
     final QueryContext sqlQueryContext = plannerContext.queryContext();
     final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
-
-    if (maxNumTasks < 2) {
-      throw InvalidInput.exception(
-          "MSQ context maxNumTasks [%,d] cannot be less than 2, since at least 1 controller and 1 worker is necessary",
-          maxNumTasks
-      );
-    }
 
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;

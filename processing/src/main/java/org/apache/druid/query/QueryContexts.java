@@ -268,7 +268,10 @@ public class QueryContexts
    * Overrides the {@link org.apache.druid.segment.loading.AcquireMode} an engine uses to acquire segments from the
    * segment cache; see {@link QueryContext#getSegmentAcquireMode}. Intended for testing, debugging, and performance
    * comparison.
+   *
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SEGMENT_ACQUIRE_MODE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SEGMENT_ACQUIRE_MODE = "segmentAcquireMode";
 
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the

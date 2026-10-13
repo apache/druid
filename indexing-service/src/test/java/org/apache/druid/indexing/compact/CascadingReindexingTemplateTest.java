@@ -22,7 +22,6 @@ package org.apache.druid.indexing.compact;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexer.CompactionEngine;
@@ -35,6 +34,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -1670,7 +1670,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
         .forDataSource("testDataSource")
         .withRuleProvider(InlineReindexingRuleProvider.builder().build())
-        .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
+        .withTaskContext(Map.of(QueryContextParameters.MAX_NUM_TASKS.getName(), 1))
         .withDefaultSegmentGranularity(Granularities.DAY)
         .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
         .build();
@@ -1678,7 +1678,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
     Assertions.assertFalse(result.isValid());
     Assertions.assertEquals(
-        "MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)",
+        "MSQ: Query context parameter [maxNumTasks] must be within the range [2, 2147483647], but was [1]",
         result.getReason()
     );
   }

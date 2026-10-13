@@ -964,8 +964,8 @@ public class QueryContext
   }
 
   /**
-   * Returns the {@link AcquireMode} set by {@link QueryContexts#SEGMENT_ACQUIRE_MODE}, or {@code defaultValue} (the
-   * engine's own choice) if absent. Currently only honored by MSQ leaf stage processors.
+   * Returns the {@link AcquireMode} set by {@link QueryContextParameters#SEGMENT_ACQUIRE_MODE}, or
+   * {@code defaultValue} (the engine's own choice) if absent. Currently only honored by MSQ leaf stage processors.
    * <p>
    * {@link AcquireMode#PARTIAL} degrades to {@link AcquireMode#FULL} where partial downloads are unavailable, such as
    * when they are disabled by configuration or the segment is not range-readable. Forcing {@link AcquireMode#PARTIAL}
@@ -974,6 +974,6 @@ public class QueryContext
    */
   public AcquireMode getSegmentAcquireMode(AcquireMode defaultValue)
   {
-    return getEnum(QueryContexts.SEGMENT_ACQUIRE_MODE, AcquireMode.class, defaultValue);
+    return getOrDefault(QueryContextParameters.SEGMENT_ACQUIRE_MODE, defaultValue);
   }
 }

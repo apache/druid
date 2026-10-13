@@ -364,9 +364,9 @@ Supported query contexts:
 
 |Key|Description|
 |---|-----------|
-|`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
-|`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.|
-|`minSpillFileSize`|Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.|
+|`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.| <!-- GENERATED QUERY CONTEXT PARAMETER: maxOnDiskStorage -->
+|`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.| <!-- GENERATED QUERY CONTEXT PARAMETER: maxSpillFileCount -->
+|`minSpillFileSize`|Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.| <!-- GENERATED QUERY CONTEXT PARAMETER: minSpillFileSize -->
 
 ### Advanced configurations
 
@@ -387,20 +387,21 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|None|
-|`bufferGrouperInitialBuckets`|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|None|
-|`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|None|
-|`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`|None|
-|`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree`|None|
-|`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads`|None|
-|`maxSelectorDictionarySize`|Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`|None|
-|`maxMergingDictionarySize`|Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`|None|
-|`mergeThreadLocal`|Whether merge buffers should always be split into thread-local buffers. Setting this to `true` reduces thread contention, but uses memory less efficiently. This tradeoff is beneficial when memory is plentiful. |false|
-|`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|false|
-|`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|false|
-|`applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan. This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.|true|
-|`groupByEnableMultiValueUnnesting`|Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key. 'true' indicates multi-value grouping keys are unnested. 'false' returns an error if a multi value column is found as part of the grouping key.|true|
-|`deferExpressionDimensions`|When an entry in `dimensions` references an `expression` virtual column, this property influences whether expression evaluation is deferred from cursor processing to the merge step. Options are:<ul><li>`fixedWidth`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string).</li><li>`fixedWidthNonNumeric`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string), unless the expression output and all inputs are numeric.</li><li>`singleString`: Defer string-typed expressions with a single dictionary-encoded string input.</li><li>`always`: Defer all expressions. May require building dictionaries for expression inputs.</li></ul><br />These properties only take effect when the `groupBy` query can be vectorized. Non-vectorized queries only defer string-typed expressions of single string inputs.|`fixedWidthNonNumeric`|
+|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|`druid.query.groupBy.singleThreaded`| <!-- GENERATED QUERY CONTEXT PARAMETER: groupByIsSingleThreaded -->
+|`bufferGrouperInitialBuckets`|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|`druid.query.groupBy.bufferGrouperInitialBuckets`| <!-- GENERATED QUERY CONTEXT PARAMETER: bufferGrouperInitialBuckets -->
+|`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|`druid.query.groupBy.bufferGrouperMaxLoadFactor`| <!-- GENERATED QUERY CONTEXT PARAMETER: bufferGrouperMaxLoadFactor -->
+|`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`.|`druid.query.groupBy.forceHashAggregation`| <!-- GENERATED QUERY CONTEXT PARAMETER: forceHashAggregation -->
+|`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree`.|`druid.query.groupBy.intermediateCombineDegree`| <!-- GENERATED QUERY CONTEXT PARAMETER: intermediateCombineDegree -->
+|`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads`.|`druid.query.groupBy.numParallelCombineThreads`| <!-- GENERATED QUERY CONTEXT PARAMETER: numParallelCombineThreads -->
+|`maxSelectorDictionarySize`|Overrides the value of `druid.query.groupBy.maxSelectorDictionarySize`.|`druid.query.groupBy.maxSelectorDictionarySize`| <!-- GENERATED QUERY CONTEXT PARAMETER: maxSelectorDictionarySize -->
+|`maxMergingDictionarySize`|Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`.|`druid.query.groupBy.maxMergingDictionarySize`| <!-- GENERATED QUERY CONTEXT PARAMETER: maxMergingDictionarySize -->
+|`mergeThreadLocal`|Whether merge buffers should always be split into thread-local buffers. Setting this to `true` reduces thread contention, but uses memory less efficiently. This tradeoff is beneficial when memory is plentiful.|`false`| <!-- GENERATED QUERY CONTEXT PARAMETER: mergeThreadLocal -->
+|`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|`false`| <!-- GENERATED QUERY CONTEXT PARAMETER: sortByDimsFirst -->
+|`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|`false`| <!-- GENERATED QUERY CONTEXT PARAMETER: forceLimitPushDown -->
+|`applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan. This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.|`druid.query.groupBy.applyLimitPushDownToSegment`| <!-- GENERATED QUERY CONTEXT PARAMETER: applyLimitPushDownToSegment -->
+|`groupByEnableMultiValueUnnesting`|Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key. 'true' indicates multi-value grouping keys are unnested. 'false' returns an error if a multi value column is found as part of the grouping key.|`true`| <!-- GENERATED QUERY CONTEXT PARAMETER: groupByEnableMultiValueUnnesting -->
+|`deferExpressionDimensions`|When an entry in `dimensions` references an `expression` virtual column, this property influences whether expression evaluation is deferred from cursor processing to the merge step. Options are:<ul><li>`fixedWidth`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string).</li><li>`fixedWidthNonNumeric`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string), unless the expression output and all inputs are numeric.</li><li>`singleString`: Defer string-typed expressions with a single dictionary-encoded string input.</li><li>`always`: Defer all expressions. May require building dictionaries for expression inputs.</li></ul><br />These properties only take effect when the `groupBy` query can be vectorized. Non-vectorized queries only defer string-typed expressions of single string inputs.|`fixedWidthNonNumeric`| <!-- GENERATED QUERY CONTEXT PARAMETER: deferExpressionDimensions -->
+|`resultAsArray`|If true, groupBy results are returned as arrays instead of maps.|`false`| <!-- GENERATED QUERY CONTEXT PARAMETER: resultAsArray -->
 
 #### Array based result rows
 

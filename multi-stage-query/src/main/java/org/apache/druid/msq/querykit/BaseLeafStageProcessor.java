@@ -267,7 +267,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
 
   /**
    * How the {@link ReadableInputQueue} for this stage's base inputs acquires segments, unless overridden by
-   * {@link org.apache.druid.query.QueryContexts#SEGMENT_ACQUIRE_MODE}. The default acquires them fully up front
+   * {@link org.apache.druid.query.context.QueryContextParameters#SEGMENT_ACQUIRE_MODE}. The default acquires them fully up front
    * ({@link AcquireMode#FULL}), which is safe for any processor. Leaf processors that read segments through the async
    * cursor API ({@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync}) can override to
    * {@link AcquireMode#PARTIAL} so only the columns a query actually touches are downloaded.

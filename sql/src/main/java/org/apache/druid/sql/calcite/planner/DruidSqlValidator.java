@@ -63,13 +63,13 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -92,8 +92,10 @@ import java.util.regex.Pattern;
 public class DruidSqlValidator extends BaseDruidSqlValidator
 {
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
-
-  // Copied here from MSQE since that extension is not visible here.
+  /**
+   * @deprecated Use {@link QueryContextParameters#ROWS_PER_SEGMENT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_ROWS_PER_SEGMENT = "msqRowsPerSegment";
 
   private final PlannerContext plannerContext;
@@ -207,8 +209,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       // during conversion, however, we've just worked out the granularity, so we
       // do it here instead.
       try {
-        plannerContext.queryContextMap().put(
-            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+        QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY.set(
+            plannerContext.queryContextMap(),
             plannerContext.getPlannerToolbox().jsonMapper().writeValueAsString(effectiveGranularity)
         );
       }
@@ -262,10 +264,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     setValidatedNodeType(insert, targetType);
 
     // Segment size
-    if (tableMetadata != null && !plannerContext.queryContextMap().containsKey(CTX_ROWS_PER_SEGMENT)) {
+    if (tableMetadata != null && !plannerContext.queryContext().has(QueryContextParameters.ROWS_PER_SEGMENT)) {
       final Integer targetSegmentRows = tableMetadata.targetSegmentRows();
       if (targetSegmentRows != null) {
-        plannerContext.queryContextMap().put(CTX_ROWS_PER_SEGMENT, targetSegmentRows);
+        QueryContextParameters.ROWS_PER_SEGMENT.set(plannerContext.queryContextMap(), targetSegmentRows);
       }
     }
   }

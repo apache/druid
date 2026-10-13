@@ -25,7 +25,6 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.SupervisorModule;
@@ -62,6 +61,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
@@ -374,13 +374,13 @@ public class OverlordCompactionSchedulerTest
         .builder()
         .forDataSource(dataSource)
         .withEngine(CompactionEngine.MSQ)
-        .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
+        .withTaskContext(Map.of(QueryContextParameters.MAX_NUM_TASKS.getName(), 1))
         .build();
 
     final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(datasourceConfig);
     Assertions.assertFalse(result.isValid());
     Assertions.assertEquals(
-        "MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)",
+        "MSQ: Query context parameter [maxNumTasks] must be within the range [2, 2147483647], but was [1]",
         result.getReason()
     );
   }

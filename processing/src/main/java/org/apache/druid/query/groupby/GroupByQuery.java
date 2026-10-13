@@ -88,18 +88,34 @@ import java.util.stream.Collectors;
  */
 public class GroupByQuery extends BaseQuery<ResultRow>
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#SORT_BY_DIMS_FIRST} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
+  /**
+   * @deprecated Use {@link QueryContextParameters#TIMESTAMP_RESULT_FIELD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
+  /**
+   * @deprecated Use {@link QueryContextParameters#TIMESTAMP_RESULT_FIELD_GRANULARITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY = "timestampResultFieldGranularity";
+  /**
+   * @deprecated Use {@link QueryContextParameters#TIMESTAMP_RESULT_FIELD_IN_ORIGINAL_DIMENSIONS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_TIMESTAMP_RESULT_FIELD_INDEX = "timestampResultFieldInOriginalDimensions";
-
   /**
    * Context key for whether this query has any "dropped" dimensions. This is set true for queries like
    * "GROUP BY 'constant'", and enables {@link GroupingEngine#summaryRowPreconditions(GroupByQuery)} to correctly
    * determine whether to include a summary row.
+   * @deprecated Use {@link QueryContextParameters#HAS_DROPPED_DIMENSIONS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_HAS_DROPPED_DIMENSIONS = "hasDroppedDimensions";
-  private static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
 
   private static final Comparator<ResultRow> NON_GRANULAR_TIME_COMP =
       (ResultRow lhs, ResultRow rhs) -> Longs.compare(lhs.getLong(0), rhs.getLong(0));
@@ -387,7 +403,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
    *
    * This method will return a nonnull timestamp in the following two cases:
    *
-   * 1) CTX_KEY_FUDGE_TIMESTAMP is set (in which case this timestamp will be returned).
+   * 1) {@link QueryContextParameters#FUDGE_TIMESTAMP} is set (in which case this timestamp will be returned).
    * 2) Granularity is "ALL".
    *
    * If this method returns null, then {@link #getResultRowHasTimestamp()} will return true. The reverse is also true:
@@ -455,7 +471,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean getContextSortByDimsFirst()
   {
-    return context().getBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+    return context().getOrDefault(QueryContextParameters.SORT_BY_DIMS_FIRST);
   }
 
   @JsonIgnore
@@ -470,15 +486,17 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean getApplyLimitPushDownFromContext()
   {
-    return context().getBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
+    return context().getOrDefault(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN);
   }
 
   /**
-   * See {@link #CTX_HAS_DROPPED_DIMENSIONS}.
+   * Whether this query has any "dropped" dimensions. This is set true for queries like "GROUP BY 'constant'", and
+   * enables {@link GroupingEngine#summaryRowPreconditions(GroupByQuery)} to correctly determine whether to include a
+   * summary row. See {@link QueryContextParameters#HAS_DROPPED_DIMENSIONS}.
    */
   public boolean hasDroppedDimensions()
   {
-    return context().getBoolean(CTX_HAS_DROPPED_DIMENSIONS, false);
+    return context().getOrDefault(QueryContextParameters.HAS_DROPPED_DIMENSIONS);
   }
 
   @Override
@@ -500,7 +518,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   private boolean validateAndGetForceLimitPushDown()
   {
-    final boolean forcePushDown = context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, false);
+    final boolean forcePushDown = context().getOrDefault(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, false);
     if (forcePushDown) {
       if (!(limitSpec instanceof DefaultLimitSpec)) {
         throw new IAE("When forcing limit push down, a limit spec must be provided.");
@@ -720,7 +738,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private DateTime computeUniversalTimestamp()
   {
-    final String timestampStringFromContext = context().getString(CTX_KEY_FUDGE_TIMESTAMP, "");
+    final String timestampStringFromContext = context().getOrDefault(QueryContextParameters.FUDGE_TIMESTAMP, "");
     final Granularity granularity = getGranularity();
 
     if (!timestampStringFromContext.isEmpty()) {

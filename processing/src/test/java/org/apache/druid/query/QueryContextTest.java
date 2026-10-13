@@ -590,17 +590,17 @@ public class QueryContextTest
     assertEquals(AcquireMode.PARTIAL, QueryContext.empty().getSegmentAcquireMode(AcquireMode.PARTIAL));
     assertEquals(
         AcquireMode.FULL,
-        QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "full"))
+        QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "full").toContext()
                     .getSegmentAcquireMode(AcquireMode.PARTIAL)
     );
     assertEquals(
         AcquireMode.PARTIAL,
-        QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "PARTIAL"))
+        QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "PARTIAL").toContext()
                     .getSegmentAcquireMode(AcquireMode.FULL)
     );
     assertThrows(
         BadQueryContextException.class,
-        () -> QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "dummy"))
+        () -> QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "dummy").toContext()
                           .getSegmentAcquireMode(AcquireMode.FULL)
     );
   }

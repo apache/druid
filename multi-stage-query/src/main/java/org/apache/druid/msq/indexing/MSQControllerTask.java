@@ -332,13 +332,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   {
     if (isIngestion(querySpec)) {
       return MultiStageQueryContext.validateAndGetTaskLockType(
-          QueryContext.of(
-              // Use the task context and override with the query context
-              QueryContexts.override(
-                  getContext(),
-                  querySpec.getContext().asMap()
-              )
-          ),
+          // The query context takes precedence over the task context.
+          QueryContext.of(getContext()).override(querySpec.getContext()),
           ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()
       );
     } else {

@@ -42,6 +42,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Order;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -6312,7 +6313,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
             .aggregators(commonAggregators)
             .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
-            .context(ImmutableMap.of("doAggregateTopNMetricFirst", true))
+            .context(QueryContext.ofMap(QueryContextParameters.DO_AGGREGATE_TOP_N_METRIC_FIRST, true))
             .build();
 
 
@@ -6366,7 +6367,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             new LongFirstAggregatorFactory("first", "index", null),
             new LongLastAggregatorFactory("last", "index", null)
         )
-        .context(ImmutableMap.of("doAggregateTopNMetricFirst", true))
+        .context(QueryContext.ofMap(QueryContextParameters.DO_AGGREGATE_TOP_N_METRIC_FIRST, true))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(

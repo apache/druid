@@ -89,6 +89,7 @@ Some query types offer context parameters specific to that query type.
 |Parameter        |Default              | Description          |
 |-----------------|---------------------|----------------------|
 |`skipEmptyBuckets`| `false` | Disable timeseries zero-filling behavior, so only buckets with results will be returned.| <!-- GENERATED QUERY CONTEXT PARAMETER: skipEmptyBuckets -->
+|`grandTotal`| `false` | If true, a timeseries query returns an additional row with the totals of all aggregations as its last row.| <!-- GENERATED QUERY CONTEXT PARAMETER: grandTotal -->
 
 ### Join filter
 

@@ -22,7 +22,6 @@ package org.apache.druid.benchmark.query;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
@@ -43,6 +42,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -397,9 +397,7 @@ public class ScanBenchmark
                 )
             )
         )
-        .withOverriddenContext(
-            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
-        );
+        .withOverriddenContext(QueryContextParameters.SCAN_OUTERMOST, false);
 
     List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, effectiveQuery);
     blackhole.consume(results);
@@ -429,9 +427,7 @@ public class ScanBenchmark
                 )
             )
         )
-        .withOverriddenContext(
-            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
-        );
+        .withOverriddenContext(QueryContextParameters.SCAN_OUTERMOST, false);
 
     List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, effectiveQuery);
     blackhole.consume(results);
@@ -474,9 +470,7 @@ public class ScanBenchmark
         .withQuerySegmentSpec(
             new MultipleSpecificSegmentSpec(segmentDescriptors)
         )
-        .withOverriddenContext(
-            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
-        );
+        .withOverriddenContext(QueryContextParameters.SCAN_OUTERMOST, false);
 
     Sequence<Result<ScanResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(effectiveQuery),
