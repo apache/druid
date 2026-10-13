@@ -198,10 +198,12 @@ public class QueryContextTest
   {
     final QueryContextParameter<Integer> nullableWithDefault = QueryContextParameter
         .builder("nullable", Integer.class, value -> (Integer) value)
+        .description("Test parameter.")
         .defaultValue(10)
         .build();
     final QueryContextParameter<Integer> nonNullable = QueryContextParameter
         .builder("nonNullable", Integer.class, value -> (Integer) value)
+        .description("Test parameter.")
         .nullable(false)
         .build();
     final Map<String, Object> values = new HashMap<>();
@@ -574,6 +576,33 @@ public class QueryContextTest
         QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, false))
                    .getRealtimeSegmentsMode()
     );
+  }
+
+  @Test
+  public void testIntegerParametersRejectOnlyInexactNumbers()
+  {
+    assertEquals(5, QueryContext.of(ImmutableMap.of(QueryContextParameters.PRIORITY.getName(), 5.0)).getPriority());
+    assertEquals(5, QueryContext.of(ImmutableMap.of(QueryContextParameters.PRIORITY.getName(), "5.0")).getPriority());
+    assertEquals(
+        "Query context parameter [priority] should be in integer format, but got [1.5]",
+        assertThrows(
+            BadQueryContextException.class,
+            () -> QueryContext.of(ImmutableMap.of(QueryContextParameters.PRIORITY.getName(), 1.5)).getPriority()
+        ).getMessage()
+    );
+    assertThrows(
+        BadQueryContextException.class,
+        () -> QueryContext.of(ImmutableMap.of(QueryContextParameters.TIMEOUT.getName(), "1.5")).getTimeout()
+    );
+  }
+
+  @Test
+  public void testGetRealtimeSegmentsModeIgnoresExplicitNullDeprecatedFlag()
+  {
+    final Map<String, Object> context = new HashMap<>();
+    QueryContextParameters.REALTIME_SEGMENTS_MODE.set(context, QueryContexts.RealtimeSegmentsMode.EXCLUDE);
+    context.put(QueryContextParameters.REALTIME_SEGMENTS_ONLY.getName(), null);
+    assertEquals(QueryContexts.RealtimeSegmentsMode.EXCLUDE, QueryContext.of(context).getRealtimeSegmentsMode());
   }
 
   @Test

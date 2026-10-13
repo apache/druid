@@ -51,6 +51,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -243,7 +244,7 @@ public class DartSqlEngine implements SqlEngine
     }
 
     // Set default query timeout if not already specified.
-    contextMap.putIfAbsent(QueryContexts.TIMEOUT_KEY, serverConfig.getDefaultQueryTimeout());
+    contextMap.putIfAbsent(QueryContextParameters.TIMEOUT.getName(), serverConfig.getDefaultQueryTimeout());
 
     // Add execution ID.
     contextMap.put(QueryContexts.CTX_DART_QUERY_ID, generateExecutionId());

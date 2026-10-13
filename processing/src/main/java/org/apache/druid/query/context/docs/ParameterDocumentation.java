@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.context.docs;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
@@ -52,12 +53,30 @@ public final class ParameterDocumentation
     DART
   }
 
+  /**
+   * Native query type that a parameter applies to.
+   */
   public enum QueryType
   {
-    SCAN,
-    TIMESERIES,
-    TOP_N,
-    GROUP_BY
+    SCAN("Scan"),
+    TIMESERIES("TimeSeries"),
+    TOP_N("TopN"),
+    GROUP_BY("GroupBy"),
+    SEARCH("Search");
+
+    private final String value;
+
+    QueryType(final String value)
+    {
+      this.value = value;
+    }
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return value;
+    }
   }
 
   public enum StatementType
@@ -72,8 +91,10 @@ public final class ParameterDocumentation
   private final Set<Engine> engines;
   private final Set<QueryType> queryTypes;
   private final Set<StatementType> statementTypes;
-  private final Optional<String> defaultDescription;
-  private final Optional<String> since;
+  @Nullable
+  private final String defaultDescription;
+  @Nullable
+  private final String since;
 
   private ParameterDocumentation(final Builder builder)
   {
@@ -82,8 +103,8 @@ public final class ParameterDocumentation
     this.engines = Set.copyOf(builder.engines);
     this.queryTypes = Set.copyOf(builder.queryTypes);
     this.statementTypes = Set.copyOf(builder.statementTypes);
-    this.defaultDescription = Optional.ofNullable(builder.defaultDescription);
-    this.since = Optional.ofNullable(builder.since);
+    this.defaultDescription = builder.defaultDescription;
+    this.since = builder.since;
   }
 
   public static Builder builder()
@@ -118,12 +139,12 @@ public final class ParameterDocumentation
 
   public Optional<String> getDefaultDescription()
   {
-    return defaultDescription;
+    return Optional.ofNullable(defaultDescription);
   }
 
   public Optional<String> getSince()
   {
-    return since;
+    return Optional.ofNullable(since);
   }
 
   private static String requireNonBlank(@Nullable final String value, final String name)

@@ -562,7 +562,14 @@ public class QueryContexts
       overridden.putAll(context);
     }
     if (overrides != null) {
-      overridden.putAll(overrides);
+      // A null override unsets the key, like override(Map, String, Object).
+      overrides.forEach((key, value) -> {
+        if (value == null) {
+          overridden.remove(key);
+        } else {
+          overridden.put(key, value);
+        }
+      });
     }
 
     return overridden;

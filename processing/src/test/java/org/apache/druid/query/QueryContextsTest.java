@@ -333,4 +333,16 @@ public class QueryContextsTest
     );
   }
 
+
+  @Test
+  public void testOverrideWithNullRemovesKey()
+  {
+    final Map<String, Object> overrides = new HashMap<>();
+    overrides.put("a", null);
+    overrides.put("b", 2);
+    Assertions.assertEquals(
+        ImmutableMap.of("b", 2, "c", 3),
+        QueryContexts.override(ImmutableMap.of("a", 1, "c", 3), overrides)
+    );
+  }
 }

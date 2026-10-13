@@ -31,8 +31,8 @@ import java.util.Objects;
  * Builds an immutable query context map using typed parameter descriptors.
  * Existing string-keyed maps can be copied with {@link #putAll(Map)} for backward compatibility.
  *
- * <p>Like {@link com.google.common.collect.ImmutableMap.Builder}, {@link #putAll(Map)} rejects {@code null} keys and
- * values.
+ * <p>Like {@link com.google.common.collect.ImmutableMap.Builder}, {@link #putRaw(String, Object)} and
+ * {@link #putAll(Map)} reject {@code null} keys and values.
  * Typed entries follow the {@link QueryContextParameter} convention that {@code null} means "unset", so
  * {@link #put(QueryContextParameter, Object)} with a {@code null} value removes the parameter.
  * Unlike {@code ImmutableMap.Builder}, a later value for the same key replaces the earlier one.</p>
@@ -48,11 +48,24 @@ public final class QueryContextBuilder
    */
   public QueryContextBuilder putAll(final Map<? extends String, ?> values)
   {
-    values.forEach(
-        (name, value) -> this.values.put(
-            Objects.requireNonNull(name, "name"),
-            Objects.requireNonNull(value, () -> "value for query context key [" + name + "]")
-        )
+    values.forEach(this::putRaw);
+    return this;
+  }
+
+  /**
+   * Adds a context value using a raw string key.
+   *
+   * <p>Use this only for keys that do not yet have a declared {@link QueryContextParameter} descriptor. Remaining
+   * callers mark the parameters still to be migrated; replace them with {@link #put(QueryContextParameter, Object)}
+   * once the descriptor exists.</p>
+   *
+   * @throws NullPointerException if the name or value is {@code null}
+   */
+  public QueryContextBuilder putRaw(final String name, final Object value)
+  {
+    values.put(
+        Objects.requireNonNull(name, "name"),
+        Objects.requireNonNull(value, () -> "value for query context key [" + name + "]")
     );
     return this;
   }

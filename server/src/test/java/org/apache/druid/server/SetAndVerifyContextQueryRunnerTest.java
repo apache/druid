@@ -20,13 +20,13 @@
 package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -42,7 +42,7 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .context(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1L))
         .build();
 
     ServerConfig defaultConfig = new ServerConfig();
@@ -93,7 +93,7 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
+        .context(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 0L))
         .build();
 
     ServerConfig defaultConfig = new ServerConfig();
@@ -115,7 +115,7 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
+        .context(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 0L))
         .build();
 
     ServerConfig defaultConfig = new ServerConfig()
@@ -150,10 +150,10 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(
-            QueryContexts.TIMEOUT_KEY, 300_000,
-            DirectDruidClient.QUERY_FAIL_TIME, existingFailTime
-        ))
+        .context(QueryContext.builder()
+            .put(QueryContextParameters.TIMEOUT, 300_000L)
+            .putRaw(DirectDruidClient.QUERY_FAIL_TIME, existingFailTime)
+            .toMap())
         .build();
 
     ServerConfig defaultConfig = new ServerConfig();
@@ -177,10 +177,10 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(
-            QueryContexts.TIMEOUT_KEY, 1,
-            DirectDruidClient.QUERY_FAIL_TIME, existingFailTime
-        ))
+        .context(QueryContext.builder()
+            .put(QueryContextParameters.TIMEOUT, 1L)
+            .putRaw(DirectDruidClient.QUERY_FAIL_TIME, existingFailTime)
+            .toMap())
         .build();
 
     ServerConfig defaultConfig = new ServerConfig();
@@ -206,10 +206,10 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(
-            QueryContexts.TIMEOUT_KEY, Long.MAX_VALUE,
-            DirectDruidClient.QUERY_FAIL_TIME, existingFailTime
-        ))
+        .context(QueryContext.builder()
+            .put(QueryContextParameters.TIMEOUT, Long.MAX_VALUE)
+            .putRaw(DirectDruidClient.QUERY_FAIL_TIME, existingFailTime)
+            .toMap())
         .build();
 
     // Explicit max so the test does not depend on ServerConfig default values.

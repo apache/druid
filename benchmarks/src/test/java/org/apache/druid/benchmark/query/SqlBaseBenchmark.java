@@ -60,6 +60,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.AutoTypeColumnSchema;
@@ -248,7 +249,7 @@ public class SqlBaseBenchmark
   @Setup(Level.Trial)
   public void setup() throws JsonProcessingException
   {
-    vectorizeContext = QueryContexts.Vectorize.fromString(vectorize);
+    vectorizeContext = QueryContextParameters.VECTORIZE.parse(vectorize);
     checkIncompatibleParameters();
 
     Map<DataSegment, IncrementalIndex> realtimeSegments = new HashMap<>();
