@@ -45,3 +45,18 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      # Leave time for ASF Infra to allowlist new versions of third-party actions
+      # https://github.com/apache/infrastructure-actions#dependabot-cooldown-period
+      default-days: 14
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
