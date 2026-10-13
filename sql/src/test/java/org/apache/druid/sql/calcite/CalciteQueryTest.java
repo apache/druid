@@ -85,6 +85,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -16054,7 +16055,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .queryContext(
             ImmutableMap.of(
-                QueryContexts.ENABLE_DEBUG, true
+                QueryContextParameters.DEBUG.getName(), true
             )
         )
         .expectedQuery(
@@ -16153,7 +16154,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .queryContext(
             ImmutableMap.of(
-                QueryContexts.ENABLE_DEBUG, true
+                QueryContextParameters.DEBUG.getName(), true
             )
         )
         .expectedResults(

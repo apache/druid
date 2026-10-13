@@ -3347,9 +3347,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   protected Map<String, Object> makeContext(final Map<String, Object> myContext)
   {
     final Map<String, Object> context = new HashMap<>();
-    context.put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false");
-    context.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize ? "force" : "false");
-    context.put(QueryContexts.VECTOR_SIZE_KEY, 16); // Small vector size to ensure we use more than one.
+    context.put(QueryContextParameters.VECTORIZE.getName(), vectorize ? "force" : "false");
+    context.put(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.getName(), vectorize ? "force" : "false");
+    context.put(QueryContextParameters.VECTOR_SIZE.getName(), 16); // Small vector size to ensure we use more than one.
     context.putAll(myContext);
     return context;
   }

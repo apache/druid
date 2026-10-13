@@ -60,6 +60,11 @@ import java.util.Set;
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
   public static final String CTX_GRAND_TOTAL = "grandTotal";
+  /**
+   * @deprecated Use {@link QueryContextParameters#SKIP_EMPTY_BUCKETS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
   // "timestampResultField" is an undocumented parameter used internally by the SQL layer.
   // It is necessary because when the SQL layer generates a Timeseries query for a group-by-time-floor SQL query,
   // it expects the result of the time-floor to have a specific name. That name is provided using this parameter.

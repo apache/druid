@@ -229,8 +229,8 @@ public class SqlBaseBenchmark
   protected Map<String, Object> getContext()
   {
     final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+        QueryContextParameters.VECTORIZE.getName(), vectorize,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.getName(), vectorize
     );
     return context;
   }

@@ -114,7 +114,8 @@ public final class ParameterDocumentationGenerator
       final Path sourcePath = document.getKey();
       if (mode == Mode.GENERATE) {
         Files.writeString(sourcePath, document.getValue(), StandardCharsets.UTF_8);
-      } else if (!Files.readString(sourcePath, StandardCharsets.UTF_8).equals(document.getValue())) {
+      } else if (!normalizeLineEndings(Files.readString(sourcePath, StandardCharsets.UTF_8))
+                  .equals(document.getValue())) {
         throw new ISE(
             "Generated query context documentation is stale in [%s]. "
             + "Run Maven with [-Dquery.context.docs.mode=generate].",
@@ -283,12 +284,21 @@ public final class ParameterDocumentationGenerator
   )
   {
     return docs.getDefaultDescription()
-               .map(ParameterDocumentationGenerator::normalizeTableCell)
+               .map(ParameterDocumentationGenerator::escapeTableCell)
                .or(() -> parameter.getDefaultValue().map(value -> "`" + value + "`"))
                .orElse("N/A");
   }
 
-  private static String escapeTableCell(final String value)
+  /**
+   * Generated documents always use LF line endings, so a checkout with CRLF line endings is compared after converting
+   * them.
+   */
+  private static String normalizeLineEndings(final String value)
+  {
+    return StringUtils.replace(value, "\r\n", "\n");
+  }
+
+  static String escapeTableCell(final String value)
   {
     return StringUtils.replace(normalizeTableCell(value), "|", "\\|");
   }

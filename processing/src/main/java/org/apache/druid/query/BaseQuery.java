@@ -59,6 +59,10 @@ public abstract class BaseQuery<T> implements Query<T>
     }
   }
 
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#QUERY_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String QUERY_ID = "queryId";
   public static final String SUB_QUERY_ID = "subQueryId";
   public static final String SQL_QUERY_ID = "sqlQueryId";

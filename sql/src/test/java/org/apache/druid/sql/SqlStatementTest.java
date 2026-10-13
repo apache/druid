@@ -40,6 +40,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
@@ -533,7 +534,7 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("select 1 + ?")
-        .queryContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
+        .queryContext(ImmutableMap.of(QueryContextParameters.BY_SEGMENT.getName(), "true"))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);

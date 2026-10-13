@@ -47,7 +47,6 @@ import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -122,7 +121,7 @@ public class DartSqlEngine implements SqlEngine
 
   /**
    * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
-   * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID that becomes the {@link Controller#queryId()}.
+   * or {@link org.apache.druid.query.context.QueryContextParameters#QUERY_ID}. Instead we generate a UUID that becomes the {@link Controller#queryId()}.
    *
    * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
    * for purposes of query cancellation.

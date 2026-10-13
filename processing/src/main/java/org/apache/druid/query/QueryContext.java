@@ -549,12 +549,7 @@ public class QueryContext
 
   public String getMaxSubqueryMemoryBytes(String defaultMemoryBytes)
   {
-    // Generic to allow for both strings and numbers to be passed as values in the query context
-    Object maxSubqueryBytesObject = get(QueryContextParameters.MAX_SUBQUERY_BYTES);
-    if (maxSubqueryBytesObject == null) {
-      maxSubqueryBytesObject = defaultMemoryBytes;
-    }
-    return String.valueOf(maxSubqueryBytesObject);
+    return getOrDefault(QueryContextParameters.MAX_SUBQUERY_BYTES, defaultMemoryBytes);
   }
 
   public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)
@@ -934,7 +929,7 @@ public class QueryContext
   }
 
   /**
-   * Returns the realtime segments mode for this query. If {@link QueryContexts#REALTIME_SEGMENTS_MODE} is absent
+   * Returns the realtime segments mode for this query. If {@link org.apache.druid.query.context.QueryContextParameters#REALTIME_SEGMENTS_MODE} is absent
    * or null, falls back to the deprecated {@code realtimeSegmentsOnly} boolean: {@code true} maps
    * to {@link RealtimeSegmentsMode#EXCLUSIVE}; otherwise returns {@link RealtimeSegmentsMode#INCLUDE}.
    * Throws {@link BadQueryContextException} if both fields are set simultaneously.

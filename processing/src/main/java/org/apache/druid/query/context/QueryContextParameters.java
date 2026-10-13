@@ -43,9 +43,8 @@ import java.util.function.Supplier;
 ///
 /// Define user-facing metadata here, including descriptions, default values, constraints,
 /// applicability, and introduction versions. The
-/// {@link org.apache.druid.query.context.docs.ParameterDocumentationGenerator} generates the
-/// corresponding tables in `query-context-reference.md`, `scan-query.md`, and
-/// `sql-query-context.md`.
+/// {@link org.apache.druid.query.context.docs.ParameterDocumentationGenerator} generates a table row
+/// for every public parameter wherever a managed document has a marker for it.
 ///
 /// When adding or changing a descriptor, including introducing a new parameter, run this command
 /// from the repository root to regenerate the checked-in documentation. The default Maven mode
@@ -262,8 +261,15 @@ public final class QueryContextParameters
           .defaultDescription("`druid.server.http.maxSubqueryRows`")
           .build();
 
-  public static final QueryContextParameter<Object> MAX_SUBQUERY_BYTES =
-      objectParameter("maxSubqueryBytes")
+  /**
+   * The Broker's subquery guardrail resolves the value, computing the limit for {@code auto} from its heap size and
+   * lookups. This descriptor only checks the form of the value: {@code auto}, {@code disabled} or a non-negative number
+   * of bytes. Numbers are converted to the string form that the guardrail reads.
+   */
+  public static final QueryContextParameter<String> MAX_SUBQUERY_BYTES =
+      QueryContextParameter
+          .builder("maxSubqueryBytes", String.class, QueryContextParameters::parseMaxSubqueryBytes)
+          .constraint(QueryContextParameters::validateMaxSubqueryBytes)
           .since("27.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description(
               """
@@ -683,9 +689,44 @@ public final class QueryContextParameters
     return QueryContextParameter.builder(name, valueType, value -> QueryContexts.getAsEnum(name, value, valueType));
   }
 
-  static QueryContextParameter.Builder<Object> objectParameter(final String name)
+  private static final String MAX_SUBQUERY_BYTES_FORMAT = "'auto', 'disabled' or a non-negative number of bytes";
+
+  private static String parseMaxSubqueryBytes(final Object value)
   {
-    return QueryContextParameter.builder(name, Object.class, value -> value);
+    try {
+      return String.valueOf(
+          QueryContextParameter.exactNumber(
+              "maxSubqueryBytes",
+              value,
+              "long",
+              0,
+              Long.MAX_VALUE,
+              BigDecimal::longValueExact
+          )
+      );
+    }
+    catch (BadQueryContextException e) {
+      throw invalidValueException("maxSubqueryBytes", MAX_SUBQUERY_BYTES_FORMAT, value);
+    }
+  }
+
+  /**
+   * Accepts the same strings as the Broker's subquery guardrail.
+   */
+  private static void validateMaxSubqueryBytes(final String name, final String value)
+  {
+    if ("auto".equalsIgnoreCase(value) || "disabled".equalsIgnoreCase(value)) {
+      return;
+    }
+    try {
+      if (Long.parseLong(value) >= 0) {
+        return;
+      }
+    }
+    catch (NumberFormatException e) {
+      // Reported below.
+    }
+    throw invalidValueException(name, MAX_SUBQUERY_BYTES_FORMAT, value);
   }
 
   /**

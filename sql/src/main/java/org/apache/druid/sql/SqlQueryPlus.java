@@ -168,7 +168,7 @@ public class SqlQueryPlus
         sql,
         sqlNode,
         allowSetStatements,
-        QueryContexts.override(defaultContext, userProvidedContext),
+        QueryContexts.withDefaults(defaultContext, userProvidedContext),
         userProvidedContext == null ? Set.of() : userProvidedContext.keySet(),
         parameters,
         authResult
@@ -315,7 +315,7 @@ public class SqlQueryPlus
                                                       );
       final Map<String, Object> stmtContext = systemDefaultContext == null
                                               ? userProvidedContext
-                                              : QueryContexts.override(systemDefaultContext, userProvidedContext);
+                                              : QueryContexts.withDefaults(systemDefaultContext, userProvidedContext);
       return new SqlQueryPlus(
           sql,
           statementAndSetContext.getMainStatement(),
@@ -340,7 +340,7 @@ public class SqlQueryPlus
           sql,
           null,
           false,
-          QueryContexts.override(systemDefaultContext, queryContext),
+          QueryContexts.withDefaults(systemDefaultContext, queryContext),
           queryContext == null ? Set.of() : queryContext.keySet(),
           parameters,
           authResult

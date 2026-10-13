@@ -242,9 +242,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Map<String, Object> QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT =
       QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .putRaw(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  .put(QueryContextParameters.MAX_SUBQUERY_BYTES, "100000")
                   // Disallows the fallback to row based limiting
-                  .putRaw(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1")
+                  .put(QueryContextParameters.MAX_SUBQUERY_ROWS, 1)
                   .toMap();
 
   // Add additional context to the given context map for when the
@@ -275,7 +275,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), true);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), Long.MAX_VALUE);
 
     OUTER_LIMIT_CONTEXT.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
   }
@@ -1236,7 +1236,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)
   {
     return (boolean) queryContext.getOrDefault(
-        QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
+        QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getName(),
         QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
     );
   }

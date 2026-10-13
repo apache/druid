@@ -370,7 +370,7 @@ class QueryContextParameterTest
   }
 
   @Test
-  void testAllParametersAreDescribed()
+  void testAllParametersDeclareSince()
   {
     for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
       assertNotNull(parameter.getSince(), parameter.getName());

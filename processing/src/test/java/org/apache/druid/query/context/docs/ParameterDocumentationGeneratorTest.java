@@ -20,6 +20,7 @@
 package org.apache.druid.query.context.docs;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Test;
@@ -104,6 +105,23 @@ class ParameterDocumentationGeneratorTest
   }
 
   @Test
+  void testVerifyAcceptsCrlfLineEndings() throws IOException
+  {
+    writeDocuments("|stale| " + GENERAL_MARKER, "|stale| " + SCAN_MARKER, SQL_TABLE + "|stale| " + SQL_MARKER);
+    ParameterDocumentationGenerator.main(arguments("generate", temporaryFolder.resolve("generated")));
+    for (final String document : ParameterDocumentationGenerator.DOCUMENTS.keySet()) {
+      final Path path = temporaryFolder.resolve(document);
+      Files.writeString(
+          path,
+          StringUtils.replace(Files.readString(path, StandardCharsets.UTF_8), "\n", "\r\n"),
+          StandardCharsets.UTF_8
+      );
+    }
+
+    ParameterDocumentationGenerator.main(arguments("verify", temporaryFolder.resolve("verified")));
+  }
+
+  @Test
   void testGenerateRejectsMissingMarker() throws IOException
   {
     writeDocuments("no generated row", "|stale| " + SCAN_MARKER, SQL_TABLE + "|stale| " + SQL_MARKER, false);
@@ -181,6 +199,12 @@ class ParameterDocumentationGeneratorTest
         "Description with wrapped lines and a continuation marker.",
         ParameterDocumentationGenerator.normalizeTableCell(description)
     );
+  }
+
+  @Test
+  void testEscapesTableCell()
+  {
+    assertEquals("a \\| b", ParameterDocumentationGenerator.escapeTableCell(" a\n| b "));
   }
 
   private String[] arguments(final String mode, final Path generatedOutput)
