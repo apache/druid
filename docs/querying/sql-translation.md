@@ -819,7 +819,7 @@ Druid does not support all SQL features. In particular, the following features a
 
 - JOIN between native datasources (table, lookup, subquery) and [system tables](sql-metadata-tables.md) that use the
   traditional SQL-layer execution path. System tables that support native execution can participate in these joins
-  when `useNativeQueryForSystemTables` is enabled.
+  when `allowNativeFunctionsForSystemTables` is enabled.
 - JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
 - JOIN conditions containing a constant value inside the condition.
 - JOIN conditions on a column which contains a multi-value dimension.
@@ -829,7 +829,7 @@ Druid does not support all SQL features. In particular, the following features a
 - DDL and DML.
 - Using Druid-specific functions like `TIME_PARSE` and `APPROX_QUANTILE_DS` on system tables that use the traditional
   SQL-layer execution path. [System tables with native query support](sql-metadata-tables.md#native-query-execution) can
-  use expressions and aggregations that the native SQL engine can translate when `useNativeQueryForSystemTables` is
+  use expressions and aggregations that the native SQL engine can translate when `allowNativeFunctionsForSystemTables` is
   enabled.
 
 Additionally, some Druid native query features are not supported by the SQL language. Some unsupported Druid features

@@ -81,12 +81,12 @@ also be queried using the [`LOOKUP` function](sql-scalar.md#string-functions).
 - [Subqueries](datasource.md#query).
 - [Joins](datasource.md#join) between anything in this list. The traditional SQL-layer system-table path does not
   support joins between native datasources (table, lookup, query) and system tables. When
-  [`useNativeQueryForSystemTables`](sql-metadata-tables.md#native-query-execution) is enabled, system tables that support
+  [`allowNativeFunctionsForSystemTables`](sql-metadata-tables.md#native-query-execution) is enabled, system tables that support
   native execution can participate in native datasource joins. The join condition must be an equality between
   expressions from the left- and right-hand side of the join.
 - [Metadata tables](sql-metadata-tables.md) from the `INFORMATION_SCHEMA` or `sys` schemas. By default, metadata tables
   exist only in the SQL layer and are not considered datasources. When
-  [`useNativeQueryForSystemTables`](sql-metadata-tables.md#native-query-execution) is enabled, supported `sys` tables are
+  [`allowNativeFunctionsForSystemTables`](sql-metadata-tables.md#native-query-execution) is enabled, supported `sys` tables are
   represented as native system-table datasources.
 
 For more information about table, lookup, query, and join datasources, refer to the [Datasources](datasource.md)

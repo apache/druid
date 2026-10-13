@@ -20,7 +20,7 @@
 package org.apache.druid.testing.embedded.query;
 
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -173,7 +173,7 @@ public class NativeSysServerPropertiesQueryTest extends EmbeddedClusterTestBase
     return Map.of(
         QueryContexts.ENGINE,
         NativeSqlEngine.NAME,
-        PlannerContext.CTX_USE_NATIVE_QUERY_FOR_SYSTEM_TABLES,
+        QueryContextParameters.ALLOW_NATIVE_FUNCTIONS_FOR_SYSTEM_TABLES.getName(),
         true,
         QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
         plannerStrategy

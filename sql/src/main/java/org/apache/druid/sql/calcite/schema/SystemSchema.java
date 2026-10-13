@@ -141,7 +141,7 @@ public class SystemSchema extends AbstractTableSchema
       final PlannerContext plannerContext
   )
   {
-    return plannerContext.useNativeQueryForSystemTables()
+    return plannerContext.allowNativeFunctionsForSystemTables()
            && NativeSqlEngine.NAME.equals(plannerContext.getEngine().name())
            && table.unwrap(NativeSystemTable.class) != null;
   }

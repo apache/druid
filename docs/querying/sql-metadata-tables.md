@@ -143,13 +143,13 @@ The "sys" schema provides visibility into Druid segments, servers and tasks.
 ### Native query execution
 
 The native SQL engine can plan supported system tables as native datasources. To enable this behavior for a query, set
-`useNativeQueryForSystemTables` to `true` in the SQL query context:
+`allowNativeFunctionsForSystemTables` to `true` in the SQL query context:
 
 ```json
 {
   "query": "SELECT COUNT(DISTINCT server) FROM sys.server_properties",
   "context": {
-    "useNativeQueryForSystemTables": true
+    "allowNativeFunctionsForSystemTables": true
   }
 }
 ```
@@ -158,7 +158,7 @@ For clients that support setting query context parameters with SQL statements, y
 execution with `SET`:
 
 ```sql
-SET useNativeQueryForSystemTables = 'true';
+SET allowNativeFunctionsForSystemTables = 'true';
 SELECT COUNT(DISTINCT server) FROM sys.server_properties;
 ```
 
@@ -172,11 +172,11 @@ execution:
 
 After Druid retrieves the system-table rows, the native engine applies the remaining filters, expressions,
 aggregations, sorting, and result processing. A system table that doesn't advertise native query support continues to
-use its existing SQL-layer execution path, even when `useNativeQueryForSystemTables` is `true`.
+use its existing SQL-layer execution path, even when `allowNativeFunctionsForSystemTables` is `true`.
 
 The parameter defaults to `false`. During a rolling upgrade, leave it disabled until the Broker and all nodes
 that serve the native system tables have been upgraded. After the upgrade, you can enable it by query or set
-`druid.query.default.context.useNativeQueryForSystemTables=true` on Brokers as the cluster-wide default. For more
+`druid.query.default.context.allowNativeFunctionsForSystemTables=true` on Brokers as the cluster-wide default. For more
 information, see [SQL query context](sql-query-context.md).
 
 Native system-table queries sent to the Router use distributed Broker execution by default. To execute a native

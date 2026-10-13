@@ -37,10 +37,13 @@ class ParameterDocumentationGeneratorTest
 {
   private static final String GENERAL_DOCUMENT = "docs/querying/query-context-reference.md";
   private static final String SCAN_DOCUMENT = "docs/querying/scan-query.md";
+  private static final String SQL_DOCUMENT = "docs/querying/sql-query-context.md";
   private static final String GENERAL_MARKER =
       "<!-- GENERATED QUERY CONTEXT PARAMETER: useResultLevelCache -->";
   private static final String SCAN_MARKER =
       "<!-- GENERATED QUERY CONTEXT PARAMETER: maxRowsQueuedForOrdering -->";
+  private static final String SQL_MARKER =
+      "<!-- GENERATED QUERY CONTEXT PARAMETER: allowNativeFunctionsForSystemTables -->";
 
   @TempDir
   Path temporaryFolder;
@@ -64,8 +67,14 @@ class ParameterDocumentationGeneratorTest
     assertTrue(scan.contains("An integer in [1, 2147483647]"));
     assertTrue(scan.contains(SCAN_MARKER));
 
+    final String sql = Files.readString(temporaryFolder.resolve(SQL_DOCUMENT), StandardCharsets.UTF_8);
+    assertTrue(sql.startsWith("sql header\n"));
+    assertTrue(sql.contains("|`allowNativeFunctionsForSystemTables`|"));
+    assertTrue(sql.contains("|`false`| " + SQL_MARKER));
+
     assertEquals(general, Files.readString(generatedOutput.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8));
     assertEquals(scan, Files.readString(generatedOutput.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8));
+    assertEquals(sql, Files.readString(generatedOutput.resolve(SQL_DOCUMENT), StandardCharsets.UTF_8));
 
     ParameterDocumentationGenerator.main(arguments("verify", temporaryFolder.resolve("verified")));
   }
@@ -136,8 +145,10 @@ class ParameterDocumentationGeneratorTest
   {
     final Path generalPath = temporaryFolder.resolve(GENERAL_DOCUMENT);
     final Path scanPath = temporaryFolder.resolve(SCAN_DOCUMENT);
+    final Path sqlPath = temporaryFolder.resolve(SQL_DOCUMENT);
     Files.createDirectories(generalPath.getParent());
     Files.writeString(generalPath, general, StandardCharsets.UTF_8);
     Files.writeString(scanPath, scan, StandardCharsets.UTF_8);
+    Files.writeString(sqlPath, "sql header\n|stale| " + SQL_MARKER, StandardCharsets.UTF_8);
   }
 }

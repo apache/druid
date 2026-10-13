@@ -21,7 +21,10 @@ package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.SystemTableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -29,8 +32,33 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 public class SystemTableDataProviderTest
 {
+  /// The typed flag defaults to false and accepts boolean or SQL SET string values.
+  @Test
+  public void testAllowNativeFunctionsUsesTypedQueryContext()
+  {
+    final PlannerContext context = EasyMock.partialMockBuilder(PlannerContext.class)
+                                          .addMockedMethod("queryContext")
+                                          .createMock();
+    final String key = QueryContextParameters.ALLOW_NATIVE_FUNCTIONS_FOR_SYSTEM_TABLES.getName();
+    EasyMock.expect(context.queryContext()).andReturn(QueryContext.empty());
+    EasyMock.expect(context.queryContext()).andReturn(QueryContext.of(Map.of(key, true)));
+    EasyMock.expect(context.queryContext()).andReturn(QueryContext.of(Map.of(key, "true")));
+    EasyMock.expect(context.queryContext()).andReturn(QueryContext.of(Map.of(key, false)));
+    EasyMock.expect(context.queryContext()).andReturn(QueryContext.of(Map.of(key, 1)));
+    EasyMock.replay(context);
+
+    Assertions.assertFalse(context.allowNativeFunctionsForSystemTables());
+    Assertions.assertTrue(context.allowNativeFunctionsForSystemTables());
+    Assertions.assertTrue(context.allowNativeFunctionsForSystemTables());
+    Assertions.assertFalse(context.allowNativeFunctionsForSystemTables());
+    Assertions.assertThrows(BadQueryContextException.class, context::allowNativeFunctionsForSystemTables);
+    EasyMock.verify(context);
+  }
+
   @Test
   public void testNativeTablesExposeSystemMetadata()
   {
@@ -55,10 +83,10 @@ public class SystemTableDataProviderTest
     final PlannerContext enabledContext = EasyMock.createMock(PlannerContext.class);
     EasyMock.expect(nativeEngine.name()).andReturn(NativeSqlEngine.NAME).anyTimes();
     EasyMock.expect(bindableEngine.name()).andReturn("bindable").anyTimes();
-    EasyMock.expect(disabledContext.useNativeQueryForSystemTables()).andReturn(false).once();
-    EasyMock.expect(bindableContext.useNativeQueryForSystemTables()).andReturn(true).once();
+    EasyMock.expect(disabledContext.allowNativeFunctionsForSystemTables()).andReturn(false).once();
+    EasyMock.expect(bindableContext.allowNativeFunctionsForSystemTables()).andReturn(true).once();
     EasyMock.expect(bindableContext.getEngine()).andReturn(bindableEngine).once();
-    EasyMock.expect(enabledContext.useNativeQueryForSystemTables()).andReturn(true).once();
+    EasyMock.expect(enabledContext.allowNativeFunctionsForSystemTables()).andReturn(true).once();
     EasyMock.expect(enabledContext.getEngine()).andReturn(nativeEngine).once();
     EasyMock.expect(table.unwrap(NativeSystemTable.class)).andReturn(NativeServerPropertiesTable::new).once();
     EasyMock.replay(table, nativeEngine, bindableEngine, disabledContext, bindableContext, enabledContext);
