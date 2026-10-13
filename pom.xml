@@ -99,12 +99,12 @@
         <dropwizard.metrics.version>4.2.40</dropwizard.metrics.version>
         <errorprone.annotations.version>2.50.0</errorprone.annotations.version>
         <errorprone.version>2.50.0</errorprone.version>
-        <fabric8.version>7.9.0</fabric8.version>
+        <fabric8.version>8.0.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>33.7.1-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
-        <iceberg.core.version>1.11.0</iceberg.core.version>
+        <iceberg.core.version>1.12.0</iceberg.core.version>
         <arrow.version>19.0.0</arrow.version>
         <jetty.version>12.1.13</jetty.version>
         <jspecify.version>1.0.1</jspecify.version>
@@ -127,7 +127,7 @@
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
-        <aws.sdk.v2.version>2.55.4</aws.sdk.v2.version>
+        <aws.sdk.v2.version>2.55.6</aws.sdk.v2.version>
         <caffeine.version>3.3.0</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
@@ -344,7 +344,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.20.0</version>
+                <version>3.21.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -1021,7 +1021,7 @@
             <dependency>
                 <groupId>at.yawk.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.11.4</version>
+                <version>1.12.0</version>
             </dependency>
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
@@ -1193,7 +1193,7 @@
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <version>3.0.13</version>
+                <version>3.0.14</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -1283,7 +1283,7 @@
             <dependency>
                 <groupId>org.apache.directory.api</groupId>
                 <artifactId>api-util</artifactId>
-                <version>2.1.8</version>
+                <version>2.1.9</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.datasketches</groupId>

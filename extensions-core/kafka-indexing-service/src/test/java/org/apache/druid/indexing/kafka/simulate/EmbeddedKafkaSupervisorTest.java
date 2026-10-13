@@ -58,6 +58,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
@@ -110,6 +111,57 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
         supervisorSpec = null;
       }
     }
+  }
+
+  @Test
+  public void testSupervisorIngestsOnlySelectedPartitions()
+  {
+    final String topic = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic, 4);
+    final KafkaSupervisorSpec spec = newKafkaSupervisor()
+        .withIoConfig(io -> io.withPartitionIds(Set.of(1)).withTaskCount(2).withStopTaskCount(1))
+        .build(dataSource, topic);
+    cluster.callApi().postSupervisor(spec);
+
+    // One record per partition, but only partition 1 is selected.
+    kafkaServer.produceRecordsToTopic(partitionRecords(topic, 4));
+    waitForSelectedRows(dataSource, 1);
+
+    Assertions.assertEquals("1", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals("0", cluster.runSql("SELECT COUNT(*) FROM %s WHERE item != 'p1'", dataSource));
+
+    // Replacing the supervisor with a wider selection picks up partition 3 but still skips partition 2.
+    final KafkaSupervisorSpec expanded = newKafkaSupervisor()
+        .withIoConfig(io -> io.withPartitionIds(Set.of(1, 3)).withTaskCount(2).withStopTaskCount(1))
+        .build(dataSource, topic);
+    cluster.callApi().postSupervisor(expanded);
+    waitForSelectedRows(dataSource, 2);
+
+    Assertions.assertEquals("2", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals("0", cluster.runSql("SELECT COUNT(*) FROM %s WHERE item = 'p2'", dataSource));
+    cluster.callApi().postSupervisor(expanded.createSuspendedSpec());
+  }
+
+  private static List<ProducerRecord<byte[], byte[]>> partitionRecords(String topic, int partitions)
+  {
+    final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
+    for (int partition = 0; partition < partitions; partition++) {
+      records.add(new ProducerRecord<>(
+          topic,
+          partition,
+          null,
+          StringUtils.toUtf8("2025-06-01T00:00:00Z,p" + partition)
+      ));
+    }
+    return records;
+  }
+
+  private void waitForSelectedRows(String source, int count)
+  {
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/events/processed").hasDimension(DruidMetrics.DATASOURCE, source),
+        agg -> agg.hasSumAtLeast(count)
+    );
   }
 
   @Test

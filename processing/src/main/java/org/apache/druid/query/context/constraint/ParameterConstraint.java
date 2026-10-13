@@ -17,34 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
-
-import org.apache.druid.segment.projections.ProjectionMetadata;
+package org.apache.druid.query.context.constraint;
 
 /**
- * {@link RowCountInspector} for V10 segments. Reads the row count from the base projection's
- * {@link ProjectionMetadata#getNumRows()} (persisted at write time), so it answers without reading any column data.
+ * A structured, executable restriction on a non-null, parsed query context parameter value. Nullability is handled by
+ * {@code QueryContextParameter} before constraints are invoked.
  */
-public final class V10RowCountInspector implements RowCountInspector
+public interface ParameterConstraint<T>
 {
   /**
-   * Build an inspector that reads the row count from the given base projection metadata.
+   * @throws org.apache.druid.query.BadQueryContextException if the value violates this constraint
    */
-  public static V10RowCountInspector forBaseProjection(ProjectionMetadata baseProjection)
-  {
-    return new V10RowCountInspector(baseProjection.getNumRows());
-  }
-
-  private final int numRows;
-
-  private V10RowCountInspector(int numRows)
-  {
-    this.numRows = numRows;
-  }
-
-  @Override
-  public int getNumRows()
-  {
-    return numRows;
-  }
+  void validate(String parameterName, T value);
 }
