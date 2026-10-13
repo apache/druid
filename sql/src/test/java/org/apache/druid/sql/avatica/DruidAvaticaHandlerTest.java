@@ -82,6 +82,7 @@ import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.CatalogTableWriter;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -316,6 +317,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
               binder.bind(JoinableFactoryWrapper.class).toInstance(CalciteTests.createJoinableFactoryWrapper());
               binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+              binder.bind(CatalogTableWriter.class).toInstance(CatalogTableWriter.NOT_AVAILABLE);
             }
         )
         .build();
@@ -1399,6 +1401,27 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               new ClientSqlParameter(SqlType.VARCHAR.toString(), "abc"),
               new ClientSqlParameter(SqlType.VARCHAR.toString(), "def")
           ),
+          testRequestLogger.getSqlQueryLogs().get(0).getSqlParameters()
+      );
+    }
+  }
+
+  @Test
+  public void testFloatParameterBinding() throws SQLException
+  {
+    testRequestLogger.clear();
+    try (PreparedStatement statement = client.prepareStatement(
+        "SELECT CAST(? AS VARCHAR) AS c FROM druid.foo LIMIT 1")) {
+      statement.setFloat(1, 0.1f);
+      final ResultSet resultSet = statement.executeQuery();
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("c", "0.1")
+          ),
+          getRows(resultSet)
+      );
+      Assertions.assertEquals(
+          List.of(new ClientSqlParameter(SqlType.FLOAT.toString(), 0.1f)),
           testRequestLogger.getSqlQueryLogs().get(0).getSqlParameters()
       );
     }

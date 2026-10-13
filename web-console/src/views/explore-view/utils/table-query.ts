@@ -631,8 +631,8 @@ function makeJoinCompareTableQueryAndHints(
                   undefined,
                 )
               : decodedOrderBy.orderedShowColumn
-              ? toShowColumnExpression(decodedOrderBy.orderedShowColumn, multipleValueMode, 't')
-              : decodedOrderBy.orderedThing.expression
+                ? toShowColumnExpression(decodedOrderBy.orderedShowColumn, multipleValueMode, 't')
+                : decodedOrderBy.orderedThing.expression
             )
               .getUnderlyingExpression()
               .toOrderByExpression('DESC'),

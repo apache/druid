@@ -574,8 +574,8 @@ export class Execution {
     const { status, stages } = this;
     return Boolean(
       status === 'RUNNING' &&
-        stages &&
-        stages.getTotalInputForStage(stages.getStage(0), 'rows') > 0,
+      stages &&
+      stages.getTotalInputForStage(stages.getStage(0), 'rows') > 0,
     );
   }
 
@@ -648,10 +648,10 @@ export class Execution {
   public hasPotentiallyStuckStage(): boolean {
     return Boolean(
       this.status === 'RUNNING' &&
-        this.stages &&
-        this.stages.getPotentiallyStuckStageIndex() >= 0 &&
-        this.usageInfo &&
-        this.usageInfo.pendingTasks > 0,
+      this.stages &&
+      this.stages.getPotentiallyStuckStageIndex() >= 0 &&
+      this.usageInfo &&
+      this.usageInfo.pendingTasks > 0,
     );
   }
 }

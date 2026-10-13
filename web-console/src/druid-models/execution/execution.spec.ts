@@ -29,7 +29,7 @@ describe('Execution', () => {
           asyncResultId: 'multi-stage-query-sql-1392d806-c17f-4937-94ee-8fa0a3ce1566',
           error: null,
         } as any),
-      ).toThrowError('Invalid payload');
+      ).toThrow('Invalid payload');
     });
 
     it('works in a general case', () => {

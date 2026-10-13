@@ -126,6 +126,21 @@ public final class SimdProcessors
       case NEG -> new SimdDoubleNegProcessor(input, scalarFallback);
       case ABS -> new SimdDoubleAbsProcessor(input, scalarFallback);
       case SQRT -> new SimdDoubleSqrtProcessor(input, scalarFallback);
+      case LOG -> new SimdDoubleLogProcessor(input, scalarFallback);
+      case EXP -> new SimdDoubleExpProcessor(input, scalarFallback);
+      case LOG10 -> new SimdDoubleLog10Processor(input, scalarFallback);
+      case LOG1P -> new SimdDoubleLog1pProcessor(input, scalarFallback);
+      case EXPM1 -> new SimdDoubleExpm1Processor(input, scalarFallback);
+      case CBRT -> new SimdDoubleCbrtProcessor(input, scalarFallback);
+      case SIN -> new SimdDoubleSinProcessor(input, scalarFallback);
+      case COS -> new SimdDoubleCosProcessor(input, scalarFallback);
+      case TAN -> new SimdDoubleTanProcessor(input, scalarFallback);
+      case ASIN -> new SimdDoubleAsinProcessor(input, scalarFallback);
+      case ACOS -> new SimdDoubleAcosProcessor(input, scalarFallback);
+      case ATAN -> new SimdDoubleAtanProcessor(input, scalarFallback);
+      case SINH -> new SimdDoubleSinhProcessor(input, scalarFallback);
+      case COSH -> new SimdDoubleCoshProcessor(input, scalarFallback);
+      case TANH -> new SimdDoubleTanhProcessor(input, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD unary op[%s]", op);
     };
   }
@@ -138,6 +153,21 @@ public final class SimdProcessors
   {
     return switch (op) {
       case SQRT -> new SimdLongToDoubleSqrtProcessor(input, scalarFallback);
+      case LOG -> new SimdLongToDoubleLogProcessor(input, scalarFallback);
+      case EXP -> new SimdLongToDoubleExpProcessor(input, scalarFallback);
+      case LOG10 -> new SimdLongToDoubleLog10Processor(input, scalarFallback);
+      case LOG1P -> new SimdLongToDoubleLog1pProcessor(input, scalarFallback);
+      case EXPM1 -> new SimdLongToDoubleExpm1Processor(input, scalarFallback);
+      case CBRT -> new SimdLongToDoubleCbrtProcessor(input, scalarFallback);
+      case SIN -> new SimdLongToDoubleSinProcessor(input, scalarFallback);
+      case COS -> new SimdLongToDoubleCosProcessor(input, scalarFallback);
+      case TAN -> new SimdLongToDoubleTanProcessor(input, scalarFallback);
+      case ASIN -> new SimdLongToDoubleAsinProcessor(input, scalarFallback);
+      case ACOS -> new SimdLongToDoubleAcosProcessor(input, scalarFallback);
+      case ATAN -> new SimdLongToDoubleAtanProcessor(input, scalarFallback);
+      case SINH -> new SimdLongToDoubleSinhProcessor(input, scalarFallback);
+      case COSH -> new SimdLongToDoubleCoshProcessor(input, scalarFallback);
+      case TANH -> new SimdLongToDoubleTanhProcessor(input, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD unary op[%s] for long->double", op);
     };
   }

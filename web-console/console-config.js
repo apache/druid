@@ -18,6 +18,4 @@
 
 /* globals window */
 
-window.consoleConfig = {
-  /* configs go here */
-};
+window.consoleConfig = {/* configs go here */};

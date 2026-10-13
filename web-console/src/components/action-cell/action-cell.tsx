@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Popover, Position } from '@blueprintjs/core';
+import { PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -47,9 +47,14 @@ export const ActionCell = React.memo(function ActionCell(props: ActionCellProps)
         <ActionIcon icon={IconNames.SEARCH_TEMPLATE} onClick={onDetail} disabled={disableDetail} />
       )}
       {actionsMenu && (
-        <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
+        <PopoverNext
+          content={actionsMenu}
+          placement="bottom-end"
+          lazy
+          shouldReturnFocusOnClose={false}
+        >
           <ActionIcon icon={IconNames.MORE} />
-        </Popover>
+        </PopoverNext>
       )}
     </div>
   );

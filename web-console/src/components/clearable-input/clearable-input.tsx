@@ -38,7 +38,7 @@ export const ClearableInput = React.memo(function ClearableInput(props: Clearabl
       onChange={(e: any) => onValueChange(e.target.value.trimStart())}
       rightElement={
         value ? (
-          <Button icon={IconNames.CROSS} minimal onClick={() => onValueChange('')} />
+          <Button icon={IconNames.CROSS} variant="minimal" onClick={() => onValueChange('')} />
         ) : undefined
       }
       {...otherProps}

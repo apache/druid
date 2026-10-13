@@ -57,8 +57,8 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.catalog.TestCatalogClient;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
@@ -112,7 +112,7 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedRouter router = new EmbeddedRouter();
-  private final MinIOStorageResource storageResource = new MinIOStorageResource();
+  private final S3StorageResource storageResource = new S3StorageResource();
 
   private EmbeddedMSQApis msqApis;
 
@@ -176,7 +176,7 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
         .addCommonProperty("druid.msq.dart.enabled", "true")
         // Clustered base-table + projection segments require the V10 segment format.
         .addCommonProperty("druid.indexer.task.buildV10", "true")
-        // Range reads over MinIO — required for partial loading to be functional.
+        // Range reads over S3 — required for partial loading to be functional.
         .addCommonProperty("druid.storage.zip", "false")
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT1s")
         .addServer(coordinator)

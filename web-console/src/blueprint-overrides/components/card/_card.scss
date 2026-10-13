@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+@use '../../common/colors' as *;
+@use '../../common/variables' as *;
+
 $card-padding: $pt-grid-size * 2;
 
 $card-background-color: $white;

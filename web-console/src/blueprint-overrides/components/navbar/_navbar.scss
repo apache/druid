@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+@use '../../common/colors' as *;
+@use '../../common/variables' as *;
+
 $navbar-padding: $pt-grid-size * 1.5;
 
 $navbar-background-color: $white;

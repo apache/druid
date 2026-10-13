@@ -1,177 +1,409 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`HomeView matches snapshot (coordinator) 1`] = `
 <div
-  className="home-view app-view"
+  class="home-view app-view"
 >
-  <Memo(StatusCard) />
-  <React.Fragment>
-    <Memo(DatasourcesCard)
-      capabilities={
-        Capabilities {
-          "coordinator": true,
-          "maxTaskSlots": undefined,
-          "multiStageQueryDart": false,
-          "multiStageQueryTask": false,
-          "overlord": false,
-          "queryType": "none",
-        }
-      }
-    />
-    <Memo(SegmentsCard)
-      capabilities={
-        Capabilities {
-          "coordinator": true,
-          "maxTaskSlots": undefined,
-          "multiStageQueryDart": false,
-          "multiStageQueryTask": false,
-          "overlord": false,
-          "queryType": "none",
-        }
-      }
-    />
-  </React.Fragment>
-  <Memo(ServicesCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "maxTaskSlots": undefined,
-        "multiStageQueryDart": false,
-        "multiStageQueryTask": false,
-        "overlord": false,
-        "queryType": "none",
-      }
-    }
-  />
-  <Memo(LookupsCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "maxTaskSlots": undefined,
-        "multiStageQueryDart": false,
-        "multiStageQueryTask": false,
-        "overlord": false,
-        "queryType": "none",
-      }
-    }
-  />
+  <a
+    class="home-view-card status-card"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-graph"
+        >
+          <svg
+            data-icon="graph"
+          />
+        </span>
+         
+        Status
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card datasources-card"
+    href="#datasources"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-multi-select"
+        >
+          <svg
+            data-icon="multi-select"
+          />
+        </span>
+         
+        Datasources
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card segments-card"
+    href="#segments"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-stacked-chart"
+        >
+          <svg
+            data-icon="stacked-chart"
+          />
+        </span>
+         
+        Segments
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card services-card"
+    href="#services"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-database"
+        >
+          <svg
+            data-icon="database"
+          />
+        </span>
+         
+        Services
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card lookups-card"
+    href="#lookups"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-properties"
+        >
+          <svg
+            data-icon="properties"
+          />
+        </span>
+         
+        Lookups
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
 </div>
 `;
 
 exports[`HomeView matches snapshot (full) 1`] = `
 <div
-  className="home-view app-view"
+  class="home-view app-view"
 >
-  <Memo(StatusCard) />
-  <React.Fragment>
-    <Memo(DatasourcesCard)
-      capabilities={
-        Capabilities {
-          "coordinator": true,
-          "maxTaskSlots": undefined,
-          "multiStageQueryDart": true,
-          "multiStageQueryTask": true,
-          "overlord": true,
-          "queryType": "nativeAndSql",
-        }
-      }
-    />
-    <Memo(SegmentsCard)
-      capabilities={
-        Capabilities {
-          "coordinator": true,
-          "maxTaskSlots": undefined,
-          "multiStageQueryDart": true,
-          "multiStageQueryTask": true,
-          "overlord": true,
-          "queryType": "nativeAndSql",
-        }
-      }
-    />
-  </React.Fragment>
-  <React.Fragment>
-    <Memo(SupervisorsCard)
-      capabilities={
-        Capabilities {
-          "coordinator": true,
-          "maxTaskSlots": undefined,
-          "multiStageQueryDart": true,
-          "multiStageQueryTask": true,
-          "overlord": true,
-          "queryType": "nativeAndSql",
-        }
-      }
-    />
-    <Memo(TasksCard)
-      capabilities={
-        Capabilities {
-          "coordinator": true,
-          "maxTaskSlots": undefined,
-          "multiStageQueryDart": true,
-          "multiStageQueryTask": true,
-          "overlord": true,
-          "queryType": "nativeAndSql",
-        }
-      }
-    />
-  </React.Fragment>
-  <Memo(ServicesCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "maxTaskSlots": undefined,
-        "multiStageQueryDart": true,
-        "multiStageQueryTask": true,
-        "overlord": true,
-        "queryType": "nativeAndSql",
-      }
-    }
-  />
-  <Memo(LookupsCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "maxTaskSlots": undefined,
-        "multiStageQueryDart": true,
-        "multiStageQueryTask": true,
-        "overlord": true,
-        "queryType": "nativeAndSql",
-      }
-    }
-  />
+  <a
+    class="home-view-card status-card"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-graph"
+        >
+          <svg
+            data-icon="graph"
+          />
+        </span>
+         
+        Status
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card datasources-card"
+    href="#datasources"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-multi-select"
+        >
+          <svg
+            data-icon="multi-select"
+          />
+        </span>
+         
+        Datasources
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card segments-card"
+    href="#segments"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-stacked-chart"
+        >
+          <svg
+            data-icon="stacked-chart"
+          />
+        </span>
+         
+        Segments
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card supervisors-card"
+    href="#supervisors"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-eye-open"
+        >
+          <svg
+            data-icon="eye-open"
+          />
+        </span>
+         
+        Supervisors
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card tasks-card"
+    href="#tasks"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-gantt-chart"
+        >
+          <svg
+            data-icon="gantt-chart"
+          />
+        </span>
+         
+        Tasks
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card services-card"
+    href="#services"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-database"
+        >
+          <svg
+            data-icon="database"
+          />
+        </span>
+         
+        Services
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card lookups-card"
+    href="#lookups"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-properties"
+        >
+          <svg
+            data-icon="properties"
+          />
+        </span>
+         
+        Lookups
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
 </div>
 `;
 
 exports[`HomeView matches snapshot (overlord) 1`] = `
 <div
-  className="home-view app-view"
+  class="home-view app-view"
 >
-  <Memo(StatusCard) />
-  <React.Fragment>
-    <Memo(SupervisorsCard)
-      capabilities={
-        Capabilities {
-          "coordinator": false,
-          "maxTaskSlots": undefined,
-          "multiStageQueryDart": false,
-          "multiStageQueryTask": false,
-          "overlord": true,
-          "queryType": "none",
-        }
-      }
-    />
-    <Memo(TasksCard)
-      capabilities={
-        Capabilities {
-          "coordinator": false,
-          "maxTaskSlots": undefined,
-          "multiStageQueryDart": false,
-          "multiStageQueryTask": false,
-          "overlord": true,
-          "queryType": "none",
-        }
-      }
-    />
-  </React.Fragment>
+  <a
+    class="home-view-card status-card"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-graph"
+        >
+          <svg
+            data-icon="graph"
+          />
+        </span>
+         
+        Status
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card supervisors-card"
+    href="#supervisors"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-eye-open"
+        >
+          <svg
+            data-icon="eye-open"
+          />
+        </span>
+         
+        Supervisors
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
+  <a
+    class="home-view-card tasks-card"
+    href="#tasks"
+  >
+    <div
+      class="bp6-card bp6-elevation-1 bp6-interactive"
+    >
+      <h5
+        class="bp6-heading"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-gantt-chart"
+        >
+          <svg
+            data-icon="gantt-chart"
+          />
+        </span>
+         
+        Tasks
+      </h5>
+      <p>
+        Loading...
+      </p>
+    </div>
+  </a>
 </div>
 `;

@@ -67,6 +67,7 @@ CentralizedDatasourceSchema
 Ceph
 circledR
 CloudWatch
+ClusterRole
 ColumnDescriptor
 Corretto
 CLI
@@ -104,6 +105,7 @@ DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
+EKS
 EMR
 EMRFS
 ETL
@@ -118,6 +120,7 @@ Float.POSITIVE_INFINITY
 Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
+GKE
 GPG
 GoogleCloudStorageInputSource
 GSSAPI
@@ -162,6 +165,7 @@ JDBC
 JDK
 JDK7
 JDK8
+JIT
 JKS
 jks
 JNDI
@@ -179,6 +183,7 @@ Joda
 JsonProperty
 Jupyter
 JupyterLab
+KIP-392
 KMS
 Kerberized
 Kerberos
@@ -205,6 +210,7 @@ Marquez
 MiddleManager
 MiddleManagers
 Montréal
+MSK
 MSQ
 Murmur3
 MVCC
@@ -245,6 +251,7 @@ SAS
 SDK
 SIGAR
 SIMD
+SLEEF
 SNI
 SPNEGO
 Splunk
@@ -258,6 +265,7 @@ Splunk
 SqlParameter
 SslContextFactory
 StatsD
+SVML
 SYSTEM_TABLE
 TaskRunner
 TabItem
@@ -277,7 +285,9 @@ uris
 UTF-16
 UTF-8
 UTF8
+VO_MATHLIB
 XMLs
+x86
 ZK
 ZSTD
 accessor
@@ -422,6 +432,7 @@ kbps
 kerberos
 keystore
 keytool
+kubelet
 keytab
 kubeconfig
 kubernetes
@@ -618,6 +629,7 @@ transactionally
 try_parse_json
 tsv
 ulimit
+ulps
 unannounce
 unannouncements
 unary
@@ -1593,7 +1605,10 @@ case_simple
 cbrt
 concat
 copysign
+cosh
 expm1
+sinh
+tanh
 expr
 expr1
 expr2
@@ -2677,3 +2692,9 @@ dylan
 eve
 opaUri
 rego
+
+- ../docs/querying/sql-jdbc.md
+getters
+savepoints
+Scrollable
+updatable

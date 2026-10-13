@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
@@ -38,6 +39,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
@@ -58,8 +60,10 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
+import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -71,6 +75,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.servlet.http.HttpServletRequest;
@@ -102,6 +107,7 @@ public class SqlStatementTest
 
   private PolicyEnforcer policyEnforcer;
   private SqlStatementFactory sqlStatementFactory;
+  private SqlToolbox sqlToolbox;
 
   @BeforeAll
   public static void setUpClass()
@@ -568,15 +574,97 @@ public class SqlStatementTest
         new DruidHookDispatcher()
     );
 
-    return new SqlStatementFactory(
-        new SqlToolbox(
-            CalciteTests.createMockSqlEngine(walker, conglomerate),
-            plannerFactory,
-            new NoopServiceEmitter(),
-            testRequestLogger,
-            QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-            new SqlLifecycleManager()
-        )
+    this.sqlToolbox = new SqlToolbox(
+        CalciteTests.createMockSqlEngine(walker, conglomerate),
+        plannerFactory,
+        new NoopServiceEmitter(),
+        testRequestLogger,
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new SqlLifecycleManager()
     );
+    return new SqlStatementFactory(sqlToolbox);
+  }
+
+  /**
+   * Planning that exceeds {@code maxPlanningTimeMs} fails with a {@link QueryTimeoutException}. Planning is simulated
+   * as a CPU-bound loop that honours the cancel flag (as Calcite does), so the watchdog trips it and we time out.
+   */
+  @Test
+  @Timeout(30)
+  public void testPlanningTimeout()
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 100))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    // A DirectStatement whose planning step blocks until the query is cancelled, mimicking a pathological query.
+    DirectStatement stmt = new DirectStatement(sqlToolbox, sqlReq, null)
+    {
+      @Override
+      protected PlannerResult createPlan(DruidPlanner planner)
+      {
+        final CancelFlag cancelFlag = planner.getPlannerContext().getCancelFlag();
+        while (!cancelFlag.isCancelRequested() && !Thread.currentThread().isInterrupted()) {
+          // spin until the watchdog aborts us
+        }
+        // Calcite throws when it observes a tripped cancel flag; emulate that.
+        throw new RuntimeException("Preparation aborted");
+      }
+    };
+
+    try {
+      QueryTimeoutException e = Assertions.assertThrows(QueryTimeoutException.class, stmt::plan);
+      Assertions.assertTrue(
+          e.getMessage().contains("exceeded the configured maximum planning time"),
+          "Unexpected message: " + e.getMessage()
+      );
+    }
+    finally {
+      stmt.close();
+    }
+  }
+
+  /**
+   * The budget covers planner construction: if {@link DirectStatement#createPlanner()} alone exhausts
+   * {@code maxPlanningTimeMs}, planning fails with a {@link QueryTimeoutException} before any further work.
+   */
+  @Test
+  @Timeout(30)
+  public void testPlanningTimeoutDuringPlannerConstruction()
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 50))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    // Simulate an expensive planner/schema construction that by itself exceeds the budget.
+    DirectStatement stmt = new DirectStatement(sqlToolbox, sqlReq, null)
+    {
+      @Override
+      protected DruidPlanner createPlanner()
+      {
+        try {
+          Thread.sleep(300);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        return super.createPlanner();
+      }
+    };
+
+    try {
+      QueryTimeoutException e = Assertions.assertThrows(QueryTimeoutException.class, stmt::plan);
+      Assertions.assertTrue(
+          e.getMessage().contains("exceeded the configured maximum planning time"),
+          "Unexpected message: " + e.getMessage()
+      );
+    }
+    finally {
+      stmt.close();
+    }
   }
 }

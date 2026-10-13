@@ -34,7 +34,7 @@ export function wrapInExplainAsParsedIfNeeded(query: string): string {
 
 export function wrapInExplainAsStringIfNeeded(query: string): string {
   const [setPart, queryPart] = SqlSetStatement.partitionSetStatements(query, true);
-  if (/^\s*EXPLAIN\sPLAN\sFOR/im.test(queryPart)) return query;
+  if (/^[^\S\n\r\u2028\u2029]*EXPLAIN\sPLAN\sFOR/im.test(queryPart)) return query;
 
   // Only replace the first occurrence
   return setPart + queryPart.replace(/REPLACE|INSERT|SELECT|WITH/i, 'EXPLAIN PLAN FOR\n$&');

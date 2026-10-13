@@ -30,16 +30,8 @@ public class LocalDataSegmentPusherConfig
   @JsonProperty
   public File storageDirectory = new File("/tmp/druid/localStorage");
 
-  @JsonProperty
-  public boolean zip = false;
-
   public File getStorageDirectory()
   {
     return storageDirectory;
-  }
-
-  public boolean isZip()
-  {
-    return zip;
   }
 }

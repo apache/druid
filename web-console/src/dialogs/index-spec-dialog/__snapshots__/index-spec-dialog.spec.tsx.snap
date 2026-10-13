@@ -1,297 +1,1107 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
-<Blueprint5.Dialog
-  canOutsideClickClose={false}
-  className="index-spec-dialog"
-  isOpen={true}
-  onClose={[Function]}
-  title="Index spec"
+<div
+  class="bp6-portal"
 >
-  <Memo(FormJsonSelector)
-    onChange={[Function]}
-    tab="form"
-  />
   <div
-    className="content"
-  >
-    <AutoForm
-      fields={
-        [
-          {
-            "defaultValue": "utf8",
-            "info": <React.Fragment>
-              Encoding format for STRING value dictionaries used by STRING and COMPLEX&lt;json&gt; columns.
-            </React.Fragment>,
-            "label": "String dictionary encoding",
-            "name": "stringDictionaryEncoding.type",
-            "suggestions": [
-              "utf8",
-              "frontCoded",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": 4,
-            "defined": [Function],
-            "info": <React.Fragment>
-              The number of values to place in a bucket to perform delta encoding. Must be a power of 2, maximum is 128.
-            </React.Fragment>,
-            "label": "String dictionary encoding bucket size",
-            "max": 128,
-            "min": 1,
-            "name": "stringDictionaryEncoding.bucketSize",
-            "type": "number",
-          },
-          {
-            "defaultValue": "roaring",
-            "info": <React.Fragment>
-              Compression format for bitmap indexes.
-            </React.Fragment>,
-            "label": "Bitmap type",
-            "name": "bitmap.type",
-            "suggestions": [
-              "roaring",
-              "concise",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "lz4",
-            "info": <React.Fragment>
-              Compression format for dimension columns.
-            </React.Fragment>,
-            "name": "dimensionCompression",
-            "suggestions": [
-              "lz4",
-              "lzf",
-              "zstd",
-              "uncompressed",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "longs",
-            "info": <React.Fragment>
-              Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. 
-              <ForwardRef>
-                auto
-              </ForwardRef>
-               encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. 
-              <ForwardRef>
-                longs
-              </ForwardRef>
-               stores the value as-is with 8 bytes each.
-            </React.Fragment>,
-            "name": "longEncoding",
-            "suggestions": [
-              "longs",
-              "auto",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "lz4",
-            "info": <React.Fragment>
-              Compression format for primitive type metric columns.
-            </React.Fragment>,
-            "name": "metricCompression",
-            "suggestions": [
-              "lz4",
-              "lzf",
-              "zstd",
-              "uncompressed",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "lz4",
-            "info": <React.Fragment>
-              Compression format to use for nested column raw data. 
-            </React.Fragment>,
-            "label": "JSON compression",
-            "name": "jsonCompression",
-            "suggestions": [
-              "lz4",
-              "lzf",
-              "zstd",
-              "uncompressed",
-            ],
-            "type": "string",
-          },
-        ]
-      }
-      model={
-        {
-          "dimensionCompression": "lzf",
-        }
-      }
-      onChange={[Function]}
-    />
-  </div>
-  <div
-    className="bp5-dialog-footer"
+    aria-live="polite"
+    class="bp6-overlay bp6-overlay-open bp6-overlay-scroll-container"
   >
     <div
-      className="bp5-dialog-footer-actions"
+      class="bp6-overlay-start-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp6-overlay-backdrop bp6-overlay-appear bp6-overlay-appear-active"
+    />
+    <div
+      class="bp6-dialog-container bp6-overlay-content bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
     >
-      <Blueprint5.Button
-        onClick={[Function]}
-        text="Close"
-      />
-      <Blueprint5.Button
-        disabled={false}
-        intent="primary"
-        onClick={[Function]}
-        text="Save"
-      />
+      <div
+        aria-labelledby="title-bp-dialog-1"
+        aria-modal="true"
+        class="bp6-dialog index-spec-dialog"
+        role="dialog"
+      >
+        <div
+          class="bp6-dialog-header"
+        >
+          <h2
+            class="bp6-heading"
+            id="title-bp-dialog-1"
+          >
+            Index spec
+          </h2>
+          <button
+            aria-label="Close"
+            class="bp6-button bp6-minimal bp6-dialog-close-button"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-small-cross"
+            >
+              <svg
+                data-icon="small-cross"
+              />
+            </span>
+          </button>
+        </div>
+        <div
+          class="bp6-form-group form-json-selector"
+        >
+          <div
+            class="bp6-form-content"
+          >
+            <div
+              class="bp6-button-group bp6-fill"
+            >
+              <button
+                class="bp6-button bp6-active"
+                type="button"
+              >
+                <span
+                  class="bp6-button-text"
+                >
+                  Form
+                </span>
+              </button>
+              <button
+                class="bp6-button"
+                type="button"
+              >
+                <span
+                  class="bp6-button-text"
+                >
+                  JSON
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
+          class="content"
+        >
+          <div
+            class="auto-form"
+          >
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                String dictionary encoding
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="utf8"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Bitmap type
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="roaring"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Dimension compression
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="lzf"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Long encoding
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="longs"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Metric compression
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="lz4"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                JSON compression
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="lz4"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bp6-dialog-footer"
+        >
+          <div
+            class="bp6-dialog-footer-actions"
+          >
+            <button
+              class="bp6-button"
+              type="button"
+            >
+              <span
+                class="bp6-button-text"
+              >
+                Close
+              </span>
+            </button>
+            <button
+              class="bp6-button bp6-intent-primary"
+              type="button"
+            >
+              <span
+                class="bp6-button-text"
+              >
+                Save
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+    <div
+      class="bp6-overlay-end-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
+    />
   </div>
-</Blueprint5.Dialog>
+</div>
 `;
 
 exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
-<Blueprint5.Dialog
-  canOutsideClickClose={false}
-  className="index-spec-dialog"
-  isOpen={true}
-  onClose={[Function]}
-  title="Index spec"
+<div
+  class="bp6-portal"
 >
-  <Memo(FormJsonSelector)
-    onChange={[Function]}
-    tab="form"
-  />
   <div
-    className="content"
-  >
-    <AutoForm
-      fields={
-        [
-          {
-            "defaultValue": "utf8",
-            "info": <React.Fragment>
-              Encoding format for STRING value dictionaries used by STRING and COMPLEX&lt;json&gt; columns.
-            </React.Fragment>,
-            "label": "String dictionary encoding",
-            "name": "stringDictionaryEncoding.type",
-            "suggestions": [
-              "utf8",
-              "frontCoded",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": 4,
-            "defined": [Function],
-            "info": <React.Fragment>
-              The number of values to place in a bucket to perform delta encoding. Must be a power of 2, maximum is 128.
-            </React.Fragment>,
-            "label": "String dictionary encoding bucket size",
-            "max": 128,
-            "min": 1,
-            "name": "stringDictionaryEncoding.bucketSize",
-            "type": "number",
-          },
-          {
-            "defaultValue": "roaring",
-            "info": <React.Fragment>
-              Compression format for bitmap indexes.
-            </React.Fragment>,
-            "label": "Bitmap type",
-            "name": "bitmap.type",
-            "suggestions": [
-              "roaring",
-              "concise",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "lz4",
-            "info": <React.Fragment>
-              Compression format for dimension columns.
-            </React.Fragment>,
-            "name": "dimensionCompression",
-            "suggestions": [
-              "lz4",
-              "lzf",
-              "zstd",
-              "uncompressed",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "longs",
-            "info": <React.Fragment>
-              Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. 
-              <ForwardRef>
-                auto
-              </ForwardRef>
-               encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. 
-              <ForwardRef>
-                longs
-              </ForwardRef>
-               stores the value as-is with 8 bytes each.
-            </React.Fragment>,
-            "name": "longEncoding",
-            "suggestions": [
-              "longs",
-              "auto",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "lz4",
-            "info": <React.Fragment>
-              Compression format for primitive type metric columns.
-            </React.Fragment>,
-            "name": "metricCompression",
-            "suggestions": [
-              "lz4",
-              "lzf",
-              "zstd",
-              "uncompressed",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "lz4",
-            "info": <React.Fragment>
-              Compression format to use for nested column raw data. 
-            </React.Fragment>,
-            "label": "JSON compression",
-            "name": "jsonCompression",
-            "suggestions": [
-              "lz4",
-              "lzf",
-              "zstd",
-              "uncompressed",
-            ],
-            "type": "string",
-          },
-        ]
-      }
-      model={{}}
-      onChange={[Function]}
-    />
-  </div>
-  <div
-    className="bp5-dialog-footer"
+    aria-live="polite"
+    class="bp6-overlay bp6-overlay-open bp6-overlay-scroll-container"
   >
     <div
-      className="bp5-dialog-footer-actions"
+      class="bp6-overlay-start-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp6-overlay-backdrop bp6-overlay-appear bp6-overlay-appear-active"
+    />
+    <div
+      class="bp6-dialog-container bp6-overlay-content bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
     >
-      <Blueprint5.Button
-        onClick={[Function]}
-        text="Close"
-      />
-      <Blueprint5.Button
-        disabled={false}
-        intent="primary"
-        onClick={[Function]}
-        text="Save"
-      />
+      <div
+        aria-labelledby="title-bp-dialog-0"
+        aria-modal="true"
+        class="bp6-dialog index-spec-dialog"
+        role="dialog"
+      >
+        <div
+          class="bp6-dialog-header"
+        >
+          <h2
+            class="bp6-heading"
+            id="title-bp-dialog-0"
+          >
+            Index spec
+          </h2>
+          <button
+            aria-label="Close"
+            class="bp6-button bp6-minimal bp6-dialog-close-button"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-small-cross"
+            >
+              <svg
+                data-icon="small-cross"
+              />
+            </span>
+          </button>
+        </div>
+        <div
+          class="bp6-form-group form-json-selector"
+        >
+          <div
+            class="bp6-form-content"
+          >
+            <div
+              class="bp6-button-group bp6-fill"
+            >
+              <button
+                class="bp6-button bp6-active"
+                type="button"
+              >
+                <span
+                  class="bp6-button-text"
+                >
+                  Form
+                </span>
+              </button>
+              <button
+                class="bp6-button"
+                type="button"
+              >
+                <span
+                  class="bp6-button-text"
+                >
+                  JSON
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
+          class="content"
+        >
+          <div
+            class="auto-form"
+          >
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                String dictionary encoding
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="utf8"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Bitmap type
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="roaring"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Dimension compression
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="lz4"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Long encoding
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="longs"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Metric compression
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="lz4"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                JSON compression
+                 
+                <span
+                  class="bp6-text-muted"
+                >
+                  <span
+                    class="info-popover bp6-popover-target"
+                  >
+                    <span
+                      aria-expanded="false"
+                      aria-haspopup="menu"
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                      />
+                    </span>
+                  </span>
+                </span>
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="lz4"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bp6-dialog-footer"
+        >
+          <div
+            class="bp6-dialog-footer-actions"
+          >
+            <button
+              class="bp6-button"
+              type="button"
+            >
+              <span
+                class="bp6-button-text"
+              >
+                Close
+              </span>
+            </button>
+            <button
+              class="bp6-button bp6-intent-primary"
+              type="button"
+            >
+              <span
+                class="bp6-button-text"
+              >
+                Save
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+    <div
+      class="bp6-overlay-end-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
+    />
   </div>
-</Blueprint5.Dialog>
+</div>
 `;

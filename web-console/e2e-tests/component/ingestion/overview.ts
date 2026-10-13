@@ -52,7 +52,7 @@ export class TasksOverview {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const data = await extractTable(this.page, 'div.rt-tr-group', 'div.rt-td');
+    const data = await extractTable(this.page, 'div.ct-tr-group', 'div.ct-td');
 
     return data.map(
       row =>

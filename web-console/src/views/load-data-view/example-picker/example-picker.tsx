@@ -52,7 +52,7 @@ export const ExamplePicker = React.memo(function ExamplePicker(props: ExamplePic
       <FormGroup>
         <Button
           text="Load example"
-          rightIcon={IconNames.ARROW_RIGHT}
+          endIcon={IconNames.ARROW_RIGHT}
           intent={Intent.PRIMARY}
           onClick={() => {
             onSelectExample(exampleSpecs[selectedIndex]);

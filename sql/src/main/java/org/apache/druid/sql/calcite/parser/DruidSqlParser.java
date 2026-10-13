@@ -150,6 +150,17 @@ public class DruidSqlParser
   @Nullable
   static Object sqlLiteralToContextValue(final SqlLiteral literal)
   {
+    return sqlLiteralToJavaValue(literal, "SET");
+  }
+
+  /**
+   * Coerces a SQL literal to a plain Java value, as used for query context entries and catalog table properties.
+   *
+   * @param what the clause the literal came from, named in the error message if its type has no Java equivalent
+   */
+  @Nullable
+  public static Object sqlLiteralToJavaValue(final SqlLiteral literal, final String what)
+  {
     if (SqlUtil.isNullLiteral(literal, false)) {
       return null;
     } else if (SqlTypeName.CHAR_TYPES.contains(literal.getTypeName())) {
@@ -172,7 +183,7 @@ public class DruidSqlParser
     } else if (literal.getTypeName() == SqlTypeName.TIMESTAMP) {
       return Calcites.CALCITE_TIMESTAMP_PARSER.parse(literal.getValue().toString()).toString();
     } else {
-      throw InvalidSqlInput.exception("Unsupported type for SET[%s]", literal.getTypeName());
+      throw InvalidSqlInput.exception("Unsupported type for %s[%s]", what, literal.getTypeName());
     }
   }
 
