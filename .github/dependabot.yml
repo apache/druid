@@ -51,10 +51,7 @@ updates:
     schedule:
       interval: "weekly"
     cooldown:
-      default-days: 14
-      # Releases about weekly, and each release restarts the cooldown, which would hold back major bumps
-      exclude:
-        - "github/codeql-action"
+      default-days: 7
     commit-message:
       prefix: "ci"
     groups:
