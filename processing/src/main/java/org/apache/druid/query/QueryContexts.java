@@ -216,7 +216,7 @@ public class QueryContexts
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_RESULT_LEVEL_CACHE} instead.
    */
-  @Deprecated
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SERIALIZE_DATE_TIME_AS_LONG} instead.
@@ -284,14 +284,14 @@ public class QueryContexts
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   /**
-   * @deprecated Use {@link #REALTIME_SEGMENTS_MODE} instead.
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#REALTIME_SEGMENTS_MODE} instead.
    */
-  @Deprecated
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String REALTIME_SEGMENTS_ONLY = "realtimeSegmentsOnly";
   /**
    * @deprecated Use {@link #DEFAULT_REALTIME_SEGMENTS_MODE} instead.
    */
-  @Deprecated
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_REALTIME_SEGMENTS_ONLY = false;
 
   /**

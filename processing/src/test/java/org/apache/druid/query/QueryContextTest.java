@@ -588,13 +588,13 @@ public class QueryContextTest
     // realtimeSegmentsOnly=true maps to EXCLUSIVE
     assertEquals(
         QueryContexts.RealtimeSegmentsMode.EXCLUSIVE,
-        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
+        QueryContext.of(QueryContext.ofMap(QueryContextParameters.REALTIME_SEGMENTS_ONLY, true))
                    .getRealtimeSegmentsMode()
     );
     // realtimeSegmentsOnly=false maps to INCLUDE (default)
     assertEquals(
         QueryContexts.RealtimeSegmentsMode.INCLUDE,
-        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, false))
+        QueryContext.of(QueryContext.ofMap(QueryContextParameters.REALTIME_SEGMENTS_ONLY, false))
                    .getRealtimeSegmentsMode()
     );
   }
@@ -631,10 +631,14 @@ public class QueryContextTest
   {
     BadQueryContextException e = assertThrows(
         BadQueryContextException.class,
-        () -> QueryContext.of(ImmutableMap.of(
-            QueryContexts.REALTIME_SEGMENTS_ONLY, true,
-            QueryContextParameters.REALTIME_SEGMENTS_MODE.getName(), "exclude"
-        )).getRealtimeSegmentsMode()
+        () -> QueryContext.of(
+            QueryContext.ofMap(
+                QueryContextParameters.REALTIME_SEGMENTS_ONLY,
+                true,
+                QueryContextParameters.REALTIME_SEGMENTS_MODE,
+                QueryContexts.RealtimeSegmentsMode.EXCLUDE
+            )
+        ).getRealtimeSegmentsMode()
     );
     assertEquals(
         "Cannot set both [realtimeSegmentsMode] and deprecated [realtimeSegmentsOnly]; use [realtimeSegmentsMode] only.",

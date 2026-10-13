@@ -313,9 +313,7 @@ public class SqlQueryPlus
                                                           queryContext,
                                                           statementAndSetContext.getSetContext()
                                                       );
-      final Map<String, Object> stmtContext = systemDefaultContext == null
-                                              ? userProvidedContext
-                                              : QueryContexts.withDefaults(systemDefaultContext, userProvidedContext);
+      final Map<String, Object> stmtContext = QueryContexts.withDefaults(systemDefaultContext, userProvidedContext);
       return new SqlQueryPlus(
           sql,
           statementAndSetContext.getMainStatement(),

@@ -274,6 +274,7 @@ public final class QueryContextParameters
           .description(
               """
               Upper limit on the number of bytes a subquery can generate.
+              Accepts `auto`, `disabled`, or a non-negative number of bytes.
               See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
               """
           )
