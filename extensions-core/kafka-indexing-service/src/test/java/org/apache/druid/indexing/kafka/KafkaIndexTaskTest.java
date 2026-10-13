@@ -2689,6 +2689,11 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
 
     Assertions.assertEquals(2, countEvents(task));
+
+    task.getRunner().stopGracefully();
+
+    // Wait for task to exit
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
   }
 
   @Test
