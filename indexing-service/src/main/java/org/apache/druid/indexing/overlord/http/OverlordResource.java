@@ -559,6 +559,7 @@ public class OverlordResource
           @Override
           public void onFailure(Throwable t)
           {
+            log.warn(t, "Failed to perform task action");
             if (t instanceof DruidException druidException) {
               asyncRequest.complete(druidException.getStatusCode(), druidException.toErrorResponse());
             } else {

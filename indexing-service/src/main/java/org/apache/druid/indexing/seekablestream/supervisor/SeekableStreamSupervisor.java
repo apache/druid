@@ -2932,7 +2932,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
             // OR if there is an older publishing task for another groupId, use the first sequenceId of this task
             // since the offsets persisted in metadata store might still be behind the checkpoints of this task
-            || (isAnotherTaskGroupPublishingToPartitions(taskId, Set.copyOf(taskGroup.startingSequences.keySet()))
+            || (isOlderTaskGroupPublishingToPartitions(taskId, Map.copyOf(taskGroup.startingSequences))
                 && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))
         ) {
           final SortedMap<Integer, Map<PartitionIdType, SequenceOffsetType>> latestCheckpoints = new TreeMap<>(
@@ -2995,29 +2995,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
+   * Checks if there is an older task group (which does not contain {@code taskId})
    * publishing to any of the given partitions. If this method returns a non-empty map,it
-   * indicates that the current task would need to wait for the other tasks to
+   * indicates that the current task would need to wait for the older tasks to
    * finish publishing before it can publish its own offsets.
    *
    * @return Map containing the conflicting TaskGroups that are publishing to
    * overlapping partitions.
    */
-  private Map<TaskGroup, Set<PartitionIdType>> getOtherTaskGroupsPublishingToPartitions(
+  private Map<TaskGroup, Set<PartitionIdType>> getOlderTaskGroupsPublishingToPartitions(
       String taskId,
-      Set<Object> partitions
+      Map<PartitionIdType, SequenceOffsetType> taskStartOffsets
   )
   {
     // Identify all the partitions that are being published by other taskGroups
-    final Map<PartitionIdType, Set<TaskGroup>> partitionIdToPublishingGroups = new HashMap<>();
+    final Map<PartitionIdType, Map<TaskGroup, SequenceOffsetType>> partitionIdToPublishingGroups = new HashMap<>();
     pendingCompletionTaskGroups.values().stream().flatMap(Collection::stream).forEach(group -> {
       // Do not consider this taskId or its replicas
       if (group.taskIds().contains(taskId)) {
         return;
       }
-      for (PartitionIdType partitionId : group.startingSequences.keySet()) {
-        partitionIdToPublishingGroups.computeIfAbsent(partitionId, p -> new HashSet<>()).add(group);
-      }
+      group.startingSequences.forEach(
+          (partitionId, offset) -> partitionIdToPublishingGroups
+              .computeIfAbsent(partitionId, p -> new HashMap<>()).put(group, offset)
+      );
     });
 
     if (partitionIdToPublishingGroups.isEmpty()) {
@@ -3026,26 +3027,29 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     // Check if any of the partitions of this taskId are being published by other taskGroups
     final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups = new HashMap<>();
-    for (Object partition : partitions) {
-      @SuppressWarnings("unchecked")
-      final PartitionIdType partitionId = (PartitionIdType) partition;
+    for (PartitionIdType partitionId : taskStartOffsets.keySet()) {
       if (partitionIdToPublishingGroups.containsKey(partitionId)) {
-        for (TaskGroup taskGroup : partitionIdToPublishingGroups.get(partitionId)) {
-          blockingTaskGroups.computeIfAbsent(taskGroup, _ -> new HashSet<>())
-                            .add(partitionId);
-        }
+        final SequenceOffsetType taskOffset = taskStartOffsets.get(partitionId);
+        partitionIdToPublishingGroups.get(partitionId).forEach((taskGroup, pendingGroupOffset) -> {
+          // Consider only task groups which are reading from offsets strictly
+          // smaller than the candidate taskId
+          if (!isOffsetAtOrBeyond(pendingGroupOffset, taskOffset)) {
+            blockingTaskGroups.computeIfAbsent(taskGroup, _ -> new HashSet<>())
+                              .add(partitionId);
+          }
+        });
       }
     }
 
     return blockingTaskGroups;
   }
 
-  private boolean isAnotherTaskGroupPublishingToPartitions(
+  private boolean isOlderTaskGroupPublishingToPartitions(
       String taskId,
-      Set<Object> partitions
+      Map<PartitionIdType, SequenceOffsetType> taskStartOffsets
   )
   {
-    return !getOtherTaskGroupsPublishingToPartitions(taskId, partitions).isEmpty();
+    return !getOlderTaskGroupsPublishingToPartitions(taskId, taskStartOffsets).isEmpty();
   }
 
   /**
@@ -3056,10 +3060,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * its segments since all previous tasks that were reading from an overlapping
    * set of partitions have already published their offsets.
    */
-  public ListenableFuture<Boolean> isTaskReadyToPublishSegments(String taskId, Set<Object> partitions)
+  public ListenableFuture<Boolean> isTaskReadyToPublishSegments(String taskId, DataSourceMetadata startMetadata)
   {
+    if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?> streamStartMetadata)) {
+      throw InvalidInput.exception(
+          "Start metadata[%s] of type[%s] is not valid streaming metadata",
+          startMetadata, startMetadata == null ? null : startMetadata.getClass()
+      );
+    }
+
+    @SuppressWarnings("unchecked")
+    final Map<PartitionIdType, SequenceOffsetType> taskStartOffsets =
+        (Map<PartitionIdType, SequenceOffsetType>) streamStartMetadata
+            .getSeekableStreamSequenceNumbers()
+            .getPartitionSequenceNumberMap();
+
     final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups =
-        getOtherTaskGroupsPublishingToPartitions(taskId, partitions);
+        getOlderTaskGroupsPublishingToPartitions(taskId, taskStartOffsets);
 
     // No tasks writing to overlapping partitions, task may proceed with publish
     if (blockingTaskGroups.isEmpty()) {

@@ -1148,7 +1148,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorIdIsNull()
+  public void test_isTaskReadyToPublishSegments_throwsException_ifSupervisorIdIsNull()
   {
     final DruidException exception = Assertions.assertThrows(
         DruidException.class,
@@ -1161,7 +1161,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_isTaskReadyToPublish_Segments_throwsException_ifSupervisorNotFound()
+  public void test_isTaskReadyToPublishSegments_throwsException_ifSupervisorNotFound()
   {
     final DruidException exception = Assertions.assertThrows(
         DruidException.class,
@@ -1194,7 +1194,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifMetadataIsNull()
+  public void test_isTaskReadyToPublishSegments_throwsException_ifMetadataIsNull()
   {
     final String supervisorId = "supervisor1";
     final SeekableStreamSupervisor<Integer, String, ByteEntity> seekableStreamSupervisor =
@@ -1224,7 +1224,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifMetadataIsInvalid()
+  public void test_isTaskReadyToPublishSegments_throwsException_ifMetadataIsInvalid()
   {
     final String supervisorId = "supervisor1";
     final SeekableStreamSupervisor<Integer, String, ByteEntity> seekableStreamSupervisor =

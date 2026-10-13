@@ -44,6 +44,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -512,6 +513,26 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void test_isTaskReadyToPublishSegments_throwsException_ifMetadataIsInvalid()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> supervisor.isTaskReadyToPublishSegments(
+            "task1",
+            new ObjectMetadata("abc")
+        )
+    );
+  }
+
+  @Test
   public void test_isTaskReadyToPublishSegments_returnsCompleted_ifNoConflictingTask()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -525,7 +546,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
         "task1",
-        Set.of("partition")
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of("p1", "100"), Set.of())
+        )
     );
 
     Assertions.assertTrue(future.isDone());
@@ -533,7 +556,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void test_isTaskReadyToPublishSegments_waitsForConflictingTask()
+  public void test_isTaskReadyToPublishSegments_waitsForEarlierTask()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
@@ -543,25 +566,29 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     replayAll();
 
     final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-
-    final Map<String, String> startingPartitions = new HashMap<>();
-    startingPartitions.put("partition", "offset");
-
-    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "taskPendingCompletion", startingPartitions);
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "earlierGroupPendingCompletion", Map.of("p1", "0"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "laterGroupPendingCompletion", Map.of("p1", "10000"));
 
     final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
         "waitingTask",
-        Set.of("partition")
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of("p1", "100"), Set.of())
+        )
     );
     Assertions.assertFalse(future.isDone());
 
     // Mark the earlier task group as completed
-    final SeekableStreamSupervisor<?, ?, ?>.TaskGroup conflictingTaskGroup =
+    final SeekableStreamSupervisor<?, ?, ?>.TaskGroup earlierTaskGroup =
         supervisor.getPendingCompletionTaskGroups(0).get(0);
-    conflictingTaskGroup.onCompleted();
+    earlierTaskGroup.onCompleted();
 
+    // Verify that the task is now ready to publish even though the later task group is not complete yet
     Assertions.assertTrue(future.isDone());
     Assertions.assertEquals(Boolean.TRUE, FutureUtils.getUnchecked(future, true));
+
+    final SeekableStreamSupervisor<?, ?, ?>.TaskGroup laterTaskGroup =
+        supervisor.getPendingCompletionTaskGroups(1).get(0);
+    Assertions.assertFalse(laterTaskGroup.completed.get());
   }
 
   @Test

@@ -626,14 +626,8 @@ public class SupervisorManager implements SupervisorStatsProvider
       );
     }
 
-    final Set<Object> partitionIds = Set.copyOf(
-        ((SeekableStreamDataSourceMetadata<?, ?>) startMetadata)
-            .getSeekableStreamSequenceNumbers()
-            .getPartitionSequenceNumberMap()
-            .keySet()
-    );
     return ((SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs)
-        .isTaskReadyToPublishSegments(taskId, partitionIds);
+        .isTaskReadyToPublishSegments(taskId, startMetadata);
   }
 
   /**
