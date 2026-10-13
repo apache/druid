@@ -26,7 +26,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Objects;
 
 public class TaskReportData<PartitionIdType, SequenceOffsetType>
 {
@@ -42,13 +41,14 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
   @JsonCreator
   public TaskReportData(
       @JsonProperty("id") String id,
-      @JsonProperty("startingOffsets") @Nullable Map<PartitionIdType, SequenceOffsetType> startingOffsets,
-      @JsonProperty("currentOffsets") @Nullable Map<PartitionIdType, SequenceOffsetType> currentOffsets,
+      // startingOffsets/currentOffsets/lag/lagMillis are left unbound from JSON since we can't derive the map key type.
+      @JsonProperty("ignored1") @Nullable Map<PartitionIdType, SequenceOffsetType> startingOffsets,
+      @JsonProperty("ignored2") @Nullable Map<PartitionIdType, SequenceOffsetType> currentOffsets,
       @JsonProperty("startTime") @Nullable DateTime startTime,
       @JsonProperty("remainingSeconds") Long remainingSeconds,
       @JsonProperty("type") TaskType type,
-      @JsonProperty("lag") @Nullable Map<PartitionIdType, Long> lag,
-      @JsonProperty("lagMillis") @Nullable Map<PartitionIdType, Long> lagMillis
+      @JsonProperty("ignored3") @Nullable Map<PartitionIdType, Long> lag,
+      @JsonProperty("ignored4") @Nullable Map<PartitionIdType, Long> lagMillis
   )
   {
     this.id = id;
@@ -125,32 +125,6 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
            (lag != null ? ", lag=" + lag : "") +
            (lagMillis != null ? ", lagMillis=" + lagMillis : "") +
            '}';
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    TaskReportData<?, ?> that = (TaskReportData<?, ?>) o;
-    return Objects.equals(id, that.id)
-           && Objects.equals(startingOffsets, that.startingOffsets)
-           && Objects.equals(currentOffsets, that.currentOffsets)
-           && Objects.equals(startTime, that.startTime)
-           && Objects.equals(remainingSeconds, that.remainingSeconds)
-           && type == that.type
-           && Objects.equals(lag, that.lag)
-           && Objects.equals(lagMillis, that.lagMillis);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(id, startingOffsets, currentOffsets, startTime, remainingSeconds, type, lag, lagMillis);
   }
 
   /**

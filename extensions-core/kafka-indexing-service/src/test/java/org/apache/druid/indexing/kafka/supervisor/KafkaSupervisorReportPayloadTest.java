@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -39,8 +40,8 @@ public class KafkaSupervisorReportPayloadTest
         "active-task",
         null,
         null,
-        null,
-        null,
+        DateTimes.nowUtc(),
+        30L,
         TaskReportData.TaskType.ACTIVE,
         null,
         null
@@ -49,8 +50,8 @@ public class KafkaSupervisorReportPayloadTest
         "publishing-task",
         null,
         null,
-        null,
-        null,
+        DateTimes.nowUtc(),
+        60L,
         TaskReportData.TaskType.PUBLISHING,
         null,
         null
@@ -80,7 +81,12 @@ public class KafkaSupervisorReportPayloadTest
     final String json = mapper.writeValueAsString(payload);
     final KafkaSupervisorReportPayload deserialized = mapper.readValue(json, KafkaSupervisorReportPayload.class);
 
-    Assertions.assertEquals(List.of(active), deserialized.getActiveTasks());
-    Assertions.assertEquals(List.of(publishing), deserialized.getPublishingTasks());
+    Assertions.assertEquals(1, deserialized.getActiveTasks().size());
+    Assertions.assertEquals(active.getId(), deserialized.getActiveTasks().get(0).getId());
+    Assertions.assertEquals(active.getType(), deserialized.getActiveTasks().get(0).getType());
+
+    Assertions.assertEquals(1, deserialized.getPublishingTasks().size());
+    Assertions.assertEquals(publishing.getId(), deserialized.getPublishingTasks().get(0).getId());
+    Assertions.assertEquals(publishing.getType(), deserialized.getPublishingTasks().get(0).getType());
   }
 }
