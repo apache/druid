@@ -693,7 +693,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
 
             if (shouldProcess) {
-              final List<InputRow> rows = reader.parse(record.getData(), isEndOfShard(record.getSequenceNumber()));
+              final List<InputRow> rows = reader.parse(
+                  record.getData(),
+                  isEndOfShard(record.getSequenceNumber()),
+                  record.isFiltered()
+              );
               boolean isPersistRequired = false;
 
               final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToUse =

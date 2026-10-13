@@ -22,17 +22,16 @@ import { Button, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
-import copy from 'copy-to-clipboard';
 import type { Column, QueryResult, SqlExpression } from 'druid-query-toolkit';
 import { QueryRunner, SqlLiteral, SqlQuery } from 'druid-query-toolkit';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 
 import { Loader, SplitterLayout } from '../../components';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import type { Capabilities } from '../../helpers';
 import { useHashAndLocalStorageHybridState, useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
-import { DruidError, LocalStorageKeys, queryDruidSql } from '../../utils';
+import { copyToClipboard, DruidError, LocalStorageKeys, queryDruidSql } from '../../utils';
 
 import {
   DroppableContainer,
@@ -114,7 +113,7 @@ export interface ExploreViewProps {
 
 export const ExploreView = React.memo(function ExploreView({ capabilities }: ExploreViewProps) {
   const [shownText, setShownText] = useState<string | undefined>();
-  const filterPane = useRef<{ filterOn(column: Column): void }>();
+  const filterPane = useRef<{ filterOn(column: Column): void } | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const [exploreState, setExploreState] = useHashAndLocalStorageHybridState<ExploreState>(
@@ -156,14 +155,17 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
   // -------------------------------------------------------
   // If we have a TIMESTAMP column and no filter, then add a filter
 
-  useEffect(() => {
-    const columns = querySourceState.data?.columns;
-    if (!columns) return;
+  const addInitTimeFilterIfNeeded = useEffectEvent((columns: readonly Column[]) => {
     const newExploreState = exploreState.addInitTimeFilterIfNeeded(columns);
     if (exploreState !== newExploreState) {
       setExploreState(newExploreState);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  useEffect(() => {
+    const columns = querySourceState.data?.columns;
+    if (!columns) return;
+    addInitTimeFilterIfNeeded(columns);
   }, [querySourceState.data]);
 
   // -------------------------------------------------------
@@ -256,7 +258,7 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
               text="Copy last query"
               disabled={!QUERY_LOG.length()}
               onClick={() => {
-                copy(QUERY_LOG.getLastQuery()!, { format: 'text/plain' });
+                copyToClipboard(QUERY_LOG.getLastQuery()!);
                 AppToaster.show({
                   message: `Copied query to clipboard`,
                   intent: Intent.SUCCESS,

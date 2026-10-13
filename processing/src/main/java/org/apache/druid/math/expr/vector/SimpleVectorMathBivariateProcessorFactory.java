@@ -79,7 +79,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
   @Override
   public final ExprVectorProcessor<long[]> longsProcessor(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
   {
-    if (simdOp != null && simdOp.supportsLongLong() && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.supportsLongLong() && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeLongLong(
           left.asVectorProcessor(inspector),
           right.asVectorProcessor(inspector),
@@ -117,7 +117,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
       Expr right
   )
   {
-    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeLongDouble(
           left.asVectorProcessor(inspector),
           right.asVectorProcessor(inspector),
@@ -139,7 +139,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
       Expr right
   )
   {
-    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeDoubleLong(
           left.asVectorProcessor(inspector),
           right.asVectorProcessor(inspector),
@@ -161,7 +161,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
       Expr right
   )
   {
-    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeDoubleDouble(
           left.asVectorProcessor(inspector),
           right.asVectorProcessor(inspector),

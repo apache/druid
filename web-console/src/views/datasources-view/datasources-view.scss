@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+@use '../../variables' as *;
 
 .datasources-view {
   height: 100%;
@@ -42,7 +42,7 @@
     height: 100%;
   }
 
-  .ReactTable {
+  .console-table {
     @include pin-full;
 
     .datasource-color-tab {

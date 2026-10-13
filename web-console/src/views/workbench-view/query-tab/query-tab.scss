@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
+@use '../../../variables' as *;
 
 $vertical-gap: 6px;
 $visible-splitter-size: 3px;

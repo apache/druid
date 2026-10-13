@@ -31,6 +31,54 @@ import java.util.Map;
 public class SqlQueryPlusTest
 {
   @Test
+  public void testSetAcceptsUnmigratedParameters()
+  {
+    final SqlQueryPlus query = SqlQueryPlus.builder("SET lane = 'fast'; SELECT 1")
+                                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                           .build();
+
+    Assertions.assertEquals("fast", query.context().get("lane"));
+  }
+
+  @Test
+  public void testSetParameterConstraintIsValidated()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 0; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains(
+                "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
+            )
+    );
+  }
+
+  @Test
+  public void testSetParameterParserFailureIsInvalidSqlInput()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 'not-an-int'; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] should be in integer format, but got [not-an-int]")
+    );
+  }
+
+  @Test
   public void testSyntaxError()
   {
     // SqlQueryPlus throws parse errors on build() if the statement is invalid

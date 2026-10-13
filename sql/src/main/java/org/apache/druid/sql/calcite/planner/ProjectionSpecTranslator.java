@@ -30,13 +30,17 @@ import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
+import org.apache.druid.catalog.model.RollupTableBaseTableMetadata;
+import org.apache.druid.catalog.model.TableBaseTableMetadata;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -52,9 +56,9 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -62,14 +66,18 @@ import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Turns the SQL body of a projection definition into the {@link AggregateProjectionSpec} the catalog stores.
@@ -139,33 +147,62 @@ public class ProjectionSpecTranslator
    * than an additional aggregate.
    * <p>
    * The body enumerates the table's columns in the order segments store them, so it must name every declared column,
-   * in declared order. An item written as {@code <expr> AS <name>} makes that column computed at ingest time: the
-   * expression becomes a virtual column materializing the declared column, which is why the declared type has to
-   * match what the expression produces.
+   * in declared order. With {@code CLUSTERED BY} the layout is a clustered base table, and an item written as
+   * {@code <expr> AS <name>} makes that column computed at ingest time: the expression becomes a virtual column
+   * materializing the declared column, which is why the declared type has to match what the expression produces.
+   * Without {@code CLUSTERED BY} the layout is a plain table, which stores columns as they arrive; the only
+   * expression it accepts is {@code TIME_FLOOR(__time, <period>)} selected as {@code __time}, which becomes the
+   * table's query granularity (carried as the granularity virtual column of the spec).
+   * <p>
+   * A body with {@code GROUP BY} declares the rollup layout: the body is the query that rolls the table up onto
+   * itself. A grouping output is a declared column referenced as itself (or the {@code TIME_FLOOR} of {@code __time}),
+   * and an aggregate output becomes the aggregator that fills the declared metric column it is named for, reading the
+   * column it fills, since aggregating a stored rollup table is done with the combining form of its aggregators.
    *
-   * @param clusteredBy the columns segments are clustered on, which must be the leading prefix of the column list
+   * @param clusteredBy the columns segments are clustered on, which must be the leading prefix of the column list;
+   *                    null selects the plain-table (or, with GROUP BY, the rollup) layout
    */
-  public ClusteredValueGroupsBaseTableMetadata translateBaseTable(
+  public DatasourceBaseTableMetadata translateBaseTable(
       final String tableName,
       final List<ColumnSpec> columns,
       final SqlSelect body,
       @Nullable final SqlNodeList clusteredBy
   )
   {
-    if (body.getWhere() != null || body.getGroup() != null) {
+    if (body.getWhere() != null) {
       throw invalid(
           BASE_PROJECTION_NAME,
-          "its body filters or groups. The base table stores every ingested row, so it can do neither"
+          "its body filters. The base table stores every ingested row, so it cannot filter"
       );
     }
     rejectSubqueries(BASE_PROJECTION_NAME, body);
 
-    final DruidQuery druidQuery = planBody(tableName, columns, BASE_PROJECTION_NAME, body);
-    final ClusteredValueGroupsBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
-        clusteringColumns(clusteredBy),
-        liftComputedColumns(columns, druidQuery),
-        null
-    );
+    final DatasourceBaseTableMetadata metadata;
+    if (body.getGroup() != null) {
+      // A GROUP BY body declares the rollup layout: rows with identical grouping values aggregate into one.
+      if (clusteredBy != null) {
+        throw invalid(
+            BASE_PROJECTION_NAME,
+            "its body groups and declares CLUSTERED BY. A clustered base table stores every ingested row, so a base"
+            + " table is either clustered or rollup, not both"
+        );
+      }
+      metadata = liftRollupBaseTable(tableName, columns, planBody(tableName, columns, BASE_PROJECTION_NAME, body));
+    } else {
+      final DruidQuery druidQuery = planBody(tableName, columns, BASE_PROJECTION_NAME, body);
+      final List<ComputedColumn> computed = liftComputedColumns(columns, druidQuery);
+      if (clusteredBy == null) {
+        metadata = new TableBaseTableMetadata(plainTableVirtualColumns(computed), null);
+      } else {
+        // liftComputedColumns already verified that the body plans to a scan.
+        final VirtualColumns planned = druidQuery.getQuery().getVirtualColumns();
+        metadata = new ClusteredValueGroupsBaseTableMetadata(
+            clusteringColumns(clusteredBy),
+            materializedVirtualColumns(computed, planned, columns),
+            null
+        );
+      }
+    }
 
     // Derive the physical spec now. The catalog does this too when the write lands, but doing it here attributes
     // layout problems to the statement that caused them rather than to a Coordinator round trip.
@@ -176,6 +213,220 @@ public class ProjectionSpecTranslator
       throw contextualize(BASE_PROJECTION_NAME, e);
     }
     return metadata;
+  }
+
+  /**
+   * A computed column of a plain (non-clustered) base table can only be the table's query granularity.
+   */
+  private static VirtualColumns plainTableVirtualColumns(final List<ComputedColumn> computed)
+  {
+    final List<VirtualColumn> virtualColumns = new ArrayList<>();
+    for (ComputedColumn column : computed) {
+      if (!ColumnHolder.TIME_COLUMN_NAME.equals(column.declaredName)) {
+        throw invalid(
+            BASE_PROJECTION_NAME,
+            StringUtils.format(
+                "its column [%s] is computed by an expression. Computed columns are not supported; compute the column"
+                + " at ingestion time instead",
+                column.declaredName
+            )
+        );
+      }
+      final Granularity granularity = Granularities.fromTimeVirtualColumn(column.virtualColumn);
+      if (granularity == null) {
+        throw invalid(
+            BASE_PROJECTION_NAME,
+            StringUtils.format(
+                "it computes [%s] with an expression that is not a granularity. A base table computes [%s] only as"
+                + " TIME_FLOOR(%s, <period>), which declares the table's query granularity",
+                ColumnHolder.TIME_COLUMN_NAME,
+                ColumnHolder.TIME_COLUMN_NAME,
+                ColumnHolder.TIME_COLUMN_NAME
+            )
+        );
+      }
+      virtualColumns.add(Granularities.toVirtualColumn(granularity, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME));
+    }
+    return VirtualColumns.create(virtualColumns);
+  }
+
+  /**
+   * The clustered write path materializes computed columns: each planned virtual column is stored under the name of
+   * the declared column it fills, together with its dependency closure. The planner composes specialized virtual
+   * columns by reference so the intermediaries a materialized column reads are carried into the spec under those
+   * synthetic names, as unstored inputs of the columns they feed. Only the materialized roots are renamed.
+   */
+  private static VirtualColumns materializedVirtualColumns(
+      final List<ComputedColumn> computed,
+      final VirtualColumns planned,
+      final List<ColumnSpec> columns
+  )
+  {
+    final Set<String> declared = new HashSet<>();
+    for (ColumnSpec column : columns) {
+      declared.add(column.name());
+    }
+    final List<VirtualColumn> materialized = new ArrayList<>(computed.size());
+    final Map<String, VirtualColumn> intermediaries = new LinkedHashMap<>();
+    for (ComputedColumn column : computed) {
+      if (!column.virtualColumn.supportsOutputNameRewrite()) {
+        throw invalid(
+            BASE_PROJECTION_NAME,
+            "column [" + column.declaredName + "] is computed by an expression the base table cannot store"
+        );
+      }
+      materialized.add(column.virtualColumn.withOutputName(column.declaredName));
+      collectDependencies(column.virtualColumn, planned, declared, intermediaries);
+    }
+    materialized.addAll(intermediaries.values());
+    return VirtualColumns.create(materialized);
+  }
+
+  /**
+   * Collects the planned virtual columns that {@code root} (transitively) reads by synthetic name. A required column
+   * that is declared is a stored column reference and needs nothing; one that names a planned virtual column is an
+   * intermediary to carry along; anything else is left for the spec's own validation to report.
+   */
+  private static void collectDependencies(
+      final VirtualColumn root,
+      final VirtualColumns planned,
+      final Set<String> declared,
+      final Map<String, VirtualColumn> intermediaries
+  )
+  {
+    for (String input : root.requiredColumns()) {
+      if (declared.contains(input) || intermediaries.containsKey(input)) {
+        continue;
+      }
+      final VirtualColumn dependency = planned.getVirtualColumn(input);
+      if (dependency == null) {
+        continue;
+      }
+      intermediaries.put(input, dependency);
+      collectDependencies(dependency, planned, declared, intermediaries);
+    }
+  }
+
+  /**
+   * Lift a GROUP BY body into the rollup layout's metadata. The body plans like an aggregate projection body, and its
+   * outputs must name every declared column in declared order: an output backed by a grouping dimension must reference
+   * the declared column itself (or {@code TIME_FLOOR(__time, <period>) AS __time}, which becomes the query
+   * granularity carrier) and an output backed by an aggregate becomes the aggregator filling the declared metric
+   * column it is named for.
+   */
+  private static RollupTableBaseTableMetadata liftRollupBaseTable(
+      final String tableName,
+      final List<ColumnSpec> columns,
+      final DruidQuery druidQuery
+  )
+  {
+    final PlannedAggregation planned = plannedAggregation(BASE_PROJECTION_NAME, tableName, druidQuery);
+    if (planned.virtualColumnsAndFilter.filter(BASE_PROJECTION_NAME) != null) {
+      throw invalid(BASE_PROJECTION_NAME, "its body filters. The base table stores every ingested row");
+    }
+
+    final List<String> outputNames = druidQuery.getOutputRowType().getFieldNames();
+    if (outputNames.size() != columns.size()) {
+      throw invalid(
+          BASE_PROJECTION_NAME,
+          StringUtils.format(
+              "it selects %d column(s) but the table declares %d. The body lists the columns in the order segments"
+              + " store them, so it must name every declared column",
+              outputNames.size(),
+              columns.size()
+          )
+      );
+    }
+
+    final Map<String, DimensionSpec> dimensionsByInternalName = new HashMap<>();
+    for (DimensionSpec dimension : planned.dimensions) {
+      dimensionsByInternalName.put(dimension.getOutputName(), dimension);
+    }
+    final Map<String, AggregatorFactory> aggregatorsByInternalName = new HashMap<>();
+    for (AggregatorFactory aggregator : planned.aggregators) {
+      aggregatorsByInternalName.put(aggregator.getName(), aggregator);
+    }
+
+    final RowSignature sources = druidQuery.getOutputRowSignature();
+    final List<VirtualColumn> carrier = new ArrayList<>(1);
+    final List<AggregatorFactory> aggregators = new ArrayList<>(planned.aggregators.size());
+    for (int i = 0; i < columns.size(); i++) {
+      final String declared = columns.get(i).name();
+      if (!declared.equals(outputNames.get(i))) {
+        throw invalid(
+            BASE_PROJECTION_NAME,
+            StringUtils.format(
+                "its column %d is [%s] but the table declares [%s] there. The body lists the columns in the order"
+                + " segments store them",
+                i + 1,
+                outputNames.get(i),
+                declared
+            )
+        );
+      }
+      final String source = sources.getColumnName(i);
+      final AggregatorFactory aggregator = aggregatorsByInternalName.get(source);
+      if (aggregator != null) {
+        aggregators.add(aggregator.withName(declared));
+        continue;
+      }
+      final DimensionSpec dimension = dimensionsByInternalName.get(source);
+      if (!(dimension instanceof DefaultDimensionSpec)) {
+        throw invalid(
+            BASE_PROJECTION_NAME,
+            "its grouping column [" + declared + "] is not a plain column reference"
+        );
+      }
+      final String grouped = dimension.getDimension();
+      if (grouped.equals(declared)) {
+        // A grouping column referenced as itself: derived from the declared column by the catalog, nothing to lift.
+        continue;
+      }
+      final VirtualColumn virtualColumn =
+          planned.virtualColumnsAndFilter.virtualColumns.getVirtualColumn(grouped);
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(declared) && virtualColumn != null) {
+        final Granularity granularity = Granularities.fromTimeVirtualColumn(virtualColumn);
+        if (granularity == null) {
+          throw invalid(
+              BASE_PROJECTION_NAME,
+              StringUtils.format(
+                  "it computes [%s] with an expression that is not a granularity. A base table computes [%s] only as"
+                  + " TIME_FLOOR(%s, <period>), which declares the table's query granularity",
+                  ColumnHolder.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME
+              )
+          );
+        }
+        carrier.add(Granularities.toVirtualColumn(granularity, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME));
+      } else if (virtualColumn != null) {
+        throw invalid(
+            BASE_PROJECTION_NAME,
+            StringUtils.format(
+                "its column [%s] is computed by an expression. Computed columns are not supported; compute the column"
+                + " at ingestion time instead",
+                declared
+            )
+        );
+      } else {
+        throw invalid(
+            BASE_PROJECTION_NAME,
+            StringUtils.format(
+                "its column %d groups [%s] but declares it as [%s]. A grouping column is stored under the name it"
+                + " groups, so nothing would fill [%s]",
+                i + 1,
+                grouped,
+                declared,
+                declared
+            )
+        );
+      }
+    }
+    return new RollupTableBaseTableMetadata(
+        VirtualColumns.create(carrier),
+        aggregators.toArray(new AggregatorFactory[0]),
+        null
+    );
   }
 
   private static List<String> clusteringColumns(@Nullable final SqlNodeList clusteredBy)
@@ -198,12 +449,30 @@ public class ProjectionSpecTranslator
   }
 
   /**
-   * Pair the planned output with the declared columns and lift the virtual columns behind the computed ones.
+   * A body item written as {@code <expr> AS <name>}: the declared column it fills, paired with the planned virtual
+   * column that computes it. The virtual column is exactly what the planner would generate for the same expression in
+   * a query — including specializations such as the nested-field virtual column — so a layout can interpret it before
+   * deciding how (or whether) to store it, and what it stores matches what queries plan.
+   */
+  private static final class ComputedColumn
+  {
+    private final String declaredName;
+    private final VirtualColumn virtualColumn;
+
+    private ComputedColumn(String declaredName, VirtualColumn virtualColumn)
+    {
+      this.declaredName = declaredName;
+      this.virtualColumn = virtualColumn;
+    }
+  }
+
+  /**
+   * Pair the planned output with the declared columns and lift the expressions behind the computed ones.
    * <p>
-   * The planner names its virtual columns {@code v0}, {@code v1}, ...; each is renamed to the declared column it
+   * The planner names its virtual columns {@code v0}, {@code v1}, ...; each is paired with the declared column it
    * fills, which is what makes it a materialized column rather than an anonymous intermediate.
    */
-  private static VirtualColumns liftComputedColumns(
+  private static List<ComputedColumn> liftComputedColumns(
       final List<ColumnSpec> columns,
       final DruidQuery druidQuery
   )
@@ -230,8 +499,8 @@ public class ProjectionSpecTranslator
       );
     }
 
-    final VirtualColumns planned = ((ScanQuery) query).getVirtualColumns();
-    final List<VirtualColumn> materialized = new ArrayList<>();
+    final VirtualColumns planned = query.getVirtualColumns();
+    final List<ComputedColumn> computed = new ArrayList<>();
     for (int i = 0; i < columns.size(); i++) {
       final String declared = columns.get(i).name();
       if (!declared.equals(outputNames.get(i))) {
@@ -265,23 +534,9 @@ public class ProjectionSpecTranslator
         // A plain reference: the column is ingested as it arrives.
         continue;
       }
-      if (!(virtualColumn instanceof ExpressionVirtualColumn)) {
-        throw invalid(
-            BASE_PROJECTION_NAME,
-            "column [" + declared + "] is computed by an expression the base table cannot store"
-        );
-      }
-      final ExpressionVirtualColumn expression = (ExpressionVirtualColumn) virtualColumn;
-      materialized.add(
-          new ExpressionVirtualColumn(
-              declared,
-              expression.getExpression(),
-              expression.getOutputType(),
-              ExprMacroTable.nil()
-          )
-      );
+      computed.add(new ComputedColumn(declared, virtualColumn));
     }
-    return VirtualColumns.create(materialized);
+    return computed;
   }
 
   /**
@@ -362,6 +617,44 @@ public class ProjectionSpecTranslator
       final DruidQuery druidQuery
   )
   {
+    final PlannedAggregation planned = plannedAggregation(projectionName, tableName, druidQuery);
+    return AggregateProjectionSpec
+        .builder(projectionName)
+        .virtualColumns(planned.virtualColumnsAndFilter.virtualColumns)
+        .filter(planned.virtualColumnsAndFilter.filter(projectionName))
+        .groupingColumns(groupingColumns(projectionName, planned.dimensions))
+        .aggregators(renameToOutputNames(projectionName, druidQuery, planned.aggregators))
+        .build();
+  }
+
+  /**
+   * The pieces of a planned aggregating body that both the aggregate-projection lift and the rollup base-table lift
+   * consume: the grouping dimensions, the aggregators, and the virtual columns / filter / intervals of the query.
+   */
+  private static final class PlannedAggregation
+  {
+    private final List<DimensionSpec> dimensions;
+    private final List<AggregatorFactory> aggregators;
+    private final VirtualColumnsAndFilter virtualColumnsAndFilter;
+
+    private PlannedAggregation(
+        List<DimensionSpec> dimensions,
+        List<AggregatorFactory> aggregators,
+        VirtualColumnsAndFilter virtualColumnsAndFilter
+    )
+    {
+      this.dimensions = dimensions;
+      this.aggregators = aggregators;
+      this.virtualColumnsAndFilter = virtualColumnsAndFilter;
+    }
+  }
+
+  private static PlannedAggregation plannedAggregation(
+      final String projectionName,
+      final String tableName,
+      final DruidQuery druidQuery
+  )
+  {
     final DataSource dataSource = druidQuery.getDataSource();
     if (!(dataSource instanceof TableDataSource) || !tableName.equals(((TableDataSource) dataSource).getName())) {
       throw invalid(
@@ -387,27 +680,36 @@ public class ProjectionSpecTranslator
     }
 
     final Query<?> query = druidQuery.getQuery();
-    final List<DimensionSpec> dimensions;
-    final List<AggregatorFactory> aggregators;
-    final VirtualColumnsAndFilter virtualColumnsAndFilter;
     if (query instanceof GroupByQuery) {
       final GroupByQuery groupBy = (GroupByQuery) query;
-      dimensions = groupBy.getDimensions();
-      aggregators = groupBy.getAggregatorSpecs();
-      virtualColumnsAndFilter = new VirtualColumnsAndFilter(
-          groupBy.getVirtualColumns(),
-          groupBy.getDimFilter(),
-          groupBy.getIntervals()
+      if (!CollectionUtils.isNullOrEmpty(groupBy.getSubtotalsSpec())) {
+        // Subtotal groupings produce rows of several different grouping shapes; a stored grouping has exactly one.
+        throw invalid(
+            projectionName,
+            "its body uses GROUPING SETS (or ROLLUP/CUBE), which a projection cannot store: each grouping is a"
+            + " different row shape. Store each grouping as its own projection instead"
+        );
+      }
+      return new PlannedAggregation(
+          groupBy.getDimensions(),
+          groupBy.getAggregatorSpecs(),
+          new VirtualColumnsAndFilter(
+              groupBy.getVirtualColumns(),
+              groupBy.getDimFilter(),
+              groupBy.getIntervals()
+          )
       );
     } else if (query instanceof TimeseriesQuery) {
       // GROUP BY () plans to a timeseries over all time; it has no grouping columns.
       final TimeseriesQuery timeseries = (TimeseriesQuery) query;
-      dimensions = Collections.emptyList();
-      aggregators = List.of(timeseries.getAggregatorSpecs().toArray(new AggregatorFactory[0]));
-      virtualColumnsAndFilter = new VirtualColumnsAndFilter(
-          timeseries.getVirtualColumns(),
-          timeseries.getFilter(),
-          timeseries.getIntervals()
+      return new PlannedAggregation(
+          Collections.emptyList(),
+          List.of(timeseries.getAggregatorSpecs().toArray(new AggregatorFactory[0])),
+          new VirtualColumnsAndFilter(
+              timeseries.getVirtualColumns(),
+              timeseries.getFilter(),
+              timeseries.getIntervals()
+          )
       );
     } else {
       throw invalid(
@@ -415,14 +717,6 @@ public class ProjectionSpecTranslator
           "its body did not plan to an aggregation. Add a GROUP BY clause, or use SELECT DISTINCT"
       );
     }
-
-    return AggregateProjectionSpec
-        .builder(projectionName)
-        .virtualColumns(virtualColumnsAndFilter.virtualColumns)
-        .filter(virtualColumnsAndFilter.filter(projectionName))
-        .groupingColumns(groupingColumns(projectionName, dimensions))
-        .aggregators(renameToOutputNames(projectionName, druidQuery, aggregators))
-        .build();
   }
 
   private static List<DimensionSchema> groupingColumns(

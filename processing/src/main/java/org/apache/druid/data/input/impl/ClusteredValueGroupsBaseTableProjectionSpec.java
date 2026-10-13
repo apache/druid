@@ -184,7 +184,8 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
    * {@code null} or {@code NONE} granularity is a no-op (no flooring), so this returns {@code this} unchanged.
    * <p>
    * {@code ALL} is rejected: it would floor {@code __time} to a single constant (the interval start) for the whole
-   * segment, which clustered base tables do not yet support.
+   * segment, which clustered base tables do not yet support. Everything other than a period granularity in the UTC
+   * time zone is rejected too, see {@link BaseTableProjectionSpec#validateQueryGranularity}.
    * <p>
    * Idempotent: if the spec already declares a query-granularity virtual column, that one is authoritative and this is
    * a no-op. (The compaction path attaches the virtual column up front; the MSQ generation path then calls this again
@@ -203,6 +204,7 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
         || virtualColumns.getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME) != null) {
       return this;
     }
+    BaseTableProjectionSpec.validateQueryGranularity(queryGranularity, TYPE_NAME);
     final VirtualColumn granularityVirtualColumn =
         Granularities.toVirtualColumn(queryGranularity, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     final List<VirtualColumn> merged = new ArrayList<>(Arrays.asList(virtualColumns.getVirtualColumns()));
@@ -377,6 +379,11 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
     final VirtualColumn[] all = virtualColumns.getVirtualColumns();
     if (all.length == 0) {
       return;
+    }
+    final VirtualColumn granularity =
+        virtualColumns.getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    if (granularity != null) {
+      BaseTableProjectionSpec.validateGranularity(granularity, TYPE_NAME);
     }
     // Declared column types, doubling as the ColumnInspector used to infer each materialized virtual column's output
     // type (an expression's output type can depend on its input column types).

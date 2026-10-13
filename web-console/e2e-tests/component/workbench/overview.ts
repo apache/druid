@@ -18,7 +18,7 @@
 
 import type * as playwright from 'playwright-chromium';
 
-import { clickButton } from '../../util/playwright';
+import { clickButton, setQueryInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
@@ -37,11 +37,22 @@ export class WorkbenchOverview {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const input = await this.page.waitForSelector('div.flexible-query-input textarea');
-    await input.fill(query);
+    await setQueryInput(this.page, query);
     await clickButton(this.page, 'Run');
-    await this.page.waitForSelector('div.result-table-pane', { timeout: 4 * 60 * 1000 });
 
-    return await extractTable(this.page, 'div.result-table-pane div.rt-tr-group', 'div.rt-td');
+    const results = this.page.locator('div.result-table-pane');
+    const capacityAlert = this.page.locator('.alert-dialog').filter({
+      hasText: 'The cluster does not currently have enough available task slots',
+    });
+    const first = await Promise.race([
+      results.waitFor({ timeout: 4 * 60 * 1000 }).then(() => 'results'),
+      capacityAlert.waitFor({ timeout: 4 * 60 * 1000 }).then(() => 'capacityAlert'),
+    ]);
+    if (first === 'capacityAlert') {
+      await capacityAlert.getByRole('button', { name: 'Run it anyway' }).click();
+      await results.waitFor({ timeout: 4 * 60 * 1000 });
+    }
+
+    return await extractTable(this.page, 'div.result-table-pane div.ct-tr-group', 'div.ct-td');
   }
 }

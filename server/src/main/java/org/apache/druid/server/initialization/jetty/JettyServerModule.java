@@ -177,7 +177,7 @@ public class JettyServerModule extends JerseyServletModule
     return provider;
   }
 
-  static Server makeAndInitializeServer(
+  public static Server makeAndInitializeServer(
       Injector injector,
       Lifecycle lifecycle,
       DruidNode node,

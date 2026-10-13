@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.Objects;
 
 /**
  */
@@ -164,5 +165,25 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
              .setNumericColumnSupplier(new FloatNumericColumnSupplier(column, bitmap))
              .setNullValueIndexSupplier(bitmap);
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final FloatNumericColumnPartSerdeV2 that = (FloatNumericColumnPartSerdeV2) o;
+    return Objects.equals(byteOrder, that.byteOrder)
+           && Objects.equals(bitmapSerdeFactory, that.bitmapSerdeFactory);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(byteOrder, bitmapSerdeFactory);
   }
 }

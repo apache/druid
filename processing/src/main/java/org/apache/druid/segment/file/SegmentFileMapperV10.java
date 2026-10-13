@@ -173,17 +173,18 @@ public class SegmentFileMapperV10 implements SegmentFileMapper
   public ByteBuffer mapFile(String name) throws IOException
   {
     checkClosed();
-    final SegmentInternalFileMetadata fileMetadata = segmentFileMetadata.getFiles().get(name);
-    if (fileMetadata == null) {
+    final SegmentInternalFileMap files = segmentFileMetadata.getFiles();
+    final int index = files.indexOf(name);
+    if (index < 0) {
       return null;
     }
-    final MappedByteBuffer container = containers.get(fileMetadata.getContainer());
+    final MappedByteBuffer container = containers.get(files.getContainer(index));
     if (container == null) {
-      throw DruidException.defensive("invalid container[%s]", fileMetadata.getContainer());
+      throw DruidException.defensive("invalid container[%s]", files.getContainer(index));
     }
     final ByteBuffer view = container.asReadOnlyBuffer();
-    view.position(Ints.checkedCast(fileMetadata.getStartOffset()))
-        .limit(Ints.checkedCast(fileMetadata.getStartOffset() + fileMetadata.getSize()));
+    view.position(Ints.checkedCast(files.getStartOffset(index)))
+        .limit(Ints.checkedCast(files.getStartOffset(index) + files.getSize(index)));
     return view.slice();
   }
 
