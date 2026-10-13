@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.error.InvalidInput;
 
 /**
@@ -60,6 +61,7 @@ public enum CloneQueryMode
     throw InvalidInput.exception("No such clone query mode[%s]", value);
   }
 
+  @JsonValue
   @Override
   public String toString()
   {
