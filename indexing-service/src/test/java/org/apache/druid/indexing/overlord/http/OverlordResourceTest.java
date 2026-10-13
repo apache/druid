@@ -1601,7 +1601,7 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void test_performTaskAction_returns500_whenFutureFailsWithGenericException()
+  public void test_performTaskAction_returns500_whenFutureFailsWithGenericException() throws Exception
   {
     final NoopTask task = NoopTask.create();
     final TaskActionHolder holder = new TaskActionHolder(task, new LockListAction());
@@ -1626,6 +1626,15 @@ public class OverlordResourceTest
 
     Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
     Assertions.assertTrue(asyncContext.isCompleted());
+
+    final Map<String, String> responsePayload = TestHelper.JSON_MAPPER.readValue(
+        asyncResponse.baos.toByteArray(),
+        new TypeReference<>() {}
+    );
+    Assertions.assertEquals(
+        Map.of("error", "Something went wrong"),
+        responsePayload
+    );
 
     EasyMock.verify(taskActionClient);
   }

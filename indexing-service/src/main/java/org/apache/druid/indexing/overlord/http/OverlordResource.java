@@ -562,7 +562,9 @@ public class OverlordResource
             if (t instanceof DruidException druidException) {
               asyncRequest.complete(druidException.getStatusCode(), druidException.toErrorResponse());
             } else {
-              asyncRequest.complete(Status.INTERNAL_SERVER_ERROR.getStatusCode(), null);
+              final Map<String, String> payload = new HashMap<>();
+              payload.put("error", t.getMessage());
+              asyncRequest.complete(Status.INTERNAL_SERVER_ERROR.getStatusCode(), payload);
             }
           }
         },
