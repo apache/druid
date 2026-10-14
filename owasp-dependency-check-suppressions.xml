@@ -771,7 +771,7 @@
     <notes><![CDATA[
       file name: package-lock.json (pkg:npm/uuid@7.0.3)
     ]]></notes>
-    <packageUrl regex="true">^pkg:npm/uuid@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:npm/uuid@7\.0\.3$</packageUrl>
     <vulnerabilityName>GHSA-w5hq-g745-h8pq</vulnerabilityName>
   </suppress>
 
@@ -794,7 +794,7 @@
     <notes><![CDATA[
       file name: azure-core-1.58.1.jar azure-core-http-netty-1.16.5.jar azure-identity-1.18.4.jar azure-json-1.5.1.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.azure/azure-.*@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.azure/azure-(core@1\.58\.1|core-http-netty@1\.16\.5|identity@1\.18\.4|json@1\.5\.1)$</packageUrl>
     <cve>CVE-2026-33117</cve>
   </suppress>
 
@@ -836,12 +836,13 @@
 
   <suppress>
     <!-- CVE-2026-89407, CVE-2026-89425: ReDoS/OOM in jackson-core's number and error-token parsing
-         of malformed input. Affects jackson-core shaded inside hadoop-client-runtime-3.5.0.jar,
-         not Druid's own jackson-core (2.22.x). -->
+         of malformed input. Affects jackson-core shaded inside hadoop-client-runtime-3.5.0.jar
+         and parquet-jackson-1.18.1.jar, not Druid's own jackson-core (2.22.3). -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-core 2.18.6)
+                 parquet-jackson-1.18.1.jar (shaded jackson-core 2.22.2)
     ]]></notes>
-    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-core/pom\.xml$</filePath>
+    <filePath regex="true">.*/(hadoop-client-runtime|parquet-jackson)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-core/pom\.xml$</filePath>
     <cve>CVE-2026-89407</cve>
     <cve>CVE-2026-68498</cve>
     <cve>CVE-2026-89425</cve>
@@ -938,7 +939,7 @@
     <notes><![CDATA[
       file name: snappy-java-1.1.10.8.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.xerial\.snappy/snappy-java@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.xerial\.snappy/snappy-java@1\.1\.10\.8$</packageUrl>
     <cve>CVE-2026-90559</cve>
     <cve>CVE-2026-93452</cve>
     <cve>CVE-2026-108106</cve>
@@ -953,8 +954,19 @@
     <notes><![CDATA[
       file name: pac4j-core-5.7.10.jar / pac4j-oidc-5.7.10.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-.*@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-(core|oidc)@5\.7\.10$</packageUrl>
     <cve>CVE-2026-82463</cve>
     <cve>CVE-2026-82461</cve>
+  </suppress>
+
+  <suppress>
+    <!-- TODO: CVE-2026-93879 has no public details yet (not in NVD, GitHub Security Advisories,
+         or VulnCheck as of 2026-10-14). Suppressed temporarily to unblock the build;
+         revisit and re-assess once the advisory is published. -->
+    <notes><![CDATA[
+      file name: hibernate-validator-9.1.4.Final.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.hibernate\.validator/hibernate-validator@.*$</packageUrl>
+    <cve>CVE-2026-93879</cve>
   </suppress>
 </suppressions>
