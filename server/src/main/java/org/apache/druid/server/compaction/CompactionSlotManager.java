@@ -301,16 +301,6 @@ public class CompactionSlotManager
   }
 
   /**
-   * Maximum number of task slots used by an MSQ compaction task at any
-   * time when the task is run with the given context.
-   */
-  public static int getMaxTaskSlotsForMSQCompactionTask(@Nullable Map<String, Object> context)
-  {
-    return QueryContext.of(context).getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
-  }
-
-
-  /**
    * Returns true if the compaction task can run in the parallel mode with the given tuningConfig.
    * This method should be synchronized with ParallelIndexSupervisorTask.isParallelMode(InputSource, ParallelIndexTuningConfig).
    */
@@ -351,7 +341,7 @@ public class CompactionSlotManager
       final Map<String, Object> autoCompactionContext = task.getContext();
       final QueryContext queryContext = QueryContext.of(autoCompactionContext);
       if (queryContext.has(QueryContextParameters.MAX_NUM_TASKS)) {
-        return getMaxTaskSlotsForMSQCompactionTask(autoCompactionContext);
+        return queryContext.getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
       } else {
         // Since MSQ needs all task slots for the calculated #tasks to be available upfront, allot all available
         // compaction slots (upto a max of MAX_TASK_SLOTS_FOR_MSQ_COMPACTION) to current compaction task to avoid
@@ -379,7 +369,7 @@ public class CompactionSlotManager
   public static int computeSlotsRequiredForTask(ClientCompactionTaskQuery task)
   {
     if (task.isMsq()) {
-      return getMaxTaskSlotsForMSQCompactionTask(task.getContext());
+      return QueryContext.of(task.getContext()).getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
     } else {
       return getMaxTaskSlotsForNativeCompactionTask(task.getTuningConfig());
     }

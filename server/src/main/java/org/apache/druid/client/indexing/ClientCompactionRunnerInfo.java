@@ -26,6 +26,7 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -243,7 +244,13 @@ public class ClientCompactionRunnerInfo
   public static CompactionConfigValidationResult validateMaxNumTasksForMSQ(Map<String, Object> context)
   {
     if (context != null) {
-      final int maxNumTasks = QueryContext.of(context).getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
+      final int maxNumTasks;
+      try {
+        maxNumTasks = QueryContext.of(context).getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
+      }
+      catch (BadQueryContextException e) {
+        return CompactionConfigValidationResult.failure("MSQ: %s", e.getMessage());
+      }
       if (maxNumTasks < 2) {
         return CompactionConfigValidationResult.failure(
             "MSQ: Context maxNumTasks[%,d] must be at least 2 (1 controller + 1 worker)",
