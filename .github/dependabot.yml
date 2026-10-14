@@ -18,9 +18,9 @@ updates:
         patterns:
           - "org.apache.maven.resolver:*"
     ignore:
-      # zstd-jni 1.5.7-13 and later cannot decode legacy (pre-1.0) zstd frames in .zst batch input
+      # zstd-jni 1.5.7-13 and later cannot decode legacy (pre-1.0) zstd frames in .zst batch input.
+      # Version updates are ignored; security updates still open PRs.
       - dependency-name: "com.github.luben:zstd-jni"
-        versions: "[1.5.7-13,)"
       # Major upgrades of the following dependencies need code or build changes, so they are done by hand.
       # Dependabot still proposes their minor and patch updates.
       # Vert.x must stay on the major version used by the Fabric8 Kubernetes client
