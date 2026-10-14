@@ -1111,7 +1111,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
-  public void testCreateStatementFailsAuthenticationAndFreesConnectionSlot() throws Exception
+  public void testStatementExecutionFailsAuthenticationAndFreesConnectionSlot() throws Exception
   {
     final AvaticaServerConfig config = new AvaticaServerConfig();
     config.maxConnections = 1;
@@ -1144,10 +1144,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     try (final ServerWrapper authServer = new ServerWrapper(druidMeta)) {
       try (final Connection badConnection = authServer.getConnection("regularUser", "wrong-password")) {
-        // openConnection() succeeds even with bad credentials; authentication is deferred.
-        final AvaticaClientRuntimeException ex = Assertions.assertThrows(
-            AvaticaClientRuntimeException.class,
-            badConnection::createStatement
+        // openConnection() and createStatement() succeed even with bad credentials;
+        // authentication is deferred until the statement is actually executed.
+        final Statement badStatement = badConnection.createStatement();
+        final AvaticaSqlException ex = Assertions.assertThrows(
+            AvaticaSqlException.class,
+            () -> badStatement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo")
         );
         Assertions.assertTrue(ex.getMessage().contains("Unauthorized"));
       }
@@ -1156,10 +1158,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       // authenticated connection should succeed immediately afterward, with no need to wait
       // for the idle timeout or for another connection attempt to trigger closeIfEmpty() eviction.
       try (final Connection goodConnection = authServer.getConnection("regularUser", "druid")) {
-        // codeql[java/database-resource-leak] - held open deliberately to occupy the only slot
-        final Statement statement = goodConnection.createStatement();
-        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
-        Assertions.assertTrue(resultSet.next());
+        try (Statement statement = goodConnection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo")) {
+          Assertions.assertTrue(resultSet.next());
+        }
 
         // Sanity check the other direction: once the single slot is legitimately occupied by a
         // connection with a real statement on it, a new connection attempt must still be blocked.

@@ -278,9 +278,7 @@ public class DruidMeta extends MetaImpl
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
     try {
-      final DruidConnection druidConnection = getDruidConnection(ch.id);
-      doAuthenticate(druidConnection);
-      final DruidJdbcStatement druidStatement = druidConnection
+      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id)
           .createStatement(
               sqlStatementFactory,
               queryConfigProvider.getContext(),
