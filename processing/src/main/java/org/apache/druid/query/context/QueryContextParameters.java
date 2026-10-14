@@ -32,6 +32,7 @@ import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
 import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
+import org.apache.druid.query.context.docs.ParameterDocumentation.StatementType;
 import org.apache.druid.query.topn.TopNQueryConfig;
 
 import java.lang.reflect.Field;
@@ -869,8 +870,10 @@ public final class QueryContextParameters
               Affects all joins in the query.
               This is a hint to the MSQ engine, and the actual joins may proceed differently.
               The native engine only supports `broadcast`.
+              See [Joins](../multi-stage-query/reference.md#joins) for more details.
               """
           )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
           .build();
 
   public static final QueryContextParameter<Object> SQL_CURRENT_TIMESTAMP =
