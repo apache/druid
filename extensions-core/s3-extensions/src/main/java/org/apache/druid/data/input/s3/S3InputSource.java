@@ -42,7 +42,6 @@ import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
-import org.apache.druid.storage.s3.S3IntermediateRoleConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -71,7 +70,6 @@ public class S3InputSource extends CloudObjectInputSource
   private final AWSProxyConfig awsProxyConfig;
   private final AWSClientConfig awsClientConfig;
   private final AWSEndpointConfig awsEndpointConfig;
-  private final S3IntermediateRoleConfig intermediateRoleConfig;
   private int maxRetries;
 
   /**
@@ -94,7 +92,6 @@ public class S3InputSource extends CloudObjectInputSource
    * @param awsProxyConfig      User provided proxy information for the overridden s3 client
    * @param awsEndpointConfig   User provided s3 endpoint and region for overriding the default S3 endpoint
    * @param awsClientConfig     User provided properties for the S3 client with the overridden endpoint
-   * @param intermediateRoleConfig Role to assume before the role named in {@param s3InputSourceConfig}
    */
   @JsonCreator
   public S3InputSource(
@@ -110,8 +107,7 @@ public class S3InputSource extends CloudObjectInputSource
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig,
       @JsonProperty("proxyConfig") @Nullable AWSProxyConfig awsProxyConfig,
       @JsonProperty("endpointConfig") @Nullable AWSEndpointConfig awsEndpointConfig,
-      @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig,
-      @JacksonInject @Nullable S3IntermediateRoleConfig intermediateRoleConfig
+      @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig
   )
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob, systemFields);
@@ -121,7 +117,6 @@ public class S3InputSource extends CloudObjectInputSource
     this.awsProxyConfig = awsProxyConfig;
     this.awsClientConfig = awsClientConfig;
     this.awsEndpointConfig = awsEndpointConfig;
-    this.intermediateRoleConfig = intermediateRoleConfig;
 
     this.s3ClientSupplier = Suppliers.memoize(() -> {
       if (s3ClientBuilder == null || s3InputSourceConfig == null) {
@@ -135,7 +130,7 @@ public class S3InputSource extends CloudObjectInputSource
           awsClientConfig,
           s3InputSourceConfig,
           null,
-          intermediateRoleConfig
+          s3ClientBuilder.getIntermediateRoleConfig()
       ).build();
     });
     this.maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
@@ -169,8 +164,7 @@ public class S3InputSource extends CloudObjectInputSource
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
-        awsClientConfig,
-        null
+        awsClientConfig
     );
   }
 
@@ -204,8 +198,7 @@ public class S3InputSource extends CloudObjectInputSource
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
-        awsClientConfig,
-        null
+        awsClientConfig
     );
     this.maxRetries = maxRetries;
   }
@@ -307,8 +300,7 @@ public class S3InputSource extends CloudObjectInputSource
         getS3InputSourceConfig(),
         getAwsProxyConfig(),
         getAwsEndpointConfig(),
-        getAwsClientConfig(),
-        intermediateRoleConfig
+        getAwsClientConfig()
     );
   }
 

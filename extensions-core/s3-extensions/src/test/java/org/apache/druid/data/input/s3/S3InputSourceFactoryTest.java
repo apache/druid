@@ -51,7 +51,6 @@ public class S3InputSourceFactoryTest
         null,
         null,
         null,
-        null,
         null
     );
     Assertions.assertTrue(s3Builder.create(fileUris) instanceof S3InputSource);

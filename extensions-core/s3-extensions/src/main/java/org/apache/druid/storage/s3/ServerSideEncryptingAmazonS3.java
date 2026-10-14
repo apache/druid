@@ -415,7 +415,6 @@ public class ServerSideEncryptingAmazonS3
       credentialsProvider = maybeAssumeIntermediateRole(
           credentialsProvider,
           intermediateRoleConfig,
-          awsEndpointConfig,
           awsClientConfig
       );
 
@@ -435,7 +434,8 @@ public class ServerSideEncryptingAmazonS3
     return ServerSideEncryptingAmazonS3.builder()
                                        .setS3ClientSupplier(clientBuilder::build)
                                        .setS3AsyncClientSupplier(asyncClientBuilder::build)
-                                       .setS3StorageConfig(s3StorageConfig);
+                                       .setS3StorageConfig(s3StorageConfig)
+                                       .setIntermediateRoleConfig(intermediateRoleConfig);
   }
 
   /**
@@ -475,7 +475,6 @@ public class ServerSideEncryptingAmazonS3
   public static AwsCredentialsProvider maybeAssumeIntermediateRole(
       AwsCredentialsProvider baseCredentialsProvider,
       @Nullable S3IntermediateRoleConfig intermediateRoleConfig,
-      @Nullable AWSEndpointConfig awsEndpointConfig,
       @Nullable AWSClientConfig awsClientConfig
   )
   {
@@ -488,7 +487,7 @@ public class ServerSideEncryptingAmazonS3
     return createAssumeRoleCredentialsProvider(
         intermediateAssumeRoleArn,
         null,
-        awsEndpointConfig,
+        null,
         baseCredentialsProvider,
         awsClientConfig
     );
@@ -533,6 +532,8 @@ public class ServerSideEncryptingAmazonS3
     @Nullable
     private Supplier<S3AsyncClient> s3AsyncClientSupplier;
     private S3StorageConfig s3StorageConfig = new S3StorageConfig(new NoopServerSideEncryption(), null);
+    @Nullable
+    private S3IntermediateRoleConfig intermediateRoleConfig;
 
     public Builder setS3ClientSupplier(Supplier<S3Client> s3ClientSupplier)
     {
@@ -555,6 +556,18 @@ public class ServerSideEncryptingAmazonS3
     public S3StorageConfig getS3StorageConfig()
     {
       return this.s3StorageConfig;
+    }
+
+    public Builder setIntermediateRoleConfig(@Nullable S3IntermediateRoleConfig intermediateRoleConfig)
+    {
+      this.intermediateRoleConfig = intermediateRoleConfig;
+      return this;
+    }
+
+    @Nullable
+    public S3IntermediateRoleConfig getIntermediateRoleConfig()
+    {
+      return this.intermediateRoleConfig;
     }
 
     /**
