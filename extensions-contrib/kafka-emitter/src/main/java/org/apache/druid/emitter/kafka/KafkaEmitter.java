@@ -186,10 +186,12 @@ public class KafkaEmitter implements Emitter
 
     long currentMetricSampled = metricSampled.get();
     long deltaMetricSampled = currentMetricSampled - previousMetricSampled.getAndSet(currentMetricSampled);
+    // Advance the emitted baseline every interval, even when nothing was sampled, so that each summary
+    // only covers the latest interval.
+    long currentMetricEmitted = metricEmitted.get();
+    long deltaMetricEmitted = currentMetricEmitted - previousMetricEmitted.getAndSet(currentMetricEmitted);
 
     if (deltaMetricSampled > 0) {
-      long currentMetricEmitted = metricEmitted.get();
-      long deltaMetricEmitted = currentMetricEmitted - previousMetricEmitted.getAndSet(currentMetricEmitted);
       long deltaTotal = deltaMetricSampled + deltaMetricEmitted;
       log.info(
           "Metrics sampling for past %d minutes: total=[%d], emitted=[%d], sampledOut=[%d], cumulativeSampledOut=[%d]",
@@ -437,5 +439,17 @@ public class KafkaEmitter implements Emitter
   protected long getPreviousInvalidLostCount()
   {
     return previousInvalidLost.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousMetricSampledCount()
+  {
+    return previousMetricSampled.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousMetricEmittedCount()
+  {
+    return previousMetricEmitted.get();
   }
 }

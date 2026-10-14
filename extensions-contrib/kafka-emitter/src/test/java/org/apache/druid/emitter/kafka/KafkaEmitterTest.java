@@ -1059,6 +1059,37 @@ public class KafkaEmitterTest
     kafkaEmitter.logLostMessagesStatus();
   }
 
+  /**
+   * The sampling summary must only cover the latest interval. An interval that emits metrics but samples none
+   * skips the log line, but must still move the emitted-count baseline forward, so its emissions are not
+   * reported again in a later interval's summary.
+   */
+  @Test
+  public void testSamplingSummaryWindowAdvancesWhenNothingSampled()
+  {
+    final KafkaEmitter kafkaEmitter = initKafkaEmitter(newSamplingConfig(0, ImmutableSet.of("query/time"), null));
+    final ServiceMetricEvent keptEvent = ServiceMetricEvent.builder()
+                                                           .setMetric("jvm/mem/used", 1)
+                                                           .build("druid/broker", "host");
+    final ServiceMetricEvent sampledEvent = ServiceMetricEvent.builder()
+                                                              .setMetric("query/time", 1)
+                                                              .build("druid/broker", "host");
+
+    // Interval 1: two metrics emitted, none sampled out.
+    kafkaEmitter.emit(keptEvent);
+    kafkaEmitter.emit(keptEvent);
+    kafkaEmitter.logLostMessagesStatus();
+    Assertions.assertEquals(0, kafkaEmitter.getMetricSampledCount());
+    Assertions.assertEquals(2, kafkaEmitter.getPreviousMetricEmittedCount());
+
+    // Interval 2: one emitted and one sampled out. The window must start from interval 1's end.
+    kafkaEmitter.emit(keptEvent);
+    kafkaEmitter.emit(sampledEvent);
+    kafkaEmitter.logLostMessagesStatus();
+    Assertions.assertEquals(3, kafkaEmitter.getPreviousMetricEmittedCount());
+    Assertions.assertEquals(1, kafkaEmitter.getPreviousMetricSampledCount());
+  }
+
   private static KafkaEmitterConfig newSamplingConfig(
       final Integer samplingRate,
       final Set<String> sampledMetrics,
