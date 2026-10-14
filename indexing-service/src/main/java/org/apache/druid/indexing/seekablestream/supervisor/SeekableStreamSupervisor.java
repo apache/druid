@@ -3027,19 +3027,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     // Check if any of the partitions of this taskId are being published by other taskGroups
     final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups = new HashMap<>();
-    for (PartitionIdType partitionId : taskStartOffsets.keySet()) {
+    taskStartOffsets.forEach((partitionId, taskOffset) -> {
       if (partitionIdToPublishingGroups.containsKey(partitionId)) {
-        final SequenceOffsetType taskOffset = taskStartOffsets.get(partitionId);
         partitionIdToPublishingGroups.get(partitionId).forEach((taskGroup, pendingGroupOffset) -> {
-          // Consider only task groups which are reading from offsets strictly
-          // smaller than the candidate taskId
+          // Consider only task groups which are reading from offsets
+          // strictly smaller than the candidate taskId
           if (!isOffsetAtOrBeyond(pendingGroupOffset, taskOffset)) {
             blockingTaskGroups.computeIfAbsent(taskGroup, _ -> new HashSet<>())
                               .add(partitionId);
           }
         });
       }
-    }
+    });
 
     return blockingTaskGroups;
   }
