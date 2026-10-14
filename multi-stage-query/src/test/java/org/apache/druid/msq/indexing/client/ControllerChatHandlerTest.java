@@ -42,7 +42,7 @@ public class ControllerChatHandlerTest
     TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
     reportMap.put("killUnusedSegments", new KillTaskReport("kill_1", new KillTaskReport.Stats(1, 2)));
 
-    Mockito.when(controller.liveReports())
+    Mockito.when(controller.getLiveOrFinalReport())
            .thenReturn(reportMap);
 
     final AuthorizerMapper authorizerMapper = new AuthorizerMapper(null);

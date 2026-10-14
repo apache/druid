@@ -103,6 +103,30 @@ public class ControllerHolder
     return controller;
   }
 
+  /** Returns the final report once available, or a live snapshot while the query is running. */
+  @Nullable
+  public TaskReport.ReportMap getReports()
+  {
+    final TaskReport.ReportMap report = controller.getLiveOrFinalReport();
+    if (report != null) {
+      return report;
+    }
+
+    // A controller canceled before it starts never enters Controller#run, so Controller#getLiveOrFinalReport()
+    // remains null. Return the canceled report here while the completion listener runs.
+    // Check controllerThread as well as state because a running controller can be canceled before
+    // it publishes its real final report.
+    synchronized (this) {
+      if (state == State.CANCELED && controllerThread == null) {
+        return TaskReport.buildTaskReports(
+            new MSQTaskReport(controller.queryId(), makeCanceledReport(cancelReason))
+        );
+      }
+    }
+
+    return controller.getLiveOrFinalReport();
+  }
+
   @Nullable
   public String getSqlQueryId()
   {
@@ -169,12 +193,12 @@ public class ControllerHolder
       Thread.currentThread().setName(makeThreadName());
 
       try {
-        final CaptureReportQueryListener reportListener = new CaptureReportQueryListener(listener);
+        TaskReport.ReportMap reportMap = null;
 
         try {
           if (transitionToRunning()) {
             try {
-              controller.run(reportListener);
+              controller.run(listener);
             }
             finally {
               synchronized (this) {
@@ -185,12 +209,25 @@ public class ControllerHolder
               }
             }
 
-            updateStateOnQueryComplete(reportListener.getReport());
+            reportMap = controller.getLiveOrFinalReport();
+            if (reportMap != null) {
+              final TaskReport taskReport = reportMap.get(MSQTaskReport.REPORT_KEY);
+              if (taskReport instanceof MSQTaskReport) {
+                final MSQTaskReportPayload report = ((MSQTaskReport) taskReport).getPayload();
+                if (report != null) {
+                  updateStateOnQueryComplete(report);
+                }
+              }
+            }
           } else {
             // Canceled before running.
+            final MSQTaskReportPayload canceledReport;
             synchronized (this) {
-              reportListener.onQueryComplete(makeCanceledReport(cancelReason));
+              canceledReport = makeCanceledReport(cancelReason);
             }
+            reportMap = TaskReport.buildTaskReports(new MSQTaskReport(controller.queryId(), canceledReport));
+            // Invoke the listener outside the holder lock so report lookups can acquire the lock while it runs.
+            listener.onQueryComplete(canceledReport);
           }
         }
         catch (Throwable e) {
@@ -203,17 +240,11 @@ public class ControllerHolder
           );
         }
         finally {
-          // Build report and then call "deregister".
-          final MSQTaskReport taskReport;
-
-          if (reportListener.hasReport()) {
-            taskReport = new MSQTaskReport(controller.queryId(), reportListener.getReport());
-          } else {
-            taskReport = null;
+          if (reportMap == null) {
+            // ControllerImpl publishes its final report through getLiveOrFinalReport() before invoking the completion
+            // listener, including when controller.run() exits with an exception.
+            reportMap = controller.getLiveOrFinalReport();
           }
-
-          final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
-          reportMap.put(MSQTaskReport.REPORT_KEY, taskReport);
 
           if (controllerRegistry != null) {
             controllerRegistry.deregister(this, reportMap);
