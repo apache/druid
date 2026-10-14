@@ -223,6 +223,77 @@ public class MSQLoadedSegmentTests extends MSQTestBase
   }
 
   @Test
+  public void testSelectWithLoadedSegmentsOnFooWithMultipleYielders()
+  {
+    final RowSignature resultSignature =
+        RowSignature.builder()
+                    .add("cnt", ColumnType.LONG)
+                    .add("dim1", ColumnType.STRING)
+                    .build();
+
+    doReturn(
+        Futures.immediateFuture(
+            new DataServerQueryResult<>(
+                ImmutableList.of(
+                    Yielders.each(
+                        Sequences.simple(
+                            ImmutableList.of(
+                                new Object[]{1L, "qwe"},
+                                new Object[]{1L, "tyu"}
+                            )
+                        )
+                    ),
+                    Yielders.each(Sequences.empty()),
+                    Yielders.each(
+                        Sequences.simple(
+                            ImmutableList.of(
+                                new Object[]{1L, "uio"}
+                            )
+                        )
+                    )
+                ),
+                ImmutableList.of(),
+                "foo"
+            )
+        )).when(dataServerQueryHandler)
+          .fetchRowsFromDataServer(any(), any(), any(), any());
+
+    testSelectQuery()
+        .setSql("select cnt, dim1 from foo order by dim1")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("cnt", "dim1")
+                           .columnTypes(resultSignature.getColumnTypes())
+                           .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
+                           .context(REALTIME_QUERY_CTX)
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(REALTIME_QUERY_CTX)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1L, ""},
+            new Object[]{1L, "1"},
+            new Object[]{1L, "10.1"},
+            new Object[]{1L, "2"},
+            new Object[]{1L, "abc"},
+            new Object[]{1L, "def"},
+            new Object[]{1L, "qwe"},
+            new Object[]{1L, "tyu"},
+            new Object[]{1L, "uio"}
+        ))
+        .verifyResults();
+  }
+
+  @Test
   public void testGroupByWithLoadedSegmentsOnFoo()
   {
     RowSignature rowSignature = RowSignature.builder()
