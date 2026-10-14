@@ -1158,20 +1158,28 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       // authenticated connection should succeed immediately afterward, with no need to wait
       // for the idle timeout or for another connection attempt to trigger closeIfEmpty() eviction.
       try (final Connection goodConnection = authServer.getConnection("regularUser", "druid")) {
-        try (Statement statement = goodConnection.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo")) {
+        // Statement/ResultSet are kept open (then closed in the finally block below) because
+        // closing them immediately would let closeIfEmpty() reclaim the connection's slot before
+        // the sanity check below runs.
+        final Statement statement = goodConnection.createStatement();
+        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+        try {
           Assertions.assertTrue(resultSet.next());
-        }
 
-        // Sanity check the other direction: once the single slot is legitimately occupied by a
-        // connection with a real statement on it, a new connection attempt must still be blocked.
-        // The fix only frees slots on authentication failure; it must not otherwise weaken
-        // maxConnections enforcement.
-        final AvaticaClientRuntimeException blockedEx = Assertions.assertThrows(
-            AvaticaClientRuntimeException.class,
-            () -> authServer.getConnection("regularUser", "druid")
-        );
-        Assertions.assertTrue(blockedEx.getMessage().contains("Too many connections"));
+          // Sanity check the other direction: once the single slot is legitimately occupied by a
+          // connection with a real statement on it, a new connection attempt must still be blocked.
+          // The fix only frees slots on authentication failure; it must not otherwise weaken
+          // maxConnections enforcement.
+          final AvaticaClientRuntimeException blockedEx = Assertions.assertThrows(
+              AvaticaClientRuntimeException.class,
+              () -> authServer.getConnection("regularUser", "druid")
+          );
+          Assertions.assertTrue(blockedEx.getMessage().contains("Too many connections"));
+        }
+        finally {
+          resultSet.close();
+          statement.close();
+        }
       }
     }
     finally {
