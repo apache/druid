@@ -419,7 +419,6 @@ public class KafkaEmitterTest
    * Unit test to validate the handling of {@link ServiceMetricEvent}s and {@link TestEvent}s.
    * The default event types (alerts and metrics) are subscribed in the config, so the expectation is that only
    * {@link ServiceMetricEvent} is expected to be emitted, while dropping all unknown {@link TestEvent}s.
-   * </p>
    */
   @Test
   @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)

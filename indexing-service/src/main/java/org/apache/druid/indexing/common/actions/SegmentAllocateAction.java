@@ -68,7 +68,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * <p/>
  * If this action cannot acquire an appropriate task lock, or if it cannot expand an existing segment set, it returns
  * null.
- * </p>
+ * <p/>
  * Do NOT allocate WEEK granularity segments unless the preferred segment granularity is WEEK.
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>

@@ -3430,7 +3430,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Converts a map with string keys from BoundedStreamConfig to a properly typed map.
-   * The BoundedStreamConfig uses Map<?, ?> which Jackson deserializes as Map<String, Object>.
+   * The BoundedStreamConfig uses {@code Map<?, ?>} which Jackson deserializes as {@code Map<String, Object>}.
    * This method converts string keys to partition IDs and offset values to the appropriate types.
    *
    * @param rawMap the raw map from BoundedStreamConfig

@@ -159,7 +159,7 @@ public class JoinFilterAnalyzer
   }
 
   /**
-   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis}
    * @param baseFilter - Filter on base table that was specified in the query itself
    *
    * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
@@ -223,7 +223,7 @@ public class JoinFilterAnalyzer
    * The clause is expected to be an OR filter or a leaf filter.
    *
    * @param filterClause                      Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
-   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis}
    * @param pushDownVirtualColumnsForLhsExprs Used when there are LHS expressions in the join equiconditions.
    *                                          If we rewrite an RHS filter such that it applies to the LHS expression instead,
    *                                          because the expression existed only in the equicondition, we must create a virtual column
@@ -346,7 +346,7 @@ public class JoinFilterAnalyzer
    * the base table.
    *
    * @param orFilter                          OrFilter to be rewritten
-   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis}
    * @param pushDownVirtualColumnsForLhsExprs See comments on {@link #analyzeJoinFilterClause}
    *
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
@@ -412,7 +412,7 @@ public class JoinFilterAnalyzer
    * Rewrites a selector filter on a join table into an IN filter on the base table.
    *
    * @param selectorFilter                    SelectorFilter to be rewritten
-   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis}
    * @param pushDownVirtualColumnsForLhsExprs See comments on {@link #analyzeJoinFilterClause}
    *
    * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter

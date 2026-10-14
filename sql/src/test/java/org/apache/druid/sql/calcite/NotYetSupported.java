@@ -61,7 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * testclass. Ensure that it's loaded as the most outer-rule by using the right
  * ExtendWith order - or by specifying Order: <code>
  *   &#64;Order(0)
- *   @RegisterExtension
+ *   &#64;RegisterExtension
  *   public TestRule notYetSupportedRule = new NotYetSupportedProcessor(Scope.DECOUPLED);
  *
  *   &#64;NotYetSupported(NOT_ENOUGH_RULES)
