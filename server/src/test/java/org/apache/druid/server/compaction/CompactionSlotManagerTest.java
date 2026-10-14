@@ -64,6 +64,28 @@ public class CompactionSlotManagerTest
     );
   }
 
+  @Test
+  public void test_computeSlotsRequiredForTask_forMsqTask_whenMaxNumTasksIsMalformed_returnsDefault()
+  {
+    Assertions.assertEquals(
+        QueryContextParameters.MAX_NUM_TASKS.getDefaultValue().orElseThrow(),
+        CompactionSlotManager.computeSlotsRequiredForTask(
+            createMsqTask(Map.of(QueryContextParameters.MAX_NUM_TASKS.getName(), 2.5))
+        )
+    );
+  }
+
+  @Test
+  public void test_computeSlotsRequiredForTask_forMsqTask_whenMaxNumTasksIsAString_returnsValue()
+  {
+    Assertions.assertEquals(
+        5,
+        CompactionSlotManager.computeSlotsRequiredForTask(
+            createMsqTask(Map.of(QueryContextParameters.MAX_NUM_TASKS.getName(), "5"))
+        )
+    );
+  }
+
   private ClientCompactionTaskQuery createMsqTask(Map<String, Object> context)
   {
     return new ClientCompactionTaskQuery(

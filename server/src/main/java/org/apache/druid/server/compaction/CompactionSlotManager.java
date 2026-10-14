@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -341,7 +342,7 @@ public class CompactionSlotManager
       final Map<String, Object> autoCompactionContext = task.getContext();
       final QueryContext queryContext = QueryContext.of(autoCompactionContext);
       if (queryContext.has(QueryContextParameters.MAX_NUM_TASKS)) {
-        return queryContext.getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
+        return getMaxTaskSlotsForMSQCompactionTask(queryContext);
       } else {
         // Since MSQ needs all task slots for the calculated #tasks to be available upfront, allot all available
         // compaction slots (upto a max of MAX_TASK_SLOTS_FOR_MSQ_COMPACTION) to current compaction task to avoid
@@ -369,9 +370,25 @@ public class CompactionSlotManager
   public static int computeSlotsRequiredForTask(ClientCompactionTaskQuery task)
   {
     if (task.isMsq()) {
-      return QueryContext.of(task.getContext()).getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
+      return getMaxTaskSlotsForMSQCompactionTask(QueryContext.of(task.getContext()));
     } else {
       return getMaxTaskSlotsForNativeCompactionTask(task.getTuningConfig());
+    }
+  }
+
+  /**
+   * Maximum number of task slots used by an MSQ compaction task with the given context. A task whose
+   * {@code maxNumTasks} cannot be parsed fails validation when it runs, so it is counted with the default until then
+   * rather than failing slot accounting for every task.
+   */
+  private static int getMaxTaskSlotsForMSQCompactionTask(final QueryContext context)
+  {
+    try {
+      return context.getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
+    }
+    catch (BadQueryContextException e) {
+      log.warn(e, "Counting MSQ compaction task with the default number of task slots");
+      return QueryContextParameters.MAX_NUM_TASKS.getDefaultValue().orElseThrow();
     }
   }
 }
