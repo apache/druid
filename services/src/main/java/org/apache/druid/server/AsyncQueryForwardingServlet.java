@@ -79,7 +79,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -316,17 +315,23 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
    */
   private SqlQuery buildSqlQueryWithId(SqlQuery sqlQuery)
   {
-    final Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
-    final QueryContext queryContext = QueryContext.of(context);
+    final QueryContext queryContext = QueryContext.of(sqlQuery.getContext());
     final String sqlQueryId = queryContext.getOrDefault(
         QueryContextParameters.SQL_QUERY_ID,
         UUID.randomUUID().toString()
     );
     // set queryId to sqlQueryId if not overridden
     final String queryId = queryContext.getOrDefault(QueryContextParameters.QUERY_ID, sqlQueryId);
-    QueryContextParameters.SQL_QUERY_ID.set(context, sqlQueryId);
-    QueryContextParameters.QUERY_ID.set(context, queryId);
-    return sqlQuery.withOverridenContext(context);
+    return sqlQuery.withOverridenContext(
+        queryContext.override(
+            QueryContext.ofMap(
+                QueryContextParameters.SQL_QUERY_ID,
+                sqlQueryId,
+                QueryContextParameters.QUERY_ID,
+                queryId
+            )
+        ).asMap()
+    );
   }
 
   /**
