@@ -71,7 +71,7 @@ public class GuavaUtils
 
   /**
    * If first argument is not null, return it, else return the other argument.
-   * Sort of like {@link com.google.common.base.Objects#firstNonNull(T, T)}
+   * Sort of like {@link com.google.common.base.MoreObjects#firstNonNull(Object, Object)}
    * except will not explode if both arguments are null.
    */
   @Nullable
