@@ -17,34 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.segment.virtual;
 
-import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.segment.ColumnValueSelector;
 
 /**
- * {@link RowCountInspector} for V10 segments. Reads the row count from the base projection's
- * {@link ProjectionMetadata#getNumRows()} (persisted at write time), so it answers without reading any column data.
+ * Supplies expression selectors cached for the lifetime of an ingestion column selector factory.
+ *
+ * Implementations may return one mutable selector shared across callers. Callers must only use returned selectors from
+ * the thread that ingests rows. Query-time column selector factories, which may be used from multiple threads, must not
+ * implement this interface.
  */
-public final class V10RowCountInspector implements RowCountInspector
+public interface ExprEvalSelectorCache
 {
   /**
-   * Build an inspector that reads the row count from the given base projection metadata.
+   * Returns a cached or newly created selector for an expression.
+   *
+   * @param expression expression to evaluate
+   * @return cached or newly created selector
    */
-  public static V10RowCountInspector forBaseProjection(ProjectionMetadata baseProjection)
-  {
-    return new V10RowCountInspector(baseProjection.getNumRows());
-  }
-
-  private final int numRows;
-
-  private V10RowCountInspector(int numRows)
-  {
-    this.numRows = numRows;
-  }
-
-  @Override
-  public int getNumRows()
-  {
-    return numRows;
-  }
+  ColumnValueSelector<ExprEval> getOrCreateExprEvalSelector(Expr expression);
 }

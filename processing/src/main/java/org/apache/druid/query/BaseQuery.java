@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
@@ -39,6 +41,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -56,6 +59,10 @@ public abstract class BaseQuery<T> implements Query<T>
     }
   }
 
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#QUERY_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String QUERY_ID = "queryId";
   public static final String SUB_QUERY_ID = "subQueryId";
   public static final String SQL_QUERY_ID = "sqlQueryId";
@@ -182,6 +189,20 @@ public abstract class BaseQuery<T> implements Query<T>
     return computeOverriddenContext(getContext(), overrides);
   }
 
+  /**
+   * Returns {@code context} with a single typed parameter overridden. A {@code null} value removes the parameter.
+   *
+   * @throws BadQueryContextException if the value is invalid
+   */
+  public static <V> Map<String, Object> computeOverriddenContext(
+      final Map<String, Object> context,
+      final QueryContextParameter<V> parameter,
+      @Nullable final V value
+  )
+  {
+    return QueryContexts.override(context, Collections.singletonMap(parameter.getName(), parameter.validate(value)));
+  }
+
   public static Map<String, Object> computeOverriddenContext(
       final Map<String, Object> context,
       final Map<String, Object> overrides
@@ -206,7 +227,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getId()
   {
-    return context().getString(QUERY_ID);
+    return context().get(QueryContextParameters.QUERY_ID);
   }
 
   @Override
@@ -225,7 +246,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public Query<T> withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
+    return withOverriddenContext(QueryContextParameters.QUERY_ID, id);
   }
 
   @Override

@@ -52,7 +52,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
@@ -60,6 +60,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -339,10 +340,12 @@ public class DirectDruidClientTest
     final TestHttpClient testHttpClient = new TestHttpClient(objectMapper, 110);
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(testHttpClient, false));
 
-    final QueryPlus queryPlus = getQueryPlus(Map.of(
-        QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 100,
-        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 100
-    ));
+    final QueryPlus queryPlus = getQueryPlus(
+        QueryContext.builder()
+            .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 100L)
+            .putRaw(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 100)
+            .toMap()
+    );
 
     QueryTimeoutException actualException = Assertions.assertThrows(
         QueryTimeoutException.class,
@@ -425,10 +428,12 @@ public class DirectDruidClientTest
   {
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientWithSuccessfulQuery());
 
-    final QueryPlus queryPlus = getQueryPlus(Map.of(
-        QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 100,
-        DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE
-    ));
+    final QueryPlus queryPlus = getQueryPlus(
+        QueryContext.builder()
+            .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 100L)
+            .putRaw(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE)
+            .toMap()
+    );
 
     ResourceLimitExceededException actualException = Assertions.assertThrows(
         ResourceLimitExceededException.class,

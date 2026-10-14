@@ -20,9 +20,12 @@
 package org.apache.druid.segment.loading;
 
 /**
- * How {@link SegmentCacheManager#acquireSegment} and {@link SegmentCacheManager#acquireCachedSegment} materialize a
+ * How {@code SegmentCacheManager#acquireSegment} and {@code SegmentCacheManager#acquireCachedSegment} materialize a
  * segment. Both modes return an open reference that callers must close when finished; they differ only in how much
  * of the segment is downloaded before the reference is handed back.
+ * <p>
+ * Engines that support it can be told which mode to use via
+ * {@link org.apache.druid.query.QueryContext#getSegmentAcquireMode}.
  */
 public enum AcquireMode
 {

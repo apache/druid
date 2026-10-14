@@ -207,8 +207,9 @@ public class SegmentTransactionalInsertActionTest
         actionTestKit.getTaskActionToolbox()
     );
 
+    Assertions.assertTrue(result.isOffsetMismatch());
     Assertions.assertEquals(
-        SegmentPublishResult.fail(
+        SegmentPublishResult.retryableOffsetMismatchFailure(
             "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
             + " ahead of the last committed end state[null]. Try resetting the supervisor."
         ),

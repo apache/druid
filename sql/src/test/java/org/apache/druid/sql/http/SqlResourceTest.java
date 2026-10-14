@@ -63,6 +63,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -1978,7 +1979,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String sqlQueryId = "timeoutTest";
     Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.TIMEOUT_KEY,
+        QueryContextParameters.TIMEOUT.getName(),
         1,
         BaseQuery.SQL_QUERY_ID,
         sqlQueryId
@@ -2130,7 +2131,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String sqlQueryId = "badQueryContextTimeout";
     Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.TIMEOUT_KEY,
+        QueryContextParameters.TIMEOUT.getName(),
         "2000'",
         BaseQuery.SQL_QUERY_ID,
         sqlQueryId

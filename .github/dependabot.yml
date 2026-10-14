@@ -45,3 +45,16 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

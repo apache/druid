@@ -22,13 +22,13 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -189,9 +189,7 @@ public interface Query<T>
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
   /**
-   * Returns a new query with the given typed context parameter overridden. Because {@link #withOverriddenContext(Map)}
-   * can only add or replace keys, a {@code null} value is stored as an explicit {@code null}, which
-   * {@link QueryContext} treats the same as an unset parameter.
+   * Returns a new query with the given typed context parameter overridden. A {@code null} value removes the parameter.
    *
    * @throws BadQueryContextException if the value is invalid
    */
@@ -267,12 +265,12 @@ public interface Query<T>
 
   default Query<T> withPriority(int priority)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+    return withOverriddenContext(QueryContextParameters.PRIORITY, priority);
   }
 
   default Query<T> withLane(String lane)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
+    return withOverriddenContext(QueryContextParameters.LANE, lane);
   }
 
   default VirtualColumns getVirtualColumns()

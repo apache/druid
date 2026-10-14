@@ -27,6 +27,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -257,8 +258,8 @@ public class Queries
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
     QueryContext context = query.context();
-    if (!context.containsKey(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY)) {
-      return query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit));
+    if (!context.has(QueryContextParameters.MAX_SCATTER_GATHER_BYTES)) {
+      return query.withOverriddenContext(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, maxScatterGatherBytesLimit);
     }
     context.verifyMaxScatterGatherBytes(maxScatterGatherBytesLimit);
     return query;
@@ -266,7 +267,7 @@ public class Queries
 
   public static <T> Query<T> withTimeout(Query<T> query, long timeout)
   {
-    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, timeout));
+    return query.withOverriddenContext(QueryContextParameters.TIMEOUT, timeout);
   }
 
   public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)

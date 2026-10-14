@@ -62,6 +62,7 @@ import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
@@ -751,7 +752,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         ImmutableMap.of(
             QueryContexts.CTX_FULL_REPORT, true,
-            QueryContexts.TIMEOUT_KEY, 1,
+            QueryContextParameters.TIMEOUT.getName(), 1,
             QueryContexts.ENGINE, DartSqlEngine.NAME
         ),
         Collections.emptyList()
