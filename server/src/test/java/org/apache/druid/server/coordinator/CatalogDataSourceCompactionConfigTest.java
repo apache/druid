@@ -70,6 +70,8 @@ public class CatalogDataSourceCompactionConfigTest
   private static final String TEST_DS_NUMERIC_CLUSTER_KEY = "test_numeric_cluster_key";
   private static final String TEST_DS_UNDECLARED_CLUSTER_KEY = "test_undeclared_cluster_key";
   private static final String TEST_DS_ARRAY_CLUSTER_KEY = "test_array_cluster_key";
+  private static final String TEST_DS_SEGMENT_ONLY_CLUSTER_KEY = "test_segment_only_cluster_key";
+  private static final String TEST_DS_SEALED_SEGMENT_ONLY_CLUSTER_KEY = "test_sealed_segment_only_cluster_key";
   private static final String TEST_DS_CLUSTERED_WITH_KEYS = "test_clustered_with_keys";
 
   private static final List<ColumnSpec> CLUSTERED_COLUMNS = ImmutableList.of(
@@ -176,6 +178,19 @@ public class CatalogDataSourceCompactionConfigTest
                     .clusterColumns(new ClusterKeySpec("string", false), new ClusterKeySpec("double", false))
                     .buildSpec()
     );
+    // A base table layout plus a cluster key on a column the table does not declare. Unsealed, that column can still
+    // be discovered from the segments at compaction time; sealed, the declaration is final and it cannot.
+    for (String ds : List.of(TEST_DS_SEGMENT_ONLY_CLUSTER_KEY, TEST_DS_SEALED_SEGMENT_ONLY_CLUSTER_KEY)) {
+      final TableBuilder builder =
+          TableBuilder.datasource(ds, "P1D")
+                      .columns(CLUSTERED_COLUMNS)
+                      .baseTable(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null))
+                      .clusterColumns(new ClusterKeySpec("segment_only", false));
+      if (TEST_DS_SEALED_SEGMENT_ONLY_CLUSTER_KEY.equals(ds)) {
+        builder.sealed(true);
+      }
+      METADATA_CATALOG.addSpec(TableId.datasource(ds), builder.buildSpec());
+    }
     METADATA_CATALOG.addSpec(
         TableId.datasource(TEST_DS_ARRAY_CLUSTER_KEY),
         TableBuilder.datasource(TEST_DS_ARRAY_CLUSTER_KEY, "P1D")
@@ -373,6 +388,30 @@ public class CatalogDataSourceCompactionConfigTest
             .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.NATIVE, null))
             .isValid()
     );
+  }
+
+  @Test
+  public void testValidateDefersUnknownClusterKeyTypeForUnsealedBaseTable()
+  {
+    // The generic MSQ validation sees only the base table's declared dimensions, so without deferral it would read
+    // this key's missing type as non-string and reject a configuration that compaction can actually run: the unsealed
+    // table infers the column from the segments, and the type is checked again at task time.
+    Assertions.assertTrue(
+        configFor(TEST_DS_SEGMENT_ONLY_CLUSTER_KEY)
+            .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.MSQ, null))
+            .isValid()
+    );
+  }
+
+  @Test
+  public void testValidateRejectsUnknownClusterKeyTypeForSealedBaseTable()
+  {
+    // Sealed means the declaration is the whole schema, so nothing will be inferred and the key can never resolve.
+    final CompactionConfigValidationResult result = configFor(TEST_DS_SEALED_SEGMENT_ONLY_CLUSTER_KEY)
+        .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.MSQ, null));
+
+    Assertions.assertFalse(result.isValid());
+    Assertions.assertTrue(result.getReason().contains("segment_only"), result.getReason());
   }
 
   @Test

@@ -1168,10 +1168,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             processQueryGranularity(index);
             // Column data is read from a different index for a clustered segment, but rollup, query granularity,
             // metrics and projections all come from the top-level metadata either way.
-            final QueryableIndex columnIndex = columnIndex(index);
-            processDimensionsSpec(columnIndex);
+            for (QueryableIndex columnIndex : columnIndexes(index)) {
+              processDimensionsSpec(columnIndex);
+              processMultiValuedDimensions(columnIndex);
+            }
             processMetricsSpec(index);
-            processMultiValuedDimensions(columnIndex);
             processProjections(index);
           }
         }
@@ -1179,17 +1180,23 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
 
     /**
-     * The index to read column data from. A clustered segment stores its rows in per-cluster-group containers and its
-     * top-level index deliberately holds no columns of its own, so reading the schema from it would find nothing;
-     * every group carries the same schema, so the first one answers for the segment.
+     * The indexes to read column data from. A clustered segment stores its rows in per-cluster-group containers and
+     * its top-level index deliberately holds no columns of its own, so reading the schema from it would find nothing.
+     * <p>
+     * Every group has to be read rather than taking the first as representative: a group omits a column's files
+     * entirely when it holds no values for that column, so a column can be absent from one group and present in a
+     * later one.
      */
-    private static QueryableIndex columnIndex(QueryableIndex index)
+    private static Iterable<QueryableIndex> columnIndexes(QueryableIndex index)
     {
       final ClusteredValueGroupsBaseTableSchema clusteredBaseTable = index.getMetadata().getClusteredBaseTable();
       if (clusteredBaseTable == null || clusteredBaseTable.getClusterGroups().isEmpty()) {
-        return index;
+        return Collections.singletonList(index);
       }
-      return index.getClusterGroupQueryableIndex(clusteredBaseTable.getClusterGroups().get(0), true);
+      return Iterables.transform(
+          clusteredBaseTable.getClusterGroups(),
+          group -> index.getClusterGroupQueryableIndex(group, true)
+      );
     }
 
     public Boolean getRollup()

@@ -192,10 +192,10 @@ public final class RollupTableProjectionSpec implements RollupBaseTableProjectio
   }
 
   /**
-   * Since {@link #withAdditionalColumns} appends undeclared columns after the declared grouping columns and changes
-   * nothing else, {@code other} is this spec extended exactly when it declares the same virtual columns and
-   * aggregators and its grouping column list starts with this one. List equality is the zero-appended-columns case, so
-   * this subsumes {@link #hasEqualCompactionState(BaseTableProjectionSpec)}.
+   * A rollup table absorbs undeclared grouping columns through {@link #withAdditionalColumns} and undeclared metric
+   * columns through {@link #withAdditionalMetrics}, and both append after what is already declared. So {@code other}
+   * is this spec extended exactly when it declares the same virtual columns and both of its lists start with this
+   * spec's.
    */
   @Override
   public boolean hasEqualCompactionState(BaseTableProjectionSpec other, boolean allowUndeclaredColumns)
@@ -209,9 +209,20 @@ public final class RollupTableProjectionSpec implements RollupBaseTableProjectio
     final RollupTableProjectionSpec mine = withoutQueryGranularity();
     final RollupTableProjectionSpec theirs = ((RollupTableProjectionSpec) other).withoutQueryGranularity();
     return mine.virtualColumns.equals(theirs.virtualColumns)
-           && Arrays.equals(mine.aggregators, theirs.aggregators)
            && theirs.groupingColumns.size() >= mine.groupingColumns.size()
-           && theirs.groupingColumns.subList(0, mine.groupingColumns.size()).equals(mine.groupingColumns);
+           && theirs.groupingColumns.subList(0, mine.groupingColumns.size()).equals(mine.groupingColumns)
+           && isAggregatorPrefix(mine.aggregators, theirs.aggregators);
+  }
+
+  /**
+   * Whether {@code recorded} begins with {@code declared}, the shape {@link #withAdditionalMetrics} produces.
+   */
+  private static boolean isAggregatorPrefix(AggregatorFactory[] declared, AggregatorFactory[] recorded)
+  {
+    if (recorded.length < declared.length) {
+      return false;
+    }
+    return Arrays.equals(declared, 0, declared.length, recorded, 0, declared.length);
   }
 
   /**

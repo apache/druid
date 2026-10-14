@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.RollupTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
@@ -564,6 +565,35 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment
         .builder(WIKI_SEGMENT)
         .lastCompactionState(stateWithUndeclaredColumn(unsealed))
+        .build();
+
+    Assertions.assertTrue(
+        CompactionStatus.compute(List.of(segment), unsealed, fingerprintMapper).isComplete()
+    );
+  }
+
+  @Test
+  public void testStatusWhenRollupBaseTableHasUndeclaredMetricsAndCatalogTableIsNotSealed()
+  {
+    // Unsealed rollup compaction absorbs metrics the catalog does not declare, so the recorded spec carries an extra
+    // aggregator. If that were compared strictly the interval would read as pending on every evaluation and the same
+    // compaction would be scheduled again forever.
+    final DataSourceCompactionConfig unsealed = catalogCompactionConfig(UNSEALED_ROLLUP_WIKI);
+    final CompactionState declared = unsealed.toCompactionState();
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(
+            CompactionState.builder()
+                           .partitionsSpec(declared.getPartitionsSpec())
+                           .indexSpec(declared.getIndexSpec())
+                           .segmentGranularitySpec(declared.getSegmentGranularitySpec())
+                           .baseTable(
+                               ((RollupTableProjectionSpec) declared.getBaseTable()).withAdditionalMetrics(
+                                   new AggregatorFactory[]{new LongSumAggregatorFactory("extra", "extra")}
+                               )
+                           )
+                           .build()
+        )
         .build();
 
     Assertions.assertTrue(

@@ -110,6 +110,34 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsAppendedMetrics()
+  {
+    final RollupTableProjectionSpec declared = pagesSpec();
+    final RollupTableProjectionSpec recorded = declared.withAdditionalMetrics(
+        new AggregatorFactory[]{new LongSumAggregatorFactory("extra", "extra")}
+    );
+
+    // Unsealed rollup compaction absorbs metrics the table does not declare, so the recorded spec carries more
+    // aggregators than the config. Comparing them strictly would leave the interval permanently pending.
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded));
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded, false));
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+    // One-directional, as with grouping columns: losing a declared aggregator is still a change.
+    Assertions.assertFalse(recorded.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsBothAppends()
+  {
+    final RollupTableProjectionSpec declared = pagesSpec();
+    final RollupTableProjectionSpec recorded = declared
+        .withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("city")))
+        .withAdditionalMetrics(new AggregatorFactory[]{new LongSumAggregatorFactory("extra", "extra")});
+
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+  }
+
+  @Test
   void testHasEqualCompactionStateAllowingUndeclaredColumnsStillComparesAggregators()
   {
     final RollupTableProjectionSpec declared = pagesSpec();
@@ -118,14 +146,20 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
     Assertions.assertTrue(
         declared.hasEqualCompactionState(declared.withQueryGranularity(Granularities.HOUR), true)
     );
-    // Appending grouping columns never changes the aggregators, so a different aggregator set is a real change even
-    // when the grouping columns still line up.
-    final RollupTableProjectionSpec differentAggs = RollupTableProjectionSpec
+    // Only appended aggregators are forgiven. A recorded spec that drops or replaces a declared one is a real change
+    // even when the grouping columns still line up.
+    final RollupTableProjectionSpec droppedAgg = RollupTableProjectionSpec
         .builder()
         .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
         .aggregators(new LongSumAggregatorFactory("total", "total"))
         .build();
-    Assertions.assertFalse(declared.hasEqualCompactionState(differentAggs, true));
+    Assertions.assertFalse(declared.hasEqualCompactionState(droppedAgg, true));
+    final RollupTableProjectionSpec reorderedAggs = RollupTableProjectionSpec
+        .builder()
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("rows", "rows"), new LongSumAggregatorFactory("total", "total"))
+        .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(reorderedAggs, true));
     // A spec of a different type is never equivalent.
     Assertions.assertFalse(
         declared.hasEqualCompactionState(
