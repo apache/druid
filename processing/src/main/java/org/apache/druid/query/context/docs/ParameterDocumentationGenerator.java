@@ -67,9 +67,6 @@ public final class ParameterDocumentationGenerator
   );
   private static final Pattern MARKER = Pattern.compile("<!-- GENERATED QUERY CONTEXT PARAMETER: (\\S+) -->$");
   private static final Pattern TABLE_SEPARATOR = Pattern.compile("^\\|\\s*:?-{3,}.*");
-  private static final Pattern TEXT_BLOCK_LINE_CONTINUATION = Pattern.compile("\\\\[ \\t]*\\R");
-  private static final Pattern LINE_BREAK = Pattern.compile("\\R");
-  private static final Pattern HORIZONTAL_WHITESPACE = Pattern.compile("[ \\t]+");
 
   private ParameterDocumentationGenerator()
   {
@@ -300,21 +297,7 @@ public final class ParameterDocumentationGenerator
 
   static String escapeTableCell(final String value)
   {
-    return StringUtils.replace(normalizeTableCell(value), "|", "\\|");
-  }
-
-  /**
-   * Markdown table cells must be rendered on one physical line. Parameter descriptions and default descriptions are
-   * commonly written as Java text blocks, so remove text-block line continuations, flatten remaining line breaks, and
-   * collapse incidental whitespace before writing the generated documentation.
-   */
-  static String normalizeTableCell(final String value)
-  {
-    return HORIZONTAL_WHITESPACE.matcher(
-                         LINE_BREAK.matcher(TEXT_BLOCK_LINE_CONTINUATION.matcher(value).replaceAll("")).replaceAll(" ")
-                     )
-                     .replaceAll(" ")
-                     .trim();
+    return StringUtils.replace(value, "|", "\\|");
   }
 
   private enum Mode

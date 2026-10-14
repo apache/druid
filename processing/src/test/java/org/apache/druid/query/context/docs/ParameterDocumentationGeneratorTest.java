@@ -184,27 +184,9 @@ class ParameterDocumentationGeneratorTest
   }
 
   @Test
-  void testNormalizesTableCell()
-  {
-    final String description = String.join(
-        "",
-        " Description with ",
-        "\\",
-        "\n",
-        " wrapped lines ",
-        "\n and   a continuation marker. "
-    );
-
-    assertEquals(
-        "Description with wrapped lines and a continuation marker.",
-        ParameterDocumentationGenerator.normalizeTableCell(description)
-    );
-  }
-
-  @Test
   void testEscapesTableCell()
   {
-    assertEquals("a \\| b", ParameterDocumentationGenerator.escapeTableCell(" a\n| b "));
+    assertEquals("a \\| b", ParameterDocumentationGenerator.escapeTableCell("a | b"));
   }
 
   private String[] arguments(final String mode, final Path generatedOutput)

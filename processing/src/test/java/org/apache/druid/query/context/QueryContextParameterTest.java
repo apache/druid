@@ -329,7 +329,7 @@ class QueryContextParameterTest
         assertThrows(
             IAE.class,
             () -> QueryContextParameter.builder("undocumented", String.class, String::valueOf)
-                                       .visibility(Visibility.INTERNAL)
+                                       .visibility(Visibility.SYSTEM)
                                        .since("39.0.0")
                                        .build()
         ).getMessage()

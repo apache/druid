@@ -339,6 +339,40 @@ For example, to retrieve properties for a specific server, use the query
 SELECT * FROM sys.server_properties WHERE server='192.168.1.1:8081'
 ```
 
+### QUERY_CONTEXT_PARAMETERS table
+
+The `query_context_parameters` table lists the [query context parameters](query-context.md) that users can set, along with their types, defaults, and where they apply. Each row represents one parameter. Parameters that only Druid sets internally are not listed.
+
+Unlike other `sys` tables that expose cluster state, such as `servers`, this table doesn't require `READ` permission on the `STATE` resource. Any user who can query `sys` tables can read it. Only the `effective_value` and `effective_source` columns, which come from the Broker configuration, require `READ` permission on the `CONFIG` resource. Without it, the query still succeeds, but `effective_value` is null and `effective_source` is `UNAUTHORIZED` in every row.
+
+|Column|Type|Notes|
+|------|-----|-----|
+|name|VARCHAR|Name of the parameter|
+|type|VARCHAR|Value type: `BOOLEAN`, `INTEGER`, `LONG`, `FLOAT`, `STRING`, `HUMAN_READABLE_NUMBER`, `ENUM`, or `OBJECT`. The description of an `ENUM` parameter lists its accepted values. A `HUMAN_READABLE_NUMBER` is a number that also accepts a [human-readable](../configuration/human-readable-byte.md) form with a unit suffix, such as `10K` or `256MiB`.|
+|range|VARCHAR|Accepted range of a numeric parameter, such as `[1, 2147483647]`. Null if the range is not restricted.|
+|default_value|VARCHAR|Built-in default value. Null if the default comes from configuration or depends on other settings; see `default_description`.|
+|effective_value|VARCHAR|Default value that this Broker applies from the query context defaults when a query doesn't set the parameter: the `queryContext` of the Broker dynamic configuration, else the `druid.query.default.context.<name>` runtime property, else `default_value`. A `null` value in the dynamic configuration unsets the runtime property. Null if none of them is set. Other configuration that a default can come from, such as Broker runtime properties described in `default_description` or Dart's `druid.msq.dart.query.context.*`, is not reflected. A value set in the query context or with `SET` still takes precedence.|
+|effective_source|VARCHAR|Where `effective_value` comes from: `BROKER_DYNAMIC_CONFIG`, `RUNTIME_PROPERTY`, or `BUILT_IN`. `UNAUTHORIZED` if you don't have `READ` permission on the `CONFIG` resource. Otherwise null if `effective_value` is null.|
+|default_description|VARCHAR|Description of the default when it is not a fixed value|
+|description|VARCHAR|Description of the parameter|
+|visibility|VARCHAR|`PUBLIC` for documented parameters, `HIDDEN` for parameters that can be set but are not documented|
+|query_languages|`ARRAY<VARCHAR>`|Query languages that can provide the parameter: `SQL` for Druid SQL, `JSON` for native queries|
+|engines|`ARRAY<VARCHAR>`|Query engines that honor the parameter: `NATIVE`, `MSQ`, or `DART`|
+|native_query_types|`ARRAY<VARCHAR>`|Native query types the parameter applies to, such as `Scan` or `GroupBy`. An empty array means all native query types. Null if no native engine honors the parameter.|
+|statement_types|`ARRAY<VARCHAR>`|SQL statement types the parameter applies to: `SELECT`, `INSERT`, or `REPLACE`. An empty array means all statement types. Null if Druid SQL can't provide the parameter.|
+|since|VARCHAR|Druid version that introduced the parameter|
+|is_nullable|BIGINT|1 if the parameter accepts a null value, 0 otherwise|
+|is_deprecated|BIGINT|1 if the parameter is deprecated, 0 otherwise|
+|deprecation_message|VARCHAR|Explains the deprecation and any replacement. Null if the parameter is not deprecated.|
+
+For example, to list the deprecated parameters and their replacements, use the query
+
+```sql
+SELECT name, deprecation_message
+FROM sys.query_context_parameters
+WHERE is_deprecated = 1
+```
+
 ### QUERIES table
 
 :::info

@@ -135,6 +135,21 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   }
 
   /**
+   * Returns the resolved context and the {@link BrokerDynamicConfig#getQueryContext()} of one snapshot. The overrides
+   * are empty before the first config sync.
+   */
+  @Override
+  public ContextWithOverrides getContextWithOverrides()
+  {
+    final QueryConfigSnapshot snapshot = querySnapshot;
+    final BrokerDynamicConfig dynamicConfig = snapshot.getDynamicConfig();
+    return new ContextWithOverrides(
+        snapshot.getResolvedDefaultQueryContext(),
+        dynamicConfig == null ? Map.of() : dynamicConfig.getQueryContext().asMap()
+    );
+  }
+
+  /**
    * Snapshot for a single query to resolve its context and blocklist against, instead of re-reading the live config.
    */
   public QueryConfigSnapshot snapshotForQuery()

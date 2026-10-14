@@ -58,6 +58,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -261,6 +262,7 @@ public class SystemSchema extends AbstractTableSchema
   private final HttpClient httpClient;
   private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
   private final PlannerConfig plannerConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final AuthenticationResult authenticationResult;
   private final Set<String> allTableNames;
 
@@ -277,6 +279,7 @@ public class SystemSchema extends AbstractTableSchema
       final HttpClient httpClient,
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
       final PlannerConfig plannerConfig,
+      final QueryConfigProvider queryConfigProvider,
       final AuthenticationResult authenticationResult,
       final Set<String> allTableNames
   )
@@ -293,6 +296,7 @@ public class SystemSchema extends AbstractTableSchema
     this.httpClient = httpClient;
     this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
     this.plannerConfig = plannerConfig;
+    this.queryConfigProvider = queryConfigProvider;
     this.authenticationResult = authenticationResult;
     this.allTableNames = allTableNames;
   }
@@ -330,6 +334,12 @@ public class SystemSchema extends AbstractTableSchema
           authorizerMapper,
           httpClient,
           jsonMapper,
+          authenticationResult
+      );
+      case SystemQueryContextParametersTable.TABLE_NAME -> new SystemQueryContextParametersTable(
+          jsonMapper,
+          queryConfigProvider,
+          authorizerMapper,
           authenticationResult
       );
       case QUERIES_TABLE -> new QueriesTable(

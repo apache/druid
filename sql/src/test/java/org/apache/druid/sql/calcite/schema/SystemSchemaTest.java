@@ -80,6 +80,7 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -570,17 +571,34 @@ public class SystemSchemaTest extends CalciteTestBase
         httpClient,
         () -> new SqlEngineRegistry(Collections.emptySet()),
         plannerConfig,
+        new DefaultQueryConfig(null),
         createAuthResult(Users.SUPER),
         SystemSchemaProvider.computeAllTableNames(plannerConfig)
     );
 
     Assertions.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
+        ImmutableSet.of(
+            "segments",
+            "servers",
+            "server_segments",
+            "tasks",
+            "supervisors",
+            "server_properties",
+            "query_context_parameters"
+        ),
         schema.getTableNames()
     );
 
     Assertions.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
+        ImmutableSet.of(
+            "segments",
+            "servers",
+            "server_segments",
+            "tasks",
+            "supervisors",
+            "server_properties",
+            "query_context_parameters"
+        ),
         schema.tables().getNames(LikePattern.any())
     );
 
