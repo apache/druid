@@ -278,7 +278,9 @@ public class DruidMeta extends MetaImpl
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
     try {
-      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id)
+      final DruidConnection druidConnection = getDruidConnection(ch.id);
+      doAuthenticate(druidConnection);
+      final DruidJdbcStatement druidStatement = druidConnection
           .createStatement(
               sqlStatementFactory,
               queryConfigProvider.getContext(),
@@ -334,6 +336,12 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult != null) {
       return authenticationResult;
     }
+
+    // Credentials are fixed at openConnection() and cannot be retried under the same
+    // connection id, so a failure here is terminal for this connection. Close it immediately
+    // rather than leaving it to occupy a connection slot until it times out, since it can
+    // never be reclaimed by closeIfEmpty() once a statement exists on it.
+    closeConnection(new ConnectionHandle(druidConnection.getConnectionId()));
 
     // Throw an error. Use the same text that will appear if the user is denied
     // access to any resource within the query. See mapException(). This consistency
