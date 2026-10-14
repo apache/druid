@@ -798,6 +798,7 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 useLexicographicTopN
+value_range
 wikipedia
 your-table
 enableTimeBoundaryPlanning

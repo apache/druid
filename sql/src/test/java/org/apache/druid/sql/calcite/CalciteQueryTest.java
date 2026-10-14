@@ -384,7 +384,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         """
-            SELECT name, type, default_value, effective_value, effective_source,
+            SELECT name, type, value_range, default_value, effective_value, effective_source,
               query_languages, engines, native_query_types, statement_types
             FROM sys.query_context_parameters
             WHERE name IN ('maxRowsQueuedForOrdering', 'vectorize')
@@ -395,6 +395,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{
                 "maxRowsQueuedForOrdering",
                 "INTEGER",
+                "[1, 2147483647]",
                 null,
                 null,
                 null,
@@ -406,6 +407,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{
                 "vectorize",
                 "ENUM",
+                null,
                 "true",
                 "true",
                 "BUILT_IN",

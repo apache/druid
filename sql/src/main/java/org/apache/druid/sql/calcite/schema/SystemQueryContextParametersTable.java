@@ -70,7 +70,7 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
       .builder()
       .add("name", ColumnType.STRING)
       .add("type", ColumnType.STRING)
-      .add("range", ColumnType.STRING)
+      .add("value_range", ColumnType.STRING)
       .add("default_value", ColumnType.STRING)
       .add("effective_value", ColumnType.STRING)
       .add("effective_source", ColumnType.STRING)
@@ -203,7 +203,7 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
     return new Object[]{
         parameter.getName(),
         typeName(valueType),
-        range(parameter),
+        valueRange(parameter),
         builtInValue == null ? null : toJsonForm(builtInValue),
         effectiveValue == null ? null : toJsonForm(effectiveValue),
         effectiveSource == null ? null : effectiveSource.name(),
@@ -242,7 +242,7 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
   }
 
   @Nullable
-  private static String range(final QueryContextParameter<?> parameter)
+  private static String valueRange(final QueryContextParameter<?> parameter)
   {
     for (final ParameterConstraint<?> constraint : parameter.getConstraints()) {
       if (constraint instanceof Range.Constraint<?> range) {

@@ -107,7 +107,7 @@ public class SystemQueryContextParametersTableTest
   {
     final Object[] row = scan().get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName());
     Assertions.assertEquals("INTEGER", value(row, "type"));
-    Assertions.assertEquals("[1, 2147483647]", value(row, "range"));
+    Assertions.assertEquals("[1, 2147483647]", value(row, "value_range"));
     Assertions.assertNull(value(row, "default_value"));
     Assertions.assertEquals("`druid.query.scan.maxRowsQueuedForOrdering`", value(row, "default_description"));
     Assertions.assertEquals(List.of("JSON"), value(row, "query_languages"));
