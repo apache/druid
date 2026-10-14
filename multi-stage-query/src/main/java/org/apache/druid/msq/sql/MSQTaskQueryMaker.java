@@ -540,6 +540,13 @@ public class MSQTaskQueryMaker implements QueryMaker
     final QueryContext sqlQueryContext = plannerContext.queryContext();
     final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
 
+    if (maxNumTasks < 2) {
+      throw InvalidInput.exception(
+          "MSQ context maxNumTasks [%,d] cannot be less than 2, since at least 1 controller and 1 worker is necessary",
+          maxNumTasks
+      );
+    }
+
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
     final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);

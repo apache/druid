@@ -57,7 +57,6 @@ import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -2011,8 +2010,13 @@ public class MSQInsertTest extends MSQTestBase
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setQueryContext(localContext)
                      .setExpectedExecutionErrorMatcher(
-                         ThrowableMatcher.of(BadQueryContextException.class).expectMessageIs(
-                             "Query context parameter [maxNumTasks] must be within the range [2, 2147483647], but was [1]"
+                         new DruidExceptionMatcher(
+                             DruidException.Persona.USER,
+                             DruidException.Category.INVALID_INPUT,
+                             "invalidInput"
+                         ).expectMessageIs(
+                             "MSQ context maxNumTasks [1] cannot be less than 2, since at least 1 controller "
+                             + "and 1 worker is necessary"
                          )
                      )
                      .verifyExecutionError();

@@ -1054,7 +1054,6 @@ public final class QueryContextParameters
       integerParameter("maxNumTasks")
           .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
           .defaultValue(2)
-          .constraint(Range.closedRange(2, Integer.MAX_VALUE))
           .description(
               """
               The maximum total number of tasks to launch, including the controller task.

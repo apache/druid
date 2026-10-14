@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -307,13 +306,7 @@ public class CompactionSlotManager
    */
   public static int getMaxTaskSlotsForMSQCompactionTask(@Nullable Map<String, Object> context)
   {
-    try {
-      return QueryContext.of(context).getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
-    }
-    catch (BadQueryContextException e) {
-      // A task with an invalid maxNumTasks fails validation when it runs. Count it with the default until then.
-      return QueryContextParameters.MAX_NUM_TASKS.getDefaultValue().orElseThrow();
-    }
+    return QueryContext.of(context).getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
   }
 
 

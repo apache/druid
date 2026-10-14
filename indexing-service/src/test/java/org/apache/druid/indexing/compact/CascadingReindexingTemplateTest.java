@@ -1678,7 +1678,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
     Assertions.assertFalse(result.isValid());
     Assertions.assertEquals(
-        "MSQ: Query context parameter [maxNumTasks] must be within the range [2, 2147483647], but was [1]",
+        "MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)",
         result.getReason()
     );
   }
