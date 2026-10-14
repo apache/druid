@@ -818,6 +818,8 @@
   <suppress>
     <!-- CVE-2026-54512, CVE-2026-54513: PolymorphicTypeValidator bypass in jackson-databind when
          polymorphic typing is enabled with generic type parameters or array subtypes.
+         CVE-2026-83557: DefaultBaseTypeLimitingValidator omits java.lang.Comparable from unsafe
+         base types, enabling arbitrary class instantiation via polymorphic deserialization.
          These CVEs affect jackson-databind shaded inside hadoop/parquet jars,
          not Druid's own jackson-databind (2.22.x).
          CVE-2026-68497: Not yet published in NVD, suppressed as appearing only inside shaded jars -->
@@ -829,12 +831,27 @@
     <cve>CVE-2026-54512</cve>
     <cve>CVE-2026-54513</cve>
     <cve>CVE-2026-68497</cve>
+    <cve>CVE-2026-83557</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-89407, CVE-2026-89425: ReDoS/OOM in jackson-core's number and error-token parsing
+         of malformed input. Affects jackson-core shaded inside hadoop-client-runtime-3.5.0.jar,
+         not Druid's own jackson-core (2.22.x). -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-core 2.18.6)
+    ]]></notes>
+    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-core/pom\.xml$</filePath>
+    <cve>CVE-2026-89407</cve>
+    <cve>CVE-2026-68498</cve>
+    <cve>CVE-2026-89425</cve>
   </suppress>
 
   <suppress>
     <!-- CVE-2026-2332: Jetty HTTP/1.1 request smuggling via chunk extension quoted strings.
          CVE-2026-10050: Jetty Digest auth password encoding using ISO-8859-1.
-         Both affect Jetty shaded inside hadoop-client-runtime-3.5.0.jar. Druid cannot upgrade
+         CVE-2026-19203: Jetty HTTP/1.1 request smuggling via lone-LF chunk terminators.
+         All affect Jetty shaded inside hadoop-client-runtime-3.5.0.jar. Druid cannot upgrade
          the Jetty version inside this shaded jar. The shaded Jetty is used only for Hadoop's
          internal HTTP server (WebHDFS, etc.), not for Druid's own HTTP server (Jetty 12.x).
          Druid does not use Hadoop's embedded Jetty server or Digest auth. -->
@@ -844,18 +861,25 @@
     <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/org\.eclipse\.jetty[^/]*/[^/]*/pom\.xml$</filePath>
     <cve>CVE-2026-2332</cve>
     <cve>CVE-2026-10050</cve>
+    <cve>CVE-2026-19203</cve>
   </suppress>
 
   <suppress>
     <!-- CVE-2026-56741, CVE-2026-56740: DoS via JLine Telnet server (NAWS terminal dimensions and
-         NEW-ENVIRON flooding). JLine is shaded inside hadoop-client-runtime-3.5.0.jar and is used
-         only for Hadoop's interactive CLI shell. Druid does not expose a JLine Telnet server endpoint. -->
+         NEW-ENVIRON flooding).
+         CVE-2026-77422, CVE-2026-77423: ReDoS in JLine's built-in grep/less commands via
+         user-controlled regex.
+         JLine is shaded inside hadoop-client-runtime-3.5.0.jar and is used
+         only for Hadoop's interactive CLI shell. Druid does not expose a JLine Telnet server
+         endpoint or interactive shell session. -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jline 3.9.0)
     ]]></notes>
     <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/org\.jline/jline[^/]*/pom\.xml$</filePath>
     <cve>CVE-2026-56741</cve>
     <cve>CVE-2026-56740</cve>
+    <cve>CVE-2026-77422</cve>
+    <cve>CVE-2026-77423</cve>
   </suppress>
 
   <suppress>
@@ -901,8 +925,36 @@
     <notes><![CDATA[
       file name: zstd-jni-1.5.7-11.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.github\.luben/zstd-jni@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.github\.luben/zstd-jni@1\.5\.7\-11$</packageUrl>
     <cve>CVE-2026-87823</cve>
     <cve>CVE-2026-87795</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-90559/93452: OOB read/write in Snappy.uncompress/compress(ByteBuffer, ByteBuffer).
+         CVE-2026-108106: unbounded memory allocation during decompression (fixed in 1.1.10.9).
+         snappy-java is a transitive dependency (via Kafka, Parquet, etc.); Druid's own snappy
+         compression/decompression uses Apache Commons Compress, not the xerial ByteBuffer APIs. -->
+    <notes><![CDATA[
+      file name: snappy-java-1.1.10.8.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.xerial\.snappy/snappy-java@.*$</packageUrl>
+    <cve>CVE-2026-90559</cve>
+    <cve>CVE-2026-93452</cve>
+    <cve>CVE-2026-108106</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-82463: auth bypass in pac4j-core's CheckProfileTypeAuthorizer. Not used by Druid.
+         CVE-2026-82461: pac4j-oidc fails to verify tokens when extracting Keycloak realm/client
+         roles. Druid does not do Keycloak role extraction; it only validates the ID token via
+         standard OIDC discovery and extracts a single configured claim.
+         Fixed in pac4j 6.5.6+, but 5.x -> 6.x is a major bump with likely breaking API changes. -->
+    <notes><![CDATA[
+      file name: pac4j-core-5.7.10.jar / pac4j-oidc-5.7.10.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-.*@.*$</packageUrl>
+    <cve>CVE-2026-82463</cve>
+    <cve>CVE-2026-82461</cve>
   </suppress>
 </suppressions>
