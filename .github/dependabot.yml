@@ -21,6 +21,9 @@ updates:
       # zstd-jni 1.5.7-13 and later cannot decode legacy (pre-1.0) zstd frames in .zst batch input.
       # Version updates are ignored; security updates still open PRs.
       - dependency-name: "com.github.luben:zstd-jni"
+      # skip AWS SDK v2 patch releases, which ship almost daily; minor bumps still come through
+      - dependency-name: "software.amazon.awssdk:*"
+        update-types: ["version-update:semver-patch"]
       # Major upgrades of the following dependencies need code or build changes, so they are done by hand.
       # Dependabot still proposes their minor and patch updates.
       # Vert.x must stay on the major version used by the Fabric8 Kubernetes client
