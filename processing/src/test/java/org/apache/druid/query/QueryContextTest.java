@@ -199,10 +199,12 @@ public class QueryContextTest
   {
     final QueryContextParameter<Integer> nullableWithDefault = QueryContextParameter
         .builder("nullable", Integer.class, value -> (Integer) value)
+        .description("Test parameter.")
         .defaultValue(10)
         .build();
     final QueryContextParameter<Integer> nonNullable = QueryContextParameter
         .builder("nonNullable", Integer.class, value -> (Integer) value)
+        .description("Test parameter.")
         .nullable(false)
         .build();
     final Map<String, Object> values = new HashMap<>();
@@ -409,17 +411,38 @@ public class QueryContextTest
   public void testGetMaxSubqueryBytes()
   {
     final QueryContext context1 = new QueryContext(
-        ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, 500_000_000)
+        ImmutableMap.of(QueryContextParameters.MAX_SUBQUERY_BYTES.getName(), 500_000_000)
     );
     assertEquals("500000000", context1.getMaxSubqueryMemoryBytes(null));
 
     final QueryContext context2 = new QueryContext(
-        ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto")
+        QueryContext.ofMap(QueryContextParameters.MAX_SUBQUERY_BYTES, "auto")
     );
     assertEquals("auto", context2.getMaxSubqueryMemoryBytes(null));
 
     final QueryContext context3 = new QueryContext(ImmutableMap.of());
     assertEquals("disabled", context3.getMaxSubqueryMemoryBytes("disabled"));
+  }
+
+  @Test
+  public void testMaxSubqueryBytesAcceptsGuardrailForms()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameters.MAX_SUBQUERY_BYTES;
+    assertEquals("AUTO", parameter.parse("AUTO"));
+    assertEquals("disabled", parameter.parse("disabled"));
+    assertEquals("100", parameter.parse("100"));
+    assertEquals("100", parameter.parse(100));
+    assertEquals("1000000000", parameter.parse(1e9));
+
+    assertEquals(
+        "Query context parameter [maxSubqueryBytes] should be 'auto', 'disabled' or a non-negative number of bytes, "
+        + "but got [true]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse(true)).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("1GiB"));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("-1"));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(-1));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5));
   }
 
   @Test
@@ -450,7 +473,7 @@ public class QueryContextTest
   public void testDefaultEnableQueryDebugging()
   {
     assertFalse(QueryContext.empty().isDebug());
-    assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
+    assertTrue(QueryContext.of(QueryContextParameters.DEBUG, true).isDebug());
   }
 
   @Test
@@ -545,17 +568,17 @@ public class QueryContextTest
     );
     assertEquals(
         QueryContexts.RealtimeSegmentsMode.EXCLUSIVE,
-        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclusive"))
+        QueryContext.of(ImmutableMap.of(QueryContextParameters.REALTIME_SEGMENTS_MODE.getName(), "exclusive"))
                    .getRealtimeSegmentsMode()
     );
     assertEquals(
         QueryContexts.RealtimeSegmentsMode.EXCLUDE,
-        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclude"))
+        QueryContext.of(ImmutableMap.of(QueryContextParameters.REALTIME_SEGMENTS_MODE.getName(), "exclude"))
                    .getRealtimeSegmentsMode()
     );
     assertEquals(
         QueryContexts.RealtimeSegmentsMode.INCLUDE,
-        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "include"))
+        QueryContext.of(ImmutableMap.of(QueryContextParameters.REALTIME_SEGMENTS_MODE.getName(), "include"))
                    .getRealtimeSegmentsMode()
     );
   }
@@ -588,15 +611,42 @@ public class QueryContextTest
     // realtimeSegmentsOnly=true maps to EXCLUSIVE
     assertEquals(
         QueryContexts.RealtimeSegmentsMode.EXCLUSIVE,
-        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
+        QueryContext.of(QueryContext.ofMap(QueryContextParameters.REALTIME_SEGMENTS_ONLY, true))
                    .getRealtimeSegmentsMode()
     );
     // realtimeSegmentsOnly=false maps to INCLUDE (default)
     assertEquals(
         QueryContexts.RealtimeSegmentsMode.INCLUDE,
-        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, false))
+        QueryContext.of(QueryContext.ofMap(QueryContextParameters.REALTIME_SEGMENTS_ONLY, false))
                    .getRealtimeSegmentsMode()
     );
+  }
+
+  @Test
+  public void testIntegerParametersRejectOnlyInexactNumbers()
+  {
+    assertEquals(5, QueryContext.of(ImmutableMap.of(QueryContextParameters.PRIORITY.getName(), 5.0)).getPriority());
+    assertEquals(5, QueryContext.of(ImmutableMap.of(QueryContextParameters.PRIORITY.getName(), "5.0")).getPriority());
+    assertEquals(
+        "Query context parameter [priority] should be in integer format, but got [1.5]",
+        assertThrows(
+            BadQueryContextException.class,
+            () -> QueryContext.of(ImmutableMap.of(QueryContextParameters.PRIORITY.getName(), 1.5)).getPriority()
+        ).getMessage()
+    );
+    assertThrows(
+        BadQueryContextException.class,
+        () -> QueryContext.of(ImmutableMap.of(QueryContextParameters.TIMEOUT.getName(), "1.5")).getTimeout()
+    );
+  }
+
+  @Test
+  public void testGetRealtimeSegmentsModeIgnoresExplicitNullDeprecatedFlag()
+  {
+    final Map<String, Object> context = new HashMap<>();
+    QueryContextParameters.REALTIME_SEGMENTS_MODE.set(context, QueryContexts.RealtimeSegmentsMode.EXCLUDE);
+    context.put(QueryContextParameters.REALTIME_SEGMENTS_ONLY.getName(), null);
+    assertEquals(QueryContexts.RealtimeSegmentsMode.EXCLUDE, QueryContext.of(context).getRealtimeSegmentsMode());
   }
 
   @Test
@@ -604,10 +654,14 @@ public class QueryContextTest
   {
     BadQueryContextException e = assertThrows(
         BadQueryContextException.class,
-        () -> QueryContext.of(ImmutableMap.of(
-            QueryContexts.REALTIME_SEGMENTS_ONLY, true,
-            QueryContexts.REALTIME_SEGMENTS_MODE, "exclude"
-        )).getRealtimeSegmentsMode()
+        () -> QueryContext.of(
+            QueryContext.ofMap(
+                QueryContextParameters.REALTIME_SEGMENTS_ONLY,
+                true,
+                QueryContextParameters.REALTIME_SEGMENTS_MODE,
+                QueryContexts.RealtimeSegmentsMode.EXCLUDE
+            )
+        ).getRealtimeSegmentsMode()
     );
     assertEquals(
         "Cannot set both [realtimeSegmentsMode] and deprecated [realtimeSegmentsOnly]; use [realtimeSegmentsMode] only.",
@@ -620,7 +674,7 @@ public class QueryContextTest
   {
     BadQueryContextException e = assertThrows(
         BadQueryContextException.class,
-        () -> QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "badvalue"))
+        () -> QueryContext.of(ImmutableMap.of(QueryContextParameters.REALTIME_SEGMENTS_MODE.getName(), "badvalue"))
                          .getRealtimeSegmentsMode()
     );
     assertEquals(
@@ -731,7 +785,7 @@ public class QueryContextTest
     @Override
     public Query<Integer> withId(String id)
     {
-      context.put(BaseQuery.QUERY_ID, id);
+      context.put(QueryContextParameters.QUERY_ID.getName(), id);
       return this;
     }
 
@@ -739,7 +793,7 @@ public class QueryContextTest
     @Override
     public String getId()
     {
-      return (String) context.get(BaseQuery.QUERY_ID);
+      return (String) context.get(QueryContextParameters.QUERY_ID.getName());
     }
 
     @Override

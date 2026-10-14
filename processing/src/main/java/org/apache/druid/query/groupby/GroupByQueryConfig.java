@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.utils.JvmUtils;
 
 import java.util.Optional;
@@ -401,7 +402,10 @@ public class GroupByQueryConfig
         Optional.ofNullable(queryContext.getString(CTX_KEY_DEFER_EXPRESSION_DIMENSIONS))
                 .map(DeferExpressionDimensions::fromString)
                 .orElse(getDeferExpressionDimensions());
-    newConfig.vectorize = queryContext.getBoolean(QueryContexts.VECTORIZE_KEY, isVectorize());
+    newConfig.vectorize = queryContext.getOrDefault(
+        QueryContextParameters.VECTORIZE,
+        isVectorize() ? QueryContexts.Vectorize.TRUE : QueryContexts.Vectorize.FALSE
+    ) != QueryContexts.Vectorize.FALSE;
     newConfig.enableMultiValueUnnesting = queryContext.getBoolean(
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
         isMultiValueUnnestingEnabled()

@@ -52,6 +52,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSqlAggre
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -60,7 +61,6 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -427,7 +427,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                       .withOverriddenContext(
                                           BaseCalciteQueryTest.getTimeseriesContextWithFloorTime(
                                               ImmutableMap.of(
-                                                  TimeseriesQuery.SKIP_EMPTY_BUCKETS,
+                                                  QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(),
                                                   true,
                                                   BaseQuery.SQL_QUERY_ID,
                                                   "dummy"

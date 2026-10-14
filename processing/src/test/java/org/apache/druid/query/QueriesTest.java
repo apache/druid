@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.ExecutionVertexTest;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -42,7 +43,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -522,6 +525,24 @@ public class QueriesTest
         e,
         DruidExceptionMatcher.defensive()
             .expectMessageContains("Its unsafe to replace the BaseDataSource of a non-processable query")
+    );
+  }
+
+  @Test
+  public void testWithMaxScatterGatherBytesAppliesLimitWhenExplicitlyNull()
+  {
+    final Map<String, Object> context = new HashMap<>();
+    context.put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), null);
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("foo")
+                                        .intervals("2000/3000")
+                                        .granularity(Granularities.ALL)
+                                        .context(context)
+                                        .build();
+
+    Assertions.assertEquals(
+        100L,
+        Queries.withMaxScatterGatherBytes(query, 100L).context().get(QueryContextParameters.MAX_SCATTER_GATHER_BYTES)
     );
   }
 }

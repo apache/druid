@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -70,15 +71,15 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
   private static final Map<String, Object> DEFAULT_QUERY_CONTEXT = ImmutableMap.of(
-      QueryContexts.ENABLE_DEBUG, true,
+      QueryContextParameters.DEBUG.getName(), true,
       QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false
   );
 
   private static final Map<String, Object> DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_QUERY_CONTEXT)
-                  .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
-                  .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "0")
+                  .put(QueryContextParameters.MAX_SUBQUERY_BYTES.getName(), "100000")
+                  .put(QueryContextParameters.MAX_SUBQUERY_ROWS.getName(), "0")
                   .build();
 
   public static Object[] parametersForWindowQueryTest() throws Exception
@@ -313,7 +314,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                  + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                  + "order by 1, 2, 3")
             .queryContext(ImmutableMap.of(
-                QueryContexts.ENABLE_DEBUG, true,
+                QueryContextParameters.DEBUG.getName(), true,
                 QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false,
                 PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, true
             ))

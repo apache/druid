@@ -42,31 +42,119 @@ import java.util.stream.Collectors;
 @PublicApi
 public class QueryContexts
 {
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#FINALIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String FINALIZE_KEY = "finalize";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#PRIORITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String PRIORITY_KEY = "priority";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#LANE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String LANE_KEY = "lane";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#TIMEOUT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String TIMEOUT_KEY = "timeout";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#PER_SEGMENT_TIMEOUT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String PER_SEGMENT_TIMEOUT_KEY = "perSegmentTimeout";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MAX_SCATTER_GATHER_BYTES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MAX_QUEUED_BYTES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_PARALLEL_MERGE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#PARALLEL_MERGE_INITIAL_YIELD_ROWS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#PARALLEL_MERGE_SMALL_BATCH_ROWS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#PARALLEL_MERGE_PARALLELISM} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#VECTORIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String VECTORIZE_KEY = "vectorize";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#VECTORIZE_VIRTUAL_COLUMNS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String VECTORIZE_VIRTUAL_COLUMNS_KEY = "vectorizeVirtualColumns";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#VECTOR_SIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String VECTOR_SIZE_KEY = "vectorSize";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MAX_SUBQUERY_ROWS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MAX_SUBQUERY_BYTES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_SUBQUERY_BYTES_KEY = "maxSubqueryBytes";
   public static final String USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = "useNestedForUnknownTypeInSubquery";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_JOIN_FILTER_PUSH_DOWN} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_JOIN_FILTER_REWRITE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_REWRITE_JOIN_TO_FILTER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#JOIN_FILTER_REWRITE_MAX_SIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#CLONE_QUERY_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CLONE_QUERY_MODE = "cloneQueryMode";
   /**
    * This flag controls whether {@link AggregatorFactory#optimizeForSegment(PerSegmentQueryOptimizationContext)}
@@ -79,28 +167,72 @@ public class QueryContexts
    * data servers.
    */
   public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_FILTER_CNF} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_CACHE_KEY = "useCache";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SECONDARY_PARTITION_PRUNING} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#DEBUG} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String ENABLE_DEBUG = "debug";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#BY_SEGMENT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BY_SEGMENT_KEY = "bySegment";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#BROKER_SERVICE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_SERVICE_NAME = "brokerService";
   public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
   public static final String IN_FUNCTION_THRESHOLD = "inFunctionThreshold";
   public static final String IN_FUNCTION_EXPR_THRESHOLD = "inFunctionExprThreshold";
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#POPULATE_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String POPULATE_CACHE_KEY = "populateCache";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#POPULATE_RESULT_LEVEL_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_RESULT_LEVEL_CACHE} instead.
    */
-  @Deprecated
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SERIALIZE_DATE_TIME_AS_LONG} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SERIALIZE_DATE_TIME_AS_LONG_INNER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MIN_TOP_N_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
   public static final String ENGINE = "engine";
@@ -159,16 +291,20 @@ public class QueryContexts
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   /**
-   * @deprecated Use {@link #REALTIME_SEGMENTS_MODE} instead.
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#REALTIME_SEGMENTS_MODE} instead.
    */
-  @Deprecated
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String REALTIME_SEGMENTS_ONLY = "realtimeSegmentsOnly";
   /**
    * @deprecated Use {@link #DEFAULT_REALTIME_SEGMENTS_MODE} instead.
    */
-  @Deprecated
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_REALTIME_SEGMENTS_ONLY = false;
 
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#REALTIME_SEGMENTS_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String REALTIME_SEGMENTS_MODE = "realtimeSegmentsMode";
   public static final RealtimeSegmentsMode DEFAULT_REALTIME_SEGMENTS_MODE = RealtimeSegmentsMode.INCLUDE;
 
@@ -569,10 +705,41 @@ public class QueryContexts
       overridden.putAll(context);
     }
     if (overrides != null) {
-      overridden.putAll(overrides);
+      // A null override unsets the key, like override(Map, String, Object).
+      overrides.forEach((key, value) -> {
+        if (value == null) {
+          overridden.remove(key);
+        } else {
+          overridden.put(key, value);
+        }
+      });
     }
 
     return overridden;
+  }
+
+  /**
+   * Merges a user-provided context over default values, such as the defaults an operator configures with
+   * {@code druid.query.default.context}. A {@code null} user value means the user did not set the key, so the default
+   * applies. Unlike {@link #override(Map, Map)}, a {@code null} never removes a default.
+   */
+  public static Map<String, Object> withDefaults(
+      @Nullable final Map<String, Object> defaults,
+      @Nullable final Map<String, Object> userContext
+  )
+  {
+    final Map<String, Object> merged = new HashMap<>();
+    if (defaults != null) {
+      merged.putAll(defaults);
+    }
+    if (userContext != null) {
+      userContext.forEach((key, value) -> {
+        if (value != null) {
+          merged.put(key, value);
+        }
+      });
+    }
+    return merged;
   }
 
   public static <E extends Enum<E>> E getAsEnum(String key, Object value, Class<E> clazz, E defaultValue)

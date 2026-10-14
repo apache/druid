@@ -51,11 +51,11 @@ import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -798,11 +798,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return CursorBuildSpec.builder()
                           .setFilter(filter)
                           .setVirtualColumns(virtualColumns)
-                          .setQueryContext(
-                              QueryContext.of(
-                                  ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, 3)
-                              )
-                          )
+                          .setQueryContext(QueryContext.of(QueryContextParameters.VECTOR_SIZE, 3))
                           .build();
   }
 

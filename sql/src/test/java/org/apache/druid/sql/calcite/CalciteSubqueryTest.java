@@ -54,6 +54,7 @@ import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
@@ -124,7 +125,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testExactCountDistinctUsingSubqueryWithWhereToOuterFilter(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     final Map<String, Object> contextWithLexicographicTopN =
@@ -171,7 +172,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSubqueryOnDataSourceWithMissingColumnsInSegments(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     testQuery(
@@ -442,7 +443,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     cannotVectorizeUnlessFallback();
@@ -603,7 +604,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testMinMaxAvgDailyCountWithLimit(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     testQuery(
@@ -739,7 +740,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   private void testMaxSubqueryRowsWithoutMemoryLimit(String testName, Map<String, Object> queryContext)
   {
     Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-    modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+    modifiedQueryContext.put(QueryContextParameters.MAX_SUBQUERY_ROWS.getName(), 1);
     modifiedQueryContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
 
     testQueryThrows(
@@ -767,7 +768,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     // Since the results are materializable as frames, we are able to use the memory limit and donot rely on the
     // row limit for the subquery
     Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-    modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+    modifiedQueryContext.put(QueryContextParameters.MAX_SUBQUERY_ROWS.getName(), 1);
     modifiedQueryContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
 
     testQuery(
@@ -839,7 +840,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUseTimeFloorInsteadOfGranularityOnJoinResult(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     testQuery(
@@ -961,7 +962,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryWithLimit(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     testQuery(

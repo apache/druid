@@ -191,8 +191,8 @@ public class CursorBuildSpec
   /**
    * {@link QueryContext} for the {@link CursorHolder} to provide a mechanism to push various data into
    * {@link Cursor} and {@link VectorCursor} such as
-   * {@link org.apache.druid.query.QueryContexts#VECTORIZE_KEY} and
-   * {@link org.apache.druid.query.QueryContexts#VECTOR_SIZE_KEY}
+   * {@link org.apache.druid.query.context.QueryContextParameters#VECTORIZE} and
+   * {@link org.apache.druid.query.context.QueryContextParameters#VECTOR_SIZE}
    */
   public QueryContext getQueryContext()
   {

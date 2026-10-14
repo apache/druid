@@ -51,7 +51,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -61,6 +61,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -113,6 +114,7 @@ import java.util.stream.Collectors;
 public class GroupingEngine
 {
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
+  // Internal merge marker; this is not a public query context parameter descriptor.
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
 
   private final DruidProcessingConfig processingConfig;
@@ -222,9 +224,9 @@ public class GroupingEngine
   public GroupByQuery prepareGroupByQuery(GroupByQuery query)
   {
     // Set up downstream context.
-    final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
-    context.put(QueryContexts.FINALIZE_KEY, false);
-    context.put(CTX_KEY_OUTERMOST, false);
+    final QueryContextBuilder context = QueryContext.builder();
+    context.put(QueryContextParameters.FINALIZE, false);
+    context.putRaw(CTX_KEY_OUTERMOST, false);
 
     Granularity granularity = query.getGranularity();
     List<DimensionSpec> dimensionSpecs = query.getDimensions();
@@ -268,12 +270,12 @@ public class GroupingEngine
       // otherwise the downstream is sorted by row's timestamp first which makes the final ordering not as expected
       int timestampResultFieldIndex = queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
       if (!query.getContextSortByDimsFirst() && timestampResultFieldIndex == query.getDimensions().size() - 1) {
-        context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true);
+        context.putRaw(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true);
       }
       // when timestampResultField is the first dimension and sortByDimsFirst=true,
       // it is actually equals to sortByDimsFirst=false
       if (query.getContextSortByDimsFirst() && timestampResultFieldIndex == 0) {
-        context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
+        context.putRaw(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
       }
       // when hasTimestampResultField=true and timestampResultField is neither first nor last dimension,
       // the DefaultLimitSpec will always do the reordering
@@ -282,14 +284,14 @@ public class GroupingEngine
       // universalTimestamp works only when granularity is all
       // hasTimestampResultField works only when granularity is all
       // fudgeTimestamp should not be used when hasTimestampResultField=true due to the row's actual timestamp is used
-      context.put(CTX_KEY_FUDGE_TIMESTAMP, String.valueOf(query.getUniversalTimestamp().getMillis()));
+      context.putRaw(CTX_KEY_FUDGE_TIMESTAMP, String.valueOf(query.getUniversalTimestamp().getMillis()));
     }
 
     // The having spec shouldn't be passed down, so we need to convey the existing limit push down status
-    context.put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown());
+    context.putRaw(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown());
 
     // Always request array result rows when passing the query downstream.
-    context.put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true);
+    context.putRaw(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true);
 
     return new GroupByQuery(
         query.getDataSource(),
@@ -311,7 +313,7 @@ public class GroupingEngine
         query.getSubtotalsSpec(),
         query.getContext()
     ).withOverriddenContext(
-        context.build()
+        context.toMap()
     );
   }
 

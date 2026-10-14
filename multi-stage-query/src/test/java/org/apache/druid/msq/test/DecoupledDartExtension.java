@@ -22,6 +22,7 @@ package org.apache.druid.msq.test;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
@@ -52,7 +53,7 @@ public class DecoupledDartExtension implements BeforeEachCallback
       .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
       .put(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
       .put(QueryContexts.CTX_PREPLANNED, true)
-      .put(QueryContexts.ENABLE_DEBUG, true)
+      .put(QueryContextParameters.DEBUG.getName(), true)
       .build();
 
   public QueryTestBuilder testBuilder()

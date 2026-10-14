@@ -33,6 +33,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -163,13 +164,13 @@ public class UnionQuery implements Query<Object>
   @Override
   public Query<Object> withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(BaseQuery.QUERY_ID, id));
+    return withOverriddenContext(QueryContextParameters.QUERY_ID, id);
   }
 
   @Override
   public String getId()
   {
-    return context().getString(BaseQuery.QUERY_ID);
+    return context().get(QueryContextParameters.QUERY_ID);
   }
 
   @Override

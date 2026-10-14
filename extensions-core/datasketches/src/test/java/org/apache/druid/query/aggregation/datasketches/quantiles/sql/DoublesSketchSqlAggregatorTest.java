@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -50,6 +49,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSket
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -308,9 +308,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + ") AS alias\n",
         ImmutableMap.<String, Object>builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                    .put(QueryContextParameters.MAX_SUBQUERY_BYTES.getName(), "100000")
                     // Disallows the fallback to row based limiting
-                    .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "10")
+                    .put(QueryContextParameters.MAX_SUBQUERY_ROWS.getName(), "10")
                     .build(),
         ImmutableList.of(
             newScanQueryBuilder()
