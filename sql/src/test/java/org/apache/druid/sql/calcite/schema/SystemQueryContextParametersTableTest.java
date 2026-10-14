@@ -32,6 +32,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +99,7 @@ public class SystemQueryContextParametersTableTest
     Assertions.assertEquals(List.of(), value(row, "native_query_types"));
     Assertions.assertEquals(List.of(), value(row, "statement_types"));
     Assertions.assertEquals("0.16.0-incubating", value(row, "since"));
-    Assertions.assertEquals(0L, value(row, "is_deprecated"));
+    Assertions.assertNull(value(row, "deprecation_message"));
   }
 
   @Test
@@ -109,7 +111,7 @@ public class SystemQueryContextParametersTableTest
     Assertions.assertNull(value(row, "default_value"));
     Assertions.assertEquals("`druid.query.scan.maxRowsQueuedForOrdering`", value(row, "default_description"));
     Assertions.assertEquals(List.of("JSON"), value(row, "query_languages"));
-    Assertions.assertEquals(List.of("Scan"), value(row, "native_query_types"));
+    Assertions.assertEquals(List.of("scan"), value(row, "native_query_types"));
     // Not provided by SQL queries, so statement types don't apply.
     Assertions.assertNull(value(row, "statement_types"));
   }
@@ -137,6 +139,31 @@ public class SystemQueryContextParametersTableTest
     assertEffective(rows, QueryContextParameters.PRIORITY, "0", "0", "BUILT_IN");
     // No default anywhere
     assertEffective(rows, QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, null, null, null);
+  }
+
+  @Test
+  public void testEffectiveValueIsShownAsTheParameterReadsIt()
+  {
+    final DefaultQueryConfig runtimeConfig = new DefaultQueryConfig(Map.of("vectorize", "FORCE", "priority", "high"));
+    final Map<String, Object[]> rows = scan(createTable(runtimeConfig, CalciteTests.SUPER_USER_AUTH_RESULT));
+
+    // Shown in the same form as default_value
+    assertEffective(rows, QueryContextParameters.VECTORIZE, "true", "force", "RUNTIME_PROPERTY");
+    // A value the parameter rejects is shown as configured
+    assertEffective(rows, QueryContextParameters.PRIORITY, "0", "high", "RUNTIME_PROPERTY");
+  }
+
+  @Test
+  public void testArrayValuesSortElementByElement()
+  {
+    final List<SystemQueryContextParametersTable.SortableStringList> arrays = new ArrayList<>(List.of(
+        sortable("b"),
+        sortable("a", "b"),
+        sortable(),
+        sortable("a")
+    ));
+    Collections.sort(arrays);
+    Assertions.assertEquals(List.of(List.of(), List.of("a"), List.of("a", "b"), List.of("b")), arrays);
   }
 
   @Test
@@ -203,5 +230,13 @@ public class SystemQueryContextParametersTableTest
     final int index = SystemQueryContextParametersTable.ROW_SIGNATURE.indexOf(column);
     Assertions.assertTrue(index >= 0, column);
     return row[index];
+  }
+
+  private static SystemQueryContextParametersTable.SortableStringList sortable(final String... values)
+  {
+    final SystemQueryContextParametersTable.SortableStringList list =
+        new SystemQueryContextParametersTable.SortableStringList();
+    list.addAll(List.of(values));
+    return list;
   }
 }

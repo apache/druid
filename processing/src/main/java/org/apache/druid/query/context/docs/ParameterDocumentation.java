@@ -63,11 +63,11 @@ public final class ParameterDocumentation
    */
   public enum QueryType
   {
-    SCAN("Scan"),
-    TIMESERIES("TimeSeries"),
-    TOP_N("TopN"),
-    GROUP_BY("GroupBy"),
-    SEARCH("Search");
+    SCAN(org.apache.druid.query.Query.SCAN),
+    TIMESERIES(org.apache.druid.query.Query.TIMESERIES),
+    TOP_N(org.apache.druid.query.Query.TOPN),
+    GROUP_BY(org.apache.druid.query.Query.GROUP_BY),
+    SEARCH(org.apache.druid.query.Query.SEARCH);
 
     private final String value;
 

@@ -400,7 +400,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 null,
                 ImmutableList.of("JSON"),
                 ImmutableList.of("NATIVE"),
-                ImmutableList.of("Scan"),
+                ImmutableList.of("scan"),
                 null
             },
             new Object[]{
@@ -414,6 +414,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 ImmutableList.of(),
                 ImmutableList.of()
             }
+        )
+    );
+  }
+
+  @Test
+  public void testSysQueryContextParametersOrderByArrayColumn()
+  {
+    msqIncompatible();
+    // The Bindable sort requires comparable column values, including for array columns
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        """
+            SELECT name, native_query_types
+            FROM sys.query_context_parameters
+            WHERE name IN ('minTopNThreshold', 'maxRowsQueuedForOrdering', 'vectorize')
+            ORDER BY native_query_types DESC""",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{"minTopNThreshold", ImmutableList.of("topN")},
+            new Object[]{"maxRowsQueuedForOrdering", ImmutableList.of("scan")},
+            new Object[]{"vectorize", ImmutableList.of()}
         )
     );
   }

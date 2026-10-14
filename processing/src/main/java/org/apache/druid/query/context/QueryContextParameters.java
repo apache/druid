@@ -477,14 +477,14 @@ public final class QueryContextParameters
       booleanParameter("serializeDateTimeAsLong")
           .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("If true, DateTime is serialized as long in the result returned by Broker and the data transportation between Broker and compute process")
-          .defaultDescription("`false`")
+          .defaultValue(false)
           .build();
 
   public static final QueryContextParameter<Boolean> SERIALIZE_DATE_TIME_AS_LONG_INNER =
       booleanParameter("serializeDateTimeAsLongInner")
           .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("If true, DateTime is serialized as long in the data transportation between Broker and compute process")
-          .defaultDescription("`false`")
+          .defaultValue(false)
           .build();
 
   public static final QueryContextParameter<Integer> MIN_TOP_N_THRESHOLD =

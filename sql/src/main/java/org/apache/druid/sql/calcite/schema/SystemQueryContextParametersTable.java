@@ -31,6 +31,7 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -59,7 +60,7 @@ import java.util.stream.Collectors;
 /**
  * System table {@code sys.query_context_parameters}, listing the query context parameters declared in
  * {@link QueryContextParameters#ALL} that users can set, together with their type, default, applicability and
- * documentation. Internal parameters are excluded.
+ * documentation. {@link QueryContextParameter.Visibility#SYSTEM} parameters, which only Druid sets, are excluded.
  */
 public class SystemQueryContextParametersTable extends AbstractTable implements ScannableTable
 {
@@ -82,7 +83,6 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
       .add("statement_types", ColumnType.STRING_ARRAY)
       .add("since", ColumnType.STRING)
       .add("is_nullable", ColumnType.LONG)
-      .add("is_deprecated", ColumnType.LONG)
       .add("deprecation_message", ColumnType.STRING)
       .build();
 
@@ -144,7 +144,6 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
     final Map<String, Object> dynamicContext = contextWithOverrides.dynamicOverrides();
     final List<Object[]> rows = new ArrayList<>();
     for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
-      // Internal parameters are set by Druid, not by users, and are not documented.
       if (parameter.getVisibility() != QueryContextParameter.Visibility.SYSTEM) {
         rows.add(toRow(parameter, canReadConfig, effectiveContext, dynamicContext));
       }
@@ -187,7 +186,7 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
       effectiveValue = null;
       effectiveSource = EffectiveSource.UNAUTHORIZED;
     } else if (contextValue != null) {
-      effectiveValue = contextValue;
+      effectiveValue = parseOrRaw(parameter, contextValue);
       effectiveSource = dynamicContext.get(parameter.getName()) != null
                         ? EffectiveSource.BROKER_DYNAMIC_CONFIG
                         : EffectiveSource.RUNTIME_PROPERTY;
@@ -217,7 +216,6 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
         docs.getQueries().contains(ParameterDocumentation.Query.SQL) ? names(docs.getStatementTypes()) : null,
         parameter.getSince(),
         parameter.isNullable() ? 1L : 0L,
-        parameter.isDeprecated() ? 1L : 0L,
         parameter.getDeprecationMessage()
     };
   }
@@ -254,14 +252,49 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
     return null;
   }
 
+  /**
+   * Returns a configured value as the parameter reads it, so that it is shown in the same form as
+   * {@code default_value}. A value the parameter rejects is shown as configured.
+   */
+  private static Object parseOrRaw(final QueryContextParameter<?> parameter, final Object value)
+  {
+    try {
+      return parameter.parse(value);
+    }
+    catch (BadQueryContextException e) {
+      return value;
+    }
+  }
+
   private static List<String> names(final Collection<? extends Enum<?>> values)
   {
-    return values.stream().sorted().map(Enum::name).collect(Collectors.toList());
+    return values.stream().sorted().map(Enum::name).collect(Collectors.toCollection(SortableStringList::new));
   }
 
   private static List<String> values(final Collection<? extends Enum<?>> values)
   {
-    return values.stream().sorted().map(Enum::toString).collect(Collectors.toList());
+    return values.stream().sorted().map(Enum::toString).collect(Collectors.toCollection(SortableStringList::new));
+  }
+
+  /**
+   * Value of an {@code ARRAY<VARCHAR>} column. The Bindable sort casts column values to {@link Comparable}, so array
+   * values must be comparable for {@code ORDER BY} on these columns to work. Arrays compare element by element, and a
+   * shorter array that is a prefix of a longer one sorts first.
+   */
+  static final class SortableStringList extends ArrayList<String> implements Comparable<SortableStringList>
+  {
+    @Override
+    public int compareTo(final SortableStringList other)
+    {
+      final int common = Math.min(size(), other.size());
+      for (int i = 0; i < common; i++) {
+        final int comparison = get(i).compareTo(other.get(i));
+        if (comparison != 0) {
+          return comparison;
+        }
+      }
+      return Integer.compare(size(), other.size());
+    }
   }
 
   /**

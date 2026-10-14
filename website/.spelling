@@ -760,7 +760,6 @@ exprs
 group_id
 interval_expr
 is_active
-is_deprecated
 is_available
 is_leader
 is_nullable
