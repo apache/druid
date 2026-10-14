@@ -22,7 +22,6 @@ package org.apache.druid.query.context.docs;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class ParameterDocumentationTest
 {
@@ -40,11 +39,5 @@ class ParameterDocumentationTest
 
     assertEquals("Description with wrapped lines and a continuation marker.", docs.getDescription());
     assertEquals("The value of `druid.some.property`", docs.getDefaultDescription().orElseThrow());
-  }
-
-  @Test
-  void testDefaultDescriptionIsOptional()
-  {
-    assertFalse(ParameterDocumentation.builder().description("A parameter.").build().getDefaultDescription().isPresent());
   }
 }

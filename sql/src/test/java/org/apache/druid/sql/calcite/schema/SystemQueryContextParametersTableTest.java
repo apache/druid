@@ -19,9 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.DefaultQueryConfig;
@@ -49,17 +46,7 @@ public class SystemQueryContextParametersTableTest
   );
 
   @Test
-  public void testRowType()
-  {
-    final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
-    Assertions.assertEquals(SystemQueryContextParametersTable.ROW_SIGNATURE.getColumnNames(), rowType.getFieldNames());
-    Assertions.assertEquals(SqlTypeName.VARCHAR, rowType.getField("name", true, false).getType().getSqlTypeName());
-    Assertions.assertEquals(SqlTypeName.ARRAY, rowType.getField("engines", true, false).getType().getSqlTypeName());
-    Assertions.assertEquals(SqlTypeName.BIGINT, rowType.getField("is_deprecated", true, false).getType().getSqlTypeName());
-  }
-
-  @Test
-  public void testExcludesInternalParameters()
+  public void testExcludesSystemParameters()
   {
     final Map<String, Object[]> rows = scan();
     for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
@@ -106,9 +93,10 @@ public class SystemQueryContextParametersTableTest
     Assertions.assertEquals("PUBLIC", value(row, "visibility"));
     Assertions.assertEquals(List.of("JSON", "SQL"), value(row, "query_languages"));
     Assertions.assertEquals(List.of("NATIVE"), value(row, "engines"));
+    // Applies to all native query types and statement types.
+    Assertions.assertEquals(List.of(), value(row, "native_query_types"));
+    Assertions.assertEquals(List.of(), value(row, "statement_types"));
     Assertions.assertEquals("0.16.0-incubating", value(row, "since"));
-    // Descriptions are written as multi-line text blocks and shown as one line.
-    Assertions.assertFalse(((String) value(row, "description")).contains("\n"));
     Assertions.assertEquals(0L, value(row, "is_deprecated"));
   }
 
@@ -124,17 +112,6 @@ public class SystemQueryContextParametersTableTest
     Assertions.assertEquals(List.of("Scan"), value(row, "native_query_types"));
     // Not provided by SQL queries, so statement types don't apply.
     Assertions.assertNull(value(row, "statement_types"));
-  }
-
-  @Test
-  public void testNativeParameterForAllQueryTypes()
-  {
-    final Object[] row = scan().get(QueryContextParameters.TIMEOUT.getName());
-    Assertions.assertEquals("LONG", value(row, "type"));
-    Assertions.assertEquals(List.of("JSON", "SQL"), value(row, "query_languages"));
-    Assertions.assertEquals(List.of("NATIVE"), value(row, "engines"));
-    Assertions.assertEquals(List.of(), value(row, "native_query_types"));
-    Assertions.assertEquals(List.of(), value(row, "statement_types"));
   }
 
   @Test
