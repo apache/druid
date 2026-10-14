@@ -52,4 +52,4 @@ jobs:
     with:
       maven_args: ${{ needs.prepare.outputs.maven_args }}
       # check runs are replaced by name - unique per review so later (skipped) runs can't hide them
-      id: ${{ github.event.review.id }}
+      id: ${{ github.event.review.user.login }}-${{ github.event.review.id }}
