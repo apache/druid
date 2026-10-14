@@ -51,4 +51,5 @@ jobs:
     uses: ./.github/workflows/stability.yml
     with:
       maven_args: ${{ needs.prepare.outputs.maven_args }}
-      id: ${{ needs.prepare.outputs.args_id }}
+      # check runs are replaced by name - unique per review so later (skipped) runs can't hide them
+      id: ${{ github.event.review.id }}

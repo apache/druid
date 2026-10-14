@@ -29,7 +29,7 @@ set -x
 
 RUNS=8
 
-OPTS="-Dsurefire.failIfNoSpecifiedTests=false -Pci,skip-static-checks -Dweb.console.skip=true"
+OPTS="-Pci,skip-static-checks -Dweb.console.skip=true"
 OPTS+=" -B -Dmaven.test.failure.ignore=true"
 OPTS+=" -Dorg.slf4j.simpleLogger.defaultLogLevel=warn"
 OPTS+=" -Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire=info"

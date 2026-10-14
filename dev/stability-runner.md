@@ -31,7 +31,6 @@ STABILITY_MAVEN_ARGS=-pl embedded-tests -Dtest=KafkaIndexFaultToleranceTest
 * One line; last one wins.
 * Must be in shell-safe form (identical to its `shlex` re-quoting), else rejected with the form to use — e.g. `'-Dtest=Foo#bar'`.
 * Used for `install -am -DskipTests`, then for each `test` run.
-* Preset: `-Pci,skip-static-checks -Dweb.console.skip=true -Dsurefire.failIfNoSpecifiedTests=false`.
 
 ## 🚀 Triggers
 
@@ -42,6 +41,6 @@ STABILITY_MAVEN_ARGS=-pl embedded-tests -Dtest=KafkaIndexFaultToleranceTest
 
 ## 📦 Results
 
-* Checks: `Test Report - stability-[<id>-]shard-<N>`.
+* Jobs: `stability-[<id>-]shard-<N>`; test failures fail the job and are annotated on it.
 * Artifacts: `stability-jdk<jdk>-<hash>`, one per shard →
   `stability-results/run<N>/` with `**/target/surefire-reports` and `task-logs`.
