@@ -36,8 +36,8 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.LocatedSegmentDescriptor;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
@@ -307,12 +307,8 @@ public class ClientInfoResource
       @Context final HttpServletRequest req
   )
   {
-    final CloneQueryMode cloneQueryMode = QueryContexts.getAsEnum(
-        QueryContexts.CLONE_QUERY_MODE,
-        cloneQueryModeString,
-        CloneQueryMode.class,
-        QueryContexts.DEFAULT_CLONE_QUERY_MODE
-    );
+    final CloneQueryMode cloneQueryMode =
+        QueryContextParameters.CLONE_QUERY_MODE.parseOrDefault(cloneQueryModeString);
     List<Interval> intervalList = new ArrayList<>();
     for (String interval : intervals.split(",")) {
       intervalList.add(Intervals.of(interval.trim()));

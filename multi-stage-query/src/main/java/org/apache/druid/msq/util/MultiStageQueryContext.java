@@ -50,6 +50,7 @@ import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IndexSpec;
 import org.joda.time.DateTime;
 
@@ -652,8 +653,8 @@ public class MultiStageQueryContext
     final Map<String, Object> overrides = new HashMap<>();
 
     // Add appropriate finalization to native query context.
-    if (!originalContext.containsKey(QueryContexts.FINALIZE_KEY)) {
-      overrides.put(QueryContexts.FINALIZE_KEY, isFinalizeAggregations(originalContext));
+    if (!originalContext.has(QueryContextParameters.FINALIZE)) {
+      QueryContextParameters.FINALIZE.set(overrides, isFinalizeAggregations(originalContext));
     }
 
     // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.

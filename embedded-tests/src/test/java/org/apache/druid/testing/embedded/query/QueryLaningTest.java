@@ -20,15 +20,14 @@
 package org.apache.druid.testing.embedded.query;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-
-import java.util.Map;
 
 public class QueryLaningTest extends QueryTestBase
 {
@@ -89,7 +88,7 @@ public class QueryLaningTest extends QueryTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.LANE_KEY, lane),
+        QueryContext.ofMap(QueryContextParameters.LANE, lane),
         null
     );
   }

@@ -47,13 +47,14 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -1045,9 +1046,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentsMetadataManagerConfigSupplier
     );
 
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.PRIORITY_KEY, 5,
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    Map<String, Object> queryContext = QueryContext.ofMap(
+        QueryContextParameters.PRIORITY,
+        5,
+        QueryContextParameters.ENABLE_PARALLEL_MERGE,
+        false
     );
 
     DataSegment segment = newSegment("test", 0);
@@ -2231,9 +2234,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentsMetadataManagerConfigSupplier
     );
 
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.PRIORITY_KEY, 5,
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    Map<String, Object> queryContext = QueryContext.ofMap(
+        QueryContextParameters.PRIORITY,
+        5,
+        QueryContextParameters.ENABLE_PARALLEL_MERGE,
+        false
     );
 
     DataSegment segment = newSegment("test", 0);

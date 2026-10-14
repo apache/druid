@@ -73,7 +73,7 @@ public class QueryConfigSnapshot
    */
   public Map<String, Object> resolveContext(Query<?> query, Set<String> clientProvidedQueryContextKeys)
   {
-    final Map<String, Object> result = QueryContexts.override(resolvedDefaultQueryContext, query.getContext());
+    final Map<String, Object> result = QueryContexts.withDefaults(resolvedDefaultQueryContext, query.getContext());
     if (dynamicConfig != null) {
       for (Map.Entry<String, Object> override : dynamicConfig.getContextOverridesForQuery(query).asMap().entrySet()) {
         if (!clientProvidedQueryContextKeys.contains(override.getKey())) {

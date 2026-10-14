@@ -20,15 +20,15 @@
 package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.Lists;
-import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.RowIdSupplier;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -44,7 +44,7 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
   private final Expr expression;
   private final List<String> unknownColumns;
   private final Expr.BindingAnalysis baseBindingAnalysis;
-  private final Int2ObjectMap<Expr> transformedCache;
+  private final Map<List<String>, Expr> transformedCache;
 
   public RowBasedExpressionColumnValueSelector(
       ExpressionPlan plan,
@@ -60,7 +60,7 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
                               .filter(x -> !plan.getAnalysis().getArrayBindings().contains(x))
                               .collect(Collectors.toList());
     this.baseBindingAnalysis = plan.getAnalysis();
-    this.transformedCache = new Int2ObjectArrayMap<>(unknownColumns.size());
+    this.transformedCache = new HashMap<>();
   }
 
   @Override
@@ -78,13 +78,13 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
     // if there are arrays, we need to transform the expression to one that applies each value of the array to the
     // base expression, we keep a cache of transformed expressions to minimize extra work
     if (!arrayBindings.isEmpty()) {
-      final int key = arrayBindings.hashCode();
-      if (transformedCache.containsKey(key)) {
-        return transformedCache.get(key).eval(bindings);
+      final Expr transformed = transformedCache.get(arrayBindings);
+      if (transformed != null) {
+        return transformed.eval(bindings);
       }
-      final Expr transformed = Parser.applyUnappliedBindings(expression, baseBindingAnalysis, arrayBindings);
-      transformedCache.put(key, transformed);
-      return transformed.eval(bindings);
+      final Expr newTransformed = Parser.applyUnappliedBindings(expression, baseBindingAnalysis, arrayBindings);
+      transformedCache.put(arrayBindings, newTransformed);
+      return newTransformed.eval(bindings);
     }
     // no arrays for this row, evaluate base expression
     return expression.eval(bindings);
