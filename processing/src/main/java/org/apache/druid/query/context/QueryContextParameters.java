@@ -736,7 +736,7 @@ public final class QueryContextParameters
               This tradeoff is beneficial when memory is plentiful.
               """
           )
-          .defaultDescription("`false`")
+          .defaultDescription("`druid.query.groupBy.mergeThreadLocal`")
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -758,7 +758,7 @@ public final class QueryContextParameters
               Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.
               """
           )
-          .defaultDescription("`false`")
+          .defaultDescription("`druid.query.groupBy.forcePushDownLimit`")
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -785,7 +785,7 @@ public final class QueryContextParameters
               'false' returns an error if a multi value column is found as part of the grouping key.
               """
           )
-          .defaultDescription("`true`")
+          .defaultDescription("`druid.query.groupBy.enableMultiValueUnnesting`")
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -799,7 +799,7 @@ public final class QueryContextParameters
               Non-vectorized queries only defer string-typed expressions of single string inputs.
               """
           )
-          .defaultDescription("`fixedWidthNonNumeric`")
+          .defaultDescription("`druid.query.groupBy.deferExpressionDimensions`")
           .queryType(QueryType.GROUP_BY)
           .build();
 
