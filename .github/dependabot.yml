@@ -17,9 +17,12 @@ updates:
       maven-resolver:
         patterns:
           - "org.apache.maven.resolver:*"
-    # Major upgrades of these dependencies need code or build changes, so they are done by hand.
-    # Dependabot still proposes their minor and patch updates.
     ignore:
+      # zstd-jni 1.5.7-13 and later cannot decode legacy (pre-1.0) zstd frames in .zst batch input
+      - dependency-name: "com.github.luben:zstd-jni"
+        versions: "[1.5.7-13,)"
+      # Major upgrades of the following dependencies need code or build changes, so they are done by hand.
+      # Dependabot still proposes their minor and patch updates.
       # Vert.x must stay on the major version used by the Fabric8 Kubernetes client
       - dependency-name: "io.vertx:*"
         update-types: ["version-update:semver-major"]
@@ -29,7 +32,7 @@ updates:
       # javacc-maven-plugin 3 generates a Druid SQL parser that does not compile
       - dependency-name: "org.codehaus.mojo:javacc-maven-plugin"
         update-types: ["version-update:semver-major"]
-      # Checkstyle 13 and later fail on existing sources and need config and source changes
+      # Checkstyle major versions add stricter checks that need source fixes
       - dependency-name: "com.puppycrawl.tools:checkstyle"
         update-types: ["version-update:semver-major"]
       # Guice 7 requires migrating from javax to jakarta packages
