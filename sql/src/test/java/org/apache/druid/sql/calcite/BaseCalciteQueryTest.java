@@ -263,7 +263,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public boolean cannotVectorize = false;
   public boolean cannotVectorizeUnlessFallback = false;
-  public boolean skipVectorize = false;
 
   static {
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
@@ -774,10 +773,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig())
-        .cannotVectorize(
-            cannotVectorize || (!ExpressionProcessing.allowVectorizeFallback() && cannotVectorizeUnlessFallback)
-        )
-        .skipVectorize(skipVectorize);
+        .cannotVectorize(isCannotVectorizeExpected());
   }
 
   public CalciteTestConfig createCalciteTestConfig()
@@ -1214,9 +1210,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     cannotVectorizeUnlessFallback = true;
   }
 
-  protected void skipVectorize()
+  /**
+   * Whether vectorized execution of this test's queries is expected to fail, based on {@link #cannotVectorize()} and
+   * {@link #cannotVectorizeUnlessFallback()}. Custom {@link #testBuilder()} implementations should pass this to
+   * {@link QueryTestBuilder#cannotVectorize(boolean)}.
+   */
+  public boolean isCannotVectorizeExpected()
   {
-    skipVectorize = true;
+    return cannotVectorize || (!ExpressionProcessing.allowVectorizeFallback() && cannotVectorizeUnlessFallback);
   }
 
   protected void msqIncompatible()

@@ -1080,6 +1080,9 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testThetaSketchEstimateAsVirtualColumn()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT"
         + " THETA_SKETCH_ESTIMATE(thetasketch_dim1),"
@@ -1206,6 +1209,9 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testThetaEstimateAsVirtualColumnWithTopN()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     testQuery(
         "SELECT"
         + " THETA_SKETCH_ESTIMATE(thetasketch_dim1)"

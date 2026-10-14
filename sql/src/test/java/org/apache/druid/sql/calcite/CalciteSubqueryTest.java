@@ -124,6 +124,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testExactCountDistinctUsingSubqueryWithWhereToOuterFilter(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
       cannotVectorize();
     }
@@ -171,6 +174,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSubqueryOnDataSourceWithMissingColumnsInSegments(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
       cannotVectorize();
     }
@@ -302,6 +308,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTwoExactCountDistincts(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         queryContext,
@@ -493,6 +502,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryAsFilterWithInnerSort(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Regression test for https://github.com/apache/druid/issues/4208
 
     testQuery(
@@ -542,6 +554,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryAsFilterOnTwoColumns(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT __time, cnt, dim1, dim2 FROM druid.foo "
         + " WHERE (dim1, dim2) IN ("
@@ -665,6 +680,12 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testEmptyGroupWithOffsetDoesntInfiniteLoop(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan. With a subquery memory limit, the empty subquery is materialized as zero
+    // frames, so the Scan never runs.
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT r0.c, r1.c\n"
         + "FROM (\n"
@@ -729,6 +750,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testMaxSubqueryRows(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     if ("without memory limit".equals(testName)) {
       testMaxSubqueryRowsWithoutMemoryLimit(testName, queryContext);
     } else {
@@ -839,6 +863,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUseTimeFloorInsteadOfGranularityOnJoinResult(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
       cannotVectorize();
     }
@@ -923,6 +950,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinWithTimeDimension(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         queryContext,
@@ -961,6 +991,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryWithLimit(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
       cannotVectorize();
     }
@@ -1037,6 +1070,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinWithSubqueries(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     List<Object[]> results = new ArrayList<>(ImmutableList.of(
         new Object[]{"", null},
         new Object[]{"10.1", null},
@@ -1268,6 +1304,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSingleValueStringAgg(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testBuilder()
         .sql(
             "SELECT count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 1 OFFSET 6)"
@@ -1441,6 +1480,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTopNSubqueryWithEarliestAggregator(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{"", "a", ""},
         new Object[]{"1", "a", "1"},
@@ -1510,6 +1552,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTimeseriesSubqueryWithEarliestAggregator(String testName, Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT a.__time, a.e_dim2, b.__time "
         + "FROM ("

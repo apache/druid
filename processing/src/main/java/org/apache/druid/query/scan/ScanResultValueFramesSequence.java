@@ -33,22 +33,25 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
- * Returns a thread-unsafe iterable, that converts a sequence of {@link ScanResultValue} to an iterable of {@link FrameSignaturePair}.
+ * Thread-unsafe sequence that converts a sequence of {@link ScanResultValue} to a sequence of {@link FrameSignaturePair}.
  * ScanResultValues can have heterogenous row signatures, and the returned sequence would have batched
  * them into frames appropriately.
  * <p>
@@ -83,16 +86,9 @@ import java.util.NoSuchElementException;
  * <p>
  */
 
-public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePair>
+public class ScanResultValueFramesSequence extends BaseSequence<FrameSignaturePair, CloseableIterator<FrameSignaturePair>>
 {
-
-  final Sequence<ScanResultValue> resultSequence;
-  final MemoryAllocatorFactory memoryAllocatorFactory;
-  final boolean useNestedForUnknownTypes;
-  final RowSignature defaultRowSignature;
-  final Function<RowSignature, Function<?, Object[]>> resultFormatMapper;
-
-  public ScanResultValueFramesIterable(
+  public ScanResultValueFramesSequence(
       Sequence<ScanResultValue> resultSequence,
       MemoryAllocatorFactory memoryAllocatorFactory,
       boolean useNestedForUnknownTypes,
@@ -100,26 +96,31 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       Function<RowSignature, Function<?, Object[]>> resultFormatMapper
   )
   {
-    this.resultSequence = resultSequence;
-    this.memoryAllocatorFactory = memoryAllocatorFactory;
-    this.useNestedForUnknownTypes = useNestedForUnknownTypes;
-    this.defaultRowSignature = defaultRowSignature;
-    this.resultFormatMapper = resultFormatMapper;
-  }
+    super(
+        new BaseSequence.IteratorMaker<>()
+        {
+          @Override
+          public CloseableIterator<FrameSignaturePair> make()
+          {
+            return new ScanResultValueFramesIterator(
+                resultSequence,
+                memoryAllocatorFactory,
+                useNestedForUnknownTypes,
+                defaultRowSignature,
+                resultFormatMapper
+            );
+          }
 
-  @Override
-  public Iterator<FrameSignaturePair> iterator()
-  {
-    return new ScanResultValueFramesIterator(
-        resultSequence,
-        memoryAllocatorFactory,
-        useNestedForUnknownTypes,
-        defaultRowSignature,
-        resultFormatMapper
+          @Override
+          public void cleanup(CloseableIterator<FrameSignaturePair> iterFromMake)
+          {
+            CloseableUtils.closeAndWrapExceptions(iterFromMake);
+          }
+        }
     );
   }
 
-  private static class ScanResultValueFramesIterator implements Iterator<FrameSignaturePair>
+  private static class ScanResultValueFramesIterator implements CloseableIterator<FrameSignaturePair>
   {
 
     /**
@@ -207,7 +208,18 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
 
       // Makes sure that we run through all the empty scan result values at the beginning and are pointing to a valid
       // row
-      populateCursor();
+      try {
+        populateCursor();
+      }
+      catch (Throwable t) {
+        throw CloseableUtils.closeAndWrapInCatch(t, closer);
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      closer.close();
     }
 
     @Override
@@ -228,6 +240,7 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       populateCursor();
       boolean firstRowWritten = false;
 
+      FrameCursorUtils.throwIfSubqueryColumnsHaveDisallowedNames(currentOutputRowSignature);
       final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
           memoryAllocatorFactory,
           currentOutputRowSignature,
@@ -245,10 +258,14 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
           final Object[] currentRow = currentRows.get(currentRowIndex);
           for (Integer columnNumber : nullTypedColumns) {
             if (currentRow[columnNumber] != null) {
-              throw DruidException.defensive(
-                  "Expected a null value for column [%s]",
-                  frameWriterFactory.signature().getColumnName(columnNumber)
-              );
+              throw DruidException
+                  .forPersona(DruidException.Persona.USER)
+                  .ofCategory(DruidException.Category.UNSUPPORTED)
+                  .build(
+                      "Column [%s] has non-null values but no type information, and therefore cannot be written "
+                      + "to frames",
+                      currentInputRowSignature.getColumnName(columnNumber)
+                  );
             }
           }
 

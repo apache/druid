@@ -36,9 +36,6 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainCountStarOnView()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query = "EXPLAIN PLAN FOR SELECT COUNT(*) FROM view.aview WHERE dim1_firstchar <> 'z'";
     final String explanation = "[{"
                                + "\"query\":{\"queryType\":\"timeseries\","
@@ -92,9 +89,6 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainExactCountDistinctOfSemiJoinResult()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query = "EXPLAIN PLAN FOR SELECT COUNT(*)\n"
                          + "FROM (\n"
                          + "  SELECT DISTINCT dim2\n"
@@ -117,9 +111,6 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSetStatementWithExplainSanity()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query = "SET plannerStrategy = 'DECOUPLED';\n"
             + " EXPLAIN PLAN FOR SELECT COUNT(*)\n"
             + "FROM (\n"
@@ -152,9 +143,6 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiStatementSetsContextOverridesQueryContext()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query = "SET plannerStrategy = 'DECOUPLED';\n"
             + " SET timeout = 90000;\n"
             + " EXPLAIN PLAN FOR \n"
@@ -191,8 +179,6 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainSelectStar()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
     String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"dim1\",\"dim2\",\"dim3\",\"cnt\",\"m1\",\"m2\",\"unique_dim1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"LONG\",\"STRING\",\"STRING\",\"STRING\",\"LONG\",\"FLOAT\",\"DOUBLE\",\"COMPLEX<hyperUnique>\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}]";
 
     String sql = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
@@ -205,9 +191,6 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainMultipleTopLevelUnionAllQueries()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query = "EXPLAIN PLAN FOR SELECT dim1 FROM druid.foo\n"
                          + "UNION ALL (SELECT dim1 FROM druid.foo WHERE dim1 = '42'\n"
                          + "UNION ALL SELECT dim1 FROM druid.foo WHERE dim1 = '44')";
@@ -228,9 +211,6 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainSelectMvfilterExpressions()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String explainSql = "EXPLAIN PLAN FOR SELECT"
                               + " MV_FILTER_ONLY(\"dim1\", ARRAY['true', 'false']),"
                               + " MV_FILTER_NONE(\"dim1\", ARRAY['true', 'false']),"
@@ -269,9 +249,6 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainSelectTimestampExpression()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String explainSql = "EXPLAIN PLAN FOR SELECT"
                               + " TIME_PARSE(dim1)"
                               + " FROM druid.foo";

@@ -52,16 +52,6 @@ public class DecoupledDartCalciteArraysQueryTest extends CalciteArraysQueryTest
   }
 
   @Override
-  protected void cannotVectorize()
-  {
-  }
-
-  @Override
-  protected void cannotVectorizeUnlessFallback()
-  {
-  }
-
-  @Override
   protected void msqIncompatible()
   {
     Assumptions.assumeFalse(true, "Case marked as msqIncompatible; not trying dart right now");

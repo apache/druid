@@ -174,6 +174,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringWorksLikeStringScan()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT concat(dim3, 'foo') FROM druid.numfoo",
         ImmutableList.of(
@@ -201,6 +204,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringWorksLikeStringSelfConcatScan()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT concat(dim3, '-lol-', dim3) FROM druid.numfoo",
         ImmutableList.of(
@@ -228,6 +234,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringWorksLikeStringScanWithFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // concat(dim3, '', 'foo') instad of concat(dim3, 'foo'), to disable the FilterDecomposeConcatRule rewrite
     testQuery(
         "SELECT concat(dim3, '', 'foo') FROM druid.numfoo where concat(dim3, '', 'foo') = 'bfoo'",
@@ -254,6 +263,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOverlapFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY['a','b']) LIMIT 5",
         ImmutableList.of(
@@ -278,6 +290,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOverlapFilterNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY[NULL]) LIMIT 5",
         ImmutableList.of(
@@ -304,6 +319,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOverlapFilterNonLiteral()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim2, dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY[dim2]) LIMIT 5",
         ImmutableList.of(
@@ -328,6 +346,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringContainsFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY['a','b']) LIMIT 5",
         ImmutableList.of(
@@ -356,6 +377,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringContainsFilterNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY[NULL]) LIMIT 5",
         ImmutableList.of(
@@ -382,6 +406,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringContainsArrayOfOneElement()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY['a']) LIMIT 5",
         ImmutableList.of(
@@ -405,6 +432,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringContainsArrayOfNonLiteral()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim2, ARRAY[dim2], dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY[dim2]) LIMIT 5",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
@@ -431,6 +461,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringSlice()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT MV_SLICE(dim3, 1) FROM druid.numfoo",
         ImmutableList.of(
@@ -1004,6 +1037,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectAndFilterByStringToMV()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testBuilder()
         .sql("SELECT STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ',') FROM druid.numfoo "
              + "WHERE MV_CONTAINS(STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ','), 'd')")
@@ -1192,6 +1228,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueListFilterNonLiteral()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT MV_FILTER_ONLY(dim3, ARRAY[dim2]) FROM druid.numfoo",
         ImmutableList.of(
@@ -1273,6 +1312,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueListFilterDenyNonLiteral()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT MV_FILTER_NONE(dim3, ARRAY[dim2]) FROM druid.numfoo",
         ImmutableList.of(
@@ -1974,6 +2016,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOverlapFilterCoalesceNvl()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
         + "WHERE MV_OVERLAP(COALESCE(MV_TO_ARRAY(dim3), ARRAY['other']), ARRAY['a', 'b', 'other']) OR "
@@ -2011,6 +2056,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOverlapFilterCoalesceSingleValue()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
         + "WHERE MV_OVERLAP(COALESCE(dim3, 'other'), ARRAY['a', 'b', 'other']) LIMIT 5",
@@ -2050,6 +2098,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOverlapFilterCoalesceSingleValueOtherColumn()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT COALESCE(dim3, dim2) FROM druid.numfoo "
         + "WHERE MV_OVERLAP(COALESCE(dim3, dim2), ARRAY['a', 'b', 'other']) LIMIT 5",
@@ -2176,6 +2227,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMvContainsFilterWithExtractionFn()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     final Map<String, Object> queryContext = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
         ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
@@ -2209,6 +2263,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMvContainsSelectColumns()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT MV_CONTAINS(dim3, ARRAY['a', 'b']), MV_OVERLAP(dim3, ARRAY['a', 'b']) FROM druid.numfoo LIMIT 5",
         ImmutableList.of(
@@ -2239,6 +2296,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMvContainsOnMvConcat()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT "
         + "dim3, "
@@ -2281,6 +2341,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringRegexFilterScan()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT MV_FILTER_REGEX(dim3, '^b.*') FROM druid.numfoo",
         ImmutableList.of(
@@ -2409,6 +2472,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringPrefixFilterScan()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT MV_FILTER_PREFIX(dim3, 'b') FROM druid.numfoo",
         ImmutableList.of(
@@ -2535,6 +2601,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueRegexFilterOnVirtualMV()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Test MV_FILTER_REGEX with a virtual multi-value column created by STRING_TO_MV.
     testBuilder()
         .sql("SELECT MV_FILTER_REGEX(STRING_TO_MV('abc,def,abd', ','), '^ab')")
@@ -2549,6 +2618,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValuePrefixFilterOnVirtualMV()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Test MV_FILTER_PREFIX with a virtual multi-value column created by STRING_TO_MV.
     testBuilder()
         .sql("SELECT MV_FILTER_PREFIX(STRING_TO_MV('a,b,c', ','), 'a')")
@@ -2563,6 +2635,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValuePrefixFilterOnVirtualMVWithRawLiteral()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Test MV_FILTER_PREFIX with a virtual multi-value column created by raw string.
     testBuilder()
         .sql("SELECT MV_FILTER_PREFIX('apple', 'a')")
@@ -2586,6 +2661,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueRegexFilterOnVirtualMVWithRawLiteral()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Test MV_FILTER_REGEX with a virtual multi-value column created by raw string.
     testBuilder()
         .sql("SELECT MV_FILTER_REGEX('apple', '^a.*')")
@@ -2609,6 +2687,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueRegexFilterOnNullReturnsNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Test MV_FILTER_REGEX with a null string.
     testBuilder()
         .sql("SELECT MV_FILTER_REGEX(null, '^a.*')")
@@ -2623,6 +2704,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValuePrefixFilterOnNullReturnsNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Test MV_FILTER_PREFIX with a null string.
     testBuilder()
         .sql("SELECT MV_FILTER_PREFIX(null, '^a.*')")

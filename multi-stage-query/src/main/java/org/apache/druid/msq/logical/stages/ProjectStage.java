@@ -62,7 +62,7 @@ class ProjectStage extends FilterStage
           false
       );
 
-      return GroupByStages.buildStages(this, grouping);
+      return GroupByStages.buildStages(this, grouping, stack.getPlannerContext());
     }
     return null;
   }

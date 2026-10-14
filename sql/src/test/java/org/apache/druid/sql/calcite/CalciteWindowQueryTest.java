@@ -120,10 +120,22 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       return input.sql;
     }
 
+    /**
+     * Whether vectorized execution of this case is expected to fail.
+     */
+    public boolean cannotVectorize()
+    {
+      return input.cannotVectorize;
+    }
+
     @Override
     public void verifyResults(QueryResults results) throws Exception
     {
       if (results.exception != null) {
+        if (input.cannotVectorize && "force".equals(results.vectorizeOption)) {
+          // Checked by QueryTestRunner.VerifyExpectedFailure.
+          return;
+        }
         throw new RE(results.exception, "Failed to execute because of exception.");
       }
       Assertions.assertEquals(1, results.recordedQueries.size());
@@ -219,7 +231,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
     if (testCase.getType() == TestType.operatorValidation) {
       testBuilder()
-          .skipVectorize(true)
+          .cannotVectorize(testCase.cannotVectorize())
           .sql(testCase.getSql())
           .queryContext(
               ImmutableMap.<String, Object>builder()
@@ -243,7 +255,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
     if (testCase.getType() == TestType.operatorValidation) {
       testBuilder()
-          .skipVectorize(true)
+          .cannotVectorize(testCase.cannotVectorize())
           .sql(testCase.getSql())
           .queryContext(
               ImmutableMap.<String, Object>builder()
@@ -349,6 +361,9 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
     @JsonProperty
     public Map<String, String> queryContext;
+
+    @JsonProperty
+    public boolean cannotVectorize;
 
     @JsonProperty
     public String sql;

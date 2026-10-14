@@ -1,5 +1,8 @@
 type: "operatorValidation"
 
+# Cannot vectorize due to ARRAY_AGG.
+cannotVectorize: true
+
 sql: |
   SELECT
     count(*) over (),

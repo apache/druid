@@ -70,6 +70,9 @@ public class ScanQueryEngine
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
+    // There is no vectorized native Scan engine, so this throws if vectorization is forced.
+    query.context().getVectorize().shouldVectorize(false);
+
     final Long numScannedRows = responseContext.getRowScanCount();
     if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(Order.NONE)) {
       return Sequences.empty();

@@ -114,7 +114,7 @@ public class ReadStage extends AbstractFrameProcessorStage
   @Override
   public StageProcessor<?, ?> buildStageProcessor(StageMaker stageMaker)
   {
-    return StageMaker.makeScanStageProcessor(VirtualColumns.EMPTY, signature, null);
+    return stageMaker.makeScanStageProcessor(VirtualColumns.EMPTY, signature, null);
   }
 
   public static Optional<ReadStage> buildReadStage(DruidNodeStack stack)

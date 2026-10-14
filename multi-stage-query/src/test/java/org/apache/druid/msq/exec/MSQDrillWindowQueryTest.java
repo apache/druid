@@ -60,7 +60,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   {
     return new QueryTestBuilder(new CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-        .skipVectorize(true)
+        .cannotVectorize(isCannotVectorizeExpected())
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 
@@ -147,6 +147,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_47()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -156,6 +159,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_49()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -165,6 +171,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_50()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -174,6 +183,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_51()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -183,6 +195,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_52()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -192,6 +207,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_53()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -201,6 +219,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_54()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -210,6 +231,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_55()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -219,6 +243,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_56()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -228,6 +255,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_57()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }
@@ -237,6 +267,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Test
   public void test_ntile_func_ntileFn_58()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     useSingleWorker();
     windowQueryTest();
   }

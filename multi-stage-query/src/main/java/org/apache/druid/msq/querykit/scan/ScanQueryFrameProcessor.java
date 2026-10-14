@@ -408,7 +408,20 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
         final CursorHolder nextCursorHolder =
             cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null));
-        final Cursor nextCursor = nextCursorHolder.asCursor();
+        final Cursor nextCursor;
+
+        // If asCursor() or asVectorCursor() fails, we need to close nextCursorHolder immediately.
+        try {
+          if (query.context().getVectorize().shouldVectorize(nextCursorHolder.canVectorize())) {
+            final VectorCursor vectorCursor = nextCursorHolder.asVectorCursor();
+            nextCursor = vectorCursor == null ? null : new ShimCursor(vectorCursor);
+          } else {
+            nextCursor = nextCursorHolder.asCursor();
+          }
+        }
+        catch (Throwable t) {
+          throw CloseableUtils.closeAndWrapInCatch(t, nextCursorHolder);
+        }
 
         if (nextCursor == null) {
           // no cursor

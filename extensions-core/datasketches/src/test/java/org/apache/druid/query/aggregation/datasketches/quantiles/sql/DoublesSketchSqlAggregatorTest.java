@@ -271,6 +271,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testSubqueryWithNestedGroupBy()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{946684800000L, "", 1L, "val1"},
         new Object[]{946684800000L, "1", 1L, "val1"},

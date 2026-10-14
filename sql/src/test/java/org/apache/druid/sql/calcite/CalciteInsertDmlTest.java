@@ -790,8 +790,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainPlanInsertWithClusteredBy() throws JsonProcessingException
   {
-    skipVectorize();
-
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
 
@@ -854,8 +852,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainPlanInsertWithAsSubQueryClusteredBy()
   {
-    skipVectorize();
-
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"foo\",\"partitionedBy\":{\"type\":\"all\"},\"clusteredBy\":[\"namespace\",\"country\"]}";
 
@@ -907,8 +903,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainPlanInsertJoinQuery()
   {
-    skipVectorize();
-
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"my_table\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"my_table\",\"partitionedBy\":\"HOUR\",\"clusteredBy\":[\"__time\",\"isRobotAlias\",\"countryCapital\",\"regionName\"]}";
 
@@ -970,8 +964,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testSetStatementWithExplainPlanInsertJoinQuery()
   {
-    skipVectorize();
-
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
 
@@ -1014,8 +1006,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainPlanInsertWithClusteredByDescThrowsException()
   {
-    skipVectorize();
-
     final String sql = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
                        + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
                        + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)";
@@ -1284,9 +1274,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainInsertFromExternal()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query = StringUtils.format(
         "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME",
         externSql(externalDataSource)
@@ -1324,8 +1311,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainPlanForInsertWithClusteredBy() throws JsonProcessingException
   {
-    skipVectorize();
-
     final String query = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
                        + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
                        + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 ASC, CEIL(m2)";

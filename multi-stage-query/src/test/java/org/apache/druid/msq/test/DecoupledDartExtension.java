@@ -83,6 +83,8 @@ public class DecoupledDartExtension implements BeforeEachCallback
       }
     };
 
+    // Vectorization is not tested with decoupled planning, because many of its plans have extra stages that cannot
+    // vectorize. We may revisit this later.
     return builder.skipVectorize(true);
   }
 }

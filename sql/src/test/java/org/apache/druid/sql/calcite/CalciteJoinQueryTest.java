@@ -125,6 +125,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInnerJoinWithLimitAndAlias()
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
 
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
@@ -188,6 +190,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN)
   public void testExactTopNOnInnerJoinWithLimit()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     context.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
@@ -318,6 +330,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinOuterGroupByAndSubqueryNoLimit(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     // Fully removing the join allows this query to vectorize.
     if (!isRewriteJoinToFilter(queryContext)) {
       cannotVectorize();
@@ -918,6 +940,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testFilterAndGroupByLookupUsingPostAggregationJoinOperator(Map<String, Object> queryContext)
 
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT base.dim2, lookyloo.v, base.cnt FROM (\n"
         + "  SELECT dim2, COUNT(*) cnt FROM foo GROUP BY dim2\n"
@@ -1007,6 +1032,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSelectOnLookupUsingInnerJoinOperator(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim2, lookyloo.*\n"
         + "FROM foo INNER JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n",
@@ -1040,6 +1068,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinTwoLookupsUsingJoinOperator(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1, dim2, l1.v, l2.v\n"
         + "FROM foo\n"
@@ -1088,6 +1119,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinTableLookupLookupWithFilterWithOuterLimit(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1\n"
         + "FROM foo\n"
@@ -1133,6 +1167,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinTableLookupLookupWithFilterWithoutLimit(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1\n"
         + "FROM foo\n"
@@ -1177,6 +1214,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testInnerJoinTableLookupLookupWithFilterWithOuterLimitWithAllColumns(Map<String, Object> queryContext)
 
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT __time, cnt, dim1, dim2, dim3, m1, m2, unique_dim1\n"
         + "FROM foo\n"
@@ -1231,6 +1271,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinTableLookupLookupWithFilterWithoutLimitWithAllColumns(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT __time, cnt, dim1, dim2, dim3, m1, m2, unique_dim1\n"
         + "FROM foo\n"
@@ -1283,6 +1326,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testManyManyInnerJoinOnManyManyLookup(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1\n"
         + "FROM foo\n"
@@ -1595,6 +1641,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinQueryOfLookupRemovable(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     // Like "testInnerJoinQueryOfLookup", but the subquery is removable.
 
     testQuery(
@@ -2021,6 +2070,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
   public void testCommaJoinLeftFunction()
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo, lookup.lookyloo l\n"
@@ -2194,6 +2246,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinCastLeft(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     // foo.m1 is FLOAT, l.k is STRING.
 
     testQuery(
@@ -2229,6 +2284,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinCastRight(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on lookup.
+    cannotVectorize();
+
     // foo.m1 is FLOAT, l.k is STRING.
 
     testQuery(
@@ -2278,6 +2336,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinMismatchedTypes(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on lookup.
+    cannotVectorize();
+
     // foo.m1 is FLOAT, l.k is STRING. Comparing them generates a CAST.
 
     testQuery(
@@ -2328,6 +2389,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinLeftFunction(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo\n"
@@ -2365,6 +2429,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinRightFunction(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on lookup.
+    cannotVectorize();
+
     testQuery(
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo\n"
@@ -2410,6 +2477,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinLookupOntoLookupUsingJoinOperator(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim2, l1.v, l2.v\n"
         + "FROM foo\n"
@@ -2457,6 +2527,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinThreeLookupsUsingJoinOperator(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1, dim2, l1.v, l2.v, l3.v\n"
         + "FROM foo\n"
@@ -2517,7 +2590,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinOfTwoJoinsWithSubQueries()
   {
-    skipVectorize();
+    // Cannot vectorize due to join.
+    cannotVectorize();
 
     String sql = "with\n"
         + "l1 as (SELECT f.dim1, sum(n.dbl1) s1 from foo f join numfoo n on n.dim2=f.dim2 group by f.dim1),\n"
@@ -2538,6 +2612,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSelectOnLookupUsingLeftJoinOperator(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1, lookyloo.*\n"
         + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k\n"
@@ -2585,6 +2662,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSelectOnLookupUsingRightJoinOperator(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // MSQ refuses to do RIGHT join with broadcast.
     msqIncompatible();
 
@@ -2629,6 +2709,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSelectOnLookupUsingFullJoinOperator(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // MSQ refuses to do FULL join with broadcast.
     msqIncompatible();
 
@@ -2679,6 +2762,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInAggregationSubquery(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     // Fully removing the join allows this query to vectorize.
     if (!isRewriteJoinToFilter(queryContext)) {
       cannotVectorize();
@@ -2812,6 +2900,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNotInSubqueryWithNonNullKeys()
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testBuilder()
         .sql(
             "SELECT __time FROM druid.foo\n"
@@ -2894,6 +2985,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinWithIsNullFilter(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1, l.v from druid.foo f inner join lookup.lookyloo l on f.dim1 = l.k where f.dim2 is null",
         queryContext,
@@ -2968,6 +3062,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSourcesWithTimeFilter(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "with abc as\n"
         + "(\n"
@@ -3041,6 +3138,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSourcesWithTimeFilter_withLeftDirectAccess(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "with abc as\n"
@@ -3101,6 +3201,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSourcesWithOuterWhere(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "with abc as\n"
         + "(\n"
@@ -3158,6 +3261,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSourcesWithOuterWhere_withLeftDirectAccess(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "with abc as\n"
@@ -3208,6 +3314,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSources(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "with abc as\n"
         + "(\n"
@@ -3265,6 +3374,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSources_withLeftDirectAccess(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "with abc as\n"
@@ -3315,6 +3427,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinOnTwoInlineDataSourcesWithOuterWhere(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     Druids.ScanQueryBuilder baseScanBuilder = newScanQueryBuilder()
         .dataSource(
             join(
@@ -3372,6 +3487,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinOnTwoInlineDataSourcesWithOuterWhere_withLeftDirectAccess(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "with abc as\n"
@@ -3422,6 +3540,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinOnTwoInlineDataSources(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "with abc as\n"
         + "(\n"
@@ -3540,6 +3661,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinOnTwoInlineDataSources_withLeftDirectAccess(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     queryContext = withLeftDirectAccessEnabled(queryContext);
     testQuery(
         "with abc as\n"
@@ -3782,6 +3906,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinWithNotNullFilter(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT s.dim1, t.dim1\n"
         + "FROM foo as s\n"
@@ -3831,6 +3958,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoin(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     testQuery(
         "SELECT s.dim1, t.dim1\n"
         + "FROM foo as s\n"
@@ -3879,6 +4009,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinWithExplicitIsNotDistinctFromCondition(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     // Like "testInnerJoin", but uses IS NOT DISTINCT FROM instead of equals.
 
     testQuery(
@@ -3986,6 +4119,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSemiJoinWithOuterTimeExtractScan()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1, EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
@@ -4036,6 +4179,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTwoSemiJoinsSimultaneously(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     if (!isRewriteJoinToFilter(queryContext)) {
       // Rewriting the joins to filters allows all queries to vectorize.
       cannotVectorize();
@@ -4275,6 +4423,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
@@ -4520,6 +4673,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTopNFilterJoin(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     // Fully removing the join allows this query to vectorize.
     if (!isRewriteJoinToFilter(queryContext)) {
       cannotVectorize();
@@ -4585,6 +4748,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTopNFilterJoinWithProjection(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     if (QueryContext.of(queryContext).getEnableRewriteJoinToFilter()) {
       // Join is eliminated. Cannot vectorize substring function unless fallback vectorization is on.
       cannotVectorizeUnlessFallback();
@@ -4739,6 +4912,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinWithNonEquiCondition(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
     // cross join with a filter.
 
@@ -4799,6 +4975,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinWithEquiAndNonEquiCondition(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
     // cross join with a filter.
 
@@ -4843,6 +5022,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryAsPartOfAndFilter(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     // Fully removing the join allows this query to vectorize.
     if (!isRewriteJoinToFilter(queryContext)) {
       cannotVectorize();
@@ -5155,6 +5339,21 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testCountOnSemiJoinSingleColumn(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on row-based frames with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on join, unless rewritten to a filter.
+    if (isRunningMSQ() && !isRewriteJoinToFilter(queryContext)) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1 FROM foo WHERE dim1 IN (SELECT dim1 FROM foo WHERE dim1 = '10.1')\n",
         queryContext,
@@ -5198,6 +5397,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinOnRestrictedBroadcast(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to GROUP BY on join.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     String sql = "SELECT druid.restrictedBroadcastDatasource_m1_is_6.dim4, COUNT(*)\n"
                  + "FROM druid.numfoo\n"
                  + "INNER JOIN druid.restrictedBroadcastDatasource_m1_is_6 ON numfoo.dim4 = restrictedBroadcastDatasource_m1_is_6.dim4\n"
@@ -5258,6 +5467,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN)
   public void testTopNOnStringWithNonSortedOrUniqueDictionary(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on join.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT druid.broadcast.dim4, COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -5300,6 +5519,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim(Map<String, Object> queryContext)
 
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on join.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     final Map<String, Object> contextWithLexicographicTopN =
         QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
@@ -5342,6 +5571,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testVirtualColumnOnMVFilterJoinExpression(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Doesn't work in MSQ, although it's not really MSQ's fault. In MSQ, the second field (foo2.dim3) is returned as
     // the string "[a, b]" because it gets run through DimensionHandlerUtils.convertObjectToString in
     // IndexedTableDimensionSelector. In native, this doesn't happen, because we don't have as much type information,
@@ -5401,6 +5633,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testVirtualColumnOnMVFilterMultiJoinExpression(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Doesn't work in MSQ, although it's not really MSQ's fault. In MSQ, the second field (foo2.dim3) is returned as
     // the string "[a, b]" because it gets run through DimensionHandlerUtils.convertObjectToString in
     // IndexedTableDimensionSelector. In native, this doesn't happen, because we don't have as much type information,
@@ -5484,6 +5719,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinWithFilterPushdownAndManyFiltersEmptyResults(Map<String, Object> queryContext)
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on broadcast join.
+    if (isRunningMSQ() && !isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     // create the query we expect
     ScanQuery query = newScanQueryBuilder()
         .dataSource(
@@ -5594,6 +5839,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults(Map<String, Object> queryContext)
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     // create the query we expect
     ScanQuery query = newScanQueryBuilder()
         .dataSource(
@@ -5709,6 +5957,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPlanWithInFilterMoreThanInSubQueryThreshold()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on inline data with sort-merge join.
+    if (isRunningMSQ() && isSortBasedJoin()) {
+      cannotVectorize();
+    }
+
     String query = "SELECT l1 FROM numfoo WHERE l1 IN (4842, 4844, 4845, 14905, 4853, 29064)";
 
     Map<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
@@ -5877,6 +6135,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinWithAliasAndOrderByNoGroupBy()
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
@@ -5952,6 +6213,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithTwoConditions()
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "SELECT t1.__time, t1.m1\n"
@@ -5998,6 +6262,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithThreeConditions()
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "SELECT t1.__time, t1.m1, t1.m2\n"
@@ -6128,6 +6395,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOnLeft()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6180,6 +6450,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOverFilteredDSOnLeft()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6233,6 +6506,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOverJoin()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6302,6 +6578,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelfJoinsWithUnnestOnLeftAndRight()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     String sql = "with t1 as (\n"
         + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3)\n"
@@ -6365,6 +6644,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsOverUnnestOverFilterDSOverJoin()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6438,6 +6720,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLeftJoinsOnTwoWithTables()
   {
+    // Cannot vectorize due to Scan on join.
+    cannotVectorize();
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with raw1 as (\n"

@@ -118,7 +118,9 @@ public @interface NotYetSupported
     DD_UNNEST_RESULT_MISMATCH(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)"),
     DD_UNNEST_INLINED(Scope.DECOUPLED_DART, Exception.class, "Missing conversion is Uncollect"),
     DD_JOIN_CONDITION_NORMALIZATION(Scope.DECOUPLED_DART, DruidException.class, "Cannot handle equality"),
-    DD_RESULT_MISMATCH_FLOAT_DOUBLE(Scope.DECOUPLED_DART, AssertionError.class, "column content mismatch");
+    DD_RESULT_MISMATCH_FLOAT_DOUBLE(Scope.DECOUPLED_DART, AssertionError.class, "column content mismatch"),
+    // Decoupled Dart applies LIMIT in a separate stage, so the groupBy stage has no limit spec to push down.
+    DD_FORCE_LIMIT_PUSH_DOWN(Scope.DECOUPLED_DART, DruidException.class, "When forcing limit push down, a limit spec must be provided");
     // @formatter:on
 
     public Scope scope;

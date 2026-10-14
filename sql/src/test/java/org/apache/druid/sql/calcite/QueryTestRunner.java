@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlInsert;
@@ -44,6 +45,7 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.QueryTestBuilder.QueryTestConfig;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -264,7 +266,7 @@ public class QueryTestRunner
 
       final List<String> vectorizeValues = new ArrayList<>();
       vectorizeValues.add("false");
-      if (!builder.skipVectorize) {
+      if (!builder.skipVectorize && !isExplain(builder.sql)) {
         vectorizeValues.add("force");
       }
 
@@ -283,6 +285,12 @@ public class QueryTestRunner
 
         if (!"false".equals(vectorize)) {
           theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
+
+          // MSQ derives task IDs from the SQL query ID, so each run needs its own to keep reports separate.
+          final Object sqlQueryId = theQueryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
+          if (builder.config.isRunningMSQ() && sqlQueryId != null) {
+            theQueryContext.put(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId + "-" + vectorize);
+          }
         }
 
         results.add(runQuery(
@@ -325,6 +333,19 @@ public class QueryTestRunner
             vectorize,
             e
         );
+      }
+    }
+
+    /**
+     * Whether the SQL is an EXPLAIN.
+     */
+    private static boolean isExplain(final String sql)
+    {
+      try {
+        return DruidSqlParser.parse(sql, true).getMainStatement() instanceof SqlExplain;
+      }
+      catch (Exception e) {
+        return false;
       }
     }
 
@@ -561,6 +582,9 @@ public class QueryTestRunner
 
     private void verifyLogicalPlan(QueryResults queryResults)
     {
+      if (queryResults.exception != null) {
+        return;
+      }
       String expectedPlan = execStep.builder().expectedLogicalPlan;
       String actualPlan = visualizePlan(queryResults.capture);
       Assertions.assertEquals(expectedPlan, actualPlan);

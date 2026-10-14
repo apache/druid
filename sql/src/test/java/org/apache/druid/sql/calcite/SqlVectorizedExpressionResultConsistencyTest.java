@@ -79,7 +79,7 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
       "SELECT SUM((long1 * long2) / double1) FROM foo",
       "SELECT SUM(float3 + ((long1 * long4)/double1)) FROM foo",
       "SELECT SUM(long5 - (float3 + ((long1 * long4)/double1))) FROM foo",
-      "SELECT cos(double2) FROM foo",
+      "SELECT SUM(cos(double2)) FROM foo",
       "SELECT SUM(-long4) FROM foo",
       "SELECT SUM(PARSE_LONG(string1)) FROM foo",
       "SELECT SUM(PARSE_LONG(string3)) FROM foo",

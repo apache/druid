@@ -26,6 +26,7 @@ import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -171,15 +172,17 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   )
   {
     final RowSignature defaultRowSignature = resultArraySignature(query);
+    if (!useNestedForUnknownTypes) {
+      // Check before touching the results, so callers can fall back to materializing them some other way.
+      FrameCursorUtils.throwIfColumnsHaveUnknownType(defaultRowSignature);
+    }
     return Optional.of(
-        Sequences.simple(
-            new ScanResultValueFramesIterable(
-                resultSequence,
-                memoryAllocatorFactory,
-                useNestedForUnknownTypes,
-                defaultRowSignature,
-                rowSignature -> getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames())
-            )
+        new ScanResultValueFramesSequence(
+            resultSequence,
+            memoryAllocatorFactory,
+            useNestedForUnknownTypes,
+            defaultRowSignature,
+            rowSignature -> getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames())
         )
     );
   }

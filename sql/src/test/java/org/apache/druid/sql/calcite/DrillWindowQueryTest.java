@@ -386,7 +386,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       queryContext.putAll(getQueryContext());
 
       testBuilder()
-          .skipVectorize(true)
           .queryContext(queryContext)
           .sql(testCase.getQueryString())
           .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
@@ -412,6 +411,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_11()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -419,6 +420,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_13()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -426,6 +429,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_16()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -433,6 +438,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -440,6 +450,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_20()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -447,6 +459,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_21()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -454,6 +468,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -468,6 +487,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_31()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -475,6 +496,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_32()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -482,6 +505,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_33()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -489,6 +514,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_34()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -496,6 +523,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_35()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -503,6 +532,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_36()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -510,6 +541,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_37()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -517,6 +550,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_38()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -524,6 +559,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_41()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -531,6 +568,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_42()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -538,6 +577,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_43()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -545,6 +586,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_44()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -552,6 +595,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_45()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -559,6 +604,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_46()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -566,6 +613,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_47()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -573,6 +622,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_48()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -580,6 +631,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_49()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -587,6 +640,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_51()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -601,6 +656,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_6()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -608,6 +665,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_7()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -615,6 +674,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_8()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -622,6 +683,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_9()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -629,6 +692,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_mtyOvrCluse_01()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -636,6 +704,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_mtyOvrCluse_02()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -643,6 +716,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_mtyOvrCluse_03()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -650,6 +728,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_mtyOvrCluse_04()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -657,6 +738,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_mtyOvrCluse_05()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -664,6 +750,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_11()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -671,6 +762,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -678,6 +774,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_19()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -685,6 +786,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_22()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -692,6 +798,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_24()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -699,6 +810,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_29()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -706,6 +820,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_56()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -713,6 +832,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_57()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -720,6 +844,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_58()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -727,6 +856,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_59()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -734,6 +868,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_60()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -741,6 +878,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -748,6 +890,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_11()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -755,6 +900,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -762,6 +912,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -769,6 +924,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -776,6 +936,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_15()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -783,6 +948,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_16()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -790,6 +958,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -797,6 +970,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -804,6 +982,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -811,6 +994,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -818,6 +1006,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -825,6 +1018,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_6()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -832,6 +1028,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -839,6 +1040,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -846,6 +1052,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -853,6 +1064,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_11()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -860,6 +1076,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_16()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -867,6 +1088,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -874,6 +1100,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_21()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -881,6 +1112,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_22()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -888,6 +1124,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_23()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -895,6 +1136,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_24()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -902,6 +1146,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_26()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -909,6 +1158,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_27()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -916,6 +1170,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_28()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -923,6 +1182,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_29()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -930,6 +1194,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -937,6 +1206,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_30()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -944,6 +1218,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_31()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -951,6 +1230,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_32()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -958,6 +1242,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_33()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -965,6 +1254,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_34()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -972,6 +1266,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_35()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -979,6 +1278,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_36()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -986,6 +1290,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_37()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -993,6 +1302,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_38()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1000,6 +1314,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_39()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1007,6 +1326,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_40()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1014,6 +1338,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_41()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1021,6 +1350,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_42()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1028,6 +1362,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_43()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1035,6 +1374,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_44()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1042,6 +1386,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_45()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1049,6 +1398,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_46()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1056,6 +1410,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_47()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1063,6 +1422,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_48()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1070,6 +1434,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_49()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1077,6 +1446,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_50()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1084,6 +1458,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1091,6 +1470,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1098,6 +1482,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1105,6 +1494,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1112,6 +1506,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1119,6 +1518,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1126,6 +1530,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1133,6 +1542,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1140,6 +1554,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1147,6 +1566,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wPrtnOrdrBy_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1154,6 +1578,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1161,6 +1590,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_11()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1168,6 +1602,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1175,6 +1614,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1182,6 +1626,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1189,6 +1638,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_15()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1196,6 +1650,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_16()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1203,6 +1660,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1210,6 +1672,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_20()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1217,6 +1684,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_26()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1224,6 +1696,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_27()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1231,6 +1708,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_28()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1238,6 +1720,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1245,6 +1732,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_30()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1252,6 +1742,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_31()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1259,6 +1752,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1266,6 +1764,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1273,6 +1776,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1280,6 +1788,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1287,6 +1800,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_8()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1294,6 +1810,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1301,6 +1822,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1308,6 +1834,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bln_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1315,6 +1846,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bln_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1322,6 +1858,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bln_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1329,6 +1870,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_chr_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1336,6 +1882,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dbl_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1343,6 +1892,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dbl_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1350,6 +1904,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dt_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1357,6 +1916,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int11()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1364,6 +1926,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1371,6 +1938,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1378,6 +1950,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1385,6 +1962,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1392,6 +1974,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1399,6 +1984,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1406,6 +1996,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1413,6 +2008,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_vchr_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1420,6 +2020,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bgint_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1427,6 +2032,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bgint_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1434,6 +2044,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bgint_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1441,6 +2056,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bgint_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1448,6 +2066,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bgint_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1455,6 +2078,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bln_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1462,6 +2090,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bln_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1469,6 +2102,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bln_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1476,6 +2114,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dbl_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1483,6 +2126,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dbl_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1490,6 +2138,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dbl_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1497,6 +2150,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dbl_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1504,6 +2160,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dbl_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1511,6 +2172,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dt_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1518,6 +2184,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1525,6 +2196,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_11()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1532,6 +2206,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1539,6 +2218,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1546,6 +2230,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1553,6 +2242,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1560,6 +2254,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1567,6 +2264,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1574,6 +2276,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1581,6 +2288,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1588,6 +2300,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1595,6 +2312,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bln_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1602,6 +2324,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bln_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1609,6 +2336,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bln_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1616,6 +2348,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_chr_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1623,6 +2360,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dbl_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1630,6 +2370,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dbl_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1637,6 +2382,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dt_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1644,6 +2394,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int11()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1651,6 +2404,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1658,6 +2416,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1665,6 +2428,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1672,6 +2440,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1679,6 +2452,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1686,6 +2462,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1693,6 +2474,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1700,6 +2486,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_vchr_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1707,6 +2498,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1714,6 +2510,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1721,6 +2522,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1728,6 +2534,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1735,6 +2546,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1742,6 +2558,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bln_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1749,6 +2570,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bln_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1756,6 +2582,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bln_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1763,6 +2594,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_char_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1770,6 +2606,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_char_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1777,6 +2618,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1784,6 +2630,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1791,6 +2642,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1798,6 +2654,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1805,6 +2664,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1812,6 +2676,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dt_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1819,6 +2688,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1826,6 +2700,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_11()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1833,6 +2710,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1840,6 +2722,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1847,6 +2734,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1854,6 +2746,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1861,6 +2758,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1868,6 +2770,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1875,6 +2780,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1882,6 +2792,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1889,6 +2804,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1896,6 +2816,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1903,6 +2828,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1910,6 +2840,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_vchar_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1917,6 +2852,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_vchar_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -1924,6 +2864,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_01()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1931,6 +2874,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_02()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1938,6 +2884,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_03()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1945,6 +2894,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_04()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1952,6 +2904,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_05()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1959,6 +2914,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_06()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1966,6 +2924,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_07()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1973,6 +2934,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_08()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1980,6 +2944,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_09()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1987,6 +2954,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_10()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -1994,6 +2964,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_11()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2001,6 +2974,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_12()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2008,6 +2984,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_13()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2015,6 +2994,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_14()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2022,6 +3004,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_15()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2029,6 +3014,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_16()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2036,6 +3024,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_18()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2043,6 +3034,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_19()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2050,6 +3044,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_21()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2057,6 +3054,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_29()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2064,6 +3064,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_31()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2071,6 +3074,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_32()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2078,6 +3084,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_33()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2085,6 +3094,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_34()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2092,6 +3104,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_35()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2099,6 +3114,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_36()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2106,6 +3124,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_37()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2113,6 +3134,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_38()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2120,6 +3144,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_39()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2127,6 +3154,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_40()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2134,6 +3164,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_50()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2141,6 +3174,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_51()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2148,6 +3184,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_52()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2155,6 +3194,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_56()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2162,6 +3204,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_104()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2169,6 +3216,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_105()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2176,6 +3228,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_106()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2183,6 +3240,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_107()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2190,6 +3252,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_110()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2197,6 +3264,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_111()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2204,6 +3276,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_112()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2211,6 +3288,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2218,6 +3300,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_28()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2225,6 +3312,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_29()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2232,6 +3324,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2239,6 +3336,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_30()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2246,6 +3348,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_31()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2253,6 +3360,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_32()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2260,6 +3372,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_34()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2267,6 +3384,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_35()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2274,6 +3396,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_37()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2281,6 +3408,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_38()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2288,6 +3420,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_39()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2295,6 +3432,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2302,6 +3444,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_40()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2309,6 +3456,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_43()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2316,6 +3468,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_44()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2323,6 +3480,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_46()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2330,6 +3492,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_47()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2337,6 +3504,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_48()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2344,6 +3516,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_49()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2351,6 +3528,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2358,6 +3540,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_50()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2365,6 +3552,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_52()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2372,6 +3564,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_53()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2379,6 +3576,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_55()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2386,6 +3588,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_56()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2393,6 +3600,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_57()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2400,6 +3612,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_58()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2407,6 +3624,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_59()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2414,6 +3636,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2421,6 +3648,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_61()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2428,6 +3660,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_62()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2435,6 +3672,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_70()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2442,6 +3682,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_73()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2449,6 +3694,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_74()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2456,6 +3706,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_75()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2463,6 +3718,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_76()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2470,6 +3730,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_78()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2477,6 +3742,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_79()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2484,6 +3754,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2491,6 +3766,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_80()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2498,6 +3778,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_81()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2505,6 +3790,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_83()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2512,6 +3802,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_84()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2519,6 +3814,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_85()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2526,6 +3824,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_86()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2533,6 +3834,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_87()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2540,6 +3846,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_88()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2547,6 +3858,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_89()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2554,6 +3870,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2561,6 +3882,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_90()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2568,6 +3894,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_91()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2575,6 +3906,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_92()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2582,6 +3918,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_93()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2589,6 +3930,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_94()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2596,6 +3940,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_98()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2603,6 +3952,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_26()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2610,6 +3964,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_27()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2617,6 +3976,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_28()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2624,6 +3988,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_30()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2631,6 +3998,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_31()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2638,6 +4008,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_37()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2645,6 +4018,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_100()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2652,6 +4030,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_101()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2659,6 +4042,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_102()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2666,6 +4054,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_105()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2673,6 +4066,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_106()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2680,6 +4078,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_107()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2687,6 +4090,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2694,6 +4102,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_28()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2701,6 +4114,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_29()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2708,6 +4126,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2715,6 +4138,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_30()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2722,6 +4150,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_31()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2729,6 +4162,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_32()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2736,6 +4174,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_34()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2743,6 +4186,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_35()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2750,6 +4198,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_37()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2757,6 +4210,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_38()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2764,6 +4222,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_39()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2771,6 +4234,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2778,6 +4246,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_40()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2785,6 +4258,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_41()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2792,6 +4270,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_43()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2799,6 +4282,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_44()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2806,6 +4294,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_46()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2813,6 +4306,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_47()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2820,6 +4318,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_48()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2827,6 +4330,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_49()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2834,6 +4342,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2841,6 +4354,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_50()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2848,6 +4366,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_52()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2855,6 +4378,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_53()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2862,6 +4390,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_55()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2869,6 +4402,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_56()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2876,6 +4414,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_57()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2883,6 +4426,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_58()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2890,6 +4438,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_59()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2897,6 +4450,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2904,6 +4462,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_61()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2911,6 +4474,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_62()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2918,6 +4486,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_70()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2925,6 +4496,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_73()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2932,6 +4508,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_74()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2939,6 +4520,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_75()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2946,6 +4532,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_76()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2953,6 +4544,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_78()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2960,6 +4556,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_79()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2967,6 +4568,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2974,6 +4580,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_80()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2981,6 +4590,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_81()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -2988,6 +4600,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_82()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -2995,6 +4612,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_83()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3002,6 +4624,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_84()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3009,6 +4636,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_85()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3016,6 +4648,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_86()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3023,6 +4660,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_87()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3030,6 +4672,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_88()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3037,6 +4684,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_89()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3044,6 +4694,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3051,6 +4706,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_93()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3058,6 +4718,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_99()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3065,6 +4730,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_basic_1()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3079,6 +4747,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_basic_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3149,6 +4820,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_emtyOvrCls_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3156,6 +4830,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_emtyOvrCls_5()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3177,6 +4854,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_frmclause01()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3191,6 +4871,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_frmclause06()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3198,6 +4881,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_frmclause14()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3205,6 +4891,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_frmclause19()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3219,6 +4908,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_nstdagg01()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3226,6 +4918,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_nstdagg02()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3233,6 +4928,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_nstdagg03()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3240,6 +4938,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_nstdagg04()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3254,6 +4955,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_nstdagg06()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3394,6 +5098,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_woutOby_1()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3506,6 +5213,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_wPbOb_1()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3562,6 +5272,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_wPbOb_2()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3569,6 +5282,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_wPbOb_3()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3576,6 +5292,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_wPbOb_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3583,6 +5302,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_wPbOb_5()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3590,6 +5312,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_wPbOb_6()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3618,6 +5343,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3625,6 +5355,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_11()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3632,6 +5367,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3639,6 +5379,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3646,6 +5391,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3653,6 +5403,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_16()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3660,6 +5415,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_18()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3667,6 +5427,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_19()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3674,6 +5439,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3681,6 +5451,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_20()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3688,6 +5463,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_21()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3695,6 +5475,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_22()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3702,6 +5487,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_23()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3709,6 +5499,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_24()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3716,6 +5511,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_25()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3723,6 +5523,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_26()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3730,6 +5535,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_28()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3737,6 +5547,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_29()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3744,6 +5559,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3751,6 +5571,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_30()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3758,6 +5583,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_31()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3765,6 +5593,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_32()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -3772,6 +5603,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_35()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3779,6 +5615,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_36()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3786,6 +5624,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_37()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3793,6 +5633,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_38()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3800,6 +5642,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_39()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3807,6 +5651,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3814,6 +5663,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_40()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3821,6 +5672,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_41()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3828,6 +5681,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_42()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3835,6 +5690,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_43()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3842,6 +5699,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_44()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3849,6 +5708,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_46()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -3856,6 +5717,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3863,6 +5729,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3870,6 +5741,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3877,6 +5753,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -3884,6 +5765,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4235,6 +6121,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_multiWin_5()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4266,6 +6155,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_83()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4297,6 +6191,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_108()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4304,6 +6203,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_109()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4311,6 +6215,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_69()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4318,6 +6225,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_103()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4325,6 +6237,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_104()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4332,6 +6249,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_69()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4347,6 +6267,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_3()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4354,6 +6277,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4361,6 +6287,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_29()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4368,6 +6297,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_32()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4375,6 +6307,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_33()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4382,6 +6317,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4389,6 +6329,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_9()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4396,6 +6339,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_29()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4403,6 +6349,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_34()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4410,6 +6359,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_35()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4417,6 +6369,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_38()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4424,6 +6379,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_39()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4439,6 +6397,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_33()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4446,6 +6407,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_34()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4453,6 +6417,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_47()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4460,6 +6427,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_48()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4467,6 +6437,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_49()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4474,6 +6447,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_50()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4481,6 +6457,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_51()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4488,6 +6467,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_52()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4495,6 +6477,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_53()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4502,6 +6487,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_54()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4509,6 +6497,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_55()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4516,6 +6507,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_56()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4523,6 +6517,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_57()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4530,6 +6527,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_58()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4569,6 +6569,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4792,6 +6797,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_82()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4799,6 +6809,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4822,6 +6837,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4829,6 +6849,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_10()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -4836,6 +6859,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_11()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -4987,6 +7015,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5074,6 +7107,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_3()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5081,6 +7117,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5088,6 +7129,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_5()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5095,6 +7139,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_6()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5102,6 +7149,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5109,6 +7161,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_8()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5116,6 +7171,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5123,6 +7183,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_61()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5130,6 +7195,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_62()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5137,6 +7207,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_64()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5144,6 +7217,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_65()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5231,6 +7309,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_76()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5238,6 +7321,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_77()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5245,6 +7333,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_78()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5252,6 +7345,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_79()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5259,6 +7355,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_80()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5266,6 +7365,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_81()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5273,6 +7375,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_82()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5280,6 +7385,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5287,6 +7397,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_11()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5294,6 +7409,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5301,6 +7421,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5308,6 +7433,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5315,6 +7445,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_15()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5322,6 +7457,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_16()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5329,6 +7469,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_17()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5336,6 +7481,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_18()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5415,6 +7563,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_64()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5422,6 +7575,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_65()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5429,6 +7587,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_66()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5436,6 +7599,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_67()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
 
   }
@@ -5451,6 +7617,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_71()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5466,6 +7635,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5473,6 +7647,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_11()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5480,6 +7659,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5487,6 +7671,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5494,6 +7683,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5501,6 +7695,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_15()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5508,6 +7707,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_16()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5515,6 +7719,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_17()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5522,6 +7731,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_18()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5585,6 +7797,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_64()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5592,6 +7809,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_65()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5599,6 +7821,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_66()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5606,6 +7833,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_67()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5621,6 +7851,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_71()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5636,6 +7869,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_testW_Nulls_1()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5643,6 +7879,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_18()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5650,6 +7891,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_19()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5657,6 +7903,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_21()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5664,6 +7915,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_22()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5671,6 +7927,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_24()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5678,6 +7939,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_25()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5685,6 +7951,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_17()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5692,6 +7961,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_20()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5699,6 +7971,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_26()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5706,6 +7981,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_27()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5713,6 +7991,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_28()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5720,6 +8001,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_30()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5727,6 +8011,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_47()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5734,6 +8021,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_48()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5741,6 +8031,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_49()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5748,6 +8041,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_100()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5755,6 +8053,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_102()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5762,6 +8065,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_103()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5769,6 +8077,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_41()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5776,6 +8089,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_42()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5783,6 +8101,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_45()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5790,6 +8113,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_63()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5797,6 +8125,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_96()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5804,6 +8137,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_97()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5811,6 +8149,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_99()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5818,6 +8161,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_18()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5825,6 +8173,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_19()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5832,6 +8185,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_21()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5839,6 +8197,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_22()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5846,6 +8209,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_24()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5853,6 +8221,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_25()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5860,6 +8233,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_33()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -5867,6 +8243,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_36()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5874,6 +8255,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_45()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5881,6 +8267,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_91()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5888,6 +8279,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_92()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5895,6 +8291,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_94()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5902,6 +8303,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_95()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5909,6 +8315,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_97()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5916,6 +8327,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_98()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -5923,6 +8339,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_10()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5930,6 +8348,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_12()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5937,6 +8357,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_14()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5944,6 +8366,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_15()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5951,6 +8375,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_17()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5958,6 +8384,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_18()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5965,6 +8393,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_19()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5972,6 +8402,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_22()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5979,6 +8411,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_23()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5986,6 +8420,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_39()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -5993,6 +8429,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_40()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -6000,6 +8438,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_aggOWnFn_50()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -6015,6 +8455,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_16()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6030,6 +8475,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6037,6 +8487,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_26()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6044,6 +8499,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_28()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6051,6 +8511,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6058,6 +8523,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_31()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6065,6 +8533,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6072,6 +8545,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_46()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6079,6 +8557,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_47()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6086,6 +8569,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_48()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6093,6 +8581,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_49()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6100,6 +8593,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6107,6 +8605,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_50()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6114,6 +8615,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_51()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6121,6 +8625,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_52()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6128,6 +8637,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_53()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6135,6 +8649,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_54()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6142,6 +8661,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_55()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6149,6 +8673,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6156,6 +8685,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_84()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6163,6 +8697,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_85()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6170,6 +8709,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6177,6 +8721,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_17()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6184,6 +8733,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_18()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6191,6 +8745,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_19()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6198,6 +8757,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_20()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6205,6 +8769,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_21()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6212,6 +8779,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_22()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6219,6 +8791,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_23()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6226,6 +8803,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_24()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6233,6 +8815,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_25()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6240,6 +8827,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_wo_OrdrBy_26()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6247,6 +8837,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6254,6 +8849,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6261,6 +8861,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6268,6 +8873,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_14()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6275,6 +8883,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_15()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6282,6 +8895,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_17()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6289,6 +8907,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_18()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6296,6 +8919,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_19()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6303,6 +8929,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_20()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6310,6 +8941,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_25()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6317,6 +8953,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6324,6 +8965,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6331,6 +8975,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6338,6 +8987,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6345,6 +8999,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6352,6 +9011,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6359,6 +9023,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_woPrtnBy_9()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6366,6 +9033,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_17()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6373,6 +9045,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_first_val_firstValFn_23()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6380,6 +9057,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6387,6 +9069,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6394,6 +9081,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6401,6 +9093,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6408,6 +9103,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6415,6 +9115,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6422,6 +9127,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_chr_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6429,6 +9139,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_chr_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6436,6 +9151,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dbl_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6443,6 +9163,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dbl_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6450,6 +9175,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dbl_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6457,6 +9187,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dbl_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6464,6 +9199,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dbl_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6471,6 +9211,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dt_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6478,6 +9223,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dt_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6485,6 +9235,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dt_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6492,6 +9247,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dt_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6499,6 +9259,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6506,6 +9271,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6513,6 +9283,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6520,6 +9295,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6527,6 +9307,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6534,6 +9319,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_vchr_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6541,6 +9331,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_vchr_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6548,6 +9343,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_avg_mulwds()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6555,6 +9353,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_count_mulwds()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6562,6 +9365,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_fval_mulwds()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6569,6 +9377,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_lval_mulwds()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6576,6 +9389,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_08()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6583,6 +9401,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_09()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6590,6 +9413,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_sum_mulwds()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6597,6 +9425,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bgint_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6604,6 +9437,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bgint_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6611,6 +9449,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_char_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6618,6 +9461,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_char_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6625,6 +9473,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_char_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6632,6 +9485,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dbl_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6639,6 +9497,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dbl_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6646,6 +9509,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dt_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6653,6 +9521,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dt_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6660,6 +9533,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dt_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6667,6 +9545,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dt_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6674,6 +9557,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6681,6 +9569,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6688,6 +9581,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6695,6 +9593,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6702,6 +9605,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_vchar_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6709,6 +9617,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_vchar_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6716,6 +9629,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_vchar_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6723,6 +9641,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6730,6 +9653,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6737,6 +9665,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6744,6 +9677,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6751,6 +9687,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6758,6 +9699,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6765,6 +9711,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_chr_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6772,6 +9723,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_chr_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6779,6 +9735,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dbl_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6786,6 +9747,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dbl_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6793,6 +9759,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dbl_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6800,6 +9771,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dbl_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6807,6 +9783,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dbl_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6814,6 +9795,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6821,6 +9807,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6828,6 +9819,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6835,6 +9831,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_vchr_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6842,6 +9843,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_vchr_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6849,6 +9855,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_4()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6856,6 +9865,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6863,6 +9877,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_char_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6870,6 +9889,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6877,6 +9901,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6884,6 +9913,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dt_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6891,6 +9925,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dt_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6898,6 +9937,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dt_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6905,6 +9949,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dt_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6912,6 +9961,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6919,6 +9973,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_vchar_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6926,6 +9985,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_53()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6933,6 +9997,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_54()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6940,6 +10009,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_55()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6947,6 +10021,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_57()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6954,6 +10031,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_58()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -6961,6 +10041,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_59()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6968,6 +10053,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_60()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6975,6 +10065,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_61()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6982,6 +10077,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_62()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6989,6 +10089,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_63()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -6996,6 +10101,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_subQueries_frmInSubQry_64()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7003,6 +10113,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_101()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7010,6 +10125,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7017,6 +10137,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_10()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7024,6 +10149,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_11()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7031,6 +10161,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_12()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7038,6 +10173,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_13()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7045,6 +10185,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_14()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7052,6 +10197,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_15()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7059,6 +10209,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_16()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7066,6 +10219,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_17()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7073,6 +10231,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7080,6 +10243,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_20()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7087,6 +10255,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_23()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7094,6 +10267,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7101,6 +10279,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_32()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7108,6 +10291,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_36()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7115,6 +10303,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_3()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7122,6 +10315,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7129,6 +10327,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7136,6 +10339,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7143,6 +10351,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_8()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7150,6 +10361,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_last_val_lastValFn_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7157,6 +10373,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_33()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7164,6 +10385,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_42()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7171,6 +10397,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_51()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7178,6 +10409,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_54()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7185,6 +10421,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_60()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7199,6 +10440,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_6()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7206,6 +10452,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_77()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7213,6 +10464,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_90()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7220,6 +10476,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_96()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7227,6 +10488,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lead_func_lead_Fn_9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7256,6 +10522,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_cte_win_05()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7285,6 +10556,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_woutPrtnBy_1()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7320,6 +10594,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_15()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7327,6 +10606,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_17()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7334,6 +10618,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_27()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7341,6 +10630,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_45()
   {
+    // Cannot vectorize due to aggregation on window subquery results.
+    cannotVectorize();
     windowQueryTest();
   }
 
@@ -7348,6 +10639,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_59()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7355,6 +10651,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_ntile_func_ntileFn_7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7362,6 +10663,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm01()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7369,6 +10673,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm02()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7376,6 +10683,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm03()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7383,6 +10693,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm04()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7390,6 +10703,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm05()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7397,6 +10713,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm06()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7404,6 +10723,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dt_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7411,6 +10735,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dt_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7418,6 +10747,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dt_4()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7425,6 +10759,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dt_5()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7432,6 +10771,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int7()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7439,6 +10783,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7446,6 +10795,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int9()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7453,6 +10807,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_33()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7460,6 +10819,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_51()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7467,6 +10831,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_60()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7474,6 +10843,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_77()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7481,6 +10853,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_lag_func_lag_Fn_95()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7495,6 +10872,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_frmclause12()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7502,6 +10882,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_frmclause16()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7509,6 +10892,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_multiWin_6()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7516,6 +10902,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_multiWin_8()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7527,6 +10916,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_same_window_wikipedia_query_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7534,6 +10928,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_same_window_wikipedia_query_1_named_window()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7555,6 +10954,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_shuffle_columns_wikipedia_query_1()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7562,6 +10964,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_shuffle_columns_wikipedia_query_1_shuffle_1()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     windowQueryTest();
   }
 
@@ -7583,6 +10988,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_partition_by_multiple_columns_wikipedia_query_1()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 
@@ -7590,6 +11000,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_partition_by_multiple_columns_wikipedia_query_2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     windowQueryTest();
   }
 

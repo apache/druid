@@ -1,5 +1,8 @@
 type: "operatorValidation"
 
+# Cannot vectorize native Scan.
+cannotVectorize: true
+
 sql: |
    SELECT
      l2,l1,

@@ -56,6 +56,9 @@ public class SleepSqlTest extends BaseCalciteQueryTest
   @Test
   public void testSleepFunction()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT sleep(m1) from foo where m1 < 2.0",
         ImmutableList.of(

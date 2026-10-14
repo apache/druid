@@ -469,23 +469,27 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
     final RowSignature rowSignature =
         query.getResultRowSignature(query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
-    final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
-        resultsAsArrays(query, resultSequence),
-        rowSignature
-    );
-    final Cursor cursor = cursorAndCloseable.lhs;
-    final Closeable closeable = cursorAndCloseable.rhs;
 
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
                                         ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                         : rowSignature;
+
+    // Validate before getCursorFromSequence, which starts running the query.
     FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
+    FrameCursorUtils.throwIfSubqueryColumnsHaveDisallowedNames(modifiedRowSignature);
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
         memoryAllocatorFactory,
         modifiedRowSignature,
         new ArrayList<>()
     );
+
+    final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
+        resultsAsArrays(query, resultSequence),
+        rowSignature
+    );
+    final Cursor cursor = cursorAndCloseable.lhs;
+    final Closeable closeable = cursorAndCloseable.rhs;
 
     Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).withBaggage(closeable);
 
