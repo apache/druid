@@ -77,6 +77,8 @@ public class WorkerHolder
   // Known list of tasks running/completed on this worker.
   protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef;
 
+  private final AtomicReference<ImmutableWorkerInfo> announcementsViewRef = new AtomicReference<>();
+
   private final AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(DateTimes.nowUtc());
   private final AtomicReference<DateTime> blacklistedUntil = new AtomicReference<>();
   private final AtomicInteger continuouslyFailedTasksCount = new AtomicInteger(0);
@@ -125,6 +127,7 @@ public class WorkerHolder
       knownAnnouncements.forEach(e -> announcements.put(e.getTaskId(), e));
     }
     tasksSnapshotRef = new AtomicReference<>(announcements);
+    refreshAnnouncementsView();
   }
 
   public Worker getWorker()
@@ -149,11 +152,28 @@ public class WorkerHolder
 
   public ImmutableWorkerInfo toImmutable()
   {
-    return ImmutableWorkerInfo.fromWorkerAnnouncements(
+    final ImmutableWorkerInfo announcementsView = announcementsViewRef.get();
+    return new ImmutableWorkerInfo(
         getWorker(),
-        tasksSnapshotRef.get(),
+        announcementsView.getCurrCapacityUsed(),
+        announcementsView.getCurrParallelIndexCapacityUsed(),
+        announcementsView.getCurrCapacityUsedByTaskType(),
+        announcementsView.getAvailabilityGroups(),
+        announcementsView.getRunningTasks(),
         lastCompletedTaskTime.get(),
         blacklistedUntil.get()
+    );
+  }
+
+  protected void refreshAnnouncementsView()
+  {
+    announcementsViewRef.set(
+        ImmutableWorkerInfo.fromWorkerAnnouncements(
+            enabledWorker,
+            tasksSnapshotRef.get(),
+            lastCompletedTaskTime.get(),
+            blacklistedUntil.get()
+        )
     );
   }
 
@@ -368,6 +388,7 @@ public class WorkerHolder
         }
 
         tasksSnapshotRef.set(newSnapshot);
+        refreshAnnouncementsView();
 
         notifyListener(delta, isWorkerDisabled);
       }
@@ -418,6 +439,8 @@ public class WorkerHolder
             ).emit();
           }
         }
+
+        refreshAnnouncementsView();
 
         notifyListener(delta, isWorkerDisabled);
       }
