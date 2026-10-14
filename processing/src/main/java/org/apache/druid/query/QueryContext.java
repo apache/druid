@@ -34,6 +34,7 @@ import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.segment.loading.AcquireMode;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -996,5 +997,19 @@ public class QueryContext
              : QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
     }
     return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
+  }
+
+  /**
+   * Returns the {@link AcquireMode} set by {@link QueryContexts#SEGMENT_ACQUIRE_MODE}, or {@code defaultValue} (the
+   * engine's own choice) if absent. Currently only honored by MSQ leaf stage processors.
+   * <p>
+   * {@link AcquireMode#PARTIAL} degrades to {@link AcquireMode#FULL} where partial downloads are unavailable, such as
+   * when they are disabled by configuration or the segment is not range-readable. Forcing {@link AcquireMode#PARTIAL}
+   * where the engine defaults to {@link AcquireMode#FULL} fails at cursor creation if the engine reads segments through
+   * the synchronous cursor API.
+   */
+  public AcquireMode getSegmentAcquireMode(AcquireMode defaultValue)
+  {
+    return getEnum(QueryContexts.SEGMENT_ACQUIRE_MODE, AcquireMode.class, defaultValue);
   }
 }

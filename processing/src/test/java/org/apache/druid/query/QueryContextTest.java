@@ -38,6 +38,7 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -556,6 +557,28 @@ public class QueryContextTest
         QueryContexts.RealtimeSegmentsMode.INCLUDE,
         QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "include"))
                    .getRealtimeSegmentsMode()
+    );
+  }
+
+  @Test
+  public void testGetSegmentAcquireMode()
+  {
+    assertEquals(AcquireMode.FULL, QueryContext.empty().getSegmentAcquireMode(AcquireMode.FULL));
+    assertEquals(AcquireMode.PARTIAL, QueryContext.empty().getSegmentAcquireMode(AcquireMode.PARTIAL));
+    assertEquals(
+        AcquireMode.FULL,
+        QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "full"))
+                    .getSegmentAcquireMode(AcquireMode.PARTIAL)
+    );
+    assertEquals(
+        AcquireMode.PARTIAL,
+        QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "PARTIAL"))
+                    .getSegmentAcquireMode(AcquireMode.FULL)
+    );
+    assertThrows(
+        BadQueryContextException.class,
+        () -> QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "dummy"))
+                          .getSegmentAcquireMode(AcquireMode.FULL)
     );
   }
 
