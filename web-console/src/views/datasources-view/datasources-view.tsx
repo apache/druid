@@ -1807,7 +1807,7 @@ GROUP BY 1, 2`;
                       let filters = TableFilters.empty();
                       if (datasource) {
                         filters = filters.addOrUpdate(
-                          new TableFilter('datasource', '=', datasource),
+                          new TableFilter('datasource', '=', [datasource]),
                         );
                       }
                       if (realtime !== undefined) {

@@ -1183,7 +1183,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                       }
                       if (datasource) {
                         filters = filters.addOrUpdate(
-                          new TableFilter('datasource', '=', datasource),
+                          new TableFilter('datasource', '=', [datasource]),
                         );
                       }
                       if (typeof realtime === 'boolean') {
