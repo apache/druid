@@ -521,6 +521,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
+   * Whether this task partitions by range. Base-table mode needs to know, because MSQ cannot range partition over a
+   * multi-valued column and only the segments can say whether one is; {@link #identifyMultiValuedDimensions()} is too
+   * broad to use for that, since it also answers true for a possibly-rollup task.
+   */
+  boolean isRangePartitioned()
+  {
+    return tuningConfig != null && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
+  }
+
+  /**
    * Checks if multi-valued string dimensions need to be analyzed by downloading the segments.
    * This method returns true only for MSQ engine when either of the following holds true:
    * <ul>
@@ -584,6 +594,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         projections,
         baseTable,
         sealed,
+        this.isRangePartitioned(),
         getMetricBuilder(),
         this.identifyMultiValuedDimensions()
     );
@@ -621,6 +632,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable final List<AggregateProjectionSpec> projections,
       @Nullable final BaseTableProjectionSpec baseTable,
       final boolean sealed,
+      final boolean rangePartitioned,
       final ServiceMetricEvent.Builder metricBuilder,
       boolean needMultiValuedColumns
   ) throws IOException
@@ -718,6 +730,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             projections,
             baseTable,
             sealed,
+            rangePartitioned,
             needMultiValuedColumns
         );
         final QuerySegmentSpec querySegmentSpec;
@@ -768,6 +781,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           projections,
           baseTable,
           sealed,
+          rangePartitioned,
           needMultiValuedColumns
       );
       final QuerySegmentSpec querySegmentSpec;
@@ -818,6 +832,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable List<AggregateProjectionSpec> projections,
       @Nullable BaseTableProjectionSpec baseTable,
       boolean sealed,
+      boolean rangePartitioned,
       boolean needMultiValuedColumns
   )
   {
@@ -825,41 +840,55 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       // BaseTable mode: the spec owns dimensions/metrics and (via its query-granularity virtual column) query
       // granularity; segment granularity + intervals are the compaction config's. Attach the config's query
       // granularity up front (a no-op if absent/NONE); the generator's incremental index applies it at build time.
-      // A sealed spec is the complete declaration of the table, so existing-segment analysis has nothing to add and is
-      // skipped entirely.
+      // A sealed spec is the complete description of the table, so the columns and projections it leaves undeclared
+      // are taken to not exist rather than inferred. Range partitioning is the exception that reads the segments even
+      // when sealed: only they can say whether a partition column is multi-valued, which MSQ cannot partition by.
+      final boolean analyzeSchema = !sealed;
+      final boolean analyzeProjections = !sealed && projections == null;
+      final boolean analyzeMultiValued = rangePartitioned;
       BaseTableProjectionSpec baseTableSpec = baseTable.withQueryGranularity(granularitySpec.getQueryGranularity());
-      if (!sealed) {
-        // Otherwise the segments may carry columns the spec does not know about. Find them and append them after the
-        // declared columns, leaving the shape the operator asked for unchanged.
+      List<AggregateProjectionSpec> projectionSpecs = projections;
+      Set<String> multiValuedDimensions = null;
+      if (analyzeSchema || analyzeMultiValued) {
         final ExistingSegmentAnalyzer analyzer = new ExistingSegmentAnalyzer(
             segments,
             false,
             false,
-            true,
-            true,
-            false,
-            false
+            analyzeSchema,
+            analyzeSchema,
+            analyzeProjections,
+            analyzeMultiValued
         );
         fetchAndProcess(analyzer, emitter, metricBuilder);
-        baseTableSpec = baseTableSpec.withAdditionalColumns(
-            undeclaredColumns(baseTableSpec, analyzer.getDimensionsSpec())
-        );
-        if (baseTableSpec instanceof RollupBaseTableProjectionSpec) {
-          baseTableSpec = ((RollupBaseTableProjectionSpec) baseTableSpec).withAdditionalMetrics(
-              undeclaredMetrics(baseTableSpec, analyzer.getMetricsSpec())
+        if (analyzeSchema) {
+          // An unsealed spec is partial, so append what it does not declare after the declared columns, leaving the
+          // shape the operator asked for unchanged.
+          baseTableSpec = baseTableSpec.withAdditionalColumns(
+              undeclaredColumns(baseTableSpec, analyzer.getDimensionsSpec())
           );
-        } else {
-          // A spec with no metric columns has nowhere to put these, and dropping them would delete data the table
-          // never said it did not want. Sealing the table is how an operator asks for that.
-          final Set<String> metricNames = analyzer.getMetricNames();
-          if (!metricNames.isEmpty()) {
-            throw InvalidInput.exception(
-                "Segments of dataSource[%s] store metric column(s) %s, but its base table has no metric columns to"
-                + " keep them in. Declare a rollup base table, or seal the table to drop them.",
-                dataSource,
-                metricNames
+          if (baseTableSpec instanceof RollupBaseTableProjectionSpec) {
+            baseTableSpec = ((RollupBaseTableProjectionSpec) baseTableSpec).withAdditionalMetrics(
+                undeclaredMetrics(baseTableSpec, analyzer.getMetricsSpec())
             );
+          } else {
+            // A spec with no metric columns has nowhere to put these, and dropping them would delete data the table
+            // never said it did not want. Sealing the table is how an operator asks for that.
+            final Set<String> metricNames = analyzer.getMetricNames();
+            if (!metricNames.isEmpty()) {
+              throw InvalidInput.exception(
+                  "Segments of dataSource[%s] store metric column(s) %s, but its base table has no metric columns to"
+                  + " keep them in. Declare a rollup base table, or seal the table to drop them.",
+                  dataSource,
+                  metricNames
+              );
+            }
           }
+        }
+        if (analyzeProjections) {
+          projectionSpecs = analyzer.getProjections();
+        }
+        if (analyzeMultiValued) {
+          multiValuedDimensions = analyzer.getMultiValuedDimensions();
         }
       }
       return CombinedDataSchema.forBaseTable(
@@ -870,8 +899,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
               Collections.singletonList(totalInterval)
           ),
           transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null),
-          projections,
-          baseTableSpec
+          projectionSpecs,
+          baseTableSpec,
+          multiValuedDimensions
       );
     }
 
@@ -1133,6 +1163,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
      * Segments are downloaded even when just needMultiValuedDimensions=true since MSQ switches to dynamic partitioning
      * on finding any 'range' partition dimension to be multivalued at runtime, which ends up in a mismatch between
      * the compaction config and the actual segments (lastCompactionState), leading to repeated compactions.
+     * <p>
+     * Note that needProjections alone does not trigger a download: every caller that asks for projections also asks
+     * for something above, so the lists stay in step. A caller that wants only projections would have to add it here.
      */
     private boolean shouldDownloadSegments()
     {

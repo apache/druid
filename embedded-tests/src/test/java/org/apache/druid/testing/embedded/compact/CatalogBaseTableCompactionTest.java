@@ -28,6 +28,7 @@ import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -43,6 +44,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.coordinator.CatalogDataSourceCompactionConfig;
@@ -85,6 +87,11 @@ public class CatalogBaseTableCompactionTest extends EmbeddedClusterTestBase
    * Present in the segments but absent from the catalog table, so only an analyze step can find it.
    */
   private static final String UNDECLARED_COLUMN = "countryName";
+  /**
+   * Materialized into the ingested segment but never mentioned by the catalog table, so compaction can only keep it by
+   * carrying forward what the segments already have.
+   */
+  private static final String PROJECTION_NAME = "by_country";
 
   private final EmbeddedOverlord overlord = new EmbeddedOverlord()
       .addProperty("druid.catalog.client.maxSyncRetries", "0")
@@ -148,6 +155,16 @@ public class CatalogBaseTableCompactionTest extends EmbeddedClusterTestBase
         List.of(DECLARED_COLUMN),
         ((ClusteredValueGroupsBaseTableProjectionSpec) compactionState.getBaseTable()).getClusteringColumnNames()
     );
+    // The catalog declares no projections at all, which means "leave what is there" rather than "there are none", so
+    // the projection the segments were built with is carried forward instead of being compacted away.
+    Assertions.assertNotNull(compactionState.getProjections(), "projections were dropped");
+    Assertions.assertEquals(
+        List.of(PROJECTION_NAME),
+        compactionState.getProjections()
+                       .stream()
+                       .map(AggregateProjectionSpec::getName)
+                       .collect(Collectors.toList())
+    );
   }
 
   @Test
@@ -171,6 +188,12 @@ public class CatalogBaseTableCompactionTest extends EmbeddedClusterTestBase
                        .stream()
                        .map(DimensionSchema::getName)
                        .collect(Collectors.toList())
+    );
+    // Sealing says the catalog describes the whole table, so an undeclared projection list means the table has none
+    // and the one the segments were built with goes too. The segments are never read to find out.
+    Assertions.assertTrue(
+        compactionState.getProjections() == null || compactionState.getProjections().isEmpty(),
+        () -> "expected no projections, got " + compactionState.getProjections()
     );
   }
 
@@ -308,6 +331,14 @@ public class CatalogBaseTableCompactionTest extends EmbeddedClusterTestBase
                 .withTimestamp(new TimestampSpec("time", "iso", null))
                 .withSegmentGranularity(
                     new SegmentGranularitySpec(Granularities.HOUR, List.of(Intervals.of("2024-01-01/2024-01-02")))
+                )
+                .withProjections(
+                    List.of(
+                        AggregateProjectionSpec.builder(PROJECTION_NAME)
+                                               .groupingColumns(new StringDimensionSchema(UNDECLARED_COLUMN))
+                                               .aggregators(new CountAggregatorFactory("cnt"))
+                                               .build()
+                    )
                 )
                 .withBaseTable(
                     ClusteredValueGroupsBaseTableProjectionSpec

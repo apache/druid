@@ -335,11 +335,11 @@ Not every [table property](#table-properties) drives compaction. These do:
 | Property | Effect on existing segments |
 |---|---|
 | `segmentGranularity` | Segments are re-partitioned in time to the declared granularity. |
-| `clusterKeys` | Segments are range-partitioned by the key columns, in the declared order. All key columns must be `VARCHAR`; compaction fails on a numeric one. |
+| `clusterKeys` | Segments are range-partitioned by the key columns, in the declared order. With the MSQ task engine, which a `baseTable` layout requires, every key column must be `VARCHAR` and hold a single value per row; compaction rejects anything else. |
 | `targetSegmentRows` | Rewritten segments are sized to this row count, the same size an `INSERT` produces. |
-| `projections` | Once the table declares any [projection](#projections), the declared set is authoritative: those are built and any others are dropped. A table that declares none leaves whatever the segments already have. |
+| `projections` | Once the table declares any [projection](#projections), the declared set is authoritative: those are built and any others are dropped. A table that declares none keeps whatever the segments already have, unless it is sealed, in which case it is taken to have none and existing projections are dropped. |
 | `baseTable` | The table's physical layout, written in SQL as the [`__base` projection](#the-base-table). The stored column order, clustering, and computed columns are rewritten to match it, along with the declared column list it combines with. |
-| `sealed` | On a `__base` table, decides whether columns the table does not declare are kept. See below. |
+| `sealed` | On a `__base` table, declares the catalog to be the table's complete description: columns and projections it does not declare are dropped rather than carried over, so compaction does not read the segments looking for them. See below. |
 
 Everything else a table can declare is ignored by compaction today, including `hiddenColumns` and, on a table with no
 `__base` projection, the column list itself. A plain catalog table's columns therefore never trim: compaction infers
@@ -356,6 +356,17 @@ Dropping a column trims it from storage only on a table that has both a `__base`
 
 That last row is the case to be careful with: on a sealed clustered table, `ALTER TABLE ... DROP COLUMN` eventually
 deletes data, just not at the moment the statement runs.
+
+Sealing decides this for projections too, not only columns. A sealed table is the complete description of itself, so
+compaction infers nothing from the segments: projections it does not declare are dropped the same way undeclared
+columns are. Note that before sealing a table that already has projections it has never declared, because they go on
+the next compaction; declare them with `ADD PROJECTION` first to keep them.
+
+Sealing does not make compaction skip reading the segments entirely, though. A table that declares
+[`clusterKeys`](#table-properties) is still read, because the MSQ task engine cannot range-partition by a multi-valued
+column and only the stored data says which columns hold multiple values. Compaction fails with a clear error in that
+case; without the check it would quietly write differently-partitioned segments and then recompact the interval on
+every run, trying to reach a layout it never produces.
 
 A non-sealed [rollup table](#rollup-tables) appends metric columns not declared in the columns list as additional
 aggregators. Any other layout has no metric columns at all, so if the segments store metrics and the table's layout

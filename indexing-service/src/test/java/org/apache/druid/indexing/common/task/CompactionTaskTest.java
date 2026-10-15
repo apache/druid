@@ -821,6 +821,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -871,6 +872,7 @@ public class CompactionTaskTest
             null,
             TENANT_BASE_TABLE,
             true,
+            false,
             METRIC_BUILDER,
             false
         ).values()
@@ -881,6 +883,62 @@ public class CompactionTaskTest
         dataSchema.getDimensionsSpec().getDimensionNames()
     );
     Assertions.assertEquals(TENANT_BASE_TABLE, dataSchema.getBaseTable());
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithSealedBaseTableAnalyzesForRangePartitioning() throws IOException
+  {
+    // Sealing normally means the segments are never read, but MSQ cannot range partition over a multi-valued column
+    // and only the segments know which columns are. So a range-partitioned table is read even when sealed, and the
+    // result is handed to the runner to validate.
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            TENANT_BASE_TABLE,
+            true,
+            true,
+            METRIC_BUILDER,
+            true
+        ).values()
+    );
+
+    Assertions.assertNotNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
+    // The declaration is still authoritative: analyzing for multi-valued columns adds none of them to the spec.
+    Assertions.assertEquals(
+        ImmutableList.of("string_dim_0", ColumnHolder.TIME_COLUMN_NAME),
+        dataSchema.getDimensionsSpec().getDimensionNames()
+    );
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithSealedBaseTableSkipsAnalysisWithoutRangePartitioning() throws IOException
+  {
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            TENANT_BASE_TABLE,
+            true,
+            false,
+            METRIC_BUILDER,
+            true
+        ).values()
+    );
+
+    Assertions.assertNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
   }
 
   @Test
@@ -900,6 +958,7 @@ public class CompactionTaskTest
             new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
             null,
             TENANT_BASE_TABLE,
+            false,
             false,
             METRIC_BUILDER,
             false
@@ -925,6 +984,7 @@ public class CompactionTaskTest
             new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
             null,
             ROLLUP_BASE_TABLE,
+            false,
             false,
             METRIC_BUILDER,
             false
@@ -984,6 +1044,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1050,6 +1111,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1117,6 +1179,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1191,6 +1254,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1245,6 +1309,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1292,6 +1357,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1346,6 +1412,7 @@ public class CompactionTaskTest
               null,
               null,
               true,
+              false,
               METRIC_BUILDER,
               false
           );
@@ -1382,6 +1449,7 @@ public class CompactionTaskTest
               null,
               null,
               true,
+              false,
               METRIC_BUILDER,
               false
           );
@@ -1428,6 +1496,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1476,6 +1545,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1525,6 +1595,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1576,6 +1647,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1625,6 +1697,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1674,6 +1747,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1708,6 +1782,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         false
     );
@@ -1744,6 +1819,7 @@ public class CompactionTaskTest
         null,
         null,
         true,
+        false,
         METRIC_BUILDER,
         true
     );

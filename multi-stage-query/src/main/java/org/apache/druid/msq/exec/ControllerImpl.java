@@ -41,6 +41,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
@@ -1311,7 +1312,8 @@ public class ControllerImpl implements Controller
         clusterBy,
         querySpec.getColumnMappings(),
         clusterByVirtualColumnMappings,
-        mayHaveMultiValuedClusterByFields
+        mayHaveMultiValuedClusterByFields,
+        MultiStageQueryContext.isFailOnMultiValuedRangePartition(querySpec.getContext())
     );
     final List<String> shardColumns = shardReasonPair.lhs;
     final String commentary = shardReasonPair.rhs;
@@ -2002,11 +2004,21 @@ public class ControllerImpl implements Controller
       final ClusterBy clusterBy,
       final ColumnMappings columnMappings,
       final Map<String, VirtualColumn> clusterByVirtualColumns,
-      boolean mayHaveMultiValuedClusterByFields
+      boolean mayHaveMultiValuedClusterByFields,
+      boolean failOnMultiValuedRangePartition
   )
   {
     if (mayHaveMultiValuedClusterByFields) {
       // DimensionRangeShardSpec cannot handle multivalued fields.
+      if (failOnMultiValuedRangePartition) {
+        // Falling back would silently store the rows under a different partitioning than was asked for. A caller that
+        // compares what it wrote against what it asked for, as compaction does, would never see the two agree.
+        throw InvalidInput.exception(
+            "Cannot use 'range' partitioning because CLUSTERED BY %s contains multi-valued fields. Use 'dynamic'"
+            + " partitioning, or partition by single-valued columns only.",
+            clusterBy.getColumns().stream().map(KeyColumn::columnName).collect(Collectors.toList())
+        );
+      }
       return Pair.of(
           Collections.emptyList(),
           "Cannot use 'range' shard specs since CLUSTERED BY contains multi-valued fields."
