@@ -65,7 +65,6 @@ import org.apache.druid.sql.calcite.rule.DruidAggregateCaseToFilterRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
-import org.apache.druid.sql.calcite.rule.DruidStripUnionArmCastRule;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterDecomposeCoalesceRule;
@@ -365,7 +364,6 @@ public class CalciteRulesManager
 
     // Apply SORT_PROJECT_TRANSPOSE to match the expected order of "sort" and "sortProject" in PartialDruidQuery.
     builder.addRuleInstance(CoreRules.SORT_PROJECT_TRANSPOSE);
-    builder.addRuleInstance(DruidStripUnionArmCastRule.instance());
 
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }

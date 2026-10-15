@@ -107,6 +107,7 @@ public @interface NotYetSupported
     SORT_REMOVE_TROUBLE(Scope.DECOUPLED, AssertionError.class, ""),
     UNNEST_INLINED(Scope.DECOUPLED, Exception.class, "Missing conversion is Uncollect"),
     UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
+    UNION_QUERY_OVER_UNION_DATASOURCE(Scope.DECOUPLED, NullPointerException.class, "Number of remaining responses"),
 
     DD_RESTRICTED_DATASOURCE_SUPPORT(Scope.DECOUPLED_DART, DruidException.class, "ForbiddenException: Unauthorized"),
     DD_RESTRICTED_DATASOURCE_SUPPORT2(Scope.DECOUPLED_DART, AssertionError.class, "Unauthorized"),

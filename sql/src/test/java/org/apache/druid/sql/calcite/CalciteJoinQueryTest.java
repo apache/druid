@@ -3535,6 +3535,73 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @MethodSource("provideQueryContexts")
+  @ParameterizedTest(name = "{0}")
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.EQUIV_PLAN)
+  public void testGroupByOverGroupByOverInnerJoinOfInlineAndLookupReadingRightColumn(Map<String, Object> queryContext)
+  {
+    cannotVectorize();
+
+    // The inner query reads a right-hand column that the outer query does not, so the join must not be rewritten
+    // into a filter on the left-hand side.
+    testQuery(
+        "SELECT cnt, COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT l.v, COUNT(*) AS cnt\n"
+        + "  FROM (VALUES ('a'), ('a'), ('abc')) AS t(x) INNER JOIN lookup.lookyloo l ON t.x = l.k\n"
+        + "  GROUP BY 1\n"
+        + ")\n"
+        + "GROUP BY 1",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(
+                                                join(
+                                                    InlineDataSource.fromIterable(
+                                                        ImmutableList.of(
+                                                            new Object[]{"a", "a"},
+                                                            new Object[]{"a", "a"},
+                                                            new Object[]{"abc", "abc"}
+                                                        ),
+                                                        RowSignature.builder()
+                                                                    .add("x", ColumnType.STRING)
+                                                                    .add("x0", ColumnType.STRING)
+                                                                    .build()
+                                                    ),
+                                                    new LookupDataSource("lookyloo"),
+                                                    "j0.",
+                                                    equalsCondition(
+                                                        makeColumnExpression("x0"),
+                                                        makeColumnExpression("j0.k")
+                                                    ),
+                                                    JoinType.INNER
+                                                )
+                                            )
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(new DefaultDimensionSpec("j0.v", "d0", ColumnType.STRING))
+                                            .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                                            .setContext(queryContext)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(new DefaultDimensionSpec("a0", "d0", ColumnType.LONG))
+                        .setAggregatorSpecs(new CountAggregatorFactory("_a0"))
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L},
+            new Object[]{2L, 1L}
+        )
+    );
+  }
+
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_LEFT_DIRECT_ACCESS)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")

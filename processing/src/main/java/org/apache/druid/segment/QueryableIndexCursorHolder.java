@@ -121,7 +121,10 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
 
-    final List<OrderBy> indexOrdering = orderingOverride != null ? orderingOverride : index.getOrdering();
+    final List<OrderBy> indexOrdering = Cursors.trimOrdering(
+        orderingOverride != null ? orderingOverride : index.getOrdering(),
+        virtualColumns
+    );
     if (Cursors.preferDescendingTimeOrdering(cursorBuildSpec)
         && Cursors.getTimeOrdering(indexOrdering) == Order.ASCENDING) {
       this.ordering = Cursors.descendingTimeOrder();

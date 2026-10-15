@@ -266,6 +266,12 @@ public class UnionQuery implements Query<Object>
     }
 
     @Override
+    public Set<String> getReservedColumns()
+    {
+      throw methodNotSupported();
+    }
+
+    @Override
     public byte[] getCacheKey()
     {
       return null;

@@ -37,29 +37,28 @@ import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.context.QueryContextParameters;
-import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.SegmentMapFunction;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
- * Processor that reads broadcast join data and creates a segment mapping function. The resulting segment
- * mapping function embeds the joinable data within itself, and can be applied anywhere that would otherwise have used
- * {@link org.apache.druid.query.JoinDataSource#createSegmentMapFunction(Query)}.
+ * Processor that reads broadcast join data and creates segment mapping functions, one per base input, as
+ * {@link BaseInputSegmentMapFunction#createAll} returns them. The resulting segment mapping functions embed the
+ * joinable data within themselves, and can be applied anywhere that would otherwise have used
+ * {@link JoinDataSource#createSegmentMapFunction(Query)}.
  *
- * @see SimpleSegmentMapFnProcessor processor that creates a segment mapping function when there is no broadcast input
+ * @see SimpleSegmentMapFnProcessor processor that creates segment mapping functions when there is no broadcast input
  */
-public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<SegmentMapFunction>
+public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<List<BaseInputSegmentMapFunction>>
 {
   private final Query<?> query;
   private final PolicyEnforcer policyEnforcer;
@@ -157,10 +156,10 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Segmen
   }
 
   @Override
-  public ReturnOrAwait<SegmentMapFunction> runIncrementally(IntSet readableInputs)
+  public ReturnOrAwait<List<BaseInputSegmentMapFunction>> runIncrementally(IntSet readableInputs)
   {
     if (buildBroadcastTablesIncrementally(readableInputs)) {
-      return ReturnOrAwait.returnObject(createSegmentMapFunction());
+      return ReturnOrAwait.returnObject(createSegmentMapFunctions());
     } else {
       return ReturnOrAwait.awaitAny(sideChannelNumbers);
     }
@@ -182,7 +181,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Segmen
         frameReader.signature().getColumnNames().stream().map(
             columnName ->
                 cursor.getColumnSelectorFactory().makeColumnValueSelector(columnName)
-        ).collect(Collectors.toList());
+        ).toList();
 
     while (!cursor.isDone()) {
       final Object[] row = new Object[selectors.size()];
@@ -194,10 +193,10 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Segmen
     }
   }
 
-  private SegmentMapFunction createSegmentMapFunction()
+  private List<BaseInputSegmentMapFunction> createSegmentMapFunctions()
   {
     DataSource transformed = inlineChannelData(query.getDataSource());
-    return ExecutionVertex.of(query.withDataSource(transformed)).createSegmentMapFunction(policyEnforcer);
+    return BaseInputSegmentMapFunction.createAll(query.withDataSource(transformed), policyEnforcer);
   }
 
   DataSource inlineChannelData(final DataSource originalDataSource)
