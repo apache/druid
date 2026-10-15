@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +79,8 @@ public abstract class WebConsoleTestBase extends EmbeddedClusterTestBase
   private static final Logger log = new Logger(WebConsoleTestBase.class);
 
   private static final long SPEC_TIMEOUT_MINUTES = 15;
+  /** How long to wait for the rest of the output, once the spec's process is done (or killed) */
+  private static final long OUTPUT_READER_JOIN_MILLIS = 30_000;
   private static final Pattern NOT_FILE_NAME_CHARS = Pattern.compile("[^A-Za-z0-9.-]");
 
   protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
@@ -171,21 +174,51 @@ public abstract class WebConsoleTestBase extends EmbeddedClusterTestBase
     processBuilder.environment().putAll(specEnv);
     final Process process = processBuilder.start();
 
-    // Log the output as it comes (so that a hung spec can be seen) and keep it for the failure message
-    final List<String> output = new ArrayList<>();
-    try (BufferedReader reader = new BufferedReader(
-        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
-    )) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        log.info("[playwright] %s", line);
-        output.add(line);
-      }
-    }
+    // Log the output as it comes (so that a hung spec can be seen) and keep it for the failure message. It's read on
+    // its own thread, so that the timeout below holds even when a hung spec keeps its output open.
+    final List<String> output = Collections.synchronizedList(new ArrayList<>());
+    final Thread outputReader = new Thread(
+        () -> {
+          try (BufferedReader reader = new BufferedReader(
+              new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
+          )) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+              log.info("[playwright] %s", line);
+              output.add(line);
+            }
+          }
+          catch (IOException e) {
+            // The stream is closed when the process is killed (on a timeout)
+            log.info("Stopped reading the output of spec[%s]: %s", spec, e.getMessage());
+          }
+        },
+        "playwright-output"
+    );
+    outputReader.setDaemon(true);
+    outputReader.start();
 
-    if (!process.waitFor(SPEC_TIMEOUT_MINUTES, TimeUnit.MINUTES)) {
+    final boolean finished = process.waitFor(SPEC_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+    if (!finished) {
+      // npx runs Playwright in a child process, which is what keeps the output open
+      process.descendants().forEach(ProcessHandle::destroyForcibly);
       process.destroyForcibly();
-      Assertions.fail(StringUtils.format("Spec[%s] did not finish in %d minutes", spec, SPEC_TIMEOUT_MINUTES));
+    }
+    outputReader.join(OUTPUT_READER_JOIN_MILLIS);
+
+    final String outputText;
+    synchronized (output) {
+      outputText = String.join("\n", output);
+    }
+    if (!finished) {
+      Assertions.fail(
+          StringUtils.format(
+              "Spec[%s] did not finish in %d minutes, and was killed:\n%s",
+              spec,
+              SPEC_TIMEOUT_MINUTES,
+              outputText
+          )
+      );
     }
     Assertions.assertEquals(
         0,
@@ -194,7 +227,7 @@ public abstract class WebConsoleTestBase extends EmbeddedClusterTestBase
             "Spec[%s] failed (its screenshots and traces are in [%s]):\n%s",
             spec,
             new File(webConsoleDir, outputDir),
-            String.join("\n", output)
+            outputText
         )
     );
   }
