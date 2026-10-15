@@ -416,7 +416,11 @@ Array of LDAP group filters used to filter out the allowed set of groups returne
 
 #### ReadOnly Authorizer
 
-The ReadOnly authorizer allows all READ operations on ALL Druid Resources and denies all other operations (WRITE, DELETE, etc.). Please take extra care to consider if you actually intend to allow READ on ALL resources before using this authorizer. This grants READ on things like CONFIG and STATE resources which are generally not intended for low-trust users.
+The ReadOnly authorizer allows READ on **all** resources of every type and denies all other actions (WRITE, DELETE, etc.).
+Please take extra care to consider if you actually intend to grant READ this broadly before using this authorizer. A few of the more sensitive resources that this authorizer grants READ access to include:
+
+- [`CONFIG`](../../operations/security-user-auth.md#config) and [`STATE`](../../operations/security-user-auth.md#state) resources, which expose cluster configuration and state that is generally not intended for low-trust users.
+- The [`EXTERNAL`](../../operations/security-user-auth.md#external) resource, which lets users run SQL queries with the `EXTERN` function and input source table functions. These queries can read any data the Druid services can reach, such as files on the local filesystem of Druid servers, HTTP endpoints, and cloud object storage.
 
 Example configuration:
 
