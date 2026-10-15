@@ -26,6 +26,7 @@ import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import java.util.Map;
 
@@ -89,7 +90,7 @@ public class MSQMetricEventBuilder extends ServiceMetricEvent.Builder
 
   private void setQueryIdDimensions(final QueryContext queryContext)
   {
-    setDimensionIfNotNull(BaseQuery.QUERY_ID, queryContext.getString(BaseQuery.QUERY_ID));
+    setDimensionIfNotNull(QueryContextParameters.QUERY_ID.getName(), queryContext.get(QueryContextParameters.QUERY_ID));
     setDimensionIfNotNull(BaseQuery.SQL_QUERY_ID, queryContext.getString(BaseQuery.SQL_QUERY_ID));
     setDimension(DruidMetrics.TYPE, QUERY_METRIC_TYPE);
   }

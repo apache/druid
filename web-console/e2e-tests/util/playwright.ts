@@ -108,6 +108,12 @@ export async function setInput(
   await input.fill(value);
 }
 
+export async function setQueryInput(page: playwright.Page, value: string): Promise<void> {
+  // The query input is a CodeMirror editor, its editable surface is a contenteditable div
+  const editor = await page.waitForSelector('div.flexible-query-input .cm-content');
+  await editor.fill(value);
+}
+
 function buttonSelector(text: string) {
   return `//button/*[contains(text(),"${text}")]`;
 }

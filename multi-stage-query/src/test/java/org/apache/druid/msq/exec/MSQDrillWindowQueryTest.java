@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.exec;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComponentSupplier;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.AbstractMSQComponentSupplierDelegate;
@@ -27,7 +26,9 @@ import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextBuilder;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
@@ -35,17 +36,21 @@ import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DrillWindowQueryMSQComponentSupplier.class)
 public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
 {
-  private final Map<String, Object> queryContext = new HashMap<>(ImmutableMap.of(
-      PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
-      QueryContexts.ENABLE_DEBUG, true,
-      MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5
-  ));
+  private final QueryContextBuilder queryContextBuilder = QueryContext.builder()
+      .put(QueryContextParameters.DEBUG, true)
+      .putRaw(
+          PlannerCaptureHook.NEED_CAPTURE_HOOK,
+          true
+      )
+      .putRaw(
+          MultiStageQueryContext.CTX_MAX_NUM_TASKS,
+          5
+      );
 
   public static class DrillWindowQueryMSQComponentSupplier extends AbstractMSQComponentSupplierDelegate
   {
@@ -67,7 +72,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @Override
   protected Map<String, Object> getQueryContext()
   {
-    return queryContext;
+    return queryContextBuilder.toMap();
   }
 
   @Override
@@ -247,6 +252,6 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
    */
   private void useSingleWorker()
   {
-    queryContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2);
+    queryContextBuilder.putRaw(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2);
   }
 }

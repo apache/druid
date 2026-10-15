@@ -69,6 +69,7 @@ import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFacto
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -1138,7 +1139,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   {
 
     final HashMap<String, Object> specialContext = new HashMap<>();
-    specialContext.put(QueryContexts.BY_SEGMENT_KEY, "true");
+    specialContext.put(QueryContextParameters.BY_SEGMENT.getName(), "true");
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -3729,7 +3730,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
             QueryRunnerTestHelper.DEPENDENT_POST_AGG
         )
-        .context(ImmutableMap.of(QueryContexts.FINALIZE_KEY, true, QueryContexts.BY_SEGMENT_KEY, true))
+        .context(ImmutableMap.of(QueryContextParameters.FINALIZE.getName(), true, QueryContextParameters.BY_SEGMENT.getName(), true))
         .build();
     TopNResultValue topNResult = TopNResultValue.create(
         Arrays.<Map<String, Object>>asList(

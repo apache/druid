@@ -21,7 +21,6 @@ package org.apache.druid.query.spec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -33,12 +32,14 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.CountAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultBuilder;
@@ -277,7 +278,7 @@ public class SpecificSegmentQueryRunnerTest
     if (setProcessingThreadNames == null) {
       return Collections.emptyMap();
     } else {
-      return ImmutableMap.of(SpecificSegmentQueryRunner.CTX_SET_THREAD_NAME, setProcessingThreadNames);
+      return QueryContext.ofMap(QueryContextParameters.SET_PROCESSING_THREAD_NAMES, setProcessingThreadNames);
     }
   }
 

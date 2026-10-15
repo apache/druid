@@ -615,7 +615,6 @@ FROM test_json_cols;
         "resultFormat" : "compactedList",
         "columns" : [ "v0" ],
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -717,7 +716,6 @@ FROM test_json_cols;
         "resultFormat" : "compactedList",
         "columns" : [ "v0" ],
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -819,7 +817,6 @@ FROM test_json_cols;
         "resultFormat" : "compactedList",
         "columns" : [ "v0" ],
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,

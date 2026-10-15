@@ -135,6 +135,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -289,7 +290,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
-                  .put(QueryContexts.FINALIZE_KEY, true)
+                  .put(QueryContextParameters.FINALIZE.getName(), true)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)

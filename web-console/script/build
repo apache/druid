@@ -43,6 +43,13 @@ else
   ./script/build-sql-docs
 fi
 
+# Build the parsers of the editor languages
+if [ "$FORCE_BUILD" = true ]; then
+  ./script/build-grammars.mjs --force
+else
+  ./script/build-grammars.mjs
+fi
+
 # Get version from package.json
 VERSION=$(node -e "console.log(require('./package.json').version)")
 CONSOLE_OUTPUT="public/web-console-$VERSION.js"

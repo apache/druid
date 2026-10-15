@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.spec;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -32,6 +31,7 @@ import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.SegmentMissingException;
 
@@ -45,10 +45,6 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> base;
   private final SpecificSegmentSpec specificSpec;
-
-  @VisibleForTesting
-  static final String CTX_SET_THREAD_NAME = "setProcessingThreadNames";
-  static final boolean DEFAULT_SET_THREAD_NAME_ENABLED = false;
 
   public SpecificSegmentQueryRunner(
       QueryRunner<T> base,
@@ -69,7 +65,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
         )
     );
 
-    final boolean setName = input.getQuery().context().getBoolean(CTX_SET_THREAD_NAME, DEFAULT_SET_THREAD_NAME_ENABLED);
+    final boolean setName = input.getQuery().context().getOrDefault(QueryContextParameters.SET_PROCESSING_THREAD_NAMES);
 
     final Query<T> query = queryPlus.getQuery();
 

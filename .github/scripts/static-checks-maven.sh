@@ -23,8 +23,9 @@ echo 'Running Maven install...'
 
 ./mvnw -B checkstyle:checkstyle --fail-at-end
 
-# Repo-wide RAT check. packaging-check also runs RAT, but it excludes the
-# benchmarks module from its reactor, so keep this standalone pass here.
+# Repo-wide RAT check. This is the only RAT pass in CI. It must run without -T:
+# apache-rat-plugin 0.17+ shares per-run state across modules, so parallel runs
+# can drop configured excludes or throw NPEs (RAT-553, fixed upstream by RAT-573).
 ./mvnw -B apache-rat:check -Prat --fail-at-end \
   -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
   -Drat.consoleOutput=true

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.server.security.AuthConfig;
@@ -55,7 +56,7 @@ public class DecoupledExtension implements BeforeEachCallback
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.<String, Object>builder()
       .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
       .put(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-      .put(QueryContexts.ENABLE_DEBUG, true)
+      .put(QueryContextParameters.DEBUG.getName(), true)
       .build();
 
   public QueryTestBuilder testBuilder()

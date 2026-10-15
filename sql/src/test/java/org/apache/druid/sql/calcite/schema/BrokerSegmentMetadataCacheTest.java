@@ -45,11 +45,12 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
@@ -317,7 +318,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         new MultipleSpecificSegmentSpec(Collections.singletonList(realtimeSegment1.getId().toDescriptor())),
         new AllColumnIncluderator(),
         false,
-        ImmutableMap.of(QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        QueryContext.ofMap(QueryContextParameters.ENABLE_PARALLEL_MERGE, false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
@@ -1228,9 +1229,11 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.PRIORITY_KEY, 5,
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    Map<String, Object> queryContext = QueryContext.ofMap(
+        QueryContextParameters.PRIORITY,
+        5,
+        QueryContextParameters.ENABLE_PARALLEL_MERGE,
+        false
     );
 
     DataSegment segment = newSegment("test", 0);
@@ -1388,9 +1391,11 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.PRIORITY_KEY, 5,
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    Map<String, Object> queryContext = QueryContext.ofMap(
+        QueryContextParameters.PRIORITY,
+        5,
+        QueryContextParameters.ENABLE_PARALLEL_MERGE,
+        false
     );
 
     DataSegment segment = newSegment("test", 0);

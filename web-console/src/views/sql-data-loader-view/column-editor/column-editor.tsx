@@ -274,7 +274,7 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
       </FormGroup>
       <FormGroup label="SQL expression">
         <FlexibleQueryInput
-          showGutter={false}
+          showLineNumbers={false}
           placeholder="expression"
           queryString={currentBreakdown.formula}
           onQueryStringChange={formula => {
