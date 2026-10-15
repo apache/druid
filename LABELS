@@ -60,25 +60,6 @@ This product bundles Jersey version 1.15, copyright Oracle and/or its affiliates
   * https://jersey.github.io/
   * com.sun.jersey:jersey-client
 
-This product bundles OkHttp Aether Connector version 0.0.9, copyright to original author or authors,
- which is available under the Eclipse Public License 1.0. For details, see licenses/bin/aether-connector-okhttp.EPL1.
-  * https://github.com/takari/aether-connector-okhttp
-  * io.tesla.aether:aether-connector-okhttp
-
-This product bundles Tesla Aether version 0.0.5, copyright to original author or authors,
- which is available under the Eclipse Public License 1.0. For details, see licenses/bin/tesla-aether.EPL1.
-  * https://github.com/tesla/tesla-aether
-  * io.tesla.aether:tesla-aether
-
-This product bundles Eclipse Aether libraries version 0.9.0.M2, copyright Sonatype, Inc.,
- which is available under the Eclipse Public License 1.0. For details, see licenses/bin/aether-core.EPL1.
-  * https://github.com/eclipse/aether-core
-  * org.eclipse.aether:aether-api
-  * org.eclipse.aether:aether-connector-file
-  * org.eclipse.aether:aether-impl
-  * org.eclipse.aether:aether-spi
-  * org.eclipse.aether:aether-util
-
 This product bundles Rhino version 1.7R5, copyright Mozilla and individual contributors.,
  which is available under the Mozilla Public License Version 2.0. For details, see licenses/bin/rhino.MPL2.
   * https://developer.mozilla.org/en-US/docs/Mozilla/Projects/Rhino

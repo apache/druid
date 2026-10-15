@@ -4038,30 +4038,6 @@ libraries:
 
 ---
 
-name: OkHttp Aether Connector
-license_category: binary
-module: java-core
-license_name: Eclipse Public License 1.0
-version: 0.0.9
-copyright: to original author or authors
-license_file_path: licenses/bin/aether-connector-okhttp.EPL1
-libraries:
-  - io.tesla.aether: aether-connector-okhttp
-
----
-
-name: Tesla Aether
-license_category: binary
-module: java-core
-license_name: Eclipse Public License 1.0
-version: 0.0.5
-copyright: to original author or authors
-license_file_path: licenses/bin/tesla-aether.EPL1
-libraries:
-  - io.tesla.aether: tesla-aether
-
----
-
 name: Rhino
 license_category: binary
 module: java-core
@@ -5562,7 +5538,7 @@ libraries:
 ---
 name: jakarta.activation
 license_category: binary
-module: extensions/druid-avro-extensions
+module: java-core
 license_name: Eclipse Distribution License 1.0
 version: 2.0.1
 libraries:
@@ -5674,17 +5650,6 @@ license_name: MIT License
 version: 1.0.8
 libraries:
   - org.rnorth.duct-tape: duct-tape
-
----
-
-# Dependency of Testcontainers
-name: jakarta.activation
-license_category: binary
-module: extensions/druid-testcontainers
-license_name: Eclipse Distribution License 1.0
-version: 2.0.1
-libraries:
-  - com.sun.activation: jakarta.activation
 
 ---
 
