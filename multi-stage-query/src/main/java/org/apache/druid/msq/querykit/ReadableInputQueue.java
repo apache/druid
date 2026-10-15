@@ -51,6 +51,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 
 /**
  * Queue for returning {@link ReadableInput} from a list of {@link PhysicalInputSlice}.
@@ -122,18 +123,26 @@ public class ReadableInputQueue implements Closeable
    * {@link LoadableSegment#acquireIfCached(AcquireMode)}.
    */
   private final AcquireMode acquireMode;
+
+  /**
+   * Whether the caller needs no more inputs. Once true, {@link #nextInput()} returns null and no new segment loads
+   * start; inputs that were already acquired are released by {@link #close()}.
+   */
+  private final BooleanSupplier canSkipRemaining;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   public ReadableInputQueue(
       final StandardPartitionReader partitionReader,
       final List<PhysicalInputSlice> slices,
       final int loadahead,
-      final AcquireMode acquireMode
+      final AcquireMode acquireMode,
+      final BooleanSupplier canSkipRemaining
   )
   {
     this.partitionReader = partitionReader;
     this.loadahead = loadahead;
     this.acquireMode = acquireMode;
+    this.canSkipRemaining = canSkipRemaining;
 
     for (final PhysicalInputSlice slice : slices) {
       loadableSegments.addAll(slice.getLoadableSegments());
@@ -199,6 +208,10 @@ public class ReadableInputQueue implements Closeable
   {
     if (!started.get()) {
       throw DruidException.defensive("Not started, must call start() first");
+    }
+
+    if (canSkipRemaining.getAsBoolean()) {
+      return null;
     }
 
     ListenableFuture<ReadableInput> future;
@@ -303,11 +316,15 @@ public class ReadableInputQueue implements Closeable
 
   /**
    * Load the next segment from {@link #loadableSegments} and return a future to its reference. Returns null
-   * if {@link #loadableSegments} is empty.
+   * if {@link #loadableSegments} is empty, or if {@link #canSkipRemaining} is true.
    */
   @Nullable
   private ListenableFuture<ReadableInput> loadNextSegment()
   {
+    if (canSkipRemaining.getAsBoolean()) {
+      return null;
+    }
+
     synchronized (this) {
       final LoadableSegment nextLoadableSegment = loadableSegments.poll();
       if (nextLoadableSegment == null) {

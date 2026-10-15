@@ -45,7 +45,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 /**
  * Tests for {@link ReadableInputQueue}'s segment-load lifecycle: close-while-loading must promptly fail the futures
@@ -152,11 +154,21 @@ class ReadableInputQueueTest
 
   private static ReadableInputQueue makeQueue(int loadahead, LoadableSegment... segments)
   {
+    return makeQueue(loadahead, () -> false, segments);
+  }
+
+  private static ReadableInputQueue makeQueue(
+      int loadahead,
+      BooleanSupplier canSkipRemaining,
+      LoadableSegment... segments
+  )
+  {
     return new ReadableInputQueue(
         null,
         List.of(new PhysicalInputSlice(ReadablePartitions.empty(), List.of(segments), List.of())),
         loadahead,
-        AcquireMode.FULL
+        AcquireMode.FULL,
+        canSkipRemaining
     );
   }
 
@@ -406,6 +418,38 @@ class ReadableInputQueueTest
     Assertions.assertEquals(1, segment.closes.get(), "unclaimed loadahead holder must be drained on close");
     Assertions.assertEquals(0, queue.remaining(), "close must clear pending loadahead inputs");
     Assertions.assertNull(queue.nextInput(), "no inputs may be handed out after close");
+  }
+
+  @Test
+  void testCanSkipRemainingStopsHandingOutInputs()
+  {
+    final CountingSegment cachedSegment = new CountingSegment();
+    final TestLoadableSegment loadable = new TestLoadableSegment(new AcquireSegmentAction(), Optional.of(cachedSegment));
+    final AtomicBoolean canSkipRemaining = new AtomicBoolean(false);
+
+    final ReadableInputQueue queue = makeQueue(0, canSkipRemaining::get, loadable);
+    queue.start();
+    Assertions.assertEquals(1, queue.remaining());
+
+    canSkipRemaining.set(true);
+    Assertions.assertNull(queue.nextInput(), "no inputs may be handed out once remaining inputs can be skipped");
+
+    queue.close();
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be closed on close");
+  }
+
+  @Test
+  void testCanSkipRemainingStopsLoadahead()
+  {
+    final AtomicInteger cancels = new AtomicInteger();
+    final TestLoadableSegment loadable = new TestLoadableSegment(new AcquireSegmentAction(cancels::incrementAndGet));
+
+    final ReadableInputQueue queue = makeQueue(1, () -> true, loadable);
+    queue.start();
+    Assertions.assertNull(queue.nextInput());
+
+    queue.close();
+    Assertions.assertEquals(0, cancels.get(), "loadahead must not start a load once remaining inputs can be skipped");
   }
 
   @Test
