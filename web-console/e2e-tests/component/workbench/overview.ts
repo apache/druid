@@ -98,9 +98,10 @@ export class WorkbenchOverview {
   private async submit(query: string, options: QueryOptions): Promise<void> {
     await openView(this.page, 'workbench');
 
+    await this.clearOutput();
     await setQueryInput(this.page, query);
     if (options.engine) await this.pickEngine(options.engine);
-    // The view shows the result of the last query until it sends the new one (even after a reload)
+    // Matched on the query, as the view sends other SQL as it loads
     const queryRequest = this.page.waitForRequest(request => isQueryRequest(request, query), {
       timeout: QUERY_TIMEOUT,
     });
@@ -119,6 +120,18 @@ export class WorkbenchOverview {
     this.lastSubmittedQuery = { engine: context.engine, sqlQueryId: context.sqlQueryId };
   }
 
+  /**
+   * Clears the output of the last query, if there is one. The view keeps it (even after a reload), and can show it
+   * while it runs the next query (until that one shows progress or a result), so it must not be read as the next
+   * query's output.
+   */
+  private async clearOutput(): Promise<void> {
+    const clearOutput = this.page.locator('[data-tooltip="Clear output"]');
+    if (!(await clearOutput.isVisible())) return;
+    await clearOutput.click();
+    await clearOutput.waitFor({ state: 'hidden' });
+  }
+
   private async pickEngine(engine: string): Promise<void> {
     const engineButton = this.page.getByRole('button', { name: /^Engine: / });
     await engineButton.click();
@@ -135,6 +148,7 @@ export class WorkbenchOverview {
   async cancelQuery(query: string): Promise<number> {
     await openView(this.page, 'workbench');
 
+    await this.clearOutput();
     await setQueryInput(this.page, query);
 
     const queryRequest = this.page.waitForRequest(request => isQueryRequest(request, query));
