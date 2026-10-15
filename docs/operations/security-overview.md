@@ -47,7 +47,7 @@ The following recommendations apply to the network where Druid runs:
   - Restrict access from untrusted networks
   - Create an allow list of specific APIs that your users need to access
   - Implement account lockout and throttling features.
-* When possible, use firewall and other network layer filtering to only expose Druid services and ports specifically required for your use case. For example, only expose Broker ports to downstream applications that execute queries. You can limit access to a specific IP address or IP range to further tighten and enhance security.
+* When possible, use firewall and other network layer filtering to only expose Druid services and ports specifically required for your use case. For example, only expose Broker ports to downstream applications that execute queries. You can limit access to a specific IP address or IP range to further tighten and enhance security. This is especially important for the Avatica JDBC endpoint (`/druid/v2/sql/avatica/`), which authenticates within the JDBC protocol itself, so network-level restriction is the primary control for that endpoint. 
 
 The following recommendation applies to Druid's authorization and authentication model:
 * Only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the web console process. Additionally, users with `WRITE` permissions can make changes to datasources and they have access to both task and supervisor update (POST) APIs which may affect ingestion.
