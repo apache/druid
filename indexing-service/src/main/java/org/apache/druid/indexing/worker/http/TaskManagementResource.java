@@ -85,10 +85,10 @@ public class TaskManagementResource
    * Here is how, this is used.
    *
    * (1) Client sends first request /druid/internal/v1/worker?counter=-1&timeout=<timeout>
-   * Server responds with current list of running/completed tasks and metadata. And, a <counter,hash> pair.
+   * Server responds with current list of running/completed tasks and metadata. And, a {@code <counter,hash>} pair.
    *
    * (2) Client sends subsequent requests /druid/internal/v1/worker?counter=<counter>&hash=<hash>&timeout=<timeout>
-   * Where <counter,hash> values are used from the last response. Server responds with changes since then.
+   * Where {@code <counter,hash>} values are used from the last response. Server responds with changes since then.
    *
    * This endpoint makes the client wait till either there is some update or given timeout elapses.
    *

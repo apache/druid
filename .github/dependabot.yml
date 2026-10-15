@@ -27,6 +27,9 @@ updates:
       # pin Testng dependencies to 7.3.0
       - dependency-name: "org.testng"
         versions: "[7.4.0,)"
+      # skip AWS SDK v2 patch releases, which ship almost daily; minor bumps still come through
+      - dependency-name: "software.amazon.awssdk:*"
+        update-types: ["version-update:semver-patch"]
 
   # Don't run dependabot on website
   - package-ecosystem: "npm"

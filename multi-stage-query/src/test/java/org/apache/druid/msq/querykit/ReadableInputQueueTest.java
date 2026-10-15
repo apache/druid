@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.LoadableSegment;
@@ -154,6 +155,7 @@ class ReadableInputQueueTest
   {
     return new ReadableInputQueue(
         null,
+        IntList.of(0),
         List.of(new PhysicalInputSlice(ReadablePartitions.empty(), List.of(segments), List.of())),
         loadahead,
         AcquireMode.FULL
@@ -169,7 +171,7 @@ class ReadableInputQueueTest
 
     final ReadableInputQueue queue = makeQueue(0, loadable);
     queue.start();
-    final ListenableFuture<ReadableInput> future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
     Assertions.assertNotNull(future);
     Assertions.assertFalse(future.isDone());
 
@@ -193,7 +195,7 @@ class ReadableInputQueueTest
     // in flight, close() must not throw ConcurrentModificationException from a reentrant onSegmentReady, and must fail
     // every pending future rather than leaving frame processors hung.
     final int count = 4;
-    final List<ListenableFuture<ReadableInput>> futures = new ArrayList<>();
+    final List<ListenableFuture<ReadableInputQueue.NumberedReadableInput>> futures = new ArrayList<>();
     final TestLoadableSegment[] loadables = new TestLoadableSegment[count];
     for (int i = 0; i < count; i++) {
       final AcquireSegmentAction[] holder = new AcquireSegmentAction[1];
@@ -208,7 +210,7 @@ class ReadableInputQueueTest
     final ReadableInputQueue queue = makeQueue(0, loadables);
     queue.start();
     for (int i = 0; i < count; i++) {
-      final ListenableFuture<ReadableInput> future = queue.nextInput();
+      final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
       Assertions.assertNotNull(future);
       Assertions.assertFalse(future.isDone());
       futures.add(future);
@@ -217,7 +219,7 @@ class ReadableInputQueueTest
     // Must not throw ConcurrentModificationException.
     queue.close();
 
-    for (final ListenableFuture<ReadableInput> future : futures) {
+    for (final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future : futures) {
       final ExecutionException e = Assertions.assertThrows(
           ExecutionException.class,
           () -> future.get(10, TimeUnit.SECONDS)
@@ -241,7 +243,7 @@ class ReadableInputQueueTest
 
     final ReadableInputQueue queue = makeQueue(0, loadable);
     queue.start();
-    final ListenableFuture<ReadableInput> future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
     Assertions.assertNotNull(future);
 
     final ExecutionException e = Assertions.assertThrows(
@@ -266,7 +268,7 @@ class ReadableInputQueueTest
 
     final ReadableInputQueue queue = makeQueue(0, loadable);
     queue.start();
-    final ListenableFuture<ReadableInput> future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
     Assertions.assertNotNull(future);
     queue.close();
 
@@ -307,9 +309,9 @@ class ReadableInputQueueTest
 
     final ReadableInputQueue queue = makeQueue(0, loadable);
     queue.start();
-    final ListenableFuture<ReadableInput> future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
     Assertions.assertNotNull(future);
-    final ReadableInput input = future.get(10, TimeUnit.SECONDS);
+    final ReadableInput input = future.get(10, TimeUnit.SECONDS).input();
     Assertions.assertTrue(input.hasSegment());
 
     final SegmentReference ref = input.getSegment().getSegmentReferenceOnce();
@@ -333,7 +335,7 @@ class ReadableInputQueueTest
 
     final ReadableInputQueue queue = makeQueue(0, loadable);
     queue.start();
-    final ListenableFuture<ReadableInput> future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
     Assertions.assertNotNull(future);
     Assertions.assertTrue(future.isDone());
     final ExecutionException e = Assertions.assertThrows(
@@ -352,9 +354,9 @@ class ReadableInputQueueTest
 
     final ReadableInputQueue queue = makeQueue(0, loadable);
     queue.start();
-    final ListenableFuture<ReadableInput> future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
     Assertions.assertNotNull(future);
-    final ReadableInput input = future.get(10, TimeUnit.SECONDS);
+    final ReadableInput input = future.get(10, TimeUnit.SECONDS).input();
     Assertions.assertTrue(input.hasSegment());
     final SegmentReference ref = input.getSegment().getSegmentReferenceOnce();
     Assertions.assertNotNull(ref);
@@ -377,10 +379,10 @@ class ReadableInputQueueTest
 
     final ReadableInputQueue queue = makeQueue(0, loadable);
     queue.start();
-    final ListenableFuture<ReadableInput> future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
     Assertions.assertNotNull(future);
     Assertions.assertTrue(future.isDone());
-    final ReadableInput input = future.get(10, TimeUnit.SECONDS);
+    final ReadableInput input = future.get(10, TimeUnit.SECONDS).input();
     final SegmentReference ref = input.getSegment().getSegmentReferenceOnce();
     Assertions.assertNotNull(ref);
     Assertions.assertSame(cachedSegment, ref.getSegmentReference().orElseThrow());

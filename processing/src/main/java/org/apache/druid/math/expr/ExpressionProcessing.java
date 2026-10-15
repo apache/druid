@@ -29,7 +29,7 @@ public class ExpressionProcessing
 {
   /**
    * INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
-   * @see {@link ExpressionProcessingModule} for details.
+   * @see ExpressionProcessingModule for details.
    *
    * It does not take effect in all unit tests since we don't use Guice Injection. Use {@link #initializeForTests}
    * when modules are not available.

@@ -22,13 +22,18 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Set;
 
 public class FilteredDataSourceTest extends InitializedNullHandlingTest
 {
@@ -65,6 +70,27 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
   public void test_isConcrete()
   {
     Assertions.assertTrue(filteredFooDataSource.isProcessable());
+  }
+
+  @Test
+  public void test_getReservedColumns()
+  {
+    Assertions.assertEquals(Set.of("col"), filteredFooDataSource.getReservedColumns());
+    Assertions.assertEquals(Set.of(), FilteredDataSource.create(fooDataSource, null).getReservedColumns());
+
+    // Names reserved by the base are reserved too.
+    Assertions.assertEquals(
+        Set.of("col", "v0", "dim1"),
+        FilteredDataSource.create(
+            new ProjectDataSource(
+                fooDataSource,
+                VirtualColumns.create(
+                    new ExpressionVirtualColumn("v0", "dim1 + 1", ColumnType.LONG, ExprMacroTable.nil())
+                )
+            ),
+            DimFilters.dimEquals("col", "value")
+        ).getReservedColumns()
+    );
   }
 
   @Test

@@ -26,8 +26,10 @@ import org.apache.druid.java.util.common.logger.Logger;
 /**
  * Base class for broker's view of dynamic configuration fetched from the Coordinator.
  * Subclasses must implement:
- * {@link #fetchConfigFromClient()} to fetch configuration from their specific client</li>
- * {@link #getConfigTypeName()} for logging purposes</li>
+ * <ul>
+ * <li>{@link #fetchConfigFromClient()} to fetch configuration from their specific client</li>
+ * <li>{@link #getConfigTypeName()} for logging purposes</li>
+ * </ul>
  *
  * @param <DynamicConfig> the type of dynamic configuration (e.g., CoordinatorDynamicConfig, BrokerDynamicConfig)
  */

@@ -45,6 +45,7 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -53,9 +54,11 @@ import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.ProjectDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -65,7 +68,6 @@ import org.apache.druid.query.aggregation.SimpleLongAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -207,7 +209,8 @@ public class DruidQuery
       virtualColumnRegistry = VirtualColumnRegistry.create(
           sourceRowSignature,
           plannerContext.getExpressionParser(),
-          plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+          plannerContext.getPlannerConfig().isForceExpressionVirtualColumns(),
+          dataSource.getReservedColumns()
       );
     }
 
@@ -810,22 +813,8 @@ public class DruidQuery
     return VirtualColumns.create(columns);
   }
 
-  public static List<DimFilter> getAllFiltersUnderDataSource(DataSource d, List<DimFilter> dimFilterList)
-  {
-    if (d instanceof FilteredDataSource) {
-      DimFilter filter = ((FilteredDataSource) d).getFilter();
-      if (filter != null) {
-        dimFilterList.add(filter);
-      }
-    }
-    for (DataSource ds : d.getChildren()) {
-      dimFilterList.addAll(getAllFiltersUnderDataSource(ds, dimFilterList));
-    }
-    return dimFilterList;
-  }
-
   /**
-   * Returns a pair of DataSource and Filtration object created on the query filter. In case the, data source is
+   * Returns a pair of DataSource and Filtration object created on the query filter. In case the data source is
    * a join datasource, the datasource may be altered and left filter of join datasource may
    * be rid of time filters.
    */
@@ -837,69 +826,63 @@ public class DruidQuery
       JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
-    if (dataSource instanceof UnnestDataSource) {
-      // UnnestDataSource can have another unnest data source
-      // join datasource, filtered data source, etc as base
-      Pair<DataSource, Filtration> pair = getFiltration(
-          ((UnnestDataSource) dataSource).getBase(),
-          filter,
-          virtualColumnRegistry,
-          joinableFactoryWrapper
-      );
-      return Pair.of(dataSource, pair.rhs);
-    } else if (!canUseIntervalFiltering(dataSource)) {
-      return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), false));
-    } else if (dataSource instanceof FilteredDataSource) {
-      // A filteredDS is created only inside the rel for Unnest, ensuring it only grabs the outermost filter
-      // and, if possible, pushes it down inside the data source.
-      // So a chain of Filter->Unnest->Filter is typically impossible when the query is done through SQL.
-      // Also, Calcite has filter reduction rules that push filters deep into base data sources for better query planning.
-      // A base table with a chain of filters is synonymous with a filteredDS.
-      // We recursively find all filters under a filteredDS and then
-      // 1) creating a filtration from the filteredDS's filters and
-      // 2) Updating the interval of the outer filter with the intervals in step 1, and you'll see these 2 calls in the code
-      List<DimFilter> dimFilterList = getAllFiltersUnderDataSource(dataSource, new ArrayList<>());
-      final FilteredDataSource filteredDataSource = (FilteredDataSource) dataSource;
-      // Defensive check as in the base of a filter cannot be another filter
-      final DataSource baseOfFilterDataSource = filteredDataSource.getBase();
-      if (baseOfFilterDataSource instanceof FilteredDataSource) {
-        throw DruidException.defensive("Cannot create a filteredDataSource using another filteredDataSource as a base");
-      }
-      final boolean useIntervalFiltering = canUseIntervalFiltering(filteredDataSource);
-      final Filtration baseFiltration = toFiltration(
-          DimFilters.conjunction(dimFilterList),
-          virtualColumnRegistry.getFullRowSignature(),
-          useIntervalFiltering
-      );
-      // Adds the intervals from the filter of filtered data source to query filtration
-      final Filtration queryFiltration = Filtration.create(filter, baseFiltration.getIntervals())
-                                                   .optimize(virtualColumnRegistry.getFullRowSignature());
-      return Pair.of(filteredDataSource, queryFiltration);
-    } else if (dataSource instanceof JoinDataSource && ((JoinDataSource) dataSource).getLeftFilter() != null) {
-      final JoinDataSource joinDataSource = (JoinDataSource) dataSource;
+    final RowSignature rowSignature = virtualColumnRegistry.getFullRowSignature();
 
-      // If the join is left or inner, we can pull the intervals up to the query. This is done
-      // so that broker can prune the segments to query.
-      final Filtration leftFiltration = Filtration.create(joinDataSource.getLeftFilter())
-                                                  .optimize(virtualColumnRegistry.getFullRowSignature());
+    if (!canUseIntervalFiltering(dataSource)) {
+      return Pair.of(dataSource, Filtration.create(filter).optimizeFilterOnly(rowSignature));
+    }
 
-      // Adds the intervals from the join left filter to query filtration
-      final Filtration queryFiltration = Filtration.create(filter, leftFiltration.getIntervals())
-                                                   .optimize(virtualColumnRegistry.getFullRowSignature());
+    // Time filters within the datasource narrow the query intervals too, which lets the broker prune segments.
+    final Filtration queryFiltration =
+        Filtration.create(filter, getBaseIntervals(dataSource, rowSignature)).optimize(rowSignature);
 
+    if (dataSource instanceof JoinDataSource join && join.getLeftFilter() != null) {
+      // Strip the time filters from the left filter, since the query intervals now carry them.
       final JoinDataSource newDataSource = JoinDataSource.create(
-          joinDataSource.getLeft(),
-          joinDataSource.getRight(),
-          joinDataSource.getRightPrefix(),
-          joinDataSource.getConditionAnalysis(),
-          joinDataSource.getJoinType(),
-          leftFiltration.getDimFilter(),
+          join.getLeft(),
+          join.getRight(),
+          join.getRightPrefix(),
+          join.getConditionAnalysis(),
+          join.getJoinType(),
+          Filtration.create(join.getLeftFilter()).optimize(rowSignature).getDimFilter(),
           joinableFactoryWrapper,
-          joinDataSource.getJoinAlgorithm()
+          join.getJoinAlgorithm()
       );
       return Pair.of(newDataSource, queryFiltration);
     } else {
-      return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), true));
+      return Pair.of(dataSource, queryFiltration);
+    }
+  }
+
+  /**
+   * Returns the intervals that time filters within the given datasource restrict its {@code __time} to, or eternity
+   * if there are none. Filters along a single path are intersected, and the arms of a union are combined. Relies on
+   * every layer passing {@code __time} through unchanged, as the datasources we plan do.
+   */
+  private static List<Interval> getBaseIntervals(final DataSource dataSource, final RowSignature rowSignature)
+  {
+    if (dataSource instanceof FilteredDataSource filtered) {
+      // Filtration intersects the filter's time bounds with the intervals it is created with.
+      return Filtration.create(filtered.getFilter(), getBaseIntervals(filtered.getBase(), rowSignature))
+                       .optimize(rowSignature)
+                       .getIntervals();
+    } else if (dataSource instanceof JoinDataSource join) {
+      // Right-hand columns are prefixed, so __time is the left-hand side's.
+      return Filtration.create(join.getLeftFilter(), getBaseIntervals(join.getLeft(), rowSignature))
+                       .optimize(rowSignature)
+                       .getIntervals();
+    } else if (dataSource instanceof UnionDataSource) {
+      final List<Interval> intervals = new ArrayList<>();
+      for (final DataSource arm : dataSource.getChildren()) {
+        intervals.addAll(getBaseIntervals(arm, rowSignature));
+      }
+      return JodaUtils.condenseIntervals(intervals);
+    } else if (dataSource instanceof UnnestDataSource unnest) {
+      return getBaseIntervals(unnest.getBase(), rowSignature);
+    } else if (dataSource instanceof ProjectDataSource project) {
+      return getBaseIntervals(project.getBase(), rowSignature);
+    } else {
+      return Intervals.ONLY_ETERNITY;
     }
   }
 
@@ -911,21 +894,6 @@ public class DruidQuery
   {
     ExecutionVertex ev = ExecutionVertex.ofDataSource(dataSource);
     return ev.isTableBased();
-  }
-
-  private static Filtration toFiltration(
-      final DimFilter filter,
-      final RowSignature rowSignature,
-      final boolean useIntervals
-  )
-  {
-    final Filtration filtration = Filtration.create(filter);
-
-    if (useIntervals) {
-      return filtration.optimize(rowSignature);
-    } else {
-      return filtration.optimizeFilterOnly(rowSignature);
-    }
   }
 
   /**
@@ -979,6 +947,14 @@ public class DruidQuery
   public DataSource getDataSource()
   {
     return dataSource;
+  }
+
+  /**
+   * Returns the context this query was planned using.
+   */
+  public PlannerContext getPlannerContext()
+  {
+    return plannerContext;
   }
 
   @Nullable
@@ -1738,5 +1714,84 @@ public class DruidQuery
   public DimFilter getFilter()
   {
     return filter;
+  }
+
+  /**
+   * Returns the virtual columns held by this query, which must be a Scan.
+   */
+  public VirtualColumns getScanVirtualColumns()
+  {
+    if (query instanceof ScanQuery scanQuery) {
+      return scanQuery.getVirtualColumns();
+    } else {
+      throw DruidException.defensive("Expected a scan query, but got type[%s]", query.getType());
+    }
+  }
+
+  /**
+   * Wraps a datasource in a {@link FilteredDataSource} and a {@link ProjectDataSource}, so a filter and a projection
+   * can be applied without a subquery. The filter goes underneath the projection, unless it reads one of the
+   * projection's virtual columns, in which case it goes on top.
+   *
+   * @param dataSource     datasource to wrap
+   * @param rowSignature   signature of {@code dataSource}
+   * @param filter         filter to apply, or null for none
+   * @param virtualColumns virtual columns to project, or empty for none
+   */
+  public static DataSource makeFilteredProjectedDataSource(
+      final DataSource dataSource,
+      final RowSignature rowSignature,
+      @Nullable final DimFilter filter,
+      final VirtualColumns virtualColumns
+  )
+  {
+    final boolean filterOnTop = filterReadsVirtualColumns(filter, virtualColumns);
+
+    DataSource retVal = dataSource;
+
+    if (filter != null && !filterOnTop) {
+      retVal = makeFilteredDataSource(retVal, rowSignature, filter);
+    }
+
+    if (!virtualColumns.isEmpty()) {
+      retVal = new ProjectDataSource(retVal, virtualColumns);
+    }
+
+    if (filterOnTop) {
+      retVal = makeFilteredDataSource(retVal, virtualColumns.wrappedSignature(rowSignature, rowSignature), filter);
+    }
+
+    return retVal;
+  }
+
+  /**
+   * Whether the given filter reads any of the given virtual columns.
+   */
+  public static boolean filterReadsVirtualColumns(
+      @Nullable final DimFilter filter,
+      final VirtualColumns virtualColumns
+  )
+  {
+    return filter != null && filter.getRequiredColumns().stream().anyMatch(virtualColumns::exists);
+  }
+
+  /**
+   * Wraps a datasource in a {@link FilteredDataSource}. The filter is optimized, but time filters are left in place
+   * rather than being moved into query intervals, since the datasource has no intervals of its own.
+   *
+   * @param dataSource   datasource to wrap
+   * @param rowSignature signature of {@code dataSource}
+   * @param filter       filter to apply
+   */
+  public static FilteredDataSource makeFilteredDataSource(
+      final DataSource dataSource,
+      final RowSignature rowSignature,
+      final DimFilter filter
+  )
+  {
+    return FilteredDataSource.create(
+        dataSource,
+        Filtration.create(filter).optimizeFilterOnly(rowSignature).getDimFilter()
+    );
   }
 }
