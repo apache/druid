@@ -31,9 +31,13 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.util.CancelFlag;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -72,6 +76,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -138,6 +143,11 @@ public class PlannerContext
   public static final String CTX_SQL_USE_GRANULARITY = "sqlUseGranularity";
   public static final boolean DEFAULT_SQL_USE_GRANULARITY = true;
 
+  /**
+   * Context key for {@link PlannerContext#getTimeCondition()}.
+   */
+  public static final String CTX_SQL_TIME_CONDITION = "sqlTimeCondition";
+
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
@@ -179,6 +189,8 @@ public class PlannerContext
   private boolean pullUpLookup;
   private boolean reverseLookup;
   private boolean useGranularity;
+  @Nullable
+  private List<Interval> timeCondition;
   private DateTime localNow;
 
   // bindings for dynamic parameters to bind during planning
@@ -483,6 +495,16 @@ public class PlannerContext
   public boolean isUseGranularity()
   {
     return useGranularity;
+  }
+
+  /**
+   * Returns intervals that should be applied (via AND) to table reads. The returned list is sorted and
+   * non-overlapping.
+   */
+  @Nullable
+  public List<Interval> getTimeCondition()
+  {
+    return timeCondition;
   }
 
   public List<TypedValue> getParameters()
@@ -800,6 +822,8 @@ public class PlannerContext
       useGranularity = DEFAULT_SQL_USE_GRANULARITY;
     }
 
+    timeCondition = parseTimeCondition(queryContext.get(CTX_SQL_TIME_CONDITION));
+
     sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
@@ -812,6 +836,44 @@ public class PlannerContext
     } else {
       plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(queryContext);
     }
+  }
+
+  /**
+   * Parses the value of {@link #CTX_SQL_TIME_CONDITION}, which may be a comma-separated string of ISO8601 intervals
+   * or an array of ISO8601 interval strings. Returns null if the value is null. Throws an error if the string is
+   * empty or if there are empty items after splitting on commas. The returned intervals are condensed and sorted.
+   */
+  @Nullable
+  static List<Interval> parseTimeCondition(@Nullable final Object value)
+  {
+    if (value == null) {
+      return null;
+    }
+
+    final List<?> intervalStrings;
+    if (value instanceof String) {
+      intervalStrings = Arrays.asList(((String) value).split(",", -1));
+    } else if (value instanceof List) {
+      intervalStrings = (List<?>) value;
+    } else {
+      throw invalidTimeConditionException(value, null);
+    }
+
+    final List<Interval> intervals = new ArrayList<>();
+    for (final Object intervalString : intervalStrings) {
+      if (!(intervalString instanceof String)) {
+        throw invalidTimeConditionException(value, null);
+      }
+
+      try {
+        intervals.add(Intervals.of(((String) intervalString).trim()));
+      }
+      catch (DruidException e) {
+        throw invalidTimeConditionException(value, e);
+      }
+    }
+
+    return JodaUtils.condenseIntervals(intervals);
   }
 
   private static JoinAlgorithm getJoinAlgorithmFromContextValue(final Object object)
@@ -832,5 +894,16 @@ public class PlannerContext
           object
       );
     }
+  }
+
+  private static DruidException invalidTimeConditionException(final Object value, @Nullable final Throwable cause)
+  {
+    return InvalidInput.exception(
+        cause,
+        "Query context parameter [%s] must be a comma-separated string of ISO8601 intervals, or an array of "
+        + "ISO8601 interval strings, but got [%s]",
+        CTX_SQL_TIME_CONDITION,
+        value
+    );
   }
 }

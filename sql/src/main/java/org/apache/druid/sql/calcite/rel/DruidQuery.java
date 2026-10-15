@@ -817,11 +817,16 @@ public class DruidQuery
    * Returns a pair of DataSource and Filtration object created on the query filter. In case the data source is
    * a join datasource, the datasource may be altered and left filter of join datasource may
    * be rid of time filters.
+   *
+   * @param timeCondition intervals to AND with the filtration intervals if the datasource is table-based, from
+   *                      {@link PlannerContext#getTimeCondition()}. Must be sorted and non-overlapping. Null means
+   *                      no additional condition.
    */
   @VisibleForTesting
   static Pair<DataSource, Filtration> getFiltration(
       DataSource dataSource,
       DimFilter filter,
+      @Nullable List<Interval> timeCondition,
       VirtualColumnRegistry virtualColumnRegistry,
       JoinableFactoryWrapper joinableFactoryWrapper
   )
@@ -834,7 +839,7 @@ public class DruidQuery
 
     // Time filters within the datasource narrow the query intervals too, which lets the broker prune segments.
     final Filtration queryFiltration =
-        Filtration.create(filter, getBaseIntervals(dataSource, rowSignature)).optimize(rowSignature);
+        Filtration.create(filter, getBaseIntervals(dataSource, timeCondition, rowSignature)).optimize(rowSignature);
 
     if (dataSource instanceof JoinDataSource join && join.getLeftFilter() != null) {
       // Strip the time filters from the left filter, since the query intervals now carry them.
@@ -855,34 +860,42 @@ public class DruidQuery
   }
 
   /**
-   * Returns the intervals that time filters within the given datasource restrict its {@code __time} to, or eternity
-   * if there are none. Filters along a single path are intersected, and the arms of a union are combined. Relies on
-   * every layer passing {@code __time} through unchanged, as the datasources we plan do.
+   * Returns the intervals that time filters within the given datasource, and the time condition on each table it
+   * reads, restrict its {@code __time} to, or eternity if there are none. Filters along a single path are intersected,
+   * and the arms of a union are combined. Relies on every layer passing {@code __time} through unchanged, as the
+   * datasources we plan do.
+   *
+   * @param timeCondition intervals from {@link PlannerContext#getTimeCondition()}, or null for no condition
    */
-  private static List<Interval> getBaseIntervals(final DataSource dataSource, final RowSignature rowSignature)
+  private static List<Interval> getBaseIntervals(
+      final DataSource dataSource,
+      @Nullable final List<Interval> timeCondition,
+      final RowSignature rowSignature
+  )
   {
     if (dataSource instanceof FilteredDataSource filtered) {
       // Filtration intersects the filter's time bounds with the intervals it is created with.
-      return Filtration.create(filtered.getFilter(), getBaseIntervals(filtered.getBase(), rowSignature))
+      return Filtration.create(filtered.getFilter(), getBaseIntervals(filtered.getBase(), timeCondition, rowSignature))
                        .optimize(rowSignature)
                        .getIntervals();
     } else if (dataSource instanceof JoinDataSource join) {
       // Right-hand columns are prefixed, so __time is the left-hand side's.
-      return Filtration.create(join.getLeftFilter(), getBaseIntervals(join.getLeft(), rowSignature))
+      return Filtration.create(join.getLeftFilter(), getBaseIntervals(join.getLeft(), timeCondition, rowSignature))
                        .optimize(rowSignature)
                        .getIntervals();
     } else if (dataSource instanceof UnionDataSource) {
       final List<Interval> intervals = new ArrayList<>();
       for (final DataSource arm : dataSource.getChildren()) {
-        intervals.addAll(getBaseIntervals(arm, rowSignature));
+        intervals.addAll(getBaseIntervals(arm, timeCondition, rowSignature));
       }
       return JodaUtils.condenseIntervals(intervals);
     } else if (dataSource instanceof UnnestDataSource unnest) {
-      return getBaseIntervals(unnest.getBase(), rowSignature);
+      return getBaseIntervals(unnest.getBase(), timeCondition, rowSignature);
     } else if (dataSource instanceof ProjectDataSource project) {
-      return getBaseIntervals(project.getBase(), rowSignature);
+      return getBaseIntervals(project.getBase(), timeCondition, rowSignature);
     } else {
-      return Intervals.ONLY_ETERNITY;
+      // A table, since the caller only uses this for datasources where canUseIntervalFiltering is true.
+      return timeCondition != null ? timeCondition : Intervals.ONLY_ETERNITY;
     }
   }
 
@@ -1078,6 +1091,7 @@ public class DruidQuery
       final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
           dataSource,
           filter,
+          plannerContext.getTimeCondition(),
           virtualColumnRegistry,
           plannerContext.getJoinableFactoryWrapper()
       );
@@ -1202,6 +1216,7 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
+        plannerContext.getTimeCondition(),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );
@@ -1308,6 +1323,7 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
+        plannerContext.getTimeCondition(),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );
@@ -1355,6 +1371,7 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
+        plannerContext.getTimeCondition(),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );
@@ -1514,9 +1531,18 @@ public class DruidQuery
     boolean pushLeafOperator = plannerContext.queryContext()
                                              .getBoolean(PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, false)
                                && !plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR);
-    return new WindowOperatorQuery(
+
+    final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
-        new LegacySegmentSpec(Intervals.ETERNITY),
+        filter,
+        plannerContext.getTimeCondition(),
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
+    );
+
+    return new WindowOperatorQuery(
+        dataSourceFiltrationPair.lhs,
+        new LegacySegmentSpec(dataSourceFiltrationPair.rhs.getIntervals()),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
         operators,
@@ -1580,7 +1606,7 @@ public class DruidQuery
 
     return new WindowOperatorQuery(
         newDataSource,
-        new LegacySegmentSpec(Intervals.ETERNITY),
+        new LegacySegmentSpec(scan.getIntervals()),
         plannerContext.queryContextMap(),
         signature,
         operators,
@@ -1634,6 +1660,7 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
+        plannerContext.getTimeCondition(),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );

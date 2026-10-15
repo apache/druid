@@ -129,6 +129,15 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     if (!handlerContext.plannerContext().getParameters().isEmpty()) {
       throw InvalidSqlInput.exception("Dynamic parameters are not supported for [%s]", operationName());
     }
+    // Fail if CTX_SQL_TIME_CONDITION is specified, since projection bodies are planned with the statement's context,
+    // so the condition would be stored in the catalog as part of their filters.
+    if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_TIME_CONDITION) != null) {
+      throw InvalidSqlInput.exception(
+          "Context parameter [%s] cannot be provided on operator [%s]",
+          PlannerContext.CTX_SQL_TIME_CONDITION,
+          operationName()
+      );
+    }
     tableId = TableId.datasource(resolveTableName());
     final Resource resource = new Resource(tableId.name(), ResourceType.DATASOURCE);
     resourceActions = ImmutableSet.of(

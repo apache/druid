@@ -37,6 +37,7 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
+import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRels;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
@@ -243,9 +244,9 @@ public class DruidQueryGenerator
       return new VertexTweaks(JoinPosition.analyze(stack));
     }
 
-    boolean forceSubQuery(SourceDesc sourceDesc)
+    boolean forceSubQuery(PlannerContext plannerContext, SourceDesc sourceDesc)
     {
-      if (sourceDesc.dataSource.isGlobal()) {
+      if (DruidJoinQueryRel.canUseDirectlyOnRight(plannerContext, sourceDesc.dataSource)) {
         return false;
       }
       return joinType == JoinPosition.RIGHT;
@@ -513,7 +514,7 @@ public class DruidQueryGenerator
       @Override
       public boolean canUnwrapSourceDesc()
       {
-        if (tweaks.forceSubQuery(getSource())) {
+        if (tweaks.forceSubQuery(plannerContext, getSource())) {
           return false;
         }
         if (partialDruidQuery.stage() == Stage.SCAN) {

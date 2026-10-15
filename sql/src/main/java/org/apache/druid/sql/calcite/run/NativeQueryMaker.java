@@ -32,8 +32,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -52,6 +54,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.hook.DruidHook;
+import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -85,8 +88,7 @@ public class NativeQueryMaker implements QueryMaker
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      ExecutionVertex ev = ExecutionVertex.of(query);
-      if (Intervals.ONLY_ETERNITY.equals(ev.getEffectiveQuerySegmentSpec().getIntervals())) {
+      if (Intervals.ONLY_ETERNITY.equals(getBaseIntervals(query))) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
         );
@@ -265,5 +267,23 @@ public class NativeQueryMaker implements QueryMaker
     }
 
     return out;
+  }
+
+  /**
+   * Returns the effective intervals of the query that reads the base datasource, following subqueries on the
+   * left-hand side. Used for {@link PlannerConfig#isRequireTimeCondition()}.
+   */
+  private static List<Interval> getBaseIntervals(final Query<?> query)
+  {
+    final ExecutionVertex ev = ExecutionVertex.of(query);
+    if (ev.getBaseDataSource() instanceof QueryDataSource) {
+      final Query<?> subQuery = ((QueryDataSource) ev.getBaseDataSource()).getQuery();
+
+      // ExecutionVertex can only analyze BaseQuery.
+      if (subQuery instanceof BaseQuery) {
+        return getBaseIntervals(subQuery);
+      }
+    }
+    return ev.getEffectiveQuerySegmentSpec().getIntervals();
   }
 }

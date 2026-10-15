@@ -61,6 +61,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -1653,6 +1654,36 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             invalidSqlIs("Context parameter [sqlOuterLimit] cannot be provided on operator [INSERT]")
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithSqlTimeCondition()
+  {
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_TIME_CONDITION, "2000/2001");
+
+    testIngestionQuery()
+        .context(context)
+        .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            invalidSqlIs("Context parameter [sqlTimeCondition] cannot be provided on operator [INSERT]")
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithEmptySqlTimeCondition()
+  {
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_TIME_CONDITION, List.of());
+
+    testIngestionQuery()
+        .context(context)
+        .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            invalidSqlIs("Context parameter [sqlTimeCondition] cannot be provided on operator [INSERT]")
         )
         .verify();
   }
