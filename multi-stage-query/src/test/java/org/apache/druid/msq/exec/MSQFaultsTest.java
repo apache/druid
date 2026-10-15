@@ -564,7 +564,8 @@ public class MSQFaultsTest extends MSQTestBase
                 DruidException.Category.INVALID_INPUT,
                 "general"
             ).expectMessageContains(
-                "SQL requires union with input of a datasource type that is not supported."))
+                "Query requires union with an input that reads from something other than a regular table, "
+                + "which is not supported."))
         .verifyPlanningErrors();
   }
 

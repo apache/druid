@@ -1412,7 +1412,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     // lookup and a table is not plannable.
     assertQueryIsUnplannable(
         "INSERT INTO druid.dst SELECT k, v FROM lookup.lookyloo UNION SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME",
-        "SQL requires 'UNION' but only 'UNION ALL' is supported."
+        "Query requires union with an input that reads from something other than a regular table, "
+        + "which is not supported."
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.

@@ -107,22 +107,28 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
     for (final RelNode relNode : unionRel.getInputs()) {
       final DruidRel<?> druidRel = (DruidRel<?>) relNode;
       if (!DruidRels.isScanOrFilterOrProject(druidRel)) {
-        getPlannerContext().setPlanningError("SQL requires union between inputs that are not simple table scans " +
-            "and involve more than a filter or a projection");
+        getPlannerContext().setPlanningError(
+            "Query requires union with an input that does more than scan, filter, or project a table, "
+            + "which is not supported."
+        );
         throw new CannotBuildQueryException(druidRel);
       }
 
       final DruidQuery query = druidRel.toDruidQuery(false);
       final SourceDesc arm = DruidRels.makeUnionArm(query, DruidRels.dataSourceSignature(druidRel));
       if (arm == null) {
-        getPlannerContext().setPlanningError("SQL requires union with input of '%s' type that is not supported."
-                + " Union operation is only supported between regular tables. ",
-            query.getDataSource().getClass().getSimpleName());
+        getPlannerContext().setPlanningError(
+            "Query requires union with an input that reads from '%s' rather than a regular table, "
+            + "which is not supported.",
+            query.getDataSource().getClass().getSimpleName()
+        );
         throw new CannotBuildQueryException(druidRel);
       }
 
       if (arm.rowSignature.size() != unionRel.getRowType().getFieldCount()) {
-        getPlannerContext().setPlanningError("SQL requires union between inputs with the same number of columns.");
+        getPlannerContext().setPlanningError(
+            "Query requires union between inputs with different numbers of columns, which is not supported."
+        );
         throw new CannotBuildQueryException(druidRel);
       }
 

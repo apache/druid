@@ -109,9 +109,6 @@ public class DruidUnionDataSourceRule extends RelOptRule
     }
 
     if (!unionRel.all) {
-      if (null != plannerContext) {
-        plannerContext.setPlanningError("SQL requires 'UNION' but only 'UNION ALL' is supported.");
-      }
       return false;
     }
 
@@ -133,8 +130,10 @@ public class DruidUnionDataSourceRule extends RelOptRule
 
     if (!isUnion && !isTable) {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("SQL requires union with input of a datasource type that is not supported."
-            + " Union operation is only supported between regular tables. ");
+        plannerContext.setPlanningError(
+            "Query requires union with an input that reads from something other than a regular table, "
+            + "which is not supported."
+        );
       }
       return false;
     }
@@ -146,8 +145,10 @@ public class DruidUnionDataSourceRule extends RelOptRule
 
     if (!isSimple) {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("SQL requires union between inputs that are not simple table scans "
-            + "and involve more than a filter or a projection.");
+        plannerContext.setPlanningError(
+            "Query requires union with an input that does more than scan, filter, or project a table, "
+            + "which is not supported."
+        );
       }
       return false;
     }

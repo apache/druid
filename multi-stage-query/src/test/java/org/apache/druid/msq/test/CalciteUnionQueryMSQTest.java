@@ -65,7 +65,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
         "SELECT k AS c FROM lookup.lookyloo WHERE k = 'abc'\n"
         + "UNION ALL\n"
         + "SELECT dim1 AS c FROM foo WHERE dim1 = 'abc'",
-        "SQL requires union with input of a datasource type that is not supported."
+        "Query requires union with an input that reads from something other than a regular table, which is not supported."
     );
   }
 
@@ -77,7 +77,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
         "SELECT c FROM (VALUES ('x'), ('y')) AS t(c)\n"
         + "UNION ALL\n"
         + "SELECT dim1 AS c FROM foo WHERE dim1 = 'abc'",
-        "SQL requires union with input of a datasource type that is not supported."
+        "Query requires union with an input that reads from something other than a regular table, which is not supported."
     );
   }
 
