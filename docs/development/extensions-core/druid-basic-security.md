@@ -416,7 +416,7 @@ Array of LDAP group filters used to filter out the allowed set of groups returne
 
 #### ReadOnly Authorizer
 
-The ReadOnly authorizer allows all READ operations and denies all other operations (WRITE, DELETE, etc.).
+The ReadOnly authorizer allows all READ operations on ALL Druid Resources and denies all other operations (WRITE, DELETE, etc.). Please take extra care to consider if you actually intend to allow READ on ALL resources before using this authorizer. This grants READ on things like CONFIG and STATE resources which are generally not intended for low-trust users.
 
 Example configuration:
 
