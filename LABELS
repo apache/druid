@@ -2,24 +2,21 @@
 Licenses
 -----------
 
-This product bundles fonts from Font Awesome Free version 4.2.0, copyright Font Awesome,
- which is available under the SIL OFL 1.1. For details, see licenses/bin/font-awesome.silofl
-  * https://fontawesome.com/
-
-This product bundles JavaBeans Activation Framework version 1.2.0, copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/javax.activation.CDDL11
+This product bundles JavaBeans Activation Framework API version 1.2.0, copyright Oracle and/or its affiliates.,
+ which is available under the CDDL 1.1. For details, see licenses/bin/javax.activation-api.CDDL11
   * https://github.com/javaee/activation
-  * com.sun.activation:javax.activation
+  * javax.activation:javax.activation-api
 
-This product bundles Jersey version 1.19.3, copyright Oracle and/or its affiliates.,
+This product bundles Jersey version 1.19.4, copyright Oracle and/or its affiliates.,
  which is available under the CDDL 1.1. For details, see licenses/bin/jersey.CDDL11
   * https://jersey.github.io/
+  * com.sun.jersey:jersey-client
   * com.sun.jersey:jersey-core
   * com.sun.jersey:jersey-server
   * com.sun.jersey:jersey-servlet
-  * com.sun.jersey:contribs
+  * com.sun.jersey.contribs:jersey-guice
 
-This product bundles Java Servlet API version 3.1.0, copyright Oracle and/or its affiliates.,
+This product bundles Java Servlet API version 4.0.1, copyright Oracle and/or its affiliates.,
  which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
   * https://github.com/javaee/servlet-spec
   * javax.servlet:javax.servlet-api
@@ -29,43 +26,7 @@ This product bundles JSR311 API version 1.1.1, copyright Oracle and/or its affil
   * https://github.com/javaee/jsr311
   * javax.ws.rs:jsr311-api
 
-This product bundles Jersey version 1.9, copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/jersey.CDDL11
-  * https://jersey.github.io/
-  * com.sun.jersey:jersey-client
-  * com.sun.jersey:jersey-core
-
-This product bundles JavaBeans Activation Framework version 1.1, copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/javaxCDDL11
-  * https://github.com/javaee/activation
-  * javax.activation:activation
-
-This product bundles Java Servlet API version 2.5, copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
-  * https://github.com/javaee/servlet-spec
-  * javax.servlet:javax.servlet-api
-
-This product bundles stax-api version 1.0-2, copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
-  * https://github.com/javaee/
-  * javax.xml.stream:stax-api
-
-This product bundles jsp-api version 2.1, copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
-  * https://github.com/javaee/javaee-jsp-api
-  * javax.servlet.jsp:jsp-api
-
-This product bundles Jersey version 1.15, copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/jersey.CDDL11
-  * https://jersey.github.io/
-  * com.sun.jersey:jersey-client
-
-This product bundles Rhino version 1.7R5, copyright Mozilla and individual contributors.,
+This product bundles Rhino version 1.9.1, copyright Mozilla and individual contributors.,
  which is available under the Mozilla Public License Version 2.0. For details, see licenses/bin/rhino.MPL2.
-  * https://developer.mozilla.org/en-US/docs/Mozilla/Projects/Rhino
+  * https://github.com/mozilla/rhino
   * org.mozilla:rhino
-  
-This product bundles "Java Concurrency In Practice" Book Annotations, copyright Brian Goetz and Tim Peierls,
- which is available under the Creative Commons Attribution 2.5 license. For details, see licenses/bin/creative-commons-2.5.LICENSE.
-  * http://jcip.net/
-  * net.jcip:jcip-annotations
