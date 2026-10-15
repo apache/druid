@@ -72,7 +72,10 @@ import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
+import org.apache.druid.sql.calcite.rel.DruidRels;
+import org.apache.druid.sql.calcite.rel.DruidUnionDataSourceRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
+import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -584,12 +587,14 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
       return new PlannerResult(resultsSupplier, rowType);
     } else {
-      final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
-          CalciteRulesManager.DRUID_CONVENTION_RULES,
-          planner.getEmptyTraitSet()
-                 .replace(DruidConvention.instance())
-                 .plus(rootQueryRel.collation),
-          parameterized
+      final DruidRel<?> druidRel = maybeAsTopLevelUnion(
+          (DruidRel<?>) planner.transform(
+              CalciteRulesManager.DRUID_CONVENTION_RULES,
+              planner.getEmptyTraitSet()
+                     .replace(DruidConvention.instance())
+                     .plus(rootQueryRel.collation),
+              parameterized
+          )
       );
 
       handlerContext.hook().captureDruidRel(druidRel);
@@ -690,6 +695,29 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                               "Query could not be planned. A possible reason is [%s]",
                               errorMessage
                           );
+    }
+  }
+
+  /**
+   * When {@link EngineFeature#ALLOW_TOP_LEVEL_UNION_ALL} is set, this function possibly transforms top-level
+   * {@link DruidUnionDataSourceRel} into {@link DruidUnionRel} so they run as separate, sequential queries.
+   */
+  private static DruidRel<?> maybeAsTopLevelUnion(final DruidRel<?> druidRel)
+  {
+    if (!druidRel.getPlannerContext().featureAvailable(EngineFeature.ALLOW_TOP_LEVEL_UNION_ALL)) {
+      return druidRel;
+    } else if (druidRel instanceof DruidUnionRel) {
+      final List<RelNode> newInputs = new ArrayList<>();
+      for (final RelNode input : druidRel.getInputs()) {
+        newInputs.add(maybeAsTopLevelUnion((DruidRel<?>) input));
+      }
+      return (DruidRel<?>) druidRel.copy(druidRel.getTraitSet(), newInputs);
+    } else if (druidRel instanceof DruidUnionDataSourceRel
+               && druidRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SCAN
+               && !DruidRels.isUnionOfTables(druidRel.toDruidQuery(false).getDataSource())) {
+      return DruidUnionRel.create(druidRel.getPlannerContext(), druidRel.getRowType(), druidRel.getInputs(), -1);
+    } else {
+      return druidRel;
     }
   }
 

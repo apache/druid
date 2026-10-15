@@ -21,24 +21,33 @@ package org.apache.druid.msq.querykit;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.frame.processor.FrameProcessor;
+import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.segment.SegmentMapFunction;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Manager for processors created by {@link BaseLeafStageProcessor}.
@@ -48,14 +57,14 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
   private static final Logger log = new Logger(BaseLeafFrameProcessorManager.class);
 
   /**
-   * Base inputs, from {@link BaseLeafStageProcessor#makeBaseInputQueue(List, ExecutionContext)}.
+   * Base inputs, from {@link BaseLeafStageProcessor#makeBaseInputQueue(IntList, List, ExecutionContext)}.
    */
   private final ReadableInputQueue baseInputQueue;
 
   /**
-   * Segment map function for this processor, from {@link BaseLeafStageProcessor#makeSegmentMapFnProcessor}.
+   * Segment map functions, one per base input, from {@link BaseLeafStageProcessor#makeSegmentMapFnProcessor}.
    */
-  private final SegmentMapFunction segmentMapFn;
+  private final Map<Integer, SegmentMapFunction> segmentMapFns;
 
   /**
    * Frame writer factories.
@@ -90,7 +99,7 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
 
   BaseLeafFrameProcessorManager(
       ReadableInputQueue baseInputQueue,
-      SegmentMapFunction segmentMapFn,
+      List<BaseInputSegmentMapFunction> segmentMapFns,
       Queue<FrameWriterFactory> frameWriterFactoryQueue,
       Queue<WritableFrameChannel> channelQueue,
       FrameContext frameContext,
@@ -98,7 +107,12 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
   )
   {
     this.baseInputQueue = baseInputQueue;
-    this.segmentMapFn = segmentMapFn;
+    this.segmentMapFns =
+        segmentMapFns.stream()
+                     .collect(Collectors.toMap(
+                         BaseInputSegmentMapFunction::inputNumber,
+                         BaseInputSegmentMapFunction::segmentMapFn
+                     ));
     this.frameWriterFactoryQueueRef = new AtomicReference<>(frameWriterFactoryQueue);
     this.channelQueueRef = new AtomicReference<>(channelQueue);
     this.frameContext = frameContext;
@@ -115,28 +129,31 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
       baseInputQueue.start();
     }
 
-    final ListenableFuture<ReadableInput> nextInput = baseInputQueue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> nextInput = baseInputQueue.nextInput();
     if (nextInput != null) {
       return FutureUtils.transform(
           nextInput,
-          input -> Optional.of(
+          numberedInput -> Optional.of(
               new ProcessorAndCallback<>(
-                  parentFactory.makeProcessor(
-                      input,
-                      segmentMapFn,
-                      makeLazyResourceHolder(
-                          channelQueueRef,
-                          channel -> {
-                            try {
-                              channel.close();
-                            }
-                            catch (IOException e) {
-                              throw new RuntimeException(e);
-                            }
-                          }
+                  withHandoffTag(
+                      parentFactory.makeProcessor(
+                          numberedInput.input(),
+                          getSegmentMapFnForInputNumber(numberedInput.inputNumber()),
+                          makeLazyResourceHolder(
+                              channelQueueRef,
+                              channel -> {
+                                try {
+                                  channel.close();
+                                }
+                                catch (IOException e) {
+                                  throw new RuntimeException(e);
+                                }
+                              }
+                          ),
+                          makeLazyResourceHolder(frameWriterFactoryQueueRef, ignored -> {}),
+                          frameContext
                       ),
-                      makeLazyResourceHolder(frameWriterFactoryQueueRef, ignored -> {}),
-                      frameContext
+                      numberedInput.inputNumber()
                   ),
                   null
               )
@@ -178,6 +195,15 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
     baseInputQueue.close();
   }
 
+  private SegmentMapFunction getSegmentMapFnForInputNumber(final int inputNumber)
+  {
+    final SegmentMapFunction segmentMapFn = segmentMapFns.get(inputNumber);
+    if (segmentMapFn == null) {
+      throw DruidException.defensive("No segment map function for input number[%d]", inputNumber);
+    }
+    return segmentMapFn;
+  }
+
   private static <T> ResourceHolder<T> makeLazyResourceHolder(
       final AtomicReference<Queue<T>> queueRef,
       final Consumer<T> backupCloser
@@ -216,5 +242,56 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
           };
         }
     );
+  }
+
+  /**
+   * Wraps a leaf processor such that when it reports that it could not read some handed-off segments (by returning
+   * {@link SegmentsInputSlice}), those are transformed to {@link HandedOffSegments}. This allows them to be re-read
+   * with the proper {@link SegmentMapFunction} applied.
+   */
+  private static FrameProcessor<Object> withHandoffTag(final FrameProcessor<Object> processor, final int inputNumber)
+  {
+    class HandoffTaggingFrameProcessor implements FrameProcessor<Object>
+    {
+      @Override
+      public List<ReadableFrameChannel> inputChannels()
+      {
+        return processor.inputChannels();
+      }
+
+      @Override
+      public List<WritableFrameChannel> outputChannels()
+      {
+        return processor.outputChannels();
+      }
+
+      @Override
+      public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException
+      {
+        final ReturnOrAwait<Object> retVal = processor.runIncrementally(readableInputs);
+
+        if (retVal.isReturn() && retVal.value() instanceof SegmentsInputSlice slice) {
+          return ReturnOrAwait.returnObject(new HandedOffSegments(inputNumber, slice));
+        } else {
+          return retVal;
+        }
+      }
+
+      @Override
+      public void cleanup() throws IOException
+      {
+        processor.cleanup();
+      }
+    }
+
+    return new HandoffTaggingFrameProcessor();
+  }
+
+  /**
+   * Segments handed off by a realtime server while a processor was reading from it, along with the input number of
+   * the slice that server belonged to.
+   */
+  public record HandedOffSegments(int inputNumber, SegmentsInputSlice slice)
+  {
   }
 }

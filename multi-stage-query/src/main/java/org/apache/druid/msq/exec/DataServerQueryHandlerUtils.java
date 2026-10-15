@@ -34,10 +34,12 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -73,8 +75,13 @@ public class DataServerQueryHandlerUtils
   }
 
   /**
-   * Transforms {@link InputNumberDataSource} and {@link RestrictedInputNumberDataSource}, which are only understood
-   * by MSQ tasks, back into {@link TableDataSource} and {@link RestrictedDataSource} recursivly.
+   * Transforms a query into the form that should be sent down to realtime servers. Two things happen:
+   * <ul>
+   *   <li>Transform datasources that reference "inputNumber" into regular {@link TableDataSource}. If other
+   *   input numbers are encountered, throws an exception.</li>
+   *   <li>When encountering {@link UnionDataSource}, keep only the arm of the union that references "inputNumber".
+   *   If this is not exactly one arm, throws an exception.</li>
+   * </ul>
    */
   static DataSource transformDatasource(
       final DataSource dataSource,
@@ -82,8 +89,20 @@ public class DataServerQueryHandlerUtils
       final String dataSourceName
   )
   {
-    if (dataSource instanceof InputNumberDataSource) {
-      InputNumberDataSource numberDataSource = (InputNumberDataSource) dataSource;
+    if (dataSource instanceof UnionDataSource) {
+      // Mirrors how MSQ reads the segments of a union itself, one arm at a time; see ExecutionVertex#splitUnion.
+      final DataSource keepArm = CollectionUtils.getOnlyElement(
+          dataSource.getChildren().stream().filter(arm -> readsInputNumber(arm, inputNumber)).toList(),
+          xs -> DruidException.defensive(
+              "Expected exactly one arm of union[%s] to read inputNumber[%d], but got[%s]",
+              dataSource,
+              inputNumber,
+              xs
+          )
+      );
+
+      return transformDatasource(keepArm, inputNumber, dataSourceName);
+    } else if (dataSource instanceof InputNumberDataSource numberDataSource) {
       if (numberDataSource.getInputNumber() == inputNumber) {
         return new TableDataSource(dataSourceName);
       } else {
@@ -96,8 +115,7 @@ public class DataServerQueryHandlerUtils
                                 JoinAlgorithm.SORT_MERGE.toString()
                             );
       }
-    } else if (dataSource instanceof RestrictedInputNumberDataSource) {
-      RestrictedInputNumberDataSource restrictedDatasource = (RestrictedInputNumberDataSource) dataSource;
+    } else if (dataSource instanceof RestrictedInputNumberDataSource restrictedDatasource) {
       if (restrictedDatasource.getInputNumber() == inputNumber) {
         return RestrictedDataSource.create(new TableDataSource(dataSourceName), restrictedDatasource.getPolicy());
       } else {
@@ -156,5 +174,20 @@ public class DataServerQueryHandlerUtils
       return Collections.emptyList();
     }
     return missingSegments;
+  }
+
+  /**
+   * Whether the given datasource, or any of its descendants, is an {@link InputNumberDataSource} or
+   * {@link RestrictedInputNumberDataSource} for {@code inputNumber}.
+   */
+  private static boolean readsInputNumber(final DataSource dataSource, final int inputNumber)
+  {
+    if (dataSource instanceof InputNumberDataSource) {
+      return ((InputNumberDataSource) dataSource).getInputNumber() == inputNumber;
+    } else if (dataSource instanceof RestrictedInputNumberDataSource) {
+      return ((RestrictedInputNumberDataSource) dataSource).getInputNumber() == inputNumber;
+    } else {
+      return dataSource.getChildren().stream().anyMatch(child -> readsInputNumber(child, inputNumber));
+    }
   }
 }
