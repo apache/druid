@@ -79,7 +79,7 @@ public class PeonTaskHolder implements TaskHolder
    * @return a map of all task-specific dimensions applicable to this peon.
    * The task ID ({@link TaskHolder#getTaskId()}) is added to both {@link DruidMetrics#TASK_ID}
    * {@link DruidMetrics#ID} dimensions to the map for backward compatibility. {@link DruidMetrics#ID} is
-   * deprecated because it's ambiguous and can be removed in a future release.</p>
+   * deprecated because it's ambiguous and can be removed in a future release.
    */
   @Override
   public Map<String, String> getMetricDimensions()

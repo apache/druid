@@ -29,7 +29,7 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
  * given to classes (e.g. FloatColumnSelector objects) by something which keeps a reference to the base Offset object
  * and increments it.
  *
- * @see org.apache.druid.segment.vector.ReadableVectorOffset, the vectorized version.
+ * @see org.apache.druid.segment.vector.ReadableVectorOffset the vectorized version.
  */
 public interface ReadableOffset extends HotLoopCallee
 {

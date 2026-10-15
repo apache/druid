@@ -2260,7 +2260,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected abstract boolean isEndOfShard(SequenceOffsetType seqNum);
 
   /**
-   * deserializes the checkpoints into of Map<sequenceId, Map<PartitionIdType, SequenceOffsetType>>
+   * deserializes the checkpoints into of {@code Map<sequenceId, Map<PartitionIdType, SequenceOffsetType>>}
    *
    * @param toolbox           task toolbox
    * @param checkpointsString the json-serialized checkpoint string

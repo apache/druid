@@ -29,7 +29,7 @@ import java.util.Objects;
 
 /**
  * This is same as {@link org.apache.druid.query.lookup.LookupExtractorFactoryContainer } except it uses
- * Map<String, Object> instead of LookupExtractorFactory for referencing lookup spec so that lookup extensions are not
+ * {@code Map<String, Object>} instead of LookupExtractorFactory for referencing lookup spec so that lookup extensions are not
  * required to be loaded at the Coordinator.
  */
 public class LookupExtractorFactoryMapContainer

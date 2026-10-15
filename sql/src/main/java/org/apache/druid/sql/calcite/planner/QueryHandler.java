@@ -481,7 +481,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    *    DruidRel (A)
    *    DruidRel (B)
    *  DruidRel(C)
-   * </code</pre>will return {@code [DruidRel(A), DruidRel(B), DruidRel(C)]}.
+   * </code></pre>will return {@code [DruidRel(A), DruidRel(B), DruidRel(C)]}.
    *
    * @param outermostDruidRel The outermost rel which is to be flattened
    * @return a list of DruidRel's which do not have a DruidUnionRel nested in between them
