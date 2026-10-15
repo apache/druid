@@ -35,9 +35,6 @@ updates:
       # javacc-maven-plugin 3 generates a Druid SQL parser that does not compile
       - dependency-name: "org.codehaus.mojo:javacc-maven-plugin"
         update-types: ["version-update:semver-major"]
-      # Checkstyle major versions add stricter checks that need source fixes
-      - dependency-name: "com.puppycrawl.tools:checkstyle"
-        update-types: ["version-update:semver-major"]
       # Guice 7 requires migrating from javax to jakarta packages
       - dependency-name: "com.google.inject:*"
         update-types: ["version-update:semver-major"]
