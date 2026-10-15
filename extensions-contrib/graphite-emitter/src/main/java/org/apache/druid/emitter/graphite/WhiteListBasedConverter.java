@@ -201,7 +201,6 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
    * <p/>
    * The order of the dimension is the order returned by {@code getOrderedDimValues()}
    * Note that this path will be sanitized by replacing all the `.` or space by `_` {@link GraphiteEmitter#sanitize(String)}
-   * </p>
    */
 
   @Override
