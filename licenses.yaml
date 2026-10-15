@@ -486,7 +486,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.7.1-jre
+version: 33.7.2-jre
 libraries:
   - com.google.guava: guava
 
