@@ -46,6 +46,7 @@ import org.joda.time.DateTime;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -167,12 +168,22 @@ public class WorkerHolder
 
   protected void refreshAnnouncementsView()
   {
+    final ImmutableWorkerInfo view = ImmutableWorkerInfo.fromWorkerAnnouncements(
+        enabledWorker,
+        tasksSnapshotRef.get(),
+        lastCompletedTaskTime.get(),
+        blacklistedUntil.get()
+    );
     announcementsViewRef.set(
-        ImmutableWorkerInfo.fromWorkerAnnouncements(
-            enabledWorker,
-            tasksSnapshotRef.get(),
-            lastCompletedTaskTime.get(),
-            blacklistedUntil.get()
+        new ImmutableWorkerInfo(
+            view.getWorker(),
+            view.getCurrCapacityUsed(),
+            view.getCurrParallelIndexCapacityUsed(),
+            Collections.unmodifiableMap(view.getCurrCapacityUsedByTaskType()),
+            view.getAvailabilityGroups(),
+            view.getRunningTasks(),
+            view.getLastCompletedTaskTime(),
+            view.getBlacklistedUntil()
         )
     );
   }
