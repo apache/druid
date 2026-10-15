@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord.hrtr;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -41,6 +42,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -252,6 +254,38 @@ public class WorkerHolderTest
     Assertions.assertEquals(blacklistedUntil, workerHolder.toImmutable().getBlacklistedUntil());
     // Disabled until the first sync enables it
     Assertions.assertTrue(workerHolder.toImmutable().getWorker().isDisabled());
+  }
+
+  @Test
+  public void testWorkerRejoiningWithPlaceholderAnnouncements()
+  {
+    final String taskId = "task1";
+    final TaskAnnouncement placeholder = TaskAnnouncement.create(
+        taskId,
+        NoopTask.TYPE,
+        null,
+        TaskStatus.running(taskId),
+        TaskLocation.unknown(),
+        null
+    );
+    final WorkerHolder workerHolder = createWorkerHolder(new RunningTasksRecorder(), placeholder);
+
+    Assertions.assertEquals(ImmutableSet.of(taskId), workerHolder.toImmutable().getRunningTasks());
+    Assertions.assertEquals(1, workerHolder.toImmutable().getCurrCapacityUsed());
+  }
+
+  @Test
+  public void testToImmutableDoesNotExposeCachedCapacityByTaskType()
+  {
+    final Task task = NoopTask.create();
+    final WorkerHolder workerHolder = createWorkerHolder(new RunningTasksRecorder(), running(task));
+    final Map<String, Integer> capacityByTaskType = workerHolder.toImmutable().getCurrCapacityUsedByTaskType();
+
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> capacityByTaskType.put(task.getType(), 100));
+    Assertions.assertEquals(
+        ImmutableMap.of(task.getType(), 1),
+        workerHolder.toImmutable().getCurrCapacityUsedByTaskType()
+    );
   }
 
   private static WorkerHolder createWorkerHolder(WorkerHolder.Listener listener, TaskAnnouncement... knownAnnouncements)
