@@ -2387,7 +2387,6 @@
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>
                                 <exclude>NOTICE.BINARY</exclude>
-                                <exclude>LABELS</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
