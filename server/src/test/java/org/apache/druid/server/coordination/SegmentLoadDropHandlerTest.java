@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -443,6 +444,65 @@ public class SegmentLoadDropHandlerTest
     Mockito.verify(segmentManager, Mockito.times(1))
            .dropSegment(ArgumentMatchers.any());
 
+  }
+
+  /**
+   * A load finishes, and its callback resolves the waiting futures, after {@code processBatch()} has seen it as
+   * pending but before the future for the batch has been registered. The future must still be resolved right away,
+   * rather than waiting for another request to finish or for the HTTP request to time out.
+   */
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
+  public void testProcessBatchResolvesWhenLoadFinishesBeforeFutureIsRegistered() throws Exception
+  {
+    final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any()))
+           .thenAnswer(invocation -> invocation.getArgument(0));
+
+    // Holds back each submitted load until the next one is submitted, and then runs it on the submitting thread.
+    // The first load thus finishes after processBatch() has checked its status, and the second load never finishes.
+    final List<Runnable> heldLoads = new ArrayList<>();
+    final ScheduledThreadPoolExecutor normalLoadExec =
+        new ScheduledThreadPoolExecutor(1, Execs.makeThreadFactory("LoadDropHandlerTest-[%d]"))
+        {
+          @Override
+          public Future<?> submit(Runnable task)
+          {
+            if (!heldLoads.isEmpty()) {
+              heldLoads.remove(0).run();
+            }
+            heldLoads.add(task);
+            return null;
+          }
+        };
+
+    final SegmentLoadDropHandler handler = new SegmentLoadDropHandler(
+        segmentLoaderConfig,
+        segmentAnnouncer,
+        segmentManager,
+        normalLoadExec,
+        (ThreadPoolExecutor) scheduledExecutorFactory.create(5, "TurboSegmentLoadDropHandlerTest-[%d]")
+    );
+
+    final DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
+    final DataSegment segment2 = makeSegment("batchtest2", "1", Intervals.of("P1d/2011-04-01"));
+    final List<DataSegmentChangeRequest> batch = ImmutableList.of(
+        new SegmentChangeRequestLoad(segment1),
+        new SegmentChangeRequestLoad(segment2)
+    );
+
+    final ListenableFuture<List<DataSegmentChangeResponse>> future =
+        handler.processBatch(batch, SegmentLoadingMode.NORMAL);
+    Assertions.assertTrue(future.isDone());
+
+    final Map<DataSegmentChangeRequest, SegmentChangeStatus> expectedStatusMap = Map.of(
+        batch.get(0), SegmentChangeStatus.success(SegmentLoadingMode.NORMAL),
+        batch.get(1), SegmentChangeStatus.pending(SegmentLoadingMode.NORMAL)
+    );
+    for (DataSegmentChangeResponse requestAndStatus : future.get()) {
+      Assertions.assertEquals(expectedStatusMap.get(requestAndStatus.getRequest()), requestAndStatus.getStatus());
+    }
+    Assertions.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.getObservedSegments());
   }
 
   private SegmentLoadDropHandler initSegmentLoadDropHandler(SegmentManager segmentManager)
