@@ -362,14 +362,14 @@ Unlike other `sys` tables that expose cluster state, such as `servers`, this tab
 |statement_types|`ARRAY<VARCHAR>`|SQL statement types the parameter applies to: `SELECT`, `INSERT`, or `REPLACE`. An empty array means all statement types. Null if Druid SQL can't provide the parameter.|
 |since|VARCHAR|Druid version that introduced the parameter|
 |is_nullable|BIGINT|1 if the parameter accepts a null value, 0 otherwise|
-|deprecation_message|VARCHAR|Explains the deprecation and any replacement. Null if the parameter is not deprecated.|
+|deprecation|VARCHAR|Explains the deprecation and any replacement. Null if the parameter is not deprecated.|
 
 For example, to list the deprecated parameters and their replacements, use the query
 
 ```sql
-SELECT name, deprecation_message
+SELECT name, deprecation
 FROM sys.query_context_parameters
-WHERE deprecation_message IS NOT NULL
+WHERE deprecation IS NOT NULL
 ```
 
 ### QUERIES table

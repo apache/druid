@@ -99,7 +99,14 @@ public class SystemQueryContextParametersTableTest
     Assertions.assertEquals(List.of(), value(row, "native_query_types"));
     Assertions.assertEquals(List.of(), value(row, "statement_types"));
     Assertions.assertEquals("0.16.0-incubating", value(row, "since"));
-    Assertions.assertNull(value(row, "deprecation_message"));
+    Assertions.assertNull(value(row, "deprecation"));
+  }
+
+  @Test
+  public void testDeprecatedParameter()
+  {
+    final Object[] row = scan().get(QueryContextParameters.REALTIME_SEGMENTS_ONLY.getName());
+    Assertions.assertEquals("Use realtimeSegmentsMode instead.", value(row, "deprecation"));
   }
 
   @Test

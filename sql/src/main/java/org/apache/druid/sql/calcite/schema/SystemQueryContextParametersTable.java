@@ -83,7 +83,7 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
       .add("statement_types", ColumnType.STRING_ARRAY)
       .add("since", ColumnType.STRING)
       .add("is_nullable", ColumnType.LONG)
-      .add("deprecation_message", ColumnType.STRING)
+      .add("deprecation", ColumnType.STRING)
       .build();
 
   /**
