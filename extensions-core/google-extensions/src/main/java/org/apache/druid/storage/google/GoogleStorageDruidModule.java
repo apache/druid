@@ -116,7 +116,7 @@ public class GoogleStorageDruidModule implements DruidModule
   }
 
   /**
-   * Returns a GoogleStorage that lazily initialize {@link {@link Storage}}.
+   * Returns a GoogleStorage that lazily initialize {@link Storage}.
    * This is to avoid immediate config validation but defer it until you actually use the client.
    */
   @Provides
