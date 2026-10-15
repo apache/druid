@@ -128,7 +128,7 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
   protected boolean canSkipRemainingInputs()
   {
     return runningCountForLimit != null
-           && runningCountForLimit.get() >= ScanQueryFrameProcessor.getQueryOffsetPlusLimit(query);
+           && runningCountForLimit.get() >= ScanQueryFrameProcessor.getOffsetPlusLimit(query);
   }
 
   @Override

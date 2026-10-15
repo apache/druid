@@ -37,7 +37,7 @@ import java.util.Map;
 /**
  * Base class for input source definitions.
  *
- * @see {@link FormattedInputSourceDefn} for the base class for (most) input formats
+ * @see FormattedInputSourceDefn for the base class for (most) input formats
  * which take an input format.
  */
 public abstract class BaseInputSourceDefn implements InputSourceDefn

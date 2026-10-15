@@ -115,7 +115,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
    */
   private final AtomicLong sharedRunningCountForLimit;
   /**
-   * Cached result of {@link #getQueryOffsetPlusLimit(ScanQuery)}.
+   * Cached result of {@link #getOffsetPlusLimit(ScanQuery)}.
    */
   private final long queryOffsetPlusLimit;
   private final ObjectMapper jsonMapper;
@@ -172,7 +172,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     );
     this.query = query;
     this.sharedRunningCountForLimit = sharedRunningCountForLimit;
-    this.queryOffsetPlusLimit = getQueryOffsetPlusLimit(query);
+    this.queryOffsetPlusLimit = getOffsetPlusLimit(query);
     this.jsonMapper = jsonMapper;
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
 
@@ -227,14 +227,16 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
    */
   private static ScanQuery prepareScanQueryForDataServer(@NotNull ScanQuery scanQuery)
   {
+    // Add the offset to the limit, and remove the offset, when pushing down a query.
+    final Druids.ScanQueryBuilder builder = Druids.ScanQueryBuilder.copy(scanQuery).offset(0);
+
     if (Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
-      return Druids.ScanQueryBuilder.copy(scanQuery)
-                                    .orderBy(ImmutableList.of())
-                                    .limit(0)
-                                    .build();
+      builder.orderBy(ImmutableList.of()).limit(0);
     } else {
-      return scanQuery;
+      builder.limit(getOffsetPlusLimit(scanQuery));
     }
+
+    return builder.build();
   }
 
   @Override
@@ -584,7 +586,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
    * Returns the {@link ScanQuery#getScanRowsOffset()} plus {@link ScanQuery#getScanRowsLimit()}, or
    * {@link Long#MAX_VALUE} if that addition would overflow.
    */
-  static long getQueryOffsetPlusLimit(final ScanQuery query)
+  static long getOffsetPlusLimit(final ScanQuery query)
   {
     final long sum = query.getScanRowsOffset() + query.getScanRowsLimit();
     if (sum < 0) {
