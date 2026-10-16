@@ -231,9 +231,30 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       ParseExceptionHandler parseExceptionHandler
   )
   {
+    return newAppenderator(
+        toolbox,
+        getId(),
+        dataSchema,
+        tuningConfig,
+        metrics,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+  }
+
+  public static Appenderator newAppenderator(
+      TaskToolbox toolbox,
+      String taskId,
+      DataSchema dataSchema,
+      SeekableStreamIndexTaskTuningConfig tuningConfig,
+      SegmentGenerationMetrics metrics,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
     return toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
         toolbox.getSegmentLoaderConfig(),
-        getId(),
+        taskId,
         dataSchema,
         SeekableStreamAppenderatorConfig.fromTuningConfig(
             tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
@@ -269,6 +290,25 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       final SegmentGenerationMetrics metrics
   )
   {
+    return newDriver(
+        appenderator,
+        toolbox,
+        metrics,
+        dataSchema,
+        lockGranularityToUse,
+        lockTypeToUse
+    );
+  }
+
+  public static StreamAppenderatorDriver newDriver(
+      final Appenderator appenderator,
+      final TaskToolbox toolbox,
+      final SegmentGenerationMetrics metrics,
+      final DataSchema dataSchema,
+      final LockGranularity lockGranularity,
+      final TaskLockType lockType
+  )
+  {
     return new StreamAppenderatorDriver(
         appenderator,
         new ActionBasedSegmentAllocator(
@@ -283,8 +323,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                 previousSegmentId,
                 skipSegmentLineageCheck,
                 NumberedPartialShardSpec.instance(),
-                lockGranularityToUse,
-                lockTypeToUse
+                lockGranularity,
+                lockType
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),
