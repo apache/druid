@@ -19,10 +19,15 @@
 
 package org.apache.druid.msq.dart.worker;
 
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceClientFactoryImpl;
 import org.apache.druid.rpc.ServiceClosedException;
 import org.apache.druid.segment.TestHelper;
@@ -104,6 +109,100 @@ public class DartWorkerClientImplTest
     workerClient.close();
     Assertions.assertDoesNotThrow(() -> workerClient.closeClient(WORKER_ID.toString()));
     Assertions.assertThrows(DruidException.class, () -> workerClient.getClient(WORKER_ID.toString()));
+  }
+
+  @Test
+  public void test_stopWorker_cancelsActiveWorkOrder()
+  {
+    final SettableFuture<Void> workOrderFuture = SettableFuture.create();
+    final ServiceClient serviceClient = Mockito.mock(ServiceClient.class);
+    Mockito.<ListenableFuture<Void>>when(serviceClient.asyncRequest(Mockito.any(), Mockito.any()))
+           .thenReturn(workOrderFuture, Futures.immediateFuture(null));
+
+    final ServiceClientFactory clientFactory = Mockito.mock(ServiceClientFactory.class);
+    Mockito.when(clientFactory.makeClient(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(serviceClient);
+
+    final DartWorkerClientImpl client = new DartWorkerClientImpl(
+        QUERY_ID,
+        clientFactory,
+        TestHelper.makeSmileMapper(),
+        "localhost:8080"
+    );
+
+    try {
+      client.postWorkOrder(WORKER_ID.toString(), Mockito.mock(WorkOrder.class));
+      client.stopWorker(WORKER_ID.toString());
+
+      Assertions.assertTrue(workOrderFuture.isCancelled());
+    }
+    finally {
+      client.close();
+    }
+  }
+
+  @Test
+  public void test_postWorkOrder_afterStop_isCancelled()
+  {
+    final SettableFuture<Void> workOrderFuture = SettableFuture.create();
+    final ServiceClient serviceClient = Mockito.mock(ServiceClient.class);
+    Mockito.<ListenableFuture<Void>>when(serviceClient.asyncRequest(Mockito.any(), Mockito.any()))
+           .thenReturn(Futures.immediateFuture(null), workOrderFuture);
+
+    final ServiceClientFactory clientFactory = Mockito.mock(ServiceClientFactory.class);
+    Mockito.when(clientFactory.makeClient(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(serviceClient);
+
+    final DartWorkerClientImpl client = new DartWorkerClientImpl(
+        QUERY_ID,
+        clientFactory,
+        TestHelper.makeSmileMapper(),
+        "localhost:8080"
+    );
+
+    try {
+      client.stopWorker(WORKER_ID.toString());
+      final ListenableFuture<Void> returned = client.postWorkOrder(
+          WORKER_ID.toString(),
+          Mockito.mock(WorkOrder.class)
+      );
+
+      Assertions.assertTrue(returned.isCancelled());
+      Assertions.assertFalse(workOrderFuture.isCancelled());
+    }
+    finally {
+      client.close();
+    }
+  }
+
+  @Test
+  public void test_closeCancelsActiveRequests()
+  {
+    final SettableFuture<Void> finishFuture = SettableFuture.create();
+    final SettableFuture<Void> stopFuture = SettableFuture.create();
+    final ServiceClient serviceClient = Mockito.mock(ServiceClient.class);
+    Mockito.<ListenableFuture<Void>>when(serviceClient.asyncRequest(Mockito.any(), Mockito.any()))
+           .thenReturn(finishFuture, stopFuture);
+
+    final ServiceClientFactory clientFactory = Mockito.mock(ServiceClientFactory.class);
+    Mockito.when(clientFactory.makeClient(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(serviceClient);
+
+    final DartWorkerClientImpl client = new DartWorkerClientImpl(
+        QUERY_ID,
+        clientFactory,
+        TestHelper.makeSmileMapper(),
+        "localhost:8080"
+    );
+
+    try {
+      client.postFinish(WORKER_ID.toString());
+      client.stopWorker(WORKER_ID.toString());
+      client.close();
+
+      Assertions.assertTrue(finishFuture.isCancelled());
+      Assertions.assertTrue(stopFuture.isCancelled());
+    }
+    finally {
+      client.close();
+    }
   }
 
   /**
