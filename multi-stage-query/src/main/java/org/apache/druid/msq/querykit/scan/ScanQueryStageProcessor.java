@@ -29,6 +29,7 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
+import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
@@ -47,8 +48,6 @@ import java.util.concurrent.atomic.AtomicLong;
 @JsonTypeName("scan")
 public class ScanQueryStageProcessor extends BaseLeafStageProcessor
 {
-  private static final String IRRELEVANT = "irrelevant";
-
   private final ScanQuery query;
 
   /**
@@ -77,7 +76,7 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
     DimFilter newFilter = filtration.getDimFilter();
 
     ScanQuery scanQuery = Druids.newScanQueryBuilder()
-        .dataSource(IRRELEVANT)
+        .dataSource(new InputNumberDataSource(0))
         .intervals(QuerySegmentSpec.ETERNITY)
         .filters(newFilter)
         .virtualColumns(virtualColumns)

@@ -51,6 +51,7 @@ import org.apache.druid.sql.calcite.rel.logical.DruidValues;
 import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Represents a stage that reads data from input sources.
@@ -96,7 +97,8 @@ public class ReadStage extends AbstractFrameProcessorStage
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         signature,
         plannerContext.getExpressionParser(),
-        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns(),
+        Set.of()
     );
 
     DimFilter dimFilter = DruidQuery.getDimFilter(

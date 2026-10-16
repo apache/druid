@@ -26,8 +26,8 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 /**
  * This class is used in {@link ActionBasedSegmentAllocator} and expected to generate a
- * {@link TaskAction<  SegmentIdWithShardSpec  >} which is submitted to overlords to allocate a new segment.
- * The {@link #generate} method can return any implementation of {@link TaskAction<  SegmentIdWithShardSpec  >}.
+ * {@link TaskAction<SegmentIdWithShardSpec>} which is submitted to overlords to allocate a new segment.
+ * The {@link #generate} method can return any implementation of {@link TaskAction<SegmentIdWithShardSpec>}.
  *
  * @see org.apache.druid.indexing.common.actions.SegmentAllocateAction
  * @see org.apache.druid.indexing.common.actions.SurrogateAction

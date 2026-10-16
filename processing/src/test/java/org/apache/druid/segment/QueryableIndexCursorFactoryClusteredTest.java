@@ -647,6 +647,42 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
   }
 
   @Test
+  void testReportedOrderingEndsAtQueryVirtualColumn()
+  {
+    // The query's "tenant" := upper(region) is equivalent to the materialized region_upper, so it is remapped to that
+    // column and dropped from each group's spec. It still shadows the stored "tenant", so the ordering must end before
+    // it, whether one group survives or many.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    final List<OrderBy> segmentOrdering = segmentIndex.getClusteredBaseSummary().getOrdering();
+    Assertions.assertEquals("tenant", segmentOrdering.get(1).getColumnName());
+
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("tenant", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    // Single surviving group.
+    try (CursorHolder single = factory.makeCursorHolder(
+        CursorBuildSpec.builder()
+                       .setVirtualColumns(virtualColumns)
+                       .setFilter(new EqualityFilter("tenant_lower", ColumnType.STRING, "acme", null))
+                       .build()
+    )) {
+      Assertions.assertEquals(segmentOrdering.subList(0, 1), single.getOrdering());
+    }
+    // Multiple surviving groups.
+    try (CursorHolder multi = factory.makeCursorHolder(
+        CursorBuildSpec.builder().setVirtualColumns(virtualColumns).build()
+    )) {
+      Assertions.assertEquals(segmentOrdering.subList(0, 1), multi.getOrdering());
+    }
+  }
+
+  @Test
   void testFilterOnNonClusteringColumnRunsBitmapOnEverySurvivingGroup()
   {
     segmentIndex = standardTwoGroup();

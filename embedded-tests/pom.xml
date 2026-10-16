@@ -401,6 +401,7 @@
       <artifactId>simple-client-sslcontext</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
+
     </dependency>
     <!-- Pin protobuf-java-util to the version from druid-protobuf-extensions to satisfy
          the enforcer's RequireUpperBoundDeps rule (google-cloud-storage brings a lower version). -->
@@ -822,12 +823,17 @@
     <dependency>
       <groupId>com.google.auth</groupId>
       <artifactId>google-auth-library-credentials</artifactId>
-      <version>1.53.0</version>
+      <version>1.54.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.github.docker-java</groupId>
       <artifactId>docker-java-transport</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

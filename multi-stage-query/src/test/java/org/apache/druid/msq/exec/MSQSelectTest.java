@@ -50,6 +50,7 @@ import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
@@ -2908,6 +2909,54 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setQueryContext(context)
         .setExpectedResultRows(results)
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testUnionAllUsingUnionDataSourceWithFilteredArms(String contextName, Map<String, Object> context)
+  {
+    final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+
+    testSelectQuery()
+        .setSql("SELECT COUNT(*) FROM (\n"
+                + "SELECT dim1 FROM foo WHERE dim2 = 'a'\n"
+                + "UNION ALL\n"
+                + "SELECT dim1 FROM foo2 WHERE dim2 = 'en'\n"
+                + ")")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(
+                                       new UnionDataSource(
+                                           ImmutableList.of(
+                                               FilteredDataSource.create(
+                                                   new TableDataSource(CalciteTests.DATASOURCE1),
+                                                   equality("dim2", "a", ColumnType.STRING)
+                                               ),
+                                               FilteredDataSource.create(
+                                                   new TableDataSource(CalciteTests.DATASOURCE2),
+                                                   equality("dim2", "en", ColumnType.STRING)
+                                               )
+                                           )
+                                       )
+                                   )
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setGranularity(Granularities.ALL)
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{3L}))
         .verifyResults();
   }
 

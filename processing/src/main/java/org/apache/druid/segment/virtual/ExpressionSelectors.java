@@ -491,7 +491,7 @@ public class ExpressionSelectors
 
   /**
    * Wraps a {@link ColumnValueSelector<ExprEval>} and calls {@link ExprEval#value()} on the output of
-   * {@link #baseSelector#getObject()} in {@link #getObject()}.
+   * {@code baseSelector.getObject()} in {@link #getObject()}.
    */
   private static class EvalUnwrappingColumnValueSelector implements ColumnValueSelector
   {

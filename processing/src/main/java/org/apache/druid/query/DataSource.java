@@ -22,11 +22,14 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SegmentPruner;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -49,6 +52,7 @@ import java.util.stream.Collectors;
     @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable"),
     @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest"),
     @JsonSubTypes.Type(value = FilteredDataSource.class, name = "filter"),
+    @JsonSubTypes.Type(value = ProjectDataSource.class, name = "project"),
     @JsonSubTypes.Type(value = RestrictedDataSource.class, name = "restrict"),
     @JsonSubTypes.Type(value = SystemTableDataSource.class, name = "systemTable")
 })
@@ -104,20 +108,51 @@ public interface DataSource extends Cacheable
 
   /**
    * Returns a segment function on to how to segment should be modified.
+   *
+   * <p>Datasources with children must apply their children's functions to the incoming segment before doing any work
+   * of their own. {@link ExecutionVertex#splitUnionSegmentMapFunctions} relies on this.
+   *
+   * <p>Throws for {@link UnionDataSource}, since its arms read different segments. Callers that read unions should
+   * split them by arm first; see {@link ExecutionVertex#splitUnion()}.
    */
   SegmentMapFunction createSegmentMapFunction(Query query);
 
   /**
-   * Returns a {@link SegmentPruner} if this datasource embeds in any information which can be used to determine if a
-   * segment needs processed or not. Note that callers of this method will always only be processing segments for the
-   * datasource, so there is no need for a 'default' pruner that ensures the segment has the proper datasource. A return
-   * value of null indicates that no pruning can be performed from this datasource, though other sources of pruning,
-   * such as filters may still be used.
+   * Returns a {@link SegmentPruner} for the segments backing this datasource, given a filter and virtual columns
+   * that are defined on top of the datasource. Returns null if no pruning can be performed.
+   *
+   * <p>Throws for {@link UnionDataSource}, since its arms read different segments. Callers that read unions
+   * should split them by arm first; see {@link ExecutionVertex#splitUnion()}.
+   *
+   * @param filter         filter on the columns this datasource presents, or null for none
+   * @param virtualColumns virtual columns that {@code filter} may read, layered on top of the columns this datasource
+   *                       presents
    */
   @Nullable
-  default SegmentPruner createSegmentPruner()
+  default SegmentPruner createSegmentPruner(@Nullable DimFilter filter, VirtualColumns virtualColumns)
   {
     return null;
+  }
+
+  /**
+   * Returns the names of columns that are to be avoided for generated virtual columns placed on top of this
+   * datasource (such as by the SQL planner). This method is implemented by datasources with
+   * {@link SegmentMapFunction} that evaluate or populate columns as part of doing their work, in the
+   * same namespace that virtual columns on top of this datasource would be placed in.
+   *
+   * <p>For {@link UnionDataSource}, which has no {@link SegmentMapFunction} and which is split by arm
+   * before segments are mapped, this returns the reserved column names from all arms.
+   */
+  Set<String> getReservedColumns();
+
+  /**
+   * Whether reading this datasource may filter out rows from the underlying table. Returning false means this
+   * datasource definitely does not filter rows. Returning true means this datasource *may*, but does not
+   * necessarily, filter rows.
+   */
+  default boolean mayFilterRows()
+  {
+    return true;
   }
 
   /**

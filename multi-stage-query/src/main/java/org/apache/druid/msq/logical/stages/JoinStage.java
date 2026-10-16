@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Represents a stage that reads data from input sources.
@@ -155,7 +156,8 @@ public class JoinStage
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         signature,
         plannerContext.getExpressionParser(),
-        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns(),
+        Set.of()
     );
     plannerContext.setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 

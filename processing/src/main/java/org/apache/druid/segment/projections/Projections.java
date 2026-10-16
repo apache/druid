@@ -1008,7 +1008,7 @@ public class Projections
    * When the filter references none of the remapped columns, it is returned unchanged without calling
    * {@link Filter#rewriteRequiredColumns} at all as there is nothing to rewrite.
    */
-  static Filter rewriteFilterRequiredColumns(Filter filter, Map<String, String> remap)
+  public static Filter rewriteFilterRequiredColumns(Filter filter, Map<String, String> remap)
   {
     final Set<String> requiredColumns = filter.getRequiredColumns();
     if (Collections.disjoint(requiredColumns, remap.keySet())) {
