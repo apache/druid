@@ -365,7 +365,7 @@ the next compaction; declare them with `ADD PROJECTION` first to keep them.
 Sealing does not make compaction skip reading the segments entirely, though. A table that declares
 [`clusterKeys`](#table-properties) is still read, because the MSQ task engine cannot range-partition by a multi-valued
 column and only the stored data says which columns hold multiple values. Compaction fails with a clear error in that
-case; without the check it would quietly write differently-partitioned segments and then recompact the interval on
+case; without the check it would quietly write differently-partitioned segments and then re-compact the interval on
 every run, trying to reach a layout it never produces.
 
 A non-sealed [rollup table](#rollup-tables) appends metric columns not declared in the columns list as additional
