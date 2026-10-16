@@ -1764,8 +1764,10 @@ GROUP BY 1, 2`;
                   : {
                       capabilities,
                       datasource: findMap(filters.toArray(), filter =>
-                        filter.key === 'datasource' && filter.mode === '='
-                          ? filter.value
+                        filter.key === 'datasource' &&
+                        filter.mode === '=' &&
+                        filter.values.length === 1
+                          ? filter.values[0]
                           : undefined,
                       ),
                     },
