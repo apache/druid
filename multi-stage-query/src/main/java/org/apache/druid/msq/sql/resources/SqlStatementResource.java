@@ -207,7 +207,7 @@ public class SqlStatementResource
           req,
           QueryContext.builder()
                       .putAll(queryConfigProvider.getContext())
-                      .put(QueryContextParameters.RESULT_FORMAT, sqlQuery.getResultFormat())
+                      .put(QueryContextParameters.RESULT_FORMAT, sqlQuery.getResultFormat().toString())
                       .toMap()
       );
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);

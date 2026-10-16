@@ -1735,8 +1735,8 @@ public final class QueryContextParameters
           .visibility(Visibility.SYSTEM)
           .build();
 
-  public static final QueryContextParameter<Object> RESULT_FORMAT =
-      objectParameter("__resultFormat")
+  public static final QueryContextParameter<String> RESULT_FORMAT =
+      stringParameter("__resultFormat")
           .since("28.0.0").query(Query.SQL).engine(Engine.MSQ)
           .description("Result format of a query submitted through the SQL statements API. Set by Druid from the request.")
           .visibility(Visibility.SYSTEM)
