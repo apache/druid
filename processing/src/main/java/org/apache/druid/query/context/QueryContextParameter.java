@@ -199,9 +199,9 @@ public final class QueryContextParameter<T>
     }
     this.documentation = builder.documentationBuilder.build();
 
-    if (defaultValue instanceof DefaultValue.Literal<T>(T value)) {
+    if (defaultValue instanceof DefaultValue.Literal<T> literal) {
       try {
-        validate(value);
+        validate(literal.value());
       }
       catch (BadQueryContextException e) {
         // An invalid declared default is a programming error, not a bad user-supplied value.
@@ -347,7 +347,7 @@ public final class QueryContextParameter<T>
   @Nullable
   public T getLiteralDefault()
   {
-    return defaultValue instanceof DefaultValue.Literal<T>(T value) ? value : null;
+    return defaultValue instanceof DefaultValue.Literal<T> literal ? literal.value() : null;
   }
 
   public boolean isNullable()

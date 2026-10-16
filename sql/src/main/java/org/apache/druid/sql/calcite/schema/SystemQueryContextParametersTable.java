@@ -306,8 +306,8 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
   @Nullable
   private static String defaultProperty(final QueryContextParameter<?> parameter)
   {
-    return parameter.getDefaultValue() instanceof DefaultValue.FromProperty<?>(String property)
-           ? property
+    return parameter.getDefaultValue() instanceof DefaultValue.FromProperty<?> fromProperty
+           ? fromProperty.property()
            : null;
   }
 

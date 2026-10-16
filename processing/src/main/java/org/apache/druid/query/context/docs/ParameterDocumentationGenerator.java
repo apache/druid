@@ -245,21 +245,19 @@ public final class ParameterDocumentationGenerator
 
   private static String renderValueDescription(final QueryContextParameter<?> parameter)
   {
-    final StringBuilder description = new StringBuilder();
-    description.append(
-        switch (parameter.getType()) {
-          case INTEGER -> "An integer";
-          case LONG -> "A long integer";
-          case BOOLEAN -> "A Boolean";
-          case STRING -> "A string";
-          case ENUM -> parameter.getValueType().getSimpleName();
-          default -> parameter.getType().getDisplayName();
-        }
-    );
+    final String typeDescription = switch (parameter.getType()) {
+      case INTEGER -> "An integer";
+      case LONG -> "A long integer";
+      case BOOLEAN -> "A Boolean";
+      case STRING -> "A string";
+      case ENUM -> parameter.getValueType().getSimpleName();
+      default -> parameter.getType().getDisplayName();
+    };
+    final StringBuilder description = new StringBuilder(typeDescription);
 
     for (final ParameterConstraint<?> constraint : parameter.getConstraints()) {
       if (constraint instanceof Range.Constraint<?> range) {
-          description.append(" in [")
+        description.append(" in [")
                    .append(range.getLowerBound())
                    .append(", ")
                    .append(range.getUpperBound())
