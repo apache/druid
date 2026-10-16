@@ -68,7 +68,6 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> FINALIZE = booleanParameter("finalize")
       .since("0.1.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-      .defaultDescription("`N/A`")
       .description(
           """
           Flag indicating whether to "finalize" aggregation results.
@@ -86,13 +85,7 @@ public final class QueryContextParameters
           """
           Query priority.
           Queries with higher priority get precedence for computational resources.
-          """
-      )
-      .defaultDescription(
-          """
-          The default priority is one of the following: <ul><li>Value of `priority` in the query context, if
-          set</li><li>The value of the runtime property `druid.query.default.context.priority`, if set and
-          not null</li><li>`0` if the priority is not set in the query context or runtime properties</li></ul>
+          A cluster-wide default value for this query context can be specified via `druid.query.default.context.priority`.
           """
       )
       .build();
@@ -105,7 +98,6 @@ public final class QueryContextParameters
           See [Broker configuration](../configuration/index.md#broker) for more details.
           """
       )
-      .defaultDescription("`null`")
       .build();
 
   public static final QueryContextParameter<Long> TIMEOUT = longParameter("timeout")
@@ -132,7 +124,6 @@ public final class QueryContextParameters
               A cluster-wide default value for this query context can be specified via `druid.query.default.context.perSegmentTimeout`.
               """
           )
-          .defaultDescription("`null`")
           .build();
 
   public static final QueryContextParameter<Long> MAX_SCATTER_GATHER_BYTES =
@@ -442,7 +433,6 @@ public final class QueryContextParameters
               See [Router strategies](../design/router.md#router-strategies) for more details.
               """
           )
-          .defaultDescription("`null`")
           .build();
 
   public static final QueryContextParameter<Boolean> POPULATE_CACHE =
