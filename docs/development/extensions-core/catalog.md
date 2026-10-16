@@ -338,7 +338,7 @@ Not every [table property](#table-properties) drives compaction. These do:
 | `clusterKeys` | Segments are range-partitioned by the key columns, in the declared order. With the MSQ task engine, which a `baseTable` layout requires, every key column must be `VARCHAR` and hold a single value per row; compaction rejects anything else. |
 | `targetSegmentRows` | Rewritten segments are sized to this row count, the same size an `INSERT` produces. |
 | `projections` | Once the table declares any [projection](#projections), the declared set is authoritative: those are built and any others are dropped. A table that declares none keeps whatever the segments already have, unless it is sealed, in which case it is taken to have none and existing projections are dropped. |
-| `baseTable` | The table's physical layout, written in SQL as the [`__base` projection](#the-base-table). The stored column order, clustering, and computed columns are rewritten to match it, along with the declared column list it combines with. |
+| `baseTable` | The table's physical layout, written in SQL as the [`__base` projection](#the-base-table). The stored column order, clustering, query granularity, and computed columns are rewritten to match it, along with the declared column list it combines with. |
 | `sealed` | On a `__base` table, declares the catalog to be the table's complete description: columns and projections it does not declare are dropped rather than carried over, so compaction does not read the segments looking for them. See below. |
 
 Everything else a table can declare is ignored by compaction today, including `hiddenColumns` and, on a table with no

@@ -96,6 +96,7 @@ public class CompactionStatusTest
                    .build();
 
   private static final String SEALED_WIKI = TestDataSource.WIKI + "_sealed";
+  private static final String HOURLY_WIKI = TestDataSource.WIKI + "_hourly";
   private static final String UNSEALED_WIKI = TestDataSource.WIKI + "_unsealed";
   private static final String UNSEALED_PLAIN_WIKI = TestDataSource.WIKI + "_unsealed_plain";
   private static final String UNSEALED_ROLLUP_WIKI = TestDataSource.WIKI + "_unsealed_rollup";
@@ -129,6 +130,26 @@ public class CompactionStatusTest
         TableBuilder.datasource(SEALED_WIKI, "PT1H")
                     .columns(columns)
                     .baseTable(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null))
+                    .sealed(true)
+                    .buildSpec()
+    );
+    // Same layout again, with a query granularity, which a base table carries as a virtual column that floors __time.
+    CATALOG.addSpec(
+        TableId.datasource(HOURLY_WIKI),
+        TableBuilder.datasource(HOURLY_WIKI, "PT1H")
+                    .columns(columns)
+                    .baseTable(
+                        new ClusteredValueGroupsBaseTableMetadata(
+                            ImmutableList.of("tenant"),
+                            VirtualColumns.create(
+                                Granularities.toVirtualColumn(
+                                    Granularities.HOUR,
+                                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                )
+                            ),
+                            null
+                        )
+                    )
                     .sealed(true)
                     .buildSpec()
     );
@@ -679,6 +700,65 @@ public class CompactionStatusTest
 
     Assertions.assertTrue(
         CompactionStatus.compute(List.of(segment), sealed, fingerprintMapper).isComplete()
+    );
+  }
+
+  @Test
+  public void testStatusWhenCatalogBaseTableQueryGranularityChanges()
+  {
+    // A base table carries its query granularity as a virtual column, and the base table comparison deliberately
+    // strips that carrier because query granularity has a check of its own. That check compares what the config
+    // reports, so the catalog config has to report the layout's granularity or changing it goes unnoticed.
+    final DataSourceCompactionConfig hourly = catalogCompactionConfig(HOURLY_WIKI);
+    final CompactionState declared = hourly.toCompactionState();
+    final ClusteredValueGroupsBaseTableProjectionSpec daily =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .virtualColumns(
+                                                       VirtualColumns.create(
+                                                           Granularities.toVirtualColumn(
+                                                               Granularities.DAY,
+                                                               Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                                           )
+                                                       )
+                                                   )
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new StringDimensionSchema("region"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(
+            CompactionState.builder()
+                           .partitionsSpec(declared.getPartitionsSpec())
+                           .indexSpec(declared.getIndexSpec())
+                           .segmentGranularitySpec(declared.getSegmentGranularitySpec())
+                           .projections(declared.getProjections())
+                           .baseTable(daily)
+                           .build()
+        )
+        .build();
+
+    final CompactionStatus status = CompactionStatus.compute(List.of(segment), hourly, fingerprintMapper);
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertTrue(status.getReason().contains("queryGranularity"));
+  }
+
+  @Test
+  public void testStatusWhenCatalogBaseTableQueryGranularityMatches()
+  {
+    // The flip side: the declared granularity must compare equal to the one a compaction of it records, or every
+    // segment of a table with a query granularity would look permanently out of date.
+    final DataSourceCompactionConfig hourly = catalogCompactionConfig(HOURLY_WIKI);
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(hourly.toCompactionState())
+        .build();
+
+    Assertions.assertTrue(
+        CompactionStatus.compute(List.of(segment), hourly, fingerprintMapper).isComplete()
     );
   }
 

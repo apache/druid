@@ -223,14 +223,22 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     return CatalogUtils.asDruidGranularity(segmentGranularity);
   }
 
+  /**
+   * Segment granularity comes from {@link DatasourceDefn#SEGMENT_GRANULARITY_PROPERTY}, and query granularity from the
+   * {@link #getBaseTable()} layout. A table with no base table layout declares no query granularity.
+   * <p>
+   * Rollup is left null, it is instead derived from the base table layout type, which the base table check compares
+   * directly.
+   */
   @JsonIgnore
   @Nullable
   @Override
   public UserCompactionTaskGranularityConfig getGranularitySpec()
   {
+    final BaseTableProjectionSpec baseTable = getBaseTable();
     return new UserCompactionTaskGranularityConfig(
         getSegmentGranularity(),
-        null,
+        baseTable == null ? null : baseTable.getQueryGranularity(),
         null
     );
   }
