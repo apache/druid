@@ -30,7 +30,6 @@ import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.context.DefaultValue;
@@ -211,10 +210,9 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
     }
 
     final ParameterDocumentation docs = parameter.getDocumentation();
-    final Class<?> valueType = parameter.getValueType();
     return new Object[]{
         parameter.getName(),
-        typeName(valueType),
+        parameter.getType().getDisplayName(),
         valueRange(parameter),
         defaultValue(parameter),
         effectiveValue == null ? null : toJsonForm(effectiveValue),
@@ -230,27 +228,6 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
         parameter.isNullable() ? 1L : 0L,
         parameter.getDeprecationMessage()
     };
-  }
-
-  private static String typeName(final Class<?> valueType)
-  {
-    if (valueType.isEnum()) {
-      return "ENUM";
-    } else if (Boolean.class.equals(valueType)) {
-      return "BOOLEAN";
-    } else if (Integer.class.equals(valueType)) {
-      return "INTEGER";
-    } else if (Long.class.equals(valueType)) {
-      return "LONG";
-    } else if (Float.class.equals(valueType)) {
-      return "FLOAT";
-    } else if (String.class.equals(valueType)) {
-      return "STRING";
-    } else if (HumanReadableBytes.class.equals(valueType)) {
-      return "HUMAN_READABLE_NUMBER";
-    } else {
-      return "OBJECT";
-    }
   }
 
   @Nullable

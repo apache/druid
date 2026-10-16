@@ -394,7 +394,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 "maxRowsQueuedForOrdering",
-                "INTEGER",
+                "Integer",
                 "[1, 2147483647]",
                 "${druid.query.scan.maxRowsQueuedForOrdering}",
                 null,
@@ -406,7 +406,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             },
             new Object[]{
                 "vectorize",
-                "ENUM",
+                "Enum",
                 null,
                 "true",
                 "true",
@@ -459,12 +459,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 "maxRowsQueuedForOrdering",
-                "INTEGER",
+                "Integer",
                 "${druid.query.scan.maxRowsQueuedForOrdering}",
                 null,
                 "UNAUTHORIZED"
             },
-            new Object[]{"vectorize", "ENUM", "true", null, "UNAUTHORIZED"}
+            new Object[]{"vectorize", "Enum", "true", null, "UNAUTHORIZED"}
         )
     );
   }

@@ -436,4 +436,18 @@ class QueryContextParameterTest
       }
     }
   }
+
+  @Test
+  void testTypeIsInferredFromValueType()
+  {
+    assertEquals(QueryContextParameter.Type.INTEGER, QueryContextParameters.PRIORITY.getType());
+    assertEquals(QueryContextParameter.Type.ENUM, QueryContextParameters.VECTORIZE.getType());
+    assertEquals("HumanReadableNumber", QueryContextParameter.Type.HUMAN_READABLE_NUMBER.getDisplayName());
+
+    final IAE exception = assertThrows(
+        IAE.class,
+        () -> QueryContextParameter.builder("unmapped", Map.class, value -> (Map<?, ?>) value)
+    );
+    assertEquals("No query context parameter type for value type [java.util.Map]", exception.getMessage());
+  }
 }

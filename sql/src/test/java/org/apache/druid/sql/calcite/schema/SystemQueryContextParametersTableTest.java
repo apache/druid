@@ -72,7 +72,7 @@ public class SystemQueryContextParametersTableTest
         rows.keySet(),
         scan().keySet()
     );
-    Assertions.assertEquals("LONG", value(rows.get(QueryContextParameters.TIMEOUT.getName()), "type"));
+    Assertions.assertEquals("Long", value(rows.get(QueryContextParameters.TIMEOUT.getName()), "type"));
     // The effective default is hidden the same way whether it is configured, built in, or not set at all
     assertEffective(
         rows,
@@ -103,7 +103,7 @@ public class SystemQueryContextParametersTableTest
   public void testEnumParameter()
   {
     final Object[] row = scan().get(QueryContextParameters.VECTORIZE.getName());
-    Assertions.assertEquals("ENUM", value(row, "type"));
+    Assertions.assertEquals("Enum", value(row, "type"));
     Assertions.assertEquals("true", value(row, "default_value"));
     Assertions.assertEquals("PUBLIC", value(row, "visibility"));
     Assertions.assertEquals(List.of("JSON", "SQL"), value(row, "query_languages"));
@@ -126,7 +126,7 @@ public class SystemQueryContextParametersTableTest
   public void testNativeQueryTypeAndRange()
   {
     final Object[] row = scan().get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName());
-    Assertions.assertEquals("INTEGER", value(row, "type"));
+    Assertions.assertEquals("Integer", value(row, "type"));
     Assertions.assertEquals("[1, 2147483647]", value(row, "value_range"));
     // The default is the value of a runtime property
     Assertions.assertEquals("${druid.query.scan.maxRowsQueuedForOrdering}", value(row, "default_value"));

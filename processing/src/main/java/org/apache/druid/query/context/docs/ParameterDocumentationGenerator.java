@@ -246,22 +246,20 @@ public final class ParameterDocumentationGenerator
   private static String renderValueDescription(final QueryContextParameter<?> parameter)
   {
     final StringBuilder description = new StringBuilder();
-    if (Integer.class.equals(parameter.getValueType())) {
-      description.append("An integer");
-    } else if (Long.class.equals(parameter.getValueType())) {
-      description.append("A long integer");
-    } else if (Boolean.class.equals(parameter.getValueType())) {
-      description.append("A Boolean");
-    } else if (String.class.equals(parameter.getValueType())) {
-      description.append("A string");
-    } else {
-      description.append(parameter.getValueType().getSimpleName());
-    }
+    description.append(
+        switch (parameter.getType()) {
+          case INTEGER -> "An integer";
+          case LONG -> "A long integer";
+          case BOOLEAN -> "A Boolean";
+          case STRING -> "A string";
+          case ENUM -> parameter.getValueType().getSimpleName();
+          default -> parameter.getType().getDisplayName();
+        }
+    );
 
     for (final ParameterConstraint<?> constraint : parameter.getConstraints()) {
-      if (constraint instanceof Range.Constraint<?>) {
-        final Range.Constraint<?> range = (Range.Constraint<?>) constraint;
-        description.append(" in [")
+      if (constraint instanceof Range.Constraint<?> range) {
+          description.append(" in [")
                    .append(range.getLowerBound())
                    .append(", ")
                    .append(range.getUpperBound())

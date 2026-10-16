@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.context;
 
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -78,6 +79,59 @@ public final class QueryContextParameter<T>
     SYSTEM
   }
 
+  /**
+   * The value type of a parameter as users see it, such as in {@code sys.query_context_parameters}
+   */
+  public enum Type
+  {
+    BOOLEAN("Boolean", Boolean.class),
+    INTEGER("Integer", Integer.class),
+    LONG("Long", Long.class),
+    FLOAT("Float", Float.class),
+    STRING("String", String.class),
+    /**
+     * A number that also accepts a human-readable form with a unit suffix, such as {@code 10K} or {@code 256MiB}
+     */
+    HUMAN_READABLE_NUMBER("HumanReadableNumber", HumanReadableBytes.class),
+    ENUM("Enum", Enum.class),
+    /**
+     * A JSON value of any shape, such as an object
+     */
+    OBJECT("Object", Object.class);
+
+    private final String displayName;
+    private final Class<?> javaType;
+
+    Type(final String displayName, final Class<?> javaType)
+    {
+      this.displayName = displayName;
+      this.javaType = javaType;
+    }
+
+    /**
+     * Returns the name shown to users, in PascalCase, such as {@code HumanReadableNumber}
+     */
+    public String getDisplayName()
+    {
+      return displayName;
+    }
+
+    /**
+     * Returns the type of parameters whose values are of the given class
+     *
+     * @throws IAE if no type corresponds to the class
+     */
+    public static Type of(final Class<?> valueType)
+    {
+      for (final Type type : values()) {
+        if (type == ENUM ? valueType.isEnum() : type.javaType.equals(valueType)) {
+          return type;
+        }
+      }
+      throw new IAE("No query context parameter type for value type [%s]", valueType.getName());
+    }
+  }
+
   @FunctionalInterface
   public interface ValueParser<T>
   {
@@ -111,6 +165,7 @@ public final class QueryContextParameter<T>
   }
 
   private final String name;
+  private final Type type;
   private final Class<T> valueType;
   private final ValueParser<T> parser;
   private final List<ParameterConstraint<T>> constraints;
@@ -126,6 +181,7 @@ public final class QueryContextParameter<T>
   private QueryContextParameter(final Builder<T> builder)
   {
     this.name = builder.name;
+    this.type = builder.type;
     this.valueType = builder.valueType;
     this.parser = builder.parser;
     this.constraints = List.copyOf(builder.constraints);
@@ -166,6 +222,11 @@ public final class QueryContextParameter<T>
   public String getName()
   {
     return name;
+  }
+
+  public Type getType()
+  {
+    return type;
   }
 
   public Class<T> getValueType()
@@ -286,7 +347,7 @@ public final class QueryContextParameter<T>
   @Nullable
   public T getLiteralDefault()
   {
-    return defaultValue instanceof DefaultValue.Literal<T> literal ? literal.value() : null;
+    return defaultValue instanceof DefaultValue.Literal<T>(T value) ? value : null;
   }
 
   public boolean isNullable()
@@ -374,6 +435,7 @@ public final class QueryContextParameter<T>
   public static final class Builder<T>
   {
     private final String name;
+    private final Type type;
     private final Class<T> valueType;
     private final ValueParser<T> parser;
     private final List<ParameterConstraint<T>> constraints = new ArrayList<>();
@@ -393,6 +455,7 @@ public final class QueryContextParameter<T>
     {
       this.name = Objects.requireNonNull(name, "name");
       this.valueType = Objects.requireNonNull(valueType, "valueType");
+      this.type = Type.of(valueType);
       this.parser = Objects.requireNonNull(parser, "parser");
 
       if (name.isBlank() || !name.equals(name.trim())) {
