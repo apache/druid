@@ -253,6 +253,11 @@ public class KafkaEmitter implements Emitter
   public void emit(final Event event)
   {
     if (event != null) {
+      // Decide on sampling first, so sampled-out metrics skip serialization entirely.
+      if (event instanceof ServiceMetricEvent && shouldSampleOut((ServiceMetricEvent) event)) {
+        metricSampled.incrementAndGet();
+        return;
+      }
       try {
         EventMap map = event.toMap();
         map = addExtraDimensionsToEvent(map);
@@ -266,10 +271,6 @@ public class KafkaEmitter implements Emitter
 
         Set<EventType> eventTypes = config.getEventTypes();
         if (event instanceof ServiceMetricEvent) {
-          if (shouldSampleOut((ServiceMetricEvent) event)) {
-            metricSampled.incrementAndGet();
-            return;
-          }
           if (!eventTypes.contains(EventType.METRICS) || !metricQueue.offer(objectContainer)) {
             metricLost.incrementAndGet();
           } else {

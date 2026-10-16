@@ -1090,6 +1090,47 @@ public class KafkaEmitterTest
     Assertions.assertEquals(1, kafkaEmitter.getPreviousMetricSampledCount());
   }
 
+  /**
+   * Sampling is decided before the event is serialized, so a sampled-out metric never pays for serialization.
+   * A dimension that fails to serialize proves it: the sampled-out event is counted as sampled, not invalid,
+   * while an event that is kept still goes through serialization and is counted as invalid as before.
+   */
+  @Test
+  public void testSamplingHappensBeforeSerialization()
+  {
+    final KafkaEmitter kafkaEmitter = initKafkaEmitter(newSamplingConfig(0, ImmutableSet.of("query/time"), null));
+
+    kafkaEmitter.emit(
+        ServiceMetricEvent.builder()
+                          .setDimension("bad", new UnserializableValue())
+                          .setMetric("query/time", 1)
+                          .build("druid/broker", "host")
+    );
+    Assertions.assertEquals(1, kafkaEmitter.getMetricSampledCount());
+    Assertions.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+
+    kafkaEmitter.emit(
+        ServiceMetricEvent.builder()
+                          .setDimension("bad", new UnserializableValue())
+                          .setMetric("jvm/mem/used", 1)
+                          .build("druid/broker", "host")
+    );
+    Assertions.assertEquals(1, kafkaEmitter.getMetricSampledCount());
+    Assertions.assertEquals(1, kafkaEmitter.getInvalidLostCount());
+  }
+
+  /**
+   * A dimension value that Jackson cannot serialize, because its only property getter throws.
+   */
+  private static class UnserializableValue
+  {
+    @SuppressWarnings("unused")
+    public String getValue()
+    {
+      throw new IllegalStateException("not serializable");
+    }
+  }
+
   private static KafkaEmitterConfig newSamplingConfig(
       final Integer samplingRate,
       final Set<String> sampledMetrics,
