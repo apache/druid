@@ -792,13 +792,8 @@ public class PlannerContext
   private void initializeContextFieldsAndPlannerConfig()
   {
     final QueryContext context = QueryContext.of(queryContext);
-    final Object tsParam = context.get(QueryContextParameters.SQL_CURRENT_TIMESTAMP);
-    final DateTime utcNow;
-    if (tsParam != null) {
-      utcNow = new DateTime(tsParam, DateTimeZone.UTC);
-    } else {
-      utcNow = new DateTime(DateTimeZone.UTC);
-    }
+    final String tsParam = context.get(QueryContextParameters.SQL_CURRENT_TIMESTAMP);
+    final DateTime utcNow = tsParam != null ? DateTimes.of(tsParam) : DateTimes.nowUtc();
 
     final String tzParam = context.get(QueryContextParameters.SQL_TIME_ZONE);
     final DateTimeZone timeZone;

@@ -426,4 +426,19 @@ class QueryContextParameterTest
     );
     assertThrows(BadQueryContextException.class, () -> parameter.parse(1));
   }
+
+  @Test
+  void testSqlCurrentTimestamp()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameters.SQL_CURRENT_TIMESTAMP;
+    assertEquals("2000-01-01T00:00:00Z", parameter.parse("2000-01-01T00:00:00Z"));
+    // Milliseconds since the epoch are accepted as the equivalent ISO 8601 timestamp
+    assertEquals("2000-01-01T00:00:00.000Z", parameter.parse(946684800000L));
+    assertEquals(
+        "Query context parameter [sqlCurrentTimestamp] should be an ISO 8601 timestamp or milliseconds since the epoch,"
+        + " but got [yesterday]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("yesterday")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5));
+  }
 }

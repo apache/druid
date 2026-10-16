@@ -20,6 +20,7 @@
 package org.apache.druid.query.context;
 
 import com.google.common.base.Suppliers;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BadQueryContextException;
@@ -876,8 +877,10 @@ public final class QueryContextParameters
           .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
           .build();
 
-  public static final QueryContextParameter<Object> SQL_CURRENT_TIMESTAMP =
-      objectParameter("sqlCurrentTimestamp")
+  public static final QueryContextParameter<String> SQL_CURRENT_TIMESTAMP =
+      QueryContextParameter
+          .builder("sqlCurrentTimestamp", String.class, QueryContextParameters::parseSqlCurrentTimestamp)
+          .constraint(QueryContextParameters::validateSqlCurrentTimestamp)
           .since("0.10.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description(
               """
@@ -1318,11 +1321,6 @@ public final class QueryContextParameters
     );
   }
 
-  static QueryContextParameter.Builder<Object> objectParameter(final String name)
-  {
-    return QueryContextParameter.builder(name, Object.class, value -> value);
-  }
-
   private static final String MAX_SUBQUERY_BYTES_FORMAT = "'auto', 'disabled' or a non-negative number of bytes";
 
   private static String parseMaxSubqueryBytes(final Object value)
@@ -1347,6 +1345,39 @@ public final class QueryContextParameters
   /**
    * Accepts the same strings as the Broker's subquery guardrail.
    */
+  private static final String SQL_CURRENT_TIMESTAMP_FORMAT = "an ISO 8601 timestamp or milliseconds since the epoch";
+
+  /**
+   * Accepts milliseconds since the epoch, for compatibility, as the equivalent ISO 8601 timestamp
+   */
+  private static String parseSqlCurrentTimestamp(final Object value)
+  {
+    try {
+      final long millis = QueryContextParameter.exactNumber(
+          "sqlCurrentTimestamp",
+          value,
+          "long",
+          Long.MIN_VALUE,
+          Long.MAX_VALUE,
+          BigDecimal::longValueExact
+      );
+      return DateTimes.utc(millis).toString();
+    }
+    catch (BadQueryContextException e) {
+      throw invalidValueException("sqlCurrentTimestamp", SQL_CURRENT_TIMESTAMP_FORMAT, value);
+    }
+  }
+
+  private static void validateSqlCurrentTimestamp(final String name, final String value)
+  {
+    try {
+      DateTimes.of(value);
+    }
+    catch (IllegalArgumentException e) {
+      throw invalidValueException(name, SQL_CURRENT_TIMESTAMP_FORMAT, value);
+    }
+  }
+
   private static void validateMaxSubqueryBytes(final String name, final String value)
   {
     if ("auto".equalsIgnoreCase(value) || "disabled".equalsIgnoreCase(value)) {
