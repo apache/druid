@@ -2210,11 +2210,16 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValuedFilterRegexLookup()
   {
+    // RegexFilteredVirtualColumn requires a full match while the expression finds the pattern anywhere, so expressions
+    // are not specialized
     testGroupByFilteredMultiValueExpression(
         "SELECT MV_FILTER_REGEX(LOOKUP(dim3, 'lookyloo'), '^x.*'), COUNT(*) FROM druid.foo GROUP BY 1",
         VirtualColumns.create(
-            new RegexFilteredVirtualColumn("v0", DefaultDimensionSpec.of("v1"), "^x.*"),
-            expressionVirtualColumn("v1", "lookup(\"dim3\",'lookyloo')", ColumnType.STRING)
+            expressionVirtualColumn(
+                "v0",
+                "filter((x) -> regexp_like(x, '^x.*'), lookup(\"dim3\",'lookyloo'))",
+                ColumnType.STRING
+            )
         ),
         ImmutableList.of(
             new Object[]{null, 5L},
@@ -2284,6 +2289,148 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{null, 4L},
             new Object[]{"b", 2L}
         )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyNoMatchesIsNullFilter()
+  {
+    // none of the allowed values exist, so the list filtered index has an empty dictionary
+    testFilteredMultiValueResults(
+        "SELECT COUNT(*) FROM druid.foo WHERE MV_FILTER_ONLY(dim3, ARRAY['zzz']) IS NULL",
+        ImmutableList.of(new Object[]{6L})
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyNoMatchesRangeFilter()
+  {
+    testFilteredMultiValueResults(
+        "SELECT COUNT(*) FROM druid.foo WHERE MV_FILTER_ONLY(dim3, ARRAY['zzz']) >= 'a'",
+        ImmutableList.of(new Object[]{0L})
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyExpressionOnJoinColumnFilter()
+  {
+    testFilteredMultiValueResults(
+        "SELECT COUNT(*) FROM druid.foo f INNER JOIN lookup.lookyloo l ON f.dim2 = l.k "
+        + "WHERE MV_FILTER_ONLY(UPPER(l.v), ARRAY['XA']) = 'XA'",
+        ImmutableList.of(new Object[]{2L})
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyExpressionInNestedJoinCondition()
+  {
+    testVectorizableFilteredMultiValueResults(
+        "SELECT f.dim1, l.v, l2.v FROM druid.foo f "
+        + "INNER JOIN lookup.lookyloo l ON MV_FILTER_ONLY(LOWER(f.dim3), ARRAY['a']) = l.k "
+        + "INNER JOIN lookup.lookyloo l2 ON f.dim2 = l2.k",
+        ImmutableList.of(new Object[]{"", "xa", "xa"})
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyExpressionOnJoinColumnInJoinCondition()
+  {
+    testVectorizableFilteredMultiValueResults(
+        "SELECT f.dim1, l.v, l2.v FROM druid.foo f "
+        + "INNER JOIN lookup.lookyloo l ON f.dim2 = l.k "
+        + "INNER JOIN lookup.lookyloo l2 ON MV_FILTER_ONLY(SUBSTRING(l.v, 2), ARRAY['a']) = l2.k",
+        ImmutableList.of(
+            new Object[]{"", "xa", "xa"},
+            new Object[]{"1", "xa", "xa"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterRegexExpressionNotSpecialized()
+  {
+    // expressions are not specialized for MV_FILTER_REGEX, so the pattern is still found anywhere in the value and
+    // 'abc' matches
+    testFilteredMultiValueResults(
+        "SELECT MV_FILTER_REGEX(LOWER(dim2), '^a'), COUNT(*) FROM druid.foo GROUP BY 1",
+        ImmutableList.of(
+            new Object[]{null, 3L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyNvlNotSpecialized()
+  {
+    // NVL replaces nulls, so an empty row is not equivalent to a null row and the expression is not specialized
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT MV_FILTER_ONLY(NVL(dim3, 'x'), ARRAY['x']), COUNT(*) FROM druid.foo GROUP BY 1")
+        .expectedQuery(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "filter((x) -> array_contains(array('x'), x), nvl(\"dim3\",'x'))",
+                                ColumnType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, 4L},
+                new Object[]{"x", 2L}
+            )
+        )
+        .run();
+    testFilteredMultiValueResults(
+        "SELECT MV_FILTER_ONLY(NVL(dim3, 'x'), ARRAY['x', 'a']), COUNT(*) FROM (SELECT dim3 FROM druid.foo LIMIT 10) GROUP BY 1",
+        ImmutableList.of(
+            new Object[]{null, 3L},
+            new Object[]{"a", 1L},
+            new Object[]{"x", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlySpecializedInsideExpression()
+  {
+    // COALESCE applies to each value of the filtered multi-value string, the same as when filtering a column directly,
+    // so rows where everything was filtered are null instead of 'none'
+    testFilteredMultiValueResults(
+        "SELECT COALESCE(MV_FILTER_ONLY(UPPER(dim3), ARRAY['B']), 'none'), COUNT(*) FROM druid.foo GROUP BY 1",
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"B", 2L}
+        )
+    );
+    testFilteredMultiValueResults(
+        "SELECT COALESCE(MV_FILTER_ONLY(dim3, ARRAY['b']), 'none'), COUNT(*) FROM druid.foo GROUP BY 1",
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"b", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuedFilterNoneLookupTopN()
+  {
+    // topN does not count empty multi-value rows, the same as when filtering a column directly
+    testVectorizableFilteredMultiValueResults(
+        "SELECT MV_FILTER_NONE(LOOKUP(dim3, 'lookyloo'), ARRAY['xa']), COUNT(*) FROM druid.foo "
+        + "GROUP BY 1 ORDER BY 2 DESC LIMIT 2",
+        ImmutableList.of(new Object[]{null, 6L})
     );
   }
 
@@ -2837,5 +2984,16 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(expectedResults)
         .run();
+  }
+
+  private void testFilteredMultiValueResults(String sql, List<Object[]> expectedResults)
+  {
+    cannotVectorize();
+    testBuilder().sql(sql).expectedResults(expectedResults).run();
+  }
+
+  private void testVectorizableFilteredMultiValueResults(String sql, List<Object[]> expectedResults)
+  {
+    testBuilder().sql(sql).expectedResults(expectedResults).run();
   }
 }

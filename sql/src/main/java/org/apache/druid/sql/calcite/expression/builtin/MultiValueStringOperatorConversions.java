@@ -497,10 +497,16 @@ public class MultiValueStringOperatorConversions
     if (arg.isSimpleExtraction()) {
       return arg;
     }
+    // virtual columns created for join conditions are not always carried into the native query when joins are nested,
+    // so leave expressions in join conditions inline
+    if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
+      return null;
+    }
     if (arg.getType() == DruidExpression.NodeType.SPECIALIZED || !ColumnType.STRING.equals(arg.getDruidType())) {
       return null;
     }
-    final Expr.BindingAnalysis bindingAnalysis = plannerContext.parseExpression(arg.getExpression()).analyzeInputs();
+    final Expr expr = plannerContext.parseExpression(arg.getExpression());
+    final Expr.BindingAnalysis bindingAnalysis = expr.analyzeInputs();
     if (bindingAnalysis.getRequiredBindings().size() != 1
         || bindingAnalysis.hasInputArrays()
         || bindingAnalysis.isOutputArray()) {
@@ -508,6 +514,13 @@ public class MultiValueStringOperatorConversions
     }
     final String inputColumn = Iterables.getOnlyElement(bindingAnalysis.getRequiredBindings());
     if (!rowSignature.getColumnType(inputColumn).map(ColumnType.STRING::equals).orElse(false)) {
+      return null;
+    }
+    // a plain expression evaluates an empty multi-value row as if it were null, while the dictionary backed selector of
+    // an expression virtual column evaluates the expression once for each value in a row, so an empty row produces no
+    // values at all. These are only equivalent if the expression produces null for a null input, so don't lift
+    // expressions like NVL or COALESCE which replace null values
+    if (expr.eval(InputBindings.nilBindings()).value() != null) {
       return null;
     }
     return arg.asSpecialized();
@@ -561,16 +574,21 @@ public class MultiValueStringOperatorConversions
       }
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "filter((x) -> regexp_like(x, " + DruidExpression.stringLiteral(pattern) + "), " + args.get(0).getExpression() + ")";
-      final DruidExpression druidExpression = toFilteredVirtualColumnExpression(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          druidExpressions,
-          builder,
-          (name, delegate) -> new RegexFilteredVirtualColumn(name, delegate, pattern)
-      );
-      if (druidExpression != null) {
-        return druidExpression;
+      // RegexFilteredVirtualColumn requires the entire value to match the pattern, while regexp_like matches if the
+      // pattern is found anywhere in the value, so only use the virtual column for simple extractions, which were
+      // already planned this way, and leave other expressions as plain expressions to not change their results
+      if (druidExpressions.get(0).isSimpleExtraction()) {
+        final DruidExpression druidExpression = toFilteredVirtualColumnExpression(
+            plannerContext,
+            rowSignature,
+            rexNode,
+            druidExpressions,
+            builder,
+            (name, delegate) -> new RegexFilteredVirtualColumn(name, delegate, pattern)
+        );
+        if (druidExpression != null) {
+          return druidExpression;
+        }
       }
 
       return DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
