@@ -113,7 +113,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           <span
             class="counter"
           >
-            (10/10)
+            (11/11)
           </span>
         </span>
         <span
