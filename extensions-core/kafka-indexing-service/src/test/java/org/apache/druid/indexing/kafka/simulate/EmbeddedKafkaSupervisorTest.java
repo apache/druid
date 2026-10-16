@@ -121,7 +121,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec spec = newKafkaSupervisor()
         .withIoConfig(io -> io.withPartitionIds(Set.of(1)).withTaskCount(2).withStopTaskCount(1))
         .build(dataSource, topic);
-    cluster.callApi().postSupervisor(spec);
+    submitSupervisor(spec);
 
     // One record per partition, but only partition 1 is selected.
     kafkaServer.produceRecordsToTopic(partitionRecords(topic, 4));
@@ -134,12 +134,11 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec expanded = newKafkaSupervisor()
         .withIoConfig(io -> io.withPartitionIds(Set.of(1, 3)).withTaskCount(2).withStopTaskCount(1))
         .build(dataSource, topic);
-    cluster.callApi().postSupervisor(expanded);
+    submitSupervisor(expanded);
     waitForSelectedRows(dataSource, 2);
 
     Assertions.assertEquals("2", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
     Assertions.assertEquals("0", cluster.runSql("SELECT COUNT(*) FROM %s WHERE item = 'p2'", dataSource));
-    cluster.callApi().postSupervisor(expanded.createSuspendedSpec());
   }
 
   private static List<ProducerRecord<byte[], byte[]>> partitionRecords(String topic, int partitions)
@@ -156,12 +155,17 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     return records;
   }
 
+  /**
+   * Waits for {@code count} segments, one per row with maxRowsPerSegment = 1, to be handed off and queryable through
+   * the Broker. Handoff follows publish, which commits the offsets a replacement supervisor resumes from.
+   */
   private void waitForSelectedRows(String source, int count)
   {
     indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/events/processed").hasDimension(DruidMetrics.DATASOURCE, source),
+        event -> event.hasMetricName("ingest/handoff/count").hasDimension(DruidMetrics.DATASOURCE, source),
         agg -> agg.hasSumAtLeast(count)
     );
+    cluster.callApi().waitForAllSegmentsToBeQueryable(source, coordinator, 30_000L);
   }
 
   @Test
