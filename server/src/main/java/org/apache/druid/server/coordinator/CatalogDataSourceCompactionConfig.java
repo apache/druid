@@ -235,6 +235,14 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     );
   }
 
+  /**
+   * The projections declared by the catalog table's {@link DatasourceDefn#PROJECTIONS_KEYS_PROPERTY}.
+   * <p>
+   * A sealed table is the complete description of the datasource, so a table that declares no projections is taken to
+   * have none: the property's absence becomes an empty list, which compaction treats as a declaration like any other
+   * and so drops whatever projections the segments still carry. An unsealed table says nothing about the projections
+   * it does not declare, so the absent property stays null and compaction leaves them alone.
+   */
   @JsonIgnore
   @Nullable
   @Override
@@ -246,7 +254,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     }
     List<DatasourceProjectionMetadata> projections = table.decodeProperty(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
     if (projections == null) {
-      return null;
+      return isSealed(table) ? List.of() : null;
     }
     return projections.stream().map(DatasourceProjectionMetadata::getSpec).collect(Collectors.toList());
   }
@@ -282,7 +290,11 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
   @Override
   public boolean isSealed()
   {
-    final ResolvedTable table = catalog.resolveTable(tableId);
+    return isSealed(catalog.resolveTable(tableId));
+  }
+
+  private static boolean isSealed(@Nullable ResolvedTable table)
+  {
     if (table == null) {
       return true;
     }

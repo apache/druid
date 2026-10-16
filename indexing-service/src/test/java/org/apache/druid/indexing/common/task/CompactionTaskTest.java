@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -38,6 +39,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
+import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -84,6 +87,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -92,6 +96,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -104,6 +109,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -121,6 +127,7 @@ import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -141,6 +148,7 @@ import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
@@ -162,6 +170,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.annotation.Nonnull;
@@ -883,6 +893,55 @@ public class CompactionTaskTest
         dataSchema.getDimensionsSpec().getDimensionNames()
     );
     Assertions.assertEquals(TENANT_BASE_TABLE, dataSchema.getBaseTable());
+  }
+
+  @Test
+  public void testAnalyzerAccumulatesProjectionsAcrossSegments()
+  {
+    // Two segments defining different projections. Taking either segment's set wholesale would silently drop the
+    // other's, so compaction would rewrite the data without a projection it had before.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.<Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>>>of(
+            segmentWithProjections(Intervals.of("2017-02-01/2017-03-01"), "newer_only"),
+            segmentWithProjections(Intervals.of("2017-01-01/2017-02-01"), "older_only")
+        ),
+        false,
+        false,
+        true,
+        false,
+        true,
+        false
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    Assertions.assertEquals(
+        ImmutableSet.of("newer_only", "older_only"),
+        analyzer.getProjections().stream().map(AggregateProjectionSpec::getName).collect(Collectors.toSet())
+    );
+  }
+
+  @Test
+  public void testAnalyzerPrefersTheNewestDefinitionOfAProjection()
+  {
+    // Same name in both; the newer segment is visited first and its definition is the one kept, matching how a
+    // dimension's schema is resolved across segments.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.<Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>>>of(
+            segmentWithProjections(Intervals.of("2017-02-01/2017-03-01"), "shared"),
+            segmentWithProjections(Intervals.of("2017-01-01/2017-02-01"), "shared")
+        ),
+        false,
+        false,
+        true,
+        false,
+        true,
+        false
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    final List<AggregateProjectionSpec> projections = analyzer.getProjections();
+    Assertions.assertEquals(1, projections.size());
+    Assertions.assertEquals("shared", projections.get(0).getName());
   }
 
   @Test
@@ -2489,6 +2548,57 @@ public class CompactionTaskTest
         .shardSpec(new NumberedShardSpec(partitionNum, 0))
         .size(100)
         .build();
+  }
+
+  /**
+   * A segment whose index reports the given projections and nothing else, so only projection analysis does any work.
+   */
+  private static Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>> segmentWithProjections(
+      Interval interval,
+      String... projectionNames
+  )
+  {
+    final List<AggregateProjectionMetadata> projectionMetadata = new ArrayList<>();
+    for (String projectionName : projectionNames) {
+      projectionMetadata.add(
+          new AggregateProjectionMetadata(
+              new AggregateProjectionSchema(
+                  projectionName,
+                  null,
+                  null,
+                  null,
+                  ImmutableList.of("string_dim_0"),
+                  new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+                  ImmutableList.of(OrderBy.ascending("string_dim_0"))
+              ),
+              1
+          )
+      );
+    }
+
+    final ColumnFormat columnFormat = Mockito.mock(ColumnFormat.class);
+    Mockito.lenient().when(columnFormat.getColumnSchema(ArgumentMatchers.anyString()))
+           .thenAnswer(invocation -> new StringDimensionSchema(invocation.getArgument(0)));
+    final BaseColumnHolder columnHolder = Mockito.mock(BaseColumnHolder.class);
+    Mockito.lenient().when(columnHolder.getColumnFormat()).thenReturn(columnFormat);
+
+    final QueryableIndex projectionIndex = Mockito.mock(QueryableIndex.class);
+    Mockito.lenient().when(projectionIndex.getColumnHolder(ArgumentMatchers.anyString())).thenReturn(columnHolder);
+
+    final QueryableIndex index = Mockito.mock(QueryableIndex.class);
+    Mockito.lenient().when(index.getMetadata())
+           .thenReturn(new Metadata(null, null, null, null, null, null, projectionMetadata, null));
+    Mockito.lenient().when(index.getOrdering()).thenReturn(ImmutableList.of());
+    Mockito.lenient().when(index.getAvailableDimensions()).thenReturn(new ListIndexed<>());
+    Mockito.lenient().when(index.getProjectionQueryableIndex(ArgumentMatchers.anyString())).thenReturn(projectionIndex);
+
+    final DataSegment segment = DataSegment.builder()
+                                           .dataSource(DATA_SOURCE)
+                                           .interval(interval)
+                                           .version("version")
+                                           .size(SEGMENT_SIZE_BYTES)
+                                           .build();
+    return Pair.of(segment, () -> new ReferenceCountingResourceHolder<>(index, () -> {}));
   }
 
   private static class TestTaskActionClient implements TaskActionClient

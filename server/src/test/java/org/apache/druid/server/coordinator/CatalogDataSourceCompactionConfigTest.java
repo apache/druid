@@ -447,6 +447,17 @@ public class CatalogDataSourceCompactionConfigTest
   }
 
   @Test
+  public void testUndeclaredProjectionsAreEmptyOnlyWhenSealed()
+  {
+    // A sealed table is the complete description of the datasource, so declaring no projections declares that it has
+    // none and compaction drops any the segments still carry. An unsealed table has said nothing about them, so they
+    // stay null and compaction leaves them alone.
+    Assertions.assertEquals(List.of(), configFor(TEST_DS_CLUSTERED).getProjections());
+    Assertions.assertNull(configFor(TEST_DS_CLUSTERED_UNSEALED).getProjections());
+    Assertions.assertNull(configFor("not_in_catalog").getProjections());
+  }
+
+  @Test
   public void testSerde() throws JsonProcessingException
   {
     final CatalogDataSourceCompactionConfig config = new CatalogDataSourceCompactionConfig(

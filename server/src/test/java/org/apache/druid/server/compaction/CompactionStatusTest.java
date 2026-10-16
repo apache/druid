@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -634,6 +635,54 @@ public class CompactionStatusTest
   }
 
   @Test
+  public void testStatusWhenSegmentHasUndeclaredProjectionsAndCatalogTableIsSealed()
+  {
+    // A sealed table that declares no projections is declaring that it has none, so a segment that still carries one
+    // must be recompacted to drop it. The compaction task already does the dropping; without a mismatch here it would
+    // never be scheduled to.
+    final DataSourceCompactionConfig sealed = catalogCompactionConfig(SEALED_WIKI);
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(stateWithProjection(sealed))
+        .build();
+
+    final CompactionStatus status = CompactionStatus.compute(List.of(segment), sealed, fingerprintMapper);
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertTrue(status.getReason().contains("projections"));
+  }
+
+  @Test
+  public void testStatusWhenSegmentHasUndeclaredProjectionsAndCatalogTableIsNotSealed()
+  {
+    // An unsealed table says nothing about projections it does not declare, so the segment's are left alone.
+    final DataSourceCompactionConfig unsealed = catalogCompactionConfig(UNSEALED_WIKI);
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(stateWithProjection(unsealed))
+        .build();
+
+    Assertions.assertTrue(
+        CompactionStatus.compute(List.of(segment), unsealed, fingerprintMapper).isComplete()
+    );
+  }
+
+  @Test
+  public void testStatusWhenSegmentHasNoProjectionsAndCatalogTableIsSealed()
+  {
+    // The flip side of the check above: a sealed table's empty declaration matches the empty list a compaction of it
+    // records, so a datasource that has no projections is not recompacted over and over.
+    final DataSourceCompactionConfig sealed = catalogCompactionConfig(SEALED_WIKI);
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(sealed.toCompactionState())
+        .build();
+
+    Assertions.assertTrue(
+        CompactionStatus.compute(List.of(segment), sealed, fingerprintMapper).isComplete()
+    );
+  }
+
+  @Test
   public void testStatusWhenBaseTableDeclaredColumnChangesAndCatalogTableIsNotSealed()
   {
     // The relaxation only forgives columns appended after the declared ones; a change to the declaration itself is
@@ -677,9 +726,33 @@ public class CompactionStatusTest
                           .partitionsSpec(declared.getPartitionsSpec())
                           .indexSpec(declared.getIndexSpec())
                           .segmentGranularitySpec(declared.getSegmentGranularitySpec())
+                          .projections(declared.getProjections())
                           .baseTable(
                               declared.getBaseTable()
                                       .withAdditionalColumns(List.of(new StringDimensionSchema("city")))
+                          )
+                          .build();
+  }
+
+  /**
+   * The state a compaction of {@code config} would record if the segments carried a projection the catalog does not
+   * declare: everything the config asks for, with the discovered projection in place of the declared list.
+   */
+  private static CompactionState stateWithProjection(DataSourceCompactionConfig config)
+  {
+    final CompactionState declared = config.toCompactionState();
+    return CompactionState.builder()
+                          .partitionsSpec(declared.getPartitionsSpec())
+                          .indexSpec(declared.getIndexSpec())
+                          .segmentGranularitySpec(declared.getSegmentGranularitySpec())
+                          .baseTable(declared.getBaseTable())
+                          .projections(
+                              List.of(
+                                  AggregateProjectionSpec.builder("by_tenant")
+                                                         .groupingColumns(new StringDimensionSchema("tenant"))
+                                                         .aggregators(new CountAggregatorFactory("count"))
+                                                         .build()
+                              )
                           )
                           .build();
   }

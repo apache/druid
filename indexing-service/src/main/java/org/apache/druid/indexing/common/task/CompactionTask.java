@@ -1474,9 +1474,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
       Metadata metadata = index.getMetadata();
       if (metadata != null && metadata.getProjections() != null && !metadata.getProjections().isEmpty()) {
-        projections = new HashMap<>();
+        if (projections == null) {
+          projections = new HashMap<>();
+        }
         for (AggregateProjectionMetadata projectionMetadata : metadata.getProjections()) {
           final AggregateProjectionSchema schema = projectionMetadata.getSchema();
+          // Segments are visited newest first, so the first definition seen for a name is the most recent one and
+          // wins, the same way a dimension's schema is resolved. Accumulate across segments rather than replacing:
+          // different segments may define different projections, and all of them need carrying over.
+          if (projections.containsKey(schema.getName())) {
+            continue;
+          }
           final QueryableIndex projectionIndex = Preconditions.checkNotNull(
               index.getProjectionQueryableIndex(schema.getName())
           );
