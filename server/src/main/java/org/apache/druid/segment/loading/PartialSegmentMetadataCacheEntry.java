@@ -63,6 +63,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Predicate;
 
 /**
  * Cache entry for the metadata header of a V10 segment loaded via partial download. Mounting this entry range-reads
@@ -1162,7 +1163,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   @Override
   public Optional<Segment> acquireReference()
   {
-    return buildSegmentWithExtraClose(null);
+    return buildSegmentWithExtraClose(null, false);
   }
 
   /**
@@ -1172,12 +1173,23 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   @Override
   public Optional<Segment> acquireReference(Closeable extraOnClose)
   {
-    return buildSegmentWithExtraClose(extraOnClose);
+    return buildSegmentWithExtraClose(extraOnClose, false);
   }
 
-  private Optional<Segment> buildSegmentWithExtraClose(@Nullable Closeable extraOnClose)
+  /**
+   * Like {@link #acquireReference(Closeable)}, but for {@link AcquireMode#PARTIAL_RULE_HELD}: the returned segment only
+   * serves the bundles selected by the partial-load rule applied when this is called, and serves no rows if no rule is
+   * applied. Selected bundles that are not resident are still downloaded on demand by the async cursor factory.
+   */
+  public Optional<Segment> acquireRuleHeldReference(@Nullable Closeable extraOnClose)
+  {
+    return buildSegmentWithExtraClose(extraOnClose, true);
+  }
+
+  private Optional<Segment> buildSegmentWithExtraClose(@Nullable Closeable extraOnClose, boolean ruleHeldOnly)
   {
     final PartialQueryableIndex index;
+    final Predicate<String> servableBundles;
     entryLock.lock();
     try {
       if (fileMapper == null) {
@@ -1192,6 +1204,17 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         );
       }
       index = queryableIndex;
+      if (ruleHeldOnly) {
+        // Snapshot the selection (empty when no rule is applied). The planner asks for bundles by name, so resolve
+        // each name the same way the bundle acquirer does, which maps __base to __root__ for legacy root-only segments.
+        final Set<String> selected = ruleSelectedBundleNames;
+        final PartialSegmentFileMapperV10 mapper = fileMapper;
+        servableBundles = bundleName -> selected.contains(
+            PartialSegmentBundleCacheEntry.resolveBundleName(mapper, bundleName)
+        );
+      } else {
+        servableBundles = null;
+      }
     }
     catch (Throwable t) {
       // We took ownership of extraOnClose; a failure building the queryable index must release it rather than leak
@@ -1233,7 +1256,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
               index,
               segmentId,
               onClose,
-              bundleAcquirer
+              bundleAcquirer,
+              servableBundles
           )
       );
     }

@@ -40,9 +40,16 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AsyncCursorHolder;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.PartialQueryableIndexSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -74,7 +81,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manager-level tests for the partial-load-rule {@link SegmentLocalCacheManager#load} path: a segment whose
@@ -119,6 +129,22 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
                              .aggregators(new CountAggregatorFactory("_count"))
                              .build()
   );
+
+  // group by dim1 + count, which both projections can answer
+  private static final CursorBuildSpec COUNT_BY_DIM1 =
+      CursorBuildSpec.builder()
+                     .setGroupingColumns(List.of("dim1"))
+                     .setAggregators(List.of(new CountAggregatorFactory("_count")))
+                     .setPhysicalColumns(Set.of("dim1"))
+                     .build();
+
+  // group by dim1 + sum(metric1), which only AGG_BUNDLE (or the base table) can answer
+  private static final CursorBuildSpec SUM_BY_DIM1 =
+      CursorBuildSpec.builder()
+                     .setGroupingColumns(List.of("dim1"))
+                     .setAggregators(List.of(new LongSumAggregatorFactory("_metric1_sum", "metric1")))
+                     .setPhysicalColumns(Set.of("dim1", "metric1"))
+                     .build();
 
   private static final List<InputRow> ROWS = Arrays.asList(
       new ListBasedInputRow(ROW_SIGNATURE, TIME, ROW_SIGNATURE.getColumnNames(), Arrays.asList("a", 1L)),
@@ -1061,6 +1087,135 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     }
     finally {
       queryHold.close();
+    }
+  }
+
+  @Test
+  void testRuleHeldAcquireServesOnlySelectedBundles() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final DataSegment segment = partialWrapperSegment(List.of(OTHER_AGG_BUNDLE));
+    manager.load(segment);
+    final long loadsAfterRule = location.getWeakStats().getLoadCount();
+
+    try (AcquireSegmentAction action = manager.acquireSegment(segment, AcquireMode.PARTIAL_RULE_HELD)) {
+      action.await();
+      try (Segment acquired = action.release().getSegment().orElseThrow()) {
+        Assertions.assertInstanceOf(PartialQueryableIndexSegment.class, acquired);
+        Assertions.assertEquals(2, countRows(acquired, COUNT_BY_DIM1), "served from the selected projection");
+        // only the unselected projection has the sum, and the base table fallback is resident (as a dependency of the
+        // selected projection) but was not selected itself
+        Assertions.assertEquals(0, countRows(acquired, SUM_BY_DIM1));
+        Assertions.assertEquals(0, countRows(acquired, CursorBuildSpec.FULL_SCAN));
+      }
+    }
+
+    // the cached fast path is restricted the same way
+    final Segment cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).orElseThrow();
+    try (cached) {
+      Assertions.assertEquals(2, countRows(cached, COUNT_BY_DIM1));
+      Assertions.assertEquals(0, countRows(cached, SUM_BY_DIM1));
+    }
+
+    Assertions.assertNull(
+        location.getCacheEntry(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)),
+        "the unselected projection must never be loaded"
+    );
+    Assertions.assertEquals(loadsAfterRule, location.getWeakStats().getLoadCount(), "nothing new was loaded");
+  }
+
+  @Test
+  void testRuleHeldAcquireDownloadsSelectedBundleOnDemand() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+
+    // mount the metadata the way an on-demand query would, then select a bundle that has not been loaded, as the rule
+    // state looks while a rule's eager downloads are still running
+    try (AcquireSegmentAction action = manager.acquireSegment(plainSegment(), AcquireMode.PARTIAL)) {
+      action.await();
+      action.release().getSegment().orElseThrow().close();
+    }
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    metadata.applyRule(FINGERPRINT, Set.of(AGG_BUNDLE));
+    Assertions.assertNull(location.getCacheEntry(aggId), "precondition: the selected bundle is not loaded yet");
+
+    final Segment cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).orElseThrow();
+    try (cached) {
+      Assertions.assertEquals(2, countRows(cached, SUM_BY_DIM1));
+      Assertions.assertEquals(0, countRows(cached, CursorBuildSpec.FULL_SCAN), "the base table was not selected");
+    }
+    Assertions.assertTrue(location.isWeakReserved(aggId), "the selected bundle was loaded on demand");
+  }
+
+  @Test
+  void testRuleHeldAcquireOfEntryWithoutRuleServesNothing() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    // an entry that exists only because a query loaded it has no rule applied
+    try (AcquireSegmentAction action = manager.acquireSegment(plainSegment(), AcquireMode.PARTIAL)) {
+      action.await();
+      action.release().getSegment().orElseThrow().close();
+    }
+    final long loadsBefore = location.getWeakStats().getLoadCount();
+
+    final Segment cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).orElseThrow();
+    try (cached) {
+      Assertions.assertEquals(0, countRows(cached, COUNT_BY_DIM1));
+      Assertions.assertEquals(0, countRows(cached, CursorBuildSpec.FULL_SCAN));
+    }
+    Assertions.assertEquals(loadsBefore, location.getWeakStats().getLoadCount(), "nothing was loaded");
+  }
+
+  @Test
+  void testRuleHeldAcquireOfUncachedSegmentLoadsNothing() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    Assertions.assertTrue(manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).isEmpty());
+    try (AcquireSegmentAction action = manager.acquireSegment(plainSegment(), AcquireMode.PARTIAL_RULE_HELD)) {
+      Assertions.assertTrue(action.isReady(), "nothing to load, so the action is ready immediately");
+      try (Segment acquired = action.release().getSegment().orElseThrow()) {
+        Assertions.assertInstanceOf(VirtualPlaceholderSegment.class, acquired);
+        Assertions.assertEquals(SEGMENT_ID, acquired.getId());
+        Assertions.assertEquals(0, countRows(acquired, COUNT_BY_DIM1));
+        Assertions.assertEquals(0, countRows(acquired, CursorBuildSpec.FULL_SCAN));
+      }
+    }
+    Assertions.assertNull(
+        location.getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+        "no cache entry may be created"
+    );
+    Assertions.assertEquals(0, location.getWeakStats().getLoadCount());
+  }
+
+  /**
+   * Builds an async cursor over {@code segment} for {@code spec}, waits for it, and counts the rows it reads.
+   */
+  private static int countRows(Segment segment, CursorBuildSpec spec) throws InterruptedException
+  {
+    try (AsyncCursorHolder asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(spec)) {
+      final CountDownLatch ready = new CountDownLatch(1);
+      asyncHolder.addReadyCallback(ready::countDown);
+      Assertions.assertTrue(ready.await(15, TimeUnit.SECONDS), "async cursor must materialize within the test timeout");
+      try (CursorHolder holder = asyncHolder.release()) {
+        final Cursor cursor = holder.asCursor();
+        if (cursor == null) {
+          return 0;
+        }
+        int rows = 0;
+        while (!cursor.isDone()) {
+          rows++;
+          cursor.advance();
+        }
+        return rows;
+      }
     }
   }
 

@@ -598,6 +598,11 @@ public class QueryContextTest
         QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "PARTIAL"))
                     .getSegmentAcquireMode(AcquireMode.FULL)
     );
+    assertEquals(
+        AcquireMode.PARTIAL_RULE_HELD,
+        QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "partial_rule_held"))
+                    .getSegmentAcquireMode(AcquireMode.FULL)
+    );
     assertThrows(
         BadQueryContextException.class,
         () -> QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "dummy"))
