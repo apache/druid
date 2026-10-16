@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -115,8 +114,7 @@ public final class QueryContextParameter<T>
   private final Class<T> valueType;
   private final ValueParser<T> parser;
   private final List<ParameterConstraint<T>> constraints;
-  @Nullable
-  private final T defaultValue;
+  private final DefaultValue<T> defaultValue;
   private final boolean nullable;
   private final Visibility visibility;
   @Nullable
@@ -145,9 +143,9 @@ public final class QueryContextParameter<T>
     }
     this.documentation = builder.documentationBuilder.build();
 
-    if (defaultValue != null) {
+    if (defaultValue instanceof DefaultValue.Literal<T>(T value)) {
       try {
-        validate(defaultValue);
+        validate(value);
       }
       catch (BadQueryContextException e) {
         // An invalid declared default is a programming error, not a bad user-supplied value.
@@ -240,9 +238,11 @@ public final class QueryContextParameter<T>
     if (parsed != null) {
       return parsed;
     }
-    return getDefaultValue().orElseThrow(
-        () -> new ISE("Query context parameter [%s] has no declared default", name)
-    );
+    final T literalDefault = getLiteralDefault();
+    if (literalDefault == null) {
+      throw new ISE("Query context parameter [%s] has no declared default", name);
+    }
+    return literalDefault;
   }
 
   /**
@@ -271,12 +271,22 @@ public final class QueryContextParameter<T>
   }
 
   /**
-   * Returns the declared default, if one exists. Parameters whose fallback is supplied by runtime configuration or an
-   * individual call site do not have a default value in the descriptor.
+   * Returns the declared default: none, a literal value, or the runtime property that the code reading the parameter
+   * falls back to.
    */
-  public Optional<T> getDefaultValue()
+  public DefaultValue<T> getDefaultValue()
   {
-    return Optional.ofNullable(defaultValue);
+    return defaultValue;
+  }
+
+  /**
+   * Returns the default value if it is a literal, otherwise null. Parameters whose fallback is supplied by runtime
+   * configuration or an individual call site do not have one.
+   */
+  @Nullable
+  public T getLiteralDefault()
+  {
+    return defaultValue instanceof DefaultValue.Literal<T> literal ? literal.value() : null;
   }
 
   public boolean isNullable()
@@ -367,8 +377,7 @@ public final class QueryContextParameter<T>
     private final Class<T> valueType;
     private final ValueParser<T> parser;
     private final List<ParameterConstraint<T>> constraints = new ArrayList<>();
-    @Nullable
-    private T defaultValue;
+    private DefaultValue<T> defaultValue = DefaultValue.none();
     // Query context maps historically permit explicit null values, so preserve that behavior unless declared otherwise.
     private boolean nullable = true;
     private Visibility visibility = Visibility.PUBLIC;
@@ -399,7 +408,17 @@ public final class QueryContextParameter<T>
 
     public Builder<T> defaultValue(final T defaultValue)
     {
-      this.defaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
+      this.defaultValue = new DefaultValue.Literal<>(defaultValue);
+      return this;
+    }
+
+    /**
+     * Declares that the default is the value of a runtime property, like
+     * {@code defaultValue(DefaultValue.fromProperty("druid.broker.http.maxQueuedBytes"))}.
+     */
+    public Builder<T> defaultValue(final DefaultValue.FromProperty<T> fromProperty)
+    {
+      this.defaultValue = Objects.requireNonNull(fromProperty, "fromProperty");
       return this;
     }
 

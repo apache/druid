@@ -21,6 +21,7 @@ package org.apache.druid.query.context.docs;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.context.DefaultValue;
 import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.constraint.ParameterConstraint;
@@ -280,10 +281,14 @@ public final class ParameterDocumentationGenerator
       final ParameterDocumentation docs
   )
   {
-    return docs.getDefaultDescription()
-               .map(ParameterDocumentationGenerator::escapeTableCell)
-               .or(() -> parameter.getDefaultValue().map(value -> "`" + value + "`"))
-               .orElse("N/A");
+    if (docs.getDefaultDescription().isPresent()) {
+      return escapeTableCell(docs.getDefaultDescription().get());
+    }
+    return switch (parameter.getDefaultValue()) {
+      case DefaultValue.Literal<?> literal -> "`" + literal.value() + "`";
+      case DefaultValue.FromProperty<?> fromProperty -> "`" + fromProperty.property() + "`";
+      case DefaultValue.None<?> _ -> "N/A";
+    };
   }
 
   /**

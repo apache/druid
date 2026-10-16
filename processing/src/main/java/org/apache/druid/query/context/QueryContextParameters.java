@@ -117,7 +117,7 @@ public final class QueryContextParameters
           To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker).
           """
       )
-      .defaultDescription("`druid.server.http.defaultQueryTimeout`")
+      .defaultValue(DefaultValue.fromProperty("druid.server.http.defaultQueryTimeout"))
       .build();
 
   public static final QueryContextParameter<Long> PER_SEGMENT_TIMEOUT =
@@ -145,7 +145,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxScatterGatherBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxScatterGatherBytes"))
           .build();
 
   public static final QueryContextParameter<Long> MAX_QUEUED_BYTES =
@@ -158,7 +158,7 @@ public final class QueryContextParameters
               Zero means disabled.
               """
           )
-          .defaultDescription("`druid.broker.http.maxQueuedBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.broker.http.maxQueuedBytes"))
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_PARALLEL_MERGE =
@@ -183,7 +183,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.initialYieldNumRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.initialYieldNumRows"))
           .build();
 
   public static final QueryContextParameter<Integer> PARALLEL_MERGE_SMALL_BATCH_ROWS =
@@ -195,7 +195,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.smallBatchNumRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.smallBatchNumRows"))
           .build();
 
   public static final QueryContextParameter<Integer> PARALLEL_MERGE_PARALLELISM =
@@ -207,7 +207,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.parallelism`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.parallelism"))
           .build();
 
   public static final QueryContextParameter<QueryContexts.Vectorize> VECTORIZE =
@@ -258,7 +258,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxSubqueryRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxSubqueryRows"))
           .build();
 
   /**
@@ -278,7 +278,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxSubqueryBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxSubqueryBytes"))
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_FILTER_PUSH_DOWN =
@@ -582,7 +582,7 @@ public final class QueryContextParameters
               Overrides the identically named config.
               """
           )
-          .defaultDescription("`druid.query.scan.maxRowsQueuedForOrdering`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.scan.maxRowsQueuedForOrdering"))
           .queryType(QueryType.SCAN)
           .build();
 
@@ -724,7 +724,7 @@ public final class QueryContextParameters
         return;
       }
     }
-    catch (NumberFormatException e) {
+    catch (NumberFormatException _) {
       // Reported below.
     }
     throw invalidValueException(name, MAX_SUBQUERY_BYTES_FORMAT, value);

@@ -24,6 +24,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
@@ -69,7 +70,8 @@ class QueryContextParameterTest
     assertEquals("maxThings", parameter.getName());
     assertEquals(Integer.class, parameter.getValueType());
     assertEquals(12, parameter.parse("12"));
-    assertEquals(10, parameter.getDefaultValue().orElseThrow());
+    assertEquals(new DefaultValue.Literal<>(10), parameter.getDefaultValue());
+    assertEquals(10, parameter.getLiteralDefault());
     assertTrue(parameter.isNullable());
     assertFalse(parameter.isDeprecated());
     assertNull(parameter.getDeprecationMessage());
@@ -317,8 +319,38 @@ class QueryContextParameterTest
 
     assertTrue(parameter.isDeprecated());
     assertEquals("Use `newTag` instead.", parameter.getDeprecationMessage());
-    assertTrue(parameter.getDefaultValue().isEmpty());
+    assertEquals(DefaultValue.none(), parameter.getDefaultValue());
+    assertNull(parameter.getLiteralDefault());
     assertNull(parameter.getDocumentation().getSince().orElse(null));
+  }
+
+  @Test
+  void testDefaultFromProperty()
+  {
+    final QueryContextParameter<Long> parameter = QueryContextParameter
+        .builder("maxThings", Long.class, value -> ((Number) value).longValue())
+        .description("Test parameter.")
+        .defaultValue(DefaultValue.fromProperty("druid.test.maxThings"))
+        .build();
+
+    assertEquals(new DefaultValue.FromProperty<>("druid.test.maxThings"), parameter.getDefaultValue());
+    // The code reading the parameter supplies the property value, so there is no literal default to fall back to
+    assertNull(parameter.getLiteralDefault());
+    assertNull(QueryContext.empty().get(parameter));
+    assertEquals(7L, QueryContext.empty().getOrDefault(parameter, 7L));
+    assertThrows(ISE.class, () -> QueryContext.empty().getOrDefault(parameter));
+  }
+
+  @Test
+  void testNoLiteralDefaultLooksLikeAPropertyReference()
+  {
+    // sys.query_context_parameters shows a property default as ${property} in default_value
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      final Object literalDefault = parameter.getLiteralDefault();
+      if (literalDefault != null) {
+        assertFalse(String.valueOf(literalDefault).startsWith("${"), parameter.getName());
+      }
+    }
   }
 
   @Test

@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -73,9 +74,21 @@ public class SystemQueryContextParametersTableTest
     );
     Assertions.assertEquals("LONG", value(rows.get(QueryContextParameters.TIMEOUT.getName()), "type"));
     // The effective default is hidden the same way whether it is configured, built in, or not set at all
-    assertEffective(rows, QueryContextParameters.TIMEOUT, null, null, "UNAUTHORIZED");
+    assertEffective(
+        rows,
+        QueryContextParameters.TIMEOUT,
+        "${druid.server.http.defaultQueryTimeout}",
+        null,
+        "UNAUTHORIZED"
+    );
     assertEffective(rows, QueryContextParameters.PRIORITY, "0", null, "UNAUTHORIZED");
-    assertEffective(rows, QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, null, null, "UNAUTHORIZED");
+    assertEffective(
+        rows,
+        QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
+        "${druid.query.scan.maxRowsQueuedForOrdering}",
+        null,
+        "UNAUTHORIZED"
+    );
   }
 
   @Test
@@ -115,8 +128,9 @@ public class SystemQueryContextParametersTableTest
     final Object[] row = scan().get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName());
     Assertions.assertEquals("INTEGER", value(row, "type"));
     Assertions.assertEquals("[1, 2147483647]", value(row, "value_range"));
-    Assertions.assertNull(value(row, "default_value"));
-    Assertions.assertEquals("`druid.query.scan.maxRowsQueuedForOrdering`", value(row, "default_description"));
+    // The default is the value of a runtime property
+    Assertions.assertEquals("${druid.query.scan.maxRowsQueuedForOrdering}", value(row, "default_value"));
+    Assertions.assertNull(value(row, "default_description"));
     Assertions.assertEquals(List.of("JSON"), value(row, "query_languages"));
     Assertions.assertEquals(List.of("scan"), value(row, "native_query_types"));
     // Not provided by SQL queries, so statement types don't apply.
@@ -140,12 +154,24 @@ public class SystemQueryContextParametersTableTest
     assertEffective(rows, QueryContextParameters.VECTORIZE, "true", "force", "BROKER_DYNAMIC_CONFIG");
     // Broker dynamic configuration over a runtime property
     assertEffective(rows, QueryContextParameters.USE_CACHE, "true", "true", "BROKER_DYNAMIC_CONFIG");
-    // Runtime property, no built-in default
-    assertEffective(rows, QueryContextParameters.TIMEOUT, null, "30000", "RUNTIME_PROPERTY");
+    // druid.query.default.context.timeout, no built-in default
+    assertEffective(
+        rows,
+        QueryContextParameters.TIMEOUT,
+        "${druid.server.http.defaultQueryTimeout}",
+        "30000",
+        "DEFAULT_CONTEXT_PROPERTY"
+    );
     // Built-in default only
     assertEffective(rows, QueryContextParameters.PRIORITY, "0", "0", "BUILT_IN");
-    // No default anywhere
-    assertEffective(rows, QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, null, null, null);
+    // The runtime property in default_value is not set on this Broker
+    assertEffective(
+        rows,
+        QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
+        "${druid.query.scan.maxRowsQueuedForOrdering}",
+        null,
+        null
+    );
   }
 
   @Test
@@ -155,9 +181,55 @@ public class SystemQueryContextParametersTableTest
     final Map<String, Object[]> rows = scan(createTable(runtimeConfig, CalciteTests.SUPER_USER_AUTH_RESULT));
 
     // Shown in the same form as default_value
-    assertEffective(rows, QueryContextParameters.VECTORIZE, "true", "force", "RUNTIME_PROPERTY");
+    assertEffective(rows, QueryContextParameters.VECTORIZE, "true", "force", "DEFAULT_CONTEXT_PROPERTY");
     // A value the parameter rejects is shown as configured
-    assertEffective(rows, QueryContextParameters.PRIORITY, "0", "high", "RUNTIME_PROPERTY");
+    assertEffective(rows, QueryContextParameters.PRIORITY, "0", "high", "DEFAULT_CONTEXT_PROPERTY");
+  }
+
+  @Test
+  public void testEffectiveValueFromDefaultProperty()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.query.scan.maxRowsQueuedForOrdering", "5000");
+    properties.setProperty("druid.server.http.defaultQueryTimeout", "60000");
+    final DefaultQueryConfig runtimeConfig = new DefaultQueryConfig(Map.of("timeout", 30000));
+    final Map<String, Object[]> rows = scan(
+        createTable(runtimeConfig, properties, CalciteTests.SUPER_USER_AUTH_RESULT)
+    );
+
+    assertEffective(
+        rows,
+        QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
+        "${druid.query.scan.maxRowsQueuedForOrdering}",
+        "5000",
+        "RUNTIME_PROPERTY"
+    );
+    // druid.query.default.context.timeout takes precedence over the property in default_value
+    assertEffective(
+        rows,
+        QueryContextParameters.TIMEOUT,
+        "${druid.server.http.defaultQueryTimeout}",
+        "30000",
+        "DEFAULT_CONTEXT_PROPERTY"
+    );
+  }
+
+  @Test
+  public void testEffectiveValueFromDefaultPropertyRequiresConfigReadAccess()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.query.scan.maxRowsQueuedForOrdering", "5000");
+    final Map<String, Object[]> rows = scan(
+        createTable(new DefaultQueryConfig(null), properties, CalciteTests.REGULAR_USER_AUTH_RESULT)
+    );
+
+    assertEffective(
+        rows,
+        QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
+        "${druid.query.scan.maxRowsQueuedForOrdering}",
+        null,
+        "UNAUTHORIZED"
+    );
   }
 
   @Test
@@ -189,7 +261,7 @@ public class SystemQueryContextParametersTableTest
     // Queries get the built-in default again
     assertEffective(rows, QueryContextParameters.PRIORITY, "0", "0", "BUILT_IN");
     // Queries get no default at all
-    assertEffective(rows, QueryContextParameters.TIMEOUT, null, null, null);
+    assertEffective(rows, QueryContextParameters.TIMEOUT, "${druid.server.http.defaultQueryTimeout}", null, null);
   }
 
   private static SystemQueryContextParametersTable createTable(
@@ -197,9 +269,19 @@ public class SystemQueryContextParametersTableTest
       final AuthenticationResult authenticationResult
   )
   {
+    return createTable(queryConfigProvider, new Properties(), authenticationResult);
+  }
+
+  private static SystemQueryContextParametersTable createTable(
+      final QueryConfigProvider queryConfigProvider,
+      final Properties properties,
+      final AuthenticationResult authenticationResult
+  )
+  {
     return new SystemQueryContextParametersTable(
         new DefaultObjectMapper(),
         queryConfigProvider,
+        properties,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         authenticationResult
     );

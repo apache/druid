@@ -33,6 +33,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.context.DefaultValue;
 import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.constraint.ParameterConstraint;
@@ -55,6 +56,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 /**
@@ -93,8 +95,10 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
   {
     /** The default declared with the parameter */
     BUILT_IN,
-    /** A {@code druid.query.default.context.<name>} runtime property */
+    /** The runtime property that is the default of the parameter, as set on this Broker */
     RUNTIME_PROPERTY,
+    /** A {@code druid.query.default.context.<name>} runtime property */
+    DEFAULT_CONTEXT_PROPERTY,
     /** The {@code queryContext} of the Broker dynamic configuration */
     BROKER_DYNAMIC_CONFIG,
     /** The user may not read the Broker configuration, so the effective default is not shown */
@@ -105,18 +109,21 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
 
   private final ObjectMapper jsonMapper;
   private final QueryConfigProvider queryConfigProvider;
+  private final Properties properties;
   private final AuthorizerMapper authorizerMapper;
   private final AuthenticationResult authenticationResult;
 
   public SystemQueryContextParametersTable(
       final ObjectMapper jsonMapper,
       final QueryConfigProvider queryConfigProvider,
+      final Properties properties,
       final AuthorizerMapper authorizerMapper,
       final AuthenticationResult authenticationResult
   )
   {
     this.jsonMapper = jsonMapper;
     this.queryConfigProvider = queryConfigProvider;
+    this.properties = properties;
     this.authorizerMapper = authorizerMapper;
     this.authenticationResult = authenticationResult;
   }
@@ -178,7 +185,9 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
   )
   {
     final Object contextValue = effectiveContext.get(parameter.getName());
-    final Object builtInValue = parameter.getDefaultValue().orElse(null);
+    final Object builtInValue = parameter.getLiteralDefault();
+    final String defaultProperty = defaultProperty(parameter);
+    final String propertyValue = defaultProperty == null ? null : properties.getProperty(defaultProperty);
     final Object effectiveValue;
     final EffectiveSource effectiveSource;
     if (!canReadConfig) {
@@ -189,7 +198,10 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
       effectiveValue = parseOrRaw(parameter, contextValue);
       effectiveSource = dynamicContext.get(parameter.getName()) != null
                         ? EffectiveSource.BROKER_DYNAMIC_CONFIG
-                        : EffectiveSource.RUNTIME_PROPERTY;
+                        : EffectiveSource.DEFAULT_CONTEXT_PROPERTY;
+    } else if (propertyValue != null) {
+      effectiveValue = parseOrRaw(parameter, propertyValue);
+      effectiveSource = EffectiveSource.RUNTIME_PROPERTY;
     } else if (builtInValue != null) {
       effectiveValue = builtInValue;
       effectiveSource = EffectiveSource.BUILT_IN;
@@ -204,7 +216,7 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
         parameter.getName(),
         typeName(valueType),
         valueRange(parameter),
-        builtInValue == null ? null : toJsonForm(builtInValue),
+        defaultValue(parameter),
         effectiveValue == null ? null : toJsonForm(effectiveValue),
         effectiveSource == null ? null : effectiveSource.name(),
         docs.getDefaultDescription().orElse(null),
@@ -295,6 +307,31 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
       }
       return Integer.compare(size(), other.size());
     }
+  }
+
+  /**
+   * The default_value column: a literal default in its JSON form, or {@code ${property}} for a default that is the
+   * value of a runtime property.
+   */
+  @Nullable
+  private String defaultValue(final QueryContextParameter<?> parameter)
+  {
+    return switch (parameter.getDefaultValue()) {
+      case DefaultValue.Literal<?> literal -> toJsonForm(literal.value());
+      case DefaultValue.FromProperty<?> fromProperty -> "${" + fromProperty.property() + "}";
+      case DefaultValue.None<?> _ -> null;
+    };
+  }
+
+  /**
+   * The runtime property that is the default of the parameter, if any.
+   */
+  @Nullable
+  private static String defaultProperty(final QueryContextParameter<?> parameter)
+  {
+    return parameter.getDefaultValue() instanceof DefaultValue.FromProperty<?>(String property)
+           ? property
+           : null;
   }
 
   /**

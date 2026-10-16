@@ -94,6 +94,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -263,6 +264,7 @@ public class SystemSchema extends AbstractTableSchema
   private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
   private final PlannerConfig plannerConfig;
   private final QueryConfigProvider queryConfigProvider;
+  private final Properties properties;
   private final AuthenticationResult authenticationResult;
   private final Set<String> allTableNames;
 
@@ -280,6 +282,7 @@ public class SystemSchema extends AbstractTableSchema
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
       final PlannerConfig plannerConfig,
       final QueryConfigProvider queryConfigProvider,
+      final Properties properties,
       final AuthenticationResult authenticationResult,
       final Set<String> allTableNames
   )
@@ -297,6 +300,7 @@ public class SystemSchema extends AbstractTableSchema
     this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
     this.plannerConfig = plannerConfig;
     this.queryConfigProvider = queryConfigProvider;
+    this.properties = properties;
     this.authenticationResult = authenticationResult;
     this.allTableNames = allTableNames;
   }
@@ -339,6 +343,7 @@ public class SystemSchema extends AbstractTableSchema
       case SystemQueryContextParametersTable.TABLE_NAME -> new SystemQueryContextParametersTable(
           jsonMapper,
           queryConfigProvider,
+          properties,
           authorizerMapper,
           authenticationResult
       );

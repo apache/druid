@@ -153,6 +153,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 public class SystemSchemaTest extends CalciteTestBase
@@ -572,6 +573,7 @@ public class SystemSchemaTest extends CalciteTestBase
         () -> new SqlEngineRegistry(Collections.emptySet()),
         plannerConfig,
         new DefaultQueryConfig(null),
+        new Properties(),
         createAuthResult(Users.SUPER),
         SystemSchemaProvider.computeAllTableNames(plannerConfig)
     );

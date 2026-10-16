@@ -37,6 +37,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.http.SqlEngineRegistry;
 
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 
 public class SystemSchemaProvider implements SchemaProvider
@@ -54,6 +55,7 @@ public class SystemSchemaProvider implements SchemaProvider
   private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
   private final PlannerConfig plannerConfig;
   private final QueryConfigProvider queryConfigProvider;
+  private final Properties properties;
   private final Set<String> allTableNames;
 
   @Inject
@@ -70,7 +72,8 @@ public class SystemSchemaProvider implements SchemaProvider
       @EscalatedClient final HttpClient httpClient,
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
       final PlannerConfig plannerConfig,
-      final QueryConfigProvider queryConfigProvider
+      final QueryConfigProvider queryConfigProvider,
+      final Properties properties
   )
   {
     this.segmentMetadataCache = segmentMetadataCache;
@@ -86,6 +89,7 @@ public class SystemSchemaProvider implements SchemaProvider
     this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
     this.plannerConfig = plannerConfig;
     this.queryConfigProvider = queryConfigProvider;
+    this.properties = properties;
     this.allTableNames = computeAllTableNames(plannerConfig);
   }
 
@@ -127,6 +131,7 @@ public class SystemSchemaProvider implements SchemaProvider
         sqlEngineRegistryProvider,
         plannerConfig,
         queryConfigProvider,
+        properties,
         authenticationResult,
         allTableNames
     );
