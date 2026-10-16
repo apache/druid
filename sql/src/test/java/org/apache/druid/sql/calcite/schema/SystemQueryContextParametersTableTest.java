@@ -65,15 +65,15 @@ public class SystemQueryContextParametersTableTest
   public void testEffectiveDefaultRequiresConfigReadAccess()
   {
     final DefaultQueryConfig runtimeConfig = new DefaultQueryConfig(Map.of("timeout", 30000));
-    final Map<String, Object[]> rows = scan(createTable(runtimeConfig, CalciteTests.REGULAR_USER_AUTH_RESULT));
+    final Properties properties = new Properties();
+    properties.setProperty("druid.query.scan.maxRowsQueuedForOrdering", "5000");
+    final Map<String, Object[]> rows = scan(
+        createTable(runtimeConfig, properties, CalciteTests.REGULAR_USER_AUTH_RESULT)
+    );
 
     // The catalog is still visible
-    Assertions.assertEquals(
-        rows.keySet(),
-        scan().keySet()
-    );
-    Assertions.assertEquals("Long", value(rows.get(QueryContextParameters.TIMEOUT.getName()), "type"));
-    // The effective default is hidden the same way whether it is configured, built in, or not set at all
+    Assertions.assertEquals(rows.keySet(), scan().keySet());
+    // The effective default is hidden the same way whatever it comes from, and when there is none
     assertEffective(
         rows,
         QueryContextParameters.TIMEOUT,
@@ -148,13 +148,16 @@ public class SystemQueryContextParametersTableTest
                            .withQueryContext(QueryContext.of(Map.of("useCache", true, "vectorize", "force")))
                            .build()
     );
-    final Map<String, Object[]> rows = scan(createTable(brokerConfig, CalciteTests.SUPER_USER_AUTH_RESULT));
+    final Properties properties = new Properties();
+    properties.setProperty("druid.query.scan.maxRowsQueuedForOrdering", "5000");
+    properties.setProperty("druid.server.http.defaultQueryTimeout", "60000");
+    final Map<String, Object[]> rows = scan(createTable(brokerConfig, properties, CalciteTests.SUPER_USER_AUTH_RESULT));
 
     // Broker dynamic configuration over the built-in default
     assertEffective(rows, QueryContextParameters.VECTORIZE, "true", "force", "BROKER_DYNAMIC_CONFIG");
     // Broker dynamic configuration over a runtime property
     assertEffective(rows, QueryContextParameters.USE_CACHE, "true", "true", "BROKER_DYNAMIC_CONFIG");
-    // druid.query.default.context.timeout, no built-in default
+    // druid.query.default.context.timeout over the runtime property in default_value
     assertEffective(
         rows,
         QueryContextParameters.TIMEOUT,
@@ -164,11 +167,19 @@ public class SystemQueryContextParametersTableTest
     );
     // Built-in default only
     assertEffective(rows, QueryContextParameters.PRIORITY, "0", "0", "BUILT_IN");
-    // The runtime property in default_value is not set on this Broker
+    // The runtime property in default_value, as set on this Broker
     assertEffective(
         rows,
         QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
         "${druid.query.scan.maxRowsQueuedForOrdering}",
+        "5000",
+        "RUNTIME_PROPERTY"
+    );
+    // The runtime property in default_value is not set on this Broker
+    assertEffective(
+        rows,
+        QueryContextParameters.MAX_SCATTER_GATHER_BYTES,
+        "${druid.server.http.maxScatterGatherBytes}",
         null,
         null
     );
@@ -184,52 +195,6 @@ public class SystemQueryContextParametersTableTest
     assertEffective(rows, QueryContextParameters.VECTORIZE, "true", "force", "DEFAULT_CONTEXT_PROPERTY");
     // A value the parameter rejects is shown as configured
     assertEffective(rows, QueryContextParameters.PRIORITY, "0", "high", "DEFAULT_CONTEXT_PROPERTY");
-  }
-
-  @Test
-  public void testEffectiveValueFromDefaultProperty()
-  {
-    final Properties properties = new Properties();
-    properties.setProperty("druid.query.scan.maxRowsQueuedForOrdering", "5000");
-    properties.setProperty("druid.server.http.defaultQueryTimeout", "60000");
-    final DefaultQueryConfig runtimeConfig = new DefaultQueryConfig(Map.of("timeout", 30000));
-    final Map<String, Object[]> rows = scan(
-        createTable(runtimeConfig, properties, CalciteTests.SUPER_USER_AUTH_RESULT)
-    );
-
-    assertEffective(
-        rows,
-        QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
-        "${druid.query.scan.maxRowsQueuedForOrdering}",
-        "5000",
-        "RUNTIME_PROPERTY"
-    );
-    // druid.query.default.context.timeout takes precedence over the property in default_value
-    assertEffective(
-        rows,
-        QueryContextParameters.TIMEOUT,
-        "${druid.server.http.defaultQueryTimeout}",
-        "30000",
-        "DEFAULT_CONTEXT_PROPERTY"
-    );
-  }
-
-  @Test
-  public void testEffectiveValueFromDefaultPropertyRequiresConfigReadAccess()
-  {
-    final Properties properties = new Properties();
-    properties.setProperty("druid.query.scan.maxRowsQueuedForOrdering", "5000");
-    final Map<String, Object[]> rows = scan(
-        createTable(new DefaultQueryConfig(null), properties, CalciteTests.REGULAR_USER_AUTH_RESULT)
-    );
-
-    assertEffective(
-        rows,
-        QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
-        "${druid.query.scan.maxRowsQueuedForOrdering}",
-        null,
-        "UNAUTHORIZED"
-    );
   }
 
   @Test

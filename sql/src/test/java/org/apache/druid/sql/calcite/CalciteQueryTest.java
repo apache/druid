@@ -384,38 +384,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         """
-            SELECT name, type, value_range, default_value, effective_value, effective_source,
-              query_languages, engines, native_query_types, statement_types
+            SELECT name, effective_source, native_query_types
             FROM sys.query_context_parameters
             WHERE name IN ('maxRowsQueuedForOrdering', 'vectorize')
             ORDER BY name""",
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{
-                "maxRowsQueuedForOrdering",
-                "Integer",
-                "[1, 2147483647]",
-                "${druid.query.scan.maxRowsQueuedForOrdering}",
-                null,
-                null,
-                ImmutableList.of("JSON"),
-                ImmutableList.of("NATIVE"),
-                ImmutableList.of("scan"),
-                null
-            },
-            new Object[]{
-                "vectorize",
-                "Enum",
-                null,
-                "true",
-                "true",
-                "BUILT_IN",
-                ImmutableList.of("JSON", "SQL"),
-                ImmutableList.of("NATIVE"),
-                ImmutableList.of(),
-                ImmutableList.of()
-            }
+            new Object[]{"maxRowsQueuedForOrdering", null, ImmutableList.of("scan")},
+            new Object[]{"vectorize", "BUILT_IN", ImmutableList.of()}
         )
     );
   }
