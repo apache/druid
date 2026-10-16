@@ -18,13 +18,16 @@
 
 import { Button, ButtonGroup } from '@blueprintjs/core';
 import React from 'react';
-import type { CellInfo, Column } from 'react-table';
-import ReactTable from 'react-table';
 
+import type { ConsoleTableCellInfo, ConsoleTableColumn } from '../../../components';
+import {
+  ConsoleTable,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../components';
 import { Loader } from '../../../components/loader/loader';
 import type { RowStats, RowStatsCounter, SupervisorStats } from '../../../druid-models';
 import { useInterval, useQueryManager } from '../../../hooks';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import { Api, UrlBaser } from '../../../singletons';
 import { deepGet, formatByteRate, formatBytes, formatInteger, formatRate } from '../../../utils';
 
@@ -77,7 +80,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
     supervisorStatisticsQueryManager.rerunLastQuery(true);
   }, 1500);
 
-  function renderCounters(cell: CellInfo, isRate: boolean) {
+  function renderCounters(cell: ConsoleTableCellInfo<any>, isRate: boolean) {
     const c: RowStatsCounter = cell.value;
     if (!c) return null;
 
@@ -99,7 +102,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
   }
 
   function renderTable() {
-    let columns: Column<SupervisorStatisticsTableRow>[] = [
+    let columns: ConsoleTableColumn<SupervisorStatisticsTableRow>[] = [
       {
         Header: 'Group ID',
         accessor: 'groupId',
@@ -131,7 +134,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
       columns = columns.concat(
         Object.keys(movingAveragesBuildSegments)
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-          .map((interval: string): Column<SupervisorStatisticsTableRow> => {
+          .map((interval: string): ConsoleTableColumn<SupervisorStatisticsTableRow> => {
             return {
               Header: interval,
               id: interval,
@@ -147,7 +150,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
 
     const statisticsData = supervisorStatisticsState.data || [];
     return (
-      <ReactTable
+      <ConsoleTable
         data={statisticsData}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
@@ -165,7 +168,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
           <Button
             text="View raw"
             disabled={supervisorStatisticsState.loading}
-            minimal
+            variant="minimal"
             onClick={() => window.open(UrlBaser.base(statsEndpoint), '_blank')}
           />
         </ButtonGroup>

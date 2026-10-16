@@ -21,6 +21,7 @@ package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.NotYetSupported;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
@@ -46,7 +47,7 @@ public class DecoupledDartCalciteArraysQueryTest extends CalciteArraysQueryTest
             ImmutableMap.<String, Object>builder()
                 .put(QueryContexts.CTX_PREPLANNED, true)
                 .put(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-                .put(QueryContexts.ENABLE_DEBUG, true)
+                .put(QueryContextParameters.DEBUG.getName(), true)
                 .build()
         );
   }

@@ -50,6 +50,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -575,6 +576,35 @@ public class KafkaSupervisorSpecTest
     Assertions.assertEquals("metrics", backfill.getSpec().getIOConfig().getTopic());
     Assertions.assertEquals(2, backfill.getSpec().getIOConfig().getTaskCount());
     Assertions.assertEquals(boundedStreamConfig, backfill.getSpec().getIOConfig().getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testCreateBackfillSpecDropsPartitionSelection()
+  {
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(TimestampSpec.DEFAULT)
+                .withAggregators(new CountAggregatorFactory("rows"))
+                .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
+                .withPartitionIds(Set.of(0))
+        )
+        .build("testDs", "metrics");
+    final BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(Map.of("0", 100L), Map.of("0", 500L));
+
+    final KafkaSupervisorSpec backfill = spec.createBackfillSpec("backfill-id", boundedStreamConfig, 1);
+
+    // The bounded backfill reads its own range, so it must not inherit the selection.
+    Assertions.assertNull(backfill.getSpec().getIOConfig().getPartitionIds());
+    Assertions.assertEquals(boundedStreamConfig, backfill.getSpec().getIOConfig().getBoundedStreamConfig());
+
+    // The source spec keeps its selection.
+    Assertions.assertEquals(Set.of(0), spec.getSpec().getIOConfig().getPartitionIds());
   }
 
   private KafkaSupervisorSpec getSpec(String topic, String topicPattern)

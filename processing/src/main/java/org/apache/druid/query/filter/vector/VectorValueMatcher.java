@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
  * of this interface is that it is returned by the {@link Filter} "makeVectorMatcher" method, where it is used to
  * identify selected rows for filtered cursors and filtered aggregators.
  *
- * @see org.apache.druid.query.filter.ValueMatcher, the non-vectorized version
+ * @see org.apache.druid.query.filter.ValueMatcher the non-vectorized version
  */
 public interface VectorValueMatcher extends VectorSizeInspector
 {

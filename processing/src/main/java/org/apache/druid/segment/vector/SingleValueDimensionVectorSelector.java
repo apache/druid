@@ -25,8 +25,8 @@ import org.apache.druid.segment.DimensionDictionarySelector;
  * Vectorized selector for a singly-valued string-typed column. Unlike the non-vectorized version, this is done as
  * a separate interface, which is useful since it allows "getRowVector" to be a primitive int array.
  *
- * @see org.apache.druid.segment.DimensionSelector, the non-vectorized version.
- * @see MultiValueDimensionVectorSelector, the multi-valued version.
+ * @see org.apache.druid.segment.DimensionSelector the non-vectorized version.
+ * @see MultiValueDimensionVectorSelector the multi-valued version.
  */
 public interface SingleValueDimensionVectorSelector extends DimensionDictionarySelector, VectorSizeInspector
 {

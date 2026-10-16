@@ -19,4 +19,5 @@
 # under the License.
 #
 
-.git/hooks/run-all-in-dir.py .git/hooks/pre-pushes $1 $2
+HOOKS_DIR="$(dirname "$0")"
+"${HOOKS_DIR}/run-all-in-dir.py" "${HOOKS_DIR}/pre-pushes" "$@"

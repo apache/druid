@@ -507,8 +507,13 @@ public abstract class IndexMergerBase implements IndexMerger
       final Map<String, ColumnFormat> columnFormats = Maps.newLinkedHashMapWithExpectedSize(dimensions.size()
                                                                                             + metrics.size());
 
-      for (String dimension : dimensions) {
-        final ColumnFormat dimensionFormat = projectionAdapters.get(0).getFormat(dimension);
+      // formats depend on each input's rows (such as whether a string column has multiple values), so merge them
+      // across all inputs
+      final List<ColumnFormat> dimensionFormats = new ArrayList<>(dimensions.size());
+      mergeFormat(projectionAdapters, dimensions, new HashMap<>(), dimensionFormats);
+      for (int i = 0; i < dimensions.size(); i++) {
+        final String dimension = dimensions.get(i);
+        final ColumnFormat dimensionFormat = dimensionFormats.get(i);
         columnFormats.put(dimension, dimensionFormat);
         DimensionHandler handler = dimensionFormat.getColumnHandler(dimension);
         DimensionMergerV9 merger = handler.makeMerger(

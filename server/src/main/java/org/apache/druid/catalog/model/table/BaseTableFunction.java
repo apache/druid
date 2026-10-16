@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * Base implementation for a table function definition.
  *
- * @see {@link TableFunction}
+ * @see TableFunction
  */
 public abstract class BaseTableFunction implements TableFunction
 {

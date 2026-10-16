@@ -197,7 +197,7 @@ public class DruidRelTest
         ImmutableList.of(druidQueryRelNode, druidQueryRelNode),
         true
     );
-    DruidUnionDataSourceRel rel = DruidUnionDataSourceRel.create(union, ImmutableList.of("col1"), mockPlannerContext);
+    DruidUnionDataSourceRel rel = DruidUnionDataSourceRel.create(union, mockPlannerContext);
 
     // Act
     DruidQuery queryForExplaining = rel.toDruidQueryForExplaining();

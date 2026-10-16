@@ -2,20 +2,20 @@
 
 exports[`HighlightText matches snapshot 1`] = `
 <span
-  className="highlight-text"
+  class="highlight-text"
 >
   <span
-    className="pre"
+    class="pre"
   >
     H
   </span>
   <span
-    className="highlighted"
+    class="highlighted"
   >
     woot
   </span>
   <span
-    className="post"
+    class="post"
   >
      world
   </span>

@@ -20,7 +20,6 @@
 package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -33,12 +32,13 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -144,10 +144,13 @@ public class DirectDruidClientAbortHttpTest
           queryCancellationExecutor
       );
 
-      final Map<String, Object> queryContext = ImmutableMap.of(
-          DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 60_000L,
-          BaseQuery.QUERY_ID, "abort-test"
-      );
+      final Map<String, Object> queryContext = QueryContext.builder()
+                                                            .putRaw(
+                                                                DirectDruidClient.QUERY_FAIL_TIME,
+                                                                System.currentTimeMillis() + 60_000L
+                                                            )
+                                                            .put(QueryContextParameters.QUERY_ID, "abort-test")
+                                                            .toMap();
 
       final Sequence results = directDruidClient.run(
           QueryPlus.wrap(Druids.newTimeBoundaryQueryBuilder().dataSource("test").context(queryContext).build()),

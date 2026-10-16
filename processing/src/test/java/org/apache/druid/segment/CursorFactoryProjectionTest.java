@@ -46,7 +46,9 @@ import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryResourceId;
@@ -60,6 +62,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -1556,7 +1559,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .granularity(Granularities.MINUTE)
                                         .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
-                                        .context(Map.of(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true))
+                                        .context(QueryContext.ofMap(QueryContextParameters.SKIP_EMPTY_BUCKETS, true))
                                         .build();
 
     final ExpectedProjectionTimeseries queryMetrics =
@@ -1763,6 +1766,31 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
             new Object[]{"bbb", 11L}
         )
     );
+  }
+
+  @Test
+  public void testProjectionOrderingEndsAtRemappedVirtualColumn()
+  {
+    // The query's "__vc3" is equivalent to the projection's "__vc2", so the projection serves it from "__vc2" and drops
+    // it from the spec it reads with. It still shadows the projection's own "__vc3", so the ordering must end before
+    // that column.
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension(DefaultDimensionSpec.of("__vc3", ColumnType.LONG))
+                    .setVirtualColumns(
+                        new ExpressionVirtualColumn("__vc3", "d + e", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+                    )
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy("a_concat_b_d_plus_f_sum_c");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      queryMetrics.assertProjection();
+      Assertions.assertEquals(List.of(OrderBy.ascending("__vc2")), cursorHolder.getOrdering());
+    }
   }
 
   @Test

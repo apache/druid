@@ -62,6 +62,7 @@ import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -81,6 +82,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
@@ -126,7 +129,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
-    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
+    context.put(QueryContextParameters.MIN_TOP_N_THRESHOLD.getName(), 1);
     testQuery(
         "select t1.b1 from (select __time as b1 from numfoo group by 1 order by 1) as t1 inner join (\n"
         + "  select __time as b2 from foo group by 1 order by 1\n"
@@ -189,7 +192,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     context.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
-    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
+    context.put(QueryContextParameters.MIN_TOP_N_THRESHOLD.getName(), 1);
     testQuery(
         "select f1.\"dim4\", sum(\"m1\") from numfoo f1 inner join (\n"
         + "  select \"dim4\" from numfoo where dim4 <> 'a' group by 1\n"
@@ -1624,6 +1627,53 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"", "a", "xa"},
             new Object[]{"1", "a", "xa"},
             new Object[]{"def", "abc", "xab"}
+        )
+    );
+  }
+
+  @MethodSource("provideQueryContexts")
+  @ParameterizedTest(name = "{0}")
+  public void testInnerJoinLookupWithChainedPostJoinVirtualColumns(Map<String, Object> queryContext)
+  {
+    // JSON_VALUE of JSON_OBJECT plans into two virtual columns: "v1" reads the joined column "j0.v", and "v0" reads
+    // only "v1". Both must be computed after the join.
+    testQuery(
+        "SELECT dim1, dim2, JSON_VALUE(JSON_OBJECT(KEY 'x' VALUE l.v), '$.x')\n"
+        + "FROM foo\n"
+        + "INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new LookupDataSource("lookyloo"),
+                        "j0.",
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new NestedFieldVirtualColumn("v1", "$.x", "v0", ColumnType.STRING),
+                    new NestedObjectVirtualColumn(
+                        "v1",
+                        ImmutableMap.of(
+                            "x",
+                            new NestedObjectVirtualColumn.TypedExpression("\"j0.v\"", ColumnType.STRING)
+                        ),
+                        queryFramework().macroTable()
+                    )
+                )
+                .columns("dim1", "dim2", "v0")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", "xa"},
+            new Object[]{"1", "a", "xa"},
+            new Object[]{"def", "abc", "xabc"}
         )
     );
   }
@@ -3486,6 +3536,73 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @MethodSource("provideQueryContexts")
+  @ParameterizedTest(name = "{0}")
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.EQUIV_PLAN)
+  public void testGroupByOverGroupByOverInnerJoinOfInlineAndLookupReadingRightColumn(Map<String, Object> queryContext)
+  {
+    cannotVectorize();
+
+    // The inner query reads a right-hand column that the outer query does not, so the join must not be rewritten
+    // into a filter on the left-hand side.
+    testQuery(
+        "SELECT cnt, COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT l.v, COUNT(*) AS cnt\n"
+        + "  FROM (VALUES ('a'), ('a'), ('abc')) AS t(x) INNER JOIN lookup.lookyloo l ON t.x = l.k\n"
+        + "  GROUP BY 1\n"
+        + ")\n"
+        + "GROUP BY 1",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(
+                                                join(
+                                                    InlineDataSource.fromIterable(
+                                                        ImmutableList.of(
+                                                            new Object[]{"a", "a"},
+                                                            new Object[]{"a", "a"},
+                                                            new Object[]{"abc", "abc"}
+                                                        ),
+                                                        RowSignature.builder()
+                                                                    .add("x", ColumnType.STRING)
+                                                                    .add("x0", ColumnType.STRING)
+                                                                    .build()
+                                                    ),
+                                                    new LookupDataSource("lookyloo"),
+                                                    "j0.",
+                                                    equalsCondition(
+                                                        makeColumnExpression("x0"),
+                                                        makeColumnExpression("j0.k")
+                                                    ),
+                                                    JoinType.INNER
+                                                )
+                                            )
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(new DefaultDimensionSpec("j0.v", "d0", ColumnType.STRING))
+                                            .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                                            .setContext(queryContext)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(new DefaultDimensionSpec("a0", "d0", ColumnType.LONG))
+                        .setAggregatorSpecs(new CountAggregatorFactory("_a0"))
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L},
+            new Object[]{2L, 1L}
+        )
+    );
+  }
+
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_LEFT_DIRECT_ACCESS)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
@@ -3633,7 +3750,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize due to 'concat' expression.
     cannotVectorize();
 
-    boolean isJoinFilterRewriteEnabled = queryContext.getOrDefault(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+    boolean isJoinFilterRewriteEnabled = queryContext.getOrDefault(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE.getName(), true)
                                                      .toString()
                                                      .equals("true");
     testQuery(
@@ -5830,7 +5947,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
-    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
+    context.put(QueryContextParameters.MIN_TOP_N_THRESHOLD.getName(), 1);
     testQuery(
         "select t1.__time from druid.foo as t1 join\n"
         + "  druid.numfoo as t2 on t1.dim2 = t2.dim2\n"

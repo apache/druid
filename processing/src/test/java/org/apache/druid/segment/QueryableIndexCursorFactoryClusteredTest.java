@@ -35,9 +35,11 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -77,9 +79,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +103,16 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
           .columns(
               new StringDimensionSchema("tenant"),
               StringDimensionSchema.create("region"),
+              new LongDimensionSchema("__time")
+          )
+          .clusteringColumns("tenant")
+          .build();
+
+  private static final ClusteredValueGroupsBaseTableProjectionSpec NULLABLE_LONG_CLUSTER_SPEC =
+      ClusteredValueGroupsBaseTableProjectionSpec.builder()
+          .columns(
+              new StringDimensionSchema("tenant"),
+              new LongDimensionSchema("num"),
               new LongDimensionSchema("__time")
           )
           .clusteringColumns("tenant")
@@ -633,6 +647,42 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
   }
 
   @Test
+  void testReportedOrderingEndsAtQueryVirtualColumn()
+  {
+    // The query's "tenant" := upper(region) is equivalent to the materialized region_upper, so it is remapped to that
+    // column and dropped from each group's spec. It still shadows the stored "tenant", so the ordering must end before
+    // it, whether one group survives or many.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    final List<OrderBy> segmentOrdering = segmentIndex.getClusteredBaseSummary().getOrdering();
+    Assertions.assertEquals("tenant", segmentOrdering.get(1).getColumnName());
+
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("tenant", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    // Single surviving group.
+    try (CursorHolder single = factory.makeCursorHolder(
+        CursorBuildSpec.builder()
+                       .setVirtualColumns(virtualColumns)
+                       .setFilter(new EqualityFilter("tenant_lower", ColumnType.STRING, "acme", null))
+                       .build()
+    )) {
+      Assertions.assertEquals(segmentOrdering.subList(0, 1), single.getOrdering());
+    }
+    // Multiple surviving groups.
+    try (CursorHolder multi = factory.makeCursorHolder(
+        CursorBuildSpec.builder().setVirtualColumns(virtualColumns).build()
+    )) {
+      Assertions.assertEquals(segmentOrdering.subList(0, 1), multi.getOrdering());
+    }
+  }
+
+  @Test
   void testFilterOnNonClusteringColumnRunsBitmapOnEverySurvivingGroup()
   {
     segmentIndex = standardTwoGroup();
@@ -767,7 +817,7 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
     // queries fail outright when the filter prunes every cluster group, instead of returning an empty result.
     final TimeseriesQuery query = newTimeseries()
         .filters(new EqualityFilter("tenant", ColumnType.STRING, "initech", null))
-        .context(Map.of(QueryContexts.VECTORIZE_KEY, "force"))
+        .context(QueryContext.ofMap(QueryContextParameters.VECTORIZE, QueryContexts.Vectorize.FORCE))
         .build();
     final List<Result<TimeseriesResultValue>> results = timeseriesEngine.process(query, factory, null, null).toList();
     Assertions.assertTrue(
@@ -969,6 +1019,77 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
     Assertions.assertEquals(2L, ((Number) results.get(0).get(1)).longValue());
   }
 
+  @Test
+  void testGroupByOnNullableLongWithNullsInFirstGroup()
+  {
+    final Map<Long, Long> expected = new HashMap<>();
+    expected.put(null, 1L);
+    expected.put(5L, 1L);
+    expected.put(7L, 1L);
+    assertGroupByNullableLong(
+        List.of(
+            numRow("acme", "2025-01-01T00:00:00", 5L),
+            numRow("acme", "2025-01-01T01:00:00", null),
+            numRow("globex", "2025-01-01T00:30:00", 7L)
+        ),
+        expected
+    );
+  }
+
+  @Test
+  void testGroupByOnNullableLongWithNullsInLaterGroup()
+  {
+    final Map<Long, Long> expected = new HashMap<>();
+    expected.put(null, 1L);
+    expected.put(0L, 1L);
+    expected.put(5L, 1L);
+    assertGroupByNullableLong(
+        List.of(
+            numRow("acme", "2025-01-01T00:00:00", 5L),
+            numRow("globex", "2025-01-01T00:30:00", null),
+            numRow("globex", "2025-01-01T01:30:00", 0L)
+        ),
+        expected
+    );
+  }
+
+  /**
+   * Runs {@code GROUP BY num} over a segment of {@code rows}, both vectorized and not, and checks the counts of each
+   * value, which tells nulls apart from zeros only if the cursor reports that {@code num} may have nulls.
+   */
+  private void assertGroupByNullableLong(List<InputRow> rows, Map<Long, Long> expected)
+  {
+    segmentIndex = buildSegment(NULLABLE_LONG_CLUSTER_SPEC, rows);
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    for (String vectorize : List.of("false", "force")) {
+      final GroupByQuery query = GroupByQuery.builder()
+                                             .setDataSource("test")
+                                             .setGranularity(Granularities.ALL)
+                                             .setInterval(Intervals.ETERNITY)
+                                             .addDimension(new DefaultDimensionSpec("num", "num", ColumnType.LONG))
+                                             .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                             .setContext(Map.of(QueryContexts.VECTORIZE_KEY, vectorize))
+                                             .build();
+      final Map<Long, Long> counts = new HashMap<>();
+      for (ResultRow row : groupingEngine.process(query, factory, null, nonBlockingPool, null).toList()) {
+        counts.put((Long) row.get(0), ((Number) row.get(1)).longValue());
+      }
+      Assertions.assertEquals(expected, counts, "vectorize=" + vectorize);
+    }
+  }
+
+  private static InputRow numRow(String tenant, String ts, @Nullable Long num)
+  {
+    final Map<String, Object> event = new HashMap<>();
+    event.put("tenant", tenant);
+    event.put("num", num);
+    return new MapBasedInputRow(DateTimes.of(ts), List.of("tenant", "num"), event);
+  }
+
   private static InputRow row(String tenant, String ts, String region)
   {
     return new MapBasedInputRow(
@@ -980,14 +1101,19 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
 
   private QueryableIndex buildSegment(List<InputRow> rows)
   {
+    return buildSegment(CLUSTER_SPEC, rows);
+  }
+
+  private QueryableIndex buildSegment(ClusteredValueGroupsBaseTableProjectionSpec clusterSpec, List<InputRow> rows)
+  {
     final IncrementalIndexSchema schema =
         IncrementalIndexSchema.builder()
                               .withMinTimestamp(INTERVAL.getStartMillis())
                               .withTimestampSpec(new TimestampSpec("__time", "auto", null))
                               .withQueryGranularity(Granularities.NONE)
-                              .withDimensionsSpec(CLUSTER_SPEC.getDimensionsSpec())
+                              .withDimensionsSpec(clusterSpec.getDimensionsSpec())
                               .withRollup(false)
-                              .withClusterSpec(CLUSTER_SPEC)
+                              .withClusterSpec(clusterSpec)
                               .build();
     return IndexBuilder.create()
                        .useV10()

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { useRef } from 'react';
+import { useState } from 'react';
 
 import { arraysEqualByElement } from '../utils';
 
@@ -27,11 +27,11 @@ import { arraysEqualByElement } from '../utils';
  * @returns The memoized value.
  */
 export function useMemoWithPrevious<T>(computeFn: (prev: T | undefined) => T, deps: any[]): T {
-  const value = useRef(computeFn(undefined));
-  const prevDependencies = useRef(deps);
-  if (!arraysEqualByElement(deps, prevDependencies.current)) {
-    value.current = computeFn(value.current);
-    prevDependencies.current = deps;
+  const [memo, setMemo] = useState(() => ({ value: computeFn(undefined), deps }));
+  if (!arraysEqualByElement(deps, memo.deps)) {
+    const newMemo = { value: computeFn(memo.value), deps };
+    setMemo(newMemo);
+    return newMemo.value;
   }
-  return value.current;
+  return memo.value;
 }

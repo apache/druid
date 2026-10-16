@@ -2,7 +2,7 @@
 
 exports[`SuggestionMenu matches snapshot when empty 1`] = `
 <ul
-  class="suggestion-menu bp5-menu"
+  class="suggestion-menu bp6-menu"
   role="menu"
 >
   <li
@@ -11,12 +11,12 @@ exports[`SuggestionMenu matches snapshot when empty 1`] = `
   >
     <a
       aria-disabled="true"
-      class="bp5-menu-item bp5-disabled"
+      class="bp6-menu-item bp6-disabled"
       role="menuitem"
       tabindex="-1"
     >
       <div
-        class="bp5-text-overflow-ellipsis bp5-fill"
+        class="bp6-text-overflow-ellipsis bp6-fill"
       >
         (empty)
       </div>
@@ -27,7 +27,7 @@ exports[`SuggestionMenu matches snapshot when empty 1`] = `
 
 exports[`SuggestionMenu matches snapshot with something 1`] = `
 <ul
-  class="suggestion-menu bp5-menu"
+  class="suggestion-menu bp6-menu"
   role="menu"
 >
   <li
@@ -35,12 +35,12 @@ exports[`SuggestionMenu matches snapshot with something 1`] = `
     role="none"
   >
     <a
-      class="bp5-menu-item bp5-popover-dismiss"
+      class="bp6-menu-item bp6-popover-dismiss"
       role="menuitem"
       tabindex="0"
     >
       <div
-        class="bp5-text-overflow-ellipsis bp5-fill"
+        class="bp6-text-overflow-ellipsis bp6-fill"
       >
         dog
       </div>
@@ -51,12 +51,12 @@ exports[`SuggestionMenu matches snapshot with something 1`] = `
     role="none"
   >
     <a
-      class="bp5-menu-item bp5-popover-dismiss"
+      class="bp6-menu-item bp6-popover-dismiss"
       role="menuitem"
       tabindex="0"
     >
       <div
-        class="bp5-text-overflow-ellipsis bp5-fill"
+        class="bp6-text-overflow-ellipsis bp6-fill"
       >
         cat
       </div>
@@ -67,60 +67,50 @@ exports[`SuggestionMenu matches snapshot with something 1`] = `
     role="none"
   >
     <a
-      class="bp5-menu-item bp5-popover-dismiss"
+      class="bp6-menu-item bp6-popover-dismiss"
       role="menuitem"
       tabindex="0"
     >
       <div
-        class="bp5-text-overflow-ellipsis bp5-fill"
+        class="bp6-text-overflow-ellipsis bp6-fill"
       >
         skunk
       </div>
     </a>
   </li>
   <li
-    class="bp5-submenu"
+    class="bp6-submenu"
     role="none"
   >
     <span
-      class="bp5-popover-target"
+      class="bp6-popover-target"
       role="menuitem"
       tabindex="0"
     >
       <a
         aria-haspopup="menu"
-        class="bp5-menu-item"
+        class="bp6-menu-item"
         role="none"
         tabindex="-1"
       >
         <div
-          class="bp5-text-overflow-ellipsis bp5-fill"
+          class="bp6-text-overflow-ellipsis bp6-fill"
         >
           Fruit
         </div>
         <span
-          class="bp5-icon bp5-icon-caret-right bp5-submenu-icon"
+          class="bp6-icon bp6-icon-caret-right bp6-submenu-icon"
         >
           <svg
             data-icon="caret-right"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <title>
-              Open sub menu
-            </title>
-            <path
-              d="M220 160C220 163 218.6 165.6 216.6 167.4L216.6 167.4L136.6 237.4L136.6 237.4C134.8 239 132.6 240 130 240C124.4 240 120 235.6 120 230V90C120 84.4 124.4 80 130 80C132.6 80 134.8 81 136.6 82.6C136.6 82.6 136.6 82.6 136.6 82.6L216.6 152.6L216.6 152.6C218.6 154.4 220 157 220 160z"
-              fill-rule="evenodd"
-              style="transform-origin: center;"
-              transform="scale(0.05, -0.05) translate(-160, -160)"
-            />
-          </svg>
+          />
         </span>
       </a>
     </span>
+    <div
+      aria-live="polite"
+      class="bp6-overlay bp6-overlay-inline"
+    />
   </li>
 </ul>
 `;

@@ -87,9 +87,8 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
               }}
               columns={querySource.baseColumns}
               placeholder="SQL expression"
-              editorHeight={400}
+              height={400}
               autoFocus
-              showGutter={false}
             />
           </FormGroup>
         </div>

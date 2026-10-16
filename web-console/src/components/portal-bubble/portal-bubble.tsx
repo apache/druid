@@ -85,8 +85,8 @@ export const PortalBubble = function PortalBubble(props: PortalBubbleProps) {
             <Button
               className="close-button"
               icon={IconNames.CROSS}
-              small
-              minimal
+              size="small"
+              variant="minimal"
               onClick={onClose}
             />
           )}

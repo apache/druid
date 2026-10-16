@@ -71,8 +71,11 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
@@ -1104,6 +1107,83 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     for (int i = 0; i < CONNECTION_LIMIT * 2; i++) {
       try (Connection connection = server.getUserConnection()) {
       }
+    }
+  }
+
+  @Test
+  public void testStatementExecutionFailsAuthenticationAndFreesConnectionSlot() throws Exception
+  {
+    final AvaticaServerConfig config = new AvaticaServerConfig();
+    config.maxConnections = 1;
+    config.maxStatementsPerConnection = STATEMENT_LIMIT;
+
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testCreateStatementAuthFailure");
+    final List<Authenticator> authenticators = ImmutableList.of(
+        new AllowAllAuthenticator()
+        {
+          @Override
+          public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
+          {
+            if (!"druid".equals(context.get("password"))) {
+              return null;
+            }
+            return new AuthenticationResult((String) context.get("user"), AuthConfig.ALLOW_ALL_NAME, null, null);
+          }
+        }
+    );
+
+    final DruidMeta druidMeta = new DruidMeta(
+        makeStatementFactory(),
+        DefaultQueryConfig.NIL,
+        config,
+        new ErrorHandler(new ServerConfig()),
+        exec,
+        authenticators,
+        new ResultFetcherFactory(config.fetchTimeoutMs)
+    );
+
+    try (final ServerWrapper authServer = new ServerWrapper(druidMeta)) {
+      try (final Connection badConnection = authServer.getConnection("regularUser", "wrong-password")) {
+        // openConnection() and createStatement() succeed even with bad credentials;
+        // authentication is deferred until the statement is actually executed.
+        final Statement badStatement = badConnection.createStatement();
+        final AvaticaSqlException ex = Assertions.assertThrows(
+            AvaticaSqlException.class,
+            () -> badStatement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo")
+        );
+        Assertions.assertTrue(ex.getMessage().contains("Unauthorized"));
+      }
+
+      // The failed connection must not have consumed the only available slot: a correctly
+      // authenticated connection should succeed immediately afterward, with no need to wait
+      // for the idle timeout or for another connection attempt to trigger closeIfEmpty() eviction.
+      try (final Connection goodConnection = authServer.getConnection("regularUser", "druid")) {
+        // Statement/ResultSet are kept open (then closed in the finally block below) because
+        // closing them immediately would let closeIfEmpty() reclaim the connection's slot before
+        // the sanity check below runs.
+        final Statement statement = goodConnection.createStatement();
+        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+        try {
+          Assertions.assertTrue(resultSet.next());
+
+          // Sanity check the other direction: once the single slot is legitimately occupied by a
+          // connection with a real statement on it, a new connection attempt must still be blocked.
+          // The fix only frees slots on authentication failure; it must not otherwise weaken
+          // maxConnections enforcement.
+          final AvaticaClientRuntimeException blockedEx = Assertions.assertThrows(
+              AvaticaClientRuntimeException.class,
+              () -> authServer.getConnection("regularUser", "druid")
+          );
+          Assertions.assertTrue(blockedEx.getMessage().contains("Too many connections"));
+        }
+        finally {
+          resultSet.close();
+          statement.close();
+        }
+      }
+    }
+    finally {
+      exec.shutdown();
     }
   }
 

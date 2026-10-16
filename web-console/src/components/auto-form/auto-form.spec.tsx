@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { COMPACTION_CONFIG_FIELDS } from '../../druid-models';
-import { shallow } from '../../utils/shallow-renderer';
 
 import { AutoForm } from './auto-form';
 
 describe('AutoForm', () => {
   it('matches snapshot', () => {
-    const autoForm = shallow(
+    const { container } = render(
       <AutoForm
         fields={[
           { name: 'testNumber', type: 'number' },
@@ -61,7 +62,7 @@ describe('AutoForm', () => {
         onChange={() => {}}
       />,
     );
-    expect(autoForm).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   describe('.issueWithModel', () => {

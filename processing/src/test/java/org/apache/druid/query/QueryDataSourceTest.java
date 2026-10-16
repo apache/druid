@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Set;
 
 public class QueryDataSourceTest
 {
@@ -70,6 +72,20 @@ public class QueryDataSourceTest
   public void test_getTableNames_lookup()
   {
     Assertions.assertEquals(Collections.emptySet(), queryOnLookupDataSource.getTableNames());
+  }
+
+  @Test
+  public void test_getReservedColumns()
+  {
+    // The subquery's names are its own.
+    final QueryDataSource dataSource = new QueryDataSource(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(FilteredDataSource.create(new TableDataSource("foo"), DimFilters.dimEquals("dim1", "x")))
+              .intervals("2000/3000")
+              .granularity(Granularities.ALL)
+              .build()
+    );
+    Assertions.assertEquals(Set.of(), dataSource.getReservedColumns());
   }
 
   @Test

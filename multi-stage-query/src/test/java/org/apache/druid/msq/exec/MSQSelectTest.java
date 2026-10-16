@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.remote.TypedValue;
@@ -51,11 +50,12 @@ import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -69,6 +69,7 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -116,24 +117,27 @@ public class MSQSelectTest extends MSQTestBase
   public static final String QUERY_RESULTS_WITH_DEFAULT = "query_results_with_default_storage";
 
   public static final Map<String, Object> QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2)
-                  .put(
+                  .putRaw(
+                      MultiStageQueryContext.CTX_ROWS_PER_PAGE,
+                      2
+                  )
+                  .putRaw(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
                       StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
-                  .build();
+                  .toMap();
 
 
   public static final Map<String, Object> QUERY_RESULTS_WITH_DEFAULT_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(
+                  .putRaw(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
                       StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
-                  .build();
+                  .toMap();
 
   public static Collection<Object[]> data()
   {
@@ -1071,10 +1075,10 @@ public class MSQSelectTest extends MSQTestBase
   private void testJoin(String contextName, Map<String, Object> context, final JoinAlgorithm joinAlgorithm)
   {
     final Map<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(context)
-                    .put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString())
-                    .build();
+                    .putRaw(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString())
+                    .toMap();
 
     final RowSignature resultSignature = RowSignature.builder()
                                                      .add("dim2", ColumnType.STRING)
@@ -2776,10 +2780,10 @@ public class MSQSelectTest extends MSQTestBase
                                                .add("dim2", ColumnType.STRING)
                                                .build();
 
-    ImmutableMap<String, Object> timeoutContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> timeoutContext = QueryContext.builder()
                                                               .putAll(context)
-                                                              .put(QueryContexts.TIMEOUT_KEY, 1) // Trigger timeout
-                                                              .build();
+                                                              .put(QueryContextParameters.TIMEOUT, 1L) // Trigger timeout
+                                                              .toMap();
 
     testSelectQuery()
         .setSql("select m1,dim2 from foo2")
@@ -2908,6 +2912,54 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testUnionAllUsingUnionDataSourceWithFilteredArms(String contextName, Map<String, Object> context)
+  {
+    final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+
+    testSelectQuery()
+        .setSql("SELECT COUNT(*) FROM (\n"
+                + "SELECT dim1 FROM foo WHERE dim2 = 'a'\n"
+                + "UNION ALL\n"
+                + "SELECT dim1 FROM foo2 WHERE dim2 = 'en'\n"
+                + ")")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(
+                                       new UnionDataSource(
+                                           ImmutableList.of(
+                                               FilteredDataSource.create(
+                                                   new TableDataSource(CalciteTests.DATASOURCE1),
+                                                   equality("dim2", "a", ColumnType.STRING)
+                                               ),
+                                               FilteredDataSource.create(
+                                                   new TableDataSource(CalciteTests.DATASOURCE2),
+                                                   equality("dim2", "en", ColumnType.STRING)
+                                               )
+                                           )
+                                       )
+                                   )
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setGranularity(Granularities.ALL)
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{3L}))
+        .verifyResults();
+  }
+
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2936,10 +2988,10 @@ public class MSQSelectTest extends MSQTestBase
 
   private static Map<String, Object> enableMultiValueUnnesting(Map<String, Object> context, boolean value)
   {
-    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> localContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .put("groupByEnableMultiValueUnnesting", value)
-                                                   .build();
+                                                   .putRaw("groupByEnableMultiValueUnnesting", value)
+                                                   .toMap();
     return localContext;
   }
 

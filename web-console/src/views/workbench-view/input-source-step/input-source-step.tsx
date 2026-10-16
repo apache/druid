@@ -30,7 +30,7 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { QueryResult } from 'druid-query-toolkit';
 import type { JSX } from 'react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useEffectEvent, useState } from 'react';
 
 import { AutoForm, ExternalLink } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
@@ -158,15 +158,18 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
     },
   });
 
-  useEffect(() => {
-    const guessedInputFormat = guessedInputFormatState.data;
-    if (!guessedInputFormat) return;
+  const handleGuessedInputFormat = useEffectEvent((guessedInputFormat: InputFormat) => {
     onSet(
       exampleInput?.inputSource || (inputSource as any),
       guessedInputFormat,
       exampleInput?.partitionedByHint,
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  useEffect(() => {
+    const guessedInputFormat = guessedInputFormatState.data;
+    if (!guessedInputFormat) return;
+    handleGuessedInputFormat(guessedInputFormat);
   }, [guessedInputFormatState]);
 
   const effectiveType = typeof inputSource === 'string' ? 'example' : inputSource?.type;
@@ -308,7 +311,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
             <Button
               className="next"
               text={guessedInputFormatState.isLoading() ? 'Loading...' : 'Use example'}
-              rightIcon={IconNames.ARROW_RIGHT}
+              endIcon={IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
               disabled={!exampleInput || guessedInputFormatState.isLoading()}
               onClick={() => {
@@ -323,7 +326,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
             <Button
               className="next"
               text={guessedInputFormatState.isLoading() ? 'Loading...' : 'Connect data'}
-              rightIcon={IconNames.ARROW_RIGHT}
+              endIcon={IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
               disabled={
                 !AutoForm.isValidModel(inputSource, INPUT_SOURCE_FIELDS) ||
