@@ -144,6 +144,9 @@ public class MultiStageQueryContext
   public static final String CTX_FAIL_ON_EMPTY_INSERT = "failOnEmptyInsert";
   public static final boolean DEFAULT_FAIL_ON_EMPTY_INSERT = false;
 
+  public static final String CTX_FAIL_ON_MULTI_VALUED_RANGE_PARTITION = "failOnMultiValuedRangePartition";
+  public static final boolean DEFAULT_FAIL_ON_MULTI_VALUED_RANGE_PARTITION = false;
+
   public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
@@ -359,6 +362,20 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_FAIL_ON_EMPTY_INSERT,
         DEFAULT_FAIL_ON_EMPTY_INSERT
+    );
+  }
+
+  /**
+   * Whether range partitioning that cannot be honored because the data holds multi-valued fields should fail rather
+   * than fall back to dynamic partitioning. Ingestion wants the fallback, which stores the rows either way; compaction
+   * does not, because the segments it writes would then disagree with the partitionsSpec its config asks for, and it
+   * would keep recompacting the interval trying to reach a layout it never produces.
+   */
+  public static boolean isFailOnMultiValuedRangePartition(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_FAIL_ON_MULTI_VALUED_RANGE_PARTITION,
+        DEFAULT_FAIL_ON_MULTI_VALUED_RANGE_PARTITION
     );
   }
 
