@@ -1,0 +1,47 @@
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+-- Test case for https://github.com/apache/druid/issues/17768
+
+-- Test 1: Nothing matches the WHERE clause (empty input).
+-- All aggregations operate on zero rows.
+-- Expect 0 for COUNT, NULL for MIN and SUM.
+SELECT
+  MIN(CASE WHEN cnt = 1 THEN m1 END) AS a_min,
+  SUM(CASE WHEN cnt = 1 THEN cnt END) AS a_sum,
+  COUNT(CASE WHEN cnt = 1 THEN cnt END) AS a_count,
+  COUNT(CASE WHEN cnt = 1 THEN 'dummy' END) AS c,
+  SUM(CASE WHEN cnt = 1 THEN 1 ELSE 0 END) AS d1,
+  SUM(CASE WHEN cnt = 1 THEN cnt ELSE 0 END) AS d2,
+  COUNT(DISTINCT CASE WHEN cnt = 1 THEN dim1 END) AS e
+FROM foo
+WHERE dim1 = 'nonexistent';
++-------+-------+---------+---+----+----+---+
+| a_min | a_sum | a_count | c | d1 | d2 | e |
++-------+-------+---------+---+----+----+---+
+|       |       |       0 | 0 |    |    | 0 |
++-------+-------+---------+---+----+----+---+
+(1 row)
+
+!ok
+
+-- Test 2: No WHERE clause, but nothing matches the CASE WHEN condition.
+-- Rows are present but the condition never matches.
+-- Expect 0 for COUNT and for any aggregator with ELSE 0, NULL otherwise.
+SELECT
+  MIN(CASE WHEN dim1 = 'nonexistent' THEN m1 END) AS a_min,
+  SUM(CASE WHEN dim1 = 'nonexistent' THEN cnt END) AS a_sum,
+  COUNT(CASE WHEN dim1 = 'nonexistent' THEN cnt END) AS a_count,
+  COUNT(CASE WHEN dim1 = 'nonexistent' THEN 'dummy' END) AS c,
+  SUM(CASE WHEN dim1 = 'nonexistent' THEN 1 ELSE 0 END) AS d1,
+  SUM(CASE WHEN dim1 = 'nonexistent' THEN cnt ELSE 0 END) AS d2,
+  COUNT(DISTINCT CASE WHEN dim1 = 'nonexistent' THEN dim1 END) AS e
+FROM foo;
++-------+-------+---------+---+----+----+---+
+| a_min | a_sum | a_count | c | d1 | d2 | e |
++-------+-------+---------+---+----+----+---+
+|       |       |       0 | 0 |  0 |  0 | 0 |
++-------+-------+---------+---+----+----+---+
+(1 row)
+
+!ok
