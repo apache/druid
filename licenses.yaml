@@ -486,7 +486,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.7.1-jre
+version: 33.7.2-jre
 libraries:
   - com.google.guava: guava
 
@@ -2164,7 +2164,7 @@ name: Apache Maven Artifact
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.9.16
+version: 3.10.0
 libraries:
   - org.apache.maven: maven-artifact
 notices:
@@ -2553,7 +2553,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.6.1
+version: 7.7.0
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -4161,7 +4161,7 @@ name: stax2-api
 license_category: binary
 module: extensions-contrib/druid-iceberg-extensions
 license_name: BSD-2-Clause License
-version: 4.3.0
+version: 4.3.1
 copyright: 2008+, FasterXML, LLC
 license_file_path: licenses/bin/stax2-api.BSD2
 libraries:
@@ -5073,7 +5073,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 7.2.2
+version: 7.3.0
 module: extensions-contrib/druid-ranger-security
 license_name: Apache License version 2.0
 libraries:

@@ -846,6 +846,7 @@
     <cve>CVE-2026-89407</cve>
     <cve>CVE-2026-68498</cve>
     <cve>CVE-2026-89425</cve>
+    <cve>CVE-2026-68494</cve> <!-- DoS in the async JSON parser of jackson-core 2.18.6 shaded in hadoop-client-runtime 3.5.0. Druid and Hadoop do not use the async parser. Remove when Hadoop uses jackson-core 2.18.8+ -->
   </suppress>
 
   <suppress>

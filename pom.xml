@@ -101,7 +101,7 @@
         <errorprone.version>2.50.0</errorprone.version>
         <fabric8.version>8.0.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>33.7.1-jre</guava.version>
+        <guava.version>33.7.2-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
         <iceberg.core.version>1.12.0</iceberg.core.version>
@@ -1263,7 +1263,7 @@
             <dependency>
                 <groupId>org.apache.maven</groupId>
                 <artifactId>maven-artifact</artifactId>
-                <version>3.9.16</version>
+                <version>3.10.0</version>
             </dependency>
             <dependency>
                 <groupId>javax.ws.rs</groupId>
