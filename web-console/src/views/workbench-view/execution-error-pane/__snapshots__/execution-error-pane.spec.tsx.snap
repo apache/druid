@@ -17,7 +17,7 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
     class="error-message-text"
   >
     <a
-      href="https://druid.apache.org/docs/latest/multi-stage-query/reference#error_TooManyWarnings"
+      href="https://druid.apache.org/docs/39.0.0/multi-stage-query/reference#error_TooManyWarnings"
       rel="noopener noreferrer"
       target="_blank"
     >
