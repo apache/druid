@@ -152,7 +152,7 @@ Supported arguments for the function:
 |---|---|---|---|
 | `bucket` | Yes  | S3 bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
 | `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
-| `assumeRoleArn` | No | ARN of the role to assume before exporting data. If not provided, the default credentials configured for the Druid process are used. | n/a |
+| `assumeRoleArn` | No | ARN of the role to assume before exporting data. If not provided, the default credentials configured for the Druid process are used. If the Druid process sets `druid.s3.intermediateAssumeRoleArn`, those credentials assume that role first. | n/a |
 | `assumeRoleExternalId` | No | External ID to use when assuming the role specified in assumeRoleArn. This provides an additional layer of security for role assumption. Only used when assumeRoleArn is set. | n/a |
 
 Configure the following runtime parameters to export to an S3 destination:
