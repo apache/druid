@@ -169,6 +169,48 @@ public class DruidProcessingConfigTest
     Assertions.assertTrue(t.getMessage().contains("druid.processing.buffer.sizeBytes must be less than 2GiB"));
   }
 
+  @Test
+  public void testNumThreadPoolsDefaultsToOne()
+  {
+    Injector injector = makeInjector(NUM_PROCESSORS, DIRECT_SIZE, HEAP_SIZE);
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+    Assertions.assertEquals(1, config.getNumThreadPools());
+  }
+
+  @Test
+  public void testNumThreadPoolsConfigured()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.processing.numThreads", "16");
+    props.setProperty("druid.processing.numThreadPools", "4");
+    Injector injector = makeInjector(NUM_PROCESSORS, DIRECT_SIZE, HEAP_SIZE, props);
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+    Assertions.assertEquals(16, config.getNumThreads());
+    Assertions.assertEquals(4, config.getNumThreadPools());
+  }
+
+  @Test
+  public void testNumThreadPoolsClampedToNumThreads()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.processing.numThreads", "4");
+    // More pools than threads: you cannot have more pools than threads, so it is clamped to numThreads.
+    props.setProperty("druid.processing.numThreadPools", "16");
+    Injector injector = makeInjector(NUM_PROCESSORS, DIRECT_SIZE, HEAP_SIZE, props);
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+    Assertions.assertEquals(4, config.getNumThreadPools());
+  }
+
+  @Test
+  public void testNumThreadPoolsFlooredAtOne()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.processing.numThreadPools", "0");
+    Injector injector = makeInjector(NUM_PROCESSORS, DIRECT_SIZE, HEAP_SIZE, props);
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+    Assertions.assertEquals(1, config.getNumThreadPools());
+  }
+
   private static Injector makeInjector(int numProcessors, long directMemorySize, long heapSize)
   {
     return makeInjector(numProcessors, directMemorySize, heapSize, new Properties());
