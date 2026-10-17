@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -52,6 +53,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -151,6 +153,9 @@ public class KafkaEmitterTest
         ImmutableMap.of("clusterId", "cluster-101"),
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
 
@@ -206,6 +211,9 @@ public class KafkaEmitterTest
         ImmutableMap.of("clusterId", "cluster-101", "env", "staging"),
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
 
@@ -257,6 +265,9 @@ public class KafkaEmitterTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
 
@@ -304,6 +315,9 @@ public class KafkaEmitterTest
         "requests",
         "segment_metadata",
         "clusterName",
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -383,6 +397,9 @@ public class KafkaEmitterTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
 
@@ -432,7 +449,10 @@ public class KafkaEmitterTest
         null,
         null,
         "cluster-102",
-        ImmutableMap.of("clusterName", "cluster-101", "env", "staging"), // clusterName again, extraDimensions should take precedence
+        ImmutableMap.of("clusterName", "cluster-101", "env", "staging"),
+        null,
+        null,
+        null,
         null,
         null,
         null
@@ -529,6 +549,9 @@ public class KafkaEmitterTest
         null,
         extraDimensions,
         ImmutableMap.of(ProducerConfig.BUFFER_MEMORY_CONFIG, String.valueOf(totalBufferSize)),
+        null,
+        null,
+        null,
         null,
         null
     );
@@ -671,5 +694,463 @@ public class KafkaEmitterTest
     {
       return "testFeed";
     }
+  }
+
+  // ==================== Sampling Tests ====================
+
+  @Test
+  public void testShouldSampleOut_noSamplingWhenRateIs100()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(100, ImmutableSet.of("query/time"), null));
+    ServiceMetricEvent event = ServiceMetricEvent.builder().setMetric("query/time", 100).build("svc", "host");
+    Assertions.assertFalse(emitter.shouldSampleOut(event));
+  }
+
+  @Test
+  public void testShouldSampleOut_noSamplingWhenSampledMetricsEmpty()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(100, null, null));
+    ServiceMetricEvent event = ServiceMetricEvent.builder().setMetric("query/time", 100).build("svc", "host");
+    Assertions.assertFalse(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=10, both sampledMetrics and sampledNodeTypes empty → samples ALL metrics at 10%.
+   * With rate=0 we can deterministically assert true.
+   */
+  @Test
+  public void testShouldSampleOut_samplesAllWhenRateSetButFiltersEmpty()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, null, null));
+    ServiceMetricEvent event = ServiceMetricEvent.builder().setMetric("query/time", 100).build("svc", "host");
+    // With rate=0 and no filters, ALL metrics should be sampled out
+    Assertions.assertTrue(emitter.shouldSampleOut(event));
+  }
+
+  @Test
+  public void testShouldSampleOut_noSamplingForNonMatchingMetric()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(
+        10,
+        ImmutableSet.of("query/time", "query/bytes"),
+        null
+    ));
+    // "jvm/mem/used" is not in sampledMetrics, so should never be sampled out
+    ServiceMetricEvent event = ServiceMetricEvent.builder().setMetric("jvm/mem/used", 100).build("svc", "host");
+    Assertions.assertFalse(emitter.shouldSampleOut(event));
+  }
+
+  @Test
+  public void testShouldSampleOut_samplesMatchingMetricWithZeroRate()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, ImmutableSet.of("query/time"), null));
+    ServiceMetricEvent event = ServiceMetricEvent.builder().setMetric("query/time", 100).build("svc", "host");
+    // With rate=0, all matching metrics should be sampled out
+    Assertions.assertTrue(emitter.shouldSampleOut(event));
+  }
+
+  @Test
+  public void testShouldSampleOut_consistentHashOnId()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(50, ImmutableSet.of("query/time"), null));
+
+    // Build event with an "id" dimension
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setDimension("id", "query-abc-123")
+        .setMetric("query/time", 100)
+        .build("svc", "host");
+
+    // Consistent hashing: same id should always produce the same result
+    boolean firstResult = emitter.shouldSampleOut(event);
+    for (int i = 0; i < 100; i++) {
+      Assertions.assertEquals(
+          firstResult,
+          emitter.shouldSampleOut(event),
+          "Consistent hashing should give same result for same id"
+      );
+    }
+  }
+
+  // ==================== Node Type Sampling Tests ====================
+
+  /**
+   * samplingRate=0, sampledMetrics=["query/time"], sampledNodeTypes=["druid/broker"]
+   * Event from druid/broker with query/time → should be sampled out
+   */
+  @Test
+  public void testShouldSampleOut_matchingMetricAndNodeType()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(
+        0,
+        ImmutableSet.of("query/time"),
+        ImmutableSet.of("druid/broker")
+    ));
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setMetric("query/time", 100)
+        .build("druid/broker", "host");
+    Assertions.assertTrue(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=0, sampledMetrics=["query/time"], sampledNodeTypes=["druid/broker"]
+   * Event from druid/historical with query/time → should NOT be sampled (wrong node type)
+   */
+  @Test
+  public void testShouldSampleOut_matchingMetricButWrongNodeType()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(
+        0,
+        ImmutableSet.of("query/time"),
+        ImmutableSet.of("druid/broker")
+    ));
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setMetric("query/time", 100)
+        .build("druid/historical", "host");
+    Assertions.assertFalse(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=0, sampledMetrics=empty, sampledNodeTypes=["druid/broker"]
+   * Event from druid/broker with any metric → should be sampled out (node type filter only)
+   */
+  @Test
+  public void testShouldSampleOut_nodeTypeOnlyFilter()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, null, ImmutableSet.of("druid/broker")));
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setMetric("jvm/mem/used", 100)
+        .build("druid/broker", "host");
+    Assertions.assertTrue(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=0, sampledMetrics=empty, sampledNodeTypes=["druid/broker"]
+   * Event from druid/historical → should NOT be sampled (wrong node type)
+   */
+  @Test
+  public void testShouldSampleOut_nodeTypeOnlyFilterWrongNodeType()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, null, ImmutableSet.of("druid/broker")));
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setMetric("jvm/mem/used", 100)
+        .build("druid/historical", "host");
+    Assertions.assertFalse(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=0, sampledMetrics=["query/time"], sampledNodeTypes=empty
+   * Event with query/time from any node → should be sampled out (metric filter only)
+   */
+  @Test
+  public void testShouldSampleOut_metricOnlyFilter()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, ImmutableSet.of("query/time"), null));
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setMetric("query/time", 100)
+        .build("druid/historical", "host");
+    Assertions.assertTrue(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=0, sampledMetrics=["query/time"], sampledNodeTypes=empty
+   * Event with jvm/mem/used → should NOT be sampled (metric doesn't match)
+   */
+  @Test
+  public void testShouldSampleOut_metricOnlyFilterNonMatchingMetric()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, ImmutableSet.of("query/time"), null));
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setMetric("jvm/mem/used", 100)
+        .build("druid/historical", "host");
+    Assertions.assertFalse(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=100 always means no sampling, even with filters configured
+   */
+  @Test
+  public void testShouldSampleOut_rate100OverridesAllFilters()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(
+        100,
+        ImmutableSet.of("query/time"),
+        ImmutableSet.of("druid/broker")
+    ));
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setMetric("query/time", 100)
+        .build("druid/broker", "host");
+    Assertions.assertFalse(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=0, both filters empty → sample ALL metrics from all nodes (drop everything)
+   */
+  @Test
+  public void testShouldSampleOut_rate0WithNoFiltersDropsEverything()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, null, null));
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+        .setMetric("anything/at/all", 100)
+        .build("druid/coordinator", "host");
+    Assertions.assertTrue(emitter.shouldSampleOut(event));
+  }
+
+  /**
+   * samplingRate=0, multiple node types configured
+   */
+  @Test
+  public void testShouldSampleOut_multipleNodeTypes()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(
+        0,
+        null,
+        ImmutableSet.of("druid/broker", "druid/historical")
+    ));
+
+    // broker → sampled
+    ServiceMetricEvent brokerEvent = ServiceMetricEvent.builder()
+        .setMetric("query/time", 100)
+        .build("druid/broker", "host");
+    Assertions.assertTrue(emitter.shouldSampleOut(brokerEvent));
+
+    // historical → sampled
+    ServiceMetricEvent historicalEvent = ServiceMetricEvent.builder()
+        .setMetric("query/time", 100)
+        .build("druid/historical", "host");
+    Assertions.assertTrue(emitter.shouldSampleOut(historicalEvent));
+
+    // coordinator → NOT sampled (not in set)
+    ServiceMetricEvent coordinatorEvent = ServiceMetricEvent.builder()
+        .setMetric("query/time", 100)
+        .build("druid/coordinator", "host");
+    Assertions.assertFalse(emitter.shouldSampleOut(coordinatorEvent));
+  }
+
+  /**
+   * With 10% sampling and no "id" dimension, roughly 10% of matching events should be kept.
+   * The bounds are wide enough (about 13 standard deviations) for this check never to flake.
+   */
+  @Test
+  public void testShouldSampleOut_approximateRetentionRate()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(10, ImmutableSet.of("query/time"), null));
+    final ServiceMetricEvent event = ServiceMetricEvent.builder()
+                                                       .setMetric("query/time", 100)
+                                                       .build("druid/broker", "host");
+    final int total = 100_000;
+    int kept = 0;
+    for (int i = 0; i < total; i++) {
+      if (!emitter.shouldSampleOut(event)) {
+        kept++;
+      }
+    }
+    Assertions.assertTrue(kept > 8_800 && kept < 11_200, "Expected about 10% kept, but kept " + kept + " of " + total);
+  }
+
+  /**
+   * With 50% sampling, events with different "id" values should be split between kept and dropped,
+   * while each individual id keeps getting the same decision.
+   */
+  @Test
+  public void testShouldSampleOut_hashOnIdSplitsAcrossIds()
+  {
+    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(50, ImmutableSet.of("query/time"), null));
+    final int total = 10_000;
+    int kept = 0;
+    for (int i = 0; i < total; i++) {
+      final ServiceMetricEvent event = ServiceMetricEvent.builder()
+                                                         .setDimension("id", "query-" + i)
+                                                         .setMetric("query/time", 100)
+                                                         .build("druid/broker", "host");
+      final boolean dropped = emitter.shouldSampleOut(event);
+      Assertions.assertEquals(dropped, emitter.shouldSampleOut(event));
+      if (!dropped) {
+        kept++;
+      }
+    }
+    Assertions.assertTrue(kept > 4_000 && kept < 6_000, "Expected about 50% kept, but kept " + kept + " of " + total);
+  }
+
+  /**
+   * End-to-end: with samplingRate=0, metric events never reach the Kafka producer, while alerts, requests and
+   * segment metadata are still emitted. Sampled-out events are counted as sampled, not as lost.
+   */
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
+  public void testSampledMetricsAreDroppedBeforeProducerAndOtherEventsAreKept()
+      throws InterruptedException, JsonProcessingException
+  {
+    final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
+        "",
+        new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.values())),
+        "metrics",
+        "alerts",
+        "requests",
+        "segments",
+        "clusterName",
+        null,
+        null,
+        null,
+        null,
+        0,
+        null,
+        null
+    );
+    final KafkaEmitter kafkaEmitter = initKafkaEmitter(kafkaEmitterConfig);
+
+    final List<Event> metricEvents = flattenEvents(SERVICE_METRIC_EVENTS);
+    final List<Event> keptEvents = flattenEvents(ALERT_EVENTS, REQUEST_LOG_EVENTS, SEGMENT_METADATA_EVENTS);
+    final CountDownLatch eventLatch = new CountDownLatch(keptEvents.size());
+
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+        keptEvents,
+        kafkaEmitterConfig.getClusterName(),
+        kafkaEmitterConfig.getExtraDimensions()
+    );
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+
+    emitEvents(kafkaEmitter, flattenEvents(metricEvents, keptEvents), eventLatch);
+
+    validateEvents(feedToExpectedEvents, feedToActualEvents);
+    Assertions.assertEquals(metricEvents.size(), kafkaEmitter.getMetricSampledCount());
+    Assertions.assertEquals(0, kafkaEmitter.getMetricEmittedCount());
+    Assertions.assertEquals(0, kafkaEmitter.getMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+  }
+
+  /**
+   * End-to-end: only the configured metric is sampled; other metrics are still emitted.
+   */
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
+  public void testOnlyConfiguredMetricsAreSampledEndToEnd() throws InterruptedException, JsonProcessingException
+  {
+    final KafkaEmitterConfig kafkaEmitterConfig = newSamplingConfig(0, ImmutableSet.of("query/time"), null);
+    final KafkaEmitter kafkaEmitter = initKafkaEmitter(kafkaEmitterConfig);
+
+    final List<Event> sampledEvents = ImmutableList.of(
+        ServiceMetricEvent.builder().setMetric("query/time", 10).build("druid/broker", "host"),
+        ServiceMetricEvent.builder().setMetric("query/time", 20).build("druid/broker", "host")
+    );
+    final List<Event> keptEvents = ImmutableList.of(
+        ServiceMetricEvent.builder().setMetric("jvm/mem/used", 30).build("druid/broker", "host"),
+        ServiceMetricEvent.builder().setMetric("query/bytes", 40).build("druid/broker", "host")
+    );
+    final CountDownLatch eventLatch = new CountDownLatch(keptEvents.size());
+
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+        keptEvents,
+        kafkaEmitterConfig.getClusterName(),
+        kafkaEmitterConfig.getExtraDimensions()
+    );
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+
+    emitEvents(kafkaEmitter, flattenEvents(sampledEvents, keptEvents), eventLatch);
+
+    validateEvents(feedToExpectedEvents, feedToActualEvents);
+    Assertions.assertEquals(sampledEvents.size(), kafkaEmitter.getMetricSampledCount());
+    Assertions.assertEquals(keptEvents.size(), kafkaEmitter.getMetricEmittedCount());
+    Assertions.assertEquals(0, kafkaEmitter.getMetricLostCount());
+
+    // Exercises the periodic sampling summary log path.
+    kafkaEmitter.logLostMessagesStatus();
+  }
+
+  /**
+   * The sampling summary must only cover the latest interval. An interval that emits metrics but samples none
+   * skips the log line, but must still move the emitted-count baseline forward, so its emissions are not
+   * reported again in a later interval's summary.
+   */
+  @Test
+  public void testSamplingSummaryWindowAdvancesWhenNothingSampled()
+  {
+    final KafkaEmitter kafkaEmitter = initKafkaEmitter(newSamplingConfig(0, ImmutableSet.of("query/time"), null));
+    final ServiceMetricEvent keptEvent = ServiceMetricEvent.builder()
+                                                           .setMetric("jvm/mem/used", 1)
+                                                           .build("druid/broker", "host");
+    final ServiceMetricEvent sampledEvent = ServiceMetricEvent.builder()
+                                                              .setMetric("query/time", 1)
+                                                              .build("druid/broker", "host");
+
+    // Interval 1: two metrics emitted, none sampled out.
+    kafkaEmitter.emit(keptEvent);
+    kafkaEmitter.emit(keptEvent);
+    kafkaEmitter.logLostMessagesStatus();
+    Assertions.assertEquals(0, kafkaEmitter.getMetricSampledCount());
+    Assertions.assertEquals(2, kafkaEmitter.getPreviousMetricEmittedCount());
+
+    // Interval 2: one emitted and one sampled out. The window must start from interval 1's end.
+    kafkaEmitter.emit(keptEvent);
+    kafkaEmitter.emit(sampledEvent);
+    kafkaEmitter.logLostMessagesStatus();
+    Assertions.assertEquals(3, kafkaEmitter.getPreviousMetricEmittedCount());
+    Assertions.assertEquals(1, kafkaEmitter.getPreviousMetricSampledCount());
+  }
+
+  /**
+   * Sampling is decided before the event is serialized, so a sampled-out metric never pays for serialization.
+   * A dimension that fails to serialize proves it: the sampled-out event is counted as sampled, not invalid,
+   * while an event that is kept still goes through serialization and is counted as invalid as before.
+   */
+  @Test
+  public void testSamplingHappensBeforeSerialization()
+  {
+    final KafkaEmitter kafkaEmitter = initKafkaEmitter(newSamplingConfig(0, ImmutableSet.of("query/time"), null));
+
+    kafkaEmitter.emit(
+        ServiceMetricEvent.builder()
+                          .setDimension("bad", new UnserializableValue())
+                          .setMetric("query/time", 1)
+                          .build("druid/broker", "host")
+    );
+    Assertions.assertEquals(1, kafkaEmitter.getMetricSampledCount());
+    Assertions.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+
+    kafkaEmitter.emit(
+        ServiceMetricEvent.builder()
+                          .setDimension("bad", new UnserializableValue())
+                          .setMetric("jvm/mem/used", 1)
+                          .build("druid/broker", "host")
+    );
+    Assertions.assertEquals(1, kafkaEmitter.getMetricSampledCount());
+    Assertions.assertEquals(1, kafkaEmitter.getInvalidLostCount());
+  }
+
+  /**
+   * A dimension value that Jackson cannot serialize, because its only property getter throws.
+   */
+  private static class UnserializableValue
+  {
+    @SuppressWarnings("unused")
+    public String getValue()
+    {
+      throw new IllegalStateException("not serializable");
+    }
+  }
+
+  private static KafkaEmitterConfig newSamplingConfig(
+      final Integer samplingRate,
+      final Set<String> sampledMetrics,
+      final Set<String> sampledNodeTypes
+  )
+  {
+    return new KafkaEmitterConfig(
+        "localhost:9092",
+        null,
+        "metrics",
+        "alerts",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        samplingRate,
+        sampledMetrics,
+        sampledNodeTypes
+    );
   }
 }

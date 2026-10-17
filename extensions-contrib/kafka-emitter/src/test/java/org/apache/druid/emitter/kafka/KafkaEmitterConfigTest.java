@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.DynamicConfigProvider;
@@ -57,7 +58,10 @@ public class KafkaEmitterConfigTest
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS,
-        50L
+        50L,
+        null,
+        null,
+        null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
@@ -80,6 +84,9 @@ public class KafkaEmitterConfigTest
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS,
+        null,
+        null,
+        null,
         null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
@@ -105,6 +112,9 @@ public class KafkaEmitterConfigTest
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS,
+        null,
+        null,
+        null,
         null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
@@ -125,6 +135,9 @@ public class KafkaEmitterConfigTest
         "metadataTest",
         null,
         ImmutableMap.of("env", "preProd"),
+        null,
+        null,
+        null,
         null,
         null,
         null
@@ -182,6 +195,9 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
@@ -198,6 +214,9 @@ public class KafkaEmitterConfigTest
             () -> new KafkaEmitterConfig(
                 "foo",
                 new HashSet<>(Collections.singletonList(KafkaEmitterConfig.EventType.METRICS)),
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -230,6 +249,9 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
@@ -248,6 +270,9 @@ public class KafkaEmitterConfigTest
                 new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.values())),
                 "foo",
                 "foo",
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -278,6 +303,9 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
@@ -302,12 +330,130 @@ public class KafkaEmitterConfigTest
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS,
+        null,
+        null,
+        null,
         null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);
     Assertions.assertEquals(Long.MAX_VALUE, (long) kafkaEmitterConfigExpected.getShutdownTimeout());
+  }
+
+  @Test
+  public void testSamplingDefaults()
+  {
+    KafkaEmitterConfig config = newSamplingConfig(null, null, null);
+    Assertions.assertEquals(100, config.getSamplingRate());
+    Assertions.assertEquals(Collections.emptySet(), config.getSampledMetrics());
+    Assertions.assertEquals(Collections.emptySet(), config.getSampledNodeTypes());
+  }
+
+  @Test
+  public void testSerDeserSamplingConfig() throws IOException
+  {
+    KafkaEmitterConfig config = newSamplingConfig(
+        10,
+        ImmutableSet.of("query/time", "query/bytes"),
+        ImmutableSet.of("druid/broker")
+    );
+    KafkaEmitterConfig roundTripped = MAPPER.readerFor(KafkaEmitterConfig.class)
+                                            .readValue(MAPPER.writeValueAsString(config));
+    Assertions.assertEquals(config, roundTripped);
+    Assertions.assertEquals(config.hashCode(), roundTripped.hashCode());
+    Assertions.assertEquals(10, roundTripped.getSamplingRate());
+    Assertions.assertEquals(ImmutableSet.of("query/time", "query/bytes"), roundTripped.getSampledMetrics());
+    Assertions.assertEquals(ImmutableSet.of("druid/broker"), roundTripped.getSampledNodeTypes());
+  }
+
+  @Test
+  public void testDeserSamplingConfigFromPropertyNames() throws IOException
+  {
+    KafkaEmitterConfig config = MAPPER.readValue(
+        "{\"bootstrap.servers\": \"localhost:9092\","
+        + " \"metric.topic\": \"metrics\","
+        + " \"alert.topic\": \"alerts\","
+        + " \"samplingRate\": 25,"
+        + " \"sampledMetrics\": [\"query/time\"],"
+        + " \"sampledNodeTypes\": [\"druid/broker\", \"druid/historical\"]}",
+        KafkaEmitterConfig.class
+    );
+    Assertions.assertEquals(25, config.getSamplingRate());
+    Assertions.assertEquals(ImmutableSet.of("query/time"), config.getSampledMetrics());
+    Assertions.assertEquals(ImmutableSet.of("druid/broker", "druid/historical"), config.getSampledNodeTypes());
+  }
+
+  @Test
+  public void testSamplingConfigsAffectEquality()
+  {
+    KafkaEmitterConfig base = newSamplingConfig(10, ImmutableSet.of("query/time"), ImmutableSet.of("druid/broker"));
+    Assertions.assertEquals(
+        base,
+        newSamplingConfig(10, ImmutableSet.of("query/time"), ImmutableSet.of("druid/broker"))
+    );
+    Assertions.assertNotEquals(
+        base,
+        newSamplingConfig(20, ImmutableSet.of("query/time"), ImmutableSet.of("druid/broker"))
+    );
+    Assertions.assertNotEquals(
+        base,
+        newSamplingConfig(10, ImmutableSet.of("query/bytes"), ImmutableSet.of("druid/broker"))
+    );
+    Assertions.assertNotEquals(
+        base,
+        newSamplingConfig(10, ImmutableSet.of("query/time"), ImmutableSet.of("druid/historical"))
+    );
+  }
+
+  @Test
+  public void testSamplingRateBoundariesAccepted()
+  {
+    Assertions.assertEquals(0, newSamplingConfig(0, null, null).getSamplingRate());
+    Assertions.assertEquals(100, newSamplingConfig(100, null, null).getSamplingRate());
+  }
+
+  @Test
+  public void testSamplingRateOutOfRangeRejected()
+  {
+    for (int invalidRate : new int[]{-1, 101}) {
+      DruidException exception = Assertions.assertThrows(
+          DruidException.class,
+          () -> newSamplingConfig(invalidRate, null, null)
+      );
+      Assertions.assertAll(
+          () -> Assertions.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona()),
+          () -> Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory()),
+          () -> Assertions.assertEquals(
+              "druid.emitter.kafka.samplingRate must be between 0 and 100, got [" + invalidRate + "].",
+              exception.getMessage()
+          )
+      );
+    }
+  }
+
+  private static KafkaEmitterConfig newSamplingConfig(
+      Integer samplingRate,
+      Set<String> sampledMetrics,
+      Set<String> sampledNodeTypes
+  )
+  {
+    return new KafkaEmitterConfig(
+        "localhost:9092",
+        null,
+        "metrics",
+        "alerts",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        samplingRate,
+        sampledMetrics,
+        sampledNodeTypes
+    );
   }
 
   private void assertOperatorException(final DruidException exception, final String expectedMessage)
