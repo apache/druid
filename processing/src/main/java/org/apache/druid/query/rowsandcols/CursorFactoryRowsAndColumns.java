@@ -52,6 +52,8 @@ public class CursorFactoryRowsAndColumns implements CloseableShapeshifter, RowsA
 
   public CursorFactoryRowsAndColumns(CursorFactory cursorFactory)
   {
+    // Retain the original implementation's undocumented 200 MiB single-frame limit.
+    // Consult the commit history for its original rationale.
     this(cursorFactory, 200 << 20);
   }
 
