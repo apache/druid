@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoubleLongFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoublesFunction;
@@ -84,6 +85,22 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           right.asVectorProcessor(inspector),
           simdOp,
           longsFunction
+      );
+    }
+    if (simdOp != null && isNonNullNumericLiteral(inspector, left)) {
+      return new LongBivariateLongsConstantProcessor(
+          right.asVectorProcessor(inspector),
+          literalAsLong(inspector, left),
+          true,
+          simdOp
+      );
+    }
+    if (simdOp != null && isNonNullNumericLiteral(inspector, right)) {
+      return new LongBivariateLongsConstantProcessor(
+          left.asVectorProcessor(inspector),
+          literalAsLong(inspector, right),
+          false,
+          simdOp
       );
     }
     return new LongBivariateLongsFunctionVectorProcessor(
@@ -152,10 +169,48 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           doublesFunction
       );
     }
+    if (simdOp != null && isNonNullNumericLiteral(inspector, left)) {
+      return new DoubleBivariateDoublesConstantProcessor(
+          right.asVectorProcessor(inspector),
+          literalAsDouble(inspector, left),
+          true,
+          simdOp
+      );
+    }
+    if (simdOp != null && isNonNullNumericLiteral(inspector, right)) {
+      return new DoubleBivariateDoublesConstantProcessor(
+          left.asVectorProcessor(inspector),
+          literalAsDouble(inspector, right),
+          false,
+          simdOp
+      );
+    }
     return new DoubleBivariateDoublesFunctionVectorProcessor(
         left.asVectorProcessor(inspector),
         right.asVectorProcessor(inspector),
         doublesFunction
     );
+  }
+
+  private static boolean isNonNullNumericLiteral(Expr.VectorInputBindingInspector inspector, Expr expr)
+  {
+    return expr.isLiteral()
+           && expr.getLiteralValue() != null
+           && !literalEval(inspector, expr).isNumericNull();
+  }
+
+  private static long literalAsLong(Expr.VectorInputBindingInspector inspector, Expr expr)
+  {
+    return literalEval(inspector, expr).asLong();
+  }
+
+  private static double literalAsDouble(Expr.VectorInputBindingInspector inspector, Expr expr)
+  {
+    return literalEval(inspector, expr).asDouble();
+  }
+
+  private static ExprEval<?> literalEval(Expr.VectorInputBindingInspector inspector, Expr expr)
+  {
+    return ExprEval.ofType(expr.getOutputType(inspector), expr.getLiteralValue());
   }
 }
