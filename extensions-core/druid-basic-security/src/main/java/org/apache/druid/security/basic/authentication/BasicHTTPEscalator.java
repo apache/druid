@@ -27,8 +27,11 @@ import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
+
+import java.util.Map;
 
 @JsonTypeName("basic")
 public class BasicHTTPEscalator implements Escalator
@@ -67,6 +70,11 @@ public class BasicHTTPEscalator implements Escalator
     LOG.debug("----------- Creating escalated authentication result. username: %s", this.internalClientUsername);
     // if you found your self asking why the authenticatedBy field is set to null please read this:
     // https://github.com/apache/druid/pull/5706#discussion_r185940889
-    return new AuthenticationResult(internalClientUsername, authorizerName, null, null);
+    return new AuthenticationResult(
+        internalClientUsername,
+        authorizerName,
+        null,
+        Map.of(BasicAuthUtils.SUPERUSER_CONTEXT_KEY, Boolean.TRUE)
+    );
   }
 }

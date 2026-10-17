@@ -1169,14 +1169,14 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     }
 
     if (initialAdminRole != null
-        && !(initialAdminRole.equals(BasicAuthUtils.ADMIN_NAME) || initialAdminRole.equals(BasicAuthUtils.INTERNAL_USER_NAME))
+        && !BasicAuthUtils.isDefaultSuperuserName(initialAdminRole)
         && !roleMap.containsKey(initialAdminRole)) {
       createRoleInternal(authorizerName, initialAdminRole);
       setPermissionsInternal(authorizerName, initialAdminRole, SUPERUSER_PERMISSIONS);
     }
 
     if (initialAdminUser != null
-        && !(initialAdminUser.equals(BasicAuthUtils.ADMIN_NAME) || initialAdminUser.equals(BasicAuthUtils.INTERNAL_USER_NAME))
+        && !BasicAuthUtils.isDefaultSuperuserName(initialAdminUser)
         && !userMap.containsKey(initialAdminUser)) {
       createUserInternal(authorizerName, initialAdminUser);
       assignUserRoleInternal(authorizerName, initialAdminUser, initialAdminRole == null ? BasicAuthUtils.ADMIN_NAME : initialAdminRole);

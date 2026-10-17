@@ -29,6 +29,7 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermi
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
@@ -40,6 +41,40 @@ import java.util.Map;
 
 public class BasicAuthUtilsTest
 {
+  @Test
+  public void testIsDefaultSuperuserName()
+  {
+    Assertions.assertTrue(BasicAuthUtils.isDefaultSuperuserName(BasicAuthUtils.ADMIN_NAME));
+    Assertions.assertTrue(BasicAuthUtils.isDefaultSuperuserName(BasicAuthUtils.INTERNAL_USER_NAME));
+    Assertions.assertFalse(BasicAuthUtils.isDefaultSuperuserName("someUser"));
+  }
+
+  @Test
+  public void testMarkSuperuserIfNeededNull()
+  {
+    Assertions.assertNull(BasicAuthUtils.markSuperuserIfNeeded(null));
+  }
+
+  @Test
+  public void testMarkSuperuserIfNeededNotSuperuser()
+  {
+    AuthenticationResult original = new AuthenticationResult("someUser", "authorizer", "authenticator", null);
+    AuthenticationResult result = BasicAuthUtils.markSuperuserIfNeeded(original);
+    Assertions.assertSame(original, result);
+    Assertions.assertNull(result.getContext());
+  }
+
+  @Test
+  public void testMarkSuperuserIfNeededPreservesExistingContext()
+  {
+    Map<String, Object> originalContext = new HashMap<>();
+    originalContext.put("someKey", "someValue");
+    AuthenticationResult original = new AuthenticationResult(BasicAuthUtils.ADMIN_NAME, "authorizer", "authenticator", originalContext);
+    AuthenticationResult result = BasicAuthUtils.markSuperuserIfNeeded(original);
+    Assertions.assertEquals(Boolean.TRUE, result.getContext().get(BasicAuthUtils.SUPERUSER_CONTEXT_KEY));
+    Assertions.assertEquals("someValue", result.getContext().get("someKey"));
+  }
+
   @Test
   public void testPermissionSerdeIsChillAboutUnknownEnumStuffs() throws JsonProcessingException
   {

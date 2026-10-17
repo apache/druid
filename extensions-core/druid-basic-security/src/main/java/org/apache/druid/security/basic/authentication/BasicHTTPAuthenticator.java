@@ -118,7 +118,9 @@ public class BasicHTTPAuthenticator implements Authenticator
       return null;
     }
 
-    return credentialsValidator.validateCredentials(name, authorizerName, user, password.toCharArray());
+    return BasicAuthUtils.markSuperuserIfNeeded(
+        credentialsValidator.validateCredentials(name, authorizerName, user, password.toCharArray())
+    );
   }
 
 
@@ -209,11 +211,8 @@ public class BasicHTTPAuthenticator implements Authenticator
       // further down the filter chain. If the authentication result is null and skipOnFailure is true then move on to the next filter.
       // Authentication results, for instance, can be null if a user doesn't exists within a user store
       try {
-        AuthenticationResult authenticationResult = credentialsValidator.validateCredentials(
-            name,
-            authorizerName,
-            user,
-            password
+        AuthenticationResult authenticationResult = BasicAuthUtils.markSuperuserIfNeeded(
+            credentialsValidator.validateCredentials(name, authorizerName, user, password)
         );
         if (authenticationResult != null) {
           servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);

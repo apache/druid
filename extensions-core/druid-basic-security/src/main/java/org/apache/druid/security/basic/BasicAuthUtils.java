@@ -31,6 +31,7 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
+import org.apache.druid.server.security.AuthenticationResult;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -47,6 +48,11 @@ public class BasicAuthUtils
   public static final String ADMIN_GROUP_MAPPING_NAME = "adminGroupMapping";
   public static final String INTERNAL_USER_NAME = "druid_system";
   public static final String SEARCH_RESULT_CONTEXT_KEY = "searchResult";
+
+  /**
+   * AuthenticationResult context key marking default superuser identities.
+   */
+  public static final String SUPERUSER_CONTEXT_KEY = "superuser";
 
   // PBKDF2WithHmacSHA512 is chosen since it has built-in support in Java8.
   // Argon2 (https://github.com/p-h-c/phc-winner-argon2) is newer but the only presently
@@ -235,6 +241,24 @@ public class BasicAuthUtils
     catch (IOException ioe) {
       throw new ISE(ioe, "Couldn't serialize authorizer roleMap!");
     }
+  }
+
+  public static boolean isDefaultSuperuserName(String name)
+  {
+    return ADMIN_NAME.equals(name) || INTERNAL_USER_NAME.equals(name);
+  }
+
+  /**
+   * If superuser, creates a new AuthenticationResult with superuser context marked true.
+   */
+  public static AuthenticationResult markSuperuserIfNeeded(AuthenticationResult result)
+  {
+    if (result == null || !isDefaultSuperuserName(result.getIdentity())) {
+      return result;
+    }
+    Map<String, Object> context = result.getContext() == null ? new HashMap<>() : new HashMap<>(result.getContext());
+    context.put(SUPERUSER_CONTEXT_KEY, Boolean.TRUE);
+    return new AuthenticationResult(result.getIdentity(), result.getAuthorizerName(), result.getAuthenticatedBy(), context);
   }
 
   public static void maybeInitialize(final RetryUtils.Task<?> task)
