@@ -16,20 +16,21 @@
  * limitations under the License.
  */
 
-import type { PartitionsSpec } from '../load-data/config/partition';
+import type { FullConfig } from '@playwright/test';
+import { expect, request } from '@playwright/test';
 
 /**
- * Datasource compaction configuration
+ * Waits until the console can run SQL, which is what it needs to function.
  */
-export class CompactionConfig {
-  constructor(props: CompactionConfigProps) {
-    Object.assign(this, props);
+export default async function globalSetup(config: FullConfig) {
+  const { baseURL } = config.projects[0].use;
+  const api = await request.newContext({ baseURL });
+  try {
+    await expect(async () => {
+      const response = await api.post('/druid/v2/sql', { data: { query: 'SELECT 1' } });
+      expect(response.status()).toBe(200);
+    }).toPass({ timeout: 2 * 60 * 1000, intervals: [1000] });
+  } finally {
+    await api.dispose();
   }
 }
-
-interface CompactionConfigProps {
-  readonly skipOffsetFromLatest: string;
-  readonly partitionsSpec: PartitionsSpec;
-}
-
-export interface CompactionConfig extends CompactionConfigProps {}

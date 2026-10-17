@@ -16,99 +16,55 @@
  * limitations under the License.
  */
 
-import path from 'path';
-import type * as playwright from 'playwright-chromium';
+import type { APIRequestContext } from '@playwright/test';
 
-import { DatasourcesOverview } from './component/datasources/overview';
-import { TasksOverview } from './component/ingestion/overview';
-import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
-import {
-  PartitionConfig,
-  RangePartitionsSpec,
-  SegmentGranularity,
-} from './component/load-data/config/partition';
-import { PublishConfig } from './component/load-data/config/publish';
-import { ReindexDataConnector } from './component/load-data/data-connector/reindex';
-import { DataLoader } from './component/load-data/data-loader';
-import { saveScreenshotIfError } from './util/debug';
-import {
-  DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
-  runIndexTask,
-  UNIFIED_CONSOLE_URL,
-} from './util/druid';
-import { createBrowser, createPage } from './util/playwright';
-import { retryIfJestAssertionError } from './util/retry';
-import { waitTillWebConsoleReady } from './util/setup';
+import { loadData } from './component/load-data/data-loader';
+import { readTutorialIngestionSpec, runTask } from './util/druid';
+import { expect, test } from './util/fixtures';
+import { CLUSTER_STATE_POLL, getDatasourceSegments, getTaskStatuses } from './util/sql';
 
-jest.setTimeout(5 * 60 * 1000);
+test.describe('Reindexing from Druid', () => {
+  test('Reindex datasource from dynamic to range partitions', async ({
+    page,
+    request,
+    newDatasourceName,
+  }) => {
+    const datasourceName = newDatasourceName('reindex-dynamic-to-range');
+    await loadInitialData(request, datasourceName);
 
-describe('Reindexing from Druid', () => {
-  let browser: playwright.Browser;
-  let page: playwright.Page;
+    await expect
+      .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual({ numSegments: 1, numAvailableSegments: 1, numRows: 39244 });
 
-  beforeAll(async () => {
-    await waitTillWebConsoleReady();
-    browser = await createBrowser();
-  });
-
-  beforeEach(async () => {
-    page = await createPage(browser);
-  });
-
-  afterAll(async () => {
-    await browser.close();
-  });
-
-  it('Reindex datasource from dynamic to range partitions', async () => {
-    const testName = 'reindex-dynamic-to-range';
-    const datasourceName = testName + new Date().toISOString();
-    const interval = '2015-09-12/2015-09-13';
-    const dataConnector = new ReindexDataConnector(page, {
-      datasourceName,
-      interval,
-    });
-    const configureSchemaConfig = new ConfigureSchemaConfig({ rollup: false });
-    const partitionConfig = new PartitionConfig({
-      segmentGranularity: SegmentGranularity.DAY,
-      timeIntervals: null,
-      partitionsSpec: new RangePartitionsSpec({
+    await loadData(page, {
+      connector: { type: 'reindex', datasourceName, interval: '2015-09-12/2015-09-13' },
+      validateConnect: validateConnectLocalData,
+      rollup: false,
+      segmentGranularity: 'day',
+      partitionsSpec: {
+        type: 'range',
         partitionDimensions: ['channel'],
         targetRowsPerSegment: 10_000,
         maxRowsPerSegment: null,
-      }),
+      },
+      datasourceName,
     });
-    const publishConfig = new PublishConfig({ datasourceName: datasourceName });
+    // The initial load and the reindexing
+    await expect
+      .poll(() => getTaskStatuses(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual(['SUCCESS', 'SUCCESS']);
 
-    const dataLoader = new DataLoader({
-      page: page,
-      unifiedConsoleUrl: UNIFIED_CONSOLE_URL,
-      connector: dataConnector,
-      connectValidator: validateConnectLocalData,
-      configureSchemaConfig: configureSchemaConfig,
-      partitionConfig: partitionConfig,
-      publishConfig: publishConfig,
-    });
-
-    loadInitialData(datasourceName);
-
-    await saveScreenshotIfError(testName, page, async () => {
-      const numInitialSegment = 1;
-      await validateDatasourceStatus(page, datasourceName, numInitialSegment);
-
-      await dataLoader.load();
-      await validateTaskStatus(page, datasourceName);
-
-      const numReindexedSegment = 4; // 39k rows into segments of ~10k rows
-      await validateDatasourceStatus(page, datasourceName, numReindexedSegment);
-    });
+    // 39k rows into segments of ~10k rows
+    await expect
+      .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual({ numSegments: 4, numAvailableSegments: 4, numRows: 39244 });
   });
 });
 
-function loadInitialData(datasourceName: string) {
-  const ingestionSpec = path.join(DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, 'wikipedia-index.json');
-  const setDatasourceName = `s/wikipedia/${datasourceName}/`;
-  const sedCommands = [setDatasourceName];
-  runIndexTask(ingestionSpec, sedCommands);
+async function loadInitialData(request: APIRequestContext, datasourceName: string) {
+  const ingestionSpec = readTutorialIngestionSpec('wikipedia-index.json');
+  ingestionSpec.spec.dataSchema.dataSource = datasourceName;
+  await runTask(request, ingestionSpec);
 }
 
 function validateConnectLocalData(lines: string[]) {
@@ -151,32 +107,4 @@ function validateConnectLocalData(lines: string[]) {
       ',"delta":1' +
       '}]',
   );
-}
-
-async function validateTaskStatus(page: playwright.Page, datasourceName: string) {
-  const tasksOverview = new TasksOverview(page, UNIFIED_CONSOLE_URL);
-
-  await retryIfJestAssertionError(async () => {
-    const tasks = await tasksOverview.getTasks();
-    const task = tasks.find(t => t.datasource === datasourceName);
-    expect(task).toBeDefined();
-    expect(task!.status).toMatch('SUCCESS');
-  });
-}
-
-async function validateDatasourceStatus(
-  page: playwright.Page,
-  datasourceName: string,
-  expectedNumSegment: number,
-) {
-  const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
-  const numSegmentString = `${expectedNumSegment} segment` + (expectedNumSegment !== 1 ? 's' : '');
-
-  await retryIfJestAssertionError(async () => {
-    const datasources = await datasourcesOverview.getDatasources();
-    const datasource = datasources.find(t => t.name === datasourceName);
-    expect(datasource).toBeDefined();
-    expect(datasource!.availability).toMatch(`Fully available (${numSegmentString})`);
-    expect(datasource!.totalRows).toBe(39244);
-  });
 }

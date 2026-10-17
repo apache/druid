@@ -84,10 +84,4 @@ export default [
       '@typescript-eslint/no-require-imports': [0],
     },
   },
-  {
-    files: ['e2e-tests/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-unsafe-declaration-merging': [0],
-    },
-  },
 ];
