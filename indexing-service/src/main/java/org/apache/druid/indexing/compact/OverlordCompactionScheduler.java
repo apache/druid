@@ -29,6 +29,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
@@ -198,16 +199,16 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       }
 
       @Override
-      public void locationChanged(String taskId, TaskLocation newLocation)
+      public void locationChanged(Task task, TaskLocation newLocation)
       {
         // Do nothing
       }
 
       @Override
-      public void statusChanged(String taskId, TaskStatus status)
+      public void statusChanged(Task task, TaskStatus status)
       {
         if (status.isComplete()) {
-          onTaskFinished(taskId, status);
+          onTaskFinished(task, status);
           launchPendingJobs();
         }
       }
@@ -443,12 +444,12 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     }
   }
 
-  private void onTaskFinished(String taskId, TaskStatus taskStatus)
+  private void onTaskFinished(Task task, TaskStatus taskStatus)
   {
-    statusTracker.onTaskFinished(taskId, taskStatus);
+    statusTracker.onTaskFinished(task.getId(), taskStatus);
 
     updateQueueIfComputed(queue -> {
-      queue.onTaskFinished(taskId, taskStatus);
+      queue.onTaskFinished(task.getId(), taskStatus);
       updateCompactionSnapshots(queue);
     });
   }

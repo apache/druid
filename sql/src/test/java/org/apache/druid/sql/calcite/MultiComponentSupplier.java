@@ -52,7 +52,7 @@ import java.util.Set;
  * Usage:
  *
  * <pre>
- * @ComponentSuppliers( {  RealSupplier1.class, RealSupplier2.class } )
+ * &#64;ComponentSuppliers( {  RealSupplier1.class, RealSupplier2.class } )
  * public class SomeSupplier extends MultiComponentSupplier {
  * }
  * </pre>

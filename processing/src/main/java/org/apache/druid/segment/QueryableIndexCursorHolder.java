@@ -121,7 +121,10 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
 
-    final List<OrderBy> indexOrdering = orderingOverride != null ? orderingOverride : index.getOrdering();
+    final List<OrderBy> indexOrdering = Cursors.trimOrdering(
+        orderingOverride != null ? orderingOverride : index.getOrdering(),
+        virtualColumns
+    );
     if (Cursors.preferDescendingTimeOrdering(cursorBuildSpec)
         && Cursors.getTimeOrdering(indexOrdering) == Order.ASCENDING) {
       this.ordering = Cursors.descendingTimeOrder();
@@ -153,18 +156,8 @@ public class QueryableIndexCursorHolder implements CursorHolder
   @Override
   public boolean canVectorize()
   {
-    final ColumnInspector inspector = virtualColumns.wrapInspector(index);
-    if (!virtualColumns.isEmpty()) {
-      if (!queryContext.getVectorizeVirtualColumns().shouldVectorize(virtualColumns.canVectorize(inspector))) {
-        return false;
-      }
-    }
-    if (aggregatorFactories != null) {
-      for (AggregatorFactory factory : aggregatorFactories) {
-        if (!factory.canVectorize(inspector)) {
-          return false;
-        }
-      }
+    if (!canVectorizeVirtualColumnsAndAggregators(virtualColumns, aggregatorFactories, queryContext, index)) {
+      return false;
     }
 
     final CursorResources resources = resourcesSupplier.get();
@@ -177,6 +170,33 @@ public class QueryableIndexCursorHolder implements CursorHolder
 
     // Descending time order is handled by iterating the underlying offset back-to-front and reversing the decoded
     // vectors via ReverseVectorColumnSelectorFactory; see asVectorCursor.
+    return true;
+  }
+
+  /**
+   * Whether a cursor's virtual columns and aggregators can be vectorized, given capabilities of the physical columns
+   * from {@code inspector}.
+   */
+  static boolean canVectorizeVirtualColumnsAndAggregators(
+      VirtualColumns virtualColumns,
+      @Nullable List<AggregatorFactory> aggregatorFactories,
+      QueryContext queryContext,
+      ColumnInspector inspector
+  )
+  {
+    final ColumnInspector wrappedInspector = virtualColumns.wrapInspector(inspector);
+    if (!virtualColumns.isEmpty()) {
+      if (!queryContext.getVectorizeVirtualColumns().shouldVectorize(virtualColumns.canVectorize(wrappedInspector))) {
+        return false;
+      }
+    }
+    if (aggregatorFactories != null) {
+      for (AggregatorFactory factory : aggregatorFactories) {
+        if (!factory.canVectorize(wrappedInspector)) {
+          return false;
+        }
+      }
+    }
     return true;
   }
 

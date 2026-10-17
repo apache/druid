@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ResourceAction;
@@ -216,7 +216,7 @@ public class QueryTestRunner
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
                                                 .systemDefaultContext(Map.of())
                                                 .queryContext(builder.queryContext)
-                                                .sqlParameters(builder.parameters)
+                                                .parameters(builder.parameters)
                                                 .auth(builder.authenticationResult)
                                                 .build();
       final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
@@ -271,18 +271,19 @@ public class QueryTestRunner
       for (final String vectorize : vectorizeValues) {
         // Need to create sqlQuery inside the loop, because SqlQueryPlus can only be used once
         final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                  .sqlParameters(builder.parameters)
+                                                  .parameters(builder.parameters)
                                                   .auth(builder.authenticationResult)
                                                   .systemDefaultContext(Map.of())
                                                   .queryContext(builder.queryContext)
                                                   .build();
 
+        // Pass the string form, as clients do, so that the suite also exercises parsing it.
         final Map<String, Object> theQueryContext = new HashMap<>(sqlQuery.context());
-        theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
-        theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
+        theQueryContext.put(QueryContextParameters.VECTORIZE.getName(), vectorize);
+        theQueryContext.put(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.getName(), vectorize);
 
         if (!"false".equals(vectorize)) {
-          theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
+          QueryContextParameters.VECTOR_SIZE.set(theQueryContext, 2); // Small vector size to ensure we use more than one.
         }
 
         results.add(runQuery(

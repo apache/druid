@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -63,7 +64,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
+        QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1000L)
     );
     Assertions.assertEquals(1000, query.context().getTimeout());
 
@@ -77,7 +78,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
+        QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1000L)
     );
 
     BadQueryContextException ex = Assertions.assertThrows(
@@ -93,7 +94,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 1000)
+        QueryContext.ofMap(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 1000L)
     );
 
     BadQueryContextException ex = Assertions.assertThrows(
@@ -109,7 +110,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.SECONDARY_PARTITION_PRUNING_KEY, false)
+        QueryContext.ofMap(QueryContextParameters.SECONDARY_PARTITION_PRUNING, false)
     );
     Assertions.assertFalse(query.context().isSecondaryPartitionPruningEnabled());
   }
@@ -189,7 +190,7 @@ public class QueryContextsTest
     Map<String, Object> queryContext = new HashMap<>();
     Assertions.assertNull(QueryContext.of(queryContext).getBrokerServiceName());
 
-    queryContext.put(QueryContexts.BROKER_SERVICE_NAME, "hotBroker");
+    queryContext.put(QueryContextParameters.BROKER_SERVICE.getName(), "hotBroker");
     Assertions.assertEquals("hotBroker", QueryContext.of(queryContext).getBrokerServiceName());
   }
 
@@ -197,7 +198,7 @@ public class QueryContextsTest
   public void testGetBrokerServiceName_withNonStringValue()
   {
     Map<String, Object> queryContext = new HashMap<>();
-    queryContext.put(QueryContexts.BROKER_SERVICE_NAME, 100);
+    queryContext.put(QueryContextParameters.BROKER_SERVICE.getName(), 100);
 
     Assertions.assertThrows(BadQueryContextException.class, () -> QueryContext.of(queryContext).getBrokerServiceName());
   }
@@ -206,7 +207,7 @@ public class QueryContextsTest
   public void testGetTimeout_withNonNumericValue()
   {
     Map<String, Object> queryContext = new HashMap<>();
-    queryContext.put(QueryContexts.TIMEOUT_KEY, "2000'");
+    queryContext.put(QueryContextParameters.TIMEOUT.getName(), "2000'");
 
     Assertions.assertThrows(
         BadQueryContextException.class,
@@ -333,4 +334,29 @@ public class QueryContextsTest
     );
   }
 
+
+  @Test
+  public void testOverrideWithNullRemovesKey()
+  {
+    final Map<String, Object> overrides = new HashMap<>();
+    overrides.put("a", null);
+    overrides.put("b", 2);
+    Assertions.assertEquals(
+        ImmutableMap.of("b", 2, "c", 3),
+        QueryContexts.override(ImmutableMap.of("a", 1, "c", 3), overrides)
+    );
+  }
+
+  @Test
+  public void testWithDefaultsIgnoresNullUserValues()
+  {
+    final Map<String, Object> userContext = new HashMap<>();
+    userContext.put("a", null);
+    userContext.put("b", 2);
+    Assertions.assertEquals(
+        ImmutableMap.of("a", 1, "b", 2, "c", 3),
+        QueryContexts.withDefaults(ImmutableMap.of("a", 1, "c", 3), userContext)
+    );
+    Assertions.assertEquals(ImmutableMap.of("b", 2), QueryContexts.withDefaults(null, userContext));
+  }
 }

@@ -29,9 +29,13 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.runtime.SqlFunctions;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.sql.calcite.planner.Calcites;
+import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.sql.Date;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Objects;
 
 /**
@@ -67,7 +71,7 @@ public class SqlParameter
   }
 
   @JsonIgnore
-  public TypedValue getTypedValue()
+  public TypedValue getTypedValue(final DateTimeZone sessionTimeZone)
   {
     Object adjustedValue = value;
 
@@ -75,16 +79,27 @@ public class SqlParameter
     if (type == SqlType.TIMESTAMP) {
       // TypedValue.create for TIMESTAMP expects a long...
       // but be lenient try to accept iso format and sql 'timestamp' format\
-      if (value instanceof String) {
-        try {
-          adjustedValue = DateTimes.of((String) value).getMillis();
-        }
-        catch (IllegalArgumentException ignore) {
-        }
-        try {
-          adjustedValue = new TimestampString((String) value).getMillisSinceEpoch();
-        }
-        catch (IllegalArgumentException ignore) {
+      if (value instanceof String str) {
+        final Long offsetInstant = tryParseOffsetDateTime(str);
+        if (offsetInstant != null) {
+          // Timestamp with explicit offset: convert to Calcite timestamp using the session timezone.
+          adjustedValue = Calcites.jodaToCalciteTimestamp(
+              DateTimes.utc(offsetInstant),
+              sessionTimeZone
+          );
+        } else {
+          // Timestamp with no explicit offset: interpret as UTC and then pass it along. Calcite will interpret this
+          // as a timestamp in the session timezone with the same date-time fields.
+          try {
+            adjustedValue = DateTimes.of(str).getMillis();
+          }
+          catch (IllegalArgumentException ignore) {
+          }
+          try {
+            adjustedValue = new TimestampString(str).getMillisSinceEpoch();
+          }
+          catch (IllegalArgumentException ignore) {
+          }
         }
       }
     } else if (type == SqlType.DATE) {
@@ -127,5 +142,20 @@ public class SqlParameter
   public int hashCode()
   {
     return Objects.hash(type, value);
+  }
+
+  /**
+   * Try to parse a string as a timestamp with explicit offset. If it can be done, returns the epoch millis.
+   * Otherwise, returns null.
+   */
+  @Nullable
+  private static Long tryParseOffsetDateTime(final String value)
+  {
+    try {
+      return OffsetDateTime.parse(value).toInstant().toEpochMilli();
+    }
+    catch (DateTimeParseException e) {
+      return null;
+    }
   }
 }

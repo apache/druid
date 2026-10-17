@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, PopoverNext } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import copy from 'copy-to-clipboard';
 import { T } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 import { useStore } from 'zustand';
@@ -37,6 +36,7 @@ import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
 import {
+  copyToClipboard,
   downloadQueryDetailArchive,
   formatDuration,
   prettyFormatIsoDate,
@@ -122,7 +122,12 @@ LIMIT 100`,
     <div className="recent-query-task-panel">
       <div className="title">
         Recent query tasks
-        <Button className="close-button" icon={IconNames.CROSS} minimal onClick={onClose} />
+        <Button
+          className="close-button"
+          icon={IconNames.CROSS}
+          variant="minimal"
+          onClick={onClose}
+        />
       </div>
       {queryTaskHistory ? (
         <div className="work-entries">
@@ -173,7 +178,7 @@ LIMIT 100`,
                   icon={IconNames.DUPLICATE}
                   text="Copy ID"
                   onClick={() => {
-                    copy(w.taskId, { format: 'text/plain' });
+                    copyToClipboard(w.taskId);
                     AppToaster.show({
                       message: `${w.taskId} copied to clipboard`,
                       intent: Intent.SUCCESS,
@@ -214,7 +219,14 @@ LIMIT 100`,
 
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
-              <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
+              <PopoverNext
+                className="work-entry"
+                key={w.taskId}
+                placement="left"
+                content={menu}
+                lazy
+                shouldReturnFocusOnClose={false}
+              >
                 <div
                   data-tooltip={
                     `ID: ${w.taskId}` + (w.errorMessage ? `\n\nError:\n${w.errorMessage}` : '')
@@ -253,7 +265,7 @@ LIMIT 100`,
                     </div>
                   </div>
                 </div>
-              </Popover>
+              </PopoverNext>
             );
           })}
         </div>

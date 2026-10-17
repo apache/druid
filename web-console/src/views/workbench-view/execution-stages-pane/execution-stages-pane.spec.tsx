@@ -16,17 +16,18 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { EXECUTION_INGEST_COMPLETE } from '../../../druid-models/mocks';
-import { shallow } from '../../../utils/shallow-renderer';
 
 import { ExecutionStagesPane } from './execution-stages-pane';
 
 describe('ExecutionStagesPane', () => {
   it('matches snapshot', () => {
-    const comp = shallow(
+    const { container } = render(
       <ExecutionStagesPane execution={EXECUTION_INGEST_COMPLETE} goToTask={() => {}} />,
     );
 
-    expect(comp).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

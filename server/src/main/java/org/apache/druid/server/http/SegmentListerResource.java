@@ -95,10 +95,10 @@ public class SegmentListerResource
    * Here is how, this is used.
    *
    * (1) Client sends first request /druid/internal/v1/segments?counter=-1&timeout=<timeout>
-   * Server responds with list of segments currently served and a <counter,hash> pair.
+   * Server responds with list of segments currently served and a {@code <counter,hash>} pair.
    *
    * (2) Client sends subsequent requests /druid/internal/v1/segments?counter=<counter>&hash=<hash>&timeout=<timeout>
-   * Where <counter,hash> values are used from the last response. Server responds with list of segment updates
+   * Where {@code <counter,hash>} values are used from the last response. Server responds with list of segment updates
    * since given counter.
    *
    * This endpoint makes the client wait till either there is some segment update or given timeout elapses.

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ByteBufferUtils;
@@ -49,14 +50,12 @@ import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,8 +85,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * <p>
  * State is persisted to disk so that the mapper can be restored after a process restart without re-fetching metadata
  * from deep storage. The local header file holds the raw V10 header bytes followed by a compact bitmap region that
- * tracks which internal files have been downloaded (one bit per file, updated after each download). Both regions are
- * written together, so the file's length is fixed for its lifetime at {@code headerSize + ceil(numFiles / 8)} bytes.
+ * tracks which internal files have been downloaded (one bit per file, updated after each download). Bit {@code i} is
+ * for the file at position {@code i} of {@link SegmentInternalFileMap}, so that order is part of the persisted format.
+ * Both regions are written together, so the file's length is fixed for its lifetime at
+ * {@code headerSize + ceil(numFiles / 8)} bytes.
  * On subsequent calls, the metadata is parsed from the local file instead of range-reading from deep storage.
  * <p>
  * External segment files are supported via child {@link PartialSegmentFileMapperV10} instances, each targeting a
@@ -252,20 +253,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       // (e.g. partial-cache eviction that cleared containers but couldn't atomically clear bits, or external
       // file-system damage). Clear those bits before the restore loop so we don't spuriously sparse-allocate empty
       // containers in the restore loop's ensureContainerInitialized call and treat their files as downloaded.
-      for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
+      final SegmentInternalFileMap files = result.getMetadata().getFiles();
+      for (int i = 0; i < files.size(); i++) {
         final int byteIndex = i / 8;
         final int bitMask = 1 << (i % 8);
         if ((bitmapBuffer.get(byteIndex) & bitMask) == 0) {
           continue;
         }
-        final String name = mapper.sortedFileNames.get(i);
-        final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
-        if (fileMetadata == null) {
-          continue;
-        }
         final File containerFile = new File(
             localCacheDir,
-            StringUtils.format("%s.container.%05d", targetFilename, fileMetadata.getContainer())
+            StringUtils.format("%s.container.%05d", targetFilename, files.getContainer(i))
         );
         if (!containerFile.exists()) {
           bitmapBuffer.put(byteIndex, (byte) (bitmapBuffer.get(byteIndex) & ~bitMask));
@@ -273,17 +270,13 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       }
 
       // restore downloaded files from the (now-repaired) bitmap
-      for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
+      for (int i = 0; i < files.size(); i++) {
         final int byteIndex = i / 8;
         final int bitIndex = i % 8;
         if ((bitmapBuffer.get(byteIndex) & (1 << bitIndex)) != 0) {
-          final String name = mapper.sortedFileNames.get(i);
-          final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
-          if (fileMetadata != null) {
-            mapper.ensureContainerInitialized(fileMetadata.getContainer());
-            mapper.downloadedFiles.add(name);
-            mapper.downloadedBytes.addAndGet(fileMetadata.getSize());
-          }
+          mapper.ensureContainerInitialized(files.getContainer(i));
+          mapper.downloadedFiles.add(files.getName(i));
+          mapper.downloadedBytes.addAndGet(files.getSize(i));
         }
       }
 
@@ -301,10 +294,6 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   private final SegmentRangeReader rangeReader;
   private final String targetFilename;
   private final File localCacheDir;
-
-  // stable sorted ordering of file names for bitmap indexing
-  private final List<String> sortedFileNames;
-  private final Map<String, Integer> fileNameToIndex;
 
   // per-container state, lazily initialized
   private final MappedByteBuffer[] containers;
@@ -364,13 +353,6 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     this.coalesceGapBytes = Math.max(0, coalesceGapBytes);
     this.maxFetchRunBytes = maxFetchRunBytes;
 
-    // build stable file name ordering for bitmap indexing
-    this.sortedFileNames = new ArrayList<>(new TreeSet<>(metadata.getFiles().keySet()));
-    this.fileNameToIndex = new HashMap<>();
-    for (int i = 0; i < sortedFileNames.size(); i++) {
-      fileNameToIndex.put(sortedFileNames.get(i), i);
-    }
-
     final List<SegmentFileContainerMetadata> containerMetas = metadata.getContainers();
     final int numContainers = containerMetas.size();
     this.containers = new MappedByteBuffer[numContainers];
@@ -387,23 +369,31 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     bundleIndices.replaceAll((name, indices) -> List.copyOf(indices));
     this.bundleToContainerIndices = Map.copyOf(bundleIndices);
 
-    final List<List<String>> perContainer = new ArrayList<>(numContainers);
+    final SegmentInternalFileMap files = metadata.getFiles();
+    final List<IntArrayList> perContainer = new ArrayList<>(numContainers);
     for (int i = 0; i < numContainers; i++) {
-      perContainer.add(new ArrayList<>());
+      perContainer.add(new IntArrayList());
     }
-    for (Map.Entry<String, SegmentInternalFileMetadata> entry : metadata.getFiles().entrySet()) {
-      perContainer.get(entry.getValue().getContainer()).add(entry.getKey());
+    for (int i = 0; i < files.size(); i++) {
+      perContainer.get(files.getContainer(i)).add(i);
     }
-    perContainer.replaceAll(names -> {
+    final List<List<String>> containerNames = new ArrayList<>(numContainers);
+    for (IntArrayList indexes : perContainer) {
       // sort by (startOffset, size): if any zero-length internal files exist, they share their startOffset with the
       // next real file, and the size tie-break keeps end offsets non-decreasing in iteration order for the run planners
-      names.sort(
-          Comparator.comparingLong((String name) -> metadata.getFiles().get(name).getStartOffset())
-                    .thenComparingLong(name -> metadata.getFiles().get(name).getSize())
+      indexes.sort(
+          (i1, i2) -> {
+            final int cmp = Long.compare(files.getStartOffset(i1), files.getStartOffset(i2));
+            return cmp != 0 ? cmp : Long.compare(files.getSize(i1), files.getSize(i2));
+          }
       );
-      return List.copyOf(names);
-    });
-    this.containerFileNames = List.copyOf(perContainer);
+      final String[] names = new String[indexes.size()];
+      for (int i = 0; i < names.length; i++) {
+        names[i] = files.getName(indexes.getInt(i));
+      }
+      containerNames.add(List.of(names));
+    }
+    this.containerFileNames = List.copyOf(containerNames);
 
     this.bitmapLock = new ReentrantLock();
   }
@@ -494,8 +484,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   {
     checkClosed();
 
-    final SegmentInternalFileMetadata fileMetadata = metadata.getFiles().get(name);
-    if (fileMetadata == null) {
+    final SegmentInternalFileMap files = metadata.getFiles();
+    final int index = files.indexOf(name);
+    if (index < 0) {
       return null;
     }
 
@@ -511,10 +502,10 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     }
 
     // slice from the container mmap
-    final MappedByteBuffer container = containers[fileMetadata.getContainer()];
+    final MappedByteBuffer container = containers[files.getContainer(index)];
     final ByteBuffer view = container.asReadOnlyBuffer();
-    view.position(Ints.checkedCast(fileMetadata.getStartOffset()))
-        .limit(Ints.checkedCast(fileMetadata.getStartOffset() + fileMetadata.getSize()));
+    view.position(Ints.checkedCast(files.getStartOffset(index)))
+        .limit(Ints.checkedCast(files.getStartOffset(index) + files.getSize(index)));
     return view.slice();
   }
 
@@ -1139,8 +1130,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 
   private void clearBitmapBit(String name)
   {
-    final Integer index = fileNameToIndex.get(name);
-    if (index == null) {
+    final int index = metadata.getFiles().indexOf(name);
+    if (index < 0) {
       return;
     }
     final int byteIndex = index / 8;
@@ -1258,8 +1249,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    */
   private void markDownloadedInBitmap(String name)
   {
-    final Integer index = fileNameToIndex.get(name);
-    if (index == null) {
+    final int index = metadata.getFiles().indexOf(name);
+    if (index < 0) {
       return;
     }
     final int byteIndex = index / 8;

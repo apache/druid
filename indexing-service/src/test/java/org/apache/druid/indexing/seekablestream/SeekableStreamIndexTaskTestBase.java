@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.client.cache.CacheConfig;
@@ -114,6 +115,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -618,7 +620,6 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
               @Nullable DataSourceMetadata previousDataSourceMetadata
           )
           {
-            // log.info("Adding checkpoint hash to the set");
             checkpointRequestsHash.add(
                 Objects.hash(
                     supervisorId,
@@ -627,6 +628,16 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
                 )
             );
             return true;
+          }
+
+          @Override
+          public ListenableFuture<Boolean> isTaskReadyToPublishSegments(
+              String supervisorId,
+              String taskId,
+              DataSourceMetadata startMetadata
+          )
+          {
+            return Futures.immediateFuture(true);
           }
         },
         objectMapper
@@ -664,8 +675,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     };
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
-    dataSegmentPusherConfig.zip = true;
-    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
+    final DataSegmentPusher dataSegmentPusher =
+        new LocalDataSegmentPusher(dataSegmentPusherConfig, new DeepStorageSegmentConfig(true));
 
     toolboxFactory = new TaskToolboxFactory(
         null,

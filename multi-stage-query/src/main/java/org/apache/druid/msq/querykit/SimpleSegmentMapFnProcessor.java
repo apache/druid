@@ -25,28 +25,26 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.segment.SegmentMapFunction;
 
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Processor that creates a segment mapping function that does *not* require broadcast join data. The resulting segment
- * mapping function embeds the joinable data within itself, and can be applied anywhere that would otherwise have used
+ * Processor that creates segment mapping functions that do not require broadcast join data, one per base input, as
+ * {@link BaseInputSegmentMapFunction#createAll} returns them. The resulting segment mapping functions embed the
+ * joinable data within themselves, and can be applied anywhere that would otherwise have used
  * {@link org.apache.druid.query.JoinDataSource#createSegmentMapFunction(Query)}.
  *
- * @see BroadcastJoinSegmentMapFnProcessor processor that creates a segment mapping function when there is
+ * @see BroadcastJoinSegmentMapFnProcessor processor that creates segment mapping functions when there is
  * broadcast input
  */
-public class SimpleSegmentMapFnProcessor implements FrameProcessor<SegmentMapFunction>
+public class SimpleSegmentMapFnProcessor implements FrameProcessor<List<BaseInputSegmentMapFunction>>
 {
   private final Query<?> query;
   private final PolicyEnforcer policyEnforcer;
 
-  public SimpleSegmentMapFnProcessor(final Query<?> query,
-                                     final PolicyEnforcer policyEnforcer)
+  public SimpleSegmentMapFnProcessor(final Query<?> query, final PolicyEnforcer policyEnforcer)
   {
     this.query = query;
     this.policyEnforcer = policyEnforcer;
@@ -65,10 +63,9 @@ public class SimpleSegmentMapFnProcessor implements FrameProcessor<SegmentMapFun
   }
 
   @Override
-  public ReturnOrAwait<SegmentMapFunction> runIncrementally(final IntSet readableInputs)
+  public ReturnOrAwait<List<BaseInputSegmentMapFunction>> runIncrementally(final IntSet readableInputs)
   {
-    ExecutionVertex ev = ExecutionVertex.of(query);
-    return ReturnOrAwait.returnObject(ev.createSegmentMapFunction(policyEnforcer));
+    return ReturnOrAwait.returnObject(BaseInputSegmentMapFunction.createAll(query, policyEnforcer));
   }
 
   @Override

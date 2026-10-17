@@ -128,9 +128,8 @@ async function configureCompaction(
 
   // Saving the compaction config is not instantaneous
   await retryIfJestAssertionError(async () => {
-    const savedCompactionConfig = await datasourcesOverview.getCompactionConfiguration(
-      datasourceName,
-    );
+    const savedCompactionConfig =
+      await datasourcesOverview.getCompactionConfiguration(datasourceName);
     expect(savedCompactionConfig).toEqual(compactionConfig);
   });
 }

@@ -18,7 +18,6 @@
  */
 
 const fs = require('fs');
-const checker = require('license-checker');
 
 const LICENSES_FILE = '../licenses.yaml';
 const START_MARKER_LINE = '# Web console modules start';
@@ -77,145 +76,145 @@ function injectConsoleLicenses(consoleLicenses) {
   );
 }
 
-checker.init(
-  {
+async function main() {
+  const { runLicenseCheck } = await import('@lizenz/checker');
+  const packages = await runLicenseCheck({
     start: '.',
     production: true,
-  },
-  function (err, packages) {
-    if (err) {
-      console.log('err', err);
-      return;
-    }
+  });
 
-    Object.assign(packages, extraPackages);
+  Object.assign(packages, extraPackages);
 
-    const seen = new Map();
-    const mapped = Object.keys(packages)
-      .sort()
-      .map(p => {
-        const m = p.match(/^(.+)@(\d+\.\d+\.\d+.*)$/);
-        if (!m) throw new Error(`Malformed name@version`);
-        const name = m[1];
-        if (name === 'web-console') return; // This is me!
-        if (seen.has(name)) return; // Dedupe
-        seen.set(name, true);
+  const seen = new Map();
+  const mapped = Object.keys(packages)
+    .sort()
+    .map(p => {
+      const m = p.match(/^(.+)@(\d+\.\d+\.\d+.*)$/);
+      if (!m) throw new Error(`Malformed name@version`);
+      const name = m[1];
+      if (name === 'web-console') return; // This is me!
+      if (seen.has(name)) return; // Dedupe
+      seen.set(name, true);
 
-        const version = m[2];
-        const meta = packages[p];
-        let { publisher, licenses, licenseFile } = meta;
-        if (!licenses) throw new Error(`Package '${p} does not have a licenses`);
+      const version = m[2];
+      const meta = packages[p];
+      let { publisher, licenses, licenseFile } = meta;
+      if (!licenses) throw new Error(`Package '${p} does not have a licenses`);
 
-        let properLicenseName; // Map the licenses to their proper name
-        let licenseExt; // Map the licenses to the right extension
-        switch (licenses) {
-          case 'MIT':
-            properLicenseName = 'MIT License';
-            licenseExt = 'MIT';
-            break;
+      let properLicenseName; // Map the licenses to their proper name
+      let licenseExt; // Map the licenses to the right extension
+      switch (licenses) {
+        case 'MIT':
+          properLicenseName = 'MIT License';
+          licenseExt = 'MIT';
+          break;
 
-          case 'ISC':
-            properLicenseName = 'ISC License';
-            licenseExt = 'ISC';
-            break;
+        case 'ISC':
+          properLicenseName = 'ISC License';
+          licenseExt = 'ISC';
+          break;
 
-          case 'Apache-2.0':
-            properLicenseName = 'Apache License version 2.0';
-            licenseExt = 'A2';
-            break;
+        case 'Apache-2.0':
+          properLicenseName = 'Apache License version 2.0';
+          licenseExt = 'A2';
+          break;
 
-          case 'BSD-2-Clause':
-            properLicenseName = 'BSD-2-Clause License';
-            licenseExt = 'BSD2';
-            break;
+        case 'BSD-2-Clause':
+          properLicenseName = 'BSD-2-Clause License';
+          licenseExt = 'BSD2';
+          break;
 
-          case 'BSD-3-Clause':
-            properLicenseName = 'BSD-3-Clause License';
-            licenseExt = 'BSD3';
-            break;
+        case 'BSD-3-Clause':
+          properLicenseName = 'BSD-3-Clause License';
+          licenseExt = 'BSD3';
+          break;
 
-          case '0BSD':
-            properLicenseName = 'Zero-Clause BSD';
-            licenseExt = '0BSD';
-            break;
+        case '0BSD':
+          properLicenseName = 'Zero-Clause BSD';
+          licenseExt = '0BSD';
+          break;
 
-          case  'OFL-1.1':
-            properLicenseName = 'SIL Open Font License 1.1';
-            licenseExt = 'OFL';
-            break;
+        case 'OFL-1.1':
+          properLicenseName = 'SIL Open Font License 1.1';
+          licenseExt = 'OFL';
+          break;
 
-          default:
-            throw new Error(`Unknown license '${licenses}' in ${p}`);
-        }
+        default:
+          throw new Error(`Unknown license '${licenses}' in ${p}`);
+      }
 
-        const simpleName = name.replace('/', '-');
-        const licenseDest = `licenses/bin/${simpleName}.${licenseExt}`;
+      const simpleName = name.replace('/', '-');
+      const licenseDest = `licenses/bin/${simpleName}.${licenseExt}`;
 
-        let hasLicense = false;
-        if (licenseExt !== 'A2') {
-          if (licenseFile && licenseFile.match(/\/license(?:\.\w+)?/i)) {
-            // If the file ends with license.ext? then copy it over
-            try {
-              fs.copyFileSync(licenseFile, `../${licenseDest}`);
-              hasLicense = true;
-            } catch (e) {
-              console.log(`Could not copy license for '${p}': ${JSON.stringify(meta)}`);
-            }
-          } else {
-            // See if the license is already there (manually) keep it
-            try {
-              fs.statSync(`../${licenseDest}`);
-              hasLicense = true;
-            } catch (e) {
-              console.log(`Could not find license for '${p}': ${JSON.stringify(meta)}`);
-              console.log(`Find and copy the package's license file to '../${licenseDest}'`);
-            }
+      let hasLicense = false;
+      if (licenseExt !== 'A2') {
+        if (licenseFile && licenseFile.match(/\/license(?:\.\w+)?/i)) {
+          // If the file ends with license.ext? then copy it over
+          try {
+            fs.copyFileSync(licenseFile, `../${licenseDest}`);
+            hasLicense = true;
+          } catch (e) {
+            console.log(`Could not copy license for '${p}': ${JSON.stringify(meta)}`);
+          }
+        } else {
+          // See if the license is already there (manually) keep it
+          try {
+            fs.statSync(`../${licenseDest}`);
+            hasLicense = true;
+          } catch (e) {
+            console.log(`Could not find license for '${p}': ${JSON.stringify(meta)}`);
+            console.log(`Find and copy the package's license file to '../${licenseDest}'`);
           }
         }
+      }
 
-        if (!publisher && hasLicense) {
-          // Extract copyright from license
-          const licenseText = fs.readFileSync(`../${licenseDest}`, 'utf-8');
-          const m = licenseText.match(
-            /(?:^|\n)\s*Copyright(?: (?:\(c\)|©))?(?: 2[0-9]{3}(?:-\w+)?,?)? ([^0-9][^\n]*)\n/m,
-          );
-          if (m) {
-            publisher = m[1]
-              .replace(/All rights reserved./i, '')
-              .replace(/[0-9-]{4,9}/, '')
-              .trim();
-          }
+      if (!publisher && hasLicense) {
+        // Extract copyright from license
+        const licenseText = fs.readFileSync(`../${licenseDest}`, 'utf-8');
+        const m = licenseText.match(
+          /(?:^|\n)\s*Copyright(?: (?:\(c\)|©))?(?: 2[0-9]{3}(?:-\w+)?,?)? ([^0-9][^\n]*)\n/m,
+        );
+        if (m) {
+          publisher = m[1]
+            .replace(/All rights reserved./i, '')
+            .replace(/[0-9-]{4,9}/, '')
+            .trim();
         }
+      }
 
-        if (!publisher) {
-          // Hand coded copyrights
-          if (name === 'asap') publisher = 'Contributors';
-          if (name === 'diff-match-patch') publisher = 'Google';
-          if (name === 'esutils') publisher = 'Yusuke Suzuki'; // https://github.com/estools/esutils#license
-          if (name === 'echarts') publisher = 'Apache Software Foundation';
-          if (name === '@internationalized/date') publisher = 'Adobe';
-        }
+      if (!publisher) {
+        // Hand coded copyrights
+        if (name === 'asap') publisher = 'Contributors';
+        if (name === 'diff-match-patch') publisher = 'Google';
+        if (name === 'esutils') publisher = 'Yusuke Suzuki'; // https://github.com/estools/esutils#license
+        if (name === 'echarts') publisher = 'Apache Software Foundation';
+        if (name === '@internationalized/date') publisher = 'Adobe';
+      }
 
-        if (!publisher) {
-          console.log(`No license for '${name}' ('${licenseDest}')`);
-        }
+      if (!publisher) {
+        console.log(`No license for '${name}' ('${licenseDest}')`);
+      }
 
-        // Make our blob
-        const lines = [
-          `name: "${name}"`,
-          `license_category: binary`,
-          `module: web-console`,
-          `license_name: ${properLicenseName}`,
-          publisher ? `copyright: ${publisher}` : undefined,
-          `version: ${version}`,
-          hasLicense ? `license_file_path: ${licenseDest}` : undefined,
-          extraLinesForLib[name],
-        ];
+      // Make our blob
+      const lines = [
+        `name: "${name}"`,
+        `license_category: binary`,
+        `module: web-console`,
+        `license_name: ${properLicenseName}`,
+        publisher ? `copyright: ${publisher}` : undefined,
+        `version: ${version}`,
+        hasLicense ? `license_file_path: ${licenseDest}` : undefined,
+        extraLinesForLib[name],
+      ];
 
-        return lines.filter(Boolean).join('\n');
-      })
-      .filter(Boolean);
+      return lines.filter(Boolean).join('\n');
+    })
+    .filter(Boolean);
 
-    injectConsoleLicenses(mapped);
-  },
-);
+  injectConsoleLicenses(mapped);
+}
+
+main().catch(err => {
+  console.log('err', err);
+  process.exitCode = 1;
+});

@@ -41,11 +41,13 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.HashJoinSegment;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -427,6 +429,58 @@ public class JoinDataSource implements DataSource
     final SegmentMapFunction baseMapFn = joinAnalysis.getBaseDataSource().createSegmentMapFunction(query);
 
     return createSegmentMapFunction(clausesToUse, baseFilterToUse, joinFilterPreAnalysis, baseMapFn);
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner createSegmentPruner(@Nullable DimFilter filter, VirtualColumns virtualColumns)
+  {
+    // Pass down any filters that read solely left-hand fields.
+    final List<DimFilter> leftFilters = new ArrayList<>();
+    if (filter != null) {
+      for (final DimFilter conjunct : DimFilters.splitConjunction(filter)) {
+        if (conjunct.getRequiredColumns().stream().noneMatch(c -> JoinPrefixUtils.isPrefixedBy(c, rightPrefix))) {
+          leftFilters.add(conjunct);
+        }
+      }
+    }
+
+    // Include our own leftFilter, if it's set.
+    if (leftFilter != null && !joinType.isRighty()) {
+      leftFilters.add(leftFilter);
+    }
+
+    return left.createSegmentPruner(
+        leftFilters.isEmpty() ? null : DimFilters.conjunction(leftFilters),
+        virtualColumns
+    );
+  }
+
+  @Override
+  public Set<String> getReservedColumns()
+  {
+    final JoinDataSourceAnalysis analysis = getJoinAnalysisForDataSource();
+    final Set<String> names = new HashSet<>(analysis.getBaseDataSource().getReservedColumns());
+    analysis.getJoinBaseTableFilter().ifPresent(filter -> names.addAll(filter.getRequiredColumns()));
+
+    // Skip columns under the prefix of this clause or an earlier one: they are read from a right-hand side, where
+    // virtual columns on top of us cannot shadow them. Clauses are in the order they are joined.
+    final List<String> prefixes = new ArrayList<>();
+    for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
+      prefixes.add(clause.getPrefix());
+      for (final String column : clause.getCondition().getRequiredColumns()) {
+        if (prefixes.stream().noneMatch(prefix -> JoinPrefixUtils.isPrefixedBy(column, prefix))) {
+          names.add(column);
+        }
+      }
+    }
+    return names;
+  }
+
+  @Override
+  public boolean mayFilterRows()
+  {
+    return leftFilter != null || !joinType.isLefty() || left.mayFilterRows();
   }
 
   public static SegmentMapFunction createSegmentMapFunction(

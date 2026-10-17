@@ -86,7 +86,7 @@ mvn test -pl sql -am -Dtest="org.apache.druid.sql.**" -Dsurefire.failIfNoSpecifi
 To run `sql/src/test/quidem/org.apache.druid.quidem.SqlQuidemTest/numMerge.iq`:
 
 ```
-mvn test -pl sql -am -Dtest="org.apache.druid.sql.calcite.SqlQuidemTest" -Dquidem.filter=numMerge -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true -T1C
+mvn test -pl sql -am -Dtest="org.apache.druid.quidem.SqlQuidemTest" -Dquidem.filter=numMerge -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true -T1C
 ```
 
 To run `quidem-ut/src/test/quidem/org.apache.druid.quidem.QTest/qaWin/basics_group_by.all.iq`:

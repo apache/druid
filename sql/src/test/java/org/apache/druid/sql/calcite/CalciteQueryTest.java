@@ -85,6 +85,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -6254,6 +6255,51 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountStarWithFilterOnCastAsLong()
+  {
+    // LONG is a non-reserved alias for BIGINT, so this must plan identically to
+    // testCountStarWithFilterOnCastedString() above.
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE CAST(dim1 AS long) = 2",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(equality("dim1", 2L, ColumnType.LONG))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
+  public void testLongIsUsableAsAnIdentifier()
+  {
+    // LONG is added to nonReservedKeywordsToAdd, so it must remain usable unquoted as a column alias.
+    testQuery(
+        "SELECT dim1 AS long FROM druid.foo LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1")
+                .columnTypes(ColumnType.STRING)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""}
         )
     );
   }
@@ -13227,6 +13273,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterDoubleDimensionCastAsDecimal()
+  {
+    testQuery(
+        "SELECT dim1 FROM numfoo WHERE CAST(dbl1 AS DECIMAL) = 1.7 LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1")
+                .columnTypes(ColumnType.STRING)
+                .filters(equality("dbl1", 1.7, ColumnType.DOUBLE))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1"}
+        )
+    );
+  }
+
+  @Test
+  public void testCoalesceDoubleDimensionCastAsDecimal()
+  {
+    testQuery(
+        "SELECT dim1, COALESCE(CAST(dbl1 AS DECIMAL), 0.5) FROM numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "nvl(\"dbl1\",0.5)", ColumnType.DOUBLE))
+                .columns("dim1", "v0")
+                .columnTypes(ColumnType.STRING, ColumnType.DOUBLE)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 1.0},
+            new Object[]{"10.1", 1.7},
+            new Object[]{"2", 0.0},
+            new Object[]{"1", 0.5},
+            new Object[]{"def", 0.5},
+            new Object[]{"abc", 0.5}
+        )
+    );
+  }
+
+  @Test
   public void testFilterLongDimension()
   {
     testQuery(
@@ -13257,7 +13353,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         "SELECT exp(count(*)) + 10, sin(pi / 6), cos(pi / 6), tan(pi / 6), cot(pi / 6)," +
-        "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1) " +
+        "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1)," +
+        "sinh(exp(count(*)) / 2), cosh(exp(count(*)) / 2), tanh(exp(count(*)) / 2), cbrt(exp(count(*))) " +
         "FROM druid.foo WHERE  dim2 = 0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
@@ -13279,7 +13376,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    expressionPostAgg("p5", "asin((exp(\"a0\") / 2))", ColumnType.DOUBLE),
                                    expressionPostAgg("p6", "acos((exp(\"a0\") / 2))", ColumnType.DOUBLE),
                                    expressionPostAgg("p7", "atan((exp(\"a0\") / 2))", ColumnType.DOUBLE),
-                                   expressionPostAgg("p8", "atan2(exp(\"a0\"),1)", ColumnType.DOUBLE)
+                                   expressionPostAgg("p8", "atan2(exp(\"a0\"),1)", ColumnType.DOUBLE),
+                                   expressionPostAgg("p9", "sinh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p10", "cosh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p11", "tanh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p12", "cbrt(exp(\"a0\"))", ColumnType.DOUBLE)
                                )
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
@@ -13293,7 +13394,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 Math.asin(0.5),
                 Math.acos(0.5),
                 Math.atan(0.5),
-                Math.atan2(1, 1)
+                Math.atan2(1, 1),
+                Math.sinh(0.5),
+                Math.cosh(0.5),
+                Math.tanh(0.5),
+                Math.cbrt(1.0)
             }
         )
     );
@@ -16016,7 +16121,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .queryContext(
             ImmutableMap.of(
-                QueryContexts.ENABLE_DEBUG, true
+                QueryContextParameters.DEBUG.getName(), true
             )
         )
         .expectedQuery(
@@ -16115,7 +16220,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .queryContext(
             ImmutableMap.of(
-                QueryContexts.ENABLE_DEBUG, true
+                QueryContextParameters.DEBUG.getName(), true
             )
         )
         .expectedResults(

@@ -102,20 +102,24 @@
       <artifactId>jakarta.validation-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!-- Keep S3 classes on the shared classpath to avoid loading separate copies in the different extensions. -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
       <version>${aws.sdk.v2.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3-transfer-manager</artifactId>
       <version>${aws.sdk.v2.version}</version>
     </dependency>
+    <!-- Keep CRT classes on the shared classpath, next to the crt-core that s3 brings there. -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>aws-crt-client</artifactId>
       <version>${aws.sdk.v2.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
@@ -229,12 +233,6 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>testcontainers-minio</artifactId>
-      <version>${testcontainers.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

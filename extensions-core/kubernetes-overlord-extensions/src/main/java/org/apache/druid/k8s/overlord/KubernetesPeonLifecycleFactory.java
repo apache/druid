@@ -25,24 +25,30 @@ import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import javax.annotation.Nullable;
+
 public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
 {
   private final KubernetesPeonClient client;
   private final TaskLogs taskLogs;
   private final ObjectMapper mapper;
   private final long logSaveTimeoutMs;
+  @Nullable
+  private final Integer advertisedPlaintextPort;
 
   public KubernetesPeonLifecycleFactory(
       KubernetesPeonClient client,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      long logSaveTimeoutMs
+      long logSaveTimeoutMs,
+      @Nullable Integer advertisedPlaintextPort
   )
   {
     this.client = client;
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.logSaveTimeoutMs = logSaveTimeoutMs;
+    this.advertisedPlaintextPort = advertisedPlaintextPort;
   }
 
   @Override
@@ -55,7 +61,8 @@ public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
         taskLogs,
         mapper,
         stateListener,
-        logSaveTimeoutMs
+        logSaveTimeoutMs,
+        advertisedPlaintextPort
     );
   }
 }

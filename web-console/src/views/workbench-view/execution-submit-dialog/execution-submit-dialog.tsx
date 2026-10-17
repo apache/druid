@@ -24,7 +24,7 @@ import React, { useState } from 'react';
 import { Execution } from '../../../druid-models';
 import { AppToaster } from '../../../singletons';
 import type { QueryDetailArchive } from '../../../utils';
-import { offsetToRowColumn } from '../../../utils';
+import { offsetToLineColumn } from '../../../utils';
 
 import './execution-submit-dialog.scss';
 
@@ -65,11 +65,11 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
     try {
       parsed = JSONBig.parse(text);
     } catch (e) {
-      const rowColumn = typeof e.at === 'number' ? offsetToRowColumn(text, e.at) : undefined;
+      const position = typeof e.at === 'number' ? offsetToLineColumn(text, e.at) : undefined;
       AppToaster.show({
         intent: Intent.DANGER,
         message: `Could not parse JSON: ${e.message}${
-          rowColumn ? ` (at line ${rowColumn.row + 1}, column ${rowColumn.column + 1})` : ''
+          position ? ` (at line ${position.line}, column ${position.column})` : ''
         }`,
         timeout: 5000,
       });

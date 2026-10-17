@@ -34,6 +34,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputRow;
@@ -44,11 +45,12 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
@@ -105,6 +107,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTestBase
@@ -314,7 +318,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         new MultipleSpecificSegmentSpec(Collections.singletonList(realtimeSegment1.getId().toDescriptor())),
         new AllColumnIncluderator(),
         false,
-        ImmutableMap.of(QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        QueryContext.ofMap(QueryContextParameters.ENABLE_PARALLEL_MERGE, false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
@@ -721,6 +725,168 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   }
 
   @Test
+  public void testLastSegmentRemovalClearsRebuildState() throws IOException
+  {
+    final BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        Mockito.mock(TimelineServerView.class),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+    runningSchema = schema;
+    final List<DataSegment> segments = ImmutableList.of(segment1, segment2);
+    segments.forEach(segment -> schema.addSegment(druidServers.get(0).getMetadata(), segment));
+    schema.refresh(
+        segments.stream().map(DataSegment::getId).collect(Collectors.toSet()),
+        new HashSet<>(Set.of("foo"))
+    );
+    Assertions.assertNotNull(schema.getDatasource("foo"));
+    emitter.flush();
+
+    // Removing a non-last segment marks the datasource for rebuild before the last segment is removed.
+    schema.removeSegment(segments.get(0));
+    schema.removeSegment(segments.get(1));
+    Assertions.assertNull(schema.getDatasource("foo"));
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+
+    // A later refresh must not process stale rebuild state and emit the removal metric again.
+    schema.refresh(new HashSet<>(), new HashSet<>());
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+
+    // A refresh that had already captured the datasource for rebuild before the last segment was removed
+    // (or that is handed the datasource explicitly) finds no table left to remove and must not emit again.
+    schema.refresh(new HashSet<>(), new HashSet<>(Set.of("foo")));
+    Assertions.assertNull(schema.getDatasource("foo"));
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+  }
+
+  @Test
+  public void testRefreshOfUnknownDatasourceDoesNotEmitRemovalMetric() throws IOException
+  {
+    final BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        Mockito.mock(TimelineServerView.class),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+    runningSchema = schema;
+
+    // No table was ever built for this datasource, so there is nothing to report as removed.
+    schema.refresh(new HashSet<>(), new HashSet<>(Set.of("never-existed")));
+    Assertions.assertNull(schema.getDatasource("never-existed"));
+    emitter.verifyNotEmitted(Metric.DATASOURCE_REMOVED);
+  }
+
+  @Test
+  public void testRefreshOfUninitializedDatasourceDoesNotEmitRemovalMetric() throws IOException
+  {
+    final BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        Mockito.mock(TimelineServerView.class),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+    runningSchema = schema;
+
+    // The segment is known but has not been refreshed, so the datasource row signature is empty and no table has
+    // ever been built. Rebuilding it must not report a removal.
+    schema.addSegment(druidServers.get(0).getMetadata(), segment1);
+    schema.refresh(new HashSet<>(), new HashSet<>(Set.of("foo")));
+    Assertions.assertNull(schema.getDatasource("foo"));
+    emitter.verifyNotEmitted(Metric.DATASOURCE_REMOVED);
+  }
+
+  @Test
+  public void testLastSegmentRemovedDuringRefreshWithUninitializedSegmentEmitsRemovalOnce() throws Exception
+  {
+    final AtomicBoolean blockSignatureBuild = new AtomicBoolean(false);
+    final CountDownLatch signatureBuilt = new CountDownLatch(1);
+    final CountDownLatch resumeRefresh = new CountDownLatch(1);
+    final BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        Mockito.mock(TimelineServerView.class),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    )
+    {
+      @Override
+      public RowSignature buildDataSourceRowSignature(String dataSource)
+      {
+        final RowSignature rowSignature = super.buildDataSourceRowSignature(dataSource);
+        if (blockSignatureBuild.get()) {
+          // Hold the refresh between computing the (empty) signature and acting on it.
+          signatureBuilt.countDown();
+          try {
+            Assertions.assertTrue(resumeRefresh.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+          }
+          catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+          }
+        }
+        return rowSignature;
+      }
+    };
+    runningSchema = schema;
+
+    // Build the table from a refreshed segment.
+    schema.addSegment(druidServers.get(0).getMetadata(), segment1);
+    schema.refresh(new HashSet<>(Set.of(segment1.getId())), new HashSet<>(Set.of("foo")));
+    Assertions.assertNotNull(schema.getDatasource("foo"));
+    emitter.flush();
+
+    // Leave only an unrefreshed segment behind, so the next rebuild sees an empty (non-null) row signature.
+    schema.addSegment(druidServers.get(0).getMetadata(), segment2);
+    schema.removeSegment(segment1);
+
+    blockSignatureBuild.set(true);
+    final AtomicReference<Throwable> refreshError = new AtomicReference<>();
+    final Thread refreshThread = new Thread(() -> {
+      try {
+        schema.refresh(new HashSet<>(), new HashSet<>(Set.of("foo")));
+      }
+      catch (Throwable t) {
+        refreshError.set(t);
+      }
+    });
+    refreshThread.start();
+    Assertions.assertTrue(signatureBuilt.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+
+    // The last segment disappears while the refresh is in flight: the callback removes the table and emits once.
+    schema.removeSegment(segment2);
+    Assertions.assertNull(schema.getDatasource("foo"));
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+
+    // The refresh resumes, finds the table already gone and must not emit a second removal.
+    resumeRefresh.countDown();
+    refreshThread.join(TimeUnit.SECONDS.toMillis(WAIT_TIMEOUT_SECS));
+    Assertions.assertFalse(refreshThread.isAlive(), "refresh did not finish");
+    Assertions.assertNull(refreshError.get());
+    Assertions.assertNull(schema.getDatasource("foo"));
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+  }
+
+  @Test
   public void testAllDatasourcesRebuiltOnDatasourceRemoval() throws IOException, InterruptedException
   {
     CountDownLatch addSegmentLatch = new CountDownLatch(7);
@@ -1063,9 +1229,11 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.PRIORITY_KEY, 5,
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    Map<String, Object> queryContext = QueryContext.ofMap(
+        QueryContextParameters.PRIORITY,
+        5,
+        QueryContextParameters.ENABLE_PARALLEL_MERGE,
+        false
     );
 
     DataSegment segment = newSegment("test", 0);
@@ -1223,9 +1391,11 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.PRIORITY_KEY, 5,
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    Map<String, Object> queryContext = QueryContext.ofMap(
+        QueryContextParameters.PRIORITY,
+        5,
+        QueryContextParameters.ENABLE_PARALLEL_MERGE,
+        false
     );
 
     DataSegment segment = newSegment("test", 0);

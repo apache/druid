@@ -67,7 +67,9 @@ final class ClusteringAwareIncrementalIndexColumnSelectorFactory extends Increme
     this.clusteringConstants = new ClusteringColumnSelectorFactory(
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
-        clusteringValues
+        clusteringValues,
+        VirtualColumns.EMPTY,
+        rowSelector
     );
   }
 

@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -74,6 +75,27 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
       "{\"type\":\"all\"}"
   );
+
+  @Test
+  public void testDdlRejectedByEngineWithoutFeature()
+  {
+    // This class's engine (IngestionTestSqlEngine) does not declare CAN_DDL, so DDL is rejected up front even though
+    // the config gate is open. The engine check is what keeps DDL off engines whose result contract is a task handle.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> getSqlStatementFactory(
+            PlannerConfig.builder().enableCatalogDdl(true).build(),
+            new AuthConfig()
+        ).directStatement(
+            SqlQueryPlus.builder("CREATE TABLE tbl (a VARCHAR)").auth(CalciteTests.SUPER_USER_AUTH_RESULT).build()
+        ).execute()
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("[CREATE TABLE] is not supported by requested SQL engine [ingestion-test]"),
+        e.getMessage()
+    );
+    didTest = true;
+  }
 
   @Test
   public void testInsertFromTable()
@@ -1386,9 +1408,12 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatement()
   {
+    // UNION of tables would be plannable (as an aggregation over a union datasource); however, UNION of
+    // lookup and a table is not plannable.
     assertQueryIsUnplannable(
-        "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo PARTITIONED BY ALL TIME",
-        "SQL requires 'UNION' but only 'UNION ALL' is supported."
+        "INSERT INTO druid.dst SELECT k, v FROM lookup.lookyloo UNION SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME",
+        "Query requires union with an input that reads from something other than a regular table, "
+        + "which is not supported."
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.

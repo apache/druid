@@ -548,28 +548,6 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testUnionAllWithDifferentColumnNames()
-  {
-    // This test fails till MSQ can support arbitrary column names and column types for UNION ALL
-    testIngestQuery()
-        .setSql(
-            "INSERT INTO druid.dst "
-            + "SELECT dim2, dim1, m1 FROM foo2 "
-            + "UNION ALL "
-            + "SELECT dim1, dim2, m1 FROM foo "
-            + "PARTITIONED BY ALL TIME")
-        .setExpectedValidationErrorMatcher(
-            new DruidExceptionMatcher(
-                DruidException.Persona.USER,
-                DruidException.Category.INVALID_INPUT,
-                "general"
-            ).expectMessageContains(
-                "SQL requires union between two tables and column names queried for each table are different "
-                + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."))
-        .verifyPlanningErrors();
-  }
-
-  @Test
   public void testTopLevelUnionAllWithJoins()
   {
     // This test fails becaues it is a top level UNION ALL which cannot be planned using MSQ. It will be supported once
@@ -586,7 +564,8 @@ public class MSQFaultsTest extends MSQTestBase
                 DruidException.Category.INVALID_INPUT,
                 "general"
             ).expectMessageContains(
-                "SQL requires union between inputs that are not simple table scans and involve a filter or aliasing"))
+                "Query requires union with an input that reads from something other than a regular table, "
+                + "which is not supported."))
         .verifyPlanningErrors();
   }
 

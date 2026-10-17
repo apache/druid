@@ -50,6 +50,7 @@ import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IndexSpec;
 import org.joda.time.DateTime;
 
@@ -71,16 +72,16 @@ import java.util.stream.Collectors;
  * One of the design goals for MSQ is to have less turning parameters. If a parameter is not expected to change the result
  * of a job, but only how the job runs, it's a parameter we can skip documenting in external docs.
  * </p>
- * <br></br>
+ * <br>
  * List of context parameters not present in external docs:
- * <br></br>
+ * <br>
  * <ol>
  *
  * <li><b>maxInputBytesPerWorker</b>: Should be used in conjunction with taskAssignment `auto` mode. When dividing the
  * input of a stage among the workers, this parameter determines the maximum size in bytes that are given to a single worker
  * before the next worker is chosen.This parameter is only used as a guideline during input slicing, and does not guarantee
  * that a the input cannot be larger.
- * <br></br>
+ * <br>
  * For example, we have 3 files. 3, 7, 12 GB each. then we would end up using 2 worker: worker 1 -> 3, 7 and worker 2 -> 12.
  * This value is used for all stages in a query. Default valus is: <b>10737418240</b></li>
  *
@@ -652,8 +653,8 @@ public class MultiStageQueryContext
     final Map<String, Object> overrides = new HashMap<>();
 
     // Add appropriate finalization to native query context.
-    if (!originalContext.containsKey(QueryContexts.FINALIZE_KEY)) {
-      overrides.put(QueryContexts.FINALIZE_KEY, isFinalizeAggregations(originalContext));
+    if (!originalContext.has(QueryContextParameters.FINALIZE)) {
+      QueryContextParameters.FINALIZE.set(overrides, isFinalizeAggregations(originalContext));
     }
 
     // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.

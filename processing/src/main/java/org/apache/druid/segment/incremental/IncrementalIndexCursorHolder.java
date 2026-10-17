@@ -58,7 +58,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         this.ordering = Cursors.ascendingTimeOrder();
       }
     } else {
-      this.ordering = ordering;
+      this.ordering = Cursors.trimOrdering(ordering, spec.getVirtualColumns());
     }
   }
 

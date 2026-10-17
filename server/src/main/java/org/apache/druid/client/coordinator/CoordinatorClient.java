@@ -22,7 +22,7 @@ package org.apache.druid.client.coordinator;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -37,6 +37,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -137,12 +138,14 @@ public interface CoordinatorClient
   /**
    * Returns an iterator over the metadata segments of multiple datasources in the cluster, fetching them in one go.
    * <p>
+   * The caller is responsible for closing the holder.
+   * <p>
    * API: {@code GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus}
    *
    * @param watchedDataSources Optional datasources to filter the segments by. If null or empty, all segments are returned.
    * @param includeRealtimeSegments If true, includes realtime segments in the result.
    */
-  ListenableFuture<CloseableIterator<SegmentStatusInCluster>> fetchAllUsedSegmentsWithOvershadowedStatus(
+  ListenableFuture<ResourceHolder<Iterator<SegmentStatusInCluster>>> fetchAllUsedSegmentsWithOvershadowedStatus(
       @Nullable Set<String> watchedDataSources,
       boolean includeRealtimeSegments
   );

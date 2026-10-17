@@ -40,7 +40,6 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -136,6 +135,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -159,7 +159,9 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.AcquireMode;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -288,7 +290,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
-                  .put(QueryContexts.FINALIZE_KEY, true)
+                  .put(QueryContextParameters.FINALIZE.getName(), true)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
@@ -534,7 +536,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
           config.storageDirectory = newTempFolder("storageDir");
           binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
-              new LocalDataSegmentPusher(config),
+              new LocalDataSegmentPusher(config, new DeepStorageSegmentConfig()),
               testSegmentManager
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
@@ -889,9 +891,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         SqlQueryPlus.builder()
                     .sql(query)
                     .queryContext(context)
-                    .parameters(parameters)
                     .auth(authenticationResult)
                     .build()
+                    .withParameters(parameters)
     );
 
     final List<Object[]> sequence = stmt.execute().getResults().toList();
@@ -1463,46 +1465,47 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
-          FutureUtils.getUnchecked(
-              segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL).getSegmentFuture(),
-              false
-          );
-          final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
-          final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
+          // Keep the acquire open across the direct file reads below so the (possibly ephemeral) cache keeps the
+          // segment files on disk; closing the un-released action afterwards releases everything.
+          try (AcquireSegmentAction acquireAction = segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL)) {
+            acquireAction.await();
+            final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
+            final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 
-          // assert rowSignature
-          Assertions.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(cursorFactory.getRowSignature()));
+            // assert rowSignature
+            Assertions.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(cursorFactory.getRowSignature()));
 
-          // assert rollup
-          Assertions.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
+            // assert rollup
+            Assertions.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
 
-          // assert query granularity
-          Assertions.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
+            // assert query granularity
+            Assertions.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
 
-          // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
-          // so treat null as empty
-          Assertions.assertArrayEquals(
-              expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
-              queryableIndex.getMetadata().getAggregators() == null
-              ? new AggregatorFactory[0]
-              : queryableIndex.getMetadata().getAggregators()
-          );
+            // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
+            // so treat null as empty
+            Assertions.assertArrayEquals(
+                expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
+                queryableIndex.getMetadata().getAggregators() == null
+                ? new AggregatorFactory[0]
+                : queryableIndex.getMetadata().getAggregators()
+            );
 
-          if (expectedProjections != null) {
-            Assertions.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
-          }
+            if (expectedProjections != null) {
+              Assertions.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+            }
 
-          if (expectedClusterGroups != null) {
-            Assertions.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
-            Assertions.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
-          }
+            if (expectedClusterGroups != null) {
+              Assertions.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
+              Assertions.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
+            }
 
-          for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
-            // transforming rows for sketch assertions
-            List<Object> transformedRow = row.stream()
-                                             .map(MSQTestBase.this::segmentToAssertionValueMapper)
-                                             .collect(Collectors.toList());
-            segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
+            for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
+              // transforming rows for sketch assertions
+              List<Object> transformedRow = row.stream()
+                                               .map(MSQTestBase.this::segmentToAssertionValueMapper)
+                                               .collect(Collectors.toList());
+              segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
+            }
           }
         }
 

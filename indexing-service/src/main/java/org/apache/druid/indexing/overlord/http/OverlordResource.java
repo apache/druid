@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -26,8 +27,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
@@ -79,7 +85,9 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -101,6 +109,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -121,6 +130,7 @@ public class OverlordResource
   private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
 
   private final AuthConfig authConfig;
+  private final ObjectMapper jsonMapper;
 
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
   private static final Set<String> AUDITED_TASK_TYPES
@@ -137,7 +147,8 @@ public class OverlordResource
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper,
       WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      ObjectMapper jsonMapper
   )
   {
     this.overlord = overlord;
@@ -150,6 +161,7 @@ public class OverlordResource
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
     this.authConfig = authConfig;
+    this.jsonMapper = jsonMapper;
   }
 
   /**
@@ -506,34 +518,58 @@ public class OverlordResource
   @Path("/action")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response doAction(final TaskActionHolder holder)
+  public void performTaskAction(
+      final TaskActionHolder holder,
+      @Context HttpServletRequest request
+  )
   {
-    return asLeaderWith(
-        taskMaster.getTaskActionClient(holder.getTask()),
-        new Function<>()
+    final AsyncRequest asyncRequest = new AsyncRequest(request);
+    final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
+    if (!taskActionClient.isPresent()) {
+      // Encourage client to try again soon, when we'll likely have a redirect set up
+      asyncRequest.complete(Status.SERVICE_UNAVAILABLE.getStatusCode(), null);
+      return;
+    }
+
+    final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
+    asyncRequest.context.addListener(
+        ServletResourceUtils.createAsyncTimeoutListener(_ -> {
+          asyncRequest.complete(HttpResponseStatus.GATEWAY_TIMEOUT.code(), null);
+          future.cancel(true);
+        })
+    );
+
+    // Use a default timeout of 15 minutes
+    asyncRequest.context.setTimeout(15 * 60_000);
+
+    Futures.addCallback(
+        future,
+        new FutureCallback<Object>()
         {
           @Override
-          public Response apply(TaskActionClient taskActionClient)
+          public void onSuccess(Object result)
           {
-            final Map<String, Object> retMap;
+            // Use null-safe map since some task actions may return null result
+            final Map<String, Object> payload = new HashMap<>();
+            payload.put("result", result);
 
-            // It would be great to verify that this worker is actually supposed to be running the task before
-            // actually doing the action.  Some ideas for how that could be done would be using some sort of attempt_id
-            // or token that gets passed around.
-
-            try {
-              final Object ret = taskActionClient.submit(holder.getAction());
-              retMap = new HashMap<>();
-              retMap.put("result", ret);
-            }
-            catch (Exception e) {
-              log.warn(e, "Failed to perform task action");
-              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
-            }
-
-            return Response.ok().entity(retMap).build();
+            asyncRequest.complete(Status.OK.getStatusCode(), payload);
           }
-        }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            log.warn(t, "Failed to perform task action");
+            if (t instanceof DruidException druidException) {
+              asyncRequest.complete(druidException.getStatusCode(), druidException.toErrorResponse());
+            } else {
+              final Map<String, String> payload = new HashMap<>();
+              payload.put("error", t.getMessage());
+              asyncRequest.complete(Status.INTERNAL_SERVER_ERROR.getStatusCode(), payload);
+            }
+          }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -883,5 +919,37 @@ public class OverlordResource
             authorizerMapper
         )
     );
+  }
+
+  private class AsyncRequest
+  {
+    final AtomicBoolean completed = new AtomicBoolean(false);
+    final AsyncContext context;
+
+    AsyncRequest(HttpServletRequest request)
+    {
+      this.context = request.startAsync();
+    }
+
+    void complete(int statusCode, @Nullable Object result)
+    {
+      if (!completed.compareAndSet(false, true)) {
+        log.warn("Request has already been completed");
+        return;
+      }
+
+      try {
+        final HttpServletResponse response = (HttpServletResponse) context.getResponse();
+        response.setStatus(statusCode);
+        if (result != null) {
+          response.setContentType(MediaType.APPLICATION_JSON);
+          jsonMapper.writeValue(response.getOutputStream(), result);
+        }
+        context.complete();
+      }
+      catch (Exception e) {
+        log.noStackTrace().warn(e, "Request timed out or is closed already");
+      }
+    }
   }
 }

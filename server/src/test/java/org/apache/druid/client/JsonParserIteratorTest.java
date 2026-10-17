@@ -143,6 +143,62 @@ public class JsonParserIteratorTest
       });
       Assertions.assertTrue(exception.getMessage().contains("ioexception test"));
     }
+
+    @Test
+    public void testStructuredErrorBodyReadFailureIsNormalizedToIteratorHost()
+    {
+      // A structured error body can span chunks: init() sees START_OBJECT and then pulls the rest of the object
+      // through readValue(), so a later-chunk failure (a QueryTimeoutException that DirectDruidClient rethrows as
+      // itself) surfaces from inside that read rather than as the deserialized value. It has to go through
+      // convertException like every other path, or it keeps the data server's host instead of this iterator's.
+      final QueryTimeoutException laterChunkFailure = new QueryTimeoutException(
+          "timed out reading the error body",
+          "data-server-01:8100"
+      );
+      final byte[] prefix = StringUtils.toUtf8("{\"error\":\"Query timeout\",");
+      final InputStream truncatedErrorBody = new InputStream()
+      {
+        private int pos;
+
+        @Override
+        public int read()
+        {
+          if (pos >= prefix.length) {
+            throw laterChunkFailure;
+          }
+          return prefix[pos++] & 0xff;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len)
+        {
+          if (pos >= prefix.length) {
+            throw laterChunkFailure;
+          }
+          final int n = Math.min(len, prefix.length - pos);
+          System.arraycopy(prefix, pos, b, off, n);
+          pos += n;
+          return n;
+        }
+      };
+
+      final QueryTimeoutException exception = Assertions.assertThrows(QueryTimeoutException.class, () -> {
+        JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+            JAVA_TYPE,
+            Futures.immediateFuture(truncatedErrorBody),
+            URL,
+            null,
+            HOST,
+            OBJECT_MAPPER
+        );
+        iterator.hasNext();
+      });
+      Assertions.assertEquals(HOST, exception.getHost());
+      Assertions.assertTrue(
+          exception.getMessage().contains("timed out reading the error body"),
+          exception.getMessage()
+      );
+    }
   }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")

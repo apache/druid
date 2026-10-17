@@ -1069,13 +1069,13 @@ public class MultipleKubernetesTaskRunnerTest extends EasyMockSupport
           }
 
           @Override
-          public void locationChanged(String taskId, TaskLocation newLocation)
+          public void locationChanged(Task task, TaskLocation newLocation)
           {
 
           }
 
           @Override
-          public void statusChanged(String taskId, TaskStatus status)
+          public void statusChanged(Task task, TaskStatus status)
           {
 
           }

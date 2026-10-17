@@ -437,6 +437,7 @@ public class ControllerImpl implements Controller
           MultiStageQueryContext.getSketchEncoding(querySpec.getContext())
       );
       closer.register(workerSketchFetcher::close);
+      closer.register(() -> workerManager.stop(true));
 
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory = makeInputSpecSlicerFactory(
@@ -849,7 +850,7 @@ public class ControllerImpl implements Controller
   /**
    * Adds the work orders for worker to {@link ControllerImpl#workOrdersToRetry} if the {@link ControllerQueryKernel} determines that there
    * are work orders which needs reprocessing.
-   * <br></br>
+   * <br>
    * This method is not thread safe, so it should always be called inside the main controller thread.
    */
   private void addToRetryQueue(ControllerQueryKernel kernel, int worker, MSQFault fault)
@@ -2542,7 +2543,6 @@ public class ControllerImpl implements Controller
       log.debug("Query [%s] starting task launcher.", queryDef.getQueryId());
 
       workerTaskLauncherFuture = workerManager.start();
-      closer.register(() -> workerManager.stop(true));
 
       workerTaskLauncherFuture.addListener(
           () ->
