@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.frame.Frame;
@@ -26,6 +27,7 @@ import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
@@ -50,8 +52,16 @@ public class CursorFactoryRowsAndColumns implements CloseableShapeshifter, RowsA
 
   public CursorFactoryRowsAndColumns(CursorFactory cursorFactory)
   {
+    // Retain the original implementation's undocumented 200 MiB single-frame limit.
+    // Consult the commit history for its original rationale.
+    this(cursorFactory, 200 << 20);
+  }
+
+  @VisibleForTesting
+  CursorFactoryRowsAndColumns(final CursorFactory cursorFactory, final int allocatorCapacity)
+  {
     this.cursorFactory = cursorFactory;
-    this.materialized = Suppliers.memoize(() -> materialize(cursorFactory));
+    this.materialized = Suppliers.memoize(() -> materialize(cursorFactory, allocatorCapacity));
   }
 
   @SuppressWarnings("unchecked")
@@ -88,7 +98,7 @@ public class CursorFactoryRowsAndColumns implements CloseableShapeshifter, RowsA
   }
 
   @Nonnull
-  private static RowsAndColumns materialize(CursorFactory cursorFactory)
+  private static RowsAndColumns materialize(final CursorFactory cursorFactory, final int allocatorCapacity)
   {
     try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -101,14 +111,19 @@ public class CursorFactoryRowsAndColumns implements CloseableShapeshifter, RowsA
       final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
       final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
-          new ArenaMemoryAllocatorFactory(200 << 20), // 200 MB, because, why not?
+          new ArenaMemoryAllocatorFactory(allocatorCapacity),
           rowSignature,
           Collections.emptyList()
       );
 
       try (final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
         while (!cursor.isDoneOrInterrupted()) {
-          writer.addSelection();
+          if (!writer.addSelection()) {
+            throw ResourceLimitExceededException.withMessage(
+                "RowsAndColumns materialization exceeded the configured frame capacity of [%,d] bytes",
+                allocatorCapacity
+            );
+          }
           cursor.advance();
         }
 

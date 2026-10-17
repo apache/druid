@@ -44,6 +44,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MiddleManagerServiceModule;
+import org.apache.druid.guice.NativeQueryEngineModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.annotations.Self;
@@ -116,6 +117,7 @@ public class CliMiddleManager extends ServerRunnable
   {
     return ImmutableList.of(
         new MiddleManagerServiceModule(),
+        NativeQueryEngineModule.builder().scanOnly().build(),
         new Module()
         {
           @Override
@@ -127,7 +129,6 @@ public class CliMiddleManager extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
             binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
-
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);

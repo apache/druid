@@ -48,6 +48,8 @@ class ParameterDocumentationGeneratorTest
   private static final String SQL_TABLE = "|Parameter|Description|Default value|\n|---|---|---|\n";
   private static final String SQL_MARKER =
       "<!-- GENERATED QUERY CONTEXT PARAMETER: lane -->";
+  private static final String SYSTEM_TABLE_MARKER =
+      "<!-- GENERATED QUERY CONTEXT PARAMETER: allowNativeFunctionsForSystemTables -->";
 
   @TempDir
   Path temporaryFolder;
@@ -58,7 +60,7 @@ class ParameterDocumentationGeneratorTest
     writeDocuments(
         "general header\n|stale| " + GENERAL_MARKER,
         "scan header\n|stale| " + SCAN_MARKER,
-        "sql header\n" + SQL_TABLE + "|stale| " + SQL_MARKER
+        "sql header\n" + SQL_TABLE + "|stale| " + SQL_MARKER + "\n|stale| " + SYSTEM_TABLE_MARKER
     );
 
     final Path generatedOutput = temporaryFolder.resolve("generated");
@@ -84,6 +86,8 @@ class ParameterDocumentationGeneratorTest
     assertTrue(sql.startsWith("sql header\n"));
     assertTrue(sql.contains("|`lane`|"));
     assertTrue(sql.contains(SQL_MARKER));
+    assertTrue(sql.contains("|`allowNativeFunctionsForSystemTables`|"));
+    assertTrue(sql.contains("|`false`| " + SYSTEM_TABLE_MARKER));
 
     assertEquals(general, Files.readString(generatedOutput.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8));
     assertEquals(scan, Files.readString(generatedOutput.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8));

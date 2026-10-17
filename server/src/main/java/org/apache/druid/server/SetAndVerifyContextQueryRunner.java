@@ -58,6 +58,16 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
 
   public Query<T> withTimeoutAndMaxScatterGatherBytes(Query<T> query, ServerConfig serverConfig)
   {
+    return withTimeoutAndMaxScatterGatherBytes(query, serverConfig, startTimeMillis);
+  }
+
+  /// Applies the native server guardrails before execution paths that do not use the normal segment walker.
+  public static <T> Query<T> withTimeoutAndMaxScatterGatherBytes(
+      final Query<T> query,
+      final ServerConfig serverConfig,
+      final long startTimeMillis
+  )
+  {
     Query<T> newQuery =
         Queries.withMaxScatterGatherBytes(
             Queries.withDefaultTimeout(
@@ -75,9 +85,9 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
     final long existingFailTime = context.getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
     long computedFailTime;
     if (context.hasTimeout()) {
-      computedFailTime = this.startTimeMillis + context.getTimeout();
+      computedFailTime = startTimeMillis + context.getTimeout();
     } else {
-      computedFailTime = this.startTimeMillis + serverConfig.getMaxQueryTimeout();
+      computedFailTime = startTimeMillis + serverConfig.getMaxQueryTimeout();
     }
     // Clamp overflow
     if (computedFailTime <= 0) {

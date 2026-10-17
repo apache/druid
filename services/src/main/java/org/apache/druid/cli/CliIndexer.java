@@ -40,15 +40,11 @@ import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.QueryRunnerFactoryModule;
-import org.apache.druid.guice.QueryableModule;
-import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.NativeQueryEngineModule;
 import org.apache.druid.guice.RegexEngineModule;
-import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Parent;
@@ -73,7 +69,6 @@ import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
@@ -125,10 +120,7 @@ public class CliIndexer extends ServerRunnable
   {
     return ImmutableList.of(
         new DruidProcessingModule(),
-        new QueryableModule(),
-        new QueryRunnerFactoryModule(),
-        new SegmentWranglerModule(),
-        new JoinableFactoryModule(),
+        NativeQueryEngineModule.builder().build(),
         new IndexerServiceModule(),
         new Module()
         {
@@ -140,7 +132,6 @@ public class CliIndexer extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/indexer");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
-            binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
             // needed for the CliPeon, not needed for indexer, but have to bind annotation.
             binder.bindConstant().annotatedWith(AttemptId.class).to("");
 
@@ -238,7 +229,6 @@ public class CliIndexer extends ServerRunnable
         new IndexingServiceTaskLogsModule(properties),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
-        new QueryablePeonModule(),
         new CliIndexerServerModule(properties),
         new LookupModule(),
         new MSQIndexingModule(),

@@ -50,20 +50,16 @@ import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleServer;
+import org.apache.druid.guice.NativeQueryEngineModule;
 import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.guice.PeonServerModule;
 import org.apache.druid.guice.PolyBind;
-import org.apache.druid.guice.QueryRunnerFactoryModule;
-import org.apache.druid.guice.QueryableModule;
-import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.RegexEngineModule;
-import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
@@ -118,7 +114,6 @@ import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
@@ -214,10 +209,7 @@ public class CliPeon extends GuiceRunnable
   {
     return ImmutableList.of(
         new PeonProcessingModule(),
-        new QueryableModule(),
-        new QueryRunnerFactoryModule(),
-        new SegmentWranglerModule(),
-        new JoinableFactoryModule(),
+        NativeQueryEngineModule.builder().build(),
         new IndexingServiceTaskLogsModule(properties),
         new RegexEngineModule(),
         new Module()
@@ -239,7 +231,6 @@ public class CliPeon extends GuiceRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-            binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
             binder.bindConstant().annotatedWith(AttemptId.class).to(attemptId);
 
             JsonConfigProvider.bind(binder, "druid.task.executor", DruidNode.class, Parent.class);
@@ -342,7 +333,6 @@ public class CliPeon extends GuiceRunnable
             return () -> tmpDir;
           }
         },
-        new QueryablePeonModule(),
         new PeonServerModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),

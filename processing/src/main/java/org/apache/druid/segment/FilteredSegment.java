@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.rowsandcols.CursorFactoryRowsAndColumns;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -44,6 +45,8 @@ public class FilteredSegment extends WrappedSegment
   {
     if (CursorFactory.class.equals(clazz)) {
       return (T) new FilteredCursorFactory(delegate.as(CursorFactory.class), filter);
+    } else if (CloseableShapeshifter.class.equals(clazz)) {
+      return (T) new CursorFactoryRowsAndColumns(as(CursorFactory.class));
     } else if (TopNOptimizationInspector.class.equals(clazz)) {
       return (T) new SimpleTopNOptimizationInspector(filter == null);
     }

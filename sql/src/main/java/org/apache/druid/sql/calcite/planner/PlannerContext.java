@@ -42,6 +42,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.InDimFilter;
@@ -422,6 +423,11 @@ public class PlannerContext
   public QueryContext queryContext()
   {
     return QueryContext.of(queryContext);
+  }
+
+  public boolean allowNativeFunctionsForSystemTables()
+  {
+    return queryContext().getOrDefault(QueryContextParameters.ALLOW_NATIVE_FUNCTIONS_FOR_SYSTEM_TABLES);
   }
 
   public boolean isStringifyArrays()

@@ -35,6 +35,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.List;
@@ -107,7 +108,11 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, Sourc
   private DruidTable getDruidTable()
   {
     final RelOptTable table = getTable();
-    final DruidTable druidTable = table.unwrap(DruidTable.class);
+    DruidTable druidTable = table.unwrap(DruidTable.class);
+    if (druidTable == null) {
+      // QueryHandler has already selected native planning; this decoupled stage only needs the native representation.
+      druidTable = SystemSchema.getNativeSystemTable(table);
+    }
     Preconditions.checkNotNull(druidTable, "DruidTable may not be null");
     return druidTable;
   }

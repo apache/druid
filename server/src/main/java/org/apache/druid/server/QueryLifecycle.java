@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
@@ -40,6 +41,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
@@ -48,6 +50,7 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -62,6 +65,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -99,12 +103,15 @@ public class QueryLifecycle
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final QueryConfigSnapshot configSnapshot;
+  private final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers;
+  private final ServerConfig serverConfig;
   private final long startMs;
   private final long startNs;
 
   private State state = State.NEW;
   private AuthenticationResult authenticationResult;
   private QueryToolChest toolChest;
+  private boolean executeNativeQueryLocally;
 
   @MonotonicNonNull
   private Query<?> baseQuery;
@@ -124,6 +131,8 @@ public class QueryLifecycle
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final QueryConfigSnapshot configSnapshot,
+      final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers,
+      final ServerConfig serverConfig,
       final long startMs,
       final long startNs
   )
@@ -137,8 +146,41 @@ public class QueryLifecycle
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.configSnapshot = configSnapshot;
+    this.dataSourceQueryHandlers = dataSourceQueryHandlers;
+    this.serverConfig = serverConfig;
     this.startMs = startMs;
     this.startNs = startNs;
+  }
+
+  public QueryLifecycle(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final QuerySegmentWalker texasRanger,
+      final GenericQueryMetricsFactory queryMetricsFactory,
+      final ServiceEmitter emitter,
+      final RequestLogger requestLogger,
+      final AuthorizerMapper authorizerMapper,
+      final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
+      final QueryConfigSnapshot configSnapshot,
+      final long startMs,
+      final long startNs
+  )
+  {
+    this(
+        conglomerate,
+        texasRanger,
+        queryMetricsFactory,
+        emitter,
+        requestLogger,
+        authorizerMapper,
+        authConfig,
+        policyEnforcer,
+        configSnapshot,
+        Collections.emptyMap(),
+        new ServerConfig(),
+        startMs,
+        startNs
+    );
   }
 
   /**
@@ -271,6 +313,9 @@ public class QueryLifecycle
   public AuthorizationResult authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
+    executeNativeQueryLocally = QueryResource.NATIVE_QUERY_ROUTE_LOCAL.equals(
+        req.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE)
+    );
     final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         Iterables.transform(
             baseQuery.getDataSource().getTableNames(),
@@ -420,11 +465,56 @@ public class QueryLifecycle
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
     @SuppressWarnings("unchecked")
-    final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
-                                     .withIdentity(authenticationResult.getIdentity())
-                                     .run(texasRanger, responseContext);
+    final Query<T> originalQuery = (Query<T>) baseQuery;
+    final DataSourceQueryHandler dataSourceQueryHandler = findDataSourceQueryHandler(originalQuery.getDataSource());
+    // Handlers can start fanout or provider work before reaching a segment walker, or bypass it entirely.
+    // Apply the same server guardrails first, and pass the normalized query to both runner creation and execution.
+    final Query<T> query = dataSourceQueryHandler == null
+                           ? originalQuery
+                           : SetAndVerifyContextQueryRunner.withTimeoutAndMaxScatterGatherBytes(
+                               originalQuery,
+                               serverConfig,
+                               System.currentTimeMillis()
+                           );
+    final QueryRunner<T> queryRunner = dataSourceQueryHandler == null
+                                       ? query.getRunner(texasRanger)
+                                       : dataSourceQueryHandler.createRunner(
+                                           query,
+                                           authenticationResult,
+                                           executeNativeQueryLocally
+                                       );
+    final Sequence<T> res = queryRunner.run(
+        QueryPlus.wrap(query).withIdentity(authenticationResult.getIdentity()),
+        responseContext
+    );
 
     return new QueryResponse<>(res == null ? Sequences.empty() : res, responseContext);
+  }
+
+  /**
+   * Finds a handler for the root datasource or one of its descendants. A handler selected for a descendant receives
+   * the complete query so it can resolve the matching datasource vertices before normal native execution.
+   */
+  @Nullable
+  private DataSourceQueryHandler findDataSourceQueryHandler(final DataSource dataSource)
+  {
+    final DataSourceQueryHandler directHandler = dataSourceQueryHandlers.get(dataSource.getClass());
+    if (directHandler != null) {
+      return directHandler;
+    }
+
+    DataSourceQueryHandler descendantHandler = null;
+    for (final DataSource child : dataSource.getChildren()) {
+      final DataSourceQueryHandler childHandler = findDataSourceQueryHandler(child);
+      if (childHandler == null) {
+        continue;
+      }
+      if (descendantHandler != null && descendantHandler != childHandler) {
+        throw new ISE("Multiple datasource query handlers are required for datasource[%s]", dataSource);
+      }
+      descendantHandler = childHandler;
+    }
+    return descendantHandler;
   }
 
   /**
