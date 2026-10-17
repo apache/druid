@@ -499,6 +499,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         }
 
         final Iterator<StorageLocation> iterator = strategy.getLocations();
+        final List<String> locationFailures = new ArrayList<>();
         while (iterator.hasNext()) {
           final StorageLocation location = iterator.next();
           final StorageLocation.ReservationHold<CompleteSegmentCacheEntry> hold = location.addWeakReservationHold(
@@ -518,17 +519,31 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   hold,
                   (taskHolds, waitNanos) -> loadCompleteEntry(hold.getEntry(), location, taskHolds, waitNanos)
               );
+            } else {
+              locationFailures.add(
+                  StringUtils.format(
+                      "location[%s]: max[%,d] available[%,d]",
+                      location.getPath(),
+                      location.getMaxSizeBytes(),
+                      location.availableSizeBytes()
+                  )
+              );
             }
           }
           catch (Throwable t) {
             throw CloseableUtils.closeAndWrapInCatch(t, hold);
           }
         }
-        throw DruidException.forPersona(DruidException.Persona.USER)
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
                             .build(
-                                "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
-                                dataSegment.getId()
+                                "Unable to load segment[%s] on demand, ensure enough disk space has been allocated "
+                                + "to load all segments involved in the query. Segment size[%,d] exceeded the "
+                                + "remaining capacity of every configured storage location, even after evicting "
+                                + "everything evictable: %s",
+                                dataSegment.getId(),
+                                dataSegment.getSize(),
+                                String.join("; ", locationFailures)
                             );
       }
       finally {
