@@ -20,7 +20,12 @@
 package org.apache.druid.common.exception;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.QueryExceptionCompat;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryException;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -33,6 +38,7 @@ import java.util.function.Function;
  */
 public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransformStrategy
 {
+  private static final Logger log = new Logger(PersonaBasedErrorTransformStrategy.class);
   private static final String ERROR_WITH_ID_TEMPLATE = "Internal server error, please contact your administrator "
                                                        + "with Error ID [%s] if the issue persists.";
   public static final PersonaBasedErrorTransformStrategy INSTANCE = new PersonaBasedErrorTransformStrategy();
@@ -54,10 +60,51 @@ public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransfor
                                      .build(StringUtils.format(ERROR_WITH_ID_TEMPLATE, errorId)));
   }
 
+  /**
+   * Hides a {@link SanitizableException} that is not meant for users in the same way as {@link #maybeTransform}, and
+   * logs it against the generated error id. See {@link #shouldHide} for which exceptions are hidden.
+   */
+  @Override
+  public Exception transformIfNeeded(SanitizableException exception)
+  {
+    if (!shouldHide(exception)) {
+      return (Exception) exception;
+    }
+    final String errorId = UUID.randomUUID().toString();
+    log.error((Throwable) exception, "External Error ID: [%s]", errorId);
+    return exception.sanitize(message -> StringUtils.format(ERROR_WITH_ID_TEMPLATE, errorId));
+  }
+
+  /**
+   * Not used, since {@link #transformIfNeeded} decides how to transform each exception.
+   */
   @Override
   public Function<String, String> getErrorMessageTransformFunction()
   {
-    throw new UnsupportedOperationException();
+    return Function.identity();
+  }
+
+  /**
+   * Whether a {@link SanitizableException} is hidden from the client:
+   * <ul>
+   *   <li>An exception that wraps a {@link DruidException} is hidden if that exception is not meant for users.</li>
+   *   <li>A {@link QueryException} is hidden if its {@link QueryException.FailType} is not meant for users, as
+   *   decided by {@link QueryExceptionCompat#getPersona}.</li>
+   *   <li>An {@link ISE} is hidden, since it describes internal state.</li>
+   *   <li>Other exceptions, such as {@link UOE} and authorization failures, describe what the client asked for, and
+   *   are not hidden.</li>
+   * </ul>
+   */
+  private static boolean shouldHide(SanitizableException exception)
+  {
+    final Throwable cause = ((Throwable) exception).getCause();
+    if (cause instanceof DruidException) {
+      return ((DruidException) cause).getTargetPersona() != DruidException.Persona.USER;
+    } else if (exception instanceof QueryException) {
+      return QueryExceptionCompat.getPersona(((QueryException) exception).getFailType()) != DruidException.Persona.USER;
+    } else {
+      return exception instanceof ISE;
+    }
   }
 
   @Override
