@@ -29,6 +29,7 @@ import com.google.inject.Scopes;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
+import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.LazySingleton;
@@ -36,6 +37,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
@@ -66,6 +68,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -82,6 +85,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -90,6 +95,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 @LazySingleton
 public class QueryLifecycleTest
@@ -124,6 +130,8 @@ public class QueryLifecycleTest
   AuthorizerMapper authzMapper;
 
   QueryConfigProvider queryConfig;
+  @Bind
+  ServerConfig serverConfig = new ServerConfig();
   @Bind(lazy = true)
   QueryConfigProvider queryConfigProvider;
 
@@ -170,6 +178,151 @@ public class QueryLifecycleTest
           DruidBinders.dataSourceQueryHandlerBinder(binder);
         }
     );
+  }
+
+  /// Handler-backed queries must receive the server default before local execution or node fanout.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerUsesServerDefaultTimeout(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    final long before = System.currentTimeMillis();
+    executeHandler(lifecycle, Map.of(), local);
+
+    Assertions.assertEquals(5_000L, captured.get().context().getTimeout());
+    Assertions.assertEquals(1_234L, captured.get().context().getMaxScatterGatherBytes());
+    assertHandlerDeadline(captured.get(), before, 5_000L);
+  }
+
+  /// A zero timeout is bounded by the server maximum, not an unlimited node deadline.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerZeroTimeoutUsesServerMaximum(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    final long before = System.currentTimeMillis();
+    executeHandler(lifecycle, Map.of(QueryContextParameters.TIMEOUT.getName(), 0L), local);
+
+    assertHandlerDeadline(captured.get(), before, 10_000L);
+  }
+
+  /// An explicit timeout below the server maximum is retained.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerPreservesExplicitTimeout(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    final long before = System.currentTimeMillis();
+    executeHandler(lifecycle, Map.of(QueryContextParameters.TIMEOUT.getName(), 7_000L), local);
+
+    Assertions.assertEquals(7_000L, captured.get().context().getTimeout());
+    assertHandlerDeadline(captured.get(), before, 7_000L);
+  }
+
+  /// Reject excessive timeouts before creating a handler runner or starting provider work.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerRejectsTimeoutAboveServerMaximum(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    Assertions.assertThrows(
+        BadQueryContextException.class,
+        () -> executeHandler(lifecycle, Map.of(QueryContextParameters.TIMEOUT.getName(), 10_001L), local)
+    );
+    Assertions.assertNull(captured.get());
+  }
+
+  /// Normalization must not extend a deadline inherited from an earlier query stage.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerPreservesEarlierDeadline(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    final long deadline = System.currentTimeMillis() + 1_000L;
+    executeHandler(lifecycle, Map.of(DirectDruidClient.QUERY_FAIL_TIME, deadline), local);
+
+    Assertions.assertEquals(deadline, captured.get().context().getLong(DirectDruidClient.QUERY_FAIL_TIME));
+  }
+
+  private QueryLifecycle handlerLifecycle(final AtomicReference<Query<?>> captured, final boolean local)
+  {
+    serverConfig = new ServerConfig()
+    {
+      @Override
+      public long getDefaultQueryTimeout()
+      {
+        return 5_000L;
+      }
+
+      @Override
+      public long getMaxQueryTimeout()
+      {
+        return 10_000L;
+      }
+
+      @Override
+      public long getMaxScatterGatherBytes()
+      {
+        return 1_234L;
+      }
+    };
+    final DataSourceQueryHandler handler = new DataSourceQueryHandler()
+    {
+      @Override
+      public <T> QueryRunner<T> createRunner(
+          final Query<T> query,
+          final AuthenticationResult authentication,
+          final boolean executeLocally
+      )
+      {
+        captured.set(query);
+        Assertions.assertEquals(local, executeLocally);
+        return (queryPlus, responseContext) -> {
+          Assertions.assertSame(query, queryPlus.getQuery());
+          return Sequences.empty();
+        };
+      }
+    };
+    injector = Guice.createInjector(
+        BoundFieldModule.of(this),
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          DruidBinders.dataSourceQueryHandlerBinder(binder).addBinding(SystemTableDataSource.class).toInstance(handler);
+        }
+    );
+    EasyMock.expect(queryConfig.getContext()).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(Access.OK).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).anyTimes();
+    replayAll();
+    return createLifecycle();
+  }
+
+  private void executeHandler(final QueryLifecycle lifecycle, final Map<String, Object> context, final boolean local)
+  {
+    lifecycle.initialize(
+        Druids.newScanQueryBuilder()
+              .dataSource(new SystemTableDataSource("server_properties"))
+              .eternityInterval()
+              .context(context)
+              .build()
+    );
+    lifecycle.authorize(mockRequest(local ? QueryResource.NATIVE_QUERY_ROUTE_LOCAL : null));
+    lifecycle.execute();
+  }
+
+  private void assertHandlerDeadline(final Query<?> query, final long before, final long timeout)
+  {
+    final long deadline = query.context().getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+    Assertions.assertTrue(deadline >= before + timeout);
+    Assertions.assertTrue(deadline <= System.currentTimeMillis() + timeout);
   }
 
   private QueryLifecycle createLifecycle()
@@ -1034,6 +1187,7 @@ public class QueryLifecycleTest
         policyEnforcer,
         new QueryConfigSnapshot(ImmutableMap.of(), BrokerDynamicConfig.builder().build()),
         Map.of(SystemTableDataSource.class, handler),
+        serverConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -1085,6 +1239,7 @@ public class QueryLifecycleTest
         policyEnforcer,
         new QueryConfigSnapshot(ImmutableMap.of(), BrokerDynamicConfig.builder().build()),
         Map.of(SystemTableDataSource.class, handler),
+        serverConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );

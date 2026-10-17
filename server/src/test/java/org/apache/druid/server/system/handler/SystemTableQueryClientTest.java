@@ -57,6 +57,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SystemTableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -690,6 +691,42 @@ public class SystemTableQueryClientTest
           .toList();
 
     Assertions.assertFalse(capturedNodeQuery.get().context().isBySegment());
+  }
+
+  /// SELECT * FROM (SELECT * FROM sys.server_properties) must retain the outer query deadline.
+  @ParameterizedTest
+  @ValueSource(longs = {0L, 7_000L, Long.MAX_VALUE})
+  public void testSubqueryRetainsOuterDeadline(final long innerTimeout)
+  {
+    final AtomicReference<ScanQuery> captured = new AtomicReference<>();
+    final SystemTableDescriptor descriptor = new TestSystemTableDescriptor();
+    final SystemTableQueryClient client = makeClient(
+        descriptor,
+        List.of(testNode()),
+        ignored -> (queryPlus, responseContext) -> {
+          captured.set((ScanQuery) queryPlus.getQuery());
+          return Sequences.empty();
+        },
+        (queryPlus, responseContext) -> {
+          final QueryDataSource subquery = (QueryDataSource) queryPlus.getQuery().getDataSource();
+          ((InlineDataSource) subquery.getQuery().getDataSource()).getRows().iterator().hasNext();
+          return Sequences.empty();
+        }
+    );
+    final long deadline = System.currentTimeMillis() + 1_000L;
+    final ScanQuery inner = query(descriptor, Map.of(QueryContextParameters.TIMEOUT.getName(), innerTimeout));
+    final ScanQuery outer = query(
+        descriptor,
+        Map.of(DirectDruidClient.QUERY_FAIL_TIME, deadline, QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), 1_234L)
+    )
+        .withDataSource(new QueryDataSource(inner));
+
+    client.createRunner(outer, AUTHENTICATION_RESULT, false)
+          .run(QueryPlus.wrap(outer), ResponseContext.createEmpty())
+          .toList();
+
+    Assertions.assertEquals(deadline, captured.get().context().getLong(DirectDruidClient.QUERY_FAIL_TIME));
+    Assertions.assertEquals(1_234L, captured.get().context().getMaxScatterGatherBytes());
   }
 
   /** A node query with {@code timeout = 0} retains Druid's no-timeout semantics. */

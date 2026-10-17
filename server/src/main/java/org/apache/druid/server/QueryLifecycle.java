@@ -50,6 +50,7 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -103,6 +104,7 @@ public class QueryLifecycle
   private final PolicyEnforcer policyEnforcer;
   private final QueryConfigSnapshot configSnapshot;
   private final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers;
+  private final ServerConfig serverConfig;
   private final long startMs;
   private final long startNs;
 
@@ -130,6 +132,7 @@ public class QueryLifecycle
       final PolicyEnforcer policyEnforcer,
       final QueryConfigSnapshot configSnapshot,
       final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers,
+      final ServerConfig serverConfig,
       final long startMs,
       final long startNs
   )
@@ -144,6 +147,7 @@ public class QueryLifecycle
     this.policyEnforcer = policyEnforcer;
     this.configSnapshot = configSnapshot;
     this.dataSourceQueryHandlers = dataSourceQueryHandlers;
+    this.serverConfig = serverConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -173,6 +177,7 @@ public class QueryLifecycle
         policyEnforcer,
         configSnapshot,
         Collections.emptyMap(),
+        new ServerConfig(),
         startMs,
         startNs
     );
@@ -460,8 +465,17 @@ public class QueryLifecycle
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
     @SuppressWarnings("unchecked")
-    final Query<T> query = (Query<T>) baseQuery;
-    final DataSourceQueryHandler dataSourceQueryHandler = findDataSourceQueryHandler(query.getDataSource());
+    final Query<T> originalQuery = (Query<T>) baseQuery;
+    final DataSourceQueryHandler dataSourceQueryHandler = findDataSourceQueryHandler(originalQuery.getDataSource());
+    // Handlers can start fanout or provider work before reaching a segment walker, or bypass it entirely.
+    // Apply the same server guardrails first, and pass the normalized query to both runner creation and execution.
+    final Query<T> query = dataSourceQueryHandler == null
+                           ? originalQuery
+                           : SetAndVerifyContextQueryRunner.withTimeoutAndMaxScatterGatherBytes(
+                               originalQuery,
+                               serverConfig,
+                               System.currentTimeMillis()
+                           );
     final QueryRunner<T> queryRunner = dataSourceQueryHandler == null
                                        ? query.getRunner(texasRanger)
                                        : dataSourceQueryHandler.createRunner(

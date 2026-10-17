@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.SystemTableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -184,9 +185,24 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
       );
     }
 
-    final Query<?> childOwningQuery = dataSource instanceof QueryDataSource queryDataSource
-                                      ? queryDataSource.getQuery()
-                                      : owningQuery;
+    final Query<?> childOwningQuery;
+    final DataSource resolvedParent;
+    if (dataSource instanceof QueryDataSource queryDataSource) {
+      final Query<?> childQuery = queryDataSource.getQuery();
+      // An inner query may tighten the outer guardrails, but must not discard them before node fanout.
+      childOwningQuery = childQuery.withOverriddenContext(
+          Map.of(
+              DirectDruidClient.QUERY_FAIL_TIME,
+              Math.min(getNodeFailTime(owningQuery), getNodeFailTime(childQuery)),
+              QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(),
+              Math.min(owningQuery.context().getMaxScatterGatherBytes(), childQuery.context().getMaxScatterGatherBytes())
+          )
+      );
+      resolvedParent = new QueryDataSource(childOwningQuery);
+    } else {
+      childOwningQuery = owningQuery;
+      resolvedParent = dataSource;
+    }
     final List<DataSource> resolvedChildren = new ArrayList<>();
     for (final DataSource child : dataSource.getChildren()) {
       resolvedChildren.add(
@@ -199,7 +215,7 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
           )
       );
     }
-    return dataSource.withChildren(resolvedChildren);
+    return resolvedParent.withChildren(resolvedChildren);
   }
 
   private InlineDataSource resolveSystemTableDataSource(
@@ -536,7 +552,8 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
     if (existingFailTime > 0) {
       return existingFailTime;
     } else if (query.context().hasTimeout()) {
-      return System.currentTimeMillis() + query.context().getTimeout();
+      final long failTime = System.currentTimeMillis() + query.context().getTimeout();
+      return failTime <= 0 ? Long.MAX_VALUE : failTime;
     } else {
       return JodaUtils.MAX_INSTANT;
     }

@@ -30,6 +30,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -51,6 +52,7 @@ public class QueryLifecycleFactory
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
   private final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers;
+  private final ServerConfig serverConfig;
 
   @Inject
   public QueryLifecycleFactory(
@@ -64,6 +66,7 @@ public class QueryLifecycleFactory
       final AuthorizerMapper authorizerMapper,
       final QueryConfigProvider queryConfigProvider,
       final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers,
+      final ServerConfig serverConfig,
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
@@ -75,6 +78,7 @@ public class QueryLifecycleFactory
     this.authorizerMapper = authorizerMapper;
     this.queryConfigProvider = queryConfigProvider;
     this.dataSourceQueryHandlers = dataSourceQueryHandlers;
+    this.serverConfig = serverConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
@@ -104,6 +108,7 @@ public class QueryLifecycleFactory
         authorizerMapper,
         queryConfigProvider,
         Map.of(),
+        new ServerConfig(),
         brokerViewOfBrokerConfig
     );
   }
@@ -127,6 +132,7 @@ public class QueryLifecycleFactory
         policyEnforcer,
         configSnapshot,
         dataSourceQueryHandlers,
+        serverConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );
