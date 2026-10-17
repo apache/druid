@@ -67,11 +67,9 @@ class ParameterDocumentationGeneratorTest
     final String general = Files.readString(temporaryFolder.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8);
     assertTrue(general.startsWith("general header\n"));
     assertTrue(general.contains("|`useResultLevelCache`| `true` |"));
-    assertTrue(
-        general.contains(
-            "|`priority`| The default priority is one of the following: <ul><li>Value of `priority` in the query context, if set"
-        )
-    );
+    assertTrue(general.contains("|`priority`| `0` |"));
+    // A parameter without a default
+    assertTrue(general.contains("|`finalize`| N/A |"));
     assertTrue(general.contains(GENERAL_MARKER));
 
     final String scan = Files.readString(temporaryFolder.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8);
@@ -147,7 +145,7 @@ class ParameterDocumentationGeneratorTest
 
     final String sql = Files.readString(temporaryFolder.resolve(SQL_DOCUMENT), StandardCharsets.UTF_8);
     assertTrue(sql.contains("|`lane`|Query lane, used to control usage limits on classes of queries."));
-    assertTrue(sql.contains("|`null`| " + SQL_MARKER));
+    assertTrue(sql.contains("|N/A| " + SQL_MARKER));
     assertTrue(sql.contains("|`queryId`|Unique identifier given to this query."));
     assertTrue(sql.contains("cancel the query.| <!-- GENERATED QUERY CONTEXT PARAMETER: queryId -->"));
   }
@@ -184,27 +182,9 @@ class ParameterDocumentationGeneratorTest
   }
 
   @Test
-  void testNormalizesTableCell()
-  {
-    final String description = String.join(
-        "",
-        " Description with ",
-        "\\",
-        "\n",
-        " wrapped lines ",
-        "\n and   a continuation marker. "
-    );
-
-    assertEquals(
-        "Description with wrapped lines and a continuation marker.",
-        ParameterDocumentationGenerator.normalizeTableCell(description)
-    );
-  }
-
-  @Test
   void testEscapesTableCell()
   {
-    assertEquals("a \\| b", ParameterDocumentationGenerator.escapeTableCell(" a\n| b "));
+    assertEquals("a \\| b", ParameterDocumentationGenerator.escapeTableCell("a | b"));
   }
 
   private String[] arguments(final String mode, final Path generatedOutput)

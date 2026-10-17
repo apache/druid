@@ -164,6 +164,7 @@ Queries on the [system schema tables](../querying/sql-metadata-tables.md#system-
 - `server_segments`: The user requires STATE READ permissions. Druid filters segments according to DATASOURCE READ permissions.
 - `tasks`: Druid filters tasks according to DATASOURCE READ permissions.
 - `supervisors`: Druid filters supervisors according to DATASOURCE READ permissions.
+- `query_context_parameters`: No additional permissions are required. The `effective_value` and `effective_source` columns require CONFIG READ permissions; without them, they show null and `UNAUTHORIZED`.
 
 When the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, users also require  `SYSTEM_TABLE` authorization on a system schema table to query it.
 

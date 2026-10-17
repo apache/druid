@@ -210,6 +210,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
                      .add(new Object[]{"lookup", "lookyloo-chain", "TABLE", "YES", "YES"})
                      .add(new Object[]{"lookup", "lookyloo121", "TABLE", "YES", "YES"})
+                     .add(new Object[]{"sys", "query_context_parameters", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "server_properties", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
@@ -263,6 +264,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
                      .add(new Object[]{"lookup", "lookyloo-chain", "TABLE", "YES", "YES"})
                      .add(new Object[]{"lookup", "lookyloo121", "TABLE", "YES", "YES"})
+                     .add(new Object[]{"sys", "query_context_parameters", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "server_properties", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
@@ -317,6 +319,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
                      .add(new Object[]{"lookup", "lookyloo-chain", "TABLE", "YES", "YES"})
                      .add(new Object[]{"lookup", "lookyloo121", "TABLE", "YES", "YES"})
+                     .add(new Object[]{"sys", "query_context_parameters", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "server_properties", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
@@ -370,6 +373,76 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testSysQueryContextParameters_superUser()
+  {
+    msqIncompatible();
+    // Showing the effective defaults requires CONFIG READ access
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        """
+            SELECT name, effective_source, native_query_types
+            FROM sys.query_context_parameters
+            WHERE name IN ('maxRowsQueuedForOrdering', 'vectorize')
+            ORDER BY name""",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{"maxRowsQueuedForOrdering", null, ImmutableList.of("scan")},
+            new Object[]{"vectorize", "BUILT_IN", ImmutableList.of()}
+        )
+    );
+  }
+
+  @Test
+  public void testSysQueryContextParametersOrderByArrayColumn()
+  {
+    msqIncompatible();
+    // The Bindable sort requires comparable column values, including for array columns
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        """
+            SELECT name, native_query_types
+            FROM sys.query_context_parameters
+            WHERE name IN ('minTopNThreshold', 'maxRowsQueuedForOrdering', 'vectorize')
+            ORDER BY native_query_types DESC""",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{"minTopNThreshold", ImmutableList.of("topN")},
+            new Object[]{"maxRowsQueuedForOrdering", ImmutableList.of("scan")},
+            new Object[]{"vectorize", ImmutableList.of()}
+        )
+    );
+  }
+
+  @Test
+  public void testSysQueryContextParameters_regularUser()
+  {
+    msqIncompatible();
+    // Without CONFIG READ access the catalog is still visible, but the effective defaults are not
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        """
+            SELECT name, type, default_value, effective_value, effective_source
+            FROM sys.query_context_parameters
+            WHERE name IN ('maxRowsQueuedForOrdering', 'vectorize')
+            ORDER BY name""",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{
+                "maxRowsQueuedForOrdering",
+                "Integer",
+                "${druid.query.scan.maxRowsQueuedForOrdering}",
+                null,
+                "UNAUTHORIZED"
+            },
+            new Object[]{"vectorize", "Enum", "true", null, "UNAUTHORIZED"}
+        )
     );
   }
 

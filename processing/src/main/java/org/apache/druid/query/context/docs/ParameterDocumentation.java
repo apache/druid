@@ -28,12 +28,17 @@ import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * User-facing documentation and applicability metadata for a query context parameter.
  */
 public final class ParameterDocumentation
 {
+  private static final Pattern TEXT_BLOCK_LINE_CONTINUATION = Pattern.compile("\\\\[ \\t]*\\R");
+  private static final Pattern LINE_BREAK = Pattern.compile("\\R");
+  private static final Pattern HORIZONTAL_WHITESPACE = Pattern.compile("[ \\t]+");
+
   /**
    * Query interface or representation that can provide this parameter.
    */
@@ -58,11 +63,11 @@ public final class ParameterDocumentation
    */
   public enum QueryType
   {
-    SCAN("Scan"),
-    TIMESERIES("TimeSeries"),
-    TOP_N("TopN"),
-    GROUP_BY("GroupBy"),
-    SEARCH("Search");
+    SCAN(org.apache.druid.query.Query.SCAN),
+    TIMESERIES(org.apache.druid.query.Query.TIMESERIES),
+    TOP_N(org.apache.druid.query.Query.TOPN),
+    GROUP_BY(org.apache.druid.query.Query.GROUP_BY),
+    SEARCH(org.apache.druid.query.Query.SEARCH);
 
     private final String value;
 
@@ -98,12 +103,12 @@ public final class ParameterDocumentation
 
   private ParameterDocumentation(final Builder builder)
   {
-    this.description = requireNonBlank(builder.description, "description");
+    this.description = normalize(requireNonBlank(builder.description, "description"));
     this.queries = Set.copyOf(builder.queries);
     this.engines = Set.copyOf(builder.engines);
     this.queryTypes = Set.copyOf(builder.queryTypes);
     this.statementTypes = Set.copyOf(builder.statementTypes);
-    this.defaultDescription = builder.defaultDescription;
+    this.defaultDescription = builder.defaultDescription == null ? null : normalize(builder.defaultDescription);
     this.since = builder.since;
   }
 
@@ -112,6 +117,9 @@ public final class ParameterDocumentation
     return new Builder();
   }
 
+  /**
+   * Returns the description as a single line.
+   */
   public String getDescription()
   {
     return description;
@@ -145,6 +153,17 @@ public final class ParameterDocumentation
   public Optional<String> getSince()
   {
     return Optional.ofNullable(since);
+  }
+
+  /**
+   * Descriptions are commonly written as Java text blocks. Remove text-block line continuations, flatten remaining
+   * line breaks and collapse incidental whitespace, so that descriptions are single lines wherever they are shown,
+   * such as in generated documentation tables and system tables.
+   */
+  static String normalize(final String value)
+  {
+    final String joined = LINE_BREAK.matcher(TEXT_BLOCK_LINE_CONTINUATION.matcher(value).replaceAll("")).replaceAll(" ");
+    return HORIZONTAL_WHITESPACE.matcher(joined).replaceAll(" ").trim();
   }
 
   private static String requireNonBlank(@Nullable final String value, final String name)

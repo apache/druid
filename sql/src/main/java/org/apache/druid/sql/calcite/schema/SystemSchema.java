@@ -59,6 +59,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -94,6 +95,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -262,6 +264,8 @@ public class SystemSchema extends AbstractTableSchema
   private final HttpClient httpClient;
   private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
   private final PlannerConfig plannerConfig;
+  private final QueryConfigProvider queryConfigProvider;
+  private final Properties properties;
   private final AuthenticationResult authenticationResult;
   private final Set<String> allTableNames;
 
@@ -278,6 +282,8 @@ public class SystemSchema extends AbstractTableSchema
       final HttpClient httpClient,
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
       final PlannerConfig plannerConfig,
+      final QueryConfigProvider queryConfigProvider,
+      final Properties properties,
       final AuthenticationResult authenticationResult,
       final Set<String> allTableNames
   )
@@ -294,6 +300,8 @@ public class SystemSchema extends AbstractTableSchema
     this.httpClient = httpClient;
     this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
     this.plannerConfig = plannerConfig;
+    this.queryConfigProvider = queryConfigProvider;
+    this.properties = properties;
     this.authenticationResult = authenticationResult;
     this.allTableNames = allTableNames;
   }
@@ -331,6 +339,13 @@ public class SystemSchema extends AbstractTableSchema
           authorizerMapper,
           httpClient,
           jsonMapper,
+          authenticationResult
+      );
+      case SystemQueryContextParametersTable.TABLE_NAME -> new SystemQueryContextParametersTable(
+          jsonMapper,
+          queryConfigProvider,
+          properties,
+          authorizerMapper,
           authenticationResult
       );
       case QUERIES_TABLE -> new QueriesTable(

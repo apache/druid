@@ -68,7 +68,6 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> FINALIZE = booleanParameter("finalize")
       .since("0.1.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-      .defaultDescription("`N/A`")
       .description(
           """
           Flag indicating whether to "finalize" aggregation results.
@@ -86,13 +85,7 @@ public final class QueryContextParameters
           """
           Query priority.
           Queries with higher priority get precedence for computational resources.
-          """
-      )
-      .defaultDescription(
-          """
-          The default priority is one of the following: <ul><li>Value of `priority` in the query context, if
-          set</li><li>The value of the runtime property `druid.query.default.context.priority`, if set and
-          not null</li><li>`0` if the priority is not set in the query context or runtime properties</li></ul>
+          A cluster-wide default value for this query context can be specified via `druid.query.default.context.priority`.
           """
       )
       .build();
@@ -105,7 +98,6 @@ public final class QueryContextParameters
           See [Broker configuration](../configuration/index.md#broker) for more details.
           """
       )
-      .defaultDescription("`null`")
       .build();
 
   public static final QueryContextParameter<Long> TIMEOUT = longParameter("timeout")
@@ -117,7 +109,7 @@ public final class QueryContextParameters
           To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker).
           """
       )
-      .defaultDescription("`druid.server.http.defaultQueryTimeout`")
+      .defaultValue(DefaultValue.fromProperty("druid.server.http.defaultQueryTimeout"))
       .build();
 
   public static final QueryContextParameter<Long> PER_SEGMENT_TIMEOUT =
@@ -132,7 +124,6 @@ public final class QueryContextParameters
               A cluster-wide default value for this query context can be specified via `druid.query.default.context.perSegmentTimeout`.
               """
           )
-          .defaultDescription("`null`")
           .build();
 
   public static final QueryContextParameter<Long> MAX_SCATTER_GATHER_BYTES =
@@ -145,7 +136,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxScatterGatherBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxScatterGatherBytes"))
           .build();
 
   public static final QueryContextParameter<Long> MAX_QUEUED_BYTES =
@@ -158,7 +149,7 @@ public final class QueryContextParameters
               Zero means disabled.
               """
           )
-          .defaultDescription("`druid.broker.http.maxQueuedBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.broker.http.maxQueuedBytes"))
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_PARALLEL_MERGE =
@@ -183,7 +174,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.initialYieldNumRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.initialYieldNumRows"))
           .build();
 
   public static final QueryContextParameter<Integer> PARALLEL_MERGE_SMALL_BATCH_ROWS =
@@ -195,7 +186,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.smallBatchNumRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.smallBatchNumRows"))
           .build();
 
   public static final QueryContextParameter<Integer> PARALLEL_MERGE_PARALLELISM =
@@ -207,7 +198,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.parallelism`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.parallelism"))
           .build();
 
   public static final QueryContextParameter<QueryContexts.Vectorize> VECTORIZE =
@@ -258,7 +249,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxSubqueryRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxSubqueryRows"))
           .build();
 
   /**
@@ -278,7 +269,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxSubqueryBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxSubqueryBytes"))
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_FILTER_PUSH_DOWN =
@@ -442,7 +433,6 @@ public final class QueryContextParameters
               See [Router strategies](../design/router.md#router-strategies) for more details.
               """
           )
-          .defaultDescription("`null`")
           .build();
 
   public static final QueryContextParameter<Boolean> POPULATE_CACHE =
@@ -477,14 +467,14 @@ public final class QueryContextParameters
       booleanParameter("serializeDateTimeAsLong")
           .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("If true, DateTime is serialized as long in the result returned by Broker and the data transportation between Broker and compute process")
-          .defaultDescription("`false`")
+          .defaultValue(false)
           .build();
 
   public static final QueryContextParameter<Boolean> SERIALIZE_DATE_TIME_AS_LONG_INNER =
       booleanParameter("serializeDateTimeAsLongInner")
           .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("If true, DateTime is serialized as long in the data transportation between Broker and compute process")
-          .defaultDescription("`false`")
+          .defaultValue(false)
           .build();
 
   public static final QueryContextParameter<Integer> MIN_TOP_N_THRESHOLD =
@@ -582,7 +572,7 @@ public final class QueryContextParameters
               Overrides the identically named config.
               """
           )
-          .defaultDescription("`druid.query.scan.maxRowsQueuedForOrdering`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.scan.maxRowsQueuedForOrdering"))
           .queryType(QueryType.SCAN)
           .build();
 
@@ -724,7 +714,7 @@ public final class QueryContextParameters
         return;
       }
     }
-    catch (NumberFormatException e) {
+    catch (NumberFormatException _) {
       // Reported below.
     }
     throw invalidValueException(name, MAX_SUBQUERY_BYTES_FORMAT, value);
