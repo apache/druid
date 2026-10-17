@@ -1135,7 +1135,7 @@ public class WorkerImpl implements Worker
      */
     public void addKernel(final WorkerStageKernel kernel)
     {
-      final StageId stageId = kernel.getWorkOrder().getStageDefinition().getId();
+      final StageId stageId = verifyQueryId(kernel.getWorkOrder().getStageDefinition().getId());
 
       if (holderMap.putIfAbsent(stageId.getStageNumber(), new KernelHolder(kernel)) != null) {
         // Already added. Do nothing.
@@ -1151,7 +1151,7 @@ public class WorkerImpl implements Worker
      */
     public void finishProcessing(final StageId stageId)
     {
-      final KernelHolder kernel = holderMap.get(stageId.getStageNumber());
+      final KernelHolder kernel = holderMap.get(verifyQueryId(stageId).getStageNumber());
 
       if (kernel != null) {
         try {
@@ -1172,7 +1172,7 @@ public class WorkerImpl implements Worker
      */
     public void removeKernel(final StageId stageId)
     {
-      final KernelHolder removed = holderMap.remove(stageId.getStageNumber());
+      final KernelHolder removed = holderMap.remove(verifyQueryId(stageId).getStageNumber());
 
       if (removed == null) {
         throw new ISE("No kernel for stage[%s]", stageId);
@@ -1226,7 +1226,7 @@ public class WorkerImpl implements Worker
     @Nullable
     public WorkerStageKernel getKernelFor(final StageId stageId)
     {
-      final KernelHolder holder = holderMap.get(stageId.getStageNumber());
+      final KernelHolder holder = holderMap.get(verifyQueryId(stageId).getStageNumber());
       if (holder != null) {
         return holder.kernel;
       } else {
@@ -1274,6 +1274,15 @@ public class WorkerImpl implements Worker
     public void setDone()
     {
       this.done = true;
+    }
+
+    private StageId verifyQueryId(final StageId stageId)
+    {
+      if (!stageId.getQueryId().equals(workerContext.queryId())) {
+        throw new ISE("Unexpected queryId[%s], expected queryId[%s]", stageId.getQueryId(), workerContext.queryId());
+      }
+
+      return stageId;
     }
   }
 
