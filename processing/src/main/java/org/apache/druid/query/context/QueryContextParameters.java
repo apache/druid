@@ -20,23 +20,31 @@
 package org.apache.druid.query.context;
 
 import com.google.common.base.Suppliers;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.CloneQueryMode;
+import org.apache.druid.query.ExecutionMode;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
 import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
+import org.apache.druid.query.context.docs.ParameterDocumentation.StatementType;
 import org.apache.druid.query.topn.TopNQueryConfig;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /// Central catalog of query context parameter descriptors.
@@ -161,6 +169,18 @@ public final class QueryContextParameters
           .defaultDescription("`druid.broker.http.maxQueuedBytes`")
           .build();
 
+  public static final QueryContextParameter<Long> DEFAULT_TIMEOUT = longParameter("defaultTimeout")
+      .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+      .defaultValue(TimeUnit.MINUTES.toMillis(5))
+      .description(
+          """
+          Timeout in milliseconds that applies when the query doesn't set `timeout`.
+          Druid sets it to the lower of `druid.server.http.defaultQueryTimeout` and `druid.server.http.maxQueryTimeout`.
+          """
+      )
+      .visibility(Visibility.SYSTEM)
+      .build();
+
   public static final QueryContextParameter<Boolean> ENABLE_PARALLEL_MERGE =
       booleanParameter("enableParallelMerge")
           .since("0.17.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
@@ -281,6 +301,19 @@ public final class QueryContextParameters
           .defaultDescription("`druid.server.http.maxSubqueryBytes`")
           .build();
 
+  public static final QueryContextParameter<Boolean> USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY =
+      booleanParameter("useNestedForUnknownTypeInSubquery")
+          .since("27.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY)
+          .description(
+              """
+              If true, when the Broker materializes subquery results as frames to enforce `maxSubqueryBytes`,
+              it serializes columns of unknown type as nested JSON instead of failing to materialize them.
+              """
+          )
+          .defaultDescription("`druid.server.http.useNestedForUnknownTypeInSubquery`")
+          .build();
+
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_FILTER_PUSH_DOWN =
       booleanParameter("enableJoinFilterPushDown")
           .since("0.18.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
@@ -338,6 +371,19 @@ public final class QueryContextParameters
           )
           .build();
 
+  public static final QueryContextParameter<Boolean> CURSOR_AUTO_ARRANGE_FILTERS =
+      booleanParameter("cursorAutoArrangeFilters")
+          .since("32.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(true)
+          .description(
+              """
+              If `true`, Druid orders the children of `AND` and `OR` filters by their estimated index computation cost
+              before building filter bundles for a segment cursor.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
   public static final QueryContextParameter<CloneQueryMode> CLONE_QUERY_MODE =
       enumParameter("cloneQueryMode", CloneQueryMode.class)
           .since("34.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
@@ -357,6 +403,19 @@ public final class QueryContextParameters
           )
           .build();
 
+  public static final QueryContextParameter<Boolean> OPTIMIZE_AGGREGATORS =
+      booleanParameter("optimizeAggregators")
+          .since("38.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(QueryContexts.DEFAULT_OPTIMIZE_AGGREGATORS)
+          .description(
+              """
+              Whether Druid applies per-segment aggregator optimizations.
+              Set to `false` to switch off the optimizations, for example when debugging them.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
   public static final QueryContextParameter<Boolean> USE_FILTER_CNF = booleanParameter("useFilterCNF")
       .since("0.19.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
       .defaultValue(QueryContexts.DEFAULT_USE_FILTER_CNF)
@@ -371,6 +430,30 @@ public final class QueryContextParameters
           """
       )
       .build();
+
+  public static final QueryContextParameter<Integer> NUM_RETRIES_ON_MISSING_SEGMENTS =
+      integerParameter("numRetriesOnMissingSegments")
+          .since("0.20.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ)
+          .description(
+              """
+              Maximum number of times Druid retries a query for segments that a data server reports as missing.
+              For native queries, this overrides `druid.broker.retryPolicy.numTries`.
+              """
+          )
+          .defaultDescription("`druid.broker.retryPolicy.numTries` for native queries, `3` for MSQ tasks")
+          .build();
+
+  public static final QueryContextParameter<Boolean> RETURN_PARTIAL_RESULTS =
+      booleanParameter("returnPartialResults")
+          .since("0.20.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              If true, the Broker returns partial results when segments are still missing after all retries.
+              If false, the query fails instead.
+              """
+          )
+          .defaultDescription("`false`")
+          .build();
 
   public static final QueryContextParameter<Boolean> USE_CACHE = booleanParameter("useCache")
       .since("0.1.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
@@ -487,6 +570,20 @@ public final class QueryContextParameters
           .defaultDescription("`false`")
           .build();
 
+  public static final QueryContextParameter<Integer> UNCOVERED_INTERVALS_LIMIT =
+      integerParameter("uncoveredIntervalsLimit")
+          .since("0.9.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(QueryContexts.DEFAULT_UNCOVERED_INTERVALS_LIMIT)
+          .description(
+              """
+              Maximum number of query intervals not covered by any segment that the Broker reports in the
+              `uncoveredIntervals` entry of the response context.
+              If more intervals are uncovered, the Broker also sets `uncoveredIntervalsOverflowed` to true.
+              A value of 0 disables the check.
+              """
+          )
+          .build();
+
   public static final QueryContextParameter<Integer> MIN_TOP_N_THRESHOLD =
       integerParameter("minTopNThreshold")
           .since("0.9.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
@@ -503,6 +600,33 @@ public final class QueryContextParameters
           .queryType(QueryType.TIMESERIES)
           .build();
 
+  public static final QueryContextParameter<String> ENGINE = stringParameter("engine")
+      .since("34.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.DART)
+      .defaultValue(QueryContexts.DEFAULT_ENGINE)
+      .description(
+          """
+          SQL engine that runs the query through the `/druid/v2/sql` endpoint.
+          Set to `msq-dart` to run the query with [Dart](dart.md).
+          Druid ignores this parameter for JDBC connections.
+          """
+      )
+      .build();
+
+  public static final QueryContextParameter<Boolean> USE_TOPN_MULTI_PASS_POOLED_QUERY_GRANULARITY =
+      booleanParameter("useTopNMultiPassPooledQueryGranularity")
+          .since("32.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description(
+              """
+              Whether the TopN engine may use the pooled algorithm with multiple cursor passes when the query granularity
+              isn't `all` and the result buffer is too small for a single pass.
+              This is likely slower than the default fallback to heap memory, but is less likely to run out of heap.
+              """
+          )
+          .queryType(QueryType.TOP_N)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
   public static final QueryContextParameter<Boolean> USE_RESULT_LEVEL_CACHE = booleanParameter("useResultLevelCache")
       .since("0.13.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
       .defaultValue(true)
@@ -515,11 +639,437 @@ public final class QueryContextParameters
       )
       .build();
 
+  public static final QueryContextParameter<Boolean> NO_PROJECTIONS =
+      booleanParameter("noProjections")
+          .since("32.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description("If `true`, the query engine doesn't use any [projections](projections.md).")
+          .build();
+
+  public static final QueryContextParameter<Boolean> FORCE_PROJECTIONS =
+      booleanParameter("forceProjections")
+          .since("32.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description(
+              """
+              If `true`, the query engine must use a [projection](projections.md), and the query fails if no projection matches it.
+              If `false`, Druid uses a matching projection when one exists and otherwise processes the query as usual.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<String> USE_PROJECTION =
+      stringParameter("useProjection")
+          .since("32.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Name of a [projection](projections.md) that the query engine must use.
+              If the projection doesn't match the query, the query fails.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<String> QUERY_RESOURCE_ID =
+      stringParameter("queryResourceId")
+          .since("30.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              Unique identifier that maps a query to the shared resources, such as merge buffers, reserved for it at runtime.
+              The Broker assigns a random value to every query.
+              """
+          )
+          .visibility(Visibility.SYSTEM)
+          .build();
+
   //
   // SQL planner parameters.
   //
   // The descriptors below are read by the SQL planner: PlannerContext, PlannerConfig, the planner rules and the SQL
   // validator. Descriptors that apply only to SQL are documented in sql-query-context.md.
+  public static final QueryContextParameter<String> SQL_QUERY_ID =
+      stringParameter("sqlQueryId")
+          .since("0.14.0-incubating").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              SQL query ID.
+              For HTTP client, Druid returns it in the `X-Druid-SQL-Query-Id` header.<br/><br/>To specify a SQL query ID, use `sqlQueryId` instead of [`queryId`](query-context-reference.md).
+              Setting `queryId` for a SQL request has no effect.
+              All native queries underlying SQL use an auto-generated `queryId`.
+              """
+          )
+          .defaultDescription("auto-generated")
+          .build();
+
+  public static final QueryContextParameter<Boolean> SQL_STRINGIFY_ARRAYS =
+      booleanParameter("sqlStringifyArrays")
+          .since("0.22.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("If `true`, Druid serializes result columns with array values as JSON strings in the response instead of arrays.")
+          .defaultDescription("`true`, except for JDBC connections, where it's always `false`")
+          .build();
+
+  public static final QueryContextParameter<Integer> SQL_PLANNER_BLOAT =
+      integerParameter("sqlPlannerBloat")
+          .since("31.0.1").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(1000)
+          .description(
+              """
+              Calcite parameter which controls whether to merge two Project operators when inlining expressions causes complexity to increase.
+              Implemented as a workaround to exception `There are not enough rules to produce a node with desired properties: convention=DRUID, sort=[]` thrown after rejecting the merge of two projects.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<String> SQL_TIME_ZONE =
+      // Unlike stringParameter, non-string values such as a JSON number are converted with String.valueOf rather than rejected.
+      // This keeps the behavior from before sqlTimeZone had a descriptor, when PlannerContext stringified any value it found.
+      // The string is then resolved by DateTimes.inferTzFromString.
+      QueryContextParameter.builder("sqlTimeZone", String.class, String::valueOf)
+          .since("0.10.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Time zone for a connection.
+              For example, `America/Los_Angeles` or an offset like `-08:00`.
+              This parameter affects how time functions and timestamp literals behave.
+              """
+          )
+          .defaultDescription("UTC")
+          .build();
+
+  public static final QueryContextParameter<Boolean> USE_APPROXIMATE_COUNT_DISTINCT =
+      booleanParameter("useApproximateCountDistinct")
+          .since("0.10.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.")
+          .defaultDescription("`true`")
+          .build();
+
+  public static final QueryContextParameter<Boolean> USE_GROUPING_SET_FOR_EXACT_DISTINCT =
+      booleanParameter("useGroupingSetForExactDistinct")
+          .since("0.22.0").query(Query.SQL).engine(Engine.NATIVE)
+          .description("Whether to use grouping sets to execute queries with multiple exact distinct aggregations.")
+          .defaultDescription("`false`")
+          .build();
+
+  public static final QueryContextParameter<Boolean> USE_APPROXIMATE_TOP_N =
+      booleanParameter("useApproximateTopN")
+          .since("0.10.0").query(Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              If `true`, Druid converts SQL queries to approximate [TopN queries](topnquery.md) wherever possible.
+              If `false`, Druid uses exact [GroupBy queries](groupbyquery.md) instead.
+              """
+          )
+          .defaultDescription("`true`")
+          .build();
+
+  public static final QueryContextParameter<Boolean> USE_LEXICOGRAPHIC_TOP_N =
+      booleanParameter("useLexicographicTopN")
+          .since("35.0.1").query(Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              If `true`, Druid can use [TopN queries](topnquery.md) with lexicographic dimension ordering.
+              If `false`, Druid uses [GroupBy queries](groupbyquery.md) instead for lexicographic ordering.
+              When both `useLexicographicTopN` and `useApproximateTopN` are `false`, TopN queries are never used.
+              """
+          )
+          .defaultDescription("`false`")
+          .build();
+
+  public static final QueryContextParameter<Boolean> USE_NATIVE_QUERY_EXPLAIN =
+      booleanParameter("useNativeQueryExplain")
+          .since("0.23.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              If `true`, `EXPLAIN PLAN FOR` returns the explain plan as a JSON representation of equivalent native query,
+              else it returns the original version of explain plan generated by Calcite.\
+              <br /><br />This property is provided for backwards compatibility.
+              We don't recommend setting this parameter unless your application depends on the older behavior.
+              """
+          )
+          .defaultDescription("`true`")
+          .build();
+
+  public static final QueryContextParameter<Boolean> SQL_FINALIZE_OUTER_SKETCHES =
+      booleanParameter("sqlFinalizeOuterSketches")
+          .since("25.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description(
+              """
+              If `false` (default behavior in Druid 25.0.0 and later), `DS_HLL`, `DS_THETA`, and `DS_QUANTILES_SKETCH` return sketches in query results.
+              If `true` (default behavior in Druid 24.0.1 and earlier), Druid finalizes sketches from these functions when they appear in query results.\
+              <br /><br />This property is provided for backwards compatibility with behavior in Druid 24.0.1 and earlier.
+              We don't recommend setting this parameter unless your application uses Druid 24.0.1 or earlier.
+              Instead, use a function that doesn't return a sketch, such as `APPROX_COUNT_DISTINCT_DS_HLL`, `APPROX_COUNT_DISTINCT_DS_THETA`, `APPROX_QUANTILE_DS`, `DS_THETA_ESTIMATE`, or `DS_GET_QUANTILE`.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Boolean> SQL_USE_BOUND_AND_SELECTORS =
+      booleanParameter("sqlUseBoundAndSelectors")
+          .since("30.0.1").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description(
+              """
+              If `false` (default behavior in Druid 27.0.0 and later), the SQL planner uses [equality](./filters.md#equality-filter),
+              [null](./filters.md#null-filter), and [range](./filters.md#range-filter) filters instead of [selector](./filters.md#selector-filter)
+              and [bounds](./filters.md#bound-filter).
+              For filtering `ARRAY` typed values, `sqlUseBoundAndSelectors` must be `false`.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Boolean> SQL_USE_EXTRACTION_FNS =
+      booleanParameter("sqlUseExtractionFns")
+          .since("35.0.1").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description(
+              """
+              If false, the SQL planner avoids using [`extractionFn`](dimensionspecs.md#extraction-functions) in favor of using other constructs such as [virtual columns](virtual-columns.md).
+              This parameter is provided for compatibility with prior behavior, and may be removed in a future release.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Boolean> SQL_REVERSE_LOOKUP =
+      booleanParameter("sqlReverseLookup")
+          .since("30.0.1").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(true)
+          .description(
+              """
+              Whether to consider the [reverse-lookup rewrite](lookups.md#reverse-lookup) of the `LOOKUP` function during SQL planning.\
+              <br /><br />Druid reverses calls to `LOOKUP` only when the number of matching keys is lower than both `inSubQueryThreshold` and `sqlReverseLookupThreshold`.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Integer> SQL_REVERSE_LOOKUP_THRESHOLD =
+      integerParameter("sqlReverseLookupThreshold")
+          .since("30.0.1").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(10000)
+          .description(
+              """
+              Maximum size of `IN` filter to create when applying a [reverse-lookup rewrite](lookups.md#reverse-lookup).
+              If a `LOOKUP` call matches more keys than the specified threshold, it remains unchanged.\
+              <br /><br />If `inSubQueryThreshold` is lower than `sqlReverseLookupThreshold`, Druid uses `inSubQueryThreshold` threshold instead.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Boolean> SQL_PULL_UP_LOOKUP =
+      booleanParameter("sqlPullUpLookup")
+          .since("30.0.1").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(true)
+          .description("Whether to consider the [pull-up rewrite](lookups.md#pull-up) of the `LOOKUP` function during SQL planning.")
+          .build();
+
+  public static final QueryContextParameter<JoinAlgorithm> SQL_JOIN_ALGORITHM =
+      enumParameter("sqlJoinAlgorithm", JoinAlgorithm.class, JoinAlgorithm::fromString)
+          .since("26.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue(JoinAlgorithm.BROADCAST)
+          .description(
+              """
+              Algorithm to use for `JOIN`: `broadcast` for broadcast hash join or `sortMerge` for sort-merge join.
+              Affects all joins in the query.
+              This is a hint to the MSQ engine, and the actual joins may proceed differently.
+              The native engine only supports `broadcast`.
+              See [Joins](../multi-stage-query/reference.md#joins) for more details.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<String> SQL_CURRENT_TIMESTAMP =
+      QueryContextParameter
+          .builder("sqlCurrentTimestamp", String.class, QueryContextParameters::parseSqlCurrentTimestamp)
+          .constraint(QueryContextParameters::validateSqlCurrentTimestamp)
+          .since("0.10.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Overrides the current time that SQL functions such as `CURRENT_TIMESTAMP` use, as an ISO 8601 string or
+              milliseconds since the epoch. Intended for testing.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Long> SQL_OUTER_LIMIT =
+      longParameter("sqlOuterLimit")
+          .since("0.17.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Maximum number of rows to return, applied as an outer `LIMIT` around the SQL query so that clients such as
+              the web console can limit results without rewriting the query. Not allowed for `INSERT` and `REPLACE`.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> ENABLE_RAC_OVER_WIRE =
+      booleanParameter("enableRACOverWire")
+          .since("32.0.0").query(Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description(
+              """
+              If true, and the engine doesn't support window leaf operators natively, the SQL planner pushes the leaf window
+              operator to data servers, which then transfer rows and columns (RAC) results over the wire.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> SQL_USE_GRANULARITY =
+      booleanParameter("sqlUseGranularity")
+          .since("31.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(true)
+          .description(
+              """
+              Whether the SQL planner may use query granularities other than `all`.
+              Set to false to query tables whose segments aren't sorted by time first, which only support `all`.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_NUMERIC_IN_FILTERS =
+      integerParameter("maxNumericInFilters")
+          .since("0.23.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Max limit for the amount of numeric values that Druid can compare for a string type dimension when the entire SQL WHERE clause of a query translates only to an [OR](../querying/filters.md#or) of [bound filter](../querying/filters.md#bound-filter).
+              By default, Druid doesn't restrict the amount of numeric bound filters on string columns, although this situation may block other queries from running.
+              Set this parameter to a smaller value to prevent Druid from running queries that have prohibitively long segment processing times.
+              The optimal limit requires some trial and error.
+              We recommend starting with 100.
+              Users who submit a query that exceeds the limit of `maxNumericInFilters` should rewrite their queries to use strings in the `WHERE` clause instead of numbers.
+              For example, `WHERE someString IN (‘123’, ‘456’)`.
+              This value can't exceed the set system configuration `druid.sql.planner.maxNumericInFilters`.
+              If `druid.sql.planner.maxNumericInFilters` isn't set explicitly, Druid ignores this value.
+              """
+          )
+          .defaultDescription("`-1`")
+          .build();
+
+  public static final QueryContextParameter<Boolean> ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT =
+      booleanParameter("enableJoinLeftTableScanDirect")
+          .since("0.22.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(QueryContexts.DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT)
+          .description(
+              """
+              This parameter applies to queries with joins.
+              By default, when the left child is a simple scan with a filter, Druid runs the scan as a query, then joins it with the right child on the Broker.
+              Setting this parameter to `true` overrides that behavior and pushes the join to the data servers instead.
+              Even if a query doesn't explicitly include a join, this parameter may still apply since the SQL planner can translate the query into a join internally.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Integer> IN_SUB_QUERY_THRESHOLD =
+      integerParameter("inSubQueryThreshold")
+          .since("0.23.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD)
+          .description(
+              """
+              At or beyond this threshold number of values, Druid converts SQL `IN` to `JOIN` on an inline table.
+              `inFunctionThreshold` takes priority over this setting.
+              A threshold of 0 forces usage of an inline table in all cases where the size of a SQL `IN` is larger than `inFunctionThreshold`.
+              A threshold of `2147483647` disables the rewrite of SQL `IN` to `JOIN`.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Long> MAX_PLANNING_TIME_MS =
+      longParameter("maxPlanningTimeMs")
+          .since("39.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(0L)
+          .description(
+              """
+              Maximum wall-clock time, in milliseconds, allowed for planning this query on the Broker.
+              When planning exceeds this budget, planning is aborted and the query fails with an HTTP 504 `Query timeout` error.
+              Use this to guard against pathological queries, such as one with a very large `IN` filter, whose planning time can spike.
+              A non-positive value disables the timeout.
+              To apply a cluster-wide default, set the `druid.query.default.context.maxPlanningTimeMs` runtime property (or the Broker's dynamic `queryContext` config); see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
+              """
+          )
+          .defaultDescription("`0` (disabled)")
+          .build();
+
+  public static final QueryContextParameter<Integer> IN_FUNCTION_THRESHOLD =
+      integerParameter("inFunctionThreshold")
+          .since("31.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD)
+          .description(
+              """
+              At or beyond this threshold number of values, Druid converts SQL `IN` to [`SCALAR_IN_ARRAY`](sql-functions.md#scalar_in_array).
+              A threshold of 0 forces this conversion in all cases.
+              A threshold of `Integer.MAX_VALUE` disables this conversion.
+              The converted function is eligible for fewer planning-time optimizations, which speeds up planning, but may prevent certain planning-time optimizations.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Integer> IN_FUNCTION_EXPR_THRESHOLD =
+      integerParameter("inFunctionExprThreshold")
+          .since("31.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD)
+          .description(
+              """
+              At or beyond this threshold number of values, SQL `IN` is eligible for execution using the native function `scalar_in_array` rather than an <code>&#124;&#124;</code> of `==`, even if the number of values is below `inFunctionThreshold`.
+              This property only affects translation of SQL `IN` to a [native expression](math-expr.md).
+              It doesn't affect translation of SQL `IN` to a [native filter](filters.md).
+              This property is provided for backwards compatibility purposes, and may be removed in a future release.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Boolean> ENABLE_TIME_BOUNDARY_PLANNING =
+      booleanParameter("enableTimeBoundaryPlanning")
+          .since("0.24.0").query(Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING)
+          .description(
+              """
+              If `true`, Druid converts SQL queries to [time boundary queries](timeboundaryquery.md) wherever possible.
+              Time boundary queries are very efficient for min-max calculation on the `__time` column in a datasource.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Boolean> CATALOG_VALIDATION_ENABLED =
+      booleanParameter("catalogValidationEnabled")
+          .since("31.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED)
+          .description(
+              """
+              If false, Druid skips the catalog-specific validation of `INSERT` and `REPLACE` statements that write to
+              tables defined in the Druid catalog.
+              """
+          )
+          .build();
+
+  public static final QueryContextParameter<Boolean> EXTENDED_FILTERED_SUM_REWRITE =
+      booleanParameter("extendedFilteredSumRewrite")
+          .since("32.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(QueryContexts.DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED)
+          .description(
+              """
+              Whether the SQL planner rewrites `SUM(CASE WHEN cond THEN col ELSE 0 END)` to `SUM(col) FILTER (WHERE cond)`.
+              The rewrite is faster but may return incorrect results when the condition never matches.
+              Intended for testing until a correct and fast rewrite is available.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<QueryContexts.PlannerStrategy> PLANNER_STRATEGY =
+      enumParameter("plannerStrategy", QueryContexts.PlannerStrategy.class)
+          .since("27.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(QueryContexts.PlannerStrategy.COUPLED)
+          .description(
+              """
+              SQL planning strategy: `COUPLED` plans the logical query and generates the native query together,
+              while `DECOUPLED` separates logical planning from native query generation.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
 
   //
   // GroupBy query parameters.
@@ -544,6 +1094,48 @@ public final class QueryContextParameters
   // Parameters specific to an engine, an API or a query type, such as Dart, the SQL statements API, realtime segment
   // selection and scan ordering, along with parameters Druid uses for internal coordination. Each descriptor's
   // visibility says whether it is documented or can be set by users.
+  public static final QueryContextParameter<String> DART_QUERY_ID =
+      stringParameter("dartQueryId")
+          .since("32.0.0").query(Query.SQL).engine(Engine.DART)
+          .description(
+              """
+              Globally unique execution ID that Dart generates for each query and uses as the controller query ID.
+              Unlike `sqlQueryId`, users can't choose it.
+              """
+          )
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> SUB_QUERY_ID =
+      stringParameter("subQueryId")
+          .since("0.18.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("ID that the Broker assigns to each subquery so that it can be correlated with its parent query.")
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FULL_REPORT = booleanParameter("fullReport")
+      .since("32.0.0").query(Query.SQL).engine(Engine.DART)
+      .defaultValue(QueryContexts.DEFAULT_CTX_FULL_REPORT)
+      .description(
+          """
+          If true, a [Dart](dart.md) query returns a single `fullReport` column that contains the full query report,
+          including the results, instead of the query results.
+          The report size is limited by `druid.msq.dart.controller.maxQueryReportSize`.
+          """
+      )
+      .build();
+
+  public static final QueryContextParameter<ExecutionMode> EXECUTION_MODE =
+      enumParameter("executionMode", ExecutionMode.class)
+          .since("27.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              Determines how the [SQL statements API](../api-reference/sql-api.md#query-from-deep-storage) fetches query results.
+              Druid currently only supports `ASYNC`, which requires you to retrieve the results after the query completes.
+              """
+          )
+          .build();
+
   public static final QueryContextParameter<Boolean> REALTIME_SEGMENTS_ONLY =
       booleanParameter("realtimeSegmentsOnly")
           .since("35.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
@@ -571,6 +1163,18 @@ public final class QueryContextParameters
               """
           )
           .build();
+
+  public static final QueryContextParameter<Boolean> PREPLANNED = booleanParameter("prePlanned")
+      .since("34.0.0").query(Query.SQL).engine(Engine.DART)
+      .defaultValue(QueryContexts.DEFAULT_PREPLANNED)
+      .description(
+          """
+          Whether Dart plans the query definition directly from the logical plan, instead of first translating the query
+          to a native query.
+          """
+      )
+      .visibility(Visibility.HIDDEN)
+      .build();
 
   public static final QueryContextParameter<Integer> MAX_ROWS_QUEUED_FOR_ORDERING =
       integerParameter("maxRowsQueuedForOrdering")
@@ -690,6 +1294,33 @@ public final class QueryContextParameters
     return QueryContextParameter.builder(name, valueType, value -> QueryContexts.getAsEnum(name, value, valueType));
   }
 
+  /**
+   * Creates an enum parameter whose string values are converted with the enum's own lookup, for enums whose accepted
+   * values differ from their constant names. The lookup must throw {@link IllegalArgumentException} for unknown values.
+   */
+  static <T extends Enum<T>> QueryContextParameter.Builder<T> enumParameter(
+      final String name,
+      final Class<T> valueType,
+      final Function<String, T> fromString
+  )
+  {
+    return QueryContextParameter.builder(
+        name,
+        valueType,
+        value -> {
+          if (value instanceof String) {
+            try {
+              return fromString.apply((String) value);
+            }
+            catch (IllegalArgumentException _) {
+              // Fall through to the invalid-value error below.
+            }
+          }
+          throw invalidValueException(name, "one of " + Arrays.toString(valueType.getEnumConstants()), value);
+        }
+    );
+  }
+
   private static final String MAX_SUBQUERY_BYTES_FORMAT = "'auto', 'disabled' or a non-negative number of bytes";
 
   private static String parseMaxSubqueryBytes(final Object value)
@@ -714,6 +1345,39 @@ public final class QueryContextParameters
   /**
    * Accepts the same strings as the Broker's subquery guardrail.
    */
+  private static final String SQL_CURRENT_TIMESTAMP_FORMAT = "an ISO 8601 timestamp or milliseconds since the epoch";
+
+  /**
+   * Accepts milliseconds since the epoch, for compatibility, as the equivalent ISO 8601 timestamp
+   */
+  private static String parseSqlCurrentTimestamp(final Object value)
+  {
+    try {
+      final long millis = QueryContextParameter.exactNumber(
+          "sqlCurrentTimestamp",
+          value,
+          "long",
+          Long.MIN_VALUE,
+          Long.MAX_VALUE,
+          BigDecimal::longValueExact
+      );
+      return DateTimes.utc(millis).toString();
+    }
+    catch (BadQueryContextException e) {
+      throw invalidValueException("sqlCurrentTimestamp", SQL_CURRENT_TIMESTAMP_FORMAT, value);
+    }
+  }
+
+  private static void validateSqlCurrentTimestamp(final String name, final String value)
+  {
+    try {
+      DateTimes.of(value);
+    }
+    catch (IllegalArgumentException e) {
+      throw invalidValueException(name, SQL_CURRENT_TIMESTAMP_FORMAT, value);
+    }
+  }
+
   private static void validateMaxSubqueryBytes(final String name, final String value)
   {
     if ("auto".equalsIgnoreCase(value) || "disabled".equalsIgnoreCase(value)) {

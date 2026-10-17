@@ -47,7 +47,7 @@ class ParameterDocumentationGeneratorTest
       "<!-- GENERATED QUERY CONTEXT PARAMETER: maxRowsQueuedForOrdering -->";
   private static final String SQL_TABLE = "|Parameter|Description|Default value|\n|---|---|---|\n";
   private static final String SQL_MARKER =
-      "<!-- GENERATED QUERY CONTEXT PARAMETER: lane -->";
+      "<!-- GENERATED QUERY CONTEXT PARAMETER: sqlQueryId -->";
 
   @TempDir
   Path temporaryFolder;
@@ -82,8 +82,12 @@ class ParameterDocumentationGeneratorTest
 
     final String sql = Files.readString(temporaryFolder.resolve(SQL_DOCUMENT), StandardCharsets.UTF_8);
     assertTrue(sql.startsWith("sql header\n"));
-    assertTrue(sql.contains("|`lane`|"));
+    assertTrue(sql.contains("|`sqlQueryId`|"));
     assertTrue(sql.contains(SQL_MARKER));
+    assertFalse(sql.contains("dartQueryId"));
+    // Undocumented parameters have descriptions but are left out of the generated tables.
+    assertFalse(sql.contains("prePlanned"));
+    assertFalse(general.contains("optimizeAggregators"));
 
     assertEquals(general, Files.readString(generatedOutput.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8));
     assertEquals(scan, Files.readString(generatedOutput.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8));
@@ -140,16 +144,16 @@ class ParameterDocumentationGeneratorTest
         "|stale| " + GENERAL_MARKER,
         "|stale| " + SCAN_MARKER,
         SQL_TABLE + "|stale| " + SQL_MARKER
-        + "\n\n|Key|Description|\n|---|---|\n|stale| <!-- GENERATED QUERY CONTEXT PARAMETER: queryId -->"
+        + "\n\n|Key|Description|\n|---|---|\n|stale| <!-- GENERATED QUERY CONTEXT PARAMETER: sqlTimeZone -->"
     );
 
     ParameterDocumentationGenerator.main(arguments("generate", temporaryFolder.resolve("generated")));
 
     final String sql = Files.readString(temporaryFolder.resolve(SQL_DOCUMENT), StandardCharsets.UTF_8);
-    assertTrue(sql.contains("|`lane`|Query lane, used to control usage limits on classes of queries."));
-    assertTrue(sql.contains("|`null`| " + SQL_MARKER));
-    assertTrue(sql.contains("|`queryId`|Unique identifier given to this query."));
-    assertTrue(sql.contains("cancel the query.| <!-- GENERATED QUERY CONTEXT PARAMETER: queryId -->"));
+    assertTrue(sql.contains("|`sqlQueryId`|SQL query ID."));
+    assertTrue(sql.contains("|auto-generated| " + SQL_MARKER));
+    assertTrue(sql.contains("|`sqlTimeZone`|Time zone for a connection."));
+    assertTrue(sql.contains("behave.| <!-- GENERATED QUERY CONTEXT PARAMETER: sqlTimeZone -->"));
   }
 
   @Test

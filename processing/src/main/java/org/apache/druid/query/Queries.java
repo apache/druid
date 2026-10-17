@@ -20,7 +20,6 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.error.DruidException;
@@ -272,6 +271,6 @@ public class Queries
 
   public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)
   {
-    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
+    return query.withOverriddenContext(QueryContextParameters.DEFAULT_TIMEOUT, defaultTimeout);
   }
 }

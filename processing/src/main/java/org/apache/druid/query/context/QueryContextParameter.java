@@ -76,7 +76,7 @@ public final class QueryContextParameter<T>
     /**
      * A parameter that Druid sets itself to coordinate between services. It is left out of the generated documentation.
      */
-    INTERNAL
+    SYSTEM
   }
 
   @FunctionalInterface
