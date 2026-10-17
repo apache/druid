@@ -56,7 +56,6 @@ import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
-import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -82,6 +81,7 @@ import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.Interval;
@@ -266,9 +266,7 @@ public class WorkerImpl implements Worker
 
     if (task != null) {
       maxAllowedParseExceptions =
-          Long.parseLong(task.getContext()
-                             .getOrDefault(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, Long.MAX_VALUE)
-                             .toString());
+          QueryContext.of(task.getContext()).getOrDefault(QueryContextParameters.MAX_PARSE_EXCEPTIONS, Long.MAX_VALUE);
     } else {
       maxAllowedParseExceptions = 0;
     }

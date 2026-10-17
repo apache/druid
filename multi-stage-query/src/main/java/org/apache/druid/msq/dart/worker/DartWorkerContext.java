@@ -69,7 +69,7 @@ import java.util.List;
 public class DartWorkerContext implements WorkerContext
 {
   /**
-   * Default for {@link MultiStageQueryContext#CTX_LIVE_REPORT_COUNTERS}. Off by default since older Dart controllers
+   * Default for {@link QueryContextParameters#LIVE_REPORT_COUNTERS}. Off by default since older Dart controllers
    * don't understand the {@link PostCounters} message, and because it adds some overhead.
    */
   public static final boolean DEFAULT_LIVE_REPORT_COUNTERS = false;

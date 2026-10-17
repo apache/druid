@@ -32,7 +32,6 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
@@ -116,10 +115,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   {
     super.setDynamicConfig(updatedConfig);
     querySnapshot = new QueryConfigSnapshot(
-        QueryContext.of(QueryContexts.override(
-            defaultQueryConfig.getContext(),
-            updatedConfig.getQueryContext().asMap()
-        )).asMap(),
+        QueryContext.of(defaultQueryConfig.getContext()).override(updatedConfig.getQueryContext()).asMap(),
         updatedConfig
     );
   }

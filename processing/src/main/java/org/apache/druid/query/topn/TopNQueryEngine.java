@@ -33,6 +33,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
@@ -309,7 +310,8 @@ public class TopNQueryEngine
   {
     // must be using ALL granularity since it makes multiple passes and must reset the cursor
     if (Granularities.ALL.equals(query.getGranularity())) {
-      return selector.isAggregateTopNMetricFirst() || query.context().getBoolean("doAggregateTopNMetricFirst", false);
+      return selector.isAggregateTopNMetricFirst()
+             || query.context().getOrDefault(QueryContextParameters.DO_AGGREGATE_TOP_N_METRIC_FIRST);
     }
     return false;
   }

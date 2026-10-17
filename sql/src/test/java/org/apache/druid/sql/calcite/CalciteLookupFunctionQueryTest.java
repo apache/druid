@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -36,6 +37,7 @@ import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -66,11 +68,11 @@ import java.util.Map;
 public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                  .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 1)
-                  .build();
+                  .putRaw(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
+                  .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 1)
+                  .toMap();
 
   /**
    * For tests that use the lookup extraction function rather than expressions.
@@ -210,12 +212,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     // One optimize call is needed for each "IN" value, because this expression is decomposed into a sequence of
     // [(LOOKUP(dim1, 'lookyloo') = 'xabc' AND dim1 = 'abc') OR ...]. They can't be collected and combined.
 
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 2)
-                    .build();
+                    .putRaw(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 2)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql("CONCAT(LOOKUP(dim1, 'lookyloo'), ' (', dim1, ')') IN ('xa (a)', 'xabc (abc)')"),
@@ -249,12 +251,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     // One optimize call is needed for each "IN" value, because this expression is decomposed into a sequence of
     // [(LOOKUP(dim1, 'lookyloo') = 'xabc' AND dim1 = 'abc') OR ...]. They can't be collected and combined.
 
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 2)
-                    .build();
+                    .putRaw(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 2)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql(
@@ -834,12 +836,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     // "(x = y) IS NOT TRUE", and ReverseLookupRule doesn't peek into the "IS NOT TRUE" calls nested beneatth
     // the "AND".
 
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 3)
-                    .build();
+                    .putRaw(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 3)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS DISTINCT FROM 'xabc' AND "

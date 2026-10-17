@@ -43,6 +43,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -243,8 +244,8 @@ public class TimeBoundaryQueryQueryToolChest
       RowSignature.Builder builder = RowSignature.builder();
       final QueryContext queryContext = query.context();
       String outputName = query.isMinTime() ?
-                          queryContext.getString(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MIN_TIME) :
-                          queryContext.getString(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MAX_TIME);
+                          queryContext.getOrDefault(QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MIN_TIME) :
+                          queryContext.getOrDefault(QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MAX_TIME);
       return builder.add(outputName, ColumnType.LONG).build();
     }
     return super.resultArraySignature(query);

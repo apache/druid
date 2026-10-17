@@ -61,7 +61,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultLevelCachingQueryRunner;
-import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
@@ -389,12 +388,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           queryResults = Sequences.empty();
         } else {
           Query subQueryWithSerialization = subQuery.withOverriddenContext(
-              Collections.singletonMap(
-                  ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-                  ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
-                      .serializationMode()
-                      .toString()
-              )
+              QueryContextParameters.SERIALIZATION,
+              ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
+                  .serializationMode()
           );
           queryResults = subQueryLogic
               .entryPoint(subQueryWithSerialization, this)
@@ -479,12 +475,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           queryResults = Sequences.empty();
         } else {
           Query subQueryWithSerialization = subQuery.withOverriddenContext(
-              Collections.singletonMap(
-                  ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-                  ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
-                                               .serializationMode()
-                                               .toString()
-              )
+              QueryContextParameters.SERIALIZATION,
+              ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
+                                           .serializationMode()
           );
 
           queryResults = subQueryWithSerialization
@@ -590,7 +583,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .emitCPUTimeMetric(emitter)
         .postProcess(
             objectMapper.convertValue(
-                query.context().getString("postProcessing"),
+                query.context().get(QueryContextParameters.POST_PROCESSING),
                 new TypeReference<>() {}
             )
         )

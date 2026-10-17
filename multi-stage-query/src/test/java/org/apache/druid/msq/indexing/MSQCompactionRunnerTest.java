@@ -56,12 +56,13 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -86,7 +87,6 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -430,11 +430,11 @@ public class MSQCompactionRunnerTest
     Assertions.assertEquals(dimFilter, scanQuery.getFilter());
     Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
-        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+        QueryContext.of(msqControllerTask.getContext()).get(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY)
     );
     Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
-        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
+        QueryContext.of(msqControllerTask.getContext()).get(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY)
     );
     Assertions.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
     Assertions.assertEquals(
@@ -547,11 +547,11 @@ public class MSQCompactionRunnerTest
     Assertions.assertEquals(dimFilter, groupByQuery.getFilter());
     Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
-        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+        QueryContext.of(msqControllerTask.getContext()).get(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY)
     );
     Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
-        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
+        QueryContext.of(msqControllerTask.getContext()).get(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY)
     );
     Assertions.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
 
@@ -648,11 +648,11 @@ public class MSQCompactionRunnerTest
     Assertions.assertEquals(dimFilter, scanQuery.getFilter());
     Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
-        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+        QueryContext.of(msqControllerTask.getContext()).get(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY)
     );
     Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
-        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
+        QueryContext.of(msqControllerTask.getContext()).get(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY)
     );
     Assertions.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
     Assertions.assertEquals(
@@ -753,7 +753,7 @@ public class MSQCompactionRunnerTest
     IndexSpec indexSpec = createIndexSpec();
 
     Map<String, Object> context = new HashMap<>();
-    context.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2);
+    QueryContextParameters.MAX_NUM_TASKS.set(context, 2);
     context.putAll(contextParams);
 
     builder
@@ -831,7 +831,7 @@ public class MSQCompactionRunnerTest
   {
     return new MSQTuningConfig(
         1,
-        MultiStageQueryContext.DEFAULT_MAX_ROWS_IN_MEMORY,
+        QueryContextParameters.MAX_ROWS_IN_MEMORY.getDefaultValue().orElseThrow(),
         MAX_ROWS_PER_SEGMENT,
         null,
         createIndexSpec()
