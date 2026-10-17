@@ -40,6 +40,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
@@ -480,12 +481,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
-                .context(
-                    QueryContext.builder()
-                                .putAll(queryContextWithGranularity(Granularities.HOUR))
-                                .put(QueryContextParameters.ROWS_PER_SEGMENT, 1_000_000)
-                                .toMap()
-                )
+                .context(queryContextWithGranularityAndRowsPerSegment(Granularities.HOUR, 1_000_000))
                 .build()
         )
         .verify();
@@ -511,15 +507,52 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
-                .context(
-                    QueryContext.builder()
-                                .putAll(queryContextWithGranularity(Granularities.DAY))
-                                .put(QueryContextParameters.ROWS_PER_SEGMENT, 1_000_000)
-                                .toMap()
-                )
+                .context(queryContextWithGranularityAndRowsPerSegment(Granularities.DAY, 1_000_000))
                 .build()
         )
         .verify();
+  }
+
+  /**
+   * If target segment rows is given in the catalog and {@code rowsPerSegment} is also set in the query context, then
+   * the query context value is used.
+   */
+  @Test
+  public void testInsertRowsPerSegmentFromQueryContextOverridesCatalog()
+  {
+    final Map<String, Object> context = QueryContext.builder()
+                                                    .putAll(DEFAULT_CONTEXT)
+                                                    .put(QueryContextParameters.ROWS_PER_SEGMENT, 5)
+                                                    .toMap();
+
+    testIngestionQuery()
+        .context(context)
+        .sql(StringUtils.format(dmlPrefixPattern, "hourDs") + "\n" +
+             "SELECT * FROM foo")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("hourDs", FOO_TABLE_SIGNATURE)
+        .expectResources(dataSourceRead("hourDs"), dataSourceWrite("hourDs"), dataSourceRead("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
+                .context(queryContextWithGranularityAndRowsPerSegment(Granularities.HOUR, 5))
+                .build()
+        )
+        .verify();
+  }
+
+  private Map<String, Object> queryContextWithGranularityAndRowsPerSegment(
+      final Granularity granularity,
+      final int rowsPerSegment
+  )
+  {
+    return QueryContext.builder()
+                       .putAll(queryContextWithGranularity(granularity))
+                       .put(QueryContextParameters.ROWS_PER_SEGMENT, rowsPerSegment)
+                       .toMap();
   }
 
   /**

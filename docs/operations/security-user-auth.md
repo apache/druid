@@ -81,6 +81,10 @@ This section describes the resource names available for each resource type.
 ### `DATASOURCE`
 Resource names for this type are datasource names. Specifying a datasource permission allows the administrator to grant users access to specific datasources.
 
+:::info
+Any authenticated user can read the contents of any [lookup](../querying/lookups.md). Avoid storing sensitive data in lookups.
+:::
+
 ### `CONFIG`
 There are two possible resource names for the "CONFIG" resource type, "CONFIG" and "security". Granting a user access to CONFIG resources allows them to access the following endpoints.
 

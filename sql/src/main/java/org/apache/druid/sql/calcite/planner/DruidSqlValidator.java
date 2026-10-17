@@ -96,7 +96,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
    * @deprecated Use {@link QueryContextParameters#ROWS_PER_SEGMENT} instead.
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
-  public static final String CTX_ROWS_PER_SEGMENT = "msqRowsPerSegment";
+  public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
 
   private final PlannerContext plannerContext;
 

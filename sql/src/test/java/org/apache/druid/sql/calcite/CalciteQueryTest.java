@@ -5907,6 +5907,63 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testStringInLiteralArraySemantics()
+  {
+    final String values = "('', 'abc', 'abc', 'a''b', '中文', 'abc ', 'nonmatching')";
+    for (final int threshold : new int[]{2, 1000}) {
+      final Map<String, Object> context = QueryContexts.override(
+          QUERY_CONTEXT_DEFAULT,
+          QueryContexts.IN_FUNCTION_THRESHOLD,
+          threshold
+      );
+      // Exercise the array conversion and ordinary IN planning with the same SQL and expected results.
+      for (final Object[] testCase : new Object[][]{
+          {"dim1 IN " + values, 2L},
+          {"dim1 NOT IN " + values, 4L},
+          {"dim1 IN ('', 'abc', NULL)", 2L},
+          {"dim1 NOT IN ('', 'abc', NULL)", 0L},
+          {"NULLIF(dim1, 'abc') IN ('abc', 'def', 'nonmatching')", 1L},
+          {"NULLIF(dim1, 'abc') NOT IN ('abc', 'def', 'nonmatching')", 4L},
+          {"dim1 IN (CAST('abc' AS VARCHAR(30)), CONCAT('d', 'ef'), 'nonmatching')", 2L}
+      }) {
+        testBuilder()
+            .sql("SELECT COUNT(*) FROM druid.foo WHERE " + testCase[0])
+            .queryContext(context)
+            .expectedResults(ImmutableList.of(new Object[]{testCase[1]}))
+            .run();
+      }
+    }
+  }
+
+  @Test
+  public void testLongInLiteralArraySemantics()
+  {
+    for (final int threshold : new int[]{2, 1000}) {
+      final Map<String, Object> context = QueryContexts.override(
+          QUERY_CONTEXT_DEFAULT,
+          QueryContexts.IN_FUNCTION_THRESHOLD,
+          threshold
+      );
+      for (final Object[] testCase : new Object[][]{
+          {"cnt IN (1, 1, -9223372036854775808, 9223372036854775807)", 6L},
+          {"cnt NOT IN (1, 1, -9223372036854775808, 9223372036854775807)", 0L},
+          {"cnt IN (-9223372036854775808, 0, 9223372036854775807)", 0L},
+          {"cnt IN (1, 2, NULL)", 6L},
+          {"cnt NOT IN (0, 2, NULL)", 0L},
+          {"NULLIF(cnt, 1) IN (1, 2, 3)", 0L},
+          {"NULLIF(cnt, 1) NOT IN (1, 2, 3)", 0L},
+          {"cnt IN (CAST(1 AS BIGINT), CAST(2 AS INTEGER), 3 + 1)", 6L}
+      }) {
+        testBuilder()
+            .sql("SELECT COUNT(*) FROM druid.foo WHERE " + testCase[0])
+            .queryContext(context)
+            .expectedResults(ImmutableList.of(new Object[]{testCase[1]}))
+            .run();
+      }
+    }
+  }
+
+  @Test
   public void testInFilterWith23Elements_overBothScalarInArrayAndInSubQueryThresholds()
   {
     // Verify that when an IN filter surpasses both inFunctionThreshold and inSubQueryThreshold, the
