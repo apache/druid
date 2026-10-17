@@ -113,7 +113,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           <span
             class="counter"
           >
-            (10/10)
+            (11/11)
           </span>
         </span>
         <span
@@ -181,6 +181,12 @@ exports[`SupervisorsView matches snapshot 1`] = `
       width="150"
     >
       Running tasks
+    </stub-column>
+    <stub-column
+      id="partitions"
+      width="110"
+    >
+      Partitions
     </stub-column>
     <stub-column
       id="details"

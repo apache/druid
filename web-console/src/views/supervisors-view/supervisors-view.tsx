@@ -105,6 +105,7 @@ const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   'Status',
   'Configured tasks',
   { text: 'Running tasks', label: 'status API' },
+  { text: 'Partitions', label: 'status API' },
   { text: 'Details', label: 'status API' },
   { text: 'Stats', label: 'stats API' },
   { text: 'Recent errors', label: 'status API' },
@@ -394,7 +395,7 @@ export class SupervisorsView extends React.PureComponent<
         }
 
         if (capabilities.hasOverlordAccess()) {
-          if (visibleColumns.shown('Running tasks', 'Details', 'Recent errors')) {
+          if (visibleColumns.shown('Running tasks', 'Partitions', 'Details', 'Recent errors')) {
             auxiliaryQueries.push(
               ...supervisors.map(
                 (supervisor): AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo> =>
@@ -1048,6 +1049,26 @@ export class SupervisorsView extends React.PureComponent<
             );
           },
           show: visibleColumns.shown('Running tasks'),
+        },
+        {
+          Header: 'Partitions',
+          id: 'partitions',
+          accessor: 'supervisor_id',
+          width: 110,
+          filterable: false,
+          sortable: false,
+          className: 'padded',
+          show: visibleColumns.shown('Partitions'),
+          Cell: ({ value, original }) => {
+            const status = useContext(StatusContext);
+            if (!oneOf(original.type, 'kafka', 'kinesis', 'rabbit')) return null;
+            const partitions = status[value]?.payload?.partitions;
+            return isNumberLike(partitions) ? (
+              <span data-tooltip="Number of partitions in the stream">
+                {formatInteger(partitions)}
+              </span>
+            ) : null;
+          },
         },
         {
           Header: 'Details',
