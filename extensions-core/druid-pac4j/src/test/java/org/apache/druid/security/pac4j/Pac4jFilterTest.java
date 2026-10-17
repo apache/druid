@@ -19,18 +19,23 @@
 
 package org.apache.druid.security.pac4j;
 
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.pac4j.core.config.Config;
+import org.pac4j.core.engine.SecurityLogic;
 import org.pac4j.core.exception.http.ForbiddenAction;
 import org.pac4j.core.exception.http.FoundAction;
 import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.exception.http.WithLocationAction;
+import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.jee.context.JEEContext;
 import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
@@ -41,6 +46,10 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
@@ -195,5 +204,55 @@ public class Pac4jFilterTest
     // Test that filter can be created without exceptions
     Pac4jFilter filter = new Pac4jFilter("testName", "testAuthorizer", pac4jConfig, "/test-callback", "testPassphrase");
     Assertions.assertNotNull(filter);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testDoFilterSetsProfileAttributesInAuthenticationResult() throws IOException, ServletException
+  {
+    List<String> groups = Arrays.asList("group-a", "group-b");
+
+    CommonProfile profile = new CommonProfile();
+    profile.setId("test-user-id");
+    profile.addAttribute("groups", groups);
+    profile.addAttribute("email", "test@example.com");
+
+    SecurityLogic stubbedSecurityLogic = (ctx, ss, config, adapter, actionAdapter, clients, authorizers, matchers, params) -> {
+      try {
+        return adapter.adapt(ctx, ss, Collections.singletonList(profile));
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    Pac4jFilter filter = new Pac4jFilter("test", "testAuthorizer", pac4jConfig, "/callback", "testPassphrase")
+    {
+      @Override
+      protected SecurityLogic createSecurityLogic()
+      {
+        return stubbedSecurityLogic;
+      }
+    };
+
+    Mockito.when(request.getAttribute(DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
+    Mockito.when(request.getRequestURI()).thenReturn("/druid/v2/datasources");
+
+    filter.doFilter(request, response, filterChain);
+
+    ArgumentCaptor<AuthenticationResult> captor = ArgumentCaptor.forClass(AuthenticationResult.class);
+    Mockito.verify(request).setAttribute(Mockito.eq(AuthConfig.DRUID_AUTHENTICATION_RESULT), captor.capture());
+
+    AuthenticationResult result = captor.getValue();
+    Assertions.assertEquals("test-user-id", result.getIdentity());
+
+    Map<String, Object> profileInContext = (Map<String, Object>) result.getContext().get("profile");
+    Assertions.assertNotNull(profileInContext);
+    Map<String, Object> attributes = (Map<String, Object>) profileInContext.get("attributes");
+    Assertions.assertNotNull(attributes);
+    Assertions.assertEquals(groups, attributes.get("groups"));
+    Assertions.assertEquals("test@example.com", attributes.get("email"));
+
+    Mockito.verify(filterChain).doFilter(request, response);
   }
 }
