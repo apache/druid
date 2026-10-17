@@ -20,7 +20,6 @@
 package org.apache.druid.msq.logical.stages;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
@@ -131,17 +130,18 @@ public class ReadStage extends AbstractFrameProcessorStage
   private static Optional<ReadStage> translateViaSourceDesc(PlannerContext plannerContext, SourceDescProducer node)
   {
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
-    InputSpec inputSpec = translateDataSource(sd.dataSource);
+    InputSpec inputSpec = translateDataSource(plannerContext, sd.dataSource);
     ReadStage stage = new ReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec, sd.rowSignature));
     return Optional.of(stage);
   }
 
   @Nonnull
-  private static InputSpec translateDataSource(DataSource dataSource)
+  private static InputSpec translateDataSource(PlannerContext plannerContext, DataSource dataSource)
   {
     if (dataSource instanceof TableDataSource) {
       TableDataSource ids = (TableDataSource) dataSource;
-      TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null);
+      // TableInputSpec treats null intervals as eternity.
+      TableInputSpec inputSpec = new TableInputSpec(ids.getName(), plannerContext.getTimeCondition(), null);
       return inputSpec;
     }
     if (dataSource instanceof InlineDataSource) {

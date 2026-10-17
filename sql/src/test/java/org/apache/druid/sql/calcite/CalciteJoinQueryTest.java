@@ -41,6 +41,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.OperatorFactoryBuilders;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -71,8 +72,11 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
+import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
@@ -95,6 +99,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
@@ -6583,5 +6588,129 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{0L}
         )
     );
+  }
+
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @Test
+  public void testLeftJoinWithTimeFilterAndNonTimeOrderBy()
+  {
+    // Cannot vectorize direct queries on lookup tables.
+    cannotVectorize();
+
+    final Interval interval = Intervals.utc(DateTimes.of("2001-01-01").getMillis(), JodaUtils.MAX_INSTANT);
+
+    // The filter on __time becomes the intervals of the scan.
+    testQuery(
+        "SELECT f1.dim1, f2.v\n"
+        + "FROM foo f1 LEFT JOIN (SELECT k, v FROM lookup.lookyloo GROUP BY k, v) f2 ON f1.dim2 = f2.k\n"
+        + "WHERE f1.__time >= TIMESTAMP '2001-01-01 00:00:00'\n"
+        + "ORDER BY f2.v, f1.dim1",
+        ImmutableList.of(
+            new WindowOperatorQuery(
+                new QueryDataSource(
+                    newScanQueryBuilder()
+                        .dataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(new LookupDataSource("lookyloo"))
+                                                .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                .setGranularity(Granularities.ALL)
+                                                .setDimensions(
+                                                    new DefaultDimensionSpec("k", "d0"),
+                                                    new DefaultDimensionSpec("v", "d1")
+                                                )
+                                                .setContext(QUERY_CONTEXT_DEFAULT)
+                                                .build()
+                                ),
+                                "j0.",
+                                equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.d0")),
+                                JoinType.LEFT
+                            )
+                        )
+                        .intervals(querySegmentSpec(interval))
+                        .columns("dim1", "j0.d1")
+                        .columnTypes(ColumnType.STRING, ColumnType.STRING)
+                        .context(QUERY_CONTEXT_DEFAULT)
+                        .build()
+                ),
+                new LegacySegmentSpec(interval),
+                QUERY_CONTEXT_DEFAULT,
+                RowSignature.builder().add("dim1", ColumnType.STRING).add("j0.d1", ColumnType.STRING).build(),
+                ImmutableList.of(
+                    OperatorFactoryBuilders.naiveSortOperator(
+                        ColumnWithDirection.ascending("j0.d1"),
+                        ColumnWithDirection.ascending("dim1")
+                    ),
+                    OperatorFactoryBuilders.scanOperatorFactoryBuilder().setProjectedColumns("dim1", "j0.d1").build()
+                ),
+                null
+            )
+        ),
+        ImmutableList.of(
+            new Object[]{"abc", null},
+            new Object[]{"1", "xa"},
+            new Object[]{"def", "xabc"}
+        )
+    );
+  }
+
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @Test
+  public void testJoinWithSubqueryOnLeftAndOuterTimeFilter()
+  {
+    // The filter on __time applies to the subquery's output, so it stays a filter rather than becoming intervals.
+    testBuilder()
+        .sql(
+            "SELECT base.dim2, lookyloo.v\n"
+            + "FROM (SELECT __time, dim2 FROM foo ORDER BY __time LIMIT 10) base\n"
+            + "LEFT JOIN lookup.lookyloo ON base.dim2 = lookyloo.k\n"
+            + "WHERE base.__time >= TIMESTAMP '2000-01-03 00:00:00'"
+        )
+        .expectedQueries(
+            ImmutableList.of(
+                newScanQueryBuilder()
+                    .dataSource(
+                        join(
+                            new QueryDataSource(
+                                newScanQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE1)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .columns("__time", "dim2")
+                                    .columnTypes(ColumnType.LONG, ColumnType.STRING)
+                                    .order(Order.ASCENDING)
+                                    .limit(10)
+                                    .context(QUERY_CONTEXT_DEFAULT)
+                                    .build()
+                            ),
+                            new LookupDataSource("lookyloo"),
+                            "j0.",
+                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
+                            JoinType.LEFT
+                        )
+                    )
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .filters(range("__time", ColumnType.LONG, timestamp("2000-01-03"), null, false, false))
+                    .columns("dim2", "j0.v")
+                    .columnTypes(ColumnType.STRING, ColumnType.STRING)
+                    .context(QUERY_CONTEXT_DEFAULT)
+                    .build()
+            )
+        )
+        // Unordered, since sort-merge joins return rows in join key order.
+        .expectedResults(
+            new UnorderedResultsVerifier(
+                ImmutableList.of(
+                    new Object[]{"", null},
+                    new Object[]{"a", "xa"},
+                    new Object[]{"abc", "xabc"},
+                    new Object[]{null, null}
+                ),
+                ResultMatchMode.EQUALS,
+                null
+            )
+        )
+        .run();
   }
 }
