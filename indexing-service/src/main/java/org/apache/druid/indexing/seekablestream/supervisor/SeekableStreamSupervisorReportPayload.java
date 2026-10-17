@@ -73,14 +73,59 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
+    this(
+        id,
+        dataSource,
+        stream,
+        partitions,
+        replicas,
+        durationSeconds,
+        latestOffsets,
+        minimumLag,
+        aggregateLag,
+        minimumLagMillis,
+        aggregateLagMillis,
+        offsetsLastUpdated,
+        suspended,
+        healthy,
+        state,
+        detailedState,
+        recentErrors,
+        null,
+        null
+    );
+  }
+
+  public SeekableStreamSupervisorReportPayload(
+      String id,
+      String dataSource,
+      String stream,
+      int partitions,
+      int replicas,
+      long durationSeconds,
+      @Nullable Map<PartitionIdType, SequenceOffsetType> latestOffsets,
+      @Nullable Map<PartitionIdType, Long> minimumLag,
+      @Nullable Long aggregateLag,
+      @Nullable Map<PartitionIdType, Long> minimumLagMillis,
+      @Nullable Long aggregateLagMillis,
+      @Nullable DateTime offsetsLastUpdated,
+      boolean suspended,
+      boolean healthy,
+      SupervisorStateManager.State state,
+      SupervisorStateManager.State detailedState,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors,
+      @Nullable List<TaskReportData> activeTasks,
+      @Nullable List<TaskReportData> publishingTasks
+  )
+  {
     this.id = id;
     this.dataSource = dataSource;
     this.stream = stream;
     this.partitions = partitions;
     this.replicas = replicas;
     this.durationSeconds = durationSeconds;
-    this.activeTasks = new ArrayList<>();
-    this.publishingTasks = new ArrayList<>();
+    this.activeTasks = activeTasks == null ? new ArrayList<>() : new ArrayList<>(activeTasks);
+    this.publishingTasks = publishingTasks == null ? new ArrayList<>() : new ArrayList<>(publishingTasks);
     this.latestOffsets = latestOffsets;
     this.minimumLag = minimumLag;
     this.aggregateLag = aggregateLag;

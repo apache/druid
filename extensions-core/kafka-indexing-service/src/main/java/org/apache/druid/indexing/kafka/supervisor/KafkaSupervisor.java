@@ -262,7 +262,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         stateManager.isHealthy(),
         stateManager.getSupervisorState().getBasicState(),
         stateManager.getSupervisorState(),
-        stateManager.getExceptionEvents()
+        stateManager.getExceptionEvents(),
+        null,
+        null
     );
   }
 
