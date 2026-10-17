@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 
@@ -50,6 +51,16 @@ class KmsServerSideEncryption implements org.apache.druid.storage.s3.ServerSideE
 
   @Override
   public CopyObjectRequest.Builder decorate(CopyObjectRequest.Builder builder)
+  {
+    builder.serverSideEncryption(ServerSideEncryption.AWS_KMS);
+    if (keyId != null) {
+      builder.ssekmsKeyId(keyId);
+    }
+    return builder;
+  }
+
+  @Override
+  public CreateMultipartUploadRequest.Builder decorate(CreateMultipartUploadRequest.Builder builder)
   {
     builder.serverSideEncryption(ServerSideEncryption.AWS_KMS);
     if (keyId != null) {
