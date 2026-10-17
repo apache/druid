@@ -970,7 +970,9 @@ public class QueryContext
    * {@link AcquireMode#PARTIAL} degrades to {@link AcquireMode#FULL} where partial downloads are unavailable, such as
    * when they are disabled by configuration or the segment is not range-readable. Forcing {@link AcquireMode#PARTIAL}
    * where the engine defaults to {@link AcquireMode#FULL} fails at cursor creation if the engine reads segments through
-   * the synchronous cursor API.
+   * the synchronous cursor API. The same applies to {@link AcquireMode#PARTIAL_RULE_HELD}, which never degrades: it
+   * reads only the bundles selected by each segment's partial-load rule, so it is only meaningful on servers that apply
+   * those rules (Historicals) and reads nothing elsewhere.
    */
   public AcquireMode getSegmentAcquireMode(AcquireMode defaultValue)
   {

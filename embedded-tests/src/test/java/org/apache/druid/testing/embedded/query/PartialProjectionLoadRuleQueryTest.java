@@ -69,6 +69,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -308,6 +309,37 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  void testRuleHeldAcquireModeReadsOnlyRuleLoadedBundles()
+  {
+    // With segmentAcquireMode=PARTIAL_RULE_HELD the MSQ leaves only read the bundles the partial-load rule selected.
+    // The projection is selected, so a query it can serve returns its usual results. The cluster groups are not, so a
+    // projection miss reads no rows at all, rather than loading them on demand as in
+    // testProjectionMissLoadsBaseBundleOnDemand (or reading them if an earlier test already did). Neither query loads
+    // anything.
+    final LatchableEmitter emitter = quiesceAndFlushStorageMonitor();
+    final Map<String, Object> context = Map.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "PARTIAL_RULE_HELD");
+
+    runDartQuery(
+        "SELECT \"countryName\", SUM(\"delta\") FROM \"" + dataSource + "\" GROUP BY 1 ORDER BY 1",
+        context,
+        "CA,3\nFR,7\nUS,17"
+    );
+    runDartQuery(
+        "SELECT \"channel\", SUM(\"delta\") FROM \"" + dataSource + "\" GROUP BY 1 ORDER BY 1",
+        context,
+        ""
+    );
+
+    emitter.awaitMetricQuiescent(StorageMonitor.VSF_LOAD_BEGIN_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
+
+    Assertions.assertEquals(
+        0L,
+        emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT),
+        "expected no on-demand file loads under PARTIAL_RULE_HELD"
+    );
+  }
+
+  @Test
   void testRuleTransitionBetweenPartialAndFullLoad()
   {
     // Rule churn in both directions against an already-loaded segment.
@@ -454,14 +486,17 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
    */
   private void runDartQuery(String sql, String expectedCsv)
   {
+    runDartQuery(sql, Map.of(), expectedCsv);
+  }
+
+  private void runDartQuery(String sql, Map<String, Object> context, String expectedCsv)
+  {
     final String sqlQueryId = UUID.randomUUID().toString();
+    final Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId);
     final String result;
     try {
-      result = msqApis.submitDartSqlAsync(
-          sql,
-          Map.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId),
-          broker
-      ).get();
+      result = msqApis.submitDartSqlAsync(sql, queryContext, broker).get();
     }
     catch (Exception e) {
       throw new RuntimeException("failed to run Dart query [" + sqlQueryId + "]: " + sql, e);

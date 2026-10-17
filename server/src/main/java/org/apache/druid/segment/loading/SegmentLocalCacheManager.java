@@ -462,16 +462,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public Optional<Segment> acquireCachedSegment(final SegmentId segmentId, final AcquireMode acquireMode)
   {
-    // PARTIAL accepts a mounted-but-not-fully-downloaded entry; FULL (and PARTIAL when partial downloads are disabled)
-    // requires a behaviorally fully-materialized entry.
-    final boolean requireFullyDownloaded =
-        acquireMode == AcquireMode.FULL || !config.isVirtualStoragePartialDownloadsEnabled();
-    return acquireCachedInternal(segmentId, requireFullyDownloaded);
+    return acquireCachedInternal(segmentId, acquireMode);
   }
 
   @Override
   public AcquireSegmentAction acquireSegment(final DataSegment dataSegment, final AcquireMode acquireMode)
   {
+    if (acquireMode == AcquireMode.PARTIAL_RULE_HELD) {
+      // Only an existing partial entry can have a rule applied, so never reserve, mount, or download anything here.
+      // Anything else gets an empty placeholder that serves no rows.
+      final Segment segment = acquireCachedInternal(dataSegment.getId(), acquireMode).orElseGet(
+          () -> new VirtualPlaceholderSegment(dataSegment)
+      );
+      return AcquireSegmentAction.completed(AcquireSegmentResult.of(Optional.of(segment)));
+    }
     // Partial-eligible segments route through the partial machinery: PARTIAL mounts lazily (header only, bundles load
     // on demand), FULL force-downloads everything up front. Partial-ineligible segments fall through to the eager path
     // below for both modes.
@@ -540,20 +544,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   /**
    * Shared implementation for {@link #acquireCachedSegment}. Walks the storage locations checking for existing entries.
    * <p>
-   * When {@code requireFullyDownloaded} is {@code true} the entry must also report
-   * {@link SegmentCacheEntry#isFullyDownloaded()} ({@link AcquireMode#FULL}), which never hands back an entry that
-   * isn't behaviorally fully-materialized. When {@code false} a mounted entry is sufficient
-   * ({@link AcquireMode#PARTIAL}'s lazy-mount contract), even if some bundles are still not yet on disk. In either case
-   * {@link SegmentCacheEntry#acquireReference(Closeable)} composes the weak-entry hold into the returned segment's close
-   * lifecycle.
+   * {@link AcquireMode#FULL} (and {@link AcquireMode#PARTIAL} when partial downloads are disabled) requires the entry to
+   * also report {@link SegmentCacheEntry#isFullyDownloaded()}, which never hands back an entry that isn't behaviorally
+   * fully-materialized. Otherwise a mounted entry is sufficient ({@link AcquireMode#PARTIAL}'s lazy-mount contract),
+   * even if some bundles are still not yet on disk. In either case {@link SegmentCacheEntry#acquireReference(Closeable)}
+   * composes the weak-entry hold into the returned segment's close lifecycle.
+   * <p>
+   * {@link AcquireMode#PARTIAL_RULE_HELD} only accepts a mounted {@link PartialSegmentMetadataCacheEntry}, since no
+   * other entry can have a partial-load rule applied, and returns empty for anything else.
    */
-  private Optional<Segment> acquireCachedInternal(SegmentId segmentId, boolean requireFullyDownloaded)
+  private Optional<Segment> acquireCachedInternal(SegmentId segmentId, AcquireMode acquireMode)
   {
+    final boolean ruleHeldOnly = acquireMode == AcquireMode.PARTIAL_RULE_HELD;
+    final boolean requireFullyDownloaded =
+        acquireMode == AcquireMode.FULL || !config.isVirtualStoragePartialDownloadsEnabled();
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(segmentId);
     for (StorageLocation location : locations) {
       final SegmentCacheEntry staticEntry = location.getStaticCacheEntry(id);
       if (staticEntry != null) {
-        if (staticEntry.isMounted() && (!requireFullyDownloaded || staticEntry.isFullyDownloaded())) {
+        if (!ruleHeldOnly && staticEntry.isMounted() && (!requireFullyDownloaded || staticEntry.isFullyDownloaded())) {
           return staticEntry.acquireReference();
         }
         return Optional.empty();
@@ -564,6 +573,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHoldIfExists(id);
       if (hold != null) {
         final SegmentCacheEntry entry = hold.getEntry();
+        if (ruleHeldOnly) {
+          if (entry instanceof PartialSegmentMetadataCacheEntry partial && partial.isMounted()) {
+            return partial.acquireRuleHeldReference(hold);
+          }
+          hold.close();
+          return Optional.empty();
+        }
         if (entry.isMounted() && (!requireFullyDownloaded || entry.isFullyDownloaded())) {
           if (requireFullyDownloaded && entry instanceof PartialSegmentMetadataCacheEntry partial) {
             // A FULL reference on a partial segment must pin every bundle for the segment's lifetime (the sync cursor

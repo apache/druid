@@ -45,5 +45,22 @@ public enum AcquireMode
    * Degrades to {@link #FULL} behavior when the segment's deep-storage layout cannot supply range reads (e.g. a
    * non-V10 or zipped segment) or when partial downloads are disabled by configuration.
    */
-  PARTIAL
+  PARTIAL,
+
+  /**
+   * Testing/experimental. Like {@link #PARTIAL}, but the returned segment only serves the bundles selected by the
+   * segment's current partial-load rule, as if those bundles were the whole segment. Selected bundles that are not yet
+   * resident are still fetched on demand at cursor-build, so callers must use the async API such as
+   * {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync}.
+   * <p>
+   * Projection matching only considers rule-selected projections, so a query falls back to another selected
+   * projection, a selected base table, or the selected cluster groups. Unselected cluster groups are left out of the
+   * results, and a query whose projection or base table is not selected reads no rows. A matched projection may still
+   * read the base table columns it depends on, since it cannot be read without them.
+   * <p>
+   * Never degrades to {@link #FULL}: a segment with no partial-load rule applied (including segments that cannot be
+   * partially loaded, or any segment when partial downloads are disabled) serves no rows, and nothing is downloaded for
+   * it. The bundle selection is snapshotted when the segment is acquired.
+   */
+  PARTIAL_RULE_HELD
 }
