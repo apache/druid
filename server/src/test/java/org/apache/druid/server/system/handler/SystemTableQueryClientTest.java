@@ -709,7 +709,7 @@ public class SystemTableQueryClientTest
         },
         (queryPlus, responseContext) -> {
           final QueryDataSource subquery = (QueryDataSource) queryPlus.getQuery().getDataSource();
-          ((InlineDataSource) subquery.getQuery().getDataSource()).getRows().iterator().hasNext();
+          Assertions.assertFalse(((InlineDataSource) subquery.getQuery().getDataSource()).getRows().iterator().hasNext());
           return Sequences.empty();
         }
     );
