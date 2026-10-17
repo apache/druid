@@ -130,6 +130,18 @@ describe('sql-completions', () => {
       expect(keywordValues).not.toContain('SELECT');
     });
 
+    it('suggests NULLS FIRST / NULLS LAST after an ORDER BY direction', () => {
+      const keywordsAt = (sql: string) =>
+        completionsAt(sql)
+          .filter(c => c.detail === 'keyword')
+          .map(c => c.label);
+
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC |')).toEqual(['NULLS']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 ASC |')).toEqual(['NULLS']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS |')).toEqual(['FIRST', 'LAST']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS LAST |')).toEqual([]);
+    });
+
     it('looks at the keyword on an earlier line and past comments', () => {
       for (const sql of ['SELECT * FROM t GROUP\n  |', 'SELECT * FROM t GROUP /* by what */ |']) {
         expect(

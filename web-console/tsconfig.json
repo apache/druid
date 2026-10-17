@@ -19,7 +19,7 @@
     "strict": true,
     "useUnknownInCatchVariables": false,
     "target": "es2022",
-    "types": ["jest"]
+    "types": ["jest", "node"]
   },
   "include": ["src", "e2e-tests", "typings"]
 }
