@@ -44,6 +44,33 @@ public class BalancerStrategyFactoryTest
   }
 
   @Test
+  public void testIntervalAwareStrategyIsDeserialized() throws JsonProcessingException
+  {
+    final String json = "{\"strategy\":\"intervalAware\"}";
+    BalancerStrategyFactory factory = MAPPER.readValue(json, BalancerStrategyFactory.class);
+    BalancerStrategy strategy = factory.createBalancerStrategy(1);
+
+    Assert.assertTrue(factory instanceof IntervalAwareBalancerStrategyFactory);
+    // perDatasource defaults to true when not specified
+    Assert.assertTrue(((IntervalAwareBalancerStrategyFactory) factory).isPerDatasource());
+    Assert.assertTrue(strategy instanceof IntervalAwareBalancerStrategy);
+
+    factory.stopExecutor();
+  }
+
+  @Test
+  public void testIntervalAwareStrategyRespectsPerDatasourceFlag() throws JsonProcessingException
+  {
+    final String json = "{\"strategy\":\"intervalAware\",\"perDatasource\":false}";
+    BalancerStrategyFactory factory = MAPPER.readValue(json, BalancerStrategyFactory.class);
+
+    Assert.assertTrue(factory instanceof IntervalAwareBalancerStrategyFactory);
+    Assert.assertFalse(((IntervalAwareBalancerStrategyFactory) factory).isPerDatasource());
+
+    factory.stopExecutor();
+  }
+
+  @Test
   public void testBalancerFactoryCreatesNewExecutorIfNumThreadsChanges()
   {
     BalancerStrategyFactory factory = new CostBalancerStrategyFactory();
