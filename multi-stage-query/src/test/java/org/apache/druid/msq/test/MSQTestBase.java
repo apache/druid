@@ -947,18 +947,26 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
     }
 
-    // Compare contexts in their JSON form, since the test submits its context as a client does
-    final Query<?> expectedQuery = expectedMSQSpec.getQuery().withOverriddenContext(ignoredContext);
+    // Compare the queries in their JSON form, since the test submits its context as a client does: the contexts of the
+    // query and its subqueries then hold the JSON form of their values on both sides
     Assertions.assertEquals(
-        expectedQuery.withOverriddenContext(QueryContextTestUtils.asJsonContext(objectMapper, expectedQuery.getContext())),
-        querySpecForTask.getQuery().withOverriddenContext(
-            QueryContextTestUtils.asJsonContext(objectMapper, actualQueryContext)
-        )
+        jsonRoundTrip(expectedMSQSpec.getQuery().withOverriddenContext(ignoredContext)),
+        jsonRoundTrip(querySpecForTask.getQuery())
     );
     Assertions.assertEquals(expectedMSQSpec.getAssignmentStrategy(), querySpecForTask.getAssignmentStrategy());
     Assertions.assertEquals(expectedMSQSpec.getColumnMappings(), querySpecForTask.getColumnMappings());
     Assertions.assertEquals(expectedMSQSpec.getDestination(), querySpecForTask.getDestination());
 
+  }
+
+  private Query<?> jsonRoundTrip(final Query<?> query)
+  {
+    try {
+      return objectMapper.readValue(objectMapper.writeValueAsBytes(query), Query.class);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void assertTuningConfig(
