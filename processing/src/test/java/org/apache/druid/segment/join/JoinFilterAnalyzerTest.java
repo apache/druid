@@ -26,7 +26,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
@@ -2096,8 +2096,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
                 false,
                 true,
                 true,
-                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
-                QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+                QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow(),
+                QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getDefaultValue().orElseThrow()
             ),
             joinableClauses.getJoinableClauses(),
             VirtualColumns.EMPTY,
@@ -2172,8 +2172,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
                 true,
                 false,
                 true,
-                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
-                QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+                QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow(),
+                QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getDefaultValue().orElseThrow()
             ),
             joinableClauses.getJoinableClauses(),
             VirtualColumns.EMPTY,
@@ -2577,8 +2577,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
                 true,
                 true,
                 true,
-                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
-                QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+                QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow(),
+                QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getDefaultValue().orElseThrow()
             ),
             joinableClauses,
             VirtualColumns.EMPTY,

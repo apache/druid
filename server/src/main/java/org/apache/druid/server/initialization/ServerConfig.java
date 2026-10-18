@@ -37,7 +37,7 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.eclipse.jetty.http.UriCompliance;
@@ -222,7 +222,8 @@ public class ServerConfig
   private String maxSubqueryBytes = SubqueryGuardrailHelper.LIMIT_DISABLED_VALUE;
 
   @JsonProperty
-  private boolean useNestedForUnknownTypeInSubquery = QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
+  private boolean useNestedForUnknownTypeInSubquery =
+      QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY.getDefaultValue().orElseThrow();
 
   @JsonProperty
   @Min(1)

@@ -449,7 +449,7 @@ public class QueryContextTest
     assertEquals(Integer.MAX_VALUE, context1.getInFunctionThreshold());
 
     final QueryContext context2 = QueryContext.empty();
-    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD, context2.getInFunctionThreshold());
+    assertEquals(QueryContextParameters.IN_FUNCTION_THRESHOLD.getDefaultValue().orElseThrow(), context2.getInFunctionThreshold());
   }
 
   @Test
@@ -459,7 +459,7 @@ public class QueryContextTest
     assertEquals(Integer.MAX_VALUE, context1.getInFunctionExprThreshold());
 
     final QueryContext context2 = QueryContext.empty();
-    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD, context2.getInFunctionExprThreshold());
+    assertEquals(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD.getDefaultValue().orElseThrow(), context2.getInFunctionExprThreshold());
   }
 
   @Test

@@ -22,8 +22,8 @@ package org.apache.druid.query.topn;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -292,7 +292,7 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder queryId(String queryId)
   {
-    context = BaseQuery.computeOverriddenContext(context, QueryContextParameters.QUERY_ID, queryId);
+    context = QueryContexts.override(context, QueryContextParameters.QUERY_ID, queryId);
     return this;
   }
 }

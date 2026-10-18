@@ -49,7 +49,6 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryLogicCompatToolChest;
@@ -684,10 +683,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query = query.withSqlQueryId(parentSqlQueryId);
       }
 
-      query.withOverriddenContext(Collections.singletonMap(
-          QueryContexts.QUERY_RESOURCE_ID,
-          parentQueryResourceId
-      ));
+      query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.QUERY_RESOURCE_ID, parentQueryResourceId));
 
       currentDataSource = new QueryDataSource(query);
     }

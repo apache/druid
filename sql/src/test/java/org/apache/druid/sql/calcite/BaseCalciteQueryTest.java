@@ -46,7 +46,6 @@ import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -1255,7 +1254,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     return (boolean) queryContext.getOrDefault(
         QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getName(),
-        QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
+        QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow()
     );
   }
 

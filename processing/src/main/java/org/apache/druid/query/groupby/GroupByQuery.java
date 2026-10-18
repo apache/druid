@@ -46,6 +46,7 @@ import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -1251,7 +1252,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder queryId(String queryId)
     {
-      context = BaseQuery.computeOverriddenContext(context, QueryContextParameters.QUERY_ID, queryId);
+      context = QueryContexts.override(context, QueryContextParameters.QUERY_ID, queryId);
       return this;
     }
 

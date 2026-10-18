@@ -5910,7 +5910,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     for (final int threshold : new int[]{2, 1000}) {
       final Map<String, Object> context = QueryContexts.override(
           QUERY_CONTEXT_DEFAULT,
-          QueryContexts.IN_FUNCTION_THRESHOLD,
+          QueryContextParameters.IN_FUNCTION_THRESHOLD,
           threshold
       );
       // Exercise the array conversion and ordinary IN planning with the same SQL and expected results.
@@ -5938,7 +5938,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     for (final int threshold : new int[]{2, 1000}) {
       final Map<String, Object> context = QueryContexts.override(
           QUERY_CONTEXT_DEFAULT,
-          QueryContexts.IN_FUNCTION_THRESHOLD,
+          QueryContextParameters.IN_FUNCTION_THRESHOLD,
           threshold
       );
       for (final Object[] testCase : new Object[][]{
