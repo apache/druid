@@ -122,7 +122,9 @@ import org.apache.druid.msq.test.MSQTestBase.MSQBaseComponentSupplier;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextTestUtils;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -884,7 +886,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         SqlQueryPlus.builder()
                     .sql(query)
-                    .queryContext(context)
+                    .queryContext(QueryContextTestUtils.asJsonContext(objectMapper, context))
                     .auth(authenticationResult)
                     .build()
                     .withParameters(parameters)
@@ -945,7 +947,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
     }
 
-    Assertions.assertEquals(expectedMSQSpec.getQuery().withOverriddenContext(ignoredContext), querySpecForTask.getQuery());
+    // Compare contexts in their JSON form, since the test submits its context as a client does
+    final Query<?> expectedQuery = expectedMSQSpec.getQuery().withOverriddenContext(ignoredContext);
+    Assertions.assertEquals(
+        expectedQuery.withOverriddenContext(QueryContextTestUtils.asJsonContext(objectMapper, expectedQuery.getContext())),
+        querySpecForTask.getQuery().withOverriddenContext(
+            QueryContextTestUtils.asJsonContext(objectMapper, actualQueryContext)
+        )
+    );
     Assertions.assertEquals(expectedMSQSpec.getAssignmentStrategy(), querySpecForTask.getAssignmentStrategy());
     Assertions.assertEquals(expectedMSQSpec.getColumnMappings(), querySpecForTask.getColumnMappings());
     Assertions.assertEquals(expectedMSQSpec.getDestination(), querySpecForTask.getDestination());
