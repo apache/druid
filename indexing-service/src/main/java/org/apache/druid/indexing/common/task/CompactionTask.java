@@ -102,6 +102,7 @@ import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -843,9 +844,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       // A sealed spec is the complete description of the table, so the columns and projections it leaves undeclared
       // are taken to not exist rather than inferred. Range partitioning is the exception that reads the segments even
       // when sealed: only they can say whether a partition column is multi-valued, which MSQ cannot partition by.
+      //
+      // Which string columns actually hold multiple values is likewise only knowable from the segments, and a caller
+      // that does not get told assumes they all might: MSQ groups every string column as an array and converts it
+      // back on write, which can rewrite a single-valued column as something else. So the answer is produced whenever
+      // it was asked for and the segments are being read anyway. A sealed table without range partitioning is not
+      // read, and keeps that conservative assumption rather than paying for a download to refine it.
       final boolean analyzeSchema = !sealed;
       final boolean analyzeProjections = !sealed && projections == null;
-      final boolean analyzeMultiValued = rangePartitioned;
+      final boolean analyzeMultiValued = rangePartitioned || (needMultiValuedColumns && analyzeSchema);
       BaseTableProjectionSpec baseTableSpec = baseTable.withQueryGranularity(granularitySpec.getQueryGranularity());
       List<AggregateProjectionSpec> projectionSpecs = projections;
       Set<String> multiValuedDimensions = null;
@@ -1201,10 +1208,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             processQueryGranularity(index);
             // Column data is read from a different index for a clustered segment, but rollup, query granularity,
             // metrics and projections all come from the top-level metadata either way.
-            for (QueryableIndex columnIndex : columnIndexes(index)) {
-              processDimensionsSpec(columnIndex);
-              processMultiValuedDimensions(columnIndex);
-            }
+            processColumns(index);
             processMetricsSpec(index);
             processProjections(index);
           }
@@ -1213,23 +1217,27 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
 
     /**
-     * The indexes to read column data from. A clustered segment stores its rows in per-cluster-group containers and
-     * its top-level index deliberately holds no columns of its own, so reading the schema from it would find nothing.
+     * Reads the column schema of one segment.
      * <p>
-     * Every group has to be read rather than taking the first as representative: a group omits a column's files
-     * entirely when it holds no values for that column, so a column can be absent from one group and present in a
-     * later one.
+     * A clustered segment stores its rows in per-cluster-group containers and its top-level index deliberately holds
+     * no columns of its own, so the columns are read from the group sub-indexes instead. The column names and ordering
+     * come from the segment-level clustered schema.
      */
-    private static Iterable<QueryableIndex> columnIndexes(QueryableIndex index)
+    private void processColumns(QueryableIndex index)
     {
       final ClusteredValueGroupsBaseTableSchema clusteredBaseTable = index.getMetadata().getClusteredBaseTable();
       if (clusteredBaseTable == null || clusteredBaseTable.getClusterGroups().isEmpty()) {
-        return Collections.singletonList(index);
+        processDimensionsSpec(index, index.getOrdering(), index.getAvailableDimensions());
+        processMultiValuedDimensions(index, index.getAvailableDimensions());
+        return;
       }
-      return Iterables.transform(
-          clusteredBaseTable.getClusterGroups(),
-          group -> index.getClusterGroupQueryableIndex(group, true)
-      );
+      final List<OrderBy> ordering = clusteredBaseTable.getOrdering();
+      final List<String> dimensions = clusteredBaseTable.getDimensionNames();
+      for (TableClusterGroupSpec group : clusteredBaseTable.getClusterGroups()) {
+        final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(group, true);
+        processDimensionsSpec(groupIndex, ordering, dimensions);
+        processMultiValuedDimensions(groupIndex, dimensions);
+      }
     }
 
     public Boolean getRollup()
@@ -1390,7 +1398,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       queryGranularity = compareWithCurrent(queryGranularity, current);
     }
 
-    private void processDimensionsSpec(final QueryableIndex index)
+    /**
+     * Records the schema of the given columns, read from {@code index}. The names are passed in rather than read from
+     * the index because a clustered segment's columns are described one level above the index they are read from; see
+     * {@link #processColumns}.
+     */
+    private void processDimensionsSpec(
+        final QueryableIndex index,
+        final List<OrderBy> indexOrdering,
+        final Iterable<String> availableDimensions
+    )
     {
       if (!needDimensionsSpec) {
         return;
@@ -1398,7 +1415,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
       final List<String> sortOrder = new ArrayList<>();
 
-      for (final OrderBy orderBy : index.getOrdering()) {
+      for (final OrderBy orderBy : indexOrdering) {
         final String dimension = orderBy.getColumnName();
         if (orderBy.getOrder() != Order.ASCENDING) {
           throw DruidException.defensive("Order[%s] for dimension[%s] not supported", orderBy.getOrder(), dimension);
@@ -1406,7 +1423,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         sortOrder.add(dimension);
       }
 
-      for (String dimension : Iterables.concat(sortOrder, index.getAvailableDimensions())) {
+      for (String dimension : Iterables.concat(sortOrder, availableDimensions)) {
         uniqueDims.computeIfAbsent(dimension, ignored -> uniqueDims.size());
 
         if (!dimensionSchemaMap.containsKey(dimension)) {
@@ -1449,12 +1466,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
     }
 
-    private void processMultiValuedDimensions(final QueryableIndex index)
+    /**
+     * A clustering column is one value per cluster group, so it reports no multiple values and is never added here;
+     * it is passed through anyway so that the answer comes from the segment rather than from an assumption.
+     */
+    private void processMultiValuedDimensions(final QueryableIndex index, final Iterable<String> dimensions)
     {
       if (!needMultiValuedDimensions) {
         return;
       }
-      for (String dimension : index.getAvailableDimensions()) {
+      for (String dimension : dimensions) {
         if (isMultiValuedDimension(index, dimension)) {
           multiValuedDimensions.add(dimension);
         }

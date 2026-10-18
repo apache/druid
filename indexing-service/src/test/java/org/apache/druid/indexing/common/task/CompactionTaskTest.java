@@ -149,6 +149,8 @@ import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
@@ -945,6 +947,38 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testAnalyzerFindsTheClusteringColumnsOfAClusteredSegment()
+  {
+    // A clustered segment stores a clustering column once per cluster group as part of the group's value tuple, not
+    // as a column, so the group sub-index leaves it out of the dimensions and ordering it advertises and carries it
+    // only as a constant column holder. Reading the schema from a group alone would therefore never see 'tenant', and
+    // an unsealed compaction would drop it from a layout that no longer declares it.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.<Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>>>of(
+            clusteredSegment(COMPACTION_INTERVAL)
+        ),
+        false,
+        false,
+        true,
+        false,
+        false,
+        true
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    Assertions.assertEquals(
+        ImmutableList.of("tenant", ColumnHolder.TIME_COLUMN_NAME, "value"),
+        analyzer.getDimensionsSpec()
+                .getDimensions()
+                .stream()
+                .map(DimensionSchema::getName)
+                .collect(Collectors.toList())
+    );
+    // 'value' is multi-valued in the group; 'tenant' is one value for the whole group, so it never is.
+    Assertions.assertEquals(ImmutableSet.of("value"), analyzer.getMultiValuedDimensions());
+  }
+
+  @Test
   public void testCreateIngestionSchemaWithSealedBaseTableAnalyzesForRangePartitioning() throws IOException
   {
     // Sealing normally means the segments are never read, but MSQ cannot range partition over a multi-valued column
@@ -998,6 +1032,33 @@ public class CompactionTaskTest
     );
 
     Assertions.assertNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithUnsealedBaseTableAnalyzesMultiValuedDimensions() throws IOException
+  {
+    // A rollup base table partitioned dynamically: nothing here is range partitioned, but the task still asked which
+    // columns are multi-valued, and a rollup runner that is not told assumes every string column might be and groups
+    // them all as arrays. A non-sealed table is reading its segments anyway, so the real answer is free.
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            ROLLUP_BASE_TABLE,
+            false,
+            false,
+            METRIC_BUILDER,
+            true
+        ).values()
+    );
+
+    Assertions.assertNotNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
   }
 
   @Test
@@ -2591,6 +2652,59 @@ public class CompactionTaskTest
     Mockito.lenient().when(index.getOrdering()).thenReturn(ImmutableList.of());
     Mockito.lenient().when(index.getAvailableDimensions()).thenReturn(new ListIndexed<>());
     Mockito.lenient().when(index.getProjectionQueryableIndex(ArgumentMatchers.anyString())).thenReturn(projectionIndex);
+
+    final DataSegment segment = DataSegment.builder()
+                                           .dataSource(DATA_SOURCE)
+                                           .interval(interval)
+                                           .version("version")
+                                           .size(SEGMENT_SIZE_BYTES)
+                                           .build();
+    return Pair.of(segment, () -> new ReferenceCountingResourceHolder<>(index, () -> {}));
+  }
+
+  /**
+   * A clustered segment with one cluster group, shaped the way {@code SimpleQueryableIndex} builds one: the group
+   * sub-index advertises only its own columns and ordering, while the clustering column resolves through the constant
+   * column holder injected into it. The full column list and ordering live on the segment-level clustered schema.
+   */
+  private static Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>> clusteredSegment(
+      Interval interval
+  )
+  {
+    final ColumnFormat columnFormat = Mockito.mock(ColumnFormat.class);
+    Mockito.lenient().when(columnFormat.getColumnSchema(ArgumentMatchers.anyString()))
+           .thenAnswer(invocation -> new StringDimensionSchema(invocation.getArgument(0)));
+    final BaseColumnHolder columnHolder = Mockito.mock(BaseColumnHolder.class);
+    Mockito.lenient().when(columnHolder.getColumnFormat()).thenReturn(columnFormat);
+
+    final QueryableIndex groupIndex = Mockito.mock(QueryableIndex.class);
+    Mockito.lenient().when(groupIndex.getAvailableDimensions()).thenReturn(new ListIndexed<>("value"));
+    Mockito.lenient().when(groupIndex.getOrdering())
+           .thenReturn(ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("value")));
+    Mockito.lenient().when(groupIndex.getColumnHolder(ArgumentMatchers.anyString())).thenReturn(columnHolder);
+    Mockito.lenient().when(groupIndex.getColumnCapabilities("value"))
+           .thenReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.STRING).setHasMultipleValues(true));
+    Mockito.lenient().when(groupIndex.getColumnCapabilities("tenant"))
+           .thenReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.STRING).setHasMultipleValues(false));
+
+    final TableClusterGroupSpec group = Mockito.mock(TableClusterGroupSpec.class);
+    final ClusteredValueGroupsBaseTableSchema clusteredBaseTable =
+        Mockito.mock(ClusteredValueGroupsBaseTableSchema.class);
+    Mockito.lenient().when(clusteredBaseTable.getClusterGroups()).thenReturn(ImmutableList.of(group));
+    final List<OrderBy> segmentOrdering = ImmutableList.of(
+        OrderBy.ascending("tenant"),
+        OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME),
+        OrderBy.ascending("value")
+    );
+    Mockito.lenient().when(clusteredBaseTable.getOrdering()).thenReturn(segmentOrdering);
+    Mockito.lenient().when(clusteredBaseTable.getDimensionNames()).thenReturn(ImmutableList.of("tenant", "value"));
+
+    final QueryableIndex index = Mockito.mock(QueryableIndex.class);
+    Mockito.lenient().when(index.getMetadata())
+           .thenReturn(new Metadata(null, null, null, null, null, null, null, clusteredBaseTable));
+    Mockito.lenient()
+           .when(index.getClusterGroupQueryableIndex(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean()))
+           .thenReturn(groupIndex);
 
     final DataSegment segment = DataSegment.builder()
                                            .dataSource(DATA_SOURCE)
