@@ -295,14 +295,13 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY =
       booleanParameter("useNestedForUnknownTypeInSubquery")
           .since("27.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY)
           .description(
               """
               If true, when the Broker materializes subquery results as frames to enforce `maxSubqueryBytes`,
               it serializes columns of unknown type as nested JSON instead of failing to materialize them.
               """
           )
-          .defaultDescription("`druid.server.http.useNestedForUnknownTypeInSubquery`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.useNestedForUnknownTypeInSubquery"))
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_FILTER_PUSH_DOWN =
@@ -443,7 +442,7 @@ public final class QueryContextParameters
               If false, the query fails instead.
               """
           )
-          .defaultDescription("`false`")
+          .defaultValue(false)
           .build();
 
   public static final QueryContextParameter<Boolean> USE_CACHE = booleanParameter("useCache")
@@ -722,21 +721,21 @@ public final class QueryContextParameters
               This parameter affects how time functions and timestamp literals behave.
               """
           )
-          .defaultDescription("UTC")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.sqlTimeZone"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_APPROXIMATE_COUNT_DISTINCT =
       booleanParameter("useApproximateCountDistinct")
           .since("0.10.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description("Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.")
-          .defaultDescription("`true`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useApproximateCountDistinct"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_GROUPING_SET_FOR_EXACT_DISTINCT =
       booleanParameter("useGroupingSetForExactDistinct")
           .since("0.22.0").query(Query.SQL).engine(Engine.NATIVE)
           .description("Whether to use grouping sets to execute queries with multiple exact distinct aggregations.")
-          .defaultDescription("`false`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useGroupingSetForExactDistinct"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_APPROXIMATE_TOP_N =
@@ -748,7 +747,7 @@ public final class QueryContextParameters
               If `false`, Druid uses exact [GroupBy queries](groupbyquery.md) instead.
               """
           )
-          .defaultDescription("`true`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useApproximateTopN"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_LEXICOGRAPHIC_TOP_N =
@@ -761,7 +760,7 @@ public final class QueryContextParameters
               When both `useLexicographicTopN` and `useApproximateTopN` are `false`, TopN queries are never used.
               """
           )
-          .defaultDescription("`false`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useLexicographicTopN"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_NATIVE_QUERY_EXPLAIN =
@@ -775,7 +774,7 @@ public final class QueryContextParameters
               We don't recommend setting this parameter unless your application depends on the older behavior.
               """
           )
-          .defaultDescription("`true`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useNativeQueryExplain"))
           .build();
 
   public static final QueryContextParameter<Boolean> SQL_FINALIZE_OUTER_SKETCHES =
@@ -935,7 +934,7 @@ public final class QueryContextParameters
               If `druid.sql.planner.maxNumericInFilters` isn't set explicitly, Druid ignores this value.
               """
           )
-          .defaultDescription("`-1`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.maxNumericInFilters"))
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT =
@@ -979,7 +978,6 @@ public final class QueryContextParameters
               To apply a cluster-wide default, set the `druid.query.default.context.maxPlanningTimeMs` runtime property (or the Broker's dynamic `queryContext` config); see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
               """
           )
-          .defaultDescription("`0` (disabled)")
           .build();
 
   public static final QueryContextParameter<Integer> IN_FUNCTION_THRESHOLD =
