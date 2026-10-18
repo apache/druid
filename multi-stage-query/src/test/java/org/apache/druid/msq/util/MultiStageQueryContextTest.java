@@ -33,7 +33,6 @@ import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -44,6 +43,7 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -426,12 +426,10 @@ public class MultiStageQueryContextTest
   @Test
   public void testDartSelectDestination()
   {
-    final QueryContext context = QueryContext.of(
-        ImmutableMap.of(
-            QueryContexts.CTX_DART_QUERY_ID, "test",
-            MultiStageQueryContext.CTX_SELECT_DESTINATION, "durablestorage"
-        )
-    );
+    final QueryContext context = QueryContext.builder()
+        .put(QueryContextParameters.DART_QUERY_ID, "test")
+        .putRaw(MultiStageQueryContext.CTX_SELECT_DESTINATION, "durablestorage")
+        .toContext();
 
     Assertions.assertEquals(
         MSQSelectDestination.TASKREPORT,
@@ -490,6 +488,17 @@ public class MultiStageQueryContextTest
             true
         )
     );
+  }
+
+  @Test
+  public void withCommonContext_explicitNullFinalize_setsFinalize()
+  {
+    final Map<String, Object> originalContext = new HashMap<>();
+    originalContext.put(QueryContextParameters.FINALIZE.getName(), null);
+
+    final QueryContext context = MultiStageQueryContext.withCommonContext(QueryContext.of(originalContext));
+
+    Assertions.assertEquals(true, context.get(QueryContextParameters.FINALIZE));
   }
 
   @Test

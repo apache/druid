@@ -93,8 +93,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
 {
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
 
-  // Copied here from MSQE since that extension is not visible here.
-  public static final String CTX_ROWS_PER_SEGMENT = "msqRowsPerSegment";
+  // Must match MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, which is not visible here.
+  public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
 
   private final PlannerContext plannerContext;
 

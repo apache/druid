@@ -59,11 +59,13 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -423,12 +425,17 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         false,
         false,
         false,
-        ImmutableMap.of("sqlQueryId", "dummy"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "dummy"),
         null
     );
     final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
     EasyMock.expect(hostFinder.findServerSql(
-        query.withOverridenContext(ImmutableMap.of("sqlQueryId", "dummy", "queryId", "dummy")))
+        query.withOverridenContext(QueryContext.ofMap(
+            QueryContextParameters.SQL_QUERY_ID,
+            "dummy",
+            QueryContextParameters.QUERY_ID,
+            "dummy"
+        )))
     ).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
     EasyMock.replay(hostFinder);
 
@@ -444,7 +451,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                                         .dataSource("foo")
                                         .intervals("2000/P1D")
                                         .granularity(Granularities.ALL)
-                                        .context(ImmutableMap.of("queryId", "dummy"))
+                                        .context(QueryContext.ofMap(QueryContextParameters.QUERY_ID, "dummy"))
                                         .build();
 
     final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
@@ -626,7 +633,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                                         .dataSource("foo")
                                         .intervals("2000/P1D")
                                         .granularity(Granularities.ALL)
-                                        .context(ImmutableMap.of("queryId", "dummy"))
+                                        .context(QueryContext.ofMap(QueryContextParameters.QUERY_ID, "dummy"))
                                         .build();
 
     final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
@@ -645,12 +652,17 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         false,
         false,
         false,
-        ImmutableMap.of("sqlQueryId", "dummy"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "dummy"),
         null
     );
     final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
     EasyMock.expect(hostFinder.findServerSql(
-        query.withOverridenContext(ImmutableMap.of("sqlQueryId", "dummy", "queryId", "dummy")))
+        query.withOverridenContext(QueryContext.ofMap(
+            QueryContextParameters.SQL_QUERY_ID,
+            "dummy",
+            QueryContextParameters.QUERY_ID,
+            "dummy"
+        )))
     ).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
     EasyMock.replay(hostFinder);
 
@@ -701,7 +713,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                                         .dataSource("foo")
                                         .intervals("2000/P1D")
                                         .granularity(Granularities.ALL)
-                                        .context(ImmutableMap.of("queryId", "test-query-504"))
+                                        .context(QueryContext.ofMap(QueryContextParameters.QUERY_ID, "test-query-504"))
                                         .build();
 
     final HttpServletRequest requestMock = Mockito.mock(HttpServletRequest.class);
@@ -768,7 +780,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                                         .dataSource("foo")
                                         .intervals("2000/P1D")
                                         .granularity(Granularities.ALL)
-                                        .context(ImmutableMap.of("queryId", "closed-test"))
+                                        .context(QueryContext.ofMap(QueryContextParameters.QUERY_ID, "closed-test"))
                                         .build();
 
     final HttpServletRequest requestMock = Mockito.mock(HttpServletRequest.class);
@@ -840,7 +852,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                                         .dataSource("foo")
                                         .intervals("2000/P1D")
                                         .granularity(Granularities.ALL)
-                                        .context(ImmutableMap.of("queryId", "zero-status-test"))
+                                        .context(QueryContext.ofMap(QueryContextParameters.QUERY_ID, "zero-status-test"))
                                         .build();
 
     final HttpServletRequest requestMock = Mockito.mock(HttpServletRequest.class);
@@ -938,7 +950,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                           "agg"
                       )))
               .granularity(Granularities.ALL)
-              .context(ImmutableMap.of("queryId", "dummy"))
+              .context(QueryContext.ofMap(QueryContextParameters.QUERY_ID, "dummy"))
               .build();
 
     final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
@@ -1024,7 +1036,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     EasyMock.expect(requestMock.getMethod()).andReturn("POST");
     if (isNativeSql) {
       SqlQuery sqlQuery = (SqlQuery) query;
-      query = sqlQuery.withOverridenContext(ImmutableMap.of("sqlQueryId", "dummy", "queryId", "dummy"));
+      query = sqlQuery.withOverridenContext(QueryContext.ofMap(
+          QueryContextParameters.SQL_QUERY_ID,
+          "dummy",
+          QueryContextParameters.QUERY_ID,
+          "dummy"
+      ));
     }
     requestMock.setAttribute(
         "org.apache.druid.proxy." + (isNativeSql ? "sqlQuery" : (isJDBCSql ? "avaticaQuery" : "query")),
