@@ -1672,7 +1672,7 @@ public final class QueryContextParameters
               Maximum number of rows to store in memory at once before flushing to disk during the segment generation process.
               Ignored for non-INSERT queries.
               In most cases, use the default value.
-              You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage.
+              You may need to override the default if you run into one of the [known issues](../multi-stage-query/known-issues.md) around memory usage.
               """
           )
           .statement(StatementType.INSERT, StatementType.REPLACE)
