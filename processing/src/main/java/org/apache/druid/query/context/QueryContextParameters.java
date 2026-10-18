@@ -68,7 +68,7 @@ public final class QueryContextParameters
           .defaultValue(false)
           .description(
               """
-              Allows supported [system tables](sql-metadata-tables.md#native-query-execution) to use native query
+              Experimental. Allows supported [system tables](sql-metadata-tables.md#native-query-execution) to use native query
               functions and operators instead of Calcite `Bindable` execution when the resolved SQL engine is `native`.
               System tables without native query support continue to use their existing execution path.<br /><br />
               During a rolling upgrade, leave this parameter disabled until the Broker and the components that serve

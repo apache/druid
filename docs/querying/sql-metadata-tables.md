@@ -136,11 +136,15 @@ The "sys" schema provides visibility into Druid segments, servers and tasks.
 
 :::info
  By default, "sys" tables use the SQL-layer execution path and support only standard SQL functions. You can enable
- [native query execution](#native-query-execution) for supported system tables, which enables expressions and
+ experimental [native query execution](#native-query-execution) for supported system tables, which enables expressions and
  aggregations that the native SQL engine can translate.
 :::
 
 ### Native query execution
+
+:::caution Experimental
+Native query execution for system tables is an experimental, opt-in feature. Its behavior and interfaces may change.
+:::
 
 The native SQL engine can plan supported system tables as native datasources. To enable this behavior for a query, set
 `allowNativeFunctionsForSystemTables` to `true` in the SQL query context:
