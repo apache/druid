@@ -140,6 +140,11 @@ describe('sql-completions', () => {
       expect(keywordsAt('SELECT * FROM t ORDER BY 1 ASC |')).toEqual(['NULLS']);
       expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS |')).toEqual(['FIRST', 'LAST']);
       expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS LAST |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS FIRST |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 nulls\n  first |')).toEqual([]);
+
+      // FIRST is still followed by ROW / ROWS in a FETCH
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 FETCH FIRST |')).toEqual(['ROW', 'ROWS']);
     });
 
     it('looks at the keyword on an earlier line and past comments', () => {

@@ -163,6 +163,11 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   MILLENNIUM: [],
 };
 
+// Like SQL_KEYWORD_FOLLOW_SUGGESTIONS but keyed by the two keywords before the cursor, takes precedence over it
+const SQL_KEYWORD_PAIR_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
+  'NULLS FIRST': [], // Unlike FETCH FIRST
+};
+
 const COMMENT_NODES = new Set(['LineComment', 'BlockComment', 'Issue']);
 
 // The tokens that are words, the specializer in dsql-tokens.ts tells them apart
@@ -239,6 +244,14 @@ export function getSqlCompletions(
     tokenBeforePrefix && WORD_NODES.has(tokenBeforePrefix.name)
       ? state.sliceDoc(tokenBeforePrefix.from, tokenBeforePrefix.to).toUpperCase()
       : undefined;
+  const tokenBeforeKeyword =
+    tokenBeforePrefix && keywordBeforePrefix
+      ? tokenEndingBefore(state, tokenBeforePrefix.from)
+      : undefined;
+  const keywordsBeforePrefix =
+    tokenBeforeKeyword && WORD_NODES.has(tokenBeforeKeyword.name)
+      ? `${state.sliceDoc(tokenBeforeKeyword.from, tokenBeforeKeyword.to).toUpperCase()} ${keywordBeforePrefix}`
+      : undefined;
 
   // Other than literals, do not autocomplete numbers
   if (/^\d+$/.test(prefix)) {
@@ -255,7 +268,11 @@ export function getSqlCompletions(
 
   if (!quote) {
     completions = completions.concat(
-      (SQL_KEYWORD_FOLLOW_SUGGESTIONS[keywordBeforePrefix || ''] || SQL_KEYWORDS).map(v => ({
+      (
+        SQL_KEYWORD_PAIR_FOLLOW_SUGGESTIONS[keywordsBeforePrefix || ''] ||
+        SQL_KEYWORD_FOLLOW_SUGGESTIONS[keywordBeforePrefix || ''] ||
+        SQL_KEYWORDS
+      ).map(v => ({
         label: v,
         boost: 10,
         detail: 'keyword',
