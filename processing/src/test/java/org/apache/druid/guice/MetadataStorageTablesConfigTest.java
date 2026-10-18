@@ -78,6 +78,8 @@ public class MetadataStorageTablesConfigTest
     Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.dataSource"), config.getDataSourceTable());
     Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.supervisors"), config.getSupervisorTable());
     Assertions.assertEquals(props.getProperty("druid.metadata.storage.tables.upgradeSegments"), config.getUpgradeSegmentsTable());
+    Assertions.assertEquals("druid_shareReceipts", config.getShareReceiptsTable());
+    Assertions.assertEquals("druid_shareInbox", config.getShareInboxTable());
   }
 
   @Test
@@ -92,5 +94,7 @@ public class MetadataStorageTablesConfigTest
     Assertions.assertEquals("druid.metadata.storage.tables_dataSource", fromBase.getDataSourceTable());
     Assertions.assertEquals("druid.metadata.storage.tables_supervisors", fromBase.getSupervisorTable());
     Assertions.assertEquals("druid.metadata.storage.tables_upgradeSegments", fromBase.getUpgradeSegmentsTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_shareReceipts", fromBase.getShareReceiptsTable());
+    Assertions.assertEquals("druid.metadata.storage.tables_shareInbox", fromBase.getShareInboxTable());
   }
 }
