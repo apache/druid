@@ -48,7 +48,6 @@ import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
@@ -144,11 +143,11 @@ public class IndexerControllerContext implements ControllerContext
     log.debug(
         "Query[%s] using %s[%s], %s[%s], %s[%s].",
         queryId(),
-        MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
+        QueryContextParameters.DURABLE_SHUFFLE_STORAGE,
         config.isDurableStorage(),
-        MultiStageQueryContext.CTX_FAULT_TOLERANCE,
+        QueryContextParameters.FAULT_TOLERANCE,
         config.isFaultTolerant(),
-        MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES,
+        QueryContextParameters.MAX_CONCURRENT_STAGES,
         config.getMaxConcurrentStages()
     );
 
@@ -282,7 +281,7 @@ public class IndexerControllerContext implements ControllerContext
     final boolean isDurableStorageEnabled;
 
     if (isFaultToleranceEnabled) {
-      if (!queryContext.containsKey(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE)) {
+      if (!queryContext.has(QueryContextParameters.DURABLE_SHUFFLE_STORAGE)) {
         // if context key not set, enable durableStorage automatically.
         isDurableStorageEnabled = true;
       } else {
@@ -295,9 +294,9 @@ public class IndexerControllerContext implements ControllerContext
                   StringUtils.format(
                       "Context param[%s] cannot be explicitly set to false when context param[%s] is"
                       + " set to true. Either remove the context param[%s] or explicitly set it to true.",
-                      MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
-                      MultiStageQueryContext.CTX_FAULT_TOLERANCE,
-                      MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE
+                      QueryContextParameters.DURABLE_SHUFFLE_STORAGE,
+                      QueryContextParameters.FAULT_TOLERANCE,
+                      QueryContextParameters.DURABLE_SHUFFLE_STORAGE
                   )
               )
           );
@@ -347,14 +346,14 @@ public class IndexerControllerContext implements ControllerContext
 
     // Override certain items to ensure they are the same across all workers; just in case workers have a different
     // default from the controller.
-    workerContextMap.put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled);
-    workerContextMap.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions);
-    workerContextMap.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
-    workerContextMap.put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages);
-    workerContextMap.put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version());
-    workerContextMap.put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes);
-    workerContextMap.put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
-    workerContextMap.put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
+    QueryContextParameters.DURABLE_SHUFFLE_STORAGE.set(workerContextMap, durableStorageEnabled);
+    QueryContextParameters.MAX_PARSE_EXCEPTIONS.set(workerContextMap, maxParseExceptions);
+    QueryContextParameters.IS_REINDEX.set(workerContextMap, isReindex);
+    QueryContextParameters.MAX_CONCURRENT_STAGES.set(workerContextMap, maxConcurrentStages);
+    QueryContextParameters.ROW_BASED_FRAME_TYPE.set(workerContextMap, (int) rowBasedFrameType.version());
+    QueryContextParameters.REMOVE_NULL_BYTES.set(workerContextMap, removeNullBytes);
+    QueryContextParameters.INCLUDE_ALL_COUNTERS.set(workerContextMap, includeAllCounters);
+    QueryContextParameters.MAX_FRAME_SIZE.set(workerContextMap, frameSize);
 
     if (querySpec.getId() != null) {
       QueryContextParameters.QUERY_ID.set(workerContextMap, querySpec.getId());
@@ -362,8 +361,8 @@ public class IndexerControllerContext implements ControllerContext
 
     MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {
-      workerContextMap.put(
-          MultiStageQueryContext.CTX_SELECT_DESTINATION,
+      QueryContextParameters.SELECT_DESTINATION.set(
+          workerContextMap,
           destination.toSelectDestination().getName()
       );
     }

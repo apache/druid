@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -47,8 +46,9 @@ import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -292,7 +292,7 @@ public class MSQFaultsTest extends MSQTestBase
   {
     Map<String, Object> context = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .putRaw(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
+                                              .put(QueryContextParameters.ROWS_PER_SEGMENT, 1)
                                               .toMap();
 
 
@@ -331,14 +331,8 @@ public class MSQFaultsTest extends MSQTestBase
 
     final Map<String, Object> context = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .putRaw(
-                                                  "maxNumSegments",
-                                                  maxNumSegments
-                                              )
-                                              .putRaw(
-                                                  "rowsPerSegment",
-                                                  rowsPerSegment
-                                              )
+                                              .put(QueryContextParameters.MAX_NUM_SEGMENTS, maxNumSegments)
+                                              .put(QueryContextParameters.ROWS_PER_SEGMENT, rowsPerSegment)
                                               .toMap();
 
 
@@ -455,7 +449,7 @@ public class MSQFaultsTest extends MSQTestBase
     final Map<String, Object> context =
         QueryContext.builder()
                     .putAll(DEFAULT_MSQ_CONTEXT)
-                    .putRaw(MultiStageQueryContext.CTX_MAX_CLUSTERED_BY_COLUMNS, maxClusteredByColumns)
+                    .put(QueryContextParameters.MAX_CLUSTERED_BY_COLUMNS, maxClusteredByColumns)
                     .toMap();
 
     testIngestQuery()
@@ -493,9 +487,11 @@ public class MSQFaultsTest extends MSQTestBase
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
     final String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
 
-    final Map<String, Object> context = Map.of(
-        MultiStageQueryContext.CTX_MAX_NUM_TASKS, 8,
-        MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, maxInputFilesPerWorker
+    final Map<String, Object> context = QueryContext.ofMap(
+        QueryContextParameters.MAX_NUM_TASKS,
+        8,
+        QueryContextParameters.MAX_INPUT_FILES_PER_WORKER,
+        maxInputFilesPerWorker
     );
 
     testIngestQuery()
@@ -526,14 +522,8 @@ public class MSQFaultsTest extends MSQTestBase
     final Map<String, Object> context =
         QueryContext.builder()
                     .putAll(DEFAULT_MSQ_CONTEXT)
-                    .putRaw(
-                        MultiStageQueryContext.CTX_ROWS_PER_SEGMENT,
-                        1
-                    )
-                    .putRaw(
-                        MultiStageQueryContext.CTX_MAX_PARTITIONS,
-                        maxPartitions
-                    )
+                    .put(QueryContextParameters.ROWS_PER_SEGMENT, 1)
+                    .put(QueryContextParameters.MAX_PARTITIONS, maxPartitions)
                     .toMap();
 
     final RowSignature rowSignature = RowSignature.builder().addTimeColumn().build();
@@ -698,7 +688,7 @@ public class MSQFaultsTest extends MSQTestBase
     // wraps this in DruidException, which getFaultFromException() converts to DruidExceptionFault.
     final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .putRaw("vectorize", "false")
+                                                    .put(QueryContextParameters.VECTORIZE, QueryContexts.Vectorize.FALSE)
                                                     .toMap();
 
     testSelectQuery()
@@ -720,7 +710,7 @@ public class MSQFaultsTest extends MSQTestBase
   private void testLockTypes(TaskLockType contextTaskLockType, String sql, String errorMessage)
   {
     Map<String, Object> context = new HashMap<>(DEFAULT_MSQ_CONTEXT);
-    context.put(Tasks.TASK_LOCK_TYPE, contextTaskLockType.name());
+    QueryContextParameters.TASK_LOCK_TYPE.set(context, contextTaskLockType.name());
     testIngestQuery()
         .setSql(
             sql

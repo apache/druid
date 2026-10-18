@@ -21,8 +21,9 @@ package org.apache.druid.server.compaction;
 
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +35,7 @@ public class CompactionSlotManagerTest
   public void test_computeSlotsRequiredForTask_forMsqTask_whenContextIsNull_returnsDefault()
   {
     Assertions.assertEquals(
-        ClientMSQContext.DEFAULT_MAX_NUM_TASKS,
+        QueryContextParameters.MAX_NUM_TASKS.getDefaultValue().orElseThrow(),
         CompactionSlotManager.computeSlotsRequiredForTask(
             createMsqTask(null)
         )
@@ -47,7 +48,7 @@ public class CompactionSlotManagerTest
     Assertions.assertEquals(
         50,
         CompactionSlotManager.computeSlotsRequiredForTask(
-            createMsqTask(Map.of(ClientMSQContext.CTX_MAX_NUM_TASKS, 50))
+            createMsqTask(QueryContext.ofMap(QueryContextParameters.MAX_NUM_TASKS, 50))
         )
     );
   }
@@ -56,9 +57,31 @@ public class CompactionSlotManagerTest
   public void test_computeSlotsRequiredForTask_forMsqTask_whenContextIsEmpty_returnsDefault()
   {
     Assertions.assertEquals(
-        ClientMSQContext.DEFAULT_MAX_NUM_TASKS,
+        QueryContextParameters.MAX_NUM_TASKS.getDefaultValue().orElseThrow(),
         CompactionSlotManager.computeSlotsRequiredForTask(
             createMsqTask(Map.of())
+        )
+    );
+  }
+
+  @Test
+  public void test_computeSlotsRequiredForTask_forMsqTask_whenMaxNumTasksIsMalformed_returnsDefault()
+  {
+    Assertions.assertEquals(
+        QueryContextParameters.MAX_NUM_TASKS.getDefaultValue().orElseThrow(),
+        CompactionSlotManager.computeSlotsRequiredForTask(
+            createMsqTask(Map.of(QueryContextParameters.MAX_NUM_TASKS.getName(), 2.5))
+        )
+    );
+  }
+
+  @Test
+  public void test_computeSlotsRequiredForTask_forMsqTask_whenMaxNumTasksIsAString_returnsValue()
+  {
+    Assertions.assertEquals(
+        5,
+        CompactionSlotManager.computeSlotsRequiredForTask(
+            createMsqTask(Map.of(QueryContextParameters.MAX_NUM_TASKS.getName(), "5"))
         )
     );
   }

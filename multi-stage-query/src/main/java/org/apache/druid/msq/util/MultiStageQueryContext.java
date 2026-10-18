@@ -50,6 +50,7 @@ import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IndexSpec;
 import org.joda.time.DateTime;
@@ -115,115 +116,236 @@ public class MultiStageQueryContext
 {
   private static final Logger log = new Logger(MultiStageQueryContext.class);
 
+  /**
+   * @deprecated Use {@link QueryContextParameters#MSQ_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MSQ_MODE = "mode";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#MSQ_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String DEFAULT_MSQ_MODE = MSQMode.STRICT_MODE.toString();
-
-  // Note: CTX_MAX_NUM_TASKS and DEFAULT_MAX_NUM_TASKS values used here should be kept in sync with those in
-  // org.apache.druid.client.indexing.ClientMsqContext
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_NUM_TASKS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
-  @VisibleForTesting
-  static final int DEFAULT_MAX_NUM_TASKS = 2;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#TASK_ASSIGNMENT_STRATEGY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_TASK_ASSIGNMENT_STRATEGY = "taskAssignment";
-  private static final String DEFAULT_TASK_ASSIGNMENT_STRATEGY = WorkerAssignmentStrategy.MAX.toString();
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#FINALIZE_AGGREGATIONS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
-  private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#INCLUDE_SEGMENT_SOURCE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_INCLUDE_SEGMENT_SOURCE = "includeSegmentSource";
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_CONCURRENT_STAGES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_CONCURRENT_STAGES = "maxConcurrentStages";
+  /**
+   * @deprecated Use {@link QueryContextParameters#DURABLE_SHUFFLE_STORAGE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
-  private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
+  /**
+   * @deprecated Use {@link QueryContextParameters#SELECT_DESTINATION} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SELECT_DESTINATION = "selectDestination";
-  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.TASKREPORT.getName();
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#FAULT_TOLERANCE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#FAULT_TOLERANCE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#FAIL_ON_EMPTY_INSERT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_FAIL_ON_EMPTY_INSERT = "failOnEmptyInsert";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#FAIL_ON_EMPTY_INSERT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_FAIL_ON_EMPTY_INSERT = false;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#WAIT_UNTIL_SEGMENTS_LOAD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#WAIT_UNTIL_SEGMENTS_LOAD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_INPUT_BYTES_PER_WORKER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_INPUT_FILES_PER_WORKER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_INPUT_FILES_PER_WORKER = "maxInputFilesPerWorker";
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_PARTITIONS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_PARTITIONS = "maxPartitions";
-
   /**
    * Used by {@link #getMaxClusteredByColumns(QueryContext)}. Can be used to adjust the limit of columns appearing
    * in clusterBy, where the default is {@link Limits#MAX_CLUSTERED_BY_COLUMNS}. This parameter is undocumented
    * because its main purpose is to speed up the test {@code MSQFaultsTest#testInsertWithHugeClusteringKeys}.
+   * @deprecated Use {@link QueryContextParameters#MAX_CLUSTERED_BY_COLUMNS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_CLUSTERED_BY_COLUMNS = "maxClusteredByColumns";
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#CLUSTER_STATISTICS_MERGE_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#CLUSTER_STATISTICS_MERGE_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#SKETCH_ENCODING} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SKETCH_ENCODING_MODE = "sketchEncoding";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#SKETCH_ENCODING} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String DEFAULT_CTX_SKETCH_ENCODING_MODE = SketchEncoding.OCTET_STREAM.toString();
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#ROWS_PER_SEGMENT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#ROWS_PER_SEGMENT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#ROWS_PER_PAGE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_ROWS_PER_PAGE = "rowsPerPage";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#ROWS_PER_PAGE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_ROWS_PER_PAGE = 100000;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#REMOVE_NULL_BYTES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#REMOVE_NULL_BYTES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#BACKGROUND_FETCH_EXTERNAL_FILES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_BACKGROUND_FETCH_EXTERNAL_FILES = "backgroundFetchExternalFiles";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#BACKGROUND_FETCH_EXTERNAL_FILES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_BACKGROUND_FETCH_EXTERNAL_FILES = true;
-
   /**
    * Hint to {@link StageProcessor} implementations about whether they should attempt to use
    * {@link FrameCombiner} when doing sort-based aggregations.
+   * @deprecated Use {@link QueryContextParameters#USE_COMBINER} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_USE_COMBINER = "useCombiner";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#USE_COMBINER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_USE_COMBINER = false;
-
-  /**
-   * Used by {@link #getMaxRowsInMemory(QueryContext)}.
-   */
-  static final String CTX_MAX_ROWS_IN_MEMORY = "maxRowsInMemory";
-
-  /**
-   * Used by {@link #getMaxRowsInMemory(QueryContext)}. Alternate spelling of {@link #CTX_MAX_ROWS_IN_MEMORY}.
-   * Ignored if {@link #CTX_MAX_ROWS_IN_MEMORY} is set.
-   */
-  static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
-
   /**
    * Lower than the default to minimize the impact of per-row overheads that are not accounted for by
    * OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
+   * @deprecated Use the default value of {@link QueryContextParameters#MAX_ROWS_IN_MEMORY} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_MAX_ROWS_IN_MEMORY = 100000;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#IS_REINDEX} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_IS_REINDEX = "isReindex";
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_NUM_SEGMENTS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_NUM_SEGMENTS = "maxNumSegments";
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#START_TIME} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_START_TIME = "startTime";
-
   /**
    * The time that a query should time out. Value is an ISO8601 timestamp.
+   * @deprecated Use {@link QueryContextParameters#QUERY_DEADLINE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_QUERY_DEADLINE = "queryDeadline";
-
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
    * CLUSTERED BY clause) but it can be overridden.
+   * @deprecated Use {@link QueryContextParameters#SEGMENT_SORT_ORDER} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SORT_ORDER = "segmentSortOrder";
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#INDEX_SPEC} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_INDEX_SPEC = "indexSpec";
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#USE_AUTO_COLUMN_SCHEMAS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_USE_AUTO_SCHEMAS = "useAutoColumnSchemas";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#USE_AUTO_COLUMN_SCHEMAS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_USE_AUTO_SCHEMAS = false;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#ARRAY_INGEST_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#ARRAY_INGEST_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.ARRAY;
-
   /**
    * Whether new counters (anything other than channel, sortProgress, warnings, segmentGenerationProgress) should
    * be included in reports. This parameter is necessary because prior to Druid 31, we lacked
@@ -232,10 +354,15 @@ public class MultiStageQueryContext
    * not yet recognize. This causes problems during rolling updates.
    *
    * For a rolling update from a version prior to Druid 31, this must be set to "false" by the job submitter.
+   * @deprecated Use {@link QueryContextParameters#INCLUDE_ALL_COUNTERS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_INCLUDE_ALL_COUNTERS = "includeAllCounters";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#INCLUDE_ALL_COUNTERS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = true;
-
   /**
    * Whether worker tasks read input segments via on-demand partial (per-column) downloads instead of downloading each
    * segment in full. Aliases the task-context key {@link Tasks#VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY} so it can be set
@@ -247,76 +374,83 @@ public class MultiStageQueryContext
    * Whether workers should send live counter updates to the controller via the message relay. When enabled, workers
    * periodically send counter snapshots to the controller, allowing the controller to have more up-to-date progress
    * information.
+   * @deprecated Use {@link QueryContextParameters#LIVE_REPORT_COUNTERS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_LIVE_REPORT_COUNTERS = "liveReportCounters";
-
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#FORCE_SEGMENT_SORT_BY_TIME} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
-  private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
-
   /**
    * The {@link FrameType} to use for row-based frames. This context parameter exists to support rolling updates from
    * older Druid versions. The latest type is given by {@link FrameType#latestRowBased()}, which is set in
    * {@link MultiStageQueryContext#withCommonContext} starting in Druid 34. Once all servers are on Druid 34 or newer,
    * the current-latest type {@link FrameType#ROW_BASED_V2} is used.
+   * @deprecated Use {@link QueryContextParameters#ROW_BASED_FRAME_TYPE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_ROW_BASED_FRAME_TYPE = "rowBasedFrameType";
-  private static final FrameType DEFAULT_ROW_BASED_FRAME_TYPE = FrameType.ROW_BASED_V1;
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_ROWS_MATERIALIZED_IN_WINDOW} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
-
-  // This flag ensures backward compatibility and will be removed in Druid 33, with the default behavior as enabled.
+  /**
+   * @deprecated Use {@link QueryContextParameters#WINDOW_FUNCTION_OPERATOR_TRANSFORMATION} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String WINDOW_FUNCTION_OPERATOR_TRANSFORMATION = "windowFunctionOperatorTransformation";
-
+  /**
+   * @deprecated Use {@link QueryContextParameters#SKIP_TYPE_VERIFICATION} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
-
   /**
    * Number of partitions to target per worker when creating shuffle specs that involve specific numbers of
    * partitions. This helps us utilize more parallelism when workers are multi-threaded.
+   * @deprecated Use {@link QueryContextParameters#TARGET_PARTITIONS_PER_WORKER} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_TARGET_PARTITIONS_PER_WORKER = "targetPartitionsPerWorker";
-
   /**
    * Maximum size of frames to create. Defaults to {@link WorkerMemoryParameters#DEFAULT_FRAME_SIZE}.
+   * @deprecated Use {@link QueryContextParameters#MAX_FRAME_SIZE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_FRAME_SIZE = "maxFrameSize";
-
   /**
    * Maximum number of threads to use for processing. Cap on the value of {@link ExecutionContext#threadCount()}.
+   * @deprecated Use {@link QueryContextParameters#MAX_THREADS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_THREADS = "maxThreads";
-
   /**
    * Number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
    * <p>
    * A worker may be configured with a local default for this value. When this context value is set, it always wins;
    * the worker-local default applies only when this context value is absent.
+   * @deprecated Use {@link QueryContextParameters#SEGMENT_LOAD_AHEAD_COUNT} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SEGMENT_LOAD_AHEAD_COUNT = "segmentLoadAheadCount";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
   public static String getMSQMode(final QueryContext queryContext)
   {
-    return queryContext.getString(
-        CTX_MSQ_MODE,
-        DEFAULT_MSQ_MODE
-    );
+    return queryContext.getOrDefault(QueryContextParameters.MSQ_MODE);
   }
 
   public static int getMaxRowsMaterializedInWindow(final QueryContext queryContext)
   {
-    return queryContext.getInt(
-        MAX_ROWS_MATERIALIZED_IN_WINDOW,
-        Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW
-    );
+    return queryContext.getOrDefault(QueryContextParameters.MAX_ROWS_MATERIALIZED_IN_WINDOW);
   }
 
   public static boolean isWindowFunctionOperatorTransformationEnabled(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(
-        WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
-        false
-    );
+    return queryContext.getOrDefault(QueryContextParameters.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION);
   }
 
   public static int getMaxConcurrentStagesWithDefault(
@@ -324,8 +458,8 @@ public class MultiStageQueryContext
       final int defaultMaxConcurrentStages
   )
   {
-    return queryContext.getInt(
-        CTX_MAX_CONCURRENT_STAGES,
+    return queryContext.getOrDefault(
+        QueryContextParameters.MAX_CONCURRENT_STAGES,
         defaultMaxConcurrentStages
     );
   }
@@ -340,84 +474,68 @@ public class MultiStageQueryContext
 
   public static boolean isDurableStorageEnabled(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(
-        CTX_DURABLE_SHUFFLE_STORAGE,
-        DEFAULT_DURABLE_SHUFFLE_STORAGE
-    );
+    return queryContext.getOrDefault(QueryContextParameters.DURABLE_SHUFFLE_STORAGE);
   }
 
   public static boolean isFaultToleranceEnabled(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(
-        CTX_FAULT_TOLERANCE,
-        DEFAULT_FAULT_TOLERANCE
-    );
+    return queryContext.getOrDefault(QueryContextParameters.FAULT_TOLERANCE);
   }
 
   public static boolean isFailOnEmptyInsertEnabled(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(
-        CTX_FAIL_ON_EMPTY_INSERT,
-        DEFAULT_FAIL_ON_EMPTY_INSERT
-    );
+    return queryContext.getOrDefault(QueryContextParameters.FAIL_ON_EMPTY_INSERT);
   }
 
   public static boolean shouldWaitForSegmentLoad(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(
-        CTX_SEGMENT_LOAD_WAIT,
-        DEFAULT_SEGMENT_LOAD_WAIT
-    );
+    return queryContext.getOrDefault(QueryContextParameters.WAIT_UNTIL_SEGMENTS_LOAD);
   }
 
   public static boolean isReindex(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(
-        CTX_IS_REINDEX,
-        false
-    );
+    return queryContext.getOrDefault(QueryContextParameters.IS_REINDEX);
   }
 
   public static long getMaxInputBytesPerWorker(final QueryContext queryContext)
   {
-    return queryContext.getLong(
-        CTX_MAX_INPUT_BYTES_PER_WORKER,
-        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
-    );
+    return queryContext.getOrDefault(QueryContextParameters.MAX_INPUT_BYTES_PER_WORKER);
   }
 
   public static int getMaxInputFilesPerWorker(final QueryContext queryContext)
   {
-    final Integer value = queryContext.getInt(CTX_MAX_INPUT_FILES_PER_WORKER);
-    if (value == null) {
-      return Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER;
-    }
+    final int value = queryContext.getOrDefault(QueryContextParameters.MAX_INPUT_FILES_PER_WORKER);
     if (value <= 0) {
-      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_INPUT_FILES_PER_WORKER, value);
+      throw InvalidInput.exception(
+          "%s must be a positive integer, got[%d]",
+          QueryContextParameters.MAX_INPUT_FILES_PER_WORKER,
+          value
+      );
     }
     return value;
   }
 
   public static int getMaxPartitions(final QueryContext queryContext)
   {
-    final Integer value = queryContext.getInt(CTX_MAX_PARTITIONS);
-    if (value == null) {
-      return Limits.DEFAULT_MAX_PARTITIONS;
-    }
+    final int value = queryContext.getOrDefault(QueryContextParameters.MAX_PARTITIONS);
     if (value <= 0) {
-      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_PARTITIONS, value);
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", QueryContextParameters.MAX_PARTITIONS, value);
     }
     return value;
   }
 
   public static int getMaxClusteredByColumns(final QueryContext queryContext)
   {
-    final Integer value = queryContext.getInt(CTX_MAX_CLUSTERED_BY_COLUMNS);
-    if (value == null) {
-      return Limits.MAX_CLUSTERED_BY_COLUMNS;
-    }
+    final int value = queryContext.getOrDefault(
+        QueryContextParameters.MAX_CLUSTERED_BY_COLUMNS,
+        Limits.MAX_CLUSTERED_BY_COLUMNS
+    );
     if (value <= 0) {
-      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_CLUSTERED_BY_COLUMNS, value);
+      throw InvalidInput.exception(
+          "%s must be a positive integer, got[%d]",
+          QueryContextParameters.MAX_CLUSTERED_BY_COLUMNS,
+          value
+      );
     }
     return value;
   }
@@ -425,8 +543,8 @@ public class MultiStageQueryContext
   public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(QueryContext queryContext)
   {
     return QueryContexts.getAsEnum(
-        CTX_CLUSTER_STATISTICS_MERGE_MODE,
-        queryContext.getString(CTX_CLUSTER_STATISTICS_MERGE_MODE, DEFAULT_CLUSTER_STATISTICS_MERGE_MODE),
+        QueryContextParameters.CLUSTER_STATISTICS_MERGE_MODE.getName(),
+        queryContext.getOrDefault(QueryContextParameters.CLUSTER_STATISTICS_MERGE_MODE),
         ClusterStatisticsMergeMode.class
     );
   }
@@ -434,24 +552,22 @@ public class MultiStageQueryContext
   public static SketchEncoding getSketchEncoding(QueryContext queryContext)
   {
     return QueryContexts.getAsEnum(
-        CTX_SKETCH_ENCODING_MODE,
-        queryContext.getString(CTX_SKETCH_ENCODING_MODE, DEFAULT_CTX_SKETCH_ENCODING_MODE),
+        QueryContextParameters.SKETCH_ENCODING.getName(),
+        queryContext.getOrDefault(QueryContextParameters.SKETCH_ENCODING),
         SketchEncoding.class
     );
   }
 
   public static boolean isFinalizeAggregations(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(
-        CTX_FINALIZE_AGGREGATIONS,
-        DEFAULT_FINALIZE_AGGREGATIONS
-    );
+    return queryContext.getOrDefault(QueryContextParameters.FINALIZE_AGGREGATIONS);
   }
 
   public static SegmentSource getSegmentSources(final QueryContext queryContext, final SegmentSource defaultSource)
   {
-    return queryContext.getEnum(
-        CTX_INCLUDE_SEGMENT_SOURCE,
+    return QueryContexts.getAsEnum(
+        QueryContextParameters.INCLUDE_SEGMENT_SOURCE.getName(),
+        queryContext.get(QueryContextParameters.INCLUDE_SEGMENT_SOURCE),
         SegmentSource.class,
         defaultSource
     );
@@ -460,49 +576,40 @@ public class MultiStageQueryContext
   public static WorkerAssignmentStrategy getAssignmentStrategy(final QueryContext queryContext)
   {
     return QueryContexts.getAsEnum(
-        CTX_TASK_ASSIGNMENT_STRATEGY,
-        queryContext.getString(CTX_TASK_ASSIGNMENT_STRATEGY, DEFAULT_TASK_ASSIGNMENT_STRATEGY),
+        QueryContextParameters.TASK_ASSIGNMENT_STRATEGY.getName(),
+        queryContext.getOrDefault(QueryContextParameters.TASK_ASSIGNMENT_STRATEGY),
         WorkerAssignmentStrategy.class
     );
   }
 
   public static int getMaxNumTasks(final QueryContext queryContext)
   {
-    return queryContext.getInt(
-        CTX_MAX_NUM_TASKS,
-        DEFAULT_MAX_NUM_TASKS
-    );
+    return queryContext.getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
   }
 
   public static int getRowsPerSegment(final QueryContext queryContext)
   {
-    return queryContext.getInt(
-        CTX_ROWS_PER_SEGMENT,
-        DEFAULT_ROWS_PER_SEGMENT
-    );
+    return queryContext.getOrDefault(QueryContextParameters.ROWS_PER_SEGMENT);
   }
 
   public static int getRowsPerPage(final QueryContext queryContext)
   {
-    return queryContext.getInt(
-        CTX_ROWS_PER_PAGE,
-        DEFAULT_ROWS_PER_PAGE
-    );
+    return queryContext.getOrDefault(QueryContextParameters.ROWS_PER_PAGE);
   }
 
   public static boolean removeNullBytes(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_REMOVE_NULL_BYTES, DEFAULT_REMOVE_NULL_BYTES);
+    return queryContext.getOrDefault(QueryContextParameters.REMOVE_NULL_BYTES);
   }
 
   public static boolean isBackgroundFetchExternalFiles(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_BACKGROUND_FETCH_EXTERNAL_FILES, DEFAULT_BACKGROUND_FETCH_EXTERNAL_FILES);
+    return queryContext.getOrDefault(QueryContextParameters.BACKGROUND_FETCH_EXTERNAL_FILES);
   }
 
   public static boolean isUseCombiner(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_USE_COMBINER, DEFAULT_USE_COMBINER);
+    return queryContext.getOrDefault(QueryContextParameters.USE_COMBINER);
   }
 
   public static boolean isDartQuery(final QueryContext queryContext)
@@ -513,8 +620,8 @@ public class MultiStageQueryContext
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
     MSQSelectDestination destination = QueryContexts.getAsEnum(
-        CTX_SELECT_DESTINATION,
-        queryContext.getString(CTX_SELECT_DESTINATION, DEFAULT_SELECT_DESTINATION),
+        QueryContextParameters.SELECT_DESTINATION.getName(),
+        queryContext.getOrDefault(QueryContextParameters.SELECT_DESTINATION),
         MSQSelectDestination.class
     );
 
@@ -533,47 +640,52 @@ public class MultiStageQueryContext
 
   public static int getMaxRowsInMemory(final QueryContext queryContext)
   {
-    Integer ctxValue = queryContext.getInt(CTX_MAX_ROWS_IN_MEMORY);
-    if (ctxValue == null) {
-      ctxValue = queryContext.getInt(CTX_ROWS_IN_MEMORY);
+    if (queryContext.has(QueryContextParameters.MAX_ROWS_IN_MEMORY)) {
+      return queryContext.getOrDefault(QueryContextParameters.MAX_ROWS_IN_MEMORY);
     }
-
-    return ctxValue != null ? ctxValue : DEFAULT_MAX_ROWS_IN_MEMORY;
+    return queryContext.getOrDefault(QueryContextParameters.ROWS_IN_MEMORY);
   }
 
   public static Integer getMaxNumSegments(final QueryContext queryContext)
   {
     // The default is null, if the context is not set.
-    return queryContext.getInt(CTX_MAX_NUM_SEGMENTS);
+    return queryContext.get(QueryContextParameters.MAX_NUM_SEGMENTS);
   }
 
   public static List<String> getSortOrder(final QueryContext queryContext)
   {
-    return decodeList(CTX_SORT_ORDER, queryContext.getString(CTX_SORT_ORDER));
+    return decodeList(
+        QueryContextParameters.SEGMENT_SORT_ORDER,
+        queryContext.get(QueryContextParameters.SEGMENT_SORT_ORDER)
+    );
   }
 
   @Nullable
   public static IndexSpec getIndexSpec(final QueryContext queryContext, final ObjectMapper objectMapper)
   {
-    return decodeIndexSpec(queryContext.get(CTX_INDEX_SPEC), objectMapper);
+    return decodeIndexSpec(queryContext.get(QueryContextParameters.INDEX_SPEC), objectMapper);
   }
 
   public static long getMaxParseExceptions(final QueryContext queryContext)
   {
-    return queryContext.getLong(
-        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+    return queryContext.getOrDefault(
+        QueryContextParameters.MAX_PARSE_EXCEPTIONS,
         MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED
     );
   }
 
   public static boolean useAutoColumnSchemas(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, DEFAULT_USE_AUTO_SCHEMAS);
+    return queryContext.getOrDefault(QueryContextParameters.USE_AUTO_COLUMN_SCHEMAS);
   }
 
   public static ArrayIngestMode getArrayIngestMode(final QueryContext queryContext)
   {
-    return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
+    return QueryContexts.getAsEnum(
+        QueryContextParameters.ARRAY_INGEST_MODE.getName(),
+        queryContext.getOrDefault(QueryContextParameters.ARRAY_INGEST_MODE),
+        ArrayIngestMode.class
+    );
   }
 
   public static int getTargetPartitionsPerWorkerWithDefault(
@@ -581,49 +693,57 @@ public class MultiStageQueryContext
       final int defaultValue
   )
   {
-    return queryContext.getInt(CTX_TARGET_PARTITIONS_PER_WORKER, defaultValue);
+    return queryContext.getOrDefault(QueryContextParameters.TARGET_PARTITIONS_PER_WORKER, defaultValue);
   }
 
   /**
-   * See {@link #CTX_INCLUDE_ALL_COUNTERS}.
+   * Whether new counters (anything other than channel, sortProgress, warnings, segmentGenerationProgress) should
+   * be included in reports. This parameter is necessary because prior to Druid 31, we lacked
+   * {@link NilQueryCounterSnapshot} as a default counter, which means that {@link SqlStatementResourceHelper} and
+   * {@link ControllerResource#httpPostCounters} would throw errors when encountering new counter types that they do
+   * not yet recognize. This causes problems during rolling updates.
+   *
+   * For a rolling update from a version prior to Druid 31, {@link QueryContextParameters#INCLUDE_ALL_COUNTERS} must be
+   * set to "false" by the job submitter.
    */
   public static boolean getIncludeAllCounters(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_INCLUDE_ALL_COUNTERS, DEFAULT_INCLUDE_ALL_COUNTERS);
+    return queryContext.getOrDefault(QueryContextParameters.INCLUDE_ALL_COUNTERS);
   }
 
   /**
-   * See {@link #CTX_LIVE_REPORT_COUNTERS}.
+   * Whether workers should send live counter updates to the controller via the message relay. When enabled, workers
+   * periodically send counter snapshots to the controller, allowing the controller to have more up-to-date progress
+   * information. See {@link QueryContextParameters#LIVE_REPORT_COUNTERS}.
    */
   public static boolean getLiveReportCounters(final QueryContext queryContext, final boolean defaultValue)
   {
-    return queryContext.getBoolean(CTX_LIVE_REPORT_COUNTERS, defaultValue);
+    return queryContext.getOrDefault(QueryContextParameters.LIVE_REPORT_COUNTERS, defaultValue);
   }
 
   public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
+    return queryContext.getOrDefault(QueryContextParameters.FORCE_SEGMENT_SORT_BY_TIME);
   }
 
   /**
-   * Returns the value of {@link #CTX_ROW_BASED_FRAME_TYPE}, or {@link #DEFAULT_ROW_BASED_FRAME_TYPE}.
-   *
-   * @see #CTX_ROW_BASED_FRAME_TYPE for more details
+   * Returns the {@link FrameType} to use for row-based frames, given by
+   * {@link QueryContextParameters#ROW_BASED_FRAME_TYPE}. This context parameter exists to support rolling updates from
+   * older Druid versions. The latest type is given by {@link FrameType#latestRowBased()}, which is set in
+   * {@link MultiStageQueryContext#withCommonContext} starting in Druid 34. Once all servers are on Druid 34 or newer,
+   * the current-latest type {@link FrameType#ROW_BASED_V2} is used. The default is {@link FrameType#ROW_BASED_V1}.
    */
   public static FrameType getRowBasedFrameType(final QueryContext queryContext)
   {
     return FrameType.forVersion(
-        (byte) queryContext.getInt(
-            CTX_ROW_BASED_FRAME_TYPE,
-            DEFAULT_ROW_BASED_FRAME_TYPE.version()
-        )
+        queryContext.getOrDefault(QueryContextParameters.ROW_BASED_FRAME_TYPE).byteValue()
     );
   }
 
   public static DateTime getStartTime(final QueryContext queryContext)
   {
     // Get the start time from the query context set by the broker.
-    final String startTime = queryContext.getString(CTX_START_TIME);
+    final String startTime = queryContext.get(QueryContextParameters.START_TIME);
     if (startTime != null) {
       return DateTimes.of(startTime);
     } else {
@@ -637,7 +757,7 @@ public class MultiStageQueryContext
   @Nullable
   public static DateTime getQueryDeadline(final QueryContext queryContext)
   {
-    final String queryDeadline = queryContext.getString(CTX_QUERY_DEADLINE);
+    final String queryDeadline = queryContext.get(QueryContextParameters.QUERY_DEADLINE);
     if (queryDeadline != null) {
       return DateTimes.of(queryDeadline);
     } else {
@@ -658,25 +778,25 @@ public class MultiStageQueryContext
     }
 
     // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
-    if (!originalContext.containsKey(WINDOW_FUNCTION_OPERATOR_TRANSFORMATION)) {
-      overrides.put(WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
+    if (!originalContext.has(QueryContextParameters.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION)) {
+      QueryContextParameters.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION.set(overrides, true);
     }
 
-    if (!originalContext.containsKey(CTX_ROW_BASED_FRAME_TYPE)) {
+    if (!originalContext.has(QueryContextParameters.ROW_BASED_FRAME_TYPE)) {
       // Use the latest row-based frame type. The default is an older type, to ensure compatibility during rolling
       // updates. Since the Broker is updated last, it's safe to set this property on the Broker.
-      overrides.put(CTX_ROW_BASED_FRAME_TYPE, (int) FrameType.latestRowBased().version());
+      QueryContextParameters.ROW_BASED_FRAME_TYPE.set(overrides, (int) FrameType.latestRowBased().version());
     }
 
     // Add start time.
     final DateTime now = DateTimes.nowUtc();
-    overrides.put(CTX_START_TIME, now.toString());
+    QueryContextParameters.START_TIME.set(overrides, now.toString());
 
     // Add query deadline if not already present (and if timeout is set).
-    if (!originalContext.containsKey(CTX_QUERY_DEADLINE)) {
+    if (!originalContext.has(QueryContextParameters.QUERY_DEADLINE)) {
       final long timeout = originalContext.getTimeout(QueryContexts.NO_TIMEOUT);
       if (timeout != QueryContexts.NO_TIMEOUT) {
-        overrides.put(CTX_QUERY_DEADLINE, now.plus(timeout).toString());
+        QueryContextParameters.QUERY_DEADLINE.set(overrides, now.plus(timeout).toString());
       }
     }
 
@@ -685,30 +805,36 @@ public class MultiStageQueryContext
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)
   {
-    return new HashSet<>(decodeList(CTX_SKIP_TYPE_VERIFICATION, queryContext.getString(CTX_SKIP_TYPE_VERIFICATION)));
+    return new HashSet<>(
+        decodeList(
+            QueryContextParameters.SKIP_TYPE_VERIFICATION,
+            queryContext.get(QueryContextParameters.SKIP_TYPE_VERIFICATION)
+        )
+    );
   }
 
   public static int getFrameSize(final QueryContext queryContext)
   {
-    return queryContext.getInt(CTX_MAX_FRAME_SIZE, WorkerMemoryParameters.DEFAULT_FRAME_SIZE);
+    return queryContext.getOrDefault(QueryContextParameters.MAX_FRAME_SIZE);
   }
 
   public static Integer getMaxThreads(final QueryContext queryContext)
   {
-    return queryContext.getInt(CTX_MAX_THREADS);
+    return queryContext.get(QueryContextParameters.MAX_THREADS);
   }
 
   public static Integer getSegmentLoadAheadCount(final QueryContext queryContext)
   {
-    return queryContext.getInt(CTX_SEGMENT_LOAD_AHEAD_COUNT);
+    return queryContext.get(QueryContextParameters.SEGMENT_LOAD_AHEAD_COUNT);
   }
 
   /**
    * Decodes a list from either a JSON or CSV string.
    */
   @VisibleForTesting
-  static List<String> decodeList(final String keyName, @Nullable final String listString)
+  static List<String> decodeList(final QueryContextParameter<String> parameter, @Nullable final String listString)
   {
+    final String keyName = parameter.getName();
     if (listString == null) {
       return Collections.emptyList();
     } else if (LOOKS_LIKE_JSON_ARRAY.matcher(listString).matches()) {
@@ -736,7 +862,7 @@ public class MultiStageQueryContext
   }
 
   /**
-   * Decodes {@link #CTX_INDEX_SPEC} from either a JSON-encoded string, or POJOs.
+   * Decodes {@link QueryContextParameters#INDEX_SPEC} from either a JSON-encoded string, or POJOs.
    */
   @Nullable
   @VisibleForTesting
@@ -752,7 +878,7 @@ public class MultiStageQueryContext
       }
     }
     catch (Exception e) {
-      throw QueryContexts.badValueException(CTX_INDEX_SPEC, "an indexSpec", indexSpecObject);
+      throw QueryContexts.badValueException(QueryContextParameters.INDEX_SPEC.getName(), "an indexSpec", indexSpecObject);
     }
   }
 
@@ -764,16 +890,13 @@ public class MultiStageQueryContext
    */
   public static TaskLockType validateAndGetTaskLockType(QueryContext queryContext, boolean isReplaceQuery)
   {
-    final boolean useConcurrentLocks = queryContext.getBoolean(
-        Tasks.USE_CONCURRENT_LOCKS,
-        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
-    );
+    final boolean useConcurrentLocks = queryContext.getOrDefault(QueryContextParameters.USE_CONCURRENT_LOCKS);
     if (useConcurrentLocks) {
       return isReplaceQuery ? TaskLockType.REPLACE : TaskLockType.APPEND;
     }
     final TaskLockType taskLockType = QueryContexts.getAsEnum(
-        Tasks.TASK_LOCK_TYPE,
-        queryContext.getString(Tasks.TASK_LOCK_TYPE, null),
+        QueryContextParameters.TASK_LOCK_TYPE.getName(),
+        queryContext.get(QueryContextParameters.TASK_LOCK_TYPE),
         TaskLockType.class
     );
     if (taskLockType == null) {
@@ -785,7 +908,7 @@ public class MultiStageQueryContext
     }
     final String appendErrorMessage = StringUtils.format(
         " Please use [%s] key in the context parameter and use one of the TaskLock types as mentioned earlier or "
-        + "remove this key for automatic lock type selection", Tasks.TASK_LOCK_TYPE);
+        + "remove this key for automatic lock type selection", QueryContextParameters.TASK_LOCK_TYPE);
 
     if (isReplaceQuery && !(taskLockType.equals(TaskLockType.EXCLUSIVE) || taskLockType.equals(TaskLockType.REPLACE))) {
       throw InvalidInput.exception(

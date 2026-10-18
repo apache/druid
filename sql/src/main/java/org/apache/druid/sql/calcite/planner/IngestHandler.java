@@ -128,8 +128,8 @@ public abstract class IngestHandler extends QueryHandler
           operationName()
       );
     } else {
-      handlerContext.plannerContext().queryContextMap().put(
-          DruidSqlIngest.SQL_EXPORT_FILE_FORMAT,
+      QueryContextParameters.EXPORT_FILE_FORMAT.set(
+          handlerContext.plannerContext().queryContextMap(),
           exportFileFormat.toString()
       );
     }
@@ -163,8 +163,8 @@ public abstract class IngestHandler extends QueryHandler
     validatedQueryNode = validatedNode.getSource();
     // This context key is set during validation in
     // org.apache.druid.sql.calcite.planner.DruidSqlValidator.validateInsert.
-    String effectiveGranularity = (String) handlerContext.queryContextMap()
-        .get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY);
+    String effectiveGranularity =
+        handlerContext.queryContext().get(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY);
     try {
       ingestionGranularity = effectiveGranularity != null
           ? handlerContext.jsonMapper().readValue(effectiveGranularity, Granularity.class)
@@ -407,10 +407,7 @@ public abstract class IngestHandler extends QueryHandler
       );
       if (replaceIntervalsList != null) {
         replaceIntervals = String.join(",", replaceIntervalsList);
-        handlerContext.queryContextMap().put(
-            DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-            replaceIntervals
-        );
+        QueryContextParameters.SQL_REPLACE_TIME_CHUNKS.set(handlerContext.queryContextMap(), replaceIntervals);
       }
     }
 

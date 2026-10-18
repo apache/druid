@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
@@ -351,7 +351,10 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
     final Map<String, Object> context = QueryContext.builder()
         .put(QueryContextParameters.VECTORIZE, vectorizeContext)
         .put(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS, vectorizeContext)
-        .putRaw(GroupByQueryConfig.CTX_KEY_DEFER_EXPRESSION_DIMENSIONS, deferExpressionDimensions)
+        .put(
+            QueryContextParameters.DEFER_EXPRESSION_DIMENSIONS,
+            DeferExpressionDimensions.fromString(deferExpressionDimensions)
+        )
         .toMap();
     return context;
   }

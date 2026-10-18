@@ -41,7 +41,6 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -56,10 +55,8 @@ import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -108,8 +105,8 @@ public class MSQInsertTest extends MSQTestBase
   private static final Map<String, Object> QUERY_CONTEXT_WITH_APPEND_LOCK =
       QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .putRaw(
-                      Tasks.TASK_LOCK_TYPE,
+                  .put(
+                      QueryContextParameters.TASK_LOCK_TYPE,
                       TaskLockType.APPEND.name().toLowerCase(Locale.ENGLISH)
                   )
                   .toMap();
@@ -321,13 +318,13 @@ public class MSQInsertTest extends MSQTestBase
                     )
                     .setContext(
                         QueryContext.builder()
-                                   .putRaw("__user", "allowAll")
+                                   .put(QueryContextParameters.USER, "allowAll")
                                    .put(QueryContextParameters.FINALIZE, true)
-                                   .putRaw(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
-                                   .putRaw("maxParseExceptions", 0)
-                                   .putRaw("sqlInsertSegmentGranularity", "\"DAY\"")
-                                   .put(QueryContextParameters.SQL_QUERY_ID, "test-query")
-                                   .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
+                                   .put(QueryContextParameters.MAX_NUM_TASKS, 2)
+                                   .put(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 0L)
+                                   .put(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY, "\"DAY\"")
+                                   .putRaw("sqlQueryId", "test-query")
+                                   .putRaw("sqlStringifyArrays", false)
                                    .toMap()
                     )
                     .setLimitSpec(DefaultLimitSpec.builder()
@@ -359,8 +356,8 @@ public class MSQInsertTest extends MSQTestBase
     Map<String, Object> sqlContext =
         QueryContext.builder()
             .putAll(context)
-                    .putRaw(
-                        "sqlInsertSegmentGranularity",
+                    .put(
+                        QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
                         "\"DAY\""
                     )
                     .putRaw(
@@ -1212,8 +1209,8 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertOnFoo1WithTimeAggregatorAndMultipleWorkers(String contextName, Map<String, Object> context)
   {
     Map<String, Object> localContext = new HashMap<>(context);
-    localContext.put(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.MAX.name());
-    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 4);
+    QueryContextParameters.TASK_ASSIGNMENT_STRATEGY.set(localContext, WorkerAssignmentStrategy.MAX.name());
+    QueryContextParameters.MAX_NUM_TASKS.set(localContext, 4);
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -1288,8 +1285,8 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
     Map<String, Object> newContext = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .putRaw(
-                                                  MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                                              .put(
+                                                  QueryContextParameters.CLUSTER_STATISTICS_MERGE_MODE,
                                                   ClusterStatisticsMergeMode.SEQUENTIAL.toString()
                                               )
                                               .toMap();
@@ -1432,7 +1429,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("dim3", ColumnType.STRING_ARRAY).build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_USE_AUTO_SCHEMAS, true);
+    QueryContextParameters.USE_AUTO_COLUMN_SCHEMAS.set(adjustedContext, true);
 
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) as dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
@@ -1461,7 +1458,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("dim3", ColumnType.STRING_ARRAY).build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) as dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME"
@@ -1518,7 +1515,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("dim3", ColumnType.STRING).build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT ARRAY_TO_MV(MV_TO_ARRAY(dim3)) as dim3 FROM foo GROUP BY MV_TO_ARRAY(dim3) PARTITIONED BY ALL TIME"
@@ -1545,7 +1542,7 @@ public class MSQInsertTest extends MSQTestBase
   {
     Map<String, Object> localContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .putRaw("groupByEnableMultiValueUnnesting", false)
+                                                   .put(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING, false)
                                                    .toMap();
 
 
@@ -2007,7 +2004,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertQueryWithInvalidSubtaskCount(String contextName, Map<String, Object> context)
   {
     Map<String, Object> localContext = new HashMap<>(context);
-    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 1);
+    localContext.put(QueryContextParameters.MAX_NUM_TASKS.getName(), 1);
 
     testIngestQuery().setSql(
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
@@ -2058,14 +2055,8 @@ public class MSQInsertTest extends MSQTestBase
   {
     final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .putRaw(
-                                                        "maxNumSegments",
-                                                        1
-                                                    )
-                                                    .putRaw(
-                                                        "rowsPerSegment",
-                                                        1
-                                                    )
+                                                    .put(QueryContextParameters.MAX_NUM_SEGMENTS, 1)
+                                                    .put(QueryContextParameters.ROWS_PER_SEGMENT, 1)
                                                     .toMap();
 
     testIngestQuery().setSql("INSERT INTO foo"
@@ -2092,14 +2083,8 @@ public class MSQInsertTest extends MSQTestBase
   {
     final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .putRaw(
-                                                        "maxNumSegments",
-                                                        2
-                                                    )
-                                                    .putRaw(
-                                                        "rowsPerSegment",
-                                                        1
-                                                    )
+                                                    .put(QueryContextParameters.MAX_NUM_SEGMENTS, 2)
+                                                    .put(QueryContextParameters.ROWS_PER_SEGMENT, 1)
                                                     .toMap();
 
     final RowSignature expectedRowSignature = RowSignature.builder()
@@ -2173,7 +2158,7 @@ public class MSQInsertTest extends MSQTestBase
   {
     Map<String, Object> queryContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .putRaw(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .put(QueryContextParameters.ROWS_PER_SEGMENT, 2)
                                                    .toMap();
 
     List<Object[]> expectedRows = ImmutableList.of(
@@ -2211,7 +2196,7 @@ public class MSQInsertTest extends MSQTestBase
   {
     Map<String, Object> queryContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .putRaw(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .put(QueryContextParameters.ROWS_PER_SEGMENT, 2)
                                                    .toMap();
 
     List<Object[]> expectedRows = ImmutableList.of(new Object[]{DateTimes.utc(0L).getMillis(), 5L});
@@ -2242,7 +2227,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertOnRestricted(String contextName, Map<String, Object> context)
   {
     // Set expected results based on query's end user
-    boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
+    boolean isSuperUser = QueryContext.of(context).get(QueryContextParameters.USER).equals(CalciteTests.TEST_SUPERUSER_NAME);
     List<Object[]> expectedRows = isSuperUser ? ImmutableList.of(
         new Object[]{978307200000L, 4.0f},
         new Object[]{978393600000L, 5.0f},
@@ -2275,8 +2260,8 @@ public class MSQInsertTest extends MSQTestBase
   public void testCorrectNumberOfWorkersUsedAutoModeWithoutBytesLimit(String contextName, Map<String, Object> context) throws IOException
   {
     Map<String, Object> localContext = new HashMap<>(context);
-    localContext.put(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.AUTO.name());
-    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 4);
+    QueryContextParameters.TASK_ASSIGNMENT_STRATEGY.set(localContext, WorkerAssignmentStrategy.AUTO.name());
+    QueryContextParameters.MAX_NUM_TASKS.set(localContext, 4);
 
     final File toRead1 = getResourceAsTemporaryFile("/multipleFiles/wikipedia-sampled-1.json");
     final String toReadFileNameAsJson1 = queryFramework().queryJsonMapper().writeValueAsString(toRead1.getAbsolutePath());
@@ -2326,9 +2311,9 @@ public class MSQInsertTest extends MSQTestBase
   public void testCorrectNumberOfWorkersUsedAutoModeWithBytesLimit(String contextName, Map<String, Object> context) throws IOException
   {
     Map<String, Object> localContext = new HashMap<>(context);
-    localContext.put(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.AUTO.name());
-    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 4);
-    localContext.put(MultiStageQueryContext.CTX_MAX_INPUT_BYTES_PER_WORKER, 10);
+    QueryContextParameters.TASK_ASSIGNMENT_STRATEGY.set(localContext, WorkerAssignmentStrategy.AUTO.name());
+    QueryContextParameters.MAX_NUM_TASKS.set(localContext, 4);
+    QueryContextParameters.MAX_INPUT_BYTES_PER_WORKER.set(localContext, 10L);
 
     final File toRead1 = getResourceAsTemporaryFile("/multipleFiles/wikipedia-sampled-1.json");
     final String toReadFileNameAsJson1 = queryFramework().queryJsonMapper().writeValueAsString(toRead1.getAbsolutePath());

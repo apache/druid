@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -58,7 +59,6 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.planner.DruidSqlValidator;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -519,8 +519,10 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   @Test
   public void testInsertRowsPerSegmentFromQueryContextOverridesCatalog()
   {
-    final Map<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(DruidSqlValidator.CTX_ROWS_PER_SEGMENT, 5);
+    final Map<String, Object> context = QueryContext.builder()
+                                                    .putAll(DEFAULT_CONTEXT)
+                                                    .put(QueryContextParameters.ROWS_PER_SEGMENT, 5)
+                                                    .toMap();
 
     testIngestionQuery()
         .context(context)
@@ -546,9 +548,10 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
       final int rowsPerSegment
   )
   {
-    final Map<String, Object> context = new HashMap<>(queryContextWithGranularity(granularity));
-    context.put(DruidSqlValidator.CTX_ROWS_PER_SEGMENT, rowsPerSegment);
-    return context;
+    return QueryContext.builder()
+                       .putAll(queryContextWithGranularity(granularity))
+                       .put(QueryContextParameters.ROWS_PER_SEGMENT, rowsPerSegment)
+                       .toMap();
   }
 
   /**

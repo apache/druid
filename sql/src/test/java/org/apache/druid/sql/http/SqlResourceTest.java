@@ -64,7 +64,6 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
@@ -91,7 +90,6 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -1681,7 +1679,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of(GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1, QueryContextParameters.SQL_QUERY_ID.getName(), "id"),
+            QueryContext.builder().put(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1).put(QueryContextParameters.SQL_QUERY_ID, "id").toMap(),
             null
         )
     ).lhs;
@@ -2154,7 +2152,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testQueryContextKeyNotAllowed() throws Exception
   {
-    Map<String, Object> queryContext = ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, "all");
+    Map<String, Object> queryContext = QueryContext.ofMap(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY, "all");
     ErrorResponse exception = postSyncForException(
         new SqlQuery("SELECT 1337", ResultFormat.OBJECT, false, false, false, queryContext, null),
         Status.BAD_REQUEST.getStatusCode()

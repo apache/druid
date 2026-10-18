@@ -518,29 +518,14 @@ public class QueryContext
     return getOrDefault(QueryContextParameters.VECTORIZE);
   }
 
-  public Vectorize getVectorize(Vectorize defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.VECTORIZE, defaultValue);
-  }
-
   public Vectorize getVectorizeVirtualColumns()
   {
     return getOrDefault(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS);
   }
 
-  public Vectorize getVectorizeVirtualColumns(Vectorize defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS, defaultValue);
-  }
-
   public int getVectorSize()
   {
     return getOrDefault(QueryContextParameters.VECTOR_SIZE);
-  }
-
-  public int getVectorSize(int defaultSize)
-  {
-    return getOrDefault(QueryContextParameters.VECTOR_SIZE, defaultSize);
   }
 
   public int getMaxSubqueryRows(int defaultSize)
@@ -571,19 +556,9 @@ public class QueryContext
     return getOrDefault(QueryContextParameters.UNCOVERED_INTERVALS_LIMIT);
   }
 
-  public int getUncoveredIntervalsLimit(int defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.UNCOVERED_INTERVALS_LIMIT, defaultValue);
-  }
-
   public int getPriority()
   {
     return getOrDefault(QueryContextParameters.PRIORITY);
-  }
-
-  public int getPriority(int defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.PRIORITY, defaultValue);
   }
 
   public String getLane()
@@ -782,11 +757,6 @@ public class QueryContext
     return getOrDefault(QueryContextParameters.IN_SUB_QUERY_THRESHOLD);
   }
 
-  public int getInSubQueryThreshold(int defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.IN_SUB_QUERY_THRESHOLD, defaultValue);
-  }
-
   /**
    * At or above this threshold number of values, when planning SQL queries, use the SQL SCALAR_IN_ARRAY operator rather
    * than a stack of SQL ORs. This speeds up planning for large sets of points because it is opaque to various
@@ -832,7 +802,6 @@ public class QueryContext
   {
     return getOrDefault(QueryContextParameters.FULL_REPORT);
   }
-
 
   public QueryResourceId getQueryResourceId()
   {
@@ -926,14 +895,14 @@ public class QueryContext
       // Backward-compat: honour the deprecated realtimeSegmentsOnly flag.
       return getOrDefault(QueryContextParameters.REALTIME_SEGMENTS_ONLY)
              ? RealtimeSegmentsMode.EXCLUSIVE
-             : QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
+             : getOrDefault(QueryContextParameters.REALTIME_SEGMENTS_MODE);
     }
-    return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
+    return getOrDefault(QueryContextParameters.REALTIME_SEGMENTS_MODE);
   }
 
   /**
-   * Returns the {@link AcquireMode} set by {@link QueryContexts#SEGMENT_ACQUIRE_MODE}, or {@code defaultValue} (the
-   * engine's own choice) if absent. Currently only honored by MSQ leaf stage processors.
+   * Returns the {@link AcquireMode} set by {@link QueryContextParameters#SEGMENT_ACQUIRE_MODE}, or
+   * {@code defaultValue} (the engine's own choice) if absent. Currently only honored by MSQ leaf stage processors.
    * <p>
    * {@link AcquireMode#PARTIAL} degrades to {@link AcquireMode#FULL} where partial downloads are unavailable, such as
    * when they are disabled by configuration or the segment is not range-readable. Forcing {@link AcquireMode#PARTIAL}
@@ -942,6 +911,6 @@ public class QueryContext
    */
   public AcquireMode getSegmentAcquireMode(AcquireMode defaultValue)
   {
-    return getEnum(QueryContexts.SEGMENT_ACQUIRE_MODE, AcquireMode.class, defaultValue);
+    return getOrDefault(QueryContextParameters.SEGMENT_ACQUIRE_MODE, defaultValue);
   }
 }

@@ -30,7 +30,6 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
@@ -43,6 +42,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -1683,7 +1683,7 @@ public class MSQWindowTest extends MSQTestBase
     final Map<String, Object> customContext =
         QueryContext.builder()
                     .putAll(DEFAULT_MSQ_CONTEXT)
-                    .putRaw(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, 200)
+                    .put(QueryContextParameters.MAX_ROWS_MATERIALIZED_IN_WINDOW, 200)
                     .toMap();
 
     testSelectQuery()
@@ -1883,7 +1883,7 @@ public class MSQWindowTest extends MSQTestBase
   public void testWindowOnMixOfEmptyAndNonEmptyOverWithMultipleWorkers()
   {
     final Map<String, Object> multipleWorkerContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
-    multipleWorkerContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5);
+    QueryContextParameters.MAX_NUM_TASKS.set(multipleWorkerContext, 5);
 
     final RowSignature rowSignature = RowSignature.builder()
                                             .add("countryName", ColumnType.STRING)

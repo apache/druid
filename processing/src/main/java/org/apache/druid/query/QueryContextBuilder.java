@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.query.context.QueryContextParameter;
 
 import javax.annotation.Nullable;
@@ -55,12 +56,13 @@ public final class QueryContextBuilder
   /**
    * Adds a context value using a raw string key.
    *
-   * <p>Use this only for keys that do not yet have a declared {@link QueryContextParameter} descriptor. Remaining
-   * callers mark the parameters still to be migrated; replace them with {@link #put(QueryContextParameter, Object)}
-   * once the descriptor exists.</p>
+   * <p>For tests only: keys that have no {@link QueryContextParameter} descriptor, such as arbitrary or test-only keys,
+   * and raw values that exercise parsing. Production code should declare a descriptor in
+   * {@link org.apache.druid.query.context.QueryContextParameters} and use {@link #put(QueryContextParameter, Object)}.</p>
    *
    * @throws NullPointerException if the name or value is {@code null}
    */
+  @VisibleForTesting
   public QueryContextBuilder putRaw(final String name, final Object value)
   {
     values.put(

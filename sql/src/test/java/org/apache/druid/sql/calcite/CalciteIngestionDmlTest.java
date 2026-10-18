@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
@@ -60,7 +59,6 @@ import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
 import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
 import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -92,8 +90,8 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
   protected static final Map<String, Object> DEFAULT_CONTEXT =
       QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID);
 
-  public static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(
-      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+  public static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = QueryContext.ofMap(
+      QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
       "{\"type\":\"all\"}"
   );
 
@@ -232,7 +230,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     catch (JsonProcessingException e) {
       Assertions.fail(e.getMessage());
     }
-    return ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, granularityString);
+    return QueryContext.ofMap(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY, granularityString);
   }
 
   protected IngestionDmlTester testIngestionQuery()

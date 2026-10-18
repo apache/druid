@@ -449,7 +449,7 @@ public class QueryContextTest
     assertEquals(Integer.MAX_VALUE, context1.getInFunctionThreshold());
 
     final QueryContext context2 = QueryContext.empty();
-    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD, context2.getInFunctionThreshold());
+    assertEquals(QueryContextParameters.IN_FUNCTION_THRESHOLD.getDefaultValue().orElseThrow(), context2.getInFunctionThreshold());
   }
 
   @Test
@@ -459,7 +459,7 @@ public class QueryContextTest
     assertEquals(Integer.MAX_VALUE, context1.getInFunctionExprThreshold());
 
     final QueryContext context2 = QueryContext.empty();
-    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD, context2.getInFunctionExprThreshold());
+    assertEquals(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD.getDefaultValue().orElseThrow(), context2.getInFunctionExprThreshold());
   }
 
   @Test
@@ -591,17 +591,17 @@ public class QueryContextTest
     assertEquals(AcquireMode.PARTIAL, QueryContext.empty().getSegmentAcquireMode(AcquireMode.PARTIAL));
     assertEquals(
         AcquireMode.FULL,
-        QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "full"))
+        QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "full").toContext()
                     .getSegmentAcquireMode(AcquireMode.PARTIAL)
     );
     assertEquals(
         AcquireMode.PARTIAL,
-        QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "PARTIAL"))
+        QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "PARTIAL").toContext()
                     .getSegmentAcquireMode(AcquireMode.FULL)
     );
     assertThrows(
         BadQueryContextException.class,
-        () -> QueryContext.of(ImmutableMap.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "dummy"))
+        () -> QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "dummy").toContext()
                           .getSegmentAcquireMode(AcquireMode.FULL)
     );
   }

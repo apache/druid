@@ -21,9 +21,11 @@ package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -94,14 +96,14 @@ public class GroupByQueryConfigTest
                     .setGranularity(Granularities.ALL)
                     .setContext(
                         QueryContext.builder()
-                                    .putRaw("maxOnDiskStorage", "3M")
+                                    .putRaw(QueryContextParameters.MAX_ON_DISK_STORAGE.getName(), "3M")
                                     .putRaw("maxResults", 2)
-                                    .putRaw("maxSelectorDictionarySize", 3)
-                                    .putRaw("maxMergingDictionarySize", 4)
-                                    .putRaw("maxSpillFileCount", 333)
-                                    .putRaw("applyLimitPushDownToSegment", true)
+                                    .put(QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE, HumanReadableBytes.valueOf(3))
+                                    .put(QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE, HumanReadableBytes.valueOf(4))
+                                    .put(QueryContextParameters.MAX_SPILL_FILE_COUNT, 333)
+                                    .put(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT, true)
                                     .putRaw(
-                                        GroupByQueryConfig.CTX_KEY_DEFER_EXPRESSION_DIMENSIONS,
+                                        QueryContextParameters.DEFER_EXPRESSION_DIMENSIONS.getName(),
                                         DeferExpressionDimensions.ALWAYS.toString()
                                     )
                                     .toMap()
@@ -206,7 +208,7 @@ public class GroupByQueryConfigTest
                     .setGranularity(Granularities.ALL)
                     .setContext(
                         QueryContext.builder()
-                            .putRaw("maxOnDiskStorage", "1G")
+                            .putRaw(QueryContextParameters.MAX_ON_DISK_STORAGE.getName(), "1G")
                             .toMap()
                     )
                     .build()

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -64,8 +63,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -259,7 +256,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -284,7 +281,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -295,7 +292,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -1502,7 +1499,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "al"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -1528,7 +1525,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "al"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -1553,7 +1550,7 @@ public class ClientQuerySegmentWalkerTest
         .granularity(Granularities.ALL)
         .intervals(Collections.singletonList(INTERVAL))
         .aggregators(new LongSumAggregatorFactory("sum", "n"))
-        .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+        .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
         .build()
         .withId(DUMMY_QUERY_ID);
     TimeseriesQuery subQuery2 = (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
@@ -1561,7 +1558,7 @@ public class ClientQuerySegmentWalkerTest
         .granularity(Granularities.ALL)
         .intervals(Collections.singletonList(INTERVAL))
         .aggregators(new LongSumAggregatorFactory("sum", "n"))
-        .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+        .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
         .build()
         .withId(DUMMY_QUERY_ID);
     final Query query = Druids.newScanQueryBuilder()
@@ -1771,13 +1768,13 @@ public class ClientQuerySegmentWalkerTest
                     .put(QueryContextParameters.FINALIZE, true)
                     .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 0L)
                     .put(QueryContextParameters.QUERY_RESOURCE_ID, "dummy")
-                    .putRaw(DirectDruidClient.QUERY_FAIL_TIME, 0L)
-                    .putRaw(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)
-                    .putRaw(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
-                    .putRaw(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
-                    .putRaw(GroupingEngine.CTX_KEY_OUTERMOST, true)
-                    .putRaw(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
-                    .putRaw(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, "blast");
+                    .put(QueryContextParameters.QUERY_FAIL_TIME, 0L)
+                    .put(QueryContextParameters.SORT_BY_DIMS_FIRST, false)
+                    .put(QueryContextParameters.RESULT_AS_ARRAY, true)
+                    .put(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, true)
+                    .put(QueryContextParameters.GROUP_BY_OUTERMOST, true)
+                    .put(QueryContextParameters.FUDGE_TIMESTAMP, "1979")
+                    .put(QueryContextParameters.SERIALIZATION, ResultSerializationMode.ROWS);
 
       modifiedQuery = query.withOverriddenContext(contextBuilder.toMap());
 

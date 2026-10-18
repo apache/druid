@@ -62,7 +62,6 @@ import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
@@ -127,8 +126,13 @@ import java.util.stream.Collectors;
 public class SqlStatementResource
 {
 
+  /**
+   * @deprecated Use {@link QueryContextParameters#RESULT_FORMAT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String RESULT_FORMAT = "__resultFormat";
   public static final String CONTENT_DISPOSITION_RESPONSE_HEADER = "Content-Disposition";
+
   private static final Pattern FILENAME_PATTERN = Pattern.compile("^[^/:*?><\\\\\"|\0\n\r]*$");
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
@@ -195,15 +199,15 @@ public class SqlStatementResource
     final HttpStatement stmt;
 
     try {
-      if (sqlQuery.getContext().containsKey(RESULT_FORMAT)) {
-        throw InvalidInput.exception("Query context parameter [%s] is not allowed", RESULT_FORMAT);
+      if (sqlQuery.getContext().containsKey(QueryContextParameters.RESULT_FORMAT.getName())) {
+        throw InvalidInput.exception("Query context parameter [%s] is not allowed", QueryContextParameters.RESULT_FORMAT);
       }
       sqlQueryPlus = SqlResource.makeSqlQueryPlus(
           sqlQuery,
           req,
           QueryContext.builder()
                       .putAll(queryConfigProvider.getContext())
-                      .putRaw(RESULT_FORMAT, sqlQuery.getResultFormat())
+                      .put(QueryContextParameters.RESULT_FORMAT, sqlQuery.getResultFormat().toString())
                       .toMap()
       );
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
@@ -717,7 +721,7 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = (MSQControllerTask) taskPayloadResponse.getPayload();
     String queryUser = String.valueOf(msqControllerTask.getQuerySpec()
                                                        .getContext()
-                                                       .get(MSQTaskQueryMaker.USER_KEY));
+                                                       .get(QueryContextParameters.USER));
 
     String currentUser = authenticationResult.getIdentity();
 
@@ -746,8 +750,8 @@ public class SqlStatementResource
   {
     if (resultFormatParam == null) {
       return QueryContexts.getAsEnum(
-          RESULT_FORMAT,
-          msqSpec.getContext().get(RESULT_FORMAT),
+          QueryContextParameters.RESULT_FORMAT.getName(),
+          msqSpec.getContext().get(QueryContextParameters.RESULT_FORMAT),
           ResultFormat.class,
           ResultFormat.DEFAULT_RESULT_FORMAT
       );
@@ -997,7 +1001,7 @@ public class SqlStatementResource
                                   + "as it allows the user to fetch large result sets. Please contact your cluster admin to "
                                   + "configure durable storage.",
                                   MSQSelectDestination.DURABLESTORAGE.getName(),
-                                  MultiStageQueryContext.CTX_SELECT_DESTINATION,
+                                  QueryContextParameters.SELECT_DESTINATION,
                                   NodeRole.BROKER.getJsonName()
                               )
                           );

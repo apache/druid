@@ -93,7 +93,9 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
    * {@link InDimFilter#optimize}. This is important because certain lookup implementations, most
    * prominently {@link MapLookupExtractor}, do a full iteration of the map for each call to
    * {@link LookupExtractor#unapplyAll}, which may be called by {@link InDimFilter#optimize}.
+   * @deprecated Use {@link QueryContextParameters#MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_OPTIMIZE_COUNT = "maxOptimizeCountForDruidReverseLookupRule";
 
   private final PlannerContext plannerContext;
@@ -109,7 +111,12 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
   {
     final Filter filter = call.rel(0);
 
-    final int maxOptimizeCount = plannerContext.queryContext().getInt(CTX_MAX_OPTIMIZE_COUNT, Integer.MAX_VALUE);
+    // Lets tests confirm that this rule doesn't do too many calls to InDimFilter#optimize. This is important because
+    // certain lookup implementations, most prominently MapLookupExtractor, do a full iteration of the map for each call
+    // to LookupExtractor#unapplyAll, which may be called by InDimFilter#optimize.
+    final int maxOptimizeCount = plannerContext.queryContext().getOrDefault(
+        QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE
+    );
     final int maxInSize =
         Math.min(
             plannerContext.queryContext().getInSubQueryThreshold(),

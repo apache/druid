@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -40,7 +39,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -197,20 +195,6 @@ public abstract class BaseQuery<T> implements Query<T>
   protected Map<String, Object> computeOverridenContext(final Map<String, Object> overrides)
   {
     return computeOverriddenContext(getContext(), overrides);
-  }
-
-  /**
-   * Returns {@code context} with a single typed parameter overridden. A {@code null} value removes the parameter.
-   *
-   * @throws BadQueryContextException if the value is invalid
-   */
-  public static <V> Map<String, Object> computeOverriddenContext(
-      final Map<String, Object> context,
-      final QueryContextParameter<V> parameter,
-      @Nullable final V value
-  )
-  {
-    return QueryContexts.override(context, Collections.singletonMap(parameter.getName(), parameter.validate(value)));
   }
 
   public static Map<String, Object> computeOverriddenContext(

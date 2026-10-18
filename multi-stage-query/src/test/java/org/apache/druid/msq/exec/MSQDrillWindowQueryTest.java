@@ -25,7 +25,6 @@ import org.apache.druid.msq.test.AbstractMSQComponentSupplierDelegate;
 import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -47,10 +46,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
           PlannerCaptureHook.NEED_CAPTURE_HOOK,
           true
       )
-      .putRaw(
-          MultiStageQueryContext.CTX_MAX_NUM_TASKS,
-          5
-      );
+      .put(QueryContextParameters.MAX_NUM_TASKS, 5);
 
   public static class DrillWindowQueryMSQComponentSupplier extends AbstractMSQComponentSupplierDelegate
   {
@@ -252,6 +248,6 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
    */
   private void useSingleWorker()
   {
-    queryContextBuilder.putRaw(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2);
+    queryContextBuilder.put(QueryContextParameters.MAX_NUM_TASKS, 2);
   }
 }
