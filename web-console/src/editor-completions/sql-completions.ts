@@ -97,6 +97,7 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   RIGHT: ['JOIN', 'OUTER'],
   INNER: ['JOIN'],
   FULL: ['JOIN', 'OUTER'],
+  OUTER: ['JOIN'],
   CROSS: ['JOIN'],
   NATURAL: ['JOIN', 'LEFT', 'RIGHT', 'INNER', 'FULL'],
   EXPLAIN: ['PLAN'],
@@ -111,12 +112,12 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   ROWS: ['ONLY'],
   ROW: ['ONLY'],
   IS: ['NOT', 'DISTINCT'],
-  DISTINCT: ['FROM'],
   BY: ['GROUPING', 'ROLLUP', 'CUBE', 'ALL', 'HOUR', 'DAY', 'MONTH', 'YEAR'],
   ALL: ['TIME'],
 
   // Keywords that cannot be followed by any other keyword
   AS: [],
+  DISTINCT: [], // Except in IS [NOT] DISTINCT FROM, see SQL_KEYWORD_PAIR_FOLLOW_SUGGESTIONS
   LAST: [],
   LIMIT: [],
   OFFSET: [],
@@ -163,9 +164,27 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   MILLENNIUM: [],
 };
 
-// Like SQL_KEYWORD_FOLLOW_SUGGESTIONS but keyed by the two keywords before the cursor, takes precedence over it
+// Like SQL_KEYWORD_FOLLOW_SUGGESTIONS but keyed by the two keywords before the cursor, takes precedence over it. For
+// keywords that are followed by different keywords depending on what comes before them
 const SQL_KEYWORD_PAIR_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
+  // BY on its own suggests the union of these
+  'GROUP BY': ['GROUPING', 'ROLLUP', 'CUBE'],
+  'PARTITIONED BY': ['ALL', 'HOUR', 'DAY', 'MONTH', 'YEAR'],
+  'ORDER BY': [],
+  'PARTITION BY': [],
+  'CLUSTERED BY': [],
+
+  // ALL on its own is PARTITIONED BY ALL TIME
+  'SELECT ALL': [],
+  'UNION ALL': ['SELECT'],
+
+  'IS NOT': ['DISTINCT'],
+  'IS DISTINCT': ['FROM'],
+  'NOT DISTINCT': ['FROM'],
+
   'NULLS FIRST': [], // Unlike FETCH FIRST
+  'CURRENT ROW': [], // Unlike FETCH FIRST ROW
+  'PLAN FOR': ['SELECT', 'INSERT', 'REPLACE'], // Unlike SUBSTRING(... FOR ...)
 };
 
 const COMMENT_NODES = new Set(['LineComment', 'BlockComment', 'Issue']);
