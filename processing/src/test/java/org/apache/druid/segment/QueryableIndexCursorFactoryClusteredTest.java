@@ -1065,14 +1065,14 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
         QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
-    for (String vectorize : List.of("false", "force")) {
+    for (QueryContexts.Vectorize vectorize : List.of(QueryContexts.Vectorize.FALSE, QueryContexts.Vectorize.FORCE)) {
       final GroupByQuery query = GroupByQuery.builder()
                                              .setDataSource("test")
                                              .setGranularity(Granularities.ALL)
                                              .setInterval(Intervals.ETERNITY)
                                              .addDimension(new DefaultDimensionSpec("num", "num", ColumnType.LONG))
                                              .setAggregatorSpecs(new CountAggregatorFactory("count"))
-                                             .setContext(Map.of(QueryContexts.VECTORIZE_KEY, vectorize))
+                                             .setContext(QueryContext.ofMap(QueryContextParameters.VECTORIZE, vectorize))
                                              .build();
       final Map<Long, Long> counts = new HashMap<>();
       for (ResultRow row : groupingEngine.process(query, factory, null, nonBlockingPool, null).toList()) {

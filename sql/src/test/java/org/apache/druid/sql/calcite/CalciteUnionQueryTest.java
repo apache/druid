@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -29,12 +28,13 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.ProjectDataSource;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.VirtualColumns;
@@ -43,7 +43,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -495,7 +494,12 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
             + ") GROUP BY x ORDER BY x LIMIT 2"
         )
         .queryContext(
-            ImmutableMap.of(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true, QueryContexts.MIN_TOP_N_THRESHOLD, 1)
+            QueryContext.ofMap(
+                QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N,
+                true,
+                QueryContextParameters.MIN_TOP_N_THRESHOLD,
+                1
+            )
         )
         .expectedResults(ImmutableList.of(new Object[]{"abc", 2L}))
         .run();

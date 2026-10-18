@@ -29,8 +29,10 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -335,7 +337,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
-                                                .context(ImmutableMap.of(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "foo"))
+                                                .context(QueryContext.ofMap(QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME, "foo"))
                                                 .build();
     RowSignature rowSignature = new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery);
     RowSignature.Builder expectedRowSignatureBuilder = RowSignature.builder();
@@ -349,7 +351,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
-                                                .context(ImmutableMap.of(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "foo"))
+                                                .context(QueryContext.ofMap(QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME, "foo"))
                                                 .build();
     RowSignature rowSignature = new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery);
     RowSignature.Builder expectedRowSignatureBuilder = RowSignature.builder();

@@ -74,8 +74,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
@@ -1930,7 +1932,7 @@ public class CompactSegmentsTest
                                                 .withTaskContext(
                                               maxNumTasksForMSQ == null
                                               ? null
-                                              : ImmutableMap.of(ClientMSQContext.CTX_MAX_NUM_TASKS, maxNumTasksForMSQ)
+                                              : QueryContext.ofMap(QueryContextParameters.MAX_NUM_TASKS, maxNumTasksForMSQ)
                                           )
                                                 .build()
       );
