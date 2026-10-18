@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.remote.TypedValue;
@@ -100,11 +99,17 @@ public class MSQReplaceTest extends MSQTestBase
 
   private static final String WITH_REPLACE_LOCK_AND_COMPACTION_STATE = "with_replace_lock_and_compaction_state";
   private static final Map<String, Object> QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(Tasks.TASK_LOCK_TYPE, StringUtils.toLowerCase(TaskLockType.REPLACE.name()))
-                  .put(Tasks.STORE_COMPACTION_STATE_KEY, true)
-                  .build();
+                  .putRaw(
+                      Tasks.TASK_LOCK_TYPE,
+                      StringUtils.toLowerCase(TaskLockType.REPLACE.name())
+                  )
+                  .putRaw(
+                      Tasks.STORE_COMPACTION_STATE_KEY,
+                      true
+                  )
+                  .toMap();
 
   public static Collection<Object[]> data()
   {
@@ -1415,11 +1420,17 @@ public class MSQReplaceTest extends MSQTestBase
   @Test
   public void testReplaceWithTooManySegmentsInTimeChunk()
   {
-    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .put("maxNumSegments", 1)
-                                                    .put("rowsPerSegment", 1)
-                                                    .build();
+                                                    .putRaw(
+                                                        "maxNumSegments",
+                                                        1
+                                                    )
+                                                    .putRaw(
+                                                        "rowsPerSegment",
+                                                        1
+                                                    )
+                                                    .toMap();
 
     testIngestQuery().setSql("REPLACE INTO foo"
                              + " OVERWRITE ALL "
@@ -1444,10 +1455,10 @@ public class MSQReplaceTest extends MSQTestBase
   @Test
   public void testReplaceWithMaxNumSegments()
   {
-    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .put("maxNumSegments", 1)
-                                                    .build();
+                                                    .putRaw("maxNumSegments", 1)
+                                                    .toMap();
 
     final RowSignature expectedRowSignature = RowSignature.builder()
                                                           .add("__time", ColumnType.LONG)
@@ -1574,10 +1585,10 @@ public class MSQReplaceTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFoo1WithLimit(String contextName, Map<String, Object> context)
   {
-    Map<String, Object> queryContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> queryContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
-                                                   .build();
+                                                   .putRaw(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .toMap();
 
     List<Object[]> expectedRows = ImmutableList.of(
         new Object[]{946684800000L, ""},
@@ -2748,10 +2759,13 @@ public class MSQReplaceTest extends MSQTestBase
   @Test
   void testRealtimeQueryWithReindexShouldThrowException()
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    Map<String, Object> context = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put(MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.name())
-                                              .build();
+                                              .putRaw(
+                                                  MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE,
+                                                  SegmentSource.REALTIME.name()
+                                              )
+                                              .toMap();
 
     testIngestQuery().setSql(
                          "REPLACE INTO foo"

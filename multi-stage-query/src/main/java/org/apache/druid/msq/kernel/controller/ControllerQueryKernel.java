@@ -138,7 +138,7 @@ public class ControllerQueryKernel
   private final Set<StageId> effectivelyFinishedStages = new HashSet<>();
 
   /**
-   * Map<StageId, Map <WorkerNumber, WorkOrder>>
+   * {@code Map<StageId, Map <WorkerNumber, WorkOrder>>}
    * Stores the work order per worker per stage so that we can retrieve that in case of worker retry
    */
   private final Map<StageId, Int2ObjectMap<WorkOrder>> stageWorkOrders = new HashMap<>();

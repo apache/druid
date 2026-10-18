@@ -40,12 +40,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.VirtualColumns;
@@ -57,6 +58,7 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.DruidSqlValidator;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -77,7 +79,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
 
   static {
     CONTEXT_WITH_VALIDATION_DISABLED = new HashMap<>(DEFAULT_CONTEXT);
-    CONTEXT_WITH_VALIDATION_DISABLED.put(QueryContexts.CATALOG_VALIDATION_ENABLED, false);
+    CONTEXT_WITH_VALIDATION_DISABLED.put(QueryContextParameters.CATALOG_VALIDATION_ENABLED.getName(), false);
   }
 
   private final String operationName;
@@ -121,7 +123,10 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     ),
                     new TableSpec(
                         DatasourceDefn.TABLE_TYPE,
-                        ImmutableMap.of(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H"),
+                        ImmutableMap.of(
+                            DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
+                            DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+                        ),
                         ImmutableList.of(
                             new ColumnSpec("__time", Columns.TIME_COLUMN, null)
                         )
@@ -458,7 +463,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
 
   /**
    * If the segment grain is given in the catalog and absent in the PARTITIONED BY clause in the query, then use the
-   * value from the catalog.
+   * value from the catalog. The catalog's target segment rows becomes the {@code rowsPerSegment} context parameter.
    */
   @Test
   public void testInsertHourGrainPartitonedByFromCatalog()
@@ -475,7 +480,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
-                .context(queryContextWithGranularity(Granularities.HOUR))
+                .context(queryContextWithGranularityAndRowsPerSegment(Granularities.HOUR, 1_000_000))
                 .build()
         )
         .verify();
@@ -501,10 +506,49 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
-                .context(queryContextWithGranularity(Granularities.DAY))
+                .context(queryContextWithGranularityAndRowsPerSegment(Granularities.DAY, 1_000_000))
                 .build()
         )
         .verify();
+  }
+
+  /**
+   * If target segment rows is given in the catalog and {@code rowsPerSegment} is also set in the query context, then
+   * the query context value is used.
+   */
+  @Test
+  public void testInsertRowsPerSegmentFromQueryContextOverridesCatalog()
+  {
+    final Map<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(DruidSqlValidator.CTX_ROWS_PER_SEGMENT, 5);
+
+    testIngestionQuery()
+        .context(context)
+        .sql(StringUtils.format(dmlPrefixPattern, "hourDs") + "\n" +
+             "SELECT * FROM foo")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("hourDs", FOO_TABLE_SIGNATURE)
+        .expectResources(dataSourceRead("hourDs"), dataSourceWrite("hourDs"), dataSourceRead("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
+                .context(queryContextWithGranularityAndRowsPerSegment(Granularities.HOUR, 5))
+                .build()
+        )
+        .verify();
+  }
+
+  private Map<String, Object> queryContextWithGranularityAndRowsPerSegment(
+      final Granularity granularity,
+      final int rowsPerSegment
+  )
+  {
+    final Map<String, Object> context = new HashMap<>(queryContextWithGranularity(granularity));
+    context.put(DruidSqlValidator.CTX_ROWS_PER_SEGMENT, rowsPerSegment);
+    return context;
   }
 
   /**

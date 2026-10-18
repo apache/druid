@@ -538,8 +538,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_query(c1, '$.a_obj.a_array[0]') c
 FROM test_json_cols;
-Query could not be planned
-!error
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                  |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+|                                                                                                                                                                                                    |
+|                                                                                                                                                                                                    |
+|                                                                                                                                                                                                    |
+|                                                                                                                                                                                                    |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_query TEST_ID: A187
@@ -549,8 +562,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_query(c1, '$.a_obj.a_array[0].a_str') c
 FROM test_json_cols;
-Query could not be planned
-!error
++-----+
+| c   |
++-----+
+| "A" |
+| "A" |
+| "A" |
+| "A" |
+|     |
+|     |
+|     |
+|     |
++-----+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_query TEST_ID: A188
@@ -560,8 +586,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_query(c1, '$.a_obj.a_array[0].a_num_int') c
 FROM test_json_cols;
-Query could not be planned
-!error
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+|   |
+|   |
+|   |
+|   |
++---+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_query TEST_ID: A189

@@ -812,6 +812,19 @@ FROM test_json_cols
 UNION ALL
 SELECT json_paths(json_query(c1, '$.a_obj.a_obj')) c
 FROM test_json_cols;
-Query could not be planned
-!error
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                  |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [$.a_str, $.a_empty_array, $.a_null, $.a_num_int, $.a_bool, $.a_empty_array_nested[1], $.a_empty_array_nested[2], $.a_empty_obj_nested.o2, $.a_num_float, $.a_empty_obj_nested.o3] |
+| [$.a_str, $.a_empty_array, $.a_null, $.a_num_int, $.a_bool, $.a_empty_array_nested[1], $.a_empty_array_nested[2], $.a_empty_obj_nested.o2, $.a_num_float, $.a_empty_obj_nested.o3] |
+| [$.a_str, $.a_empty_array, $.a_null, $.a_num_int, $.a_bool, $.a_empty_array_nested[1], $.a_empty_array_nested[2], $.a_empty_obj_nested.o2, $.a_num_float, $.a_empty_obj_nested.o3] |
+| [$.a_str, $.a_empty_array, $.a_null, $.a_num_int, $.a_bool, $.a_empty_array_nested[1], $.a_empty_array_nested[2], $.a_empty_obj_nested.o2, $.a_num_float, $.a_empty_obj_nested.o3] |
+| [$]                                                                                                                                                                                |
+| [$]                                                                                                                                                                                |
+| [$]                                                                                                                                                                                |
+| [$]                                                                                                                                                                                |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(8 rows)
+
+!ok
 

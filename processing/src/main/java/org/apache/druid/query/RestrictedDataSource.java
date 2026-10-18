@@ -24,14 +24,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -131,9 +134,26 @@ public class RestrictedDataSource implements DataSource
 
   @Nullable
   @Override
-  public SegmentPruner createSegmentPruner()
+  public SegmentPruner createSegmentPruner(@Nullable DimFilter filter, VirtualColumns virtualColumns)
   {
-    return policy.createSegmentPruner();
+    return SegmentPruner.combine(
+        policy.createSegmentPruner(),
+        base.createSegmentPruner(filter, virtualColumns)
+    );
+  }
+
+  @Override
+  public Set<String> getReservedColumns()
+  {
+    final Set<String> names = new HashSet<>(base.getReservedColumns());
+    names.addAll(policy.getReservedColumns());
+    return names;
+  }
+
+  @Override
+  public boolean mayFilterRows()
+  {
+    return !(policy instanceof NoRestrictionPolicy) || base.mayFilterRows();
   }
 
   @Override

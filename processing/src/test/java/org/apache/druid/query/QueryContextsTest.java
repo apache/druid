@@ -160,28 +160,28 @@ public class QueryContextsTest
         QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED,
         QueryContext.empty().isCatalogValidationEnabled()
     );
-    Assertions.assertTrue(QueryContext.of(ImmutableMap.of(
-        QueryContexts.CATALOG_VALIDATION_ENABLED,
-        true
-    )).isCatalogValidationEnabled());
-    Assertions.assertFalse(QueryContext.of(ImmutableMap.of(
-        QueryContexts.CATALOG_VALIDATION_ENABLED,
-        false
-    )).isCatalogValidationEnabled());
+    Assertions.assertTrue(
+        QueryContext.of(QueryContextParameters.CATALOG_VALIDATION_ENABLED, true)
+            .isCatalogValidationEnabled()
+    );
+    Assertions.assertFalse(
+        QueryContext.of(QueryContextParameters.CATALOG_VALIDATION_ENABLED, false)
+            .isCatalogValidationEnabled()
+    );
   }
 
   @Test
   public void testGetEnableJoinLeftScanDirect()
   {
     Assertions.assertFalse(QueryContext.empty().getEnableJoinLeftScanDirect());
-    Assertions.assertTrue(QueryContext.of(ImmutableMap.of(
-        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
-        true
-    )).getEnableJoinLeftScanDirect());
-    Assertions.assertFalse(QueryContext.of(ImmutableMap.of(
-        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
-        false
-    )).getEnableJoinLeftScanDirect());
+    Assertions.assertTrue(
+        QueryContext.of(QueryContextParameters.ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT, true)
+            .getEnableJoinLeftScanDirect()
+    );
+    Assertions.assertFalse(
+        QueryContext.of(QueryContextParameters.ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT, false)
+            .getEnableJoinLeftScanDirect()
+    );
   }
 
   @Test
@@ -320,17 +320,17 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, "SYNC", QueryContexts.CTX_EXECUTION_MODE + "_1", "ASYNC")
+        ImmutableMap.of(QueryContextParameters.EXECUTION_MODE.getName(), "SYNC", QueryContextParameters.EXECUTION_MODE.getName() + "_1", "ASYNC")
     );
 
     Assertions.assertEquals(
         ExecutionMode.SYNC,
-        query.context().getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, ExecutionMode.ASYNC)
+        query.context().getOrDefault(QueryContextParameters.EXECUTION_MODE, ExecutionMode.ASYNC)
     );
 
     Assertions.assertEquals(
         ExecutionMode.ASYNC,
-        query.context().getEnum(QueryContexts.CTX_EXECUTION_MODE + "_1", ExecutionMode.class, ExecutionMode.SYNC)
+        query.context().getEnum(QueryContextParameters.EXECUTION_MODE.getName() + "_1", ExecutionMode.class, ExecutionMode.SYNC)
     );
   }
 
