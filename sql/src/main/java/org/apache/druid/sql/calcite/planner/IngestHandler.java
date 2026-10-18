@@ -149,12 +149,12 @@ public abstract class IngestHandler extends QueryHandler
       }
     }
 
-    // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
+    // Check if sqlOuterLimit is specified and fail the query if it is. sqlOuterLimit being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
-    if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
+    if (handlerContext.queryContext().has(QueryContextParameters.SQL_OUTER_LIMIT)) {
       throw InvalidSqlInput.exception(
           "Context parameter [%s] cannot be provided on operator [%s]",
-          PlannerContext.CTX_SQL_OUTER_LIMIT,
+          QueryContextParameters.SQL_OUTER_LIMIT,
           operationName()
       );
     }

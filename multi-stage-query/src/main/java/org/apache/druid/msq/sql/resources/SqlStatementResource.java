@@ -962,13 +962,13 @@ public class SqlStatementResource
 
   private void contextChecks(QueryContext queryContext)
   {
-    ExecutionMode executionMode = queryContext.getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, null);
+    final ExecutionMode executionMode = queryContext.get(QueryContextParameters.EXECUTION_MODE);
 
     if (executionMode == null) {
       throw InvalidInput.exception(
           "Execution mode is not provided to the sql statement api. "
           + "Please set [%s] to [%s] in the query context",
-          QueryContexts.CTX_EXECUTION_MODE,
+          QueryContextParameters.EXECUTION_MODE,
           ExecutionMode.ASYNC
       );
     }
@@ -978,7 +978,7 @@ public class SqlStatementResource
           "The sql statement api currently does not support the provided execution mode [%s]. "
           + "Please set [%s] to [%s] in the query context",
           executionMode,
-          QueryContexts.CTX_EXECUTION_MODE,
+          QueryContextParameters.EXECUTION_MODE,
           ExecutionMode.ASYNC
       );
     }

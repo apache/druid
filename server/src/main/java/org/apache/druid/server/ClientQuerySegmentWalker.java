@@ -22,7 +22,6 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
@@ -197,10 +196,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
       query = query.withOverriddenContext(
-          ImmutableMap.of(
-              QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
-              useNestedForUnknownTypeInSubquery
-          )
+          QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
+          useNestedForUnknownTypeInSubquery
       );
       return (QueryRunner<T>) queryExecutor.entryPoint(query, this);
     }
@@ -217,7 +214,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query.getDataSource(),
         query.getId(),
         query.getSqlQueryId(),
-        query.context().getString(QueryContexts.QUERY_RESOURCE_ID)
+        query.context().get(QueryContextParameters.QUERY_RESOURCE_ID)
     ));
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());

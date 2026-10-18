@@ -44,7 +44,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -80,7 +79,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
 
   static {
     CONTEXT_WITH_VALIDATION_DISABLED = new HashMap<>(DEFAULT_CONTEXT);
-    CONTEXT_WITH_VALIDATION_DISABLED.put(QueryContexts.CATALOG_VALIDATION_ENABLED, false);
+    CONTEXT_WITH_VALIDATION_DISABLED.put(QueryContextParameters.CATALOG_VALIDATION_ENABLED.getName(), false);
   }
 
   private final String operationName;

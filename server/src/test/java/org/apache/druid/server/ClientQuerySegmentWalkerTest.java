@@ -45,7 +45,6 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContextBuilder;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -820,7 +819,7 @@ public class ClientQuerySegmentWalkerTest
   public void testTimeseriesOnGroupByOnTableErrorTooManyRows()
   {
     Throwable exception = Assertions.assertThrows(ResourceLimitExceededException.class, () -> {
-      initWalker(ImmutableMap.of("maxSubqueryRows", "2"));
+      initWalker(QueryContext.ofMap(QueryContextParameters.MAX_SUBQUERY_ROWS, 2));
 
       final GroupByQuery subquery =
           GroupByQuery.builder()
@@ -852,7 +851,12 @@ public class ClientQuerySegmentWalkerTest
   public void testScanOnScanWithStringExpression()
   {
     initWalker(
-        ImmutableMap.of(QueryContextParameters.MAX_SUBQUERY_ROWS.getName(), "1", QueryContextParameters.MAX_SUBQUERY_BYTES.getName(), "1000"),
+        QueryContext.ofMap(
+            QueryContextParameters.MAX_SUBQUERY_ROWS,
+            1,
+            QueryContextParameters.MAX_SUBQUERY_BYTES,
+            "1000"
+        ),
         scheduler
     );
 
@@ -1593,7 +1597,7 @@ public class ClientQuerySegmentWalkerTest
   /**
    * Initialize (or reinitialize) our {@link #walker} and {@link #closer} with default scheduler.
    */
-  private void initWalker(final Map<String, String> serverProperties)
+  private void initWalker(final Map<String, ?> serverProperties)
   {
     initWalker(serverProperties, QueryStackTests.DEFAULT_NOOP_SCHEDULER);
   }
@@ -1601,7 +1605,7 @@ public class ClientQuerySegmentWalkerTest
   /**
    * Initialize (or reinitialize) our {@link #walker} and {@link #closer}.
    */
-  private void initWalker(final Map<String, String> serverProperties, QueryScheduler schedulerForTest)
+  private void initWalker(final Map<String, ?> serverProperties, QueryScheduler schedulerForTest)
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final ServerConfig serverConfig = jsonMapper.convertValue(serverProperties, ServerConfig.class);
@@ -1760,10 +1764,10 @@ public class ClientQuerySegmentWalkerTest
       Query<?> modifiedQuery;
       // Need to blast various parameters that will vary and aren't important to test for.
       final QueryContextBuilder contextBuilder = QueryContext.builder();
-      contextBuilder.putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
+      contextBuilder.put(QueryContextParameters.DEFAULT_TIMEOUT, 0L)
                     .put(QueryContextParameters.FINALIZE, true)
                     .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 0L)
-                    .putRaw(QueryContexts.QUERY_RESOURCE_ID, "dummy")
+                    .put(QueryContextParameters.QUERY_RESOURCE_ID, "dummy")
                     .put(QueryContextParameters.QUERY_FAIL_TIME, 0L)
                     .put(QueryContextParameters.SORT_BY_DIMS_FIRST, false)
                     .put(QueryContextParameters.RESULT_AS_ARRAY, true)

@@ -19,8 +19,8 @@
 
 package org.apache.druid.msq.test;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
@@ -29,7 +29,6 @@ import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -80,16 +79,16 @@ public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQuery
   {
     return decoupledExtension.testBuilder()
         .queryContext(
-            ImmutableMap.<String, Object>builder()
-                .put(QueryContexts.CTX_PREPLANNED, true)
+            QueryContext.builder()
+                .put(QueryContextParameters.PREPLANNED, true)
                 .put(
-                    QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
-                    QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+                    QueryContextParameters.PLANNER_STRATEGY,
+                    QueryContexts.PlannerStrategy.DECOUPLED
                 )
-                .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getName(), decoupledExtension)
-                .put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm().toString())
-                .put(QueryContextParameters.DEBUG.getName(), true)
-                .build()
+                .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, true)
+                .put(QueryContextParameters.SQL_JOIN_ALGORITHM, joinAlgorithm())
+                .put(QueryContextParameters.DEBUG, true)
+                .toMap()
         );
   }
 

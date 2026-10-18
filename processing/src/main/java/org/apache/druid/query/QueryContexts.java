@@ -77,6 +77,10 @@ public class QueryContexts
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#DEFAULT_TIMEOUT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_PARALLEL_MERGE} instead.
@@ -123,6 +127,10 @@ public class QueryContexts
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_SUBQUERY_BYTES_KEY = "maxSubqueryBytes";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = "useNestedForUnknownTypeInSubquery";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_JOIN_FILTER_PUSH_DOWN} instead.
@@ -149,7 +157,15 @@ public class QueryContexts
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MAX_NUMERIC_IN_FILTERS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#CURSOR_AUTO_ARRANGE_FILTERS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#CLONE_QUERY_MODE} instead.
@@ -159,20 +175,34 @@ public class QueryContexts
   /**
    * This flag controls whether {@link AggregatorFactory#optimizeForSegment(PerSegmentQueryOptimizationContext)}
    * is used. It is undocumented because its main purpose is to help developers debug issues with the optimizations.
+   *
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#OPTIMIZE_AGGREGATORS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String OPTIMIZE_AGGREGATORS_KEY = "optimizeAggregators";
   /**
    * This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
    * instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
    * data servers.
+   *
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_FILTER_CNF} instead.
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#NUM_RETRIES_ON_MISSING_SEGMENTS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#RETURN_PARTIAL_RESULTS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_CACHE} instead.
@@ -199,9 +229,25 @@ public class QueryContexts
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_SERVICE_NAME = "brokerService";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#IN_SUB_QUERY_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#IN_FUNCTION_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String IN_FUNCTION_THRESHOLD = "inFunctionThreshold";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#IN_FUNCTION_EXPR_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String IN_FUNCTION_EXPR_THRESHOLD = "inFunctionExprThreshold";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_TIME_BOUNDARY_PLANNING} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#POPULATE_CACHE} instead.
@@ -228,19 +274,35 @@ public class QueryContexts
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#UNCOVERED_INTERVALS_LIMIT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   /**
    * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MIN_TOP_N_THRESHOLD} instead.
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#CATALOG_VALIDATION_ENABLED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#ENGINE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String ENGINE = "engine";
   // this flag controls whether the topN engine can use the 'pooled' algorithm when query granularity is set to
   // anything other than 'ALL' and the cardinality + number of aggregators would require more size than is available
   // in the buffers and so must reset the cursor to use multiple passes. This is likely slower than the default
   // behavior of falling back to heap memory, but less dangerous since too large of a query can cause the heap to run
   // out of memory
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_TOPN_MULTI_PASS_POOLED_QUERY_GRANULARITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY = "useTopNMultiPassPooledQueryGranularity";
   /**
    * Context parameter to enable/disable the extended filtered sum rewrite logic.
@@ -255,13 +317,28 @@ public class QueryContexts
    * but may produce incorrect results when the condition never matches (expected 0).
    * This is for testing and can be removed once a correct and high-performance rewrite
    * is implemented.
+   *
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#EXTENDED_FILTERED_SUM_REWRITE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String EXTENDED_FILTERED_SUM_REWRITE_ENABLED = "extendedFilteredSumRewrite";
 
 
   // projection context keys
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#NO_PROJECTIONS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String NO_PROJECTIONS = "noProjections";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#FORCE_PROJECTIONS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String FORCE_PROJECTION = "forceProjections";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#USE_PROJECTION} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_PROJECTION = "useProjection";
 
   /**
@@ -276,21 +353,57 @@ public class QueryContexts
 
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#QUERY_RESOURCE_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String QUERY_RESOURCE_ID = "queryResourceId";
 
   // SQL query context keys
-  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SQL_QUERY_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String CTX_SQL_QUERY_ID = "sqlQueryId";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SQL_STRINGIFY_ARRAYS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // Dart
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#DART_QUERY_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_DART_QUERY_ID = "dartQueryId";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#FULL_REPORT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_FULL_REPORT = "fullReport";
 
   // SQL statement resource specific keys
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#EXECUTION_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_EXECUTION_MODE = "executionMode";
 
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#PLANNER_STRATEGY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
+  /**
+   * @deprecated Use {@link PlannerStrategy#COUPLED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
+  /**
+   * @deprecated Use {@link PlannerStrategy#DECOUPLED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   /**
@@ -311,6 +424,10 @@ public class QueryContexts
   public static final String REALTIME_SEGMENTS_MODE = "realtimeSegmentsMode";
   public static final RealtimeSegmentsMode DEFAULT_REALTIME_SEGMENTS_MODE = RealtimeSegmentsMode.INCLUDE;
 
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#PREPLANNED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_PREPLANNED = "prePlanned";
   public static final boolean DEFAULT_PREPLANNED = true;
 
@@ -331,6 +448,11 @@ public class QueryContexts
   public static final int DEFAULT_VECTOR_SIZE = 512;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
+  /**
+   * @deprecated Use the declared default of {@link org.apache.druid.query.context.QueryContextParameters#DEFAULT_TIMEOUT}
+   * instead, for example {@link QueryContext#getOrDefault(QueryContextParameter)}.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
   public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
@@ -355,6 +477,21 @@ public class QueryContexts
   public static final boolean DEFAULT_OPTIMIZE_AGGREGATORS = true;
   public static final boolean DEFAULT_CTX_FULL_REPORT = false;
 
+
+  /**
+   * Values of {@link org.apache.druid.query.context.QueryContextParameters#PLANNER_STRATEGY}.
+   */
+  public enum PlannerStrategy
+  {
+    COUPLED,
+    DECOUPLED;
+
+    @JsonCreator
+    public static PlannerStrategy fromString(String str)
+    {
+      return PlannerStrategy.valueOf(StringUtils.toUpperCase(str));
+    }
+  }
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

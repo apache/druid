@@ -52,13 +52,11 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
@@ -97,7 +95,6 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
@@ -120,7 +117,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -431,7 +427,7 @@ public class SqlResourceTest extends CalciteTestBase
         // We set uncoveredIntervalsLimit more for the funzies than anything.  The underlying setup of the test doesn't
         // actually look at it or operate with it.  Instead, we set the supplier of the ResponseContext to mock what
         // we would expect from the normal query pipeline
-        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id", "uncoveredIntervalsLimit", 1),
+        ImmutableMap.of(QueryContextParameters.SQL_QUERY_ID.getName(), "id", "uncoveredIntervalsLimit", 1),
         null
     );
 
@@ -576,7 +572,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles"),
+            QueryContext.ofMap(QueryContextParameters.SQL_TIME_ZONE, "America/Los_Angeles"),
             null
         )
     ).rhs;
@@ -594,7 +590,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     // Create a new SqlResource with a DefaultQueryConfig that sets sqlTimeZone
     final DefaultQueryConfig queryConfigWithTimezone = new DefaultQueryConfig(
-        ImmutableMap.of("sqlTimeZone", "America/Los_Angeles")
+        QueryContext.ofMap(QueryContextParameters.SQL_TIME_ZONE, "America/Los_Angeles")
     );
 
     // We need to create a new SqlResource instance with our custom DefaultQueryConfig
@@ -1483,12 +1479,10 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testExplainCountStar() throws Exception
   {
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.CTX_SQL_QUERY_ID,
-        DUMMY_SQL_QUERY_ID,
-        PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
-        "false"
-    );
+    Map<String, Object> queryContext = QueryContext.builder()
+        .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_QUERY_ID)
+        .putRaw(QueryContextParameters.USE_NATIVE_QUERY_EXPLAIN.getName(), "false")
+        .toMap();
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo",
@@ -1508,7 +1502,7 @@ public class SqlResourceTest extends CalciteTestBase
                 StringUtils.format(
                     "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"sqlQueryId\":\"%s\",\"%s\":\"%s\"}}], signature=[{a0:LONG}])\n",
                     DUMMY_SQL_QUERY_ID,
-                    PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
+                    QueryContextParameters.USE_NATIVE_QUERY_EXPLAIN.getName(),
                     "false"
                 ),
                 "RESOURCES",
@@ -1685,7 +1679,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            QueryContext.builder().put(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1).putRaw(BaseQuery.SQL_QUERY_ID, "id").toMap(),
+            QueryContext.builder().put(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1).put(QueryContextParameters.SQL_QUERY_ID, "id").toMap(),
             null
         )
     ).lhs;
@@ -1718,7 +1712,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"),
+            ImmutableMap.of(QueryContextParameters.SQL_QUERY_ID.getName(), "id"),
             null
         ),
         DruidException.Category.INVALID_INPUT.getExpectedStatus()
@@ -1899,7 +1893,7 @@ public class SqlResourceTest extends CalciteTestBase
                   false,
                   false,
                   false,
-                  ImmutableMap.of("priority", -5, BaseQuery.SQL_QUERY_ID, sqlQueryId),
+                  ImmutableMap.of("priority", -5, QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId),
                   null
               ),
               makeRegularUserReq()
@@ -1922,7 +1916,7 @@ public class SqlResourceTest extends CalciteTestBase
                 false,
                 false,
                 false,
-                ImmutableMap.of("priority", -5, BaseQuery.SQL_QUERY_ID, sqlQueryId),
+                ImmutableMap.of("priority", -5, QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId),
                 null
             ),
             makeRegularUserReq()
@@ -1977,12 +1971,8 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryTimeoutException() throws Exception
   {
     final String sqlQueryId = "timeoutTest";
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContextParameters.TIMEOUT.getName(),
-        1,
-        BaseQuery.SQL_QUERY_ID,
-        sqlQueryId
-    );
+    Map<String, Object> queryContext = QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1L,
+                                                           QueryContextParameters.SQL_QUERY_ID, sqlQueryId);
 
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
@@ -2132,7 +2122,7 @@ public class SqlResourceTest extends CalciteTestBase
     Map<String, Object> queryContext = ImmutableMap.of(
         QueryContextParameters.TIMEOUT.getName(),
         "2000'",
-        BaseQuery.SQL_QUERY_ID,
+        QueryContextParameters.SQL_QUERY_ID.getName(),
         sqlQueryId
     );
     final ErrorResponse errorResponse = doPost(
@@ -2195,7 +2185,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assertions.assertEquals(user, stats.get("identity"));
     Assertions.assertTrue(stats.containsKey("sqlQuery/time"));
     Assertions.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
-    Assertions.assertTrue(queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
+    Assertions.assertTrue(queryContext.containsKey(QueryContextParameters.SQL_QUERY_ID.getName()));
     if (success) {
       Assertions.assertTrue(stats.containsKey("sqlQuery/bytes"));
     } else {
@@ -2205,7 +2195,7 @@ public class SqlResourceTest extends CalciteTestBase
 
   private static SqlQuery createSimpleQueryWithId(String sqlQueryId, String sql)
   {
-    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, sqlQueryId), null);
+    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId), null);
   }
 
   private Pair<ErrorResponse, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
@@ -2264,8 +2254,8 @@ public class SqlResourceTest extends CalciteTestBase
   {
     MockHttpServletResponse response = MockHttpServletResponse.forRequest(req);
 
-    final Object explicitQueryId = query.getContext().get("queryId");
-    final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
+    final Object explicitQueryId = query.getContext().get(QueryContextParameters.QUERY_ID.getName());
+    final Object explicitSqlQueryId = query.getContext().get(QueryContextParameters.SQL_QUERY_ID.getName());
     Assertions.assertNull(resource.doPost(query, req));
 
     final Object actualQueryId = response.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
@@ -2290,8 +2280,8 @@ public class SqlResourceTest extends CalciteTestBase
 
   private Response postForSyncResponse(SqlQuery query, MockHttpServletRequest req)
   {
-    final Object explicitQueryId = query.getContext().get("queryId");
-    final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
+    final Object explicitQueryId = query.getContext().get(QueryContextParameters.QUERY_ID.getName());
+    final Object explicitSqlQueryId = query.getContext().get(QueryContextParameters.SQL_QUERY_ID.getName());
 
     final Response response = resource.doPost(query, req);
 

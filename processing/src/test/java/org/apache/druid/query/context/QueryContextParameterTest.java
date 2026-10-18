@@ -24,6 +24,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
@@ -403,5 +404,41 @@ class QueryContextParameterTest
         assertEquals(constant, parameter.parse(jsonForm), description);
       }
     }
+  }
+
+  @Test
+  void testSqlTimeZoneStringifiesNonStringValues()
+  {
+    assertEquals("America/Los_Angeles", QueryContextParameters.SQL_TIME_ZONE.parse("America/Los_Angeles"));
+    assertEquals("8", QueryContextParameters.SQL_TIME_ZONE.parse(8));
+  }
+
+  @Test
+  void testEnumParameterWithCustomLookup()
+  {
+    final QueryContextParameter<JoinAlgorithm> parameter = QueryContextParameters.SQL_JOIN_ALGORITHM;
+
+    assertEquals(JoinAlgorithm.SORT_MERGE, parameter.parse("sortMerge"));
+    assertEquals(JoinAlgorithm.BROADCAST, parameter.parse(JoinAlgorithm.BROADCAST));
+    assertEquals(
+        "Query context parameter [sqlJoinAlgorithm] should be one of [broadcast, sortMerge], but got [SORT_MERGE]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("SORT_MERGE")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1));
+  }
+
+  @Test
+  void testSqlCurrentTimestamp()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameters.SQL_CURRENT_TIMESTAMP;
+    assertEquals("2000-01-01T00:00:00Z", parameter.parse("2000-01-01T00:00:00Z"));
+    // Milliseconds since the epoch are accepted as the equivalent ISO 8601 timestamp
+    assertEquals("2000-01-01T00:00:00.000Z", parameter.parse(946684800000L));
+    assertEquals(
+        "Query context parameter [sqlCurrentTimestamp] should be an ISO 8601 timestamp or milliseconds since the epoch,"
+        + " but got [yesterday]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("yesterday")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5));
   }
 }

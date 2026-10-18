@@ -614,7 +614,7 @@ public class MultiStageQueryContext
 
   public static boolean isDartQuery(final QueryContext queryContext)
   {
-    return queryContext.get(QueryContexts.CTX_DART_QUERY_ID) != null;
+    return queryContext.has(QueryContextParameters.DART_QUERY_ID);
   }
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)

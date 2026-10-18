@@ -53,7 +53,6 @@ import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -1649,7 +1648,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   public void testInsertWithSqlOuterLimit()
   {
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+    context.put(QueryContextParameters.SQL_OUTER_LIMIT.getName(), 100);
 
     testIngestionQuery()
         .context(context)

@@ -32,7 +32,6 @@ import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -418,7 +417,7 @@ public class MultiStageQueryContextTest
   public void testDartSelectDestination()
   {
     final QueryContext context = QueryContext.builder()
-        .putRaw(QueryContexts.CTX_DART_QUERY_ID, "test")
+        .put(QueryContextParameters.DART_QUERY_ID, "test")
         .put(QueryContextParameters.SELECT_DESTINATION, "durablestorage")
         .toContext();
 

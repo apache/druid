@@ -123,7 +123,6 @@ import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -287,9 +286,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       QueryContext.builder()
-                  .putRaw(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
+                  .put(QueryContextParameters.SQL_QUERY_ID, "test-query")
                   .put(QueryContextParameters.FINALIZE, true)
-                  .putRaw(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
+                  .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
                   .put(QueryContextParameters.MAX_NUM_TASKS, 2)
                   .put(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 0L)
                   .put(QueryContextParameters.USER, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity())

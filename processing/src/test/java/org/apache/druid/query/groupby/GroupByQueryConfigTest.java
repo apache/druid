@@ -188,7 +188,7 @@ public class GroupByQueryConfigTest
                     .setDataSource("test")
                     .setInterval(Intervals.of("2000/P1D"))
                     .setGranularity(Granularities.ALL)
-                    .setContext(ImmutableMap.<String, Object>builder().build())
+                    .setContext(QueryContext.builder().toMap())
                     .build()
     );
     Assertions.assertEquals(5_000_000_000L, config2.getMaxOnDiskStorage().getBytes());

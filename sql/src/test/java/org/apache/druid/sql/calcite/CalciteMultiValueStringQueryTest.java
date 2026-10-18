@@ -20,12 +20,12 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
@@ -49,7 +49,6 @@ import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -2138,7 +2137,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 
     final Map<String, Object> queryContext = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+        QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true)
     );
 
     testBuilder()
@@ -2178,7 +2177,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   {
     final Map<String, Object> queryContext = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+        QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true)
     );
 
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()

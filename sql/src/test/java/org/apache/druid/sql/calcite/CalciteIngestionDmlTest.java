@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
@@ -46,7 +45,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
@@ -90,9 +88,7 @@ import java.util.stream.Stream;
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =
-      ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
-                  .build();
+      QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID);
 
   public static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = QueryContext.ofMap(
       QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,

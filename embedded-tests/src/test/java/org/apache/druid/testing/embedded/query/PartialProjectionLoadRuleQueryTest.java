@@ -38,9 +38,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
@@ -459,7 +460,7 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
     try {
       result = msqApis.submitDartSqlAsync(
           sql,
-          Map.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId),
+          QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, sqlQueryId),
           broker
       ).get();
     }

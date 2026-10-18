@@ -34,7 +34,6 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.test.TestDartControllerContextFactoryImpl;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -65,7 +64,7 @@ public class DartControllerContextTest
    * Context returned by {@link #query}. Overrides "maxConcurrentStages".
    */
   private final QueryContext queryContext = QueryContext.builder()
-      .putRaw(QueryContexts.CTX_DART_QUERY_ID, QUERY_ID)
+      .put(QueryContextParameters.DART_QUERY_ID, QUERY_ID)
       .put(QueryContextParameters.MAX_CONCURRENT_STAGES, 3)
       .toContext();
   private MemoryIntrospector memoryIntrospector;

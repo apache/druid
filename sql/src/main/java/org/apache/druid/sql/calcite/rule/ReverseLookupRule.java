@@ -77,6 +77,18 @@ import java.util.Set;
 public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
 {
   /**
+   * @deprecated Use {@link QueryContextParameters#SQL_REVERSE_LOOKUP_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String CTX_THRESHOLD = "sqlReverseLookupThreshold";
+
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SQL_REVERSE_LOOKUP_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final int DEFAULT_THRESHOLD = 10000;
+
+  /**
    * Context parameter for tests, to allow us to confirm that this rule doesn't do too many calls to
    * {@link InDimFilter#optimize}. This is important because certain lookup implementations, most
    * prominently {@link MapLookupExtractor}, do a full iteration of the map for each call to
@@ -85,16 +97,6 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_OPTIMIZE_COUNT = "maxOptimizeCountForDruidReverseLookupRule";
-
-  /**
-   * Context parameter to prevent creating too-large IN filters as a result of reverse lookups.
-   */
-  public static final String CTX_THRESHOLD = "sqlReverseLookupThreshold";
-
-  /**
-   * Context parameter for tests, to allow us to force the case where we avoid creating a bunch of ORs.
-   */
-  public static final int DEFAULT_THRESHOLD = 10000;
 
   private final PlannerContext plannerContext;
 
@@ -118,7 +120,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
     final int maxInSize =
         Math.min(
             plannerContext.queryContext().getInSubQueryThreshold(),
-            plannerContext.queryContext().getInt(CTX_THRESHOLD, DEFAULT_THRESHOLD)
+            plannerContext.queryContext().getOrDefault(QueryContextParameters.SQL_REVERSE_LOOKUP_THRESHOLD)
         );
     final ReverseLookupShuttle reverseLookupShuttle = new ReverseLookupShuttle(
         plannerContext,
