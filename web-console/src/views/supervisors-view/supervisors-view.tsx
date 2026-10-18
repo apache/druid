@@ -105,7 +105,6 @@ const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   'Status',
   'Configured tasks',
   { text: 'Running tasks', label: 'status API' },
-  { text: 'Partitions', label: 'status API' },
   { text: 'Details', label: 'status API' },
   { text: 'Stats', label: 'stats API' },
   { text: 'Recent errors', label: 'status API' },
@@ -395,7 +394,7 @@ export class SupervisorsView extends React.PureComponent<
         }
 
         if (capabilities.hasOverlordAccess()) {
-          if (visibleColumns.shown('Running tasks', 'Partitions', 'Details', 'Recent errors')) {
+          if (visibleColumns.shown('Running tasks', 'Details', 'Recent errors')) {
             auxiliaryQueries.push(
               ...supervisors.map(
                 (supervisor): AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo> =>
@@ -1051,26 +1050,6 @@ export class SupervisorsView extends React.PureComponent<
           show: visibleColumns.shown('Running tasks'),
         },
         {
-          Header: 'Partitions',
-          id: 'partitions',
-          accessor: 'supervisor_id',
-          width: 110,
-          filterable: false,
-          sortable: false,
-          className: 'padded',
-          show: visibleColumns.shown('Partitions'),
-          Cell: ({ value, original }) => {
-            const status = useContext(StatusContext);
-            if (!oneOf(original.type, 'kafka', 'kinesis', 'rabbit')) return null;
-            const partitions = status[value]?.payload?.partitions;
-            return isNumberLike(partitions) ? (
-              <span data-tooltip="Number of partitions in the stream">
-                {formatInteger(partitions)}
-              </span>
-            ) : null;
-          },
-        },
-        {
           Header: 'Details',
           id: 'details',
           accessor: 'supervisor_id',
@@ -1085,11 +1064,22 @@ export class SupervisorsView extends React.PureComponent<
               status[value]?.payload;
             if (oneOf(original.type, 'kafka', 'kinesis', 'rabbit')) {
               const aggregateLag = supervisorStatusPayload?.aggregateLag;
-              return isNumberLike(aggregateLag) ? (
-                <span data-tooltip="Aggregate lag across all tasks">{`Lag: ${formatInteger(
-                  aggregateLag,
-                )}`}</span>
-              ) : null;
+              const partitions = supervisorStatusPayload?.partitions;
+              if (!isNumberLike(aggregateLag) && !isNumberLike(partitions)) return null;
+              return (
+                <>
+                  {isNumberLike(aggregateLag) && (
+                    <div data-tooltip="Aggregate lag across all tasks">{`Lag: ${formatInteger(
+                      aggregateLag,
+                    )}`}</div>
+                  )}
+                  {isNumberLike(partitions) && (
+                    <div data-tooltip="Number of partitions in the stream">{`Partitions: ${formatInteger(
+                      partitions,
+                    )}`}</div>
+                  )}
+                </>
+              );
             } else if (original.type === 'autocompact') {
               const compactionConfig = original.spec?.spec as CompactionConfig | undefined;
               if (!supervisorStatusPayload || !compactionConfig) return null;
