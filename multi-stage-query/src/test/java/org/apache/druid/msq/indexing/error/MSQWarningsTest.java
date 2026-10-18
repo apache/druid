@@ -417,11 +417,10 @@ public class MSQWarningsTest extends MSQTestBase
   @Test
   public void testSuccessWhenModeIsOverridden()
   {
-    final Map<String, Object> userContext =
-        ImmutableMap.<String, Object>builder()
-                    .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, -1)
-                    .put(MultiStageQueryContext.CTX_MSQ_MODE, "strict")
-                    .build();
+    final Map<String, Object> userContext = Map.of(
+        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, -1,
+        MultiStageQueryContext.CTX_MSQ_MODE, "strict"
+    );
 
     testSelectQuery().setSql("SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"

@@ -33,7 +33,7 @@ import org.apache.druid.msq.logical.stages.AbstractShuffleStage;
 import org.apache.druid.msq.logical.stages.LogicalStage;
 import org.apache.druid.msq.querykit.scan.ScanQueryStageProcessor;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
@@ -155,7 +155,7 @@ public class StageMaker
 
   private String getIdForBuilder()
   {
-    String dartQueryId = plannerContext.queryContext().getString(QueryContexts.CTX_DART_QUERY_ID);
+    final String dartQueryId = plannerContext.queryContext().get(QueryContextParameters.DART_QUERY_ID);
     if (dartQueryId != null) {
       return dartQueryId;
     }

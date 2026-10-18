@@ -30,6 +30,8 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -174,12 +176,13 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   /**
-   * Validates that {@link PlannerContext#CTX_SQL_JOIN_ALGORITHM} is {@link JoinAlgorithm#BROADCAST}. This is the
+   * Validates that {@link QueryContextParameters#SQL_JOIN_ALGORITHM} is {@link JoinAlgorithm#BROADCAST}. This is the
    * only join algorithm supported by native queries.
    */
   private static void validateJoinAlgorithm(final Map<String, Object> queryContext)
   {
-    final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+    final JoinAlgorithm joinAlgorithm =
+        QueryContext.of(queryContext).getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
 
     if (joinAlgorithm != JoinAlgorithm.BROADCAST) {
       throw InvalidSqlInput.exception("Join algorithm [%s] is not supported by engine [%s]", joinAlgorithm, NAME);
