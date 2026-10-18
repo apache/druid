@@ -35,6 +35,7 @@ import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -328,8 +329,8 @@ public class GroupByQueryEngine
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : granularizer.getBucketStart();
       this.allSingleValueDims = allSingleValueDims;
-      this.allowMultiValueGrouping = query.context().getBoolean(
-          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+      this.allowMultiValueGrouping = query.context().getOrDefault(
+          QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING,
           true
       );
     }

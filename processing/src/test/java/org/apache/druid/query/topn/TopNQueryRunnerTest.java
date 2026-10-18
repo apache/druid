@@ -6312,7 +6312,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
             .aggregators(commonAggregators)
             .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
-            .context(ImmutableMap.of("doAggregateTopNMetricFirst", true))
+            .context(QueryContext.ofMap(QueryContextParameters.DO_AGGREGATE_TOP_N_METRIC_FIRST, true))
             .build();
 
 
@@ -6366,7 +6366,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             new LongFirstAggregatorFactory("first", "index", null),
             new LongLastAggregatorFactory("last", "index", null)
         )
-        .context(ImmutableMap.of("doAggregateTopNMetricFirst", true))
+        .context(QueryContext.ofMap(QueryContextParameters.DO_AGGREGATE_TOP_N_METRIC_FIRST, true))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(

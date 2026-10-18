@@ -20,7 +20,11 @@
 package org.apache.druid.query.context;
 
 import com.google.common.base.Suppliers;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BadQueryContextException;
@@ -28,13 +32,16 @@ import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
 import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
 import org.apache.druid.query.context.docs.ParameterDocumentation.StatementType;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.segment.loading.AcquireMode;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -54,6 +61,16 @@ import java.util.function.Supplier;
 /// {@link org.apache.druid.query.context.docs.ParameterDocumentationGenerator} generates a table row
 /// for every public parameter wherever a managed document has a marker for it.
 ///
+/// Descriptors are grouped into the sections below, each wrapped in `// region` and `// endregion` comments.
+/// IDEs can fold the sections and list them for navigation, such as IntelliJ's Navigate > Custom Folding.
+///
+/// - General query parameters
+/// - SQL planner parameters
+/// - GroupBy query parameters
+/// - Scan, search and timeseries query parameters
+/// - MSQ and Dart parameters
+/// - Other query context parameters
+///
 /// When adding or changing a descriptor, including introducing a new parameter, run this command
 /// from the repository root to regenerate the checked-in documentation. The default Maven mode
 /// verifies that the generated documentation is up to date.
@@ -63,6 +80,9 @@ import java.util.function.Supplier;
 /// ```
 public final class QueryContextParameters
 {
+  // region General query parameters
+  //
+  // Parameters that apply across query types. Public ones are documented in query-context-reference.md.
   public static final QueryContextParameter<String> QUERY_ID = stringParameter("queryId")
       .since("0.6.62").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
       .description(
@@ -88,7 +108,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Integer> PRIORITY = integerParameter("priority")
       .since("0.5.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-      .defaultValue(QueryContexts.DEFAULT_PRIORITY)
+      .defaultValue(0)
       .description(
           """
           Query priority.
@@ -175,7 +195,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> ENABLE_PARALLEL_MERGE =
       booleanParameter("enableParallelMerge")
           .since("0.17.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_ENABLE_PARALLEL_MERGE)
+          .defaultValue(true)
           .description(
               """
               Enable parallel result merging on the Broker.
@@ -224,7 +244,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<QueryContexts.Vectorize> VECTORIZE =
       enumParameter("vectorize", QueryContexts.Vectorize.class)
           .since("0.16.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_VECTORIZE)
+          .defaultValue(QueryContexts.Vectorize.TRUE)
           .description(
               """
               Enables or disables vectorized query execution.
@@ -238,7 +258,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<QueryContexts.Vectorize> VECTORIZE_VIRTUAL_COLUMNS =
       enumParameter("vectorizeVirtualColumns", QueryContexts.Vectorize.class)
           .since("0.20.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_VECTORIZE_VIRTUAL_COLUMN)
+          .defaultValue(QueryContexts.Vectorize.TRUE)
           .description(
               """
               Enables or disables vectorized query processing of queries with virtual columns, layered on top of `vectorize` (`vectorize` must also be set to true for a query to utilize vectorization).
@@ -251,7 +271,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Integer> VECTOR_SIZE = integerParameter("vectorSize")
       .since("0.16.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-      .defaultValue(QueryContexts.DEFAULT_VECTOR_SIZE)
+      .defaultValue(512)
       .description(
           """
           Sets the row batching size for a particular query.
@@ -307,7 +327,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_FILTER_PUSH_DOWN =
       booleanParameter("enableJoinFilterPushDown")
           .since("0.18.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN)
+          .defaultValue(true)
           .description(
               """
               Controls whether a join query will attempt filter push down, which reduces the number of rows that have to be compared in a join operation.
@@ -318,7 +338,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_FILTER_REWRITE =
       booleanParameter("enableJoinFilterRewrite")
           .since("0.18.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE)
+          .defaultValue(true)
           .description(
               """
               Controls whether filter clauses that reference non-base table columns will be rewritten into filters on base table columns.
@@ -329,7 +349,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS =
       booleanParameter("enableJoinFilterRewriteValueColumnFilters")
           .since("0.18.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS)
+          .defaultValue(false)
           .description(
               """
               Controls whether Druid rewrites non-base table filters on non-key columns in the non-base table.
@@ -341,7 +361,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> ENABLE_REWRITE_JOIN_TO_FILTER =
       booleanParameter("enableRewriteJoinToFilter")
           .since("0.22.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER)
+          .defaultValue(true)
           .description(
               """
               Controls whether a join can be pushed partial or fully to the base table as a filter at runtime.
@@ -352,7 +372,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Long> JOIN_FILTER_REWRITE_MAX_SIZE =
       longParameter("joinFilterRewriteMaxSize")
           .since("0.18.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE)
+          .defaultValue(10000L)
           .description(
               """
               The maximum size of the correlated value set used for filter rewrites.
@@ -377,7 +397,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<CloneQueryMode> CLONE_QUERY_MODE =
       enumParameter("cloneQueryMode", CloneQueryMode.class)
           .since("34.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_CLONE_QUERY_MODE)
+          .defaultValue(CloneQueryMode.EXCLUDECLONES)
           .description(
               """
               Indicates whether clone Historicals should be queried by brokers.
@@ -396,7 +416,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> OPTIMIZE_AGGREGATORS =
       booleanParameter("optimizeAggregators")
           .since("38.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .defaultValue(QueryContexts.DEFAULT_OPTIMIZE_AGGREGATORS)
+          .defaultValue(true)
           .description(
               """
               Whether Druid applies per-segment aggregator optimizations.
@@ -408,7 +428,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> USE_FILTER_CNF = booleanParameter("useFilterCNF")
       .since("0.19.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-      .defaultValue(QueryContexts.DEFAULT_USE_FILTER_CNF)
+      .defaultValue(false)
       .description(
           """
           If true, Druid will attempt to convert the query filter to Conjunctive Normal Form (CNF).
@@ -447,7 +467,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> USE_CACHE = booleanParameter("useCache")
       .since("0.1.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-      .defaultValue(QueryContexts.DEFAULT_USE_CACHE)
+      .defaultValue(true)
       .description(
           """
           Flag indicating whether to leverage the query cache for this query.
@@ -460,7 +480,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> SECONDARY_PARTITION_PRUNING =
       booleanParameter("secondaryPartitionPruning")
           .since("0.20.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_SECONDARY_PARTITION_PRUNING)
+          .defaultValue(true)
           .description(
               """
               Enable secondary partition pruning on the Broker.
@@ -471,7 +491,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> DEBUG = booleanParameter("debug")
       .since("0.22.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-      .defaultValue(QueryContexts.DEFAULT_ENABLE_DEBUG)
+      .defaultValue(false)
       .description(
           """
           Flag indicating whether to enable debugging outputs for the query.
@@ -495,7 +515,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> BY_SEGMENT = booleanParameter("bySegment")
       .since("0.1.0").query(Query.JSON).engine(Engine.NATIVE)
-      .defaultValue(QueryContexts.DEFAULT_BY_SEGMENT)
+      .defaultValue(false)
       .description(
           """
           Native queries only.
@@ -520,7 +540,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> POPULATE_CACHE =
       booleanParameter("populateCache")
           .since("0.1.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_POPULATE_CACHE)
+          .defaultValue(true)
           .description(
               """
               Flag indicating whether to save the results of the query to the query cache.
@@ -534,7 +554,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> POPULATE_RESULT_LEVEL_CACHE =
       booleanParameter("populateResultLevelCache")
           .since("0.13.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_POPULATE_RESULTLEVEL_CACHE)
+          .defaultValue(true)
           .description(
               """
               Flag indicating whether to save the results of the query to the result level cache.
@@ -562,7 +582,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Integer> UNCOVERED_INTERVALS_LIMIT =
       integerParameter("uncoveredIntervalsLimit")
           .since("0.9.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_UNCOVERED_INTERVALS_LIMIT)
+          .defaultValue(0)
           .description(
               """
               Maximum number of query intervals not covered by any segment that the Broker reports in the
@@ -591,7 +611,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<String> ENGINE = stringParameter("engine")
       .since("34.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.DART)
-      .defaultValue(QueryContexts.DEFAULT_ENGINE)
+      .defaultValue("native")
       .description(
           """
           SQL engine that runs the query through the `/druid/v2/sql` endpoint.
@@ -670,8 +690,9 @@ public final class QueryContextParameters
           .visibility(Visibility.SYSTEM)
           .build();
 
-  //
-  // SQL planner parameters.
+  // endregion
+
+  // region SQL planner parameters
   //
   // The descriptors below are read by the SQL planner: PlannerContext, PlannerConfig, the planner rules and the SQL
   // validator. Descriptors that apply only to SQL are documented in sql-query-context.md.
@@ -940,7 +961,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT =
       booleanParameter("enableJoinLeftTableScanDirect")
           .since("0.22.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .defaultValue(QueryContexts.DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT)
+          .defaultValue(false)
           .description(
               """
               This parameter applies to queries with joins.
@@ -954,7 +975,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Integer> IN_SUB_QUERY_THRESHOLD =
       integerParameter("inSubQueryThreshold")
           .since("0.23.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .defaultValue(QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD)
+          .defaultValue(Integer.MAX_VALUE)
           .description(
               """
               At or beyond this threshold number of values, Druid converts SQL `IN` to `JOIN` on an inline table.
@@ -983,7 +1004,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Integer> IN_FUNCTION_THRESHOLD =
       integerParameter("inFunctionThreshold")
           .since("31.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .defaultValue(QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD)
+          .defaultValue(100)
           .description(
               """
               At or beyond this threshold number of values, Druid converts SQL `IN` to [`SCALAR_IN_ARRAY`](sql-functions.md#scalar_in_array).
@@ -997,7 +1018,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Integer> IN_FUNCTION_EXPR_THRESHOLD =
       integerParameter("inFunctionExprThreshold")
           .since("31.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .defaultValue(QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD)
+          .defaultValue(2)
           .description(
               """
               At or beyond this threshold number of values, SQL `IN` is eligible for execution using the native function `scalar_in_array` rather than an <code>&#124;&#124;</code> of `==`, even if the number of values is below `inFunctionThreshold`.
@@ -1011,7 +1032,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> ENABLE_TIME_BOUNDARY_PLANNING =
       booleanParameter("enableTimeBoundaryPlanning")
           .since("0.24.0").query(Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING)
+          .defaultValue(false)
           .description(
               """
               If `true`, Druid converts SQL queries to [time boundary queries](timeboundaryquery.md) wherever possible.
@@ -1023,7 +1044,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> CATALOG_VALIDATION_ENABLED =
       booleanParameter("catalogValidationEnabled")
           .since("31.0.0").query(Query.SQL).engine(Engine.MSQ)
-          .defaultValue(QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED)
+          .defaultValue(true)
           .description(
               """
               If false, Druid skips the catalog-specific validation of `INSERT` and `REPLACE` statements that write to
@@ -1035,7 +1056,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<Boolean> EXTENDED_FILTERED_SUM_REWRITE =
       booleanParameter("extendedFilteredSumRewrite")
           .since("32.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .defaultValue(QueryContexts.DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED)
+          .defaultValue(true)
           .description(
               """
               Whether the SQL planner rewrites `SUM(CASE WHEN cond THEN col ELSE 0 END)` to `SUM(col) FILTER (WHERE cond)`.
@@ -1059,25 +1080,1231 @@ public final class QueryContextParameters
           .visibility(Visibility.HIDDEN)
           .build();
 
-  //
-  // GroupBy query parameters.
+  public static final QueryContextParameter<Boolean> COMPUTE_INNER_JOIN_COST_AS_FILTER =
+      booleanParameter("computeInnerJoinCostAsFilter")
+          .since("0.22.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Whether the SQL planner computes the cost of an inner join as if it were a filter on the left input.
+              Overrides `druid.sql.planner.computeInnerJoinCostAsFilter`.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.computeInnerJoinCostAsFilter"))
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FORCE_EXPRESSION_VIRTUAL_COLUMNS =
+      booleanParameter("forceExpressionVirtualColumns")
+          .since("24.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              If true, the SQL planner always generates virtual columns of type `expression` instead of optimized
+              special-purpose virtual columns.
+              Overrides `druid.sql.planner.forceExpressionVirtualColumns`.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.forceExpressionVirtualColumns"))
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> REQUIRE_TIME_CONDITION =
+      booleanParameter("requireTimeCondition")
+          .since("34.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              If true, SQL queries without a filter condition on the `__time` column fail, so that every generated
+              native query has user-specified intervals.
+              Overrides `druid.sql.planner.requireTimeCondition`.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.requireTimeCondition"))
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE =
+      integerParameter("maxOptimizeCountForDruidReverseLookupRule")
+          .since("29.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(Integer.MAX_VALUE)
+          .description(
+              """
+              Maximum number of times the reverse-lookup rule optimizes `IN` filters while planning a query.
+              Intended for testing that the rule doesn't iterate lookups more often than necessary.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<String> SQL_INSERT_SEGMENT_GRANULARITY =
+      stringParameter("sqlInsertSegmentGranularity")
+          .since("0.23.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              JSON-serialized segment granularity of an `INSERT` or `REPLACE` statement.
+              The SQL planner sets it from the `PARTITIONED BY` clause.
+              """
+          )
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> SQL_INSERT_QUERY_GRANULARITY =
+      stringParameter("sqlInsertQueryGranularity")
+          .since("31.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              JSON-serialized query granularity that the MSQ engine applies to the segments it generates.
+              Compaction with the MSQ engine sets it from the granularity spec.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<String> SQL_REPLACE_TIME_CHUNKS =
+      stringParameter("sqlReplaceTimeChunks")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              Comma-separated list of the intervals, or `all`, that a `REPLACE` statement overwrites.
+              The SQL planner sets it from the `OVERWRITE` clause.
+              """
+          )
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Long> APPROX_QUANTILE_DS_MAX_STREAM_LENGTH =
+      longParameter("approxQuantileDsMaxStreamLength")
+          .since("0.22.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Maximum stream length of the sketches that the `APPROX_QUANTILE_DS` and `DS_QUANTILES_SKETCH` SQL functions build.
+              Increase it if a query fails because a sketch reaches its maximum stream length.
+              """
+          )
+          .defaultDescription("`1000000000`")
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  // endregion
+
+  // region GroupBy query parameters
   //
   // These descriptors are read by the groupBy engine. Public ones are documented in groupbyquery.md.
+  public static final QueryContextParameter<HumanReadableBytes> MAX_ON_DISK_STORAGE =
+      humanReadableBytesParameter("maxOnDiskStorage")
+          .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.defaultOnDiskStorage"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
 
-  //
-  // Scan, search and timeseries query parameters.
+  public static final QueryContextParameter<Integer> MAX_SPILL_FILE_COUNT =
+      integerParameter("maxSpillFileCount")
+          .since("37.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.maxSpillFileCount"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<HumanReadableBytes> MIN_SPILL_FILE_SIZE =
+      humanReadableBytesParameter("minSpillFileSize")
+          .since("38.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.minSpillFileSize"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Boolean> GROUP_BY_IS_SINGLE_THREADED =
+      booleanParameter("groupByIsSingleThreaded")
+          .since("0.9.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("Overrides the value of `druid.query.groupBy.singleThreaded` for this query.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.singleThreaded"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Integer> BUFFER_GROUPER_INITIAL_BUCKETS =
+      integerParameter("bufferGrouperInitialBuckets")
+          .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.bufferGrouperInitialBuckets"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Float> BUFFER_GROUPER_MAX_LOAD_FACTOR =
+      floatParameter("bufferGrouperMaxLoadFactor")
+          .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.bufferGrouperMaxLoadFactor"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FORCE_HASH_AGGREGATION =
+      booleanParameter("forceHashAggregation")
+          .since("0.11.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("Overrides the value of `druid.query.groupBy.forceHashAggregation`.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.forceHashAggregation"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Integer> INTERMEDIATE_COMBINE_DEGREE =
+      integerParameter("intermediateCombineDegree")
+          .since("0.12.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("Overrides the value of `druid.query.groupBy.intermediateCombineDegree`.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.intermediateCombineDegree"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Integer> NUM_PARALLEL_COMBINE_THREADS =
+      integerParameter("numParallelCombineThreads")
+          .since("0.12.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("Overrides the value of `druid.query.groupBy.numParallelCombineThreads`.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.numParallelCombineThreads"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<HumanReadableBytes> MAX_SELECTOR_DICTIONARY_SIZE =
+      humanReadableBytesParameter("maxSelectorDictionarySize")
+          .since("0.23.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("Overrides the value of `druid.query.groupBy.maxSelectorDictionarySize`.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.maxSelectorDictionarySize"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<HumanReadableBytes> MAX_MERGING_DICTIONARY_SIZE =
+      humanReadableBytesParameter("maxMergingDictionarySize")
+          .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.maxMergingDictionarySize"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Boolean> MERGE_THREAD_LOCAL =
+      booleanParameter("mergeThreadLocal")
+          .since("24.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              Whether merge buffers should always be split into thread-local buffers.
+              Setting this to `true` reduces thread contention, but uses memory less efficiently.
+              This tradeoff is beneficial when memory is plentiful.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.mergeThreadLocal"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Boolean> SORT_BY_DIMS_FIRST =
+      booleanParameter("sortByDimsFirst")
+          .since("0.10.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description("Sort the results first by dimension values and then by timestamp.")
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FORCE_LIMIT_PUSH_DOWN =
+      booleanParameter("forceLimitPushDown")
+          .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes.
+              When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case.
+              Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.forcePushDownLimit"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Boolean> APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT =
+      booleanParameter("applyLimitPushDownToSegment")
+          .since("0.17.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan.
+              This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.applyLimitPushDownToSegment"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Boolean> GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING =
+      booleanParameter("groupByEnableMultiValueUnnesting")
+          .since("0.23.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key.
+              'true' indicates multi-value grouping keys are unnested.
+              'false' returns an error if a multi value column is found as part of the grouping key.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.enableMultiValueUnnesting"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<DeferExpressionDimensions> DEFER_EXPRESSION_DIMENSIONS =
+      enumParameter("deferExpressionDimensions", DeferExpressionDimensions.class, DeferExpressionDimensions::fromString)
+          .since("31.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              When an entry in `dimensions` references an `expression` virtual column, this property influences whether expression evaluation is deferred from cursor processing to the merge step.
+              Options are:<ul><li>`fixedWidth`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string).</li><li>`fixedWidthNonNumeric`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string), unless the expression output and all inputs are numeric.</li><li>`singleString`: Defer string-typed expressions with a single dictionary-encoded string input.</li><li>`always`: Defer all expressions. May require building dictionaries for expression inputs.</li></ul><br />These properties only take effect when the `groupBy` query can be vectorized.
+              Non-vectorized queries only defer string-typed expressions of single string inputs.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.deferExpressionDimensions"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Boolean> APPLY_LIMIT_PUSH_DOWN =
+      booleanParameter("applyLimitPushDown")
+          .since("0.11.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(true)
+          .description(
+              """
+              Whether a groupBy query with a limit may push the limit down to the merge buffers of data servers.
+              Set to `false` to switch off limit push down.
+              The Broker sets this parameter on the queries it sends to data servers to tell them whether it applied limit push down.
+              """
+          )
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> RESULT_AS_ARRAY =
+      booleanParameter("resultAsArray")
+          .since("0.17.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description(
+              """
+              If true, groupBy results are returned as arrays instead of maps.
+              """
+          )
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
+  public static final QueryContextParameter<Integer> BUFFER_GROUPER_MAX_SIZE =
+      integerParameter("bufferGrouperMaxSize")
+          .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Maximum number of entries in the off-heap hash table used for grouping results.
+              Can only lower `druid.query.groupBy.bufferGrouperMaxSize`.
+              Mainly used by tests to force spilling.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.bufferGrouperMaxSize"))
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FORCE_PUSH_DOWN_NESTED_QUERY =
+      booleanParameter("forcePushDownNestedQuery")
+          .since("0.17.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              If true, the Broker pushes the outer query of a nested groupBy query down to data servers together with the inner query, and merges the results.
+              Overrides `druid.query.groupBy.forcePushDownNestedQuery`.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.forcePushDownNestedQuery"))
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> EXECUTING_NESTED_QUERY =
+      booleanParameter("executingNestedQuery")
+          .since("0.17.0").query(Query.JSON).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description(
+              """
+              Set on a groupBy query whose outer query was pushed down to data servers, so that data servers don't apply post-aggregators to the partial results that they return to the Broker.
+              """
+          )
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Boolean> GROUP_BY_OUTERMOST =
+      booleanParameter("groupByOutermost")
+          .since("0.10.0").query(Query.JSON).engine(Engine.NATIVE)
+          .defaultValue(true)
+          .description(
+              """
+              Whether a groupBy query is the outermost one, which applies post-aggregators, having filters and limits.
+              The Broker sets it to false on the queries it sends to data servers.
+              """
+          )
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> FUDGE_TIMESTAMP =
+      stringParameter("fudgeTimestamp")
+          .since("0.9.2").query(Query.JSON).engine(Engine.NATIVE)
+          .description(
+              """
+              Timestamp in milliseconds since the epoch that the Broker passes to data servers so that every result row of a groupBy query with a universal timestamp, such as one with `all` granularity, has the same timestamp.
+              """
+          )
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Boolean> MERGE_RUNNERS_USING_CHAINED_EXECUTION =
+      booleanParameter("mergeRunnersUsingChainedExecution")
+          .since("0.9.2").query(Query.JSON).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description(
+              """
+              Set by the groupBy merging runner on nested merge calls, such as those on realtime servers, so that only the outermost merge uses parallel execution.
+              """
+          )
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Boolean> HAS_DROPPED_DIMENSIONS =
+      booleanParameter("hasDroppedDimensions")
+          .since("33.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description(
+              """
+              Whether the SQL planner dropped grouping dimensions from a groupBy query, such as for `GROUP BY 'constant'`.
+              Used to determine whether the query returns a summary row when there is no input.
+              """
+          )
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> TIMESTAMP_RESULT_FIELD =
+      stringParameter("timestampResultField")
+          .since("0.19.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Name of the output column that the SQL planner maps to the query timestamp, such as one produced by `TIME_FLOOR(__time, ...)`, so that the query granularity can compute it instead of a dimension.
+              """
+          )
+          .queryType(QueryType.GROUP_BY, QueryType.TIMESERIES)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> TIMESTAMP_RESULT_FIELD_GRANULARITY =
+      stringParameter("timestampResultFieldGranularity")
+          .since("0.22.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("JSON-serialized granularity of the output column named by `timestampResultField`.")
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Integer> TIMESTAMP_RESULT_FIELD_IN_ORIGINAL_DIMENSIONS =
+      integerParameter("timestampResultFieldInOriginalDimensions")
+          .since("0.22.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("Position of the output column named by `timestampResultField` in the original groupBy dimensions.")
+          .queryType(QueryType.GROUP_BY)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  // endregion
+
+  // region Scan, search and timeseries query parameters
   //
   // Public ones are documented in scan-query.md and searchquery.md.
+  public static final QueryContextParameter<Integer> MAX_SEGMENT_PARTITIONS_ORDERED_IN_MEMORY =
+      integerParameter("maxSegmentPartitionsOrderedInMemory")
+          .since("0.15.0-incubating").query(Query.JSON).engine(Engine.NATIVE)
+          .constraint(Range.closedRange(1, Integer.MAX_VALUE))
+          .description(
+              """
+              The maximum number of segments scanned per historical when time ordering is used.
+              Overrides the identically named config.
+              """
+          )
+          .defaultValue(DefaultValue.fromProperty("druid.query.scan.maxSegmentPartitionsOrderedInMemory"))
+          .queryType(QueryType.SCAN)
+          .build();
 
-  //
-  // MSQ and Dart parameters.
+  public static final QueryContextParameter<Boolean> SCAN_OUTERMOST =
+      booleanParameter("scanOutermost")
+          .since("0.15.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(true)
+          .description(
+              """
+              Whether a scan query is running on the outermost process, that is, the process the query was sent to.
+              Druid sets it to false for the inner queries so that only the outermost process applies time ordering and limits.
+              """
+          )
+          .queryType(QueryType.SCAN)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> SEARCH_STRATEGY =
+      stringParameter("searchStrategy")
+          .since("0.10.0").query(Query.JSON).engine(Engine.NATIVE)
+          .description("Overrides the value of `druid.query.search.searchStrategy` for this query.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.search.searchStrategy"))
+          .queryType(QueryType.SEARCH)
+          .build();
+
+  public static final QueryContextParameter<Boolean> GRAND_TOTAL =
+      booleanParameter("grandTotal")
+          .since("0.13.0-incubating").query(Query.JSON).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description(
+              """
+              If true, a timeseries query returns an additional row with the totals of all aggregations as its last row.
+              """
+          )
+          .queryType(QueryType.TIMESERIES)
+          .build();
+
+  public static final QueryContextParameter<Boolean> DO_AGGREGATE_TOP_N_METRIC_FIRST =
+      booleanParameter("doAggregateTopNMetricFirst")
+          .since("0.6.112").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description(
+              """
+              If true, the TopN engine uses the two-pass algorithm that aggregates the ordering metric first,
+              and then aggregates the remaining metrics only for the top values.
+              """
+          )
+          .queryType(QueryType.TOP_N)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> UNRAVEL =
+      booleanParameter("unravel")
+          .since("26.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(true)
+          .description(
+              """
+              Whether a window operator query converts its rows and columns results to rows or frames.
+              Druid sets it to false for the inner queries so that only the outermost query converts the results.
+              """
+          )
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<ResultSerializationMode> SERIALIZATION =
+      enumParameter("serialization", ResultSerializationMode.class)
+          .since("32.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description(
+              """
+              Format, `rows` or `frames`, in which the Broker materializes the results of a subquery.
+              The Broker sets it for each subquery that it inlines.
+              """
+          )
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  // endregion
+
+  // region MSQ and Dart parameters
   //
   // These descriptors are read by the MSQ task engine and Dart. Public ones are documented in
   // multi-stage-query/reference.md and dart.md. Values whose types live in the multi-stage-query module are declared as
   // strings and converted to those types where they are read.
+  public static final QueryContextParameter<Integer> MAX_NUM_TASKS =
+      integerParameter("maxNumTasks")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(2)
+          .description(
+              """
+              The maximum total number of tasks to launch, including the controller task.
+              The lowest possible value for this setting is 2: one controller and one worker.
+              All tasks must be able to launch simultaneously.
+              If they cannot, the query returns a `TaskStartTimeout` error code after approximately 10 minutes.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
 
-  //
-  // Other query context parameters.
+  public static final QueryContextParameter<String> TASK_ASSIGNMENT_STRATEGY =
+      stringParameter("taskAssignment")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue("max")
+          .description(
+              """
+              Determines how many tasks to use.
+              Possible values include: <ul><li>`max`: Uses as many tasks as possible, up to `maxNumTasks`.</li><li>`auto`: When file sizes can be determined through directory listing (for example: local files, S3, GCS, HDFS) uses as few tasks as possible without exceeding 512 MiB or 10,000 files per task, unless exceeding these limits is necessary to stay within `maxNumTasks`.
+              When calculating the size of files, the weighted size is used, which considers the file format and compression format used if any.
+              When file sizes cannot be determined through directory listing (for example: http), behaves the same as `max`.</li></ul>
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FINALIZE_AGGREGATIONS =
+      booleanParameter("finalizeAggregations")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue(true)
+          .description(
+              """
+              Determines the type of aggregation to return.
+              If true, Druid finalizes the results of complex aggregations that directly appear in query results.
+              If false, Druid returns the aggregation's intermediate type rather than finalized type.
+              This parameter is useful during ingestion, where it enables storing sketches directly in Druid tables.
+              For more information about aggregations, see [SQL aggregation functions](../querying/sql-aggregations.md).
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<String> ARRAY_INGEST_MODE =
+      stringParameter("arrayIngestMode")
+          .since("28.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue("array")
+          .description(
+              """
+              Controls how ARRAY type values are stored in Druid segments.
+              When set to `array` (the default, recommended for SQL compliance), Druid will store all ARRAY typed values in [ARRAY typed columns](../querying/arrays.md), and supports storing both VARCHAR and numeric typed arrays.
+              When set to `mvd` (for backwards compatibility), Druid only supports VARCHAR typed arrays, and will store them as [multi-value string columns](../querying/multi-value-dimensions.md).
+              See [`arrayIngestMode`] in the [Arrays](../querying/arrays.md) page for more details.
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_ROWS_IN_MEMORY =
+      integerParameter("maxRowsInMemory")
+          .since("36.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(100_000)
+          .description(
+              """
+              Maximum number of rows to store in memory at once before flushing to disk during the segment generation process.
+              Ignored for non-INSERT queries.
+              In most cases, use the default value.
+              You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage.
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> ROWS_IN_MEMORY =
+      integerParameter("rowsInMemory")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(100_000)
+          .description(
+              """
+              Alternate spelling of `maxRowsInMemory`.
+              Ignored if `maxRowsInMemory` is set.
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<String> SEGMENT_SORT_ORDER =
+      stringParameter("segmentSortOrder")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause.
+              When you set `segmentSortOrder`, Druid uses the order from this context parameter instead.
+              Provide the column list as comma-separated values or as a JSON array in string form.<br /><br />For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`.
+              Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`.
+              """
+          )
+          .defaultDescription("empty list")
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FORCE_SEGMENT_SORT_BY_TIME =
+      booleanParameter("forceSegmentSortByTime")
+          .since("31.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(DimensionsSpec.DEFAULT_FORCE_TIME_SORT)
+          .description(
+              """
+              When set to `true` (the default), Druid prepends `__time` to [CLUSTERED BY](#clustered-by) when determining the sort order for individual segments.
+              Druid also requires that `segmentSortOrder`, if provided, starts with `__time`.<br /><br />When set to `false`, Druid uses the [CLUSTERED BY](#clustered-by) alone to determine the sort order for individual segments, and does not require that `segmentSortOrder` begin with `__time`.
+              Setting this parameter to `false` is an experimental feature; see [Sorting](../ingestion/partitioning.md#sorting) for details.
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> ROWS_PER_SEGMENT =
+      integerParameter("rowsPerSegment")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(3_000_000)
+          .description(
+              """
+              The number of rows per segment to target.
+              The actual number of rows per segment may be somewhat higher or lower than this number.
+              In most cases, use the default.
+              For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md).
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Object> INDEX_SPEC =
+      objectParameter("indexSpec")
+          .since("25.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments.
+              May be a JSON string or object.
+              See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding.
+              """
+          )
+          .defaultDescription("See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec).")
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> DURABLE_SHUFFLE_STORAGE =
+      booleanParameter("durableShuffleStorage")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description(
+              """
+              Whether to use durable storage for shuffle mesh.
+              To use this feature, configure the durable storage at the server level using `druid.msq.intermediate.storage.enable=true`).
+              If these properties are not configured, any query with the context variable `durableShuffleStorage=true` fails with a configuration error.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FAULT_TOLERANCE =
+      booleanParameter("faultTolerance")
+          .since("26.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description(
+              """
+              Whether to turn on fault tolerance mode or not.
+              Failed workers are retried based on [Limits](#limits).
+              Cannot be used when `durableShuffleStorage` is explicitly set to false.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<String> SELECT_DESTINATION =
+      stringParameter("selectDestination")
+          .since("27.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue("taskReport")
+          .description(
+              """
+              Controls where the final result of the select query is written.
+              <br />Use `taskReport`(the default) to write select results to the task report.
+              <b> This is not scalable since task reports size explodes for large results </b> <br/>Use `durableStorage` to write results to durable storage location.
+              <b>For large results sets, its recommended to use `durableStorage` </b>.
+              To configure durable storage see [`this`](#durable-storage) section.
+              """
+          )
+          .statement(StatementType.SELECT)
+          .build();
+
+  public static final QueryContextParameter<Boolean> WAIT_UNTIL_SEGMENTS_LOAD =
+      booleanParameter("waitUntilSegmentsLoad")
+          .since("29.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description(
+              """
+              If set, the ingest query waits for the generated segments to be loaded before exiting, else the ingest query exits without waiting.
+              The task and live reports contain the information about the status of loading segments if this flag is set.
+              This will ensure that any future queries made after the ingestion exits will include results from the ingestion.
+              The drawback is that the controller task will stall till the segments are loaded.
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<String> INCLUDE_SEGMENT_SOURCE =
+      stringParameter("includeSegmentSource")
+          .since("28.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Controls the sources Druid queries for results in addition to the segments present on deep storage.
+              Can be `NONE` or `REALTIME`.
+              If set to `NONE`, only non-realtime (published and used) segments are downloaded from deep storage.
+              If set to `REALTIME`, results are also included from realtime tasks.
+              `REALTIME` cannot be used while writing data into the same datasource it is read from.
+              """
+          )
+          .defaultDescription("`NONE` for the MSQ task engine, `REALTIME` for Dart")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<AcquireMode> SEGMENT_ACQUIRE_MODE =
+      enumParameter("segmentAcquireMode", AcquireMode.class)
+          .since("39.0.0").query(Query.JSON, Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Overrides how leaf stages acquire segments from the segment cache.
+              `FULL` downloads each segment up front, while `PARTIAL` downloads only the parts a query reads.
+              `PARTIAL` falls back to `FULL` where partial downloads are unavailable.
+              Intended for testing, debugging and performance comparison.
+              """
+          )
+          .defaultDescription("Chosen by the engine")
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Integer> ROWS_PER_PAGE =
+      integerParameter("rowsPerPage")
+          .since("29.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(100_000)
+          .description(
+              """
+              The number of rows per page to target.
+              The actual number of rows per page may be somewhat higher or lower than this number.
+              In most cases, use the default.<br /> This property comes into effect only when `selectDestination` is set to `durableStorage`
+              """
+          )
+          .statement(StatementType.SELECT)
+          .build();
+
+  public static final QueryContextParameter<String> SKIP_TYPE_VERIFICATION =
+      stringParameter("skipTypeVerification")
+          .since("30.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              During query validation, Druid validates that [string arrays](../querying/arrays.md) and [multi-value dimensions](../querying/multi-value-dimensions.md) are not mixed in the same column.
+              If you are intentionally migrating from one to the other, use this context parameter to disable type validation.<br /><br />Provide the column list as comma-separated values or as a JSON array in string form.
+              """
+          )
+          .defaultDescription("empty list")
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> FAIL_ON_EMPTY_INSERT =
+      booleanParameter("failOnEmptyInsert")
+          .since("29.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description(
+              """
+              When set to false (the default), an INSERT query generating no output rows will be no-op, and a REPLACE query generating no output rows will delete all data that matches the OVERWRITE clause.
+              When set to true, an ingest query generating no output rows will throw an `InsertCannotBeEmpty` fault.
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> REMOVE_NULL_BYTES =
+      booleanParameter("removeNullBytes")
+          .since("31.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description(
+              """
+              The MSQ engine can't process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data.
+              If the parameter is set to true, the MSQ engine removes the null bytes in string fields when reading the data.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> INCLUDE_ALL_COUNTERS =
+      booleanParameter("includeAllCounters")
+          .since("31.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(true)
+          .description(
+              """
+              Whether to include counters that were added in Druid 31 or later.
+              This is a backwards compatibility option that must be set to `false` during a rolling update from versions prior to Druid 31.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_FRAME_SIZE =
+      integerParameter("maxFrameSize")
+          .since("35.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue(1_000_000)
+          .description(
+              """
+              Size of frames used for data transfer within the MSQ engine.
+              You generally do not need to change this unless you have very large rows.
+              """
+          )
+          .defaultDescription("`1000000` (1 MB)")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_INPUT_FILES_PER_WORKER =
+      integerParameter("maxInputFilesPerWorker")
+          .since("36.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(10_000)
+          .description(
+              """
+              Maximum number of input files or segments per worker.
+              If a single worker would need to read more than this number of files, the query fails with a `TooManyInputFiles` error.
+              In this case, you should either increase this limit if your tasks have enough memory to handle more files, add more workers by increasing `maxNumTasks`, or split your query into smaller queries that process fewer files.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> BACKGROUND_FETCH_EXTERNAL_FILES =
+      booleanParameter("backgroundFetchExternalFiles")
+          .since("38.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(true)
+          .description(
+              """
+              Controls how workers read cloud storage files (e.g. `s3`, `gs`, `azure`) referenced by [`EXTERN`](#extern-function).
+              When `true` (the default), each worker fetches its input files asynchronously when possible before reading them.
+              This overlaps downloading with processing, which generally improves throughput when reading larger numbers of files.
+              Otherwise, workers stream each file directly from cloud storage while processing it.<br /><br />This setting has no effect for input sources that use `prefix`, or input sources that request [system fields](../ingestion/input-sources.md).
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_PARTITIONS =
+      integerParameter("maxPartitions")
+          .since("36.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(25_000)
+          .description(
+              """
+              Maximum number of output partitions for any single stage.
+              For INSERT or REPLACE queries, this controls the maximum number of segments that can be generated.
+              If the query would exceed this limit, it fails with a `TooManyPartitions` error.
+              You can increase this limit if needed, break your query into smaller queries, or use a larger target segment size (via `rowsPerSegment`).
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_THREADS =
+      integerParameter("maxThreads")
+          .since("35.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Maximum number of threads to use for processing.
+              This only has an effect if it is greater than zero and less than the default thread count based on system configuration.
+              Otherwise, it is ignored, and workers use the default thread count.
+              """
+          )
+          .defaultDescription("Not set (use default thread count)")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_CONCURRENT_STAGES =
+      integerParameter("maxConcurrentStages")
+          .since("31.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Number of stages that can run concurrently for a query.
+              A higher number can potentially improve pipelining but results in less memory available for each stage.
+              """
+          )
+          .defaultDescription("`2` for Dart, `1` for the MSQ task engine")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_NON_LEAF_WORKERS =
+      integerParameter("maxNonLeafWorkers")
+          .since("32.0.0").query(Query.SQL).engine(Engine.DART)
+          .defaultValue(1)
+          .description("Number of workers to use for stages beyond the leaf stage.")
+          .defaultDescription("1 (Scatter-gather style)")
+          .statement(StatementType.SELECT)
+          .build();
+
+  public static final QueryContextParameter<Integer> TARGET_PARTITIONS_PER_WORKER =
+      integerParameter("targetPartitionsPerWorker")
+          .since("32.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Number of partitions Druid generates for each worker.
+              This number controls how much parallelism can be maintained throughout a query.
+              """
+          )
+          .defaultDescription("`1` for Dart, the number of processing threads for the MSQ task engine")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<String> MSQ_MODE =
+      stringParameter("mode")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue("strict")
+          .description(
+              """
+              MSQ mode, which sets defaults for other context parameters.
+              `strict` sets `maxParseExceptions` to 0, and `nonStrict` sets it to -1.
+              Values that the query context sets explicitly take precedence over the mode defaults.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Long> MAX_INPUT_BYTES_PER_WORKER =
+      longParameter("maxInputBytesPerWorker")
+          .since("26.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(512L * 1024 * 1024)
+          .description(
+              """
+              Maximum number of input bytes given to a single worker when `taskAssignment` is `auto`.
+              When dividing the input of a stage among the workers, Druid moves on to the next worker once a worker reaches this size.
+              This is only a guideline during input slicing and doesn't guarantee that a worker's input can't be larger.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_CLUSTERED_BY_COLUMNS =
+      integerParameter("maxClusteredByColumns")
+          .since("37.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              Maximum number of columns that can appear in the `CLUSTERED BY` clause.
+              Intended for testing.
+              """
+          )
+          .defaultDescription("1500")
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<String> CLUSTER_STATISTICS_MERGE_MODE =
+      stringParameter("clusterStatisticsMergeMode")
+          .since("26.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue("SEQUENTIAL")
+          .description(
+              """
+              Whether the controller merges the key statistics sketches of workers in parallel or sequentially.
+              Possible values are `PARALLEL`, `SEQUENTIAL` and `AUTO`.
+              `AUTO` chooses between the two based on the number of workers and the size of the input.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<String> SKETCH_ENCODING =
+      stringParameter("sketchEncoding")
+          .since("32.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue("OCTET_STREAM")
+          .description(
+              """
+              Encoding that the controller requests for the key statistics sketches it fetches from workers.
+              Possible values are `OCTET_STREAM` and `JSON`.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> USE_COMBINER =
+      booleanParameter("useCombiner")
+          .since("37.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description("Whether stage processors attempt to combine rows with the same key when doing sort-based aggregations.")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_NUM_SEGMENTS =
+      integerParameter("maxNumSegments")
+          .since("31.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              Maximum number of segments that an ingestion query can generate in a single time chunk.
+              If the query would exceed this limit, it fails with a `TooManySegmentsInTimeChunk` error.
+              """
+          )
+          .defaultDescription("No limit")
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> USE_AUTO_COLUMN_SCHEMAS =
+      booleanParameter("useAutoColumnSchemas")
+          .since("27.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description(
+              """
+              Experimental flag that makes ingestion use the `auto` column schema for all standard-typed columns during
+              segment generation.
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> LIVE_REPORT_COUNTERS =
+      booleanParameter("liveReportCounters")
+          .since("36.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Whether workers periodically send counter snapshots to the controller, so that the controller has more
+              up-to-date progress information.
+              """
+          )
+          .defaultDescription("`true` for the MSQ task engine, `false` for Dart")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Integer> MAX_ROWS_MATERIALIZED_IN_WINDOW =
+      integerParameter("maxRowsMaterializedInWindow")
+          .since("30.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue(100_000)
+          .description(
+              """
+              Maximum number of rows that window functions can materialize in a single window partition.
+              If a partition exceeds this limit, the query fails with a `TooManyRowsInAWindow` error.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Integer> SEGMENT_LOAD_AHEAD_COUNT =
+      integerParameter("segmentLoadAheadCount")
+          .since("37.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Number of segments that a worker loads ahead of them being needed.
+              When set, it takes precedence over the worker's local default.
+              """
+          )
+          .defaultDescription("`druid.msq.dart.worker.segmentLoadAheadCount` for Dart, otherwise twice the number of processing threads")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> IS_REINDEX =
+      booleanParameter("isReindex")
+          .since("28.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description("Set by Druid when an ingestion query replaces data in a datasource that it also reads from.")
+          .statement(StatementType.REPLACE)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> START_TIME =
+      stringParameter("startTime")
+          .since("34.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              ISO 8601 time at which the Broker started the query.
+              Druid uses it to compute query deadlines and report timings.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> QUERY_DEADLINE =
+      stringParameter("queryDeadline")
+          .since("37.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .description(
+              """
+              ISO 8601 time at which the query times out.
+              The Broker computes it from `startTime` and `timeout`.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Integer> ROW_BASED_FRAME_TYPE =
+      integerParameter("rowBasedFrameType")
+          .since("34.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue((int) FrameType.ROW_BASED_V1.version())
+          .description(
+              """
+              Version of the row-based frame format that MSQ uses.
+              The Broker sets it to the latest version, and older servers fall back to the default so that rolling updates
+              from older Druid versions keep working.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Boolean> WINDOW_FUNCTION_OPERATOR_TRANSFORMATION =
+      booleanParameter("windowFunctionOperatorTransformation")
+          .since("32.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description(
+              """
+              Whether MSQ uses the transformed operator chain for window functions.
+              The Broker sets it to `true` so that rolling updates from older Druid versions keep working.
+              """
+          )
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Long> MAX_PARSE_EXCEPTIONS =
+      longParameter("maxParseExceptions")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`.
+              To ignore all the parse exceptions, set the value to -1.
+              """
+          )
+          .defaultDescription("`0`")
+          .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> STORE_COMPACTION_STATE =
+      booleanParameter("storeCompactionState")
+          .since("30.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description(
+              """
+              When set to true, a REPLACE query stores as part of each segment's metadata a `lastCompactionState` field that captures the various specs used to create the segment.
+              Future compaction jobs skip segments whose `lastCompactionState` matches the desired compaction state.
+              Works the same as [`storeCompactionState`](../ingestion/tasks.md#context-parameters) task context flag.
+              """
+          )
+          .statement(StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<String> TASK_LOCK_TYPE =
+      stringParameter("taskLockType")
+          .since("29.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              Type of time chunk lock that an INSERT or REPLACE query acquires: `EXCLUSIVE`, `SHARED`, `APPEND` or `REPLACE`.
+              If not set, REPLACE queries use `EXCLUSIVE` and INSERT queries use `SHARED`.
+              Ignored when `useConcurrentLocks` is true.
+              """
+          )
+          .defaultDescription("`EXCLUSIVE` for REPLACE, `SHARED` for INSERT")
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<Boolean> USE_CONCURRENT_LOCKS =
+      booleanParameter("useConcurrentLocks")
+          .since("30.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description(
+              """
+              Whether an INSERT or REPLACE query uses concurrent locks: `APPEND` locks for INSERT and `REPLACE` locks for REPLACE.
+              See [concurrent append and replace](../ingestion/concurrent-append-replace.md).
+              """
+          )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .build();
+
+  public static final QueryContextParameter<String> USER =
+      stringParameter("__user")
+          .since("27.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description("Identity of the user who submitted the query. Set by Druid so that later requests about the query can be authorized.")
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> RESULT_FORMAT =
+      stringParameter("__resultFormat")
+          .since("28.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description("Result format of a query submitted through the SQL statements API. Set by Druid from the request.")
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> TIME_COLUMN =
+      stringParameter("__timeColumn")
+          .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description("Name of the output column that holds the time of each row of an ingestion query. Set by the SQL planner.")
+          .statement(StatementType.INSERT, StatementType.REPLACE)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  // endregion
+
+  // region Other query context parameters
   //
   // Parameters specific to an engine, an API or a query type, such as Dart, the SQL statements API, realtime segment
   // selection and scan ordering, along with parameters Druid uses for internal coordination. Each descriptor's
@@ -1103,7 +2330,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> FULL_REPORT = booleanParameter("fullReport")
       .since("32.0.0").query(Query.SQL).engine(Engine.DART)
-      .defaultValue(QueryContexts.DEFAULT_CTX_FULL_REPORT)
+      .defaultValue(false)
       .description(
           """
           If true, a [Dart](dart.md) query returns a single `fullReport` column that contains the full query report,
@@ -1124,6 +2351,7 @@ public final class QueryContextParameters
           )
           .build();
 
+
   public static final QueryContextParameter<Boolean> REALTIME_SEGMENTS_ONLY =
       booleanParameter("realtimeSegmentsOnly")
           .since("35.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
@@ -1141,7 +2369,7 @@ public final class QueryContextParameters
   public static final QueryContextParameter<QueryContexts.RealtimeSegmentsMode> REALTIME_SEGMENTS_MODE =
       enumParameter("realtimeSegmentsMode", QueryContexts.RealtimeSegmentsMode.class)
           .since("38.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE)
+          .defaultValue(QueryContexts.RealtimeSegmentsMode.INCLUDE)
           .description(
               """
               Controls whether realtime segments are queried.
@@ -1154,7 +2382,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> PREPLANNED = booleanParameter("prePlanned")
       .since("34.0.0").query(Query.SQL).engine(Engine.DART)
-      .defaultValue(QueryContexts.DEFAULT_PREPLANNED)
+      .defaultValue(true)
       .description(
           """
           Whether Dart plans the query definition directly from the logical plan, instead of first translating the query
@@ -1177,6 +2405,52 @@ public final class QueryContextParameters
           .defaultValue(DefaultValue.fromProperty("druid.query.scan.maxRowsQueuedForOrdering"))
           .queryType(QueryType.SCAN)
           .build();
+
+  public static final QueryContextParameter<String> POST_PROCESSING =
+      stringParameter("postProcessing")
+          .since("0.6.148").query(Query.JSON).engine(Engine.NATIVE)
+          .description("JSON-serialized post-processing operator, such as `timewarp`, that the Broker applies to the query results.")
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> SKIP_INCREMENTAL_SEGMENT =
+      booleanParameter("skipIncrementalSegment")
+          .since("0.9.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .defaultValue(false)
+          .description("If true, realtime tasks skip the in-memory incremental segments that haven't been persisted yet when processing a query.")
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<String> EXPORT_FILE_FORMAT =
+      stringParameter("__exportFileFormat")
+          .since("30.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .description("Result format of an `INSERT INTO EXTERN` export. Set by the SQL planner from the `AS` clause.")
+          .statement(StatementType.INSERT)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<Long> QUERY_FAIL_TIME =
+      longParameter("queryFailTime")
+          .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .description("Wall-clock time, in milliseconds since the epoch, after which a data server fails the query with a timeout. Set by the Broker from the query timeout.")
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> MAX_TIME_ARRAY_OUTPUT_NAME =
+      stringParameter("maxTimeArrayOutputName")
+          .since("24.0.0").query(Query.SQL).engine(Engine.NATIVE)
+          .description("Output column name for the maximum time of a time boundary query generated by the SQL planner.")
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  public static final QueryContextParameter<String> MIN_TIME_ARRAY_OUTPUT_NAME =
+      stringParameter("minTimeArrayOutputName")
+          .since("24.0.0").query(Query.SQL).engine(Engine.NATIVE)
+          .description("Output column name for the minimum time of a time boundary query generated by the SQL planner.")
+          .visibility(Visibility.SYSTEM)
+          .build();
+
+  // endregion
 
   private QueryContextParameters()
   {
@@ -1263,6 +2537,52 @@ public final class QueryContextParameters
     );
   }
 
+  static QueryContextParameter.Builder<Float> floatParameter(final String name)
+  {
+    return QueryContextParameter.builder(
+        name,
+        Float.class,
+        value -> {
+          if (value instanceof Number) {
+            return ((Number) value).floatValue();
+          } else if (value instanceof String) {
+            try {
+              return Float.parseFloat((String) value);
+            }
+            catch (NumberFormatException _) {
+              // Fall through to the invalid-value error below.
+            }
+          }
+          throw invalidValueException(name, "in float format", value);
+        }
+    );
+  }
+
+  /**
+   * Creates a parameter whose values are numbers of bytes, or strings with a unit suffix such as {@code "1GiB"}, as
+   * parsed by {@link HumanReadableBytes#parse(String)}.
+   */
+  static QueryContextParameter.Builder<HumanReadableBytes> humanReadableBytesParameter(final String name)
+  {
+    return QueryContextParameter.builder(
+        name,
+        HumanReadableBytes.class,
+        value -> {
+          if (value instanceof Number) {
+            return HumanReadableBytes.valueOf(((Number) value).longValue());
+          } else if (value instanceof String) {
+            try {
+              return HumanReadableBytes.valueOf(HumanReadableBytes.parse((String) value));
+            }
+            catch (IAE _) {
+              // Fall through to the invalid-value error below.
+            }
+          }
+          throw invalidValueException(name, "a human readable number", value);
+        }
+    );
+  }
+
   static QueryContextParameter.Builder<String> stringParameter(final String name)
   {
     return QueryContextParameter.builder(
@@ -1274,6 +2594,11 @@ public final class QueryContextParameters
     );
   }
 
+  /**
+   * Creates an enum parameter whose string values are the enum's constant names, matched case-insensitively, so the
+   * enum's JSON form must equal its constant name ignoring case. The enum must also follow the JSON form convention
+   * described on {@link QueryContextParameter}.
+   */
   static <T extends Enum<T>> QueryContextParameter.Builder<T> enumParameter(
       final String name,
       final Class<T> valueType
@@ -1285,6 +2610,7 @@ public final class QueryContextParameters
   /**
    * Creates an enum parameter whose string values are converted with the enum's own lookup, for enums whose accepted
    * values differ from their constant names. The lookup must throw {@link IllegalArgumentException} for unknown values.
+   * The enum must follow the JSON form convention described on {@link QueryContextParameter}.
    */
   static <T extends Enum<T>> QueryContextParameter.Builder<T> enumParameter(
       final String name,
@@ -1307,6 +2633,11 @@ public final class QueryContextParameters
           throw invalidValueException(name, "one of " + Arrays.toString(valueType.getEnumConstants()), value);
         }
     );
+  }
+
+  static QueryContextParameter.Builder<Object> objectParameter(final String name)
+  {
+    return QueryContextParameter.builder(name, Object.class, value -> value);
   }
 
   private static final String MAX_SUBQUERY_BYTES_FORMAT = "'auto', 'disabled' or a non-negative number of bytes";

@@ -1077,10 +1077,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   public void testSuccessWithSmallMaxStreamLength()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(
-        DoublesSketchApproxQuantileSqlAggregator.CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
-        1
-    );
+    QueryContextParameters.APPROX_QUANTILE_DS_MAX_STREAM_LENGTH.set(context, 1L);
     testQuery(
         "SELECT\n"
         + "APPROX_QUANTILE_DS(m1, 0.01),\n"

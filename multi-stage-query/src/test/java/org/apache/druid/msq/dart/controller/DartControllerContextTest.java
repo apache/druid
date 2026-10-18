@@ -32,7 +32,6 @@ import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.test.TestDartControllerContextFactoryImpl;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -66,7 +65,7 @@ public class DartControllerContextTest
    */
   private final QueryContext queryContext = QueryContext.builder()
       .put(QueryContextParameters.DART_QUERY_ID, QUERY_ID)
-      .putRaw(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, 3)
+      .put(QueryContextParameters.MAX_CONCURRENT_STAGES, 3)
       .toContext();
   private MemoryIntrospector memoryIntrospector;
   private AutoCloseable mockCloser;

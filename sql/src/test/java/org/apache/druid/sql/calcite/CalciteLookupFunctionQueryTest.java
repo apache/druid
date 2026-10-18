@@ -50,7 +50,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -67,10 +66,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
       QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
                   .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
-                  .putRaw(
-                      ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT,
-                      1
-                  )
+                  .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 1)
                   .toMap();
 
   /**
@@ -215,10 +211,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
                     .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
-                    .putRaw(
-                        ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT,
-                        2
-                    )
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 2)
                     .toMap();
 
     testQuery(
@@ -257,10 +250,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
                     .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
-                    .putRaw(
-                        ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT,
-                        2
-                    )
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 2)
                     .toMap();
 
     testQuery(
@@ -845,10 +835,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
                     .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
-                    .putRaw(
-                        ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT,
-                        3
-                    )
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 3)
                     .toMap();
 
     testQuery(

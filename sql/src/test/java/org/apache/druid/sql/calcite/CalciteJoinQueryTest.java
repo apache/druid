@@ -2687,7 +2687,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT DISTINCT __time FROM druid.foo WHERE __time IN (SELECT MAX(__time) FROM druid.foo)",
         updatedQueryContext,
@@ -2735,7 +2735,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT DISTINCT __time FROM druid.foo WHERE __time NOT IN (SELECT MAX(__time) FROM druid.foo)",
         updatedQueryContext,
@@ -3802,7 +3802,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // this leads to cost(left join) < cost(converted inner join) for the below query
     queryContext = QueryContexts.override(
         queryContext,
-        ImmutableMap.of("computeInnerJoinCostAsFilter", "false")
+        QueryContext.ofMap(QueryContextParameters.COMPUTE_INNER_JOIN_COST_AS_FILTER, false)
     );
     testQuery(
         "SELECT dim1, l1.k\n"
@@ -4111,7 +4111,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM foo\n"
         + "WHERE dim1 IN ('abc', 'def')"
@@ -4174,9 +4174,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
-    minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(minTimeQueryContext, "a0");
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM foo\n"
         + "WHERE dim1 IN ('abc', 'def')\n"
@@ -4279,9 +4279,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
-    minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(minTimeQueryContext, "a0");
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM\n"
         + "foo\n"
