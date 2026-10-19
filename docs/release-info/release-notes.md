@@ -98,6 +98,16 @@ There are new configs that control the behavior of the HTTP client: `druid.globa
 
 [#19567](https://github.com/apache/druid/pull/19567)
 
+### Quality of service filtering for Coordinator
+
+You can now enable QoS filtering for the Coordinator to prevent a burst of slow API requests from exhausting the thread pool and blocking health checks.
+
+Use `druid.coordinator.server.maxConcurrentRequests` to configure this feature (default: max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))). Set this property to `0` to turn it off.
+
+Leader-status endpoints are excluded from the cap so load balancers/monitors stay unaffected.
+
+[#19271](https://github.com/apache/druid/pull/19271)
+
 ## Functional area and related changes
 
 This section contains detailed release notes separated by areas.
@@ -149,6 +159,7 @@ You can now limit how long the Broker spends planning a SQL query with the new `
 
 - You can now use Dart to query metadata tables such as those in the `sys` schema [#19952](https://github.com/apache/druid/pull/19952)
 - `CAST(x AS LONG)` is now accepted as an alias for `CAST(x AS BIGINT)` in Druid SQL [#20402](https://github.com/apache/druid/pull/20402)
+- Added `datasource` filter pushdown to `sys.segments` table [#19718](https://github.com/apache/druid/pull/19718)
 - Added framing support to the FIRST_VALUE and LAST_VALUE window functions [#19301](https://github.com/apache/druid/pull/19301)
 - Improved the performance of timeseries, timeBoundary, and scan queries that run in descending order [#19947](https://github.com/apache/druid/pull/19947)
 - Improved the performance of COALESCE [#18400](https://github.com/apache/druid/pull/18400)
@@ -158,11 +169,17 @@ You can now limit how long the Broker spends planning a SQL query with the new `
 
 ### Cluster management
 
-#### Kubernetes
+#### Kubernetes node labels
 
 The `druid-kubernetes-extensions` extension now support a `k8sNodeLabel` dynamic config provider, which resolves configuration values from the labels of the Kubernetes node a Druid process runs on.
 
 [#20404](https://github.com/apache/druid/pull/20404)
+
+#### Peon pod template
+
+You can now retrieve the Peon pod template names currently configured on the Overlord using the new `GET` `/druid/indexer/v1/k8s/taskrunner/podTemplates` endpoint. It returns each configured template's name and full pod spec. The endpoint requires CONFIG read permission and returns 404 when the Overlord is not using the custom template pod adapter.
+
+[#19712](https://github.com/apache/druid/pull/19712)
 
 #### Environment variables
 
@@ -198,7 +215,21 @@ To restore the previous behavior, set `druid.sql.planner.authorizeTableVisibilit
 
 Additionally, when set to `true`, INSERT and REPLACE require both READ and WRITE access to the target table. If this property is set to `false`, they only require WRITE permission.Regardless of the value of this property, tables only appear in INFORMATION_SCHEMA if the user has READ access to them.
 
+This is a breaking change that affects the permissions you need. For more information, see [permissions changes for SQL-based ingestion](#permissions-changes-for-sql-based-ingestion).
+
 [#20075](https://github.com/apache/druid/pull/20075)
+
+#### JAVA_HOME
+
+Middle Managers now honor JAVA_HOME when using the `bin/java` script, which should be present in the working directory.
+
+Druid uses the following logic
+
+- If you specified a command (such as if `config.getJavaCommand` is not null), use that.
+- If `bin/run-java` exists, use that
+- Use java
+
+[#19709](https://github.com/apache/druid/pull/19709)
 
 #### Other cluster management improvements
 
