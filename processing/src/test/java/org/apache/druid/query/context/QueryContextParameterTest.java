@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContexts;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -271,13 +273,46 @@ class QueryContextParameterTest
   }
 
   @Test
-  void testBooleanParameterRejectsNonBooleans()
+  void testBooleanParameter()
   {
-    assertEquals(
-        "Query context parameter [useResultLevelCache] should be a boolean, but got [1]",
-        assertThrows(BadQueryContextException.class, () -> QueryContextParameters.USE_RESULT_LEVEL_CACHE.parse(1))
-            .getMessage()
+    final QueryContextParameter<Boolean> parameter = QueryContextParameters.USE_RESULT_LEVEL_CACHE;
+    assertEquals(true, parameter.parse(true));
+    assertEquals(true, parameter.parse("true"));
+    assertEquals(true, parameter.parse("TRUE"));
+    assertEquals(false, parameter.parse("False"));
+    assertEquals(true, parameter.parse("1"));
+    assertEquals(false, parameter.parse("0"));
+
+    // Such as from "SET useResultLevelCache = 1"
+    assertEquals(true, parameter.parse(1L));
+    assertEquals(false, parameter.parse(0L));
+    assertEquals(true, parameter.parse(1));
+
+    // Floating-point numbers are rejected, even when equal to 0 or 1
+    final List<Object> invalidValues = List.of(
+        1.0d,
+        0.0f,
+        "1.0",
+        "01",
+        "yes",
+        "",
+        " true",
+        2L,
+        -1L,
+        0.5d,
+        Double.NaN,
+        List.of(true)
     );
+    for (final Object invalid : invalidValues) {
+      assertEquals(
+          StringUtils.format(
+              "Query context parameter [useResultLevelCache] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [%s]",
+              invalid
+          ),
+          assertThrows(BadQueryContextException.class, () -> parameter.parse(invalid)).getMessage(),
+          String.valueOf(invalid)
+      );
+    }
   }
 
   @Test
