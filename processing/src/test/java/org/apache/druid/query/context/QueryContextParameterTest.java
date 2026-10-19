@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.context;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
@@ -26,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
@@ -313,6 +316,27 @@ class QueryContextParameterTest
           String.valueOf(invalid)
       );
     }
+  }
+
+  @Test
+  void testBooleanParameterAcceptsBigInteger() throws Exception
+  {
+    final QueryContextParameter<Boolean> parameter = QueryContextParameters.USE_RESULT_LEVEL_CACHE;
+
+    // A context built by a Java caller
+    assertEquals(true, parameter.parse(BigInteger.ONE));
+    assertEquals(false, parameter.parse(BigInteger.ZERO));
+
+    // A context read from JSON by a mapper that keeps integers as BigInteger
+    final ObjectMapper mapper = new DefaultObjectMapper().enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS);
+    final Map<String, Object> context = mapper.readValue(
+        "{\"useResultLevelCache\": 1}",
+        new TypeReference<Map<String, Object>>() {}
+    );
+    assertEquals(BigInteger.class, context.get("useResultLevelCache").getClass());
+    assertEquals(true, QueryContext.of(context).get(parameter));
+
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(BigInteger.TWO));
   }
 
   @Test

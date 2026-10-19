@@ -46,6 +46,7 @@ import org.apache.druid.segment.loading.AcquireMode;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -2520,6 +2521,14 @@ public final class QueryContextParameters
             if (number == 1) {
               return true;
             } else if (number == 0) {
+              return false;
+            }
+          } else if (value instanceof BigInteger bigInteger) {
+            // A context built in Java, or read from JSON by a mapper that keeps integers as BigInteger, such as one
+            // with DeserializationFeature.USE_BIG_INTEGER_FOR_INTS
+            if (BigInteger.ONE.equals(bigInteger)) {
+              return true;
+            } else if (BigInteger.ZERO.equals(bigInteger)) {
               return false;
             }
           }
