@@ -361,4 +361,4 @@ The web console's code editors moved from Ace (`ace-builds` and `react-ace`) to 
 
 #### Dependency updates
 
-The following dependencies have had their versions bumped:
+Druid 39.0.0 includes a variety of updates to dependencies such as Calcite. For a full list, see the [Area - Dependencies label](https://github.com/apache/druid/milestone/69?closed=1&q=state%3Aclosed+milestone-number%3A69+archived%3Afalse+sort%3Amilestone_prio-desc+label%3A%22Area+-+Dependencies%22) in the milestone.
