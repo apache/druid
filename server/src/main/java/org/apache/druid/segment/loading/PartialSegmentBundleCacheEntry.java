@@ -667,6 +667,23 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     return requestedBundleName;
   }
 
+  /**
+   * {@link #resolveBundleName} applied to each of {@code requestedBundleNames}, giving the bundles that physically hold
+   * them. On a legacy root-only segment every name resolves to the root bundle, so a partial-load rule that selects a
+   * projection by name selects the root bundle.
+   */
+  public static Set<String> resolveBundleNames(
+      PartialSegmentFileMapperV10 fileMapper,
+      Collection<String> requestedBundleNames
+  )
+  {
+    final Set<String> resolved = new HashSet<>();
+    for (String requestedBundleName : requestedBundleNames) {
+      resolved.add(resolveBundleName(fileMapper, requestedBundleName));
+    }
+    return Set.copyOf(resolved);
+  }
+
   private static void awaitMount(SettableFuture<Void> future) throws IOException
   {
     try {

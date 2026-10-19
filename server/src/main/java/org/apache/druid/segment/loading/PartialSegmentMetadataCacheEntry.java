@@ -1205,8 +1205,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       }
       index = queryableIndex;
       if (ruleHeldOnly) {
-        // Snapshot the selection (empty when no rule is applied). The planner asks for bundles by name, so resolve
-        // each name the same way the bundle acquirer does, which maps __base to __root__ for legacy root-only segments.
+        // Snapshot the selection (empty when no rule is applied). It names physical bundles, since the cache manager
+        // resolves it when applying the rule, while the planner asks by logical name, so resolve each requested name
+        // the same way the bundle acquirer does: on a legacy root-only segment every name maps to the root bundle.
         final Set<String> selected = ruleSelectedBundleNames;
         final PartialSegmentFileMapperV10 mapper = fileMapper;
         servableBundles = bundleName -> selected.contains(

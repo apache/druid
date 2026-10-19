@@ -57,6 +57,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
+import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -76,7 +79,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -157,6 +165,8 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
+  // the same segment, laid out as a legacy V10 segment whose only bundle is the root bundle
+  private static File LEGACY_ROOT_ONLY_DEEP_STORAGE_DIR;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
@@ -195,7 +205,48 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
                                                        .build())
                                    .rows(ROWS)
                                    .buildMMappedIndexFile();
+    LEGACY_ROOT_ONLY_DEEP_STORAGE_DIR = writeRootOnlyCopy(
+        DEEP_STORAGE_DIR,
+        SHARED_TEMPORARY_FOLDER.newFolder("legacy_" + ThreadLocalRandom.current().nextInt())
+    );
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
+
+  /**
+   * Writes a copy of the V10 segment in {@code sourceDir} to {@code targetDir} with every container re-tagged to the
+   * root bundle, the layout of a legacy segment written before bundle names were recorded. Container offsets are
+   * relative to the end of the header, so only the metadata changes.
+   */
+  private static File writeRootOnlyCopy(File sourceDir, File targetDir) throws IOException
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final byte[] source = Files.readAllBytes(new File(sourceDir, IndexIO.V10_FILE_NAME).toPath());
+    Assertions.assertEquals(IndexIO.V10_VERSION, source[0]);
+    Assertions.assertEquals(CompressionStrategy.NONE.getId(), source[1], "fixture metadata must be uncompressed");
+    final int metadataLength = ByteBuffer.wrap(source, 2, Integer.BYTES).order(ByteOrder.LITTLE_ENDIAN).getInt();
+    final int headerLength = 2 + Integer.BYTES + metadataLength;
+    final SegmentFileMetadata metadata =
+        mapper.readValue(source, 2 + Integer.BYTES, metadataLength, SegmentFileMetadata.class);
+    final SegmentFileMetadata rootOnly = new SegmentFileMetadata(
+        metadata.getContainers()
+                .stream()
+                .map(container -> new SegmentFileContainerMetadata(container.getStartOffset(), container.getSize(), null))
+                .toList(),
+        metadata.getFiles(),
+        metadata.getInterval(),
+        metadata.getColumnDescriptors(),
+        metadata.getColumnFiles(),
+        metadata.getProjections(),
+        metadata.getBitmapEncoding()
+    );
+    final byte[] rootOnlyMetadata = mapper.writeValueAsBytes(rootOnly);
+    try (OutputStream out = new FileOutputStream(new File(targetDir, IndexIO.V10_FILE_NAME))) {
+      out.write(new byte[]{IndexIO.V10_VERSION, CompressionStrategy.NONE.getId()});
+      out.write(ByteBuffer.allocate(Integer.BYTES).order(ByteOrder.LITTLE_ENDIAN).putInt(rootOnlyMetadata.length).array());
+      out.write(rootOnlyMetadata);
+      out.write(source, headerLength, source.length - headerLength);
+    }
+    return targetDir;
   }
 
   @BeforeEach
@@ -1195,6 +1246,43 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertEquals(0, location.getWeakStats().getLoadCount());
   }
 
+  @Test
+  void testProjectionRuleOnLegacyRootOnlySegmentHoldsRootBundle() throws Exception
+  {
+    // On a legacy segment the root bundle physically holds everything, including the selected projection, so the rule
+    // must resolve its selection to the root bundle: that's what gets rule-held, eagerly downloaded, and served under
+    // PARTIAL_RULE_HELD. Without resolving, the rule holds and downloads nothing, and PARTIAL_RULE_HELD reads nothing.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final DataSegment segment =
+        partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), FINGERPRINT, LEGACY_ROOT_ONLY_DEEP_STORAGE_DIR);
+    manager.load(segment);
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper);
+    Assertions.assertEquals(
+        Set.of(SegmentFileBuilder.ROOT_BUNDLE_NAME),
+        PartialSegmentBundleCacheEntry.bundleNames(mapper),
+        "test setup: the segment must have only the root bundle"
+    );
+    Assertions.assertEquals(Set.of(SegmentFileBuilder.ROOT_BUNDLE_NAME), metadata.getRuleSelectedBundleNames());
+    Assertions.assertTrue(metadata.isBundleRuleHeld(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+    Assertions.assertTrue(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+    final long loadsAfterRule = location.getWeakStats().getLoadCount();
+
+    try (AcquireSegmentAction action = manager.acquireSegment(segment, AcquireMode.PARTIAL_RULE_HELD)) {
+      action.await();
+      try (Segment acquired = action.release().getSegment().orElseThrow()) {
+        Assertions.assertEquals(2, countRows(acquired, COUNT_BY_DIM1), "served from the selected projection");
+        // the root bundle is the only bundle, and it holds the other projection and the base table too
+        Assertions.assertEquals(2, countRows(acquired, SUM_BY_DIM1));
+        Assertions.assertEquals(4, countRows(acquired, CursorBuildSpec.FULL_SCAN));
+      }
+    }
+    Assertions.assertEquals(loadsAfterRule, location.getWeakStats().getLoadCount(), "nothing new was loaded");
+  }
+
   /**
    * Builds an async cursor over {@code segment} for {@code spec}, waits for it, and counts the rows it reads.
    */
@@ -1278,9 +1366,14 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
 
   private DataSegment partialWrapperSegment(List<String> selectedProjections, String fingerprint)
   {
+    return partialWrapperSegment(selectedProjections, fingerprint, DEEP_STORAGE_DIR);
+  }
+
+  private DataSegment partialWrapperSegment(List<String> selectedProjections, String fingerprint, File deepStorageDir)
+  {
     final Map<String, Object> delegate = Map.of(
         "type", "local",
-        "path", DEEP_STORAGE_DIR.getAbsolutePath()
+        "path", deepStorageDir.getAbsolutePath()
     );
     final Map<String, Object> wrapperWire =
         PartialProjectionLoadSpec.wireForm(delegate, selectedProjections, fingerprint);

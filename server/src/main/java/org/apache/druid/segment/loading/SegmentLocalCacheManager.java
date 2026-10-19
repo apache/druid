@@ -1075,7 +1075,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           // awaitEagerDownloadsOrClearRule leaves the metadata entry weak-reserved with the hook attached; when
           // cache eventually reclaims, the info file gets deleted along with the entry.
           metadata.setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
-          final Set<String> selected = Set.copyOf(
+          // Resolve the selection to the bundles that physically hold it (they differ on legacy root-only segments), so
+          // rule holds, eager downloads, and AcquireMode.PARTIAL_RULE_HELD all work with real bundle names.
+          final Set<String> selected = PartialSegmentBundleCacheEntry.resolveBundleNames(
+              mapper,
               wrapper.getSelectedBundleNames(dataSegment, mapper.getSegmentFileMetadata())
           );
           // Snapshot the rule this call is about to replace, then pin the UNION of it and the new selection for the
@@ -1820,7 +1823,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           "Bootstrap-restored partial metadata for segment[%s] has no file mapper", dataSegment.getId()
       );
     }
-    final Set<String> selected = Set.copyOf(
+    // resolved to physical bundles, as in loadPartial
+    final Set<String> selected = PartialSegmentBundleCacheEntry.resolveBundleNames(
+        mapper,
         wrapper.getSelectedBundleNames(dataSegment, mapper.getSegmentFileMetadata())
     );
     final String priorFingerprint = partial.getRuleFingerprint();
