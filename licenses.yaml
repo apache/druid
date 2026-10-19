@@ -486,7 +486,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.7.1-jre
+version: 33.7.2-jre
 libraries:
   - com.google.guava: guava
 
@@ -958,7 +958,7 @@ name: pac4j-oidc java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.10
+version: 5.8.0
 libraries:
   - org.pac4j: pac4j-oidc
 
@@ -968,7 +968,7 @@ name: pac4j-core java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.10
+version: 5.8.0
 libraries:
   - org.pac4j: pac4j-core
 
@@ -978,7 +978,7 @@ name: pac4j-javaee java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.10
+version: 5.8.0
 libraries:
   - org.pac4j: pac4j-javaee
 
@@ -1807,7 +1807,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.14.4
+version: 2.15.0
 libraries:
   - joda-time: joda-time
 notices:
@@ -2176,7 +2176,7 @@ name: Apache Maven Artifact
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.9.16
+version: 3.10.0
 libraries:
   - org.apache.maven: maven-artifact
 notices:
@@ -2189,7 +2189,7 @@ name: Maven Artifact Resolver Connector Basic
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.23
+version: 2.0.24
 libraries:
   - org.apache.maven.resolver: maven-resolver-connector-basic
   - org.apache.maven.resolver: maven-resolver-spi
@@ -2218,7 +2218,7 @@ name: Maven Artifact Resolver Transport Apache
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.23
+version: 2.0.24
 libraries:
   - org.apache.maven.resolver: maven-resolver-transport-apache
   - org.apache.maven.resolver: maven-resolver-transport-file
@@ -2236,7 +2236,7 @@ name: Maven Artifact Resolver Implementation
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.23
+version: 2.0.24
 libraries:
   - org.apache.maven.resolver: maven-resolver-impl
   - org.apache.maven.resolver: maven-resolver-named-locks
@@ -2573,7 +2573,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.6.1
+version: 7.7.0
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -4069,7 +4069,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.74.0
+version: 2.75.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -4079,7 +4079,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.69.0
+version: 2.70.0
 libraries:
   - com.google.api: api-common
 
@@ -4181,7 +4181,7 @@ name: stax2-api
 license_category: binary
 module: extensions-contrib/druid-iceberg-extensions
 license_name: BSD-2-Clause License
-version: 4.3.0
+version: 4.3.1
 copyright: 2008+, FasterXML, LLC
 license_file_path: licenses/bin/stax2-api.BSD2
 libraries:
@@ -4203,7 +4203,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.86.0
+version: 2.87.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4215,7 +4215,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.74.0
+version: 2.75.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4283,7 +4283,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.77.0
+version: 2.78.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4293,7 +4293,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.72.0
+version: 1.73.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4303,7 +4303,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.53.0
+version: 1.54.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4324,7 +4324,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.76.0
+version: 2.77.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
@@ -5093,7 +5093,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 7.2.2
+version: 7.3.0
 module: extensions-contrib/druid-ranger-security
 license_name: Apache License version 2.0
 libraries:

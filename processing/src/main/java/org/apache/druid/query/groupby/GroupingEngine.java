@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -113,8 +112,15 @@ import java.util.stream.Collectors;
  */
 public class GroupingEngine
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#FUDGE_TIMESTAMP} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
-  // Internal merge marker; this is not a public query context parameter descriptor.
+  /**
+   * @deprecated Use {@link QueryContextParameters#GROUP_BY_OUTERMOST} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
 
   private final DruidProcessingConfig processingConfig;
@@ -226,15 +232,15 @@ public class GroupingEngine
     // Set up downstream context.
     final QueryContextBuilder context = QueryContext.builder();
     context.put(QueryContextParameters.FINALIZE, false);
-    context.putRaw(CTX_KEY_OUTERMOST, false);
+    context.put(QueryContextParameters.GROUP_BY_OUTERMOST, false);
 
     Granularity granularity = query.getGranularity();
     List<DimensionSpec> dimensionSpecs = query.getDimensions();
-    // the CTX_TIMESTAMP_RESULT_FIELD is set in DruidQuery.java
+    // the timestampResultField is set in DruidQuery.java
     final QueryContext queryContext = query.context();
-    final String timestampResultField = queryContext.getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final String timestampResultField = queryContext.get(QueryContextParameters.TIMESTAMP_RESULT_FIELD);
     final boolean hasTimestampResultField = (timestampResultField != null && !timestampResultField.isEmpty())
-                                            && queryContext.getBoolean(CTX_KEY_OUTERMOST, true)
+                                            && queryContext.getOrDefault(QueryContextParameters.GROUP_BY_OUTERMOST)
                                             && !query.isApplyLimitPushDown();
     if (hasTimestampResultField) {
       // sql like "group by city_id,time_floor(__time to day)",
@@ -259,7 +265,10 @@ public class GroupingEngine
       // the granularity and dimensions are slightly different.
       // now, part of the query plan logic is handled in GroupByStrategyV2, not only in DruidQuery.toGroupByQuery()
       final Granularity timestampResultFieldGranularity
-          = queryContext.getGranularity(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, jsonMapper);
+          = queryContext.getGranularity(
+              QueryContextParameters.TIMESTAMP_RESULT_FIELD_GRANULARITY.getName(),
+              jsonMapper
+          );
       dimensionSpecs =
           query.getDimensions()
                .stream()
@@ -268,14 +277,17 @@ public class GroupingEngine
       granularity = timestampResultFieldGranularity;
       // when timestampResultField is the last dimension, should set sortByDimsFirst=true,
       // otherwise the downstream is sorted by row's timestamp first which makes the final ordering not as expected
-      int timestampResultFieldIndex = queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
+      final int timestampResultFieldIndex = queryContext.getOrDefault(
+          QueryContextParameters.TIMESTAMP_RESULT_FIELD_IN_ORIGINAL_DIMENSIONS,
+          0
+      );
       if (!query.getContextSortByDimsFirst() && timestampResultFieldIndex == query.getDimensions().size() - 1) {
-        context.putRaw(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true);
+        context.put(QueryContextParameters.SORT_BY_DIMS_FIRST, true);
       }
       // when timestampResultField is the first dimension and sortByDimsFirst=true,
       // it is actually equals to sortByDimsFirst=false
       if (query.getContextSortByDimsFirst() && timestampResultFieldIndex == 0) {
-        context.putRaw(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
+        context.put(QueryContextParameters.SORT_BY_DIMS_FIRST, false);
       }
       // when hasTimestampResultField=true and timestampResultField is neither first nor last dimension,
       // the DefaultLimitSpec will always do the reordering
@@ -284,14 +296,14 @@ public class GroupingEngine
       // universalTimestamp works only when granularity is all
       // hasTimestampResultField works only when granularity is all
       // fudgeTimestamp should not be used when hasTimestampResultField=true due to the row's actual timestamp is used
-      context.putRaw(CTX_KEY_FUDGE_TIMESTAMP, String.valueOf(query.getUniversalTimestamp().getMillis()));
+      context.put(QueryContextParameters.FUDGE_TIMESTAMP, String.valueOf(query.getUniversalTimestamp().getMillis()));
     }
 
     // The having spec shouldn't be passed down, so we need to convey the existing limit push down status
-    context.putRaw(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown());
+    context.put(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown());
 
     // Always request array result rows when passing the query downstream.
-    context.putRaw(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true);
+    context.put(QueryContextParameters.RESULT_AS_ARRAY, true);
 
     return new GroupByQuery(
         query.getDataSource(),
@@ -352,20 +364,20 @@ public class GroupingEngine
     );
 
     final QueryContext queryContext = query.context();
-    final String timestampResultField = queryContext.getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final String timestampResultField = queryContext.get(QueryContextParameters.TIMESTAMP_RESULT_FIELD);
     final boolean hasTimestampResultField = (timestampResultField != null && !timestampResultField.isEmpty())
-                                            && queryContext.getBoolean(CTX_KEY_OUTERMOST, true)
+                                            && queryContext.getOrDefault(QueryContextParameters.GROUP_BY_OUTERMOST)
                                             && !query.isApplyLimitPushDown();
-    final int timestampResultFieldIndexInOriginalDimensions = hasTimestampResultField ? queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX) : 0;
+    final int timestampResultFieldIndexInOriginalDimensions = hasTimestampResultField ? queryContext.get(QueryContextParameters.TIMESTAMP_RESULT_FIELD_IN_ORIGINAL_DIMENSIONS) : 0;
     final GroupByQuery newQuery = prepareGroupByQuery(query);
 
     final Sequence<ResultRow> mergedResults = mergingQueryRunner.run(QueryPlus.wrap(newQuery), responseContext);
 
-    // Apply postaggregators if this is the outermost mergeResults (CTX_KEY_OUTERMOST) and we are not executing a
-    // pushed-down subquery (CTX_KEY_EXECUTING_NESTED_QUERY).
+    // Apply postaggregators if this is the outermost mergeResults (GROUP_BY_OUTERMOST) and we are not executing a
+    // pushed-down subquery (EXECUTING_NESTED_QUERY).
 
-    if (!queryContext.getBoolean(CTX_KEY_OUTERMOST, true)
-        || queryContext.getBoolean(GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY, false)) {
+    if (!queryContext.getOrDefault(QueryContextParameters.GROUP_BY_OUTERMOST)
+        || queryContext.getOrDefault(QueryContextParameters.EXECUTING_NESTED_QUERY)) {
       return mergedResults;
     } else if (query.getPostAggregatorSpecs().isEmpty()) {
       if (!hasTimestampResultField) {
@@ -562,7 +574,7 @@ public class GroupingEngine
       final ResourceHolder<ByteBuffer> bufferHolder = bufferPool.take();
       closer.register(bufferHolder);
 
-      final String fudgeTimestampString = query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP);
+      final String fudgeTimestampString = query.context().get(QueryContextParameters.FUDGE_TIMESTAMP);
       final DateTime fudgeTimestamp = fudgeTimestampString == null
                                       ? null
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
@@ -621,7 +633,7 @@ public class GroupingEngine
     results = wrapSummaryRowIfNeeded(query, results);
 
     // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
-    if (query.context().getBoolean(CTX_KEY_OUTERMOST, true)) {
+    if (query.context().getOrDefault(QueryContextParameters.GROUP_BY_OUTERMOST)) {
       return query.postProcess(results);
     } else {
       return results;
@@ -752,7 +764,7 @@ public class GroupingEngine
           .withDimFilter(null)
           .withSubtotalsSpec(null)
           // timestampResult optimization is not for subtotal scenario, so disable it
-          .withOverriddenContext(ImmutableMap.of(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, ""));
+          .withOverriddenContext(QueryContext.ofMap(QueryContextParameters.TIMESTAMP_RESULT_FIELD, ""));
 
       resultSupplierOne = GroupByRowProcessor.process(
           baseSubtotalQuery,

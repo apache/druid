@@ -58,7 +58,6 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.indexing.report.MSQTaskReportTest;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.PageInformation;
@@ -68,6 +67,8 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.HttpResponseException;
@@ -138,8 +139,8 @@ public class SqlStatementResourceTest extends MSQTestBase
                                                                          Collections.singletonList(Intervals.of(
                                                                              "2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))))
                                                                      .dataSource("target")
-                                                                     .context(ImmutableMap.of(
-                                                                         MSQTaskQueryMaker.USER_KEY,
+                                                                     .context(QueryContext.ofMap(
+                                                                         QueryContextParameters.USER,
                                                                          AuthConfig.ALLOW_ALL_NAME
                                                                      ))
                                                                      .build();

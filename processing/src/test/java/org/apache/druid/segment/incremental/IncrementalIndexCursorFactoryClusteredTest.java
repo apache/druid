@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -244,6 +245,28 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
         }
         // acme group (tenant_lower=acme) first, then globex; both materialized from the clustering constant.
         Assertions.assertEquals(List.of("acme", "acme", "globex"), out);
+      }
+    }
+  }
+
+  @Test
+  void testReportedOrderingEndsAtQueryVirtualColumn()
+  {
+    // The query's "tenant" := upper(region) is equivalent to the materialized region_upper, so it is remapped to that
+    // column and dropped from each group's spec. It still shadows the stored "tenant", so the ordering must end
+    // before it.
+    try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      final List<OrderBy> segmentOrdering = index.getClusteredBaseTable().toMetadataSchema().getOrdering();
+      Assertions.assertEquals("tenant", segmentOrdering.get(1).getColumnName());
+
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("tenant", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+        Assertions.assertEquals(segmentOrdering.subList(0, 1), holder.getOrdering());
       }
     }
   }

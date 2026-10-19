@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
@@ -312,7 +313,10 @@ public class JoinFilterAnalyzer
           VirtualColumn pushDownVirtualColumn = pushDownVirtualColumnsForLhsExprs.computeIfAbsent(
               correlatedBaseExpr,
               (expr) -> {
-                String vcName = getCorrelatedBaseExprVirtualColumnName(pushDownVirtualColumnsForLhsExprs.size());
+                String vcName = getCorrelatedBaseExprVirtualColumnName(
+                    pushDownVirtualColumnsForLhsExprs.size(),
+                    joinFilterPreAnalysis.getKey().getVirtualColumns()
+                );
                 return new ExpressionVirtualColumn(
                     vcName,
                     correlatedBaseExpr,
@@ -483,7 +487,10 @@ public class JoinFilterAnalyzer
           VirtualColumn pushDownVirtualColumn = pushDownVirtualColumnsForLhsExprs.computeIfAbsent(
               correlatedBaseExpr,
               (expr) -> {
-                String vcName = getCorrelatedBaseExprVirtualColumnName(pushDownVirtualColumnsForLhsExprs.size());
+                String vcName = getCorrelatedBaseExprVirtualColumnName(
+                    pushDownVirtualColumnsForLhsExprs.size(),
+                    joinFilterPreAnalysis.getKey().getVirtualColumns()
+                );
                 return new ExpressionVirtualColumn(
                     vcName,
                     correlatedBaseExpr,
@@ -512,10 +519,15 @@ public class JoinFilterAnalyzer
     );
   }
 
-  private static String getCorrelatedBaseExprVirtualColumnName(int counter)
+  private static String getCorrelatedBaseExprVirtualColumnName(int counter, VirtualColumns virtualColumns)
   {
-    // May want to have this check other column names to absolutely prevent name conflicts
-    return PUSH_DOWN_VIRTUAL_COLUMN_NAME_BASE + counter;
+    // Avoid the names of the virtual columns applied on top of the join, since those that read only base columns are
+    // pushed down alongside this one. May want to also check base column names to absolutely prevent name conflicts.
+    String name = PUSH_DOWN_VIRTUAL_COLUMN_NAME_BASE + counter;
+    while (virtualColumns.exists(name)) {
+      name = "_" + name;
+    }
+    return name;
   }
 
   private static boolean isColumnFromPostJoinVirtualColumns(

@@ -34,9 +34,11 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -49,10 +51,8 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -71,8 +71,8 @@ import static org.apache.druid.segment.column.ColumnType.STRING;
 
 public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 {
-  protected static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(
-      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+  protected static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = QueryContext.ofMap(
+      QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
       "{\"type\":\"all\"}"
   );
 
@@ -709,8 +709,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     partitionedByArgumentToGranularityMap.forEach((partitionedByArgument, expectedGranularity) -> {
       Map<String, Object> queryContext = null;
       try {
-        queryContext = ImmutableMap.of(
-            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, queryJsonMapper.writeValueAsString(expectedGranularity)
+        queryContext = QueryContext.ofMap(
+            QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
+            queryJsonMapper.writeValueAsString(expectedGranularity)
         );
       }
       catch (JsonProcessingException e) {
@@ -756,8 +757,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     partitionedByToGranularity.forEach((partitionedByArgument, expectedGranularity) -> {
       Map<String, Object> queryContext = null;
       try {
-        queryContext = ImmutableMap.of(
-            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, queryJsonMapper.writeValueAsString(expectedGranularity)
+        queryContext = QueryContext.ofMap(
+            QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
+            queryJsonMapper.writeValueAsString(expectedGranularity)
         );
       }
       catch (JsonProcessingException e) {
@@ -1408,9 +1410,12 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatement()
   {
+    // UNION of tables would be plannable (as an aggregation over a union datasource); however, UNION of
+    // lookup and a table is not plannable.
     assertQueryIsUnplannable(
-        "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo PARTITIONED BY ALL TIME",
-        "SQL requires 'UNION' but only 'UNION ALL' is supported."
+        "INSERT INTO druid.dst SELECT k, v FROM lookup.lookyloo UNION SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME",
+        "Query requires union with an input that reads from something other than a regular table, "
+        + "which is not supported."
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -1643,7 +1648,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   public void testInsertWithSqlOuterLimit()
   {
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+    context.put(QueryContextParameters.SQL_OUTER_LIMIT.getName(), 100);
 
     testIngestionQuery()
         .context(context)

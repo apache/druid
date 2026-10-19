@@ -36,6 +36,10 @@ import java.util.List;
  */
 public abstract class DruidSqlIngest extends SqlInsert
 {
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#EXPORT_FILE_FORMAT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SQL_EXPORT_FILE_FORMAT = "__exportFileFormat";
 
   @Nullable

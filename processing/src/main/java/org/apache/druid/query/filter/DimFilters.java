@@ -23,6 +23,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -88,5 +89,22 @@ public class DimFilters
   {
     List<DimFilter> list = Arrays.stream(filters).filter(v -> v != null && !TrueDimFilter.instance().equals(v)).collect(Collectors.toList());
     return conjunction(list);
+  }
+
+  /**
+   * Returns the filters that the given filter is an AND of, flattening nested ANDs. Returns the filter itself if it is
+   * not an AND.
+   */
+  public static List<DimFilter> splitConjunction(final DimFilter filter)
+  {
+    if (filter instanceof AndDimFilter) {
+      final List<DimFilter> retVal = new ArrayList<>();
+      for (final DimFilter field : ((AndDimFilter) filter).getFields()) {
+        retVal.addAll(splitConjunction(field));
+      }
+      return retVal;
+    } else {
+      return List.of(filter);
+    }
   }
 }

@@ -23,14 +23,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -41,7 +39,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,12 +57,23 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   /**
-   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#QUERY_ID} instead.
+   * @deprecated Use {@link QueryContextParameters#QUERY_ID} instead.
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String QUERY_ID = "queryId";
+
+  /**
+   * @deprecated Use {@link QueryContextParameters#SUB_QUERY_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SUB_QUERY_ID = "subQueryId";
+
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_QUERY_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SQL_QUERY_ID = "sqlQueryId";
+
   private final DataSource dataSource;
   private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;
@@ -189,20 +197,6 @@ public abstract class BaseQuery<T> implements Query<T>
     return computeOverriddenContext(getContext(), overrides);
   }
 
-  /**
-   * Returns {@code context} with a single typed parameter overridden. A {@code null} value removes the parameter.
-   *
-   * @throws BadQueryContextException if the value is invalid
-   */
-  public static <V> Map<String, Object> computeOverriddenContext(
-      final Map<String, Object> context,
-      final QueryContextParameter<V> parameter,
-      @Nullable final V value
-  )
-  {
-    return QueryContexts.override(context, Collections.singletonMap(parameter.getName(), parameter.validate(value)));
-  }
-
   public static Map<String, Object> computeOverriddenContext(
       final Map<String, Object> context,
       final Map<String, Object> overrides
@@ -233,14 +227,14 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public Query<T> withSubQueryId(String subQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(SUB_QUERY_ID, subQueryId));
+    return withOverriddenContext(QueryContextParameters.SUB_QUERY_ID, subQueryId);
   }
 
   @Nullable
   @Override
   public String getSubQueryId()
   {
-    return context().getString(SUB_QUERY_ID);
+    return context().get(QueryContextParameters.SUB_QUERY_ID);
   }
 
   @Override
@@ -252,7 +246,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public Query<T> withSqlQueryId(String sqlQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(SQL_QUERY_ID, sqlQueryId));
+    return withOverriddenContext(QueryContextParameters.SQL_QUERY_ID, sqlQueryId);
   }
 
   @Override

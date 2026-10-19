@@ -21,18 +21,21 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -510,36 +513,62 @@ public class CursorBuildSpec
       return this;
     }
 
-
     /**
-     * Adds a {@link Filter} to the builder, if {@link #filter} is already set, the existing and new filters will be
-     * combined with an {@link org.apache.druid.segment.filter.AndFilter}. If {@link #physicalColumns} is set,
-     * {@link Filter#getRequiredColumns()} which are not present in {@link #virtualColumns} will be added to the
-     * existing set of {@link #physicalColumns}.
+     * Adds a {@link Filter} to the builder. If {@link #filter} is already set, the existing and new filters will be
+     * combined with an {@link AndFilter}. If {@link #physicalColumns} is set, {@link Filter#getRequiredColumns()}
+     * will be added to the existing set of {@link #physicalColumns}. Requires that the filter not read any
+     * {@link #virtualColumns}. Throws if there is a conflict.
      */
-    public CursorBuildSpecBuilder andFilter(
-        Filter filterToAdd
-    )
+    public CursorBuildSpecBuilder andBaseFilter(final Filter filterToAdd)
     {
       DruidException.conditionalDefensive(filterToAdd != null, "filterToAdd must not be null");
+      verifyBaseColumnsAreReadable(filterToAdd.getRequiredColumns());
+
       final Filter newFilter;
-      final Set<String> newPhysicalColumns;
       if (filter == null) {
         newFilter = filterToAdd;
       } else {
         newFilter = Filters.and(Arrays.asList(filter, filterToAdd));
       }
+
+      final Set<String> newPhysicalColumns;
       if (physicalColumns != null) {
         newPhysicalColumns = new HashSet<>(physicalColumns);
-        for (String column : filterToAdd.getRequiredColumns()) {
-          if (!virtualColumns.exists(column)) {
-            newPhysicalColumns.add(column);
-          }
-        }
+        newPhysicalColumns.addAll(filterToAdd.getRequiredColumns());
       } else {
         newPhysicalColumns = null;
       }
       return setFilter(newFilter).setPhysicalColumns(newPhysicalColumns);
+    }
+
+    /**
+     * Adds virtual columns to {@link #getVirtualColumns()} that read the base's columns, i.e., the ones
+     * currently beneath {@link #getVirtualColumns()}. Throws if this is not possible, for example if one
+     * of the virtual columns already existing in {@link #getVirtualColumns()} would shadow the required
+     * base columns or one of the {@code virtualColumnsToAdd}.
+     */
+    public CursorBuildSpecBuilder addBaseVirtualColumns(final VirtualColumns virtualColumnsToAdd)
+    {
+      final Set<String> requiredColumns = new HashSet<>();
+      for (final VirtualColumn virtualColumn : virtualColumnsToAdd.getVirtualColumns()) {
+        requiredColumns.addAll(virtualColumn.requiredColumns());
+        requiredColumns.add(virtualColumn.getOutputName());
+      }
+      verifyBaseColumnsAreReadable(requiredColumns);
+
+      final List<VirtualColumn> combined = new ArrayList<>(Arrays.asList(virtualColumnsToAdd.getVirtualColumns()));
+      combined.addAll(Arrays.asList(virtualColumns.getVirtualColumns()));
+      final VirtualColumns newVirtualColumns = VirtualColumns.create(combined);
+
+      final Set<String> newPhysicalColumns;
+      if (physicalColumns != null) {
+        newPhysicalColumns = new HashSet<>(physicalColumns);
+        newPhysicalColumns.addAll(requiredColumns);
+        newPhysicalColumns.removeIf(newVirtualColumns::exists);
+      } else {
+        newPhysicalColumns = null;
+      }
+      return setVirtualColumns(newVirtualColumns).setPhysicalColumns(newPhysicalColumns);
     }
 
     public CursorBuildSpec build()
@@ -555,6 +584,19 @@ public class CursorBuildSpec
           queryContext,
           queryMetrics
       );
+    }
+
+    /**
+     * Throws if any of the provided baseColumns would be shadowed by one of our {@link #virtualColumns}.
+     */
+    private void verifyBaseColumnsAreReadable(final Iterable<String> baseColumns)
+    {
+      for (final String baseColumn : baseColumns) {
+        final VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(baseColumn);
+        if (virtualColumn != null) {
+          throw InvalidInput.exception("Virtual column name[%s] is not permitted", virtualColumn.getOutputName());
+        }
+      }
     }
   }
 }

@@ -63,6 +63,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.utils.CloseableUtils;
@@ -91,6 +92,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#QUERY_FAIL_TIME} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String QUERY_FAIL_TIME = "queryFailTime";
 
   private static final Logger log = new Logger(DirectDruidClient.class);
@@ -171,7 +176,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       final long requestStartTimeNs = System.nanoTime();
       final QueryContext queryContext = query.context();
       // Will NPE if the value is not set.
-      final long timeoutAt = queryContext.getLong(QUERY_FAIL_TIME);
+      final long timeoutAt = queryContext.get(QueryContextParameters.QUERY_FAIL_TIME);
       final long maxScatterGatherBytes = queryContext.getMaxScatterGatherBytes();
       final AtomicLong totalBytesGathered = context.getTotalBytes();
       final long maxQueuedBytes = queryContext.getMaxQueuedBytes(0);

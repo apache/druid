@@ -34,9 +34,9 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
@@ -121,7 +121,10 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
 
-    final List<OrderBy> indexOrdering = orderingOverride != null ? orderingOverride : index.getOrdering();
+    final List<OrderBy> indexOrdering = Cursors.trimOrdering(
+        orderingOverride != null ? orderingOverride : index.getOrdering(),
+        virtualColumns
+    );
     if (Cursors.preferDescendingTimeOrdering(cursorBuildSpec)
         && Cursors.getTimeOrdering(indexOrdering) == Order.ASCENDING) {
       this.ordering = Cursors.descendingTimeOrder();
@@ -141,7 +144,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
               Cursors.getTimeOrdering(ordering),
               interval,
               filter,
-              cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
+              cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.CURSOR_AUTO_ARRANGE_FILTERS),
               metrics
           );
           resourcesComputed.set(true);

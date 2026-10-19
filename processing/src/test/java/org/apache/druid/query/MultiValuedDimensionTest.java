@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
@@ -122,7 +123,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
   private File persistedSegmentDirNullSampler;
 
   private final GroupByQueryConfig config;
-  private final ImmutableMap<String, Object> context;
+  private final Map<String, Object> context;
 
   public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory, boolean forceHashAggregation)
   {
@@ -134,7 +135,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     this.config = config;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
 
-    this.context = ImmutableMap.of("forceHashAggregation", forceHashAggregation);
+    this.context = QueryContext.ofMap(QueryContextParameters.FORCE_HASH_AGGREGATION, forceHashAggregation);
   }
 
   @BeforeEach

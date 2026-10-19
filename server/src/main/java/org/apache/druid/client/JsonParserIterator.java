@@ -35,6 +35,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -74,7 +75,7 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
     this.future = future;
     this.url = url;
     if (query != null) {
-      this.timeoutAt = query.context().getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+      this.timeoutAt = query.context().getOrDefault(QueryContextParameters.QUERY_FAIL_TIME, -1L);
       this.queryId = query.getId();
     } else {
       this.timeoutAt = -1;

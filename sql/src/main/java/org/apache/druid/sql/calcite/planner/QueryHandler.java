@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -59,10 +60,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.guava.BaseSequence;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
@@ -72,7 +76,10 @@ import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
+import org.apache.druid.sql.calcite.rel.DruidRels;
+import org.apache.druid.sql.calcite.rel.DruidUnionDataSourceRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
+import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -333,43 +340,46 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           planner.getTypeFactory(),
           plannerContext.getParameters()
       );
-      final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
-        final Enumerable<?> enumerable = theRel.bind(dataContext);
-        final Enumerator<?> enumerator = enumerable.enumerator();
-        return QueryResponse.withEmptyContext(
-            Sequences.withBaggage(new BaseSequence<>(
-                new BaseSequence.IteratorMaker<Object[], QueryHandler.EnumeratorIterator<Object[]>>()
-                {
-                  @Override
-                  public QueryHandler.EnumeratorIterator<Object[]> make()
-                  {
-                    return new QueryHandler.EnumeratorIterator<>(new Iterator<>()
-                    {
-                      @Override
-                      public boolean hasNext()
-                      {
-                        return enumerator.moveNext();
-                      }
-
-                      @Override
-                      public Object[] next()
-                      {
-                        return (Object[]) enumerator.current();
-                      }
-                    });
-                  }
-
-                  @Override
-                  public void cleanup(QueryHandler.EnumeratorIterator<Object[]> iterFromMake)
-                  {
-
-                  }
-                }
-            ), enumerator::close)
-        );
-      };
+      final Supplier<QueryResponse<Object[]>> resultsSupplier =
+          () -> QueryResponse.withEmptyContext(enumerate(theRel.bind(dataContext)));
       return new PlannerResult(resultsSupplier, rootQueryRel.validatedRowType);
     }
+  }
+
+  /**
+   * Rows of a bound {@link BindableRel}; closing the sequence releases everything the binding holds.
+   */
+  @VisibleForTesting
+  static Sequence<Object[]> enumerate(final Enumerable<?> enumerable)
+  {
+    final Sequence<Object[]> rows = new BaseSequence<>(
+        new BaseSequence.IteratorMaker<Object[], EnumeratorIterator>()
+        {
+          @Override
+          public EnumeratorIterator make()
+          {
+            return new EnumeratorIterator(enumerable.enumerator());
+          }
+
+          @Override
+          public void cleanup(EnumeratorIterator iterFromMake)
+          {
+            iterFromMake.enumerator.close();
+          }
+        }
+    );
+
+    if (!(enumerable instanceof AutoCloseable closeable)) {
+      return rows;
+    }
+    return Sequences.wrap(rows, new SequenceWrapper()
+    {
+      @Override
+      public void after(boolean isDone, Throwable thrown) throws Exception
+      {
+        closeable.close();
+      }
+    });
   }
 
   /**
@@ -542,10 +552,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     CalcitePlanner planner = handlerContext.planner();
     final RelDataType rowType = prepareResult.getReturnedRowType();
 
-    if (plannerContext.getPlannerConfig()
-                      .getNativeQuerySqlPlanningMode()
-                      .equals(QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-    ) {
+    if (plannerContext.getPlannerConfig().getNativeQuerySqlPlanningMode() == QueryContexts.PlannerStrategy.DECOUPLED) {
       RelNode newRoot = parameterized;
       newRoot = planner.transform(
           CalciteRulesManager.DRUID_DAG_CONVENTION_RULES,
@@ -584,12 +591,14 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
       return new PlannerResult(resultsSupplier, rowType);
     } else {
-      final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
-          CalciteRulesManager.DRUID_CONVENTION_RULES,
-          planner.getEmptyTraitSet()
-                 .replace(DruidConvention.instance())
-                 .plus(rootQueryRel.collation),
-          parameterized
+      final DruidRel<?> druidRel = maybeAsTopLevelUnion(
+          (DruidRel<?>) planner.transform(
+              CalciteRulesManager.DRUID_CONVENTION_RULES,
+              planner.getEmptyTraitSet()
+                     .replace(DruidConvention.instance())
+                     .plus(rootQueryRel.collation),
+              parameterized
+          )
       );
 
       handlerContext.hook().captureDruidRel(druidRel);
@@ -624,7 +633,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
    * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
    * <p>
-   * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
+   * The {@link QueryContextParameters#SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
    * @param root root node
@@ -633,7 +642,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   @Nullable
   private RelRoot possiblyWrapRootWithOuterLimitFromContext(RelRoot root)
   {
-    Long outerLimit = handlerContext.queryContext().getLong(PlannerContext.CTX_SQL_OUTER_LIMIT);
+    final Long outerLimit = handlerContext.queryContext().get(QueryContextParameters.SQL_OUTER_LIMIT);
     if (outerLimit == null) {
       return root;
     }
@@ -690,6 +699,29 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                               "Query could not be planned. A possible reason is [%s]",
                               errorMessage
                           );
+    }
+  }
+
+  /**
+   * When {@link EngineFeature#ALLOW_TOP_LEVEL_UNION_ALL} is set, this function possibly transforms top-level
+   * {@link DruidUnionDataSourceRel} into {@link DruidUnionRel} so they run as separate, sequential queries.
+   */
+  private static DruidRel<?> maybeAsTopLevelUnion(final DruidRel<?> druidRel)
+  {
+    if (!druidRel.getPlannerContext().featureAvailable(EngineFeature.ALLOW_TOP_LEVEL_UNION_ALL)) {
+      return druidRel;
+    } else if (druidRel instanceof DruidUnionRel) {
+      final List<RelNode> newInputs = new ArrayList<>();
+      for (final RelNode input : druidRel.getInputs()) {
+        newInputs.add(maybeAsTopLevelUnion((DruidRel<?>) input));
+      }
+      return (DruidRel<?>) druidRel.copy(druidRel.getTraitSet(), newInputs);
+    } else if (druidRel instanceof DruidUnionDataSourceRel
+               && druidRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SCAN
+               && !DruidRels.isUnionOfTables(druidRel.toDruidQuery(false).getDataSource())) {
+      return DruidUnionRel.create(druidRel.getPlannerContext(), druidRel.getRowType(), druidRel.getInputs(), -1);
+    } else {
+      return druidRel;
     }
   }
 
@@ -750,25 +782,25 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     }
   }
 
-  private static class EnumeratorIterator<T> implements Iterator<T>
+  private static class EnumeratorIterator implements Iterator<Object[]>
   {
-    private final Iterator<T> it;
+    private final Enumerator<?> enumerator;
 
-    EnumeratorIterator(Iterator<T> it)
+    EnumeratorIterator(Enumerator<?> enumerator)
     {
-      this.it = it;
+      this.enumerator = enumerator;
     }
 
     @Override
     public boolean hasNext()
     {
-      return it.hasNext();
+      return enumerator.moveNext();
     }
 
     @Override
-    public T next()
+    public Object[] next()
     {
-      return it.next();
+      return (Object[]) enumerator.current();
     }
   }
 }
