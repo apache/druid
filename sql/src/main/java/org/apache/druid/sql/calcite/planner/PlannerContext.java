@@ -786,13 +786,13 @@ public class PlannerContext
     plannerToolbox.getHookDispatcher().dispatch(key, object);
   }
 
-  private QueryContext initializeContextFieldsAndPlannerConfig(final Map<String, Object> context)
+  private QueryContext initializeContextFieldsAndPlannerConfig(final Map<String, Object> queryContext)
   {
-    QueryContext initialContext = QueryContext.of(context);
-    final String tsParam = initialContext.get(QueryContextParameters.SQL_CURRENT_TIMESTAMP);
+    QueryContext context = QueryContext.of(queryContext);
+    final String tsParam = context.get(QueryContextParameters.SQL_CURRENT_TIMESTAMP);
     final DateTime utcNow = tsParam != null ? DateTimes.of(tsParam) : DateTimes.nowUtc();
 
-    final String tzParam = initialContext.get(QueryContextParameters.SQL_TIME_ZONE);
+    final String tzParam = context.get(QueryContextParameters.SQL_TIME_ZONE);
     final DateTimeZone timeZone;
     if (tzParam != null) {
       timeZone = DateTimes.inferTzFromString(tzParam);
@@ -801,27 +801,27 @@ public class PlannerContext
     }
     localNow = utcNow.withZone(timeZone);
 
-    stringifyArrays = initialContext.getOrDefault(QueryContextParameters.SQL_STRINGIFY_ARRAYS, true);
-    useBoundsAndSelectors = initialContext.getOrDefault(QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS);
-    useExtractionFns = initialContext.getOrDefault(QueryContextParameters.SQL_USE_EXTRACTION_FNS);
-    pullUpLookup = initialContext.getOrDefault(QueryContextParameters.SQL_PULL_UP_LOOKUP);
-    reverseLookup = initialContext.getOrDefault(QueryContextParameters.SQL_REVERSE_LOOKUP);
+    stringifyArrays = context.getOrDefault(QueryContextParameters.SQL_STRINGIFY_ARRAYS, true);
+    useBoundsAndSelectors = context.getOrDefault(QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS);
+    useExtractionFns = context.getOrDefault(QueryContextParameters.SQL_USE_EXTRACTION_FNS);
+    pullUpLookup = context.getOrDefault(QueryContextParameters.SQL_PULL_UP_LOOKUP);
+    reverseLookup = context.getOrDefault(QueryContextParameters.SQL_REVERSE_LOOKUP);
 
-    useGranularity = initialContext.getOrDefault(QueryContextParameters.SQL_USE_GRANULARITY);
+    useGranularity = context.getOrDefault(QueryContextParameters.SQL_USE_GRANULARITY);
 
-    sqlQueryId = initialContext.get(QueryContextParameters.SQL_QUERY_ID);
+    sqlQueryId = context.get(QueryContextParameters.SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
-      initialContext = initialContext.override(QueryContextParameters.SQL_QUERY_ID, sqlQueryId);
+      context = context.override(QueryContextParameters.SQL_QUERY_ID, sqlQueryId);
     }
 
     if (plannerConfig != null) {
-      plannerConfig = plannerConfig.withOverrides(initialContext.asMap());
+      plannerConfig = plannerConfig.withOverrides(context.asMap());
     } else {
-      plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(initialContext.asMap());
+      plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(context.asMap());
     }
 
-    return initialContext;
+    return context;
   }
 }

@@ -75,8 +75,8 @@ public class QueryContext
   }
 
   /**
-   * @param copy whether to copy {@code context}. Pass false only for a {@link TreeMap} this class has just built and
-   *             will not modify afterwards.
+   * @param copy whether to copy {@code context}.
+   *             Pass false only for a {@link TreeMap} this class has just built and will not modify afterwards.
    */
   private QueryContext(@Nullable final Map<String, Object> context, final boolean copy)
   {
@@ -859,6 +859,7 @@ public class QueryContext
     if (contextOverride == null || contextOverride.isEmpty()) {
       return this;
     }
+
     final TreeMap<String, Object> overridden = new TreeMap<>(context);
     // A null override unsets the key, like QueryContexts.override(Map, Map).
     contextOverride.forEach((key, value) -> {
@@ -880,8 +881,7 @@ public class QueryContext
   }
 
   /**
-   * Returns a new context with one typed parameter inserted, updated or, if {@code value} is null, removed.
-   * Leaves this context unchanged.
+   * Returns a new context with one typed parameter inserted, updated or, if {@code value} is null, removed. Leaves this context unchanged.
    *
    * @throws BadQueryContextException if the value is invalid
    */
