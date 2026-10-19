@@ -71,12 +71,21 @@ public class QueryContext
   @JsonCreator
   public QueryContext(Map<String, Object> context)
   {
+    this(context, true);
+  }
+
+  /**
+   * @param copy whether to copy {@code context}. Pass false only for a {@link TreeMap} this class has just built and
+   *             will not modify afterwards.
+   */
+  private QueryContext(@Nullable final Map<String, Object> context, final boolean copy)
+  {
     // There is no semantic difference between an empty and a null context.
     // Ensure that a context always exists to avoid the need to check for
     // a null context. Jackson serialization will omit empty contexts.
     this.context = context == null
         ? Collections.emptyMap()
-        : Collections.unmodifiableMap(new TreeMap<>(context));
+        : Collections.unmodifiableMap(copy ? new TreeMap<>(context) : context);
   }
 
   public static QueryContext empty()
@@ -850,7 +859,16 @@ public class QueryContext
     if (contextOverride == null || contextOverride.isEmpty()) {
       return this;
     }
-    return QueryContext.of(QueryContexts.override(asMap(), contextOverride));
+    final TreeMap<String, Object> overridden = new TreeMap<>(context);
+    // A null override unsets the key, like QueryContexts.override(Map, Map).
+    contextOverride.forEach((key, value) -> {
+      if (value == null) {
+        overridden.remove(key);
+      } else {
+        overridden.put(key, value);
+      }
+    });
+    return new QueryContext(overridden, false);
   }
 
   public QueryContext override(QueryContext queryContext)
@@ -859,6 +877,19 @@ public class QueryContext
       return this;
     }
     return override(queryContext.asMap());
+  }
+
+  /**
+   * Returns a new context with one typed parameter inserted, updated or, if {@code value} is null, removed.
+   * Leaves this context unchanged.
+   *
+   * @throws BadQueryContextException if the value is invalid
+   */
+  public <T> QueryContext override(final QueryContextParameter<T> parameter, @Nullable final T value)
+  {
+    final TreeMap<String, Object> overridden = new TreeMap<>(context);
+    parameter.set(overridden, value);
+    return new QueryContext(overridden, false);
   }
 
   public boolean isPrePlanned()
