@@ -19,7 +19,7 @@
 import { Icon, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import type { Column, QueryResult, SqlExpression, SqlQueryBase } from 'druid-query-toolkit';
 import { SqlAlias, SqlFunction, SqlStar } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
@@ -48,7 +48,7 @@ function isWrappedInArrayToMv(ex: SqlExpression | undefined) {
   return ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'ARRAY_TO_MV';
 }
 
-function formatFormulaAtIndex(query: SqlQuery, selectIndex: number): string {
+function formatFormulaAtIndex(query: SqlQueryBase, selectIndex: number): string {
   const ex = query.getSelectExpressionForIndex(selectIndex);
 
   if (query.isRealOutputColumnAtSelectIndex(selectIndex)) {
