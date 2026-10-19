@@ -979,11 +979,12 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithSealedBaseTableAnalyzesForRangePartitioning() throws IOException
+  public void testCreateIngestionSchemaWithSealedBaseTableDeclaresNoMultiValuedDimensionsWhenRangePartitioning()
+      throws IOException
   {
-    // Sealing normally means the segments are never read, but MSQ cannot range partition over a multi-valued column
-    // and only the segments know which columns are. So a range-partitioned table is read even when sealed, and the
-    // result is handed to the runner to validate.
+    // MSQ cannot range partition over a multi-valued column, and only the segments know which columns are. A sealed
+    // table answers from its declaration instead of reading them: every declared string column holds one value per
+    // row. If the data disagrees the shuffle finds out and the task fails there.
     final DataSchema dataSchema = Iterables.getOnlyElement(
         CompactionTask.createInputDataSchemas(
             toolbox,
@@ -1002,8 +1003,9 @@ public class CompactionTaskTest
         ).values()
     );
 
-    Assertions.assertNotNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
-    // The declaration is still authoritative: analyzing for multi-valued columns adds none of them to the spec.
+    // Empty, not null: null would mean "unknown", which makes the runner treat every string column as possibly
+    // multi-valued and wrap it as an array.
+    Assertions.assertEquals(Set.of(), ((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
     Assertions.assertEquals(
         ImmutableList.of("string_dim_0", ColumnHolder.TIME_COLUMN_NAME),
         dataSchema.getDimensionsSpec().getDimensionNames()
@@ -1013,9 +1015,6 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithSealedBaseTableSkipsAnalysisWithoutRangePartitioning() throws IOException
   {
-    // A clustered layout does not group, so nothing needs to know which columns are multi-valued and the sealed
-    // declaration is taken at its word. identifyMultiValuedDimensions() is what works that out; here it is the false
-    // that it returns for such a task.
     final DataSchema dataSchema = Iterables.getOnlyElement(
         CompactionTask.createInputDataSchemas(
             toolbox,
@@ -1030,19 +1029,20 @@ public class CompactionTaskTest
             true,
             false,
             METRIC_BUILDER,
-            false
+            true
         ).values()
     );
 
-    Assertions.assertNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
+    Assertions.assertEquals(Set.of(), ((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
   }
 
   @Test
-  public void testCreateIngestionSchemaWithSealedRollupBaseTableAnalyzesMultiValuedDimensions() throws IOException
+  public void testCreateIngestionSchemaWithSealedRollupBaseTableSkipsAnalysisWithoutRangePartitioning()
+      throws IOException
   {
-    // Sealing says which columns exist, not which of them hold more than one value per row, and a rollup layout
-    // groups by them: a runner that is not told assumes every string column might be multi-valued and wraps them all.
-    // So this is the one question that is read from the segments even when the declaration is complete.
+    // A rollup layout groups by its string columns, and grouping by a real multi-valued one needs it converted to an
+    // array first. A sealed table declares that none of them are, rather than fetching every segment on every run to
+    // find out, so nothing is converted. A table whose data disagrees fails at the groupBy.
     final DataSchema dataSchema = Iterables.getOnlyElement(
         CompactionTask.createInputDataSchemas(
             toolbox,
@@ -1061,12 +1061,7 @@ public class CompactionTaskTest
         ).values()
     );
 
-    // The declaration is still authoritative: reading the segments for this adds nothing to the spec.
-    Assertions.assertEquals(
-        ImmutableList.of("string_dim_0", ColumnHolder.TIME_COLUMN_NAME),
-        dataSchema.getDimensionsSpec().getDimensionNames()
-    );
-    Assertions.assertNotNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
+    Assertions.assertEquals(Set.of(), ((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
   }
 
   @Test

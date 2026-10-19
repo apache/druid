@@ -522,10 +522,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
-   * Whether this task partitions by range. Base-table mode needs to know on its own account, because MSQ cannot range
-   * partition over a multi-valued column and only the segments can say whether one is. A base table's partition
-   * column need not be one of its declared columns (catalog cluster keys may name a column the table stores without
-   * declaring), so {@link #identifyMultiValuedDimensions()} can answer false for a task that still has to look.
+   * Whether this task partitions by range. A base table that is already reading its segments looks for multi-valued
+   * columns while it is there, because MSQ cannot range partition over one. {@link #identifyMultiValuedDimensions()}
+   * is not enough on its own for that: a base table's partition column need not be one of its declared columns
+   * (catalog cluster keys may name a column the table stores without declaring), so it can answer false for a task
+   * that still has something to find.
    */
   boolean isRangePartitioned()
   {
@@ -854,14 +855,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       // description of the table, so the columns and projections not declared are taken to not exist (and will be
       // removed).
       //
-      // Which string columns actually hold multiple values is only knowable from the segments, so they need analysis
-      // even when sealed if involved in grouping or partitioning.
+      // Which string columns hold multiple values is only knowable from the segments, so a sealed table declares the
+      // answer instead of paying to read it: a declared string column holds one value per row, since a base table has
+      // no way to say otherwise yet. A table whose data disagrees fails rather than being stored wrongly, after the
+      // shuffle for a range partition column and at the groupBy for a rollup grouping column.
       final boolean analyzeSchema = !sealed;
       final boolean analyzeProjections = !sealed && projections == null;
-      final boolean analyzeMultiValued = rangePartitioned || needMultiValuedColumns;
+      final boolean analyzeMultiValued = analyzeSchema && (rangePartitioned || needMultiValuedColumns);
       BaseTableProjectionSpec baseTableSpec = baseTable.withQueryGranularity(granularitySpec.getQueryGranularity());
       List<AggregateProjectionSpec> projectionSpecs = projections;
-      Set<String> multiValuedDimensions = null;
+      Set<String> multiValuedDimensions = sealed ? Set.of() : null;
       if (analyzeSchema || analyzeMultiValued) {
         final ExistingSegmentAnalyzer analyzer = new ExistingSegmentAnalyzer(
             segments,

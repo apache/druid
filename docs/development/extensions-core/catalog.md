@@ -362,11 +362,17 @@ compaction infers nothing from the segments: projections it does not declare are
 columns are. Note that before sealing a table that already has projections it has never declared, because they go on
 the next compaction; declare them with `ADD PROJECTION` first to keep them.
 
-Sealing does not make compaction skip reading the segments entirely, though. A table that declares
-[`clusterKeys`](#table-properties) is still read, because the MSQ task engine cannot range-partition by a multi-valued
-column and only the stored data says which columns hold multiple values. Compaction fails with a clear error in that
-case; without the check it would quietly write differently-partitioned segments and then re-compact the interval on
-every run, trying to reach a layout it never produces.
+Sealing makes compaction skip reading the segments entirely. Importantly, this includes the one thing the catalog cannot
+currently state, which is whether a string column holds more than one value per row. A sealed table's `VARCHAR` columns
+are taken to hold a single value each, because there is no way to declare otherwise yet. Where the stored data
+disagrees, the compaction task fails rather than writing something that was not asked for:
+
+- a [`clusterKeys`](#table-properties) column that turns out to be multi-valued fails once the data has been read,
+  because the MSQ task engine cannot range-partition by one
+- a [rollup table](#rollup-tables) grouping column that turns out to be multi-valued fails at the grouping step,
+  because grouping by such a column requires converting it to an array first
+
+Neither is detected before the task runs, and a non-sealed table avoids both by reading the segments to find out.
 
 A non-sealed [rollup table](#rollup-tables) appends metric columns not declared in the columns list as additional
 aggregators. Any other layout has no metric columns at all, so if the segments store metrics and the table's layout
