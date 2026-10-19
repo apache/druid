@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -338,6 +340,53 @@ public class GroupByQueryRunnerFailureTest
     );
     // Assert overall timeout is triggered
     Assertions.assertEquals("Query [test] timed out", ex.getMessage());
+  }
+
+  @Test
+  @org.junit.jupiter.api.Timeout(value = 60_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+  public void testInvalidInputExceptionOnQueryable_multiThreaded()
+  {
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(Granularities.ALL)
+        .queryId("test-invalid-input")
+        .build();
+
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+          @Override
+          public boolean isSingleThreaded()
+          {
+            return false;
+          }
+        }
+    );
+
+    DruidException expected = InvalidInput.exception(
+        "Projection[p] specified, but does not satisfy query"
+    );
+
+    QueryRunner<ResultRow> failingRunner = (queryPlus, responseContext) -> {
+      throw expected;
+    };
+
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(
+        Execs.directExecutor(),
+        List.of(runner, failingRunner)
+    );
+
+    DruidException actual = Assertions.assertThrows(
+        DruidException.class,
+        () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
+    );
+
+    Assertions.assertSame(expected, actual);
   }
 
   @Test
