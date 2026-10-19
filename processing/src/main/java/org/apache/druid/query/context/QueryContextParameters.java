@@ -2524,8 +2524,8 @@ public final class QueryContextParameters
               return false;
             }
           } else if (value instanceof BigInteger bigInteger) {
-            // A context built in Java, or read from JSON by a mapper that keeps integers as BigInteger, such as one
-            // with DeserializationFeature.USE_BIG_INTEGER_FOR_INTS
+            // A context built in Java, or read from JSON by a mapper that keeps integers as BigInteger,
+            // such as one with DeserializationFeature.USE_BIG_INTEGER_FOR_INTS
             if (BigInteger.ONE.equals(bigInteger)) {
               return true;
             } else if (BigInteger.ZERO.equals(bigInteger)) {
