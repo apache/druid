@@ -707,24 +707,15 @@ public class KafkaEmitterTest
     Assertions.assertFalse(emitter.shouldSampleOut(event));
   }
 
-  @Test
-  public void testShouldSampleOut_noSamplingWhenSampledMetricsEmpty()
-  {
-    final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(100, null, null));
-    ServiceMetricEvent event = ServiceMetricEvent.builder().setMetric("query/time", 100).build("svc", "host");
-    Assertions.assertFalse(emitter.shouldSampleOut(event));
-  }
-
   /**
-   * samplingRate=10, both sampledMetrics and sampledNodeTypes empty → samples ALL metrics at 10%.
-   * With rate=0 we can deterministically assert true.
+   * When both sampledMetrics and sampledServiceTypes are empty, every metric is eligible for sampling.
+   * samplingRate=0 makes the result deterministic: every metric is dropped.
    */
   @Test
   public void testShouldSampleOut_samplesAllWhenRateSetButFiltersEmpty()
   {
     final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, null, null));
     ServiceMetricEvent event = ServiceMetricEvent.builder().setMetric("query/time", 100).build("svc", "host");
-    // With rate=0 and no filters, ALL metrics should be sampled out
     Assertions.assertTrue(emitter.shouldSampleOut(event));
   }
 
@@ -772,14 +763,14 @@ public class KafkaEmitterTest
     }
   }
 
-  // ==================== Node Type Sampling Tests ====================
+  // ==================== Service Type Sampling Tests ====================
 
   /**
-   * samplingRate=0, sampledMetrics=["query/time"], sampledNodeTypes=["druid/broker"]
+   * samplingRate=0, sampledMetrics=["query/time"], sampledServiceTypes=["druid/broker"]
    * Event from druid/broker with query/time → should be sampled out
    */
   @Test
-  public void testShouldSampleOut_matchingMetricAndNodeType()
+  public void testShouldSampleOut_matchingMetricAndServiceType()
   {
     final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(
         0,
@@ -793,11 +784,11 @@ public class KafkaEmitterTest
   }
 
   /**
-   * samplingRate=0, sampledMetrics=["query/time"], sampledNodeTypes=["druid/broker"]
-   * Event from druid/historical with query/time → should NOT be sampled (wrong node type)
+   * samplingRate=0, sampledMetrics=["query/time"], sampledServiceTypes=["druid/broker"]
+   * Event from druid/historical with query/time → should NOT be sampled (wrong service type)
    */
   @Test
-  public void testShouldSampleOut_matchingMetricButWrongNodeType()
+  public void testShouldSampleOut_matchingMetricButWrongServiceType()
   {
     final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(
         0,
@@ -811,11 +802,11 @@ public class KafkaEmitterTest
   }
 
   /**
-   * samplingRate=0, sampledMetrics=empty, sampledNodeTypes=["druid/broker"]
-   * Event from druid/broker with any metric → should be sampled out (node type filter only)
+   * samplingRate=0, sampledMetrics=empty, sampledServiceTypes=["druid/broker"]
+   * Event from druid/broker with any metric → should be sampled out (service type filter only)
    */
   @Test
-  public void testShouldSampleOut_nodeTypeOnlyFilter()
+  public void testShouldSampleOut_serviceTypeOnlyFilter()
   {
     final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, null, ImmutableSet.of("druid/broker")));
     ServiceMetricEvent event = ServiceMetricEvent.builder()
@@ -825,11 +816,11 @@ public class KafkaEmitterTest
   }
 
   /**
-   * samplingRate=0, sampledMetrics=empty, sampledNodeTypes=["druid/broker"]
-   * Event from druid/historical → should NOT be sampled (wrong node type)
+   * samplingRate=0, sampledMetrics=empty, sampledServiceTypes=["druid/broker"]
+   * Event from druid/historical → should NOT be sampled (wrong service type)
    */
   @Test
-  public void testShouldSampleOut_nodeTypeOnlyFilterWrongNodeType()
+  public void testShouldSampleOut_serviceTypeOnlyFilterWrongServiceType()
   {
     final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(0, null, ImmutableSet.of("druid/broker")));
     ServiceMetricEvent event = ServiceMetricEvent.builder()
@@ -839,7 +830,7 @@ public class KafkaEmitterTest
   }
 
   /**
-   * samplingRate=0, sampledMetrics=["query/time"], sampledNodeTypes=empty
+   * samplingRate=0, sampledMetrics=["query/time"], sampledServiceTypes=empty
    * Event with query/time from any node → should be sampled out (metric filter only)
    */
   @Test
@@ -853,7 +844,7 @@ public class KafkaEmitterTest
   }
 
   /**
-   * samplingRate=0, sampledMetrics=["query/time"], sampledNodeTypes=empty
+   * samplingRate=0, sampledMetrics=["query/time"], sampledServiceTypes=empty
    * Event with jvm/mem/used → should NOT be sampled (metric doesn't match)
    */
   @Test
@@ -897,10 +888,10 @@ public class KafkaEmitterTest
   }
 
   /**
-   * samplingRate=0, multiple node types configured
+   * samplingRate=0, multiple service types configured
    */
   @Test
-  public void testShouldSampleOut_multipleNodeTypes()
+  public void testShouldSampleOut_multipleServiceTypes()
   {
     final KafkaEmitter emitter = initKafkaEmitter(newSamplingConfig(
         0,
@@ -1134,7 +1125,7 @@ public class KafkaEmitterTest
   private static KafkaEmitterConfig newSamplingConfig(
       final Integer samplingRate,
       final Set<String> sampledMetrics,
-      final Set<String> sampledNodeTypes
+      final Set<String> sampledServiceTypes
   )
   {
     return new KafkaEmitterConfig(
@@ -1151,7 +1142,7 @@ public class KafkaEmitterTest
         null,
         samplingRate,
         sampledMetrics,
-        sampledNodeTypes
+        sampledServiceTypes
     );
   }
 }

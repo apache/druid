@@ -347,7 +347,7 @@ public class KafkaEmitterConfigTest
     KafkaEmitterConfig config = newSamplingConfig(null, null, null);
     Assertions.assertEquals(100, config.getSamplingRate());
     Assertions.assertEquals(Collections.emptySet(), config.getSampledMetrics());
-    Assertions.assertEquals(Collections.emptySet(), config.getSampledNodeTypes());
+    Assertions.assertEquals(Collections.emptySet(), config.getSampledServiceTypes());
   }
 
   @Test
@@ -364,7 +364,7 @@ public class KafkaEmitterConfigTest
     Assertions.assertEquals(config.hashCode(), roundTripped.hashCode());
     Assertions.assertEquals(10, roundTripped.getSamplingRate());
     Assertions.assertEquals(ImmutableSet.of("query/time", "query/bytes"), roundTripped.getSampledMetrics());
-    Assertions.assertEquals(ImmutableSet.of("druid/broker"), roundTripped.getSampledNodeTypes());
+    Assertions.assertEquals(ImmutableSet.of("druid/broker"), roundTripped.getSampledServiceTypes());
   }
 
   @Test
@@ -376,12 +376,12 @@ public class KafkaEmitterConfigTest
         + " \"alert.topic\": \"alerts\","
         + " \"samplingRate\": 25,"
         + " \"sampledMetrics\": [\"query/time\"],"
-        + " \"sampledNodeTypes\": [\"druid/broker\", \"druid/historical\"]}",
+        + " \"sampledServiceTypes\": [\"druid/broker\", \"druid/historical\"]}",
         KafkaEmitterConfig.class
     );
     Assertions.assertEquals(25, config.getSamplingRate());
     Assertions.assertEquals(ImmutableSet.of("query/time"), config.getSampledMetrics());
-    Assertions.assertEquals(ImmutableSet.of("druid/broker", "druid/historical"), config.getSampledNodeTypes());
+    Assertions.assertEquals(ImmutableSet.of("druid/broker", "druid/historical"), config.getSampledServiceTypes());
   }
 
   @Test
@@ -435,7 +435,7 @@ public class KafkaEmitterConfigTest
   private static KafkaEmitterConfig newSamplingConfig(
       Integer samplingRate,
       Set<String> sampledMetrics,
-      Set<String> sampledNodeTypes
+      Set<String> sampledServiceTypes
   )
   {
     return new KafkaEmitterConfig(
@@ -452,7 +452,7 @@ public class KafkaEmitterConfigTest
         null,
         samplingRate,
         sampledMetrics,
-        sampledNodeTypes
+        sampledServiceTypes
     );
   }
 

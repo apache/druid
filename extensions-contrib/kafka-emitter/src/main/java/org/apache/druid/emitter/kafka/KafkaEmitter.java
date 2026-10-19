@@ -307,7 +307,7 @@ public class KafkaEmitter implements Emitter
    *   <li>{@code samplingRate} is 100 (no sampling)</li>
    *   <li>The metric name is null</li>
    *   <li>The metric name is not in the configured {@code sampledMetrics} set (exact match only)</li>
-   *   <li>The event's service (node type) is not in the configured {@code sampledNodeTypes} set (when configured)</li>
+   *   <li>The event's service is not in the configured {@code sampledServiceTypes} set (when configured)</li>
    * </ul>
    * When sampling applies, if the event has an {@code id} user dimension, consistent hash-based
    * sampling is used so that the same id always gets the same sampling decision. Otherwise,
@@ -320,7 +320,7 @@ public class KafkaEmitter implements Emitter
   {
     int samplingRate = config.getSamplingRate();
     Set<String> sampledMetrics = config.getSampledMetrics();
-    Set<String> sampledNodeTypes = config.getSampledNodeTypes();
+    Set<String> sampledServiceTypes = config.getSampledServiceTypes();
 
     // No sampling when rate is 100 or metric is null
     if (samplingRate == 100
@@ -333,10 +333,10 @@ public class KafkaEmitter implements Emitter
       return false;
     }
 
-    // If sampledNodeTypes is configured, the node type must be in the set
-    if (!sampledNodeTypes.isEmpty()
+    // If sampledServiceTypes is configured, the service must be in the set
+    if (!sampledServiceTypes.isEmpty()
         && (serviceMetricEvent.getService() == null
-            || !sampledNodeTypes.contains(serviceMetricEvent.getService()))) {
+            || !sampledServiceTypes.contains(serviceMetricEvent.getService()))) {
       return false;
     }
 

@@ -89,9 +89,9 @@ public class KafkaEmitterConfig
   @JsonProperty("sampledMetrics")
   @Nonnull
   private final Set<String> sampledMetrics;
-  @JsonProperty("sampledNodeTypes")
+  @JsonProperty("sampledServiceTypes")
   @Nonnull
-  private final Set<String> sampledNodeTypes;
+  private final Set<String> sampledServiceTypes;
 
   @JsonCreator
   public KafkaEmitterConfig(
@@ -108,7 +108,7 @@ public class KafkaEmitterConfig
       @JsonProperty("producer.shutdownTimeout") @Nullable Long shutdownTimeout,
       @JsonProperty("samplingRate") @Nullable Integer samplingRate,
       @JsonProperty("sampledMetrics") @Nullable Set<String> sampledMetrics,
-      @JsonProperty("sampledNodeTypes") @Nullable Set<String> sampledNodeTypes
+      @JsonProperty("sampledServiceTypes") @Nullable Set<String> sampledServiceTypes
   )
   {
     this.eventTypes = maybeUpdateEventTypes(eventTypes, requestTopic);
@@ -165,7 +165,7 @@ public class KafkaEmitterConfig
                           );
     }
     this.sampledMetrics = sampledMetrics == null ? Collections.emptySet() : sampledMetrics;
-    this.sampledNodeTypes = sampledNodeTypes == null ? Collections.emptySet() : sampledNodeTypes;
+    this.sampledServiceTypes = sampledServiceTypes == null ? Collections.emptySet() : sampledServiceTypes;
   }
 
   @Nonnull
@@ -266,9 +266,9 @@ public class KafkaEmitterConfig
 
   @JsonProperty
   @Nonnull
-  public Set<String> getSampledNodeTypes()
+  public Set<String> getSampledServiceTypes()
   {
-    return sampledNodeTypes;
+    return sampledServiceTypes;
   }
 
   @Override
@@ -322,7 +322,7 @@ public class KafkaEmitterConfig
     if (!getSampledMetrics().equals(that.getSampledMetrics())) {
       return false;
     }
-    if (!getSampledNodeTypes().equals(that.getSampledNodeTypes())) {
+    if (!getSampledServiceTypes().equals(that.getSampledServiceTypes())) {
       return false;
     }
     return getKafkaProducerSecrets().getConfig().equals(that.getKafkaProducerSecrets().getConfig());
@@ -343,7 +343,7 @@ public class KafkaEmitterConfig
     result = 31 * result + getShutdownTimeout().hashCode();
     result = 31 * result + Integer.hashCode(getSamplingRate());
     result = 31 * result + getSampledMetrics().hashCode();
-    result = 31 * result + getSampledNodeTypes().hashCode();
+    result = 31 * result + getSampledServiceTypes().hashCode();
     result = 31 * result + getKafkaProducerSecrets().getConfig().hashCode();
     return result;
   }
@@ -365,7 +365,7 @@ public class KafkaEmitterConfig
            ", producer.shutdownTimeout=" + shutdownTimeout +
            ", samplingRate=" + samplingRate +
            ", sampledMetrics=" + sampledMetrics +
-           ", sampledNodeTypes=" + sampledNodeTypes +
+           ", sampledServiceTypes=" + sampledServiceTypes +
            '}';
   }
 }
