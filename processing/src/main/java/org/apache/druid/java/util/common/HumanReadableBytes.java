@@ -232,15 +232,14 @@ public class HumanReadableBytes
     try {
       // Spaces are allowed between the number and the unit, such as "1 MiB"
       final String digits = number.substring(start, lastDigitIndex + 1);
-      long value = Long.parseLong(base > 1 ? digits.stripTrailing() : digits) * base;
-      if (base > 1 && value < base) {
-        //for base == 1, overflow has been checked in parseLong
-        throw new IAE("Number overflow: %s", number);
-      }
+      final long value = Math.multiplyExact(Long.parseLong(base > 1 ? digits.stripTrailing() : digits), base);
       return start == 0 ? value : -value;
     }
     catch (NumberFormatException e) {
       throw new IAE("Invalid format or out of range of long: %s", number);
+    }
+    catch (ArithmeticException e) {
+      throw new IAE("Number overflow: %s", number);
     }
   }
 

@@ -409,6 +409,30 @@ public class HumanReadableBytesTest
   }
 
   @Test
+  public void testOverflowWrapsAroundToPositive()
+  {
+    // 18014398509481985 * 1024 is 2^64 + 1024, which wraps around to 1024 without an overflow check
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("18014398509481985KiB"));
+    Assertions.assertEquals("Number overflow: 18014398509481985KiB", exception.getMessage());
+
+    final IAE negativeException = Assertions.assertThrows(
+        IAE.class,
+        () -> HumanReadableBytes.parse("-18014398509481985KiB", true)
+    );
+    Assertions.assertEquals("Number overflow: -18014398509481985KiB", negativeException.getMessage());
+  }
+
+  @Test
+  public void testOverflowBoundary()
+  {
+    Assertions.assertEquals(8191L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("8191PiB"));
+    Assertions.assertEquals(-8191L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("-8191PiB", true));
+
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("8192PiB"));
+    Assertions.assertEquals("Number overflow: 8192PiB", exception.getMessage());
+  }
+
+  @Test
   public void testJSON() throws JsonProcessingException
   {
     ObjectMapper mapper = new ObjectMapper();
