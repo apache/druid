@@ -1013,6 +1013,9 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithSealedBaseTableSkipsAnalysisWithoutRangePartitioning() throws IOException
   {
+    // A clustered layout does not group, so nothing needs to know which columns are multi-valued and the sealed
+    // declaration is taken at its word. identifyMultiValuedDimensions() is what works that out; here it is the false
+    // that it returns for such a task.
     final DataSchema dataSchema = Iterables.getOnlyElement(
         CompactionTask.createInputDataSchemas(
             toolbox,
@@ -1027,11 +1030,43 @@ public class CompactionTaskTest
             true,
             false,
             METRIC_BUILDER,
-            true
+            false
         ).values()
     );
 
     Assertions.assertNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithSealedRollupBaseTableAnalyzesMultiValuedDimensions() throws IOException
+  {
+    // Sealing says which columns exist, not which of them hold more than one value per row, and a rollup layout
+    // groups by them: a runner that is not told assumes every string column might be multi-valued and wraps them all.
+    // So this is the one question that is read from the segments even when the declaration is complete.
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            ROLLUP_BASE_TABLE,
+            true,
+            false,
+            METRIC_BUILDER,
+            true
+        ).values()
+    );
+
+    // The declaration is still authoritative: reading the segments for this adds nothing to the spec.
+    Assertions.assertEquals(
+        ImmutableList.of("string_dim_0", ColumnHolder.TIME_COLUMN_NAME),
+        dataSchema.getDimensionsSpec().getDimensionNames()
+    );
+    Assertions.assertNotNull(((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
   }
 
   @Test
@@ -2030,6 +2065,59 @@ public class CompactionTaskTest
     builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     CompactionTask compactionTask = builder.build();
     Assertions.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQClusteredBaseTableDoesNotNeedMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    builder.baseTable(TENANT_BASE_TABLE);
+    final CompactionTask compactionTask = builder.build();
+    // A base table spec says outright whether the layout rolls up, so a clustered one needs no segment analysis to
+    // rule out grouping, where a null granularitySpec would have had to assume a possible rollup.
+    Assertions.assertFalse(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRollupBaseTableOnStringNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    builder.baseTable(ROLLUP_BASE_TABLE);
+    final CompactionTask compactionTask = builder.build();
+    // A rollup layout groups, and one of its declared grouping columns is a string, which can hold multiple values.
+    Assertions.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRollupBaseTableOnNonStringDoesNotNeedMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    builder.baseTable(
+        RollupTableProjectionSpec.builder()
+            .groupingColumns(
+                new LongDimensionSchema("long_dim_0"),
+                new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)
+            )
+            .build()
+    );
+    final CompactionTask compactionTask = builder.build();
+    // Grouping only by columns that cannot hold multiple values, so there is nothing a download could discover.
+    Assertions.assertFalse(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test

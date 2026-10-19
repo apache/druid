@@ -522,9 +522,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
-   * Whether this task partitions by range. Base-table mode needs to know, because MSQ cannot range partition over a
-   * multi-valued column and only the segments can say whether one is; {@link #identifyMultiValuedDimensions()} is too
-   * broad to use for that, since it also answers true for a possibly-rollup task.
+   * Whether this task partitions by range. Base-table mode needs to know on its own account, because MSQ cannot range
+   * partition over a multi-valued column and only the segments can say whether one is. A base table's partition
+   * column need not be one of its declared columns (catalog cluster keys may name a column the table stores without
+   * declaring), so {@link #identifyMultiValuedDimensions()} can answer false for a task that still has to look.
    */
   boolean isRangePartitioned()
   {
@@ -549,8 +550,18 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     if (compactionRunner instanceof NativeCompactionRunner) {
       return false;
     }
-    // Rollup can be true even when granularitySpec is not known since rollup is then decided based on segment analysis
-    final boolean isPossiblyRollup = granularitySpec == null || !Boolean.FALSE.equals(granularitySpec.isRollup());
+    // A base table spec is the schema, so it answers both questions outright where the legacy fields can only be
+    // guessed at: it declares whether the layout rolls up, and it declares every column, so there is no "unknown
+    // dimension" case to be conservative about.
+    final DimensionsSpec declaredDimensions = baseTable == null ? dimensionsSpec : baseTable.getDimensionsSpec();
+    final boolean isPossiblyRollup;
+    if (baseTable == null) {
+      // Rollup can be true even when granularitySpec is not known since rollup is then decided based on segment
+      // analysis
+      isPossiblyRollup = granularitySpec == null || !Boolean.FALSE.equals(granularitySpec.isRollup());
+    } else {
+      isPossiblyRollup = baseTable.isRollup();
+    }
     final DimensionRangePartitionsSpec rangeSpec;
     if (tuningConfig != null && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
       rangeSpec = (DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec();
@@ -559,22 +570,22 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     final boolean isRangePartitioned = rangeSpec != null;
 
-    if (dimensionsSpec == null || dimensionsSpec.getDimensions().isEmpty()) {
+    if (declaredDimensions == null || declaredDimensions.getDimensions().isEmpty()) {
       return isPossiblyRollup || isRangePartitioned;
     } else {
       boolean isRollupOnMultiValueStringDimension = isPossiblyRollup &&
-                                                    dimensionsSpec.getDimensions()
-                                                                  .stream()
-                                                                  .anyMatch(DimensionSchema::canBeMultiValued);
+                                                    declaredDimensions.getDimensions()
+                                                                      .stream()
+                                                                      .anyMatch(DimensionSchema::canBeMultiValued);
 
       boolean isPartitionedOnMultiValueStringDimension =
           isRangePartitioned &&
-          dimensionsSpec.getDimensions()
-                        .stream()
-                        .anyMatch(
-                            dim -> dim.canBeMultiValued()
-                                   && rangeSpec.getPartitionDimensions().contains(dim.getName())
-                        );
+          declaredDimensions.getDimensions()
+                            .stream()
+                            .anyMatch(
+                                dim -> dim.canBeMultiValued()
+                                       && rangeSpec.getPartitionDimensions().contains(dim.getName())
+                            );
       return isRollupOnMultiValueStringDimension || isPartitionedOnMultiValueStringDimension;
     }
   }
@@ -839,20 +850,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   {
     if (baseTable != null) {
       // BaseTable mode: the spec owns dimensions/metrics and (via its query-granularity virtual column) query
-      // granularity; segment granularity + intervals are the compaction config's. Attach the config's query
-      // granularity up front (a no-op if absent/NONE); the generator's incremental index applies it at build time.
-      // A sealed spec is the complete description of the table, so the columns and projections it leaves undeclared
-      // are taken to not exist rather than inferred. Range partitioning is the exception that reads the segments even
-      // when sealed: only they can say whether a partition column is multi-valued, which MSQ cannot partition by.
+      // granularity; segment granularity + intervals are the compaction config's. A sealed spec is the complete
+      // description of the table, so the columns and projections not declared are taken to not exist (and will be
+      // removed).
       //
-      // Which string columns actually hold multiple values is likewise only knowable from the segments, and a caller
-      // that does not get told assumes they all might: MSQ groups every string column as an array and converts it
-      // back on write, which can rewrite a single-valued column as something else. So the answer is produced whenever
-      // it was asked for and the segments are being read anyway. A sealed table without range partitioning is not
-      // read, and keeps that conservative assumption rather than paying for a download to refine it.
+      // Which string columns actually hold multiple values is only knowable from the segments, so they need analysis
+      // even when sealed if involved in grouping or partitioning.
       final boolean analyzeSchema = !sealed;
       final boolean analyzeProjections = !sealed && projections == null;
-      final boolean analyzeMultiValued = rangePartitioned || (needMultiValuedColumns && analyzeSchema);
+      final boolean analyzeMultiValued = rangePartitioned || needMultiValuedColumns;
       BaseTableProjectionSpec baseTableSpec = baseTable.withQueryGranularity(granularitySpec.getQueryGranularity());
       List<AggregateProjectionSpec> projectionSpecs = projections;
       Set<String> multiValuedDimensions = null;
