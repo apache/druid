@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -241,7 +241,7 @@ public class SqlResource
     final QueryContext queryContext;
 
     try {
-      SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, queryConfigProvider.getContext());
+      final SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, queryConfigProvider.getContext());
 
       // Redefine queryContext to include SET parameters and default context.
       queryContext = new QueryContext(sqlQueryPlus.context());
@@ -371,7 +371,7 @@ public class SqlResource
       final ErrorResponseTransformStrategy strategy
   )
   {
-    final String sqlQueryId = queryContext.getString(QueryContexts.CTX_SQL_QUERY_ID);
+    final String sqlQueryId = queryContext.get(QueryContextParameters.SQL_QUERY_ID);
     final String errorId = sqlQueryId == null ? UUID.randomUUID().toString() : sqlQueryId;
 
     final DruidException druidException;

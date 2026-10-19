@@ -87,6 +87,10 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
 
   void exceptionCaught(ClientResponse<IntermediateType> clientResponse, Throwable e);
 
+  /**
+   * Flow control over the connection carrying one response. Once that response has completed, calls have no effect:
+   * the connection may already be carrying the response of another request.
+   */
   interface TrafficCop
   {
     /**

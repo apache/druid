@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.error.DruidException;
@@ -46,12 +45,13 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.CascadeExtractionFn;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -66,12 +66,10 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.TypedInFilter;
-import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -89,7 +87,6 @@ import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -173,75 +170,96 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final String PRETEND_CURRENT_TIME = "2000-01-01T00:00:00Z";
 
   public static final Map<String, Object> QUERY_CONTEXT_DEFAULT =
-      ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
-                  .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
-                  .put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-                  .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
-                  .build();
+      QueryContext.builder()
+                  .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
+                  .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
+                  .put(
+                      QueryContextParameters.DEFAULT_TIMEOUT,
+                      QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+                  )
+                  .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
+                  .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                  .build();
+                  .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
+                  .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                  .build();
+                  .toMap();
 
-  public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      TimeseriesQuery.SKIP_EMPTY_BUCKETS, false,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = QueryContext.builder()
+      .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
+      .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, false)
+      .toMap();
 
-  public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = QueryContext.builder()
+      .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
+      .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
+      .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_LEXICOGRAPHIC_TOPN =
-      QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+      QueryContext.builder()
+                  .putAll(QUERY_CONTEXT_DEFAULT)
+                  .put(QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N, true)
+                  .toMap();
 
-  public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false",
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = QueryContext.builder()
+      .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
+      .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .putRaw(QueryContextParameters.USE_APPROXIMATE_TOP_N.getName(), "false")
+      .toMap();
 
-  public static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = QueryContext.builder()
+      .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
+      .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .put(QueryContextParameters.SQL_TIME_ZONE, LOS_ANGELES)
+      .toMap();
 
   // Matches QUERY_CONTEXT_DEFAULT
-  public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = QueryContext.builder()
+      .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
+      .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
+      .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  .put(QueryContextParameters.MAX_SUBQUERY_BYTES, "100000")
                   // Disallows the fallback to row based limiting
-                  .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1")
-                  .build();
+                  .put(QueryContextParameters.MAX_SUBQUERY_ROWS, 1)
+                  .toMap();
 
   // Add additional context to the given context map for when the
   // timeseries query has timestamp_floor expression on the timestamp dimension
@@ -250,10 +268,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       String timestampResultField
   )
   {
-    return ImmutableMap.<String, Object>builder()
+    return QueryContext.builder()
                        .putAll(context)
-                       .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
-                       .build();
+                       .put(QueryContextParameters.TIMESTAMP_RESULT_FIELD, timestampResultField)
+                       .toMap();
   }
 
   // Matches QUERY_CONTEXT_LOS_ANGELES
@@ -266,14 +284,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public boolean skipVectorize = false;
 
   static {
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+    QueryContextParameters.SQL_QUERY_ID.set(TIMESERIES_CONTEXT_LOS_ANGELES, DUMMY_SQL_ID);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContextParameters.SQL_CURRENT_TIMESTAMP.getName(), "2000-01-01T00:00:00Z");
+    QueryContextParameters.SQL_TIME_ZONE.set(TIMESERIES_CONTEXT_LOS_ANGELES, LOS_ANGELES);
+    QueryContextParameters.SKIP_EMPTY_BUCKETS.set(TIMESERIES_CONTEXT_LOS_ANGELES, true);
+    QueryContextParameters.DEFAULT_TIMEOUT.set(
+        TIMESERIES_CONTEXT_LOS_ANGELES,
+        QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+    );
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), Long.MAX_VALUE);
 
-    OUTER_LIMIT_CONTEXT.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
+    OUTER_LIMIT_CONTEXT.put(QueryContextParameters.SQL_OUTER_LIMIT.getName(), 2);
   }
 
   public static boolean developerIDEdetected()
@@ -812,8 +833,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       Preconditions.checkNotNull(baseQueryContext, "baseQueryContext is null");
       this.baseQueryContext = baseQueryContext;
       Preconditions.checkState(
-          baseQueryContext.containsKey(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP),
-          "context must contain CTX_SQL_CURRENT_TIMESTAMP to ensure consistent behaviour!"
+          baseQueryContext.containsKey(QueryContextParameters.SQL_CURRENT_TIMESTAMP.getName()),
+          "context must contain sqlCurrentTimestamp to ensure consistent behaviour!"
       );
     }
 
@@ -1232,8 +1253,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)
   {
     return (boolean) queryContext.getOrDefault(
-        QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
-        QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
+        QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getName(),
+        QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow()
     );
   }
 
@@ -1307,49 +1328,49 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         // default behavior
         Named.of("default", QUERY_CONTEXT_DEFAULT),
         // all rewrites enabled
-        Named.of("all_enabled", new ImmutableMap.Builder<String, Object>()
+        Named.of("all_enabled", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-            .build()),
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS, true)
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE, true)
+            .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, true)
+            .toMap()),
         // filter-on-value-column rewrites disabled, everything else enabled
-        Named.of("filter-on-value-column_disabled", new ImmutableMap.Builder<String, Object>()
+        Named.of("filter-on-value-column_disabled", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-            .build()),
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS, false)
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE, true)
+            .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, true)
+            .toMap()),
         // filter rewrites fully disabled, join-to-filter enabled
-        Named.of("join-to-filter", new ImmutableMap.Builder<String, Object>()
+        Named.of("join-to-filter", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-            .build()),
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS, false)
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE, false)
+            .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, true)
+            .toMap()),
         // filter rewrites disabled, but value column filters still set to true
         // (it should be ignored and this should
         // behave the same as the previous context)
-        Named.of("filter-rewrites-disabled", new ImmutableMap.Builder<String, Object>()
+        Named.of("filter-rewrites-disabled", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-            .build()),
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS, true)
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE, false)
+            .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, true)
+            .toMap()),
         // filter rewrites fully enabled, join-to-filter disabled
-        Named.of("filter-rewrites", new ImmutableMap.Builder<String, Object>()
+        Named.of("filter-rewrites", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
-            .build()),
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS, true)
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE, true)
+            .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, false)
+            .toMap()),
         // all rewrites disabled
-        Named.of("all_disabled", new ImmutableMap.Builder<String, Object>()
+        Named.of("all_disabled", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
-            .build()),
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS, false)
+            .put(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE, false)
+            .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, false)
+            .toMap()),
     };
   }
 
@@ -1357,7 +1378,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     // since context is usually immutable in tests, make a copy
     HashMap<String, Object> newContext = new HashMap<>(context);
-    newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
+    newContext.put(QueryContextParameters.ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT.getName(), true);
     return newContext;
   }
 
@@ -1369,11 +1390,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   )
   {
     Map<String, Object> output = new HashMap<>(input);
-    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
+    QueryContextParameters.TIMESTAMP_RESULT_FIELD.set(output, timestampResultField);
 
     try {
-      output.put(
-          GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
+      QueryContextParameters.TIMESTAMP_RESULT_FIELD_GRANULARITY.set(
+          output,
           queryFramework().queryJsonMapper().writeValueAsString(granularity)
       );
     }
@@ -1381,7 +1402,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       throw new RuntimeException(e);
     }
 
-    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampResultFieldIndex);
+    QueryContextParameters.TIMESTAMP_RESULT_FIELD_IN_ORIGINAL_DIMENSIONS.set(output, timestampResultFieldIndex);
     return output;
   }
 

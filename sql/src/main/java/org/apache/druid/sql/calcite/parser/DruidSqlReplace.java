@@ -41,8 +41,11 @@ import java.util.List;
  */
 public class DruidSqlReplace extends DruidSqlIngest
 {
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SQL_REPLACE_TIME_CHUNKS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SQL_REPLACE_TIME_CHUNKS = "sqlReplaceTimeChunks";
-
   public static final SqlOperator OPERATOR = DruidSqlIngestOperator.REPLACE_OPERATOR;
 
   private final SqlNode replaceTimeQuery;

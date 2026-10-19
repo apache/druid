@@ -25,16 +25,19 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryContexts.Vectorize;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.segment.loading.AcquireMode;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -81,9 +84,150 @@ public class QueryContext
     return EMPTY;
   }
 
+  /**
+   * Creates a builder for a query context map.
+   */
+  public static QueryContextBuilder builder()
+  {
+    return new QueryContextBuilder();
+  }
+
   public static QueryContext of(Map<String, Object> context)
   {
     return new QueryContext(context);
+  }
+
+  /**
+   * Creates a query context from one declared query context parameter.
+   */
+  public static <T> QueryContext of(
+      final QueryContextParameter<T> parameter,
+      @Nullable final T value
+  )
+  {
+    return new QueryContext(ofMap(parameter, value));
+  }
+
+  /**
+   * Creates a query context map from one declared query context parameter.
+   */
+  public static <T> Map<String, Object> ofMap(
+      final QueryContextParameter<T> parameter,
+      @Nullable final T value
+  )
+  {
+    return builder().put(parameter, value).toMap();
+  }
+
+  /**
+   * Creates a query context from two declared query context parameters.
+   */
+  public static <T1, T2> QueryContext of(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2
+  )
+  {
+    return new QueryContext(ofMap(parameter1, value1, parameter2, value2));
+  }
+
+  /**
+   * Creates a query context map from two declared query context parameters.
+   */
+  public static <T1, T2> Map<String, Object> ofMap(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2
+  )
+  {
+    return builder()
+        .put(parameter1, value1)
+        .put(parameter2, value2)
+        .toMap();
+  }
+
+  /**
+   * Creates a query context from three declared query context parameters.
+   */
+  public static <T1, T2, T3> QueryContext of(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2,
+      final QueryContextParameter<T3> parameter3,
+      @Nullable final T3 value3
+  )
+  {
+    return new QueryContext(ofMap(parameter1, value1, parameter2, value2, parameter3, value3));
+  }
+
+  /**
+   * Creates a query context map from three declared query context parameters.
+   */
+  public static <T1, T2, T3> Map<String, Object> ofMap(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2,
+      final QueryContextParameter<T3> parameter3,
+      @Nullable final T3 value3
+  )
+  {
+    return builder()
+        .put(parameter1, value1)
+        .put(parameter2, value2)
+        .put(parameter3, value3)
+        .toMap();
+  }
+
+  /**
+   * Creates a query context from four declared query context parameters.
+   */
+  public static <T1, T2, T3, T4> QueryContext of(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2,
+      final QueryContextParameter<T3> parameter3,
+      @Nullable final T3 value3,
+      final QueryContextParameter<T4> parameter4,
+      @Nullable final T4 value4
+  )
+  {
+    return new QueryContext(ofMap(
+        parameter1,
+        value1,
+        parameter2,
+        value2,
+        parameter3,
+        value3,
+        parameter4,
+        value4
+    ));
+  }
+
+  /**
+   * Creates a query context map from four declared query context parameters.
+   */
+  public static <T1, T2, T3, T4> Map<String, Object> ofMap(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2,
+      final QueryContextParameter<T3> parameter3,
+      @Nullable final T3 value3,
+      final QueryContextParameter<T4> parameter4,
+      @Nullable final T4 value4
+  )
+  {
+    return builder()
+        .put(parameter1, value1)
+        .put(parameter2, value2)
+        .put(parameter3, value3)
+        .put(parameter4, value4)
+        .toMap();
   }
 
   public boolean isEmpty()
@@ -97,13 +241,22 @@ public class QueryContext
   }
 
   /**
-   * Check if the given key is set. If the client will then fetch the value,
+   * Check if the given string key is set. If the client will then fetch the value,
    * consider using one of the {@code get<Type>(String key)} methods instead:
    * they each return {@code null} if the value is not set.
    */
   public boolean containsKey(String key)
   {
     return context.containsKey(key);
+  }
+
+  /**
+   * Check if the given declared query context parameter is set to a non-null value. An explicit {@code null} is
+   * treated the same as an absent key.
+   */
+  public boolean has(final QueryContextParameter<?> parameter)
+  {
+    return get(parameter.getName()) != null;
   }
 
   /**
@@ -114,6 +267,55 @@ public class QueryContext
   public Object get(String key)
   {
     return context.get(key);
+  }
+
+  /**
+   * Returns the parsed parameter value. If the key is absent or explicitly {@code null}, returns the declared default,
+   * or {@code null} if the parameter has no declared default.
+   *
+   * @throws BadQueryContextException if the value is invalid
+   */
+  @Nullable
+  public <T> T get(final QueryContextParameter<T> parameter)
+  {
+    return parseOrDefault(parameter, parameter.getDefaultValue().orElse(null));
+  }
+
+  /**
+   * Returns the parsed parameter value. If the key is absent or explicitly {@code null}, returns the declared default.
+   *
+   * @throws ISE if the parameter has no declared default
+   * @throws BadQueryContextException if the value is invalid
+   */
+  public <T> T getOrDefault(final QueryContextParameter<T> parameter)
+  {
+    return getOrDefault(
+        parameter,
+        parameter.getDefaultValue().orElseThrow(
+            () -> new ISE("Query context parameter [%s] has no declared default", parameter.getName())
+        )
+    );
+  }
+
+  /**
+   * Returns the parsed parameter value. If the key is absent or explicitly {@code null}, returns the supplied default.
+   *
+   * @throws BadQueryContextException if the value is invalid
+   */
+  public <T> T getOrDefault(final QueryContextParameter<T> parameter, final T defaultValue)
+  {
+    return parseOrDefault(parameter, defaultValue);
+  }
+
+  @Nullable
+  private <T> T parseOrDefault(final QueryContextParameter<T> parameter, @Nullable final T defaultValue)
+  {
+    if (!containsKey(parameter.getName())) {
+      return defaultValue;
+    }
+    // Parse even an explicit null so that non-nullable parameters reject it.
+    final T parsed = parameter.parse(get(parameter.getName()));
+    return parsed == null ? defaultValue : parsed;
   }
 
   /**
@@ -200,18 +402,6 @@ public class QueryContext
   }
 
   /**
-   * Return a value as an {@code Float}, returning {@link null} if the
-   * context value is not set.
-   *
-   * @throws BadQueryContextException for an invalid value
-   */
-  @SuppressWarnings("unused")
-  public Float getFloat(final String key)
-  {
-    return QueryContexts.getAsFloat(key, get(key));
-  }
-
-  /**
    * Return a value as an {@code float}, returning the default value if the
    * context value is not set.
    *
@@ -254,239 +444,186 @@ public class QueryContext
 
   public boolean isDebug()
   {
-    return getBoolean(QueryContexts.ENABLE_DEBUG, QueryContexts.DEFAULT_ENABLE_DEBUG);
+    return getOrDefault(QueryContextParameters.DEBUG);
   }
 
   public boolean isBySegment()
   {
-    return isBySegment(QueryContexts.DEFAULT_BY_SEGMENT);
+    return getOrDefault(QueryContextParameters.BY_SEGMENT);
   }
 
   public boolean isBySegment(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.BY_SEGMENT_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.BY_SEGMENT, defaultValue);
   }
 
   public boolean isPopulateCache()
   {
-    return isPopulateCache(QueryContexts.DEFAULT_POPULATE_CACHE);
+    return getOrDefault(QueryContextParameters.POPULATE_CACHE);
   }
 
   public boolean isPopulateCache(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.POPULATE_CACHE_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.POPULATE_CACHE, defaultValue);
   }
 
   public boolean isUseCache()
   {
-    return isUseCache(QueryContexts.DEFAULT_USE_CACHE);
+    return getOrDefault(QueryContextParameters.USE_CACHE);
   }
 
   public boolean isUseCache(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.USE_CACHE_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.USE_CACHE, defaultValue);
   }
 
   public boolean isPopulateResultLevelCache()
   {
-    return isPopulateResultLevelCache(QueryContexts.DEFAULT_POPULATE_RESULTLEVEL_CACHE);
+    return getOrDefault(QueryContextParameters.POPULATE_RESULT_LEVEL_CACHE);
   }
 
   public boolean isPopulateResultLevelCache(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.POPULATE_RESULT_LEVEL_CACHE, defaultValue);
   }
 
   public boolean isUseResultLevelCache()
   {
-    return isUseResultLevelCache(QueryContexts.DEFAULT_USE_RESULTLEVEL_CACHE);
+    return getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE);
   }
 
   public boolean isUseResultLevelCache(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE, defaultValue);
   }
 
   public boolean isFinalize(boolean defaultValue)
 
   {
-    return getBoolean(QueryContexts.FINALIZE_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.FINALIZE, defaultValue);
   }
 
   public boolean isSerializeDateTimeAsLong(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.SERIALIZE_DATE_TIME_AS_LONG_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.SERIALIZE_DATE_TIME_AS_LONG, defaultValue);
   }
 
   public boolean isSerializeDateTimeAsLongInner(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.SERIALIZE_DATE_TIME_AS_LONG_INNER, defaultValue);
   }
 
   public Vectorize getVectorize()
   {
-    return getVectorize(QueryContexts.DEFAULT_VECTORIZE);
-  }
-
-  public Vectorize getVectorize(Vectorize defaultValue)
-  {
-    return getEnum(QueryContexts.VECTORIZE_KEY, Vectorize.class, defaultValue);
+    return getOrDefault(QueryContextParameters.VECTORIZE);
   }
 
   public Vectorize getVectorizeVirtualColumns()
   {
-    return getVectorizeVirtualColumns(QueryContexts.DEFAULT_VECTORIZE_VIRTUAL_COLUMN);
-  }
-
-  public Vectorize getVectorizeVirtualColumns(Vectorize defaultValue)
-  {
-    return getEnum(
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY,
-        Vectorize.class,
-        defaultValue
-    );
+    return getOrDefault(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS);
   }
 
   public int getVectorSize()
   {
-    return getVectorSize(QueryContexts.DEFAULT_VECTOR_SIZE);
-  }
-
-  public int getVectorSize(int defaultSize)
-  {
-    return getInt(QueryContexts.VECTOR_SIZE_KEY, defaultSize);
+    return getOrDefault(QueryContextParameters.VECTOR_SIZE);
   }
 
   public int getMaxSubqueryRows(int defaultSize)
   {
-    return getInt(QueryContexts.MAX_SUBQUERY_ROWS_KEY, defaultSize);
+    return getOrDefault(QueryContextParameters.MAX_SUBQUERY_ROWS, defaultSize);
   }
 
   public String getMaxSubqueryMemoryBytes(String defaultMemoryBytes)
   {
-    // Generic to allow for both strings and numbers to be passed as values in the query context
-    Object maxSubqueryBytesObject = get(QueryContexts.MAX_SUBQUERY_BYTES_KEY);
-    if (maxSubqueryBytesObject == null) {
-      maxSubqueryBytesObject = defaultMemoryBytes;
-    }
-    return String.valueOf(maxSubqueryBytesObject);
+    return getOrDefault(QueryContextParameters.MAX_SUBQUERY_BYTES, defaultMemoryBytes);
   }
 
   public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)
   {
-    return getBoolean(QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY, defaultUseNestedForUnkownTypeInSubquery);
+    return getOrDefault(
+        QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
+        defaultUseNestedForUnkownTypeInSubquery
+    );
   }
 
   public boolean isUseNestedForUnknownTypeInSubquery()
   {
-    return isUseNestedForUnknownTypeInSubquery(QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
+    return getOrDefault(QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
   }
 
   public int getUncoveredIntervalsLimit()
   {
-    return getUncoveredIntervalsLimit(QueryContexts.DEFAULT_UNCOVERED_INTERVALS_LIMIT);
-  }
-
-  public int getUncoveredIntervalsLimit(int defaultValue)
-  {
-    return getInt(QueryContexts.UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.UNCOVERED_INTERVALS_LIMIT);
   }
 
   public int getPriority()
   {
-    return getPriority(QueryContexts.DEFAULT_PRIORITY);
-  }
-
-  public int getPriority(int defaultValue)
-  {
-    return getInt(QueryContexts.PRIORITY_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.PRIORITY);
   }
 
   public String getLane()
   {
-    return getString(QueryContexts.LANE_KEY);
+    return get(QueryContextParameters.LANE);
   }
 
   public boolean getEnableParallelMerges()
   {
-    return getBoolean(
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY,
-        QueryContexts.DEFAULT_ENABLE_PARALLEL_MERGE
-    );
+    return getOrDefault(QueryContextParameters.ENABLE_PARALLEL_MERGE);
   }
 
   public int getParallelMergeInitialYieldRows(int defaultValue)
   {
-    return getInt(QueryContexts.BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.PARALLEL_MERGE_INITIAL_YIELD_ROWS, defaultValue);
   }
 
   public int getParallelMergeSmallBatchRows(int defaultValue)
   {
-    return getInt(QueryContexts.BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.PARALLEL_MERGE_SMALL_BATCH_ROWS, defaultValue);
   }
 
   public int getParallelMergeParallelism(int defaultValue)
   {
-    return getInt(QueryContexts.BROKER_PARALLELISM, defaultValue);
+    return getOrDefault(QueryContextParameters.PARALLEL_MERGE_PARALLELISM, defaultValue);
   }
 
   public long getJoinFilterRewriteMaxSize()
   {
-    return getLong(
-        QueryContexts.JOIN_FILTER_REWRITE_MAX_SIZE_KEY,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
-    );
+    return getOrDefault(QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE);
   }
 
   public boolean getEnableJoinFilterPushDown()
   {
-    return getBoolean(
-        QueryContexts.JOIN_FILTER_PUSH_DOWN_KEY,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
-    );
+    return getOrDefault(QueryContextParameters.ENABLE_JOIN_FILTER_PUSH_DOWN);
   }
 
   public boolean getEnableJoinFilterRewrite()
   {
-    return getBoolean(
-        QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
-    );
+    return getOrDefault(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE);
   }
 
   public boolean isSecondaryPartitionPruningEnabled()
   {
-    return getBoolean(
-        QueryContexts.SECONDARY_PARTITION_PRUNING_KEY,
-        QueryContexts.DEFAULT_SECONDARY_PARTITION_PRUNING
-    );
+    return getOrDefault(QueryContextParameters.SECONDARY_PARTITION_PRUNING);
   }
 
   public boolean isOptimizeAggregators()
   {
-    return getBoolean(
-        QueryContexts.OPTIMIZE_AGGREGATORS_KEY,
-        QueryContexts.DEFAULT_OPTIMIZE_AGGREGATORS
-    );
+    return getOrDefault(QueryContextParameters.OPTIMIZE_AGGREGATORS);
   }
 
   public long getMaxQueuedBytes(long defaultValue)
   {
-    return getLong(QueryContexts.MAX_QUEUED_BYTES_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.MAX_QUEUED_BYTES, defaultValue);
   }
 
   public long getMaxScatterGatherBytes()
   {
-    return getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+    return getOrDefault(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE);
   }
 
   public String getEngine()
   {
-    return QueryContexts.parseString(
-        context,
-        QueryContexts.ENGINE,
-        QueryContexts.DEFAULT_ENGINE
-    );
+    return getOrDefault(QueryContextParameters.ENGINE);
   }
 
   public boolean hasTimeout()
@@ -501,38 +638,29 @@ public class QueryContext
 
   public long getTimeout(long defaultTimeout)
   {
-    final long timeout = getLong(QueryContexts.TIMEOUT_KEY, defaultTimeout);
+    final long timeout = getOrDefault(QueryContextParameters.TIMEOUT, defaultTimeout);
     if (timeout >= 0) {
       return timeout;
     }
     throw new BadQueryContextException(
         StringUtils.format(
             "Timeout [%s] must be a non negative value, but was %d",
-            QueryContexts.TIMEOUT_KEY,
+            QueryContextParameters.TIMEOUT,
             timeout
         )
     );
   }
 
-  @Nullable
-  public Duration getTimeoutDuration()
-  {
-    if (hasTimeout()) {
-      return Duration.ofMillis(getTimeout());
-    }
-    return null;
-  }
-
   public long getDefaultTimeout()
   {
-    final long defaultTimeout = getLong(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
+    final long defaultTimeout = getOrDefault(QueryContextParameters.DEFAULT_TIMEOUT);
     if (defaultTimeout >= 0) {
       return defaultTimeout;
     }
     throw new BadQueryContextException(
         StringUtils.format(
             "Timeout [%s] must be a non negative value, but was %d",
-            QueryContexts.DEFAULT_TIMEOUT_KEY,
+            QueryContextParameters.DEFAULT_TIMEOUT,
             defaultTimeout
         )
     );
@@ -545,7 +673,7 @@ public class QueryContext
       throw new BadQueryContextException(
           StringUtils.format(
               "Configured %s = %d is more than enforced limit of %d.",
-              QueryContexts.TIMEOUT_KEY,
+              QueryContextParameters.TIMEOUT,
               timeout,
               maxQueryTimeout
           )
@@ -560,7 +688,7 @@ public class QueryContext
 
   public long getPerSegmentTimeout(long defaultPerSegmentTimeout)
   {
-    final long timeout = getLong(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, defaultPerSegmentTimeout);
+    final long timeout = getOrDefault(QueryContextParameters.PER_SEGMENT_TIMEOUT, defaultPerSegmentTimeout);
     if (timeout >= 0) {
       return timeout;
     }
@@ -568,7 +696,7 @@ public class QueryContext
     throw new BadQueryContextException(
         StringUtils.format(
             "Per-segment timeout [%s] must be a non negative value, but was [%d]",
-            QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
+            QueryContextParameters.PER_SEGMENT_TIMEOUT,
             timeout
         )
     );
@@ -581,12 +709,12 @@ public class QueryContext
 
   public void verifyMaxScatterGatherBytes(long maxScatterGatherBytesLimit)
   {
-    long curr = getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0);
+    final long curr = getOrDefault(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 0L);
     if (curr > maxScatterGatherBytesLimit) {
       throw new BadQueryContextException(
           StringUtils.format(
             "Configured %s = %d is more than enforced limit of %d.",
-            QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY,
+            QueryContextParameters.MAX_SCATTER_GATHER_BYTES,
             curr,
             maxScatterGatherBytesLimit
           )
@@ -596,58 +724,37 @@ public class QueryContext
 
   public int getNumRetriesOnMissingSegments(int defaultValue)
   {
-    return getInt(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.NUM_RETRIES_ON_MISSING_SEGMENTS, defaultValue);
   }
 
   public boolean allowReturnPartialResults(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.RETURN_PARTIAL_RESULTS, defaultValue);
   }
 
   public boolean getEnableJoinFilterRewriteValueColumnFilters()
   {
-    return getBoolean(
-        QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
-    );
+    return getOrDefault(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS);
   }
 
   public CloneQueryMode getCloneQueryMode()
   {
-    return getEnum(
-        QueryContexts.CLONE_QUERY_MODE,
-        CloneQueryMode.class,
-        QueryContexts.DEFAULT_CLONE_QUERY_MODE
-    );
+    return getOrDefault(QueryContextParameters.CLONE_QUERY_MODE);
   }
 
   public boolean getEnableRewriteJoinToFilter()
   {
-    return getBoolean(
-        QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
-        QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
-    );
+    return getOrDefault(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER);
   }
 
   public boolean getEnableJoinLeftScanDirect()
   {
-    return getBoolean(
-        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
-        QueryContexts.DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT
-    );
+    return getOrDefault(QueryContextParameters.ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT);
   }
 
   public int getInSubQueryThreshold()
   {
-    return getInSubQueryThreshold(QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD);
-  }
-
-  public int getInSubQueryThreshold(int defaultValue)
-  {
-    return getInt(
-        QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY,
-        defaultValue
-    );
+    return getOrDefault(QueryContextParameters.IN_SUB_QUERY_THRESHOLD);
   }
 
   /**
@@ -659,10 +766,7 @@ public class QueryContext
    */
   public int getInFunctionThreshold()
   {
-    return getInt(
-        QueryContexts.IN_FUNCTION_THRESHOLD,
-        QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD
-    );
+    return getOrDefault(QueryContextParameters.IN_FUNCTION_THRESHOLD);
   }
 
   /**
@@ -673,56 +777,40 @@ public class QueryContext
    */
   public int getInFunctionExprThreshold()
   {
-    return getInt(
-        QueryContexts.IN_FUNCTION_EXPR_THRESHOLD,
-        QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD
-    );
+    return getOrDefault(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD);
   }
 
   public boolean isTimeBoundaryPlanningEnabled()
   {
-    return getBoolean(
-        QueryContexts.TIME_BOUNDARY_PLANNING_KEY,
-        QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING
-    );
+    return getOrDefault(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING);
   }
 
   public boolean isCatalogValidationEnabled()
   {
-    return getBoolean(
-        QueryContexts.CATALOG_VALIDATION_ENABLED,
-        QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED
-    );
+    return getOrDefault(QueryContextParameters.CATALOG_VALIDATION_ENABLED);
   }
 
   public boolean isExtendedFilteredSumRewrite()
   {
-    return getBoolean(
-        QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED,
-        QueryContexts.DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED
-    );
+    return getOrDefault(QueryContextParameters.EXTENDED_FILTERED_SUM_REWRITE);
   }
 
   /**
-   * Returns true if {@link QueryContexts#CTX_FULL_REPORT} is set to true, false if it is set to false or not set.
+   * Returns true if {@link QueryContextParameters#FULL_REPORT} is set to true, false if it is set to false or not set.
    */
   public boolean getFullReport()
   {
-    return getBoolean(
-        QueryContexts.CTX_FULL_REPORT,
-        QueryContexts.DEFAULT_CTX_FULL_REPORT
-    );
+    return getOrDefault(QueryContextParameters.FULL_REPORT);
   }
-
 
   public QueryResourceId getQueryResourceId()
   {
-    return new QueryResourceId(getString(QueryContexts.QUERY_RESOURCE_ID));
+    return new QueryResourceId(get(QueryContextParameters.QUERY_RESOURCE_ID));
   }
 
   public String getBrokerServiceName()
   {
-    return getString(QueryContexts.BROKER_SERVICE_NAME);
+    return get(QueryContextParameters.BROKER_SERVICE);
   }
 
   @Override
@@ -754,11 +842,7 @@ public class QueryContext
 
   public boolean isDecoupledMode()
   {
-    String value = getString(
-        QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
-        QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED
-    );
-    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equals(value);
+    return getOrDefault(QueryContextParameters.PLANNER_STRATEGY) == QueryContexts.PlannerStrategy.DECOUPLED;
   }
 
   public QueryContext override(Map<String, Object> contextOverride)
@@ -779,30 +863,28 @@ public class QueryContext
 
   public boolean isPrePlanned()
   {
-    return getBoolean(QueryContexts.CTX_PREPLANNED, QueryContexts.DEFAULT_PREPLANNED);
+    return getOrDefault(QueryContextParameters.PREPLANNED);
   }
 
   /**
-   * Returns the realtime segments mode for this query. If {@link QueryContexts#REALTIME_SEGMENTS_MODE} is absent
+   * Returns the realtime segments mode for this query. If {@link QueryContextParameters#REALTIME_SEGMENTS_MODE} is absent
    * or null, falls back to the deprecated {@code realtimeSegmentsOnly} boolean: {@code true} maps
    * to {@link RealtimeSegmentsMode#EXCLUSIVE}; otherwise returns {@link RealtimeSegmentsMode#INCLUDE}.
    * Throws {@link BadQueryContextException} if both fields are set simultaneously.
    */
   public RealtimeSegmentsMode getRealtimeSegmentsMode()
   {
-    RealtimeSegmentsMode mode = getEnum(
-        QueryContexts.REALTIME_SEGMENTS_MODE,
-        RealtimeSegmentsMode.class,
-        null
-    );
-    boolean hasDeprecatedFlag = get(QueryContexts.REALTIME_SEGMENTS_ONLY) != null;
+    final RealtimeSegmentsMode mode = has(QueryContextParameters.REALTIME_SEGMENTS_MODE)
+                                      ? get(QueryContextParameters.REALTIME_SEGMENTS_MODE)
+                                      : null;
+    final boolean hasDeprecatedFlag = has(QueryContextParameters.REALTIME_SEGMENTS_ONLY);
     if (mode != null && hasDeprecatedFlag) {
       throw new BadQueryContextException(
           StringUtils.format(
               "Cannot set both [%s] and deprecated [%s]; use [%s] only.",
-              QueryContexts.REALTIME_SEGMENTS_MODE,
-              QueryContexts.REALTIME_SEGMENTS_ONLY,
-              QueryContexts.REALTIME_SEGMENTS_MODE
+              QueryContextParameters.REALTIME_SEGMENTS_MODE,
+              QueryContextParameters.REALTIME_SEGMENTS_ONLY,
+              QueryContextParameters.REALTIME_SEGMENTS_MODE
           )
       );
     }
@@ -811,19 +893,24 @@ public class QueryContext
     }
     if (hasDeprecatedFlag) {
       // Backward-compat: honour the deprecated realtimeSegmentsOnly flag.
-      return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY)
+      return getOrDefault(QueryContextParameters.REALTIME_SEGMENTS_ONLY)
              ? RealtimeSegmentsMode.EXCLUSIVE
-             : QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
+             : getOrDefault(QueryContextParameters.REALTIME_SEGMENTS_MODE);
     }
-    return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
+    return getOrDefault(QueryContextParameters.REALTIME_SEGMENTS_MODE);
   }
 
   /**
-   * @deprecated Use {@link #getRealtimeSegmentsMode()} instead.
+   * Returns the {@link AcquireMode} set by {@link QueryContextParameters#SEGMENT_ACQUIRE_MODE}, or
+   * {@code defaultValue} (the engine's own choice) if absent. Currently only honored by MSQ leaf stage processors.
+   * <p>
+   * {@link AcquireMode#PARTIAL} degrades to {@link AcquireMode#FULL} where partial downloads are unavailable, such as
+   * when they are disabled by configuration or the segment is not range-readable. Forcing {@link AcquireMode#PARTIAL}
+   * where the engine defaults to {@link AcquireMode#FULL} fails at cursor creation if the engine reads segments through
+   * the synchronous cursor API.
    */
-  @Deprecated
-  public boolean isRealtimeSegmentsOnly()
+  public AcquireMode getSegmentAcquireMode(AcquireMode defaultValue)
   {
-    return getRealtimeSegmentsMode() == RealtimeSegmentsMode.EXCLUSIVE;
+    return getOrDefault(QueryContextParameters.SEGMENT_ACQUIRE_MODE, defaultValue);
   }
 }

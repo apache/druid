@@ -28,7 +28,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
@@ -39,8 +38,10 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -66,6 +67,10 @@ public class MovingAverageQuery extends BaseQuery<Row>
   private static final Logger LOG = new Logger(MovingAverageQuery.class);
 
   public static final String MOVING_AVG_QUERY_TYPE = "movingAverage";
+  /**
+   * @deprecated Use {@link QueryContextParameters#SORT_BY_DIMS_FIRST} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
 
   private final LimitSpec limitSpec;
@@ -139,7 +144,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
             ImmutableList.copyOf(Iterables.concat(this.postAggregatorSpecs, this.postAveragerSpecs))
         )
         .setGranularity(this.granularity)
-        .overrideContext(ImmutableMap.of(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.SORT_BY_DIMS_FIRST, true))
         .build();
 
     Function<Sequence<ResultRow>, Sequence<ResultRow>> postProcFn = this.limitSpec.build(groupByQueryForLimitSpec);
@@ -232,7 +237,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
   @JsonIgnore
   public boolean getContextSortByDimsFirst()
   {
-    return context().getBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+    return context().getOrDefault(QueryContextParameters.SORT_BY_DIMS_FIRST);
   }
 
   @Override

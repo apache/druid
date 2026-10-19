@@ -31,7 +31,7 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -238,10 +238,10 @@ public class MSQParseExceptionsTest extends MSQTestBase
 
     Map<String, Object> context = new HashMap<>(DEFAULT_MSQ_CONTEXT);
     context.put("sqlInsertSegmentGranularity", "{\"type\":\"all\"}");
-    context.put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, true);
+    QueryContextParameters.REMOVE_NULL_BYTES.set(context, true);
 
     Map<String, Object> runtimeContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
-    runtimeContext.put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, true);
+    QueryContextParameters.REMOVE_NULL_BYTES.set(runtimeContext, true);
 
     final ScanQuery expectedQuery =
         newScanQueryBuilder()

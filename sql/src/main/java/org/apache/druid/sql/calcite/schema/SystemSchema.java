@@ -55,6 +55,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -441,10 +442,11 @@ public class SystemSchema extends AbstractTableSchema
           : new HashSet<>();
 
       // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
-      // Coordinator. This may include both published and realtime segments.
-      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments(dataSourceFilter);
+      // Coordinator. This may include both published and realtime segments. Fetched on first read, so a scan that is
+      // never read holds no Coordinator response.
+      final Closer closer = Closer.create();
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments))
+          .from(() -> getAuthorizedPublishedSegments(closer.register(metadataView.getSegments(dataSourceFilter))))
           .transform(val -> {
             final DataSegment segment = val.getDataSegment();
             final AvailableSegmentMetadata availableSegmentMetadata =
@@ -549,7 +551,7 @@ public class SystemSchema extends AbstractTableSchema
           Iterables.concat(publishedSegments, availableSegments)
       );
 
-      return Linq4j.asEnumerable(allSegments)
+      return Linq4j.asEnumerable(() -> wrap(allSegments.iterator(), closer))
                    .where(Objects::nonNull)
                    .select(row -> projectSegmentsRow(row, projects, jsonMapper));
     }

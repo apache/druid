@@ -56,6 +56,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`LOG10(expr)`|Logarithm (base 10).|
 |`POWER(expr, power)`|`expr` raised to the power of `power`.|
 |`SQRT(expr)`|Square root.|
+|`CBRT(expr)`|Cube root.|
 |`TRUNCATE(expr[, digits])`|Truncates `expr` to a specific number of decimal digits. If `digits` is negative, then this truncates that many places to the left of the decimal point. If not specified, `digits` defaults to zero.|
 |`TRUNC(expr[, digits])`|Alias for `TRUNCATE`.|
 |`ROUND(expr[, digits])`|Rounds `expr` to a specific number of decimal digits. If `digits` is negative, then it rounds that many places to the left of the decimal point. If not specified, `digits` defaults to zero.|
@@ -68,6 +69,9 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`ACOS(expr)`|Arc cosine of `expr`.|
 |`ATAN(expr)`|Arc tangent of `expr`.|
 |`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
+|`SINH(expr)`|Hyperbolic sine of `expr`.|
+|`COSH(expr)`|Hyperbolic cosine of `expr`.|
+|`TANH(expr)`|Hyperbolic tangent of `expr`.|
 |`DEGREES(expr)`|Converts an angle measured in radians to an approximately equivalent angle measured in degrees.|
 |`RADIANS(expr)`|Converts an angle measured in degrees to an approximately equivalent angle measured in radians.|
 |`BITWISE_AND(expr1, expr2)`|Returns the result of `expr1 & expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles.|

@@ -22,6 +22,7 @@ package org.apache.druid.segment.projections;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -42,11 +43,30 @@ class ClusteringVectorColumnSelectorFactoryTest
 {
   private static final RowSignature CLUSTER_SIGNATURE = RowSignature.builder().add("tenant", ColumnType.STRING).build();
 
+  /**
+   * Creates a factory with no query virtual columns, whose capabilities cover only the clustering columns.
+   */
+  private static ClusteringVectorColumnSelectorFactory makeFactory(
+      VectorColumnSelectorFactory delegate,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues
+  )
+  {
+    return new ClusteringVectorColumnSelectorFactory(
+        delegate,
+        clusteringColumns,
+        clusteringValues,
+        delegate.getMaxVectorSize(),
+        VirtualColumns.EMPTY,
+        column -> null
+    );
+  }
+
   @Test
   void testSingleValueDimensionSelectorRejected()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(8));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         delegate,
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -71,7 +91,7 @@ class ClusteringVectorColumnSelectorFactoryTest
     // STRING clustering columns are read through the object selector (they report non-dictionary-encoded). Verify the
     // object selector returns the per-group clustering value without consulting the delegate.
     StubDelegate delegate = new StubDelegate(inspectorFor(8));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         delegate,
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -89,7 +109,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   void testNullStringClusteringObjectSelectorIsNull()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         delegate,
         CLUSTER_SIGNATURE,
         new Object[]{null}
@@ -106,7 +126,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   void testLongClusteringValueSelector()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         delegate,
         RowSignature.builder().add("priority", ColumnType.LONG).build(),
         new Object[]{42L}
@@ -124,7 +144,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   void testDoubleClusteringObjectSelector()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         delegate,
         RowSignature.builder().add("price", ColumnType.DOUBLE).build(),
         new Object[]{3.14}
@@ -141,7 +161,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   void testFloatClusteringValueSelector()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         delegate,
         RowSignature.builder().add("ratio", ColumnType.FLOAT).build(),
         new Object[]{0.5f}
@@ -158,7 +178,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   void testNonClusteringColumnDelegated()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         delegate,
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -188,16 +208,16 @@ class ClusteringVectorColumnSelectorFactoryTest
     }
     Assertions.assertEquals("metric", delegate.lastValueRequest);
 
-    // getColumnCapabilities is NOT lazy; it returns the result directly.
-    f.getColumnCapabilities("metric");
-    Assertions.assertEquals("metric", delegate.lastCapsRequest);
+    // capabilities come from the all-groups inspector, never the delegate, which only covers the current group
+    Assertions.assertNull(f.getColumnCapabilities("metric"));
+    Assertions.assertNull(delegate.lastCapsRequest);
   }
 
   @Test
   void testSetDelegateUpdatesClusteringValueOnExistingSelector()
   {
     StubDelegate firstDelegate = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         firstDelegate,
         RowSignature.builder().add("priority", ColumnType.LONG).build(),
         new Object[]{5L}
@@ -223,7 +243,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   void testSetDelegateUpdatesNonClusteringSelector()
   {
     StubDelegate first = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         first,
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -254,7 +274,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   void testGetColumnCapabilitiesForClusteringColumns()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         delegate,
         RowSignature.builder()
                     .add("tenant", ColumnType.STRING)
@@ -275,7 +295,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   @Test
   void testMultiValueDimensionSelectorRejected()
   {
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         new StubDelegate(inspectorFor(4)),
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -299,7 +319,7 @@ class ClusteringVectorColumnSelectorFactoryTest
     // grabbed before a group transition. A multi-group ConcatenatingVectorCursor swaps the delegate on each group, and
     // a consumer that cached the inspector must observe the active group's size (not the group that was current when
     // it first asked).
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         new StubDelegate(new NoFilterVectorOffset(8, 0, 5)),   // current vector size 5
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -325,7 +345,7 @@ class ClusteringVectorColumnSelectorFactoryTest
     // A group that fits in one vector reports delegate id 0; the next group's offset also restarts at 0. The remapped
     // id must differ across the transition so a single-slot id cache doesn't treat the new group's first vector as
     // unchanged and hand back the previous group's stale vector.
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         new StubDelegate(new NoFilterVectorOffset(8, 0, 4)),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -350,7 +370,7 @@ class ClusteringVectorColumnSelectorFactoryTest
     // Within a group, ids track the delegate offset as it advances. Across a transition, the next group's first id
     // must be strictly greater than the last id the previous group handed out.
     NoFilterVectorOffset offset = new NoFilterVectorOffset(4, 0, 12); // ids 0, 4, 8 as it advances
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         new StubDelegate(offset),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -374,7 +394,7 @@ class ClusteringVectorColumnSelectorFactoryTest
     // strictly-increasing ids purely from change detection, so a non-monotonic sequence within a group and an id that
     // overlaps across a group boundary both still yield clean, collision-free ids.
     SettableVectorInspector first = new SettableVectorInspector(4);
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         new StubDelegate(first),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -399,7 +419,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   {
     // The caching contract: reading getId() twice without advancing (same delegate, same raw id) must return the SAME
     // minted id, so a downstream id-keyed cache hits instead of recomputing. Guards against an always-tick regression.
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         new StubDelegate(new NoFilterVectorOffset(8, 0, 5)),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -417,7 +437,7 @@ class ClusteringVectorColumnSelectorFactoryTest
     // not advance its minted counter, so a later real vector still mints a fresh id starting at 0.
     SettableVectorInspector state = new SettableVectorInspector(4);
     state.id = ReadableVectorInspector.NULL_ID;
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+    ClusteringVectorColumnSelectorFactory f = makeFactory(
         new StubDelegate(state),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}

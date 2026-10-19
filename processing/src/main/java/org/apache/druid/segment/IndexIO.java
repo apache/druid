@@ -72,6 +72,7 @@ import org.apache.druid.segment.file.SegmentFileMapperV10;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
+import org.apache.druid.segment.projections.ClusteredColumnInspector;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.ProjectionMetadata;
@@ -703,6 +704,7 @@ public class IndexIO
           metadata,
           projectionsColumns,
           null,
+          null,
           null
       )
       {
@@ -1089,7 +1091,8 @@ public class IndexIO
           reconstructedMetadata,
           projectionsColumns,
           clusteredBaseSummary,
-          clusterGroupColumnsList
+          clusterGroupColumnsList,
+          ClusteredColumnInspector.create(clusteredBaseSummary, metadata.getColumnDescriptors())
       )
       {
         @Override

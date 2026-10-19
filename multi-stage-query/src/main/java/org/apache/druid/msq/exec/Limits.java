@@ -22,7 +22,7 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 public class Limits
 {
@@ -51,9 +51,10 @@ public class Limits
 
   /**
    * Default maximum number of input files per worker. Exceeding this will yield a {@link TooManyInputFilesFault}.
-   * Can be overridden by the context parameter {@link MultiStageQueryContext#CTX_MAX_INPUT_FILES_PER_WORKER}.
+   * Can be overridden by the context parameter {@link QueryContextParameters#MAX_INPUT_FILES_PER_WORKER}.
    */
-  public static final int DEFAULT_MAX_INPUT_FILES_PER_WORKER = 10_000;
+  public static final int DEFAULT_MAX_INPUT_FILES_PER_WORKER =
+      QueryContextParameters.MAX_INPUT_FILES_PER_WORKER.getDefaultValue().orElseThrow();
 
   /**
    * Maximum number of parse exceptions with their stack traces a worker can send to the controller.
@@ -68,7 +69,8 @@ public class Limits
   /**
    * Maximum number of input bytes per worker in case number of tasks is determined automatically.
    */
-  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 1024 * 1024 * 512L;
+  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER =
+      QueryContextParameters.MAX_INPUT_BYTES_PER_WORKER.getDefaultValue().orElseThrow();
 
   /**
    * Maximum size of the kernel manipulation queue in {@link org.apache.druid.msq.indexing.MSQControllerTask}.
@@ -108,14 +110,17 @@ public class Limits
   /**
    * Default max number of output partitions for a stage. Exceeding this will yield a {@link TooManyPartitionsFault}.
    * For an ingestion job, this is the maximum number of segments that can be created.
-   * Can be overridden by the context parameter {@link MultiStageQueryContext#CTX_MAX_PARTITIONS}.
+   * Can be overridden by the context parameter {@link QueryContextParameters#MAX_PARTITIONS}.
    */
-  public static final int DEFAULT_MAX_PARTITIONS = 25_000;
+  public static final int DEFAULT_MAX_PARTITIONS = QueryContextParameters.MAX_PARTITIONS.getDefaultValue().orElseThrow();
 
   /**
    * Max number of rows with the same key in a window. This acts as a guardrail for
    * data distribution with high cardinality
+   * @deprecated Use the default value of {@link QueryContextParameters#MAX_ROWS_MATERIALIZED_IN_WINDOW} instead.
    */
-  public static final int MAX_ROWS_MATERIALIZED_IN_WINDOW = 100_000;
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final int MAX_ROWS_MATERIALIZED_IN_WINDOW =
+      QueryContextParameters.MAX_ROWS_MATERIALIZED_IN_WINDOW.getDefaultValue().orElseThrow();
 
 }

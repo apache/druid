@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
@@ -166,7 +168,7 @@ public class MSQControllerTaskTest
     Assertions.assertEquals(TaskLockType.REPLACE, replaceTaskWithContext.getTaskLockType());
 
     // With 'useConcurrentLocks' in query context
-    final Map<String, Object> queryContext = Collections.singletonMap(Tasks.USE_CONCURRENT_LOCKS, true);
+    final Map<String, Object> queryContext = QueryContext.ofMap(QueryContextParameters.USE_CONCURRENT_LOCKS, true);
     final ScanQuery query = new Druids.ScanQueryBuilder()
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .intervals(new MultipleIntervalSegmentSpec(INTERVALS))

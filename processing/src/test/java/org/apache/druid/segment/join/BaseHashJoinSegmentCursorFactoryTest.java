@@ -22,7 +22,7 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -59,8 +59,8 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
       true,
       true,
       true,
-      QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
-      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+      QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow(),
+      QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getDefaultValue().orElseThrow()
   );
 
   public static final String FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX = "c1.";

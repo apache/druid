@@ -35,8 +35,8 @@ import java.util.Map;
  * table. Vector boundaries do not align with cluster-group boundaries; the last vector of each group is naturally
  * partial (its {@link #getCurrentVectorSize()} returns less than max), and the next {@link #advance()} swaps in the
  * next group's vector cursor without trying to merge across groups.
- * <p/
- * >On each group transition the wrapper {@link ClusteringVectorColumnSelectorFactory} updates its underlying
+ * <p/>
+ * On each group transition the wrapper {@link ClusteringVectorColumnSelectorFactory} updates its underlying
  * delegate and clustering values, so previously-acquired delegating vector selectors observe the new group's data via
  * generation-counter cache invalidation.
  * <p/>

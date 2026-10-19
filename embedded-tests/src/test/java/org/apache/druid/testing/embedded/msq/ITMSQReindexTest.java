@@ -19,10 +19,9 @@
 
 package org.apache.druid.testing.embedded.msq;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.indexer.AbstractITBatchIndexTest;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,9 +52,11 @@ public class ITMSQReindexTest extends AbstractITBatchIndexTest
   {
     final String indexDatasource = dataSource;
     final String reindexDatasource = EmbeddedClusterApis.createTestDatasourceName();
-    Map<String, Object> context = ImmutableMap.of(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false,
-                                                  MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5,
-                                                  GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
+    Map<String, Object> context = QueryContext.builder()
+                                              .put(QueryContextParameters.FINALIZE_AGGREGATIONS, false)
+                                              .put(QueryContextParameters.MAX_NUM_TASKS, 5)
+                                              .put(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING, false)
+                                              .toMap();
     try {
       submitMSQTaskFromFile(MSQ_TASKS_DIR + sqlFileName,
                             indexDatasource,
