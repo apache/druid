@@ -40,11 +40,13 @@ import org.apache.druid.jackson.CommaListJoinSerializer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,15 +70,35 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   /**
-   * Shared canonical interner for {@link org.apache.druid.segment.VirtualColumn} instances embedded in segment-side
+   * Shared canonical interner for {@link VirtualColumn} instances embedded in segment-side
    * metadata that lives in broker/coordinator memory. Used by callers that carry virtual columns through
    * {@link DataSegment}'s wire form (clustering virtual columns on {@link ClusterGroupTuples},
    * {@link org.apache.druid.timeline.partition.BaseDimensionRangeShardSpec}'s range-clustering virtual columns) so
-   * identical VC definitions across segments collapse to a single instance in memory.
+   * identical VC definitions across segments collapse to a single instance in memory. Callers holding a whole
+   * {@link VirtualColumns} should use {@link #internVirtualColumns}.
    */
   public static Interner<VirtualColumn> virtualColumnInterner()
   {
     return VIRTUAL_COLUMN_INTERNER;
+  }
+
+  /**
+   * Returns a shared {@link VirtualColumns} instance equal to the given one, so segments with the same virtual column
+   * definitions reuse one object in memory instead of each holding its own copy. Returns {@link VirtualColumns#EMPTY}
+   * if the input is null or empty.
+   */
+  public static VirtualColumns internVirtualColumns(@Nullable VirtualColumns virtualColumns)
+  {
+    if (virtualColumns == null || virtualColumns.isEmpty()) {
+      return VirtualColumns.EMPTY;
+    }
+    return VIRTUAL_COLUMNS_INTERNER.intern(
+        VirtualColumns.create(
+            Arrays.stream(virtualColumns.getVirtualColumns())
+                  .map(VIRTUAL_COLUMN_INTERNER::intern)
+                  .toList()
+        )
+    );
   }
 
   /*
@@ -109,6 +131,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private static final Interner<List<String>> PROJECTIONS_INTERNER = Interners.newWeakInterner();
   private static final Interner<ClusterGroupTuples> CLUSTER_GROUPS_INTERNER = Interners.newWeakInterner();
   private static final Interner<VirtualColumn> VIRTUAL_COLUMN_INTERNER = Interners.newWeakInterner();
+  private static final Interner<VirtualColumns> VIRTUAL_COLUMNS_INTERNER = Interners.newWeakInterner();
   private static final Interner<CompactionState> COMPACTION_STATE_INTERNER = Interners.newWeakInterner();
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",

@@ -55,6 +55,7 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
 import org.apache.druid.sql.calcite.rule.AggregateMergeRule;
 import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
@@ -64,7 +65,6 @@ import org.apache.druid.sql.calcite.rule.DruidAggregateCaseToFilterRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
-import org.apache.druid.sql.calcite.rule.DruidStripUnionArmCastRule;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterDecomposeCoalesceRule;
@@ -90,6 +90,18 @@ import java.util.Set;
 
 public class CalciteRulesManager
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_PLANNER_BLOAT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String BLOAT_PROPERTY = "sqlPlannerBloat";
+
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SQL_PLANNER_BLOAT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final int DEFAULT_BLOAT = 1000;
+
   private static final Logger log = new Logger(CalciteRulesManager.class);
 
   public static final int DRUID_CONVENTION_RULES = 0;
@@ -99,9 +111,6 @@ public class CalciteRulesManager
   private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.parseInt(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
-  public static final String BLOAT_PROPERTY = "sqlPlannerBloat";
-  public static final int DEFAULT_BLOAT = 1000;
-
   /**
    * Rules from {@link org.apache.calcite.plan.RelOptRules#BASE_RULES}, minus:
    *
@@ -355,7 +364,6 @@ public class CalciteRulesManager
 
     // Apply SORT_PROJECT_TRANSPOSE to match the expected order of "sort" and "sortProject" in PartialDruidQuery.
     builder.addRuleInstance(CoreRules.SORT_PROJECT_TRANSPOSE);
-    builder.addRuleInstance(DruidStripUnionArmCastRule.instance());
 
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
@@ -499,8 +507,7 @@ public class CalciteRulesManager
 
   private int getBloatProperty(PlannerContext plannerContext)
   {
-    final Integer bloat = plannerContext.queryContext().getInt(BLOAT_PROPERTY);
-    return (bloat != null) ? bloat : DEFAULT_BLOAT;
+    return plannerContext.queryContext().getOrDefault(QueryContextParameters.SQL_PLANNER_BLOAT);
   }
 
   public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext, boolean withJoinRules)

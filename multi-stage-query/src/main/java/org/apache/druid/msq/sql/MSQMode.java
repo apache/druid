@@ -19,11 +19,11 @@
 
 package org.apache.druid.msq.sql;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.indexing.error.MSQWarnings;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -33,8 +33,8 @@ import java.util.stream.Collectors;
 
 public enum MSQMode
 {
-  NON_STRICT_MODE("nonStrict", ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, -1)),
-  STRICT_MODE("strict", ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0));
+  NON_STRICT_MODE("nonStrict", QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, -1L)),
+  STRICT_MODE("strict", QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 0L));
 
   private final String value;
   private final Map<String, Object> defaultQueryContext;

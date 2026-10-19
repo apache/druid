@@ -38,9 +38,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
@@ -69,7 +71,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -317,7 +318,8 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
     // testProjectionMissLoadsBaseBundleOnDemand (or reading them if an earlier test already did). Neither query loads
     // anything.
     final LatchableEmitter emitter = quiesceAndFlushStorageMonitor();
-    final Map<String, Object> context = Map.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "PARTIAL_RULE_HELD");
+    final Map<String, Object> context =
+        QueryContext.ofMap(QueryContextParameters.SEGMENT_ACQUIRE_MODE, AcquireMode.PARTIAL_RULE_HELD);
 
     runDartQuery(
         "SELECT \"countryName\", SUM(\"delta\") FROM \"" + dataSource + "\" GROUP BY 1 ORDER BY 1",
@@ -492,11 +494,13 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
   private void runDartQuery(String sql, Map<String, Object> context, String expectedCsv)
   {
     final String sqlQueryId = UUID.randomUUID().toString();
-    final Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId);
     final String result;
     try {
-      result = msqApis.submitDartSqlAsync(sql, queryContext, broker).get();
+      result = msqApis.submitDartSqlAsync(
+          sql,
+          QueryContext.builder().putAll(context).put(QueryContextParameters.SQL_QUERY_ID, sqlQueryId).toMap(),
+          broker
+      ).get();
     }
     catch (Exception e) {
       throw new RuntimeException("failed to run Dart query [" + sqlQueryId + "]: " + sql, e);

@@ -607,8 +607,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_keys(c1, '$.a_obj.a_array[0]') c
 FROM test_json_cols;
-Query could not be planned
-!error
++-----------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                     |
++-----------------------------------------------------------------------------------------------------------------------+
+| [a_str, a_num_int, a_num_float, a_bool, a_null, a_empty_obj, a_empty_array, a_empty_obj_nested, a_empty_array_nested] |
+| [a_str, a_num_int, a_num_float, a_bool, a_null, a_empty_obj, a_empty_array, a_empty_obj_nested, a_empty_array_nested] |
+| [a_str, a_num_int, a_num_float, a_bool, a_null, a_empty_obj, a_empty_array, a_empty_obj_nested, a_empty_array_nested] |
+| [a_str, a_num_int, a_num_float, a_bool, a_null, a_empty_obj, a_empty_array, a_empty_obj_nested, a_empty_array_nested] |
+|                                                                                                                       |
+|                                                                                                                       |
+|                                                                                                                       |
+|                                                                                                                       |
++-----------------------------------------------------------------------------------------------------------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_keys TEST_ID: A141
@@ -618,8 +631,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_keys(c1, '$.a_obj.a_array[0].a_str') c
 FROM test_json_cols;
-Query could not be planned
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_keys TEST_ID: A142
@@ -629,8 +655,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_keys(c1, '$.a_obj.a_array[0].a_num_int') c
 FROM test_json_cols;
-Query could not be planned
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_keys TEST_ID: A143

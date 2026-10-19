@@ -145,8 +145,8 @@ public class DirectDruidClientAbortHttpTest
       );
 
       final Map<String, Object> queryContext = QueryContext.builder()
-                                                            .putRaw(
-                                                                DirectDruidClient.QUERY_FAIL_TIME,
+                                                            .put(
+                                                                QueryContextParameters.QUERY_FAIL_TIME,
                                                                 System.currentTimeMillis() + 60_000L
                                                             )
                                                             .put(QueryContextParameters.QUERY_ID, "abort-test")
