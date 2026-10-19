@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.context;
 
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -338,16 +339,36 @@ public final class QueryContextParameter<T>
   {
     final String expectedFormat = "in " + typeName + " format";
     final BigDecimal decimal;
-    try {
-      if (value instanceof BigDecimal) {
-        decimal = (BigDecimal) value;
-      } else if (value instanceof Number || value instanceof String) {
+    if (value instanceof BigDecimal) {
+      decimal = (BigDecimal) value;
+    } else if (value instanceof Number) {
+      try {
         decimal = new BigDecimal(value.toString());
-      } else {
+      }
+      catch (NumberFormatException e) {
+        // Such as NaN or infinity
         throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
       }
-    }
-    catch (NumberFormatException e) {
+    } else if (value instanceof String) {
+      // A plain number, or a human-readable number with a unit suffix, such as 10K or 256MiB
+      BigDecimal parsed;
+      try {
+        parsed = new BigDecimal((String) value);
+      }
+      catch (NumberFormatException e) {
+        try {
+          parsed = BigDecimal.valueOf(HumanReadableBytes.parse((String) value, true));
+        }
+        catch (IAE iae) {
+          throw QueryContextParameters.invalidValueException(
+              name,
+              expectedFormat + ", or a human-readable number such as '10 K' or '256 MiB'",
+              value
+          );
+        }
+      }
+      decimal = parsed;
+    } else {
       throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
     }
 
