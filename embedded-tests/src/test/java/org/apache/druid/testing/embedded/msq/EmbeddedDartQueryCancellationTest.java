@@ -22,7 +22,8 @@ package org.apache.druid.testing.embedded.msq;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.NetworkConnector;
 import org.eclipse.jetty.server.Server;
@@ -37,7 +38,6 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -72,7 +72,7 @@ public class EmbeddedDartQueryCancellationTest extends BaseDartQueryTest
     )) {
       final ListenableFuture<String> queryFuture = msqApis.submitDartSqlAsync(
           sql,
-          Map.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId),
+          QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, sqlQueryId),
           broker1
       );
       try {

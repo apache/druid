@@ -48,6 +48,7 @@ import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -56,6 +57,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -742,11 +744,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         .setLimitSpec(
             ls2
         )
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL)
         .build();
 
@@ -876,11 +874,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
                 1000
             )
         )
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL)
         .build();
 
@@ -932,9 +926,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     // The two testing segments have non overlapping groups, so the result should be 100% accurate even
     // forceLimitPushDown is applied
     List<ResultRow> resultsWithoutLimitPushDown = testForcePushLimitDownAccuracyWhenSortHasNonGroupingFieldsHelper(ImmutableMap.of());
-    List<ResultRow> resultsWithLimitPushDown = testForcePushLimitDownAccuracyWhenSortHasNonGroupingFieldsHelper(ImmutableMap.of(
-        GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true,
-        GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true
+    List<ResultRow> resultsWithLimitPushDown = testForcePushLimitDownAccuracyWhenSortHasNonGroupingFieldsHelper(QueryContext.ofMap(
+        QueryContextParameters.APPLY_LIMIT_PUSH_DOWN,
+        true,
+        QueryContextParameters.FORCE_LIMIT_PUSH_DOWN,
+        true
     ));
 
     List<ResultRow> expectedResults = ImmutableList.of(

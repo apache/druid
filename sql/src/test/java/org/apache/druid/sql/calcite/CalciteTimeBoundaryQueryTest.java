@@ -48,7 +48,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   public void testMaxTimeQuery()
   {
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(expectedContext, "a0");
     testQuery(
         "SELECT MAX(__time) AS maxTime FROM foo",
         QueryContext.ofMap(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING, true),
@@ -67,7 +67,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   public void testMinTimeQuery()
   {
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(expectedContext, "a0");
     testQuery(
         "SELECT MIN(__time) AS minTime FROM foo",
         QueryContext.ofMap(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING, true),
@@ -86,7 +86,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   public void testMinTimeQueryWithTimeFilters()
   {
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(expectedContext, "a0");
     testQuery(
         "SELECT MIN(__time) AS minTime FROM foo where __time >= '2001-01-01' and __time < '2003-01-01'",
         QueryContext.ofMap(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING, true),
@@ -110,7 +110,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   public void testMinTimeQueryWithTimeAndColumnFilters()
   {
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(expectedContext, "a0");
     testQuery(
         "SELECT MIN(__time) AS minTime FROM foo\n"
         + "where __time >= '2001-01-01' and __time < '2003-01-01'\n"

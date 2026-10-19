@@ -20,7 +20,6 @@
 package org.apache.druid.server.system.handler;
 
 import com.google.common.util.concurrent.Futures;
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -28,6 +27,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.system.table.SystemTableDescriptor;
@@ -192,7 +192,7 @@ public class SystemTableNodeLocatorTest
     return Druids.newScanQueryBuilder()
                  .dataSource("test")
                  .eternityInterval()
-                 .context(Map.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE))
+                 .context(Map.of(QueryContextParameters.QUERY_FAIL_TIME.getName(), Long.MAX_VALUE))
                  .build();
   }
 }

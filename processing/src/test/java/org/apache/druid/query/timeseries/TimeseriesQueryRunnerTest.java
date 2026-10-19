@@ -647,7 +647,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   )
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
-                                  .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                  .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, true))
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = new ArrayList<>();
@@ -2751,7 +2751,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(
                                       makeContext(
                                           QueryContext.builder()
-                                                      .putRaw(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
+                                                      .put(QueryContextParameters.TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
                                                       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
                                                       .toMap()
                                       )
@@ -2867,7 +2867,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(
                                       makeContext(
                                           QueryContext.builder()
-                                                      .putRaw(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
+                                                      .put(QueryContextParameters.TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
                                                       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
                                                       .toMap()
                                       )
@@ -3059,7 +3059,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .descending(descending)
                                   .context(
                                       makeContext(
-                                          ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, "myTimestamp")
+                                          QueryContext.ofMap(QueryContextParameters.TIMESTAMP_RESULT_FIELD, "myTimestamp")
                                       )
                                   )
                                   .build();

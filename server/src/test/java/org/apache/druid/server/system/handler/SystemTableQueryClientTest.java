@@ -324,7 +324,7 @@ public class SystemTableQueryClientTest
                                              .dataSource(new SystemTableDataSource("test"))
                                              .eternityInterval()
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                             .context(Map.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE))
+                                             .context(Map.of(QueryContextParameters.QUERY_FAIL_TIME.getName(), Long.MAX_VALUE))
                                              .build();
       final List<QueryRunner<ScanResultValue>> nodeRunners = List.of(
           directClient(objectMapper, httpClient, "localhost:8081", cancellationExecutor),
@@ -717,7 +717,7 @@ public class SystemTableQueryClientTest
     final ScanQuery inner = query(descriptor, Map.of(QueryContextParameters.TIMEOUT.getName(), innerTimeout));
     final ScanQuery outer = query(
         descriptor,
-        Map.of(DirectDruidClient.QUERY_FAIL_TIME, deadline, QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), 1_234L)
+        Map.of(QueryContextParameters.QUERY_FAIL_TIME.getName(), deadline, QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), 1_234L)
     )
         .withDataSource(new QueryDataSource(inner));
 
@@ -725,7 +725,7 @@ public class SystemTableQueryClientTest
           .run(QueryPlus.wrap(outer), ResponseContext.createEmpty())
           .toList();
 
-    Assertions.assertEquals(deadline, captured.get().context().getLong(DirectDruidClient.QUERY_FAIL_TIME));
+    Assertions.assertEquals(deadline, captured.get().context().getLong(QueryContextParameters.QUERY_FAIL_TIME.getName()));
     Assertions.assertEquals(1_234L, captured.get().context().getMaxScatterGatherBytes());
   }
 
@@ -748,7 +748,7 @@ public class SystemTableQueryClientTest
         Map.of(
             QueryContexts.TIMEOUT_KEY,
             QueryContexts.NO_TIMEOUT,
-            DirectDruidClient.QUERY_FAIL_TIME,
+            QueryContextParameters.QUERY_FAIL_TIME.getName(),
             0L
         )
     );
@@ -759,7 +759,7 @@ public class SystemTableQueryClientTest
 
     Assertions.assertEquals(
         JodaUtils.MAX_INSTANT,
-        capturedNodeQuery.get().context().getLong(DirectDruidClient.QUERY_FAIL_TIME)
+        capturedNodeQuery.get().context().getLong(QueryContextParameters.QUERY_FAIL_TIME.getName())
     );
   }
 

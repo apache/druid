@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import io.netty.channel.ChannelException;
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -192,7 +191,7 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
       // An inner query may tighten the outer guardrails, but must not discard them before node fanout.
       childOwningQuery = childQuery.withOverriddenContext(
           Map.of(
-              DirectDruidClient.QUERY_FAIL_TIME,
+              QueryContextParameters.QUERY_FAIL_TIME.getName(),
               Math.min(getNodeFailTime(owningQuery), getNodeFailTime(childQuery)),
               QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(),
               Math.min(owningQuery.context().getMaxScatterGatherBytes(), childQuery.context().getMaxScatterGatherBytes())
@@ -275,7 +274,7 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
   {
     final Map<String, Object> nodeContext = new LinkedHashMap<>(owningQuery.getContext());
     final DimFilter nodeFilter = nodeFilter(dataSource, owningQuery);
-    nodeContext.put(DirectDruidClient.QUERY_FAIL_TIME, getNodeFailTime(owningQuery));
+    nodeContext.put(QueryContextParameters.QUERY_FAIL_TIME.getName(), getNodeFailTime(owningQuery));
     // The node endpoint always returns plain ScanResultValue objects. bySegment belongs to the user-facing query and
     // would make DirectDruidClient deserialize this private transport using an incompatible result type.
     nodeContext.put(QueryContexts.BY_SEGMENT_KEY, false);
@@ -548,7 +547,7 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
 
   private static long getNodeFailTime(final Query<?> query)
   {
-    final long existingFailTime = query.context().getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+    final long existingFailTime = query.context().getOrDefault(QueryContextParameters.QUERY_FAIL_TIME, -1L);
     if (existingFailTime > 0) {
       return existingFailTime;
     } else if (query.context().hasTimeout()) {

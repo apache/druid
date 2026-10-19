@@ -41,7 +41,6 @@ import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContext;
@@ -256,7 +255,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         false,
         QueryContext.builder()
                     .putAll(defaultAsyncContext())
-                    .putRaw(MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT, true)
+                    .put(QueryContextParameters.FAIL_ON_EMPTY_INSERT, true)
                     .toMap(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
@@ -359,7 +358,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                           + "configure durable storage as it allows the user to fetch large result sets. "
                           + "Please contact your cluster admin to configure durable storage.";
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.getName());
 
     SqlStatementResourceTest.assertExceptionMessage(resourceWithDurableStorage.doPost(
                                                         new SqlQuery(
@@ -381,8 +380,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testWithDurableStorage() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
-    context.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2);
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.getName());
+    QueryContextParameters.ROWS_PER_PAGE.set(context, 2);
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -455,9 +454,9 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testMultipleWorkersWithPageSizeLimiting() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
-    context.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2);
-    context.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 3);
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.getName());
+    QueryContextParameters.ROWS_PER_PAGE.set(context, 2);
+    QueryContextParameters.MAX_NUM_TASKS.set(context, 3);
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
@@ -559,7 +558,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testResultFormat() throws Exception
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.name());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -621,7 +620,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testResultFormatWithParamInSelect() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.name());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(

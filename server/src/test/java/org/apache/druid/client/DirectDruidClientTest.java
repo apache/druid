@@ -276,7 +276,7 @@ public class DirectDruidClientTest
     SettableFuture<Object> timeoutFuture = SettableFuture.create();
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
 
-    QueryPlus queryPlus = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 250));
+    QueryPlus queryPlus = getQueryPlus(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 250));
     Sequence results = client.run(queryPlus, responseContext);
 
     // Incomplete result set delivered via a pipe to simulate slow stream
@@ -305,7 +305,7 @@ public class DirectDruidClientTest
     final SettableFuture<Object> timeoutFuture = SettableFuture.create();
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
 
-    QueryPlus query = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 500));
+    QueryPlus query = getQueryPlus(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 500));
     Sequence results = client.run(query, responseContext);
     QueryTimeoutException actualException = Assertions.assertThrows(QueryTimeoutException.class, results::toList);
     Assertions.assertEquals("Query timeout", actualException.getErrorCode());
@@ -319,7 +319,7 @@ public class DirectDruidClientTest
     SettableFuture<Object> timeoutFuture = SettableFuture.create();
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
 
-    QueryPlus queryPlus = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis()));
+    QueryPlus queryPlus = getQueryPlus(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis()));
     QueryTimeoutException actualException = Assertions.assertThrows(
         QueryTimeoutException.class,
         () -> client.run(queryPlus, responseContext)
@@ -343,7 +343,7 @@ public class DirectDruidClientTest
     final QueryPlus queryPlus = getQueryPlus(
         QueryContext.builder()
             .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 100L)
-            .putRaw(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 100)
+            .put(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 100)
             .toMap()
     );
 
@@ -389,9 +389,9 @@ public class DirectDruidClientTest
     final TestHttpClient testHttpClient = new TestHttpClient(objectMapper, 110);
     DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(testHttpClient, false), stubEmitter);
 
-    final QueryPlus queryPlus = getQueryPlus(Map.of(
-        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 50
-    ));
+    final QueryPlus queryPlus = getQueryPlus(
+        QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 50)
+    );
 
     Assertions.assertThrows(QueryTimeoutException.class, () -> client.run(queryPlus, responseContext));
 
@@ -410,9 +410,9 @@ public class DirectDruidClientTest
 
     // Timeout far enough in the future that handleResponse + done() complete during run(), but we sleep
     // past it before consuming the sequence so that checkQueryTimeout() fires during toList().
-    final QueryPlus queryPlus = getQueryPlus(Map.of(
-        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 500
-    ));
+    final QueryPlus queryPlus = getQueryPlus(
+        QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 500)
+    );
 
     Sequence results = client.run(queryPlus, responseContext);
     Thread.sleep(600);
@@ -431,7 +431,7 @@ public class DirectDruidClientTest
     final QueryPlus queryPlus = getQueryPlus(
         QueryContext.builder()
             .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 100L)
-            .putRaw(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE)
+            .put(QueryContextParameters.QUERY_FAIL_TIME, Long.MAX_VALUE)
             .toMap()
     );
 
@@ -1065,7 +1065,7 @@ public class DirectDruidClientTest
 
   private static QueryPlus getQueryPlus()
   {
-    return getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
+    return getQueryPlus(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, Long.MAX_VALUE));
   }
 
   private static QueryPlus getQueryPlus(Map<String, Object> context)

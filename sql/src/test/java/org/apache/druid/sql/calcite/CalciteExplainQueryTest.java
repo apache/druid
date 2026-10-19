@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.context.QueryContextParameters;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
 
@@ -242,7 +241,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     // Test plan as default expressions
     final Map<String, Object> defaultExprContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     QueryContextParameters.USE_NATIVE_QUERY_EXPLAIN.set(defaultExprContext, true);
-    defaultExprContext.put(PlannerConfig.CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS, true);
+    QueryContextParameters.FORCE_EXPRESSION_VIRTUAL_COLUMNS.set(defaultExprContext, true);
 
     final String expectedPlanWithDefaultExpressions = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"filter((x) -> array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"filter((x) -> !array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v2\",\"expression\":\"filter((x) -> regexp_like(x, '^true$'), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v3\",\"expression\":\"filter((x) -> substring(x, 0, 2) == 'tr', \\\"dim1\\\")\",\"outputType\":\"STRING\"}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\",\"v2\",\"v3\"],\"context\":{\"defaultTimeout\":300000,\"forceExpressionVirtualColumns\":true,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"},{\"name\":\"v2\",\"type\":\"STRING\"},{\"name\":\"v3\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"},{\"queryColumn\":\"v2\",\"outputColumn\":\"EXPR$2\"},{\"queryColumn\":\"v3\",\"outputColumn\":\"EXPR$3\"}]}]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
