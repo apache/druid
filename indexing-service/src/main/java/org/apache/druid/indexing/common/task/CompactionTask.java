@@ -1008,16 +1008,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
-   * The names of the columns {@code baseTable} stores, metric columns included. A name in here is described by the
-   * declaration, so whatever the segments say about it does not have to be reconciled.
+   * The names of the columns {@code baseTable} stores, metric columns included.
    */
   private static Set<String> declaredColumnNames(BaseTableProjectionSpec baseTable)
   {
-    return baseTable.getDimensionsSpec()
-                    .getDimensions()
-                    .stream()
-                    .map(DimensionSchema::getName)
-                    .collect(Collectors.toSet());
+    final Set<String> names = new HashSet<>(declaredMetricNames(baseTable));
+    for (DimensionSchema declaredColumn : baseTable.getDimensionsSpec().getDimensions()) {
+      names.add(declaredColumn.getName());
+    }
+    return names;
   }
 
   /**

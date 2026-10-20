@@ -1185,6 +1185,48 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testCreateIngestionSchemaWithUnsealedRollupBaseTableDoesNotAbsorbAColumnItDeclaresAsAMetric()
+      throws IOException
+  {
+    // 'long_dim_1' is an ordinary column in the segments and a metric column in the declaration. Only the grouping
+    // columns appear in a rollup layout's dimensionsSpec, so without counting the aggregators as declared columns it
+    // would be appended as another grouping column and then collide with the aggregator of the same name.
+    final RollupTableProjectionSpec declaresADimensionAsAMetric =
+        RollupTableProjectionSpec.builder()
+            .groupingColumns(
+                new StringDimensionSchema("string_dim_0"),
+                new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)
+            )
+            .aggregators(new LongSumAggregatorFactory("long_dim_1", "long_dim_1"))
+            .build();
+
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            declaresADimensionAsAMetric,
+            false,
+            false,
+            METRIC_BUILDER,
+            false
+        ).values()
+    );
+
+    // It stays the metric the table declared, and is not also a dimension.
+    Assertions.assertTrue(
+        Arrays.stream(dataSchema.getAggregators())
+              .anyMatch(aggregator -> "long_dim_1".equals(aggregator.getName()))
+    );
+    Assertions.assertFalse(dataSchema.getDimensionsSpec().getDimensionNames().contains("long_dim_1"));
+  }
+
+  @Test
   public void testCreateIngestionSchemaWithUnsealedBaseTableAbsorbsSegmentMetricsItDeclaresAsColumns()
       throws IOException
   {
