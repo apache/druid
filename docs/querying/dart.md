@@ -120,17 +120,25 @@ As part of a `context` block:
 
 ## Query context parameters
 
-You can use any SQL query context parameters to control Dart's behavior unless otherwise stated. Additionally, the following table lists the supported MSQ engine query context parameters that Dart supports:
+You can use any SQL query context parameters to control Dart's behavior unless otherwise stated. Additionally, Dart supports the following query context parameters, which don't apply to native queries. Most of them also apply to the MSQ task engine. See the [query context reference](query-context-reference.md) for details.
 
-| Parameter | Description | Default value |
-|---|---|---|
-|`finalizeAggregations`|Determines the type of aggregation to return. If true, Druid finalizes the results of complex aggregations that directly appear in query results. If false, Druid returns the aggregation's intermediate type rather than finalized type. This parameter is useful during ingestion, where it enables storing sketches directly in Druid tables. For more information about aggregations, see [SQL aggregation functions](../querying/sql-aggregations.md).|`true`| <!-- GENERATED QUERY CONTEXT PARAMETER: finalizeAggregations -->
-|`includeSegmentSource`|Controls the sources Druid queries for results in addition to the segments present on deep storage. Can be `NONE` or `REALTIME`. If set to `NONE`, only non-realtime (published and used) segments are downloaded from deep storage. If set to `REALTIME`, results are also included from realtime tasks. `REALTIME` cannot be used while writing data into the same datasource it is read from.|`NONE` for the MSQ task engine, `REALTIME` for Dart| <!-- GENERATED QUERY CONTEXT PARAMETER: includeSegmentSource -->
-|`removeNullBytes`|The MSQ engine can't process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, the MSQ engine removes the null bytes in string fields when reading the data.|`false`| <!-- GENERATED QUERY CONTEXT PARAMETER: removeNullBytes -->
-|`maxConcurrentStages`|Number of stages that can run concurrently for a query. A higher number can potentially improve pipelining but results in less memory available for each stage.|`2` for Dart, `1` for the MSQ task engine| <!-- GENERATED QUERY CONTEXT PARAMETER: maxConcurrentStages -->
-|`maxNonLeafWorkers`|Number of workers to use for stages beyond the leaf stage.|1 (Scatter-gather style)| <!-- GENERATED QUERY CONTEXT PARAMETER: maxNonLeafWorkers -->
-|`sqlJoinAlgorithm`|Algorithm to use for `JOIN`: `broadcast` for broadcast hash join or `sortMerge` for sort-merge join. Affects all joins in the query. This is a hint to the MSQ engine, and the actual joins may proceed differently. The native engine only supports `broadcast`. See [Joins](../multi-stage-query/reference.md#joins) for more details.|`broadcast`| <!-- GENERATED QUERY CONTEXT PARAMETER: sqlJoinAlgorithm -->
-|`targetPartitionsPerWorker`|Number of partitions Druid generates for each worker. This number controls how much parallelism can be maintained throughout a query.|`1` for Dart, the number of processing threads for the MSQ task engine| <!-- GENERATED QUERY CONTEXT PARAMETER: targetPartitionsPerWorker -->
+<!-- BEGIN GENERATED QUERY CONTEXT PARAMETER TABLE: engines~DART engines!~NATIVE -->
+
+|Parameter|Statements|Description|Default|
+|---|---|---|---|
+|[`finalizeAggregations`](query-context-reference.md#finalizeaggregations)|SELECT, INSERT, REPLACE|Determines the type of aggregation to return.|`true`|
+|[`fullReport`](query-context-reference.md#fullreport)||If true, a [Dart](../querying/dart.md) query returns a single `fullReport` column that contains the full query report, including the results, instead of the query results.|`false`|
+|[`includeSegmentSource`](query-context-reference.md#includesegmentsource)|SELECT, INSERT, REPLACE|Controls the sources Druid queries for results in addition to the segments present on deep storage.|`NONE` for the MSQ task engine, `REALTIME` for Dart|
+|[`maxConcurrentStages`](query-context-reference.md#maxconcurrentstages)|SELECT, INSERT, REPLACE|Number of stages that can run concurrently for a query.|`2` for Dart, `1` for the MSQ task engine|
+|[`maxFrameSize`](query-context-reference.md#maxframesize)|SELECT, INSERT, REPLACE|Size of frames used for data transfer within the MSQ engine.|`1000000` (1 MB)|
+|[`maxNonLeafWorkers`](query-context-reference.md#maxnonleafworkers)|SELECT|Number of workers to use for stages beyond the leaf stage.|1 (Scatter-gather style)|
+|[`maxRowsMaterializedInWindow`](query-context-reference.md#maxrowsmaterializedinwindow)|SELECT, INSERT, REPLACE|Maximum number of rows that window functions can materialize in a single window partition.|`100000`|
+|[`maxThreads`](query-context-reference.md#maxthreads)|SELECT, INSERT, REPLACE|Maximum number of threads to use for processing.|Not set (use default thread count)|
+|[`removeNullBytes`](query-context-reference.md#removenullbytes)|SELECT, INSERT, REPLACE|The MSQ engine can't process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data.|`false`|
+|[`sqlJoinAlgorithm`](query-context-reference.md#sqljoinalgorithm)|SELECT, INSERT, REPLACE|Algorithm to use for `JOIN`: `broadcast` for broadcast hash join or `sortMerge` for sort-merge join.|`broadcast`|
+|[`targetPartitionsPerWorker`](query-context-reference.md#targetpartitionsperworker)|SELECT, INSERT, REPLACE|Number of partitions Druid generates for each worker.|`1` for Dart, the number of processing threads for the MSQ task engine|
+
+<!-- END GENERATED QUERY CONTEXT PARAMETER TABLE -->
 
 
   ## Known issues and limitations

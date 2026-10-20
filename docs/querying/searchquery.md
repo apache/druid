@@ -134,13 +134,17 @@ The following runtime properties apply:
 |--------|-----------|-------|
 |`druid.query.search.searchStrategy`|Default search query strategy.|useIndexes|
 
-## Query context
+## Query context parameters {#query-context}
 
 The following query context parameters apply:
 
-|Property|Description|
-|--------|-----------|
-|`searchStrategy`|Overrides the value of `druid.query.search.searchStrategy` for this query.| <!-- GENERATED QUERY CONTEXT PARAMETER: searchStrategy -->
+<!-- BEGIN GENERATED QUERY CONTEXT PARAMETER TABLE: queryTypes=SEARCH -->
+
+|Parameter|Description|Default|
+|---|---|---|
+|[`searchStrategy`](query-context-reference.md#searchstrategy)|Overrides the value of `druid.query.search.searchStrategy` for this query.|`druid.query.search.searchStrategy`|
+
+<!-- END GENERATED QUERY CONTEXT PARAMETER TABLE -->
 
 ## SearchQuerySpec
 
