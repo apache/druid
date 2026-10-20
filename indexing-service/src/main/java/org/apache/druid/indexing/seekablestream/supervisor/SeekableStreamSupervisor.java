@@ -1074,8 +1074,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Tasks waiting on other task groups to finish publishing to overlapping partitions.
-   * Map from taskId to {@link TaskWaitingToPublish}. This map is maintained only
-   * for reporting purposes.
+   * Map from taskId to {@link TaskWaitingToPublish}.
    */
   private final ConcurrentHashMap<String, TaskWaitingToPublish> tasksWaitingToPublish = new ConcurrentHashMap<>();
 
@@ -2405,10 +2404,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             StringUtils.format(reasonFormat, args)
         );
       } else {
+        unblockPublishAsNotReady(id);
         taskQueue.get().shutdown(id, reasonFormat, args);
       }
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
+    }
+  }
+
+  /**
+   * Completes the pending publish wait of the given task, if any, with a "not ready"
+   * response so that a task which is being stopped or killed does not commit its offsets.
+   */
+  private void unblockPublishAsNotReady(String taskId)
+  {
+    final TaskWaitingToPublish waitingTask = tasksWaitingToPublish.remove(taskId);
+    if (waitingTask != null) {
+      waitingTask.readyToPublish.set(false);
     }
   }
 
@@ -3205,6 +3217,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private ListenableFuture<Void> stopTask(final String id, final boolean publish)
   {
+    if (!publish) {
+      unblockPublishAsNotReady(id);
+    }
     return Futures.transform(
         taskClient.stopAsync(id, publish), new Function<>()
         {
