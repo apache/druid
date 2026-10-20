@@ -268,8 +268,8 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
         }
     );
 
-    // segment map function is shared by the regular and handoff managers above, so neither of them can own its
-    // lifecycle, close it here, once, when this manager is closed by the frame processor executor, that happens
+    // Segment map functions are shared by the regular and handoff managers above, so neither can own their
+    // lifecycle. Close them here when this manager is closed by the frame processor executor, which happens
     // after all processors have finished and released their mapped segments
     return new ProcessorManager<>()
     {
@@ -288,7 +288,14 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
       @Override
       public void close()
       {
-        CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(delegate, segmentMapFunction));
+        CloseableUtils.closeAndWrapExceptions(
+            () -> CloseableUtils.closeAll(
+                delegate,
+                () -> CloseableUtils.closeAll(
+                    segmentMapFns.stream().map(BaseInputSegmentMapFunction::segmentMapFn).toList()
+                )
+            )
+        );
       }
     };
   }

@@ -39,6 +39,7 @@ import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
@@ -56,17 +57,27 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -221,6 +232,97 @@ public class ExecutionVertexTest
     Assertions.assertEquals(
         List.of("filtered->base"),
         debugStrings(ev.splitUnionSegmentMapFunctions(NoopPolicyEnforcer.instance()))
+    );
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void test_splitUnion_segmentMapFunctions_closeSharedAfterLastArm(final boolean reverseOrder) throws IOException
+  {
+    final AtomicInteger lookupReleases = new AtomicInteger();
+    final SegmentMapFunction arm0 = Mockito.mock(SegmentMapFunction.class);
+    final SegmentMapFunction arm1 = Mockito.mock(SegmentMapFunction.class);
+    Mockito.when(arm0.apply(Optional.empty())).thenReturn(Optional.empty());
+    Mockito.when(arm1.apply(Optional.empty())).thenReturn(Optional.empty());
+    final ExecutionVertex vertex = lookupJoinOverUnion(
+        List.of(tableWithMapFunction("foo", arm0), tableWithMapFunction("bar", arm1)),
+        lookupReleases::incrementAndGet
+    );
+    final List<SegmentMapFunction> functions = vertex.splitUnionSegmentMapFunctions(NoopPolicyEnforcer.instance());
+    final SegmentMapFunction first = functions.get(reverseOrder ? 1 : 0);
+    final SegmentMapFunction last = functions.get(reverseOrder ? 0 : 1);
+
+    Assertions.assertEquals(0, lookupReleases.get());
+    first.close();
+    first.close();
+    Assertions.assertEquals(0, lookupReleases.get());
+    Assertions.assertEquals(Optional.empty(), last.apply(Optional.empty()));
+    last.close();
+    last.close();
+
+    Assertions.assertEquals(1, lookupReleases.get());
+    Mockito.verify(arm0).close();
+    Mockito.verify(arm1).close();
+  }
+
+  @Test
+  public void test_splitUnion_segmentMapFunctions_closeFailureStillReleasesAllResources() throws IOException
+  {
+    final AtomicInteger lookupReleases = new AtomicInteger();
+    final IOException closeFailure = new IOException("arm close failed");
+    final IOException secondCloseFailure = new IOException("second arm close failed");
+    final SegmentMapFunction arm0 = Mockito.mock(SegmentMapFunction.class);
+    final SegmentMapFunction arm1 = Mockito.mock(SegmentMapFunction.class);
+    Mockito.doThrow(closeFailure).when(arm0).close();
+    Mockito.doThrow(secondCloseFailure).when(arm1).close();
+    final ExecutionVertex vertex = lookupJoinOverUnion(
+        List.of(tableWithMapFunction("foo", arm0), tableWithMapFunction("bar", arm1)),
+        lookupReleases::incrementAndGet
+    );
+    final List<SegmentMapFunction> functions = vertex.splitUnionSegmentMapFunctions(NoopPolicyEnforcer.instance());
+
+    Assertions.assertSame(
+        closeFailure,
+        Assertions.assertThrows(IOException.class, () -> CloseableUtils.closeAll(functions))
+    );
+    CloseableUtils.closeAll(functions);
+    Assertions.assertEquals(1, lookupReleases.get());
+    Assertions.assertArrayEquals(new Throwable[]{secondCloseFailure}, closeFailure.getSuppressed());
+    Mockito.verify(arm0).close();
+    Mockito.verify(arm1).close();
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void test_splitUnion_segmentMapFunctions_buildFailureReleasesResources(final boolean failOnClose)
+      throws IOException
+  {
+    final AtomicInteger lookupReleases = new AtomicInteger();
+    final IllegalStateException buildFailure = new IllegalStateException("arm creation failed");
+    final IOException closeFailure = new IOException("arm close failed");
+    final SegmentMapFunction arm0 = Mockito.mock(SegmentMapFunction.class);
+    if (failOnClose) {
+      Mockito.doThrow(closeFailure).when(arm0).close();
+    }
+    final TableDataSource failingArm = Mockito.spy(new TableDataSource("bar"));
+    Mockito.doThrow(buildFailure).when(failingArm).createSegmentMapFunction(Mockito.any());
+    final ExecutionVertex vertex = lookupJoinOverUnion(
+        List.of(tableWithMapFunction("foo", arm0), failingArm),
+        lookupReleases::incrementAndGet
+    );
+
+    Assertions.assertSame(
+        buildFailure,
+        Assertions.assertThrows(
+            IllegalStateException.class,
+            () -> vertex.splitUnionSegmentMapFunctions(NoopPolicyEnforcer.instance())
+        )
+    );
+    Mockito.verify(arm0).close();
+    Assertions.assertEquals(1, lookupReleases.get());
+    Assertions.assertArrayEquals(
+        failOnClose ? new Throwable[]{closeFailure} : new Throwable[0],
+        buildFailure.getSuppressed()
     );
   }
 
@@ -856,6 +958,32 @@ public class ExecutionVertexTest
     final Segment segment = Mockito.mock(Segment.class);
     Mockito.when(segment.getDebugString()).thenReturn("base");
     return fns.stream().map(fn -> fn.apply(Optional.of(segment)).orElseThrow().getDebugString()).toList();
+  }
+
+  private static TableDataSource tableWithMapFunction(final String name, final SegmentMapFunction function)
+  {
+    final TableDataSource table = Mockito.spy(new TableDataSource(name));
+    Mockito.doReturn(function).when(table).createSegmentMapFunction(Mockito.any());
+    return table;
+  }
+
+  private static ExecutionVertex lookupJoinOverUnion(final List<DataSource> arms, final Closeable lookupCloser)
+  {
+    final JoinableFactory factory = Mockito.mock(JoinableFactory.class);
+    Mockito.when(factory.build(Mockito.any(), Mockito.any())).thenAnswer(
+        invocation -> Optional.of(LookupJoinable.wrap(new MapLookupExtractor(Map.of("key", "value"), false), lookupCloser))
+    );
+    return ExecutionVertex.of(makeScanQuery(JoinDataSource.create(
+        new UnionDataSource(arms),
+        LOOKUP_LOOKYLOO,
+        "j.",
+        "x == \"j.k\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        new JoinableFactoryWrapper(factory),
+        JoinAlgorithm.BROADCAST
+    )));
   }
 
   private static DataSegment makeDim1RangeSegment()
