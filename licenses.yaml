@@ -648,7 +648,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.22.1
+version: 1.23.0
 libraries:
   - commons-codec: commons-codec
 notices:
