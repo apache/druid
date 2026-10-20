@@ -28,6 +28,7 @@ The query context provides runtime configuration for individual queries in Apach
 This reference documents every query context parameter, grouped by where it applies:
 
 - **General parameters**: Apply to native queries and, unless noted, to SQL queries. Some also apply to other engines.
+- **Join filter parameters**: Control filter rewrites and push-down for join queries.
 - **Druid SQL parameters**: Apply to SQL queries only.
 - **Query type parameters**: Apply to a specific native query type, such as TopN or GroupBy.
 - **SQL-based ingestion parameters**: Apply to queries that run on the multi-stage query (MSQ) engine.
@@ -39,8 +40,6 @@ that introduced it.
 
 To learn how to set the query context, see [Set query context](./query-context.md).
 <a id="vectorization-parameters"></a>To learn which queries can run vectorized, see [Vectorization](vectorization.md).
-
-<a id="join-filter"></a>
 
 ## General parameters
 
@@ -92,39 +91,6 @@ The following parameters apply to native queries and, unless noted, to SQL queri
 |**Engine**|Native|
 |**Since**|0.22.0|
 
-### `enableJoinFilterPushDown`
-
-| | |
-|---|---|
-|**Description**|Controls whether a join query will attempt filter push down, which reduces the number of rows that have to be compared in a join operation.|
-|**Type**|Boolean|
-|**Default**|`true`|
-|**Query**|JSON, SQL|
-|**Engine**|Native|
-|**Since**|0.18.0|
-
-### `enableJoinFilterRewrite`
-
-| | |
-|---|---|
-|**Description**|Controls whether filter clauses that reference non-base table columns will be rewritten into filters on base table columns.|
-|**Type**|Boolean|
-|**Default**|`true`|
-|**Query**|JSON, SQL|
-|**Engine**|Native|
-|**Since**|0.18.0|
-
-### `enableJoinFilterRewriteValueColumnFilters`
-
-| | |
-|---|---|
-|**Description**|Controls whether Druid rewrites non-base table filters on non-key columns in the non-base table. Requires a scan of the non-base table.|
-|**Type**|Boolean|
-|**Default**|`false`|
-|**Query**|JSON, SQL|
-|**Engine**|Native|
-|**Since**|0.18.0|
-
 ### `enableParallelMerge`
 
 | | |
@@ -135,17 +101,6 @@ The following parameters apply to native queries and, unless noted, to SQL queri
 |**Query**|JSON, SQL|
 |**Engine**|Native|
 |**Since**|0.17.0|
-
-### `enableRewriteJoinToFilter`
-
-| | |
-|---|---|
-|**Description**|Controls whether a join can be pushed partial or fully to the base table as a filter at runtime.|
-|**Type**|Boolean|
-|**Default**|`true`|
-|**Query**|JSON, SQL|
-|**Engine**|Native|
-|**Since**|0.22.0|
 
 ### `finalize`
 
@@ -168,17 +123,6 @@ The following parameters apply to native queries and, unless noted, to SQL queri
 |**Query**|JSON, SQL|
 |**Engine**|Native, MSQ, Dart|
 |**Since**|32.0.0|
-
-### `joinFilterRewriteMaxSize`
-
-| | |
-|---|---|
-|**Description**|The maximum size of the correlated value set used for filter rewrites. Set this limit to prevent excessive memory use.|
-|**Type**|Long|
-|**Default**|`10000`|
-|**Query**|JSON, SQL|
-|**Engine**|Native|
-|**Since**|0.18.0|
 
 ### `lane`
 
@@ -531,6 +475,71 @@ The following parameters apply to native queries and, unless noted, to SQL queri
 |**Query**|JSON, SQL|
 |**Engine**|Native|
 |**Since**|0.16.0-incubating|
+
+<!-- END GENERATED QUERY CONTEXT PARAMETERS -->
+
+<a id="join-filter"></a>
+
+## Join filter parameters
+
+The following parameters control how Druid rewrites and pushes down filters in queries on [join datasources](datasource.md#join).
+
+<!-- BEGIN GENERATED QUERY CONTEXT PARAMETERS: names=enableJoinFilterPushDown,enableJoinFilterRewrite,enableJoinFilterRewriteValueColumnFilters,enableRewriteJoinToFilter,joinFilterRewriteMaxSize -->
+
+### `enableJoinFilterPushDown`
+
+| | |
+|---|---|
+|**Description**|Controls whether a join query will attempt filter push down, which reduces the number of rows that have to be compared in a join operation.|
+|**Type**|Boolean|
+|**Default**|`true`|
+|**Query**|JSON, SQL|
+|**Engine**|Native|
+|**Since**|0.18.0|
+
+### `enableJoinFilterRewrite`
+
+| | |
+|---|---|
+|**Description**|Controls whether filter clauses that reference non-base table columns will be rewritten into filters on base table columns.|
+|**Type**|Boolean|
+|**Default**|`true`|
+|**Query**|JSON, SQL|
+|**Engine**|Native|
+|**Since**|0.18.0|
+
+### `enableJoinFilterRewriteValueColumnFilters`
+
+| | |
+|---|---|
+|**Description**|Controls whether Druid rewrites non-base table filters on non-key columns in the non-base table. Requires a scan of the non-base table.|
+|**Type**|Boolean|
+|**Default**|`false`|
+|**Query**|JSON, SQL|
+|**Engine**|Native|
+|**Since**|0.18.0|
+
+### `enableRewriteJoinToFilter`
+
+| | |
+|---|---|
+|**Description**|Controls whether a join can be pushed partial or fully to the base table as a filter at runtime.|
+|**Type**|Boolean|
+|**Default**|`true`|
+|**Query**|JSON, SQL|
+|**Engine**|Native|
+|**Since**|0.22.0|
+
+### `joinFilterRewriteMaxSize`
+
+| | |
+|---|---|
+|**Description**|The maximum size of the correlated value set used for filter rewrites. Set this limit to prevent excessive memory use.|
+|**Type**|Long|
+|**Default**|`10000`|
+|**Query**|JSON, SQL|
+|**Engine**|Native|
+|**Since**|0.18.0|
 
 <!-- END GENERATED QUERY CONTEXT PARAMETERS -->
 
@@ -1169,6 +1178,7 @@ The following parameters apply to [SQL-based ingestion](../multi-stage-query/ind
 |**Default**|`true`|
 |**Query**|SQL|
 |**Engine**|MSQ|
+|**Statement**|INSERT, REPLACE|
 |**Since**|31.0.0|
 
 ### `durableShuffleStorage`

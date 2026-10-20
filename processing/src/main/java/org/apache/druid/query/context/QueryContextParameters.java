@@ -1052,6 +1052,7 @@ public final class QueryContextParameters
               tables defined in the Druid catalog.
               """
           )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
           .build();
 
   public static final QueryContextParameter<Boolean> EXTENDED_FILTERED_SUM_REWRITE =

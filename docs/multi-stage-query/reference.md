@@ -396,7 +396,7 @@ The following context parameters apply to the MSQ task engine. See the [query co
 |---|---|---|---|
 |[`arrayIngestMode`](../querying/query-context-reference.md#arrayingestmode)|INSERT, REPLACE|Controls how ARRAY type values are stored in Druid segments.|`array`|
 |[`backgroundFetchExternalFiles`](../querying/query-context-reference.md#backgroundfetchexternalfiles)|SELECT, INSERT, REPLACE|Controls how workers read cloud storage files (e.g. `s3`, `gs`, `azure`) referenced by [`EXTERN`](../multi-stage-query/reference.md#extern-function).|`true`|
-|[`catalogValidationEnabled`](../querying/query-context-reference.md#catalogvalidationenabled)||If false, Druid skips the catalog-specific validation of `INSERT` and `REPLACE` statements that write to tables defined in the Druid catalog.|`true`|
+|[`catalogValidationEnabled`](../querying/query-context-reference.md#catalogvalidationenabled)|INSERT, REPLACE|If false, Druid skips the catalog-specific validation of `INSERT` and `REPLACE` statements that write to tables defined in the Druid catalog.|`true`|
 |[`durableShuffleStorage`](../querying/query-context-reference.md#durableshufflestorage)|SELECT, INSERT, REPLACE|Whether to use durable storage for shuffle mesh.|`false`|
 |[`executionMode`](../querying/query-context-reference.md#executionmode)||Determines how the [SQL statements API](../api-reference/sql-api.md#query-from-deep-storage) fetches query results.|N/A|
 |[`failOnEmptyInsert`](../querying/query-context-reference.md#failonemptyinsert)|INSERT, REPLACE|When set to false (the default), an INSERT query generating no output rows will be no-op, and a REPLACE query generating no output rows will delete all data that matches the OVERWRITE clause.|`false`|
