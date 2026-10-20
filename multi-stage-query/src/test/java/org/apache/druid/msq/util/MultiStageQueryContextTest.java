@@ -468,13 +468,13 @@ public class MultiStageQueryContextTest
   {
     Assertions.assertTrue(
         MultiStageQueryContext.getVirtualStoragePartialDownloadsEnabled(
-            QueryContext.of(ImmutableMap.of(MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS, true)),
+            QueryContext.of(QueryContextParameters.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED, true),
             false
         )
     );
     Assertions.assertFalse(
         MultiStageQueryContext.getVirtualStoragePartialDownloadsEnabled(
-            QueryContext.of(ImmutableMap.of(MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS, false)),
+            QueryContext.of(QueryContextParameters.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED, false),
             true
         )
     );
