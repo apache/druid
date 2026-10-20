@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
@@ -46,6 +47,7 @@ import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -163,6 +165,16 @@ public class QueryDriver
       query = jsonMapper.readValue(request.getQuery(), Query.class);
     }
     catch (JsonProcessingException e) {
+      return QueryResponse.newBuilder()
+                          .setQueryId("")
+                          .setStatus(QueryStatus.REQUEST_ERROR)
+                          .setErrorMessage(e.getMessage())
+                          .build();
+    }
+    try {
+      QueryContextParameterValidator.validate(query.getContext(), queryContextConfig.isRejectUnknownParameters());
+    }
+    catch (BadQueryContextException e) {
       return QueryResponse.newBuilder()
                           .setQueryId("")
                           .setStatus(QueryStatus.REQUEST_ERROR)

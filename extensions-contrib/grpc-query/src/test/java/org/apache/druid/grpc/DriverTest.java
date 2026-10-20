@@ -122,6 +122,31 @@ public class DriverTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnknownContextParameter_native()
+  {
+    final String query = "{\n"
+                         + "  \"queryType\": \"timeseries\",\n"
+                         + "  \"dataSource\": \"foo\",\n"
+                         + "  \"intervals\": [\"2000-01-01/2002-01-01\"],\n"
+                         + "  \"granularity\": \"all\",\n"
+                         + "  \"aggregations\": [{\"type\": \"count\", \"name\": \"cnt\"}],\n"
+                         + "  \"context\": {\"useCahce\": false}\n"
+                         + "}";
+    final QueryRequest request = QueryRequest.newBuilder()
+                                             .setQuery(query)
+                                             .setResultFormat(QueryResultFormat.CSV)
+                                             .setQueryType(QueryOuterClass.QueryType.NATIVE)
+                                             .build();
+    final QueryResponse response = driver.submitQuery(request, CalciteTests.REGULAR_USER_AUTH_RESULT);
+
+    assertEquals(QueryStatus.REQUEST_ERROR, response.getStatus());
+    assertEquals(
+        "Unknown query context parameter [useCahce]. Did you mean [useCache]?",
+        response.getErrorMessage()
+    );
+  }
+
+  @Test
   public void testBasics_native_groupby()
   {
     String query = "{\n"
