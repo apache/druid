@@ -100,6 +100,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -979,6 +980,71 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testAnalyzerSkipsDeclaredMetricsWhoseTypeChanged()
+  {
+    // 'total' was longSum when the older segment was written and doubleSum when the newer one was, because the
+    // declaration changed in between. Merging the two is impossible, but it is also pointless: the declaration is
+    // what the compacted segments will use, so the name is dropped before the merge instead of blowing it up.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.<Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>>>of(
+            segmentWithAggregators(
+                Intervals.of("2017-02-01/2017-03-01"),
+                new DoubleSumAggregatorFactory("total", "total"),
+                new LongSumAggregatorFactory("hits", "hits")
+            ),
+            segmentWithAggregators(
+                Intervals.of("2017-01-01/2017-02-01"),
+                new LongSumAggregatorFactory("total", "total"),
+                new LongSumAggregatorFactory("hits", "hits")
+            )
+        ),
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    // Only the undeclared 'hits' comes back, and the irreconcilable 'total' is simply absent.
+    Assertions.assertEquals(
+        ImmutableList.of("hits"),
+        Arrays.stream(analyzer.getMetricsSpec(Set.of("total")))
+              .map(AggregatorFactory::getName)
+              .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testAnalyzerStillFailsOnUndeclaredMetricsWhoseTypeChanged()
+  {
+    // The same segments, with nothing declared: an undeclared name has no replacement waiting for it, so there is
+    // still no answer to give and the merge failure stands.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.<Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>>>of(
+            segmentWithAggregators(
+                Intervals.of("2017-02-01/2017-03-01"),
+                new DoubleSumAggregatorFactory("total", "total")
+            ),
+            segmentWithAggregators(
+                Intervals.of("2017-01-01/2017-02-01"),
+                new LongSumAggregatorFactory("total", "total")
+            )
+        ),
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    Assertions.assertThrows(ISE.class, analyzer::getMetricsSpec);
+  }
+
+  @Test
   public void testCreateIngestionSchemaWithSealedBaseTableDeclaresNoMultiValuedDimensionsWhenRangePartitioning()
       throws IOException
   {
@@ -1115,7 +1181,56 @@ public class CompactionTaskTest
         )
     );
     Assertions.assertTrue(e.getMessage().contains("agg_0"), e.getMessage());
-    Assertions.assertTrue(e.getMessage().contains("no metric columns to keep them in"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("neither declares them nor"), e.getMessage());
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithUnsealedBaseTableAbsorbsSegmentMetricsItDeclaresAsColumns()
+      throws IOException
+  {
+    // A non-rollup layout has no metric columns, but it does declare every name the segments store a metric under.
+    // Those are not homeless: compaction writes each one into the ordinary column the table declares for it, which
+    // is what sealing the table would have done anyway.
+    final ClusteredValueGroupsBaseTableProjectionSpec declaresTheMetrics =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                ImmutableList.<DimensionSchema>builder()
+                    .add(new StringDimensionSchema("string_dim_0"))
+                    .add(new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME))
+                    .addAll(
+                        AGGREGATORS.stream()
+                                   .map(aggregator -> new DoubleDimensionSchema(aggregator.getName()))
+                                   .collect(Collectors.toList())
+                    )
+                    .build()
+            )
+            .clusteringColumns("string_dim_0")
+            .build();
+
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            declaresTheMetrics,
+            false,
+            false,
+            METRIC_BUILDER,
+            false
+        ).values()
+    );
+
+    // They are stored as the declared columns, not as metrics: the layout has none.
+    final List<String> dimensions = dataSchema.getDimensionsSpec().getDimensionNames();
+    for (AggregatorFactory aggregator : AGGREGATORS) {
+      Assertions.assertTrue(dimensions.contains(aggregator.getName()), aggregator.getName());
+    }
+    Assertions.assertEquals(0, dataSchema.getAggregators().length);
   }
 
   @Test
@@ -2735,6 +2850,27 @@ public class CompactionTaskTest
     Mockito.lenient().when(index.getOrdering()).thenReturn(ImmutableList.of());
     Mockito.lenient().when(index.getAvailableDimensions()).thenReturn(new ListIndexed<>());
     Mockito.lenient().when(index.getProjectionQueryableIndex(ArgumentMatchers.anyString())).thenReturn(projectionIndex);
+
+    final DataSegment segment = DataSegment.builder()
+                                           .dataSource(DATA_SOURCE)
+                                           .interval(interval)
+                                           .version("version")
+                                           .size(SEGMENT_SIZE_BYTES)
+                                           .build();
+    return Pair.of(segment, () -> new ReferenceCountingResourceHolder<>(index, () -> {}));
+  }
+
+  /**
+   * A segment whose metadata declares the given aggregators, for exercising how they merge across segments.
+   */
+  private static Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>> segmentWithAggregators(
+      Interval interval,
+      AggregatorFactory... aggregators
+  )
+  {
+    final QueryableIndex index = Mockito.mock(QueryableIndex.class);
+    Mockito.lenient().when(index.getMetadata())
+           .thenReturn(new Metadata(null, aggregators, null, null, null, null, null, null));
 
     final DataSegment segment = DataSegment.builder()
                                            .dataSource(DATA_SOURCE)

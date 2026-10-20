@@ -370,6 +370,12 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
         continue;
       }
       final ColumnType type = Columns.druidType(columns.get(position));
+      if (type == null) {
+        // A column declared without a type resolves to a string everywhere else the catalog resolves one, in
+        // Columns.convertSignature and in the base table layout's column conversion, which is the one type this
+        // check wants. So an untyped cluster key is legitimate rather than unresolved.
+        continue;
+      }
       if (!ColumnType.STRING.equals(type)) {
         return CompactionConfigValidationResult.failure(
             "Cluster key[%s] of table[%s] is declared as[%s]; compaction partitions segments by range, which the MSQ"

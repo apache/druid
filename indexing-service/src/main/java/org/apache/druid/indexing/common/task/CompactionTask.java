@@ -884,18 +884,22 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           );
           if (baseTableSpec instanceof RollupBaseTableProjectionSpec) {
             baseTableSpec = ((RollupBaseTableProjectionSpec) baseTableSpec).withAdditionalMetrics(
-                undeclaredMetrics(baseTableSpec, analyzer.getMetricsSpec())
+                analyzer.getMetricsSpec(declaredMetricNames(baseTableSpec))
             );
           } else {
-            // A spec with no metric columns has nowhere to put these, and dropping them would delete data the table
-            // never said it did not want. Sealing the table is how an operator asks for that.
-            final Set<String> metricNames = analyzer.getMetricNames();
-            if (!metricNames.isEmpty()) {
+            // A layout with no metric columns can still keep a metric's data under a name it declares as an ordinary
+            // column, which is what compacting it sealed would do, so those are left to the declaration. Only a
+            // metric the table declares nothing for has nowhere to go, and dropping that would delete data the table
+            // never said it did not want.
+            final Set<String> homelessMetrics = new TreeSet<>(analyzer.getMetricNames());
+            homelessMetrics.removeAll(declaredColumnNames(baseTableSpec));
+            if (!homelessMetrics.isEmpty()) {
               throw InvalidInput.exception(
-                  "Segments of dataSource[%s] store metric column(s) %s, but its base table has no metric columns to"
-                  + " keep them in. Declare a rollup base table, or seal the table to drop them.",
+                  "Segments of dataSource[%s] store metric column(s) %s, but its base table neither declares them nor"
+                  + " has metric columns to keep them in. Declare them as columns, declare a rollup base table, or"
+                  + " seal the table to drop them.",
                   dataSource,
-                  metricNames
+                  homelessMetrics
               );
             }
           }
@@ -996,10 +1000,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       DimensionsSpec analyzed
   )
   {
-    final Set<String> declared = new HashSet<>();
-    for (DimensionSchema declaredColumn : baseTable.getDimensionsSpec().getDimensions()) {
-      declared.add(declaredColumn.getName());
-    }
+    final Set<String> declared = declaredColumnNames(baseTable);
     return analyzed.getDimensions()
                    .stream()
                    .filter(dimension -> !declared.contains(dimension.getName()))
@@ -1007,27 +1008,30 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
-   * The analyzed aggregators that {@code baseTable} does not already declare. Aggregators recovered from segments are
-   * already in combining form, which is what a rollup spec requires.
+   * The names of the columns {@code baseTable} stores, metric columns included. A name in here is described by the
+   * declaration, so whatever the segments say about it does not have to be reconciled.
    */
-  private static AggregatorFactory[] undeclaredMetrics(
-      BaseTableProjectionSpec baseTable,
-      @Nullable AggregatorFactory[] analyzed
-  )
+  private static Set<String> declaredColumnNames(BaseTableProjectionSpec baseTable)
   {
-    if (analyzed == null || analyzed.length == 0) {
-      return analyzed;
-    }
-    final Set<String> declared = new HashSet<>();
+    return baseTable.getDimensionsSpec()
+                    .getDimensions()
+                    .stream()
+                    .map(DimensionSchema::getName)
+                    .collect(Collectors.toSet());
+  }
+
+  /**
+   * The metric column names {@code baseTable} declares, which the analyzer leaves out of what it recovers from the
+   * segments: the declaration replaces them, and is free to describe them differently than the segments do.
+   * Aggregators the analyzer does recover are already in combining form, which is what a rollup spec requires.
+   */
+  private static Set<String> declaredMetricNames(BaseTableProjectionSpec baseTable)
+  {
     final AggregatorFactory[] declaredMetrics = baseTable.getMetrics();
-    if (declaredMetrics != null) {
-      for (AggregatorFactory declaredMetric : declaredMetrics) {
-        declared.add(declaredMetric.getName());
-      }
+    if (declaredMetrics == null) {
+      return Set.of();
     }
-    return Arrays.stream(analyzed)
-                 .filter(aggregator -> !declared.contains(aggregator.getName()))
-                 .toArray(AggregatorFactory[]::new);
+    return Arrays.stream(declaredMetrics).map(AggregatorFactory::getName).collect(Collectors.toSet());
   }
 
   /**
@@ -1321,6 +1325,19 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     public AggregatorFactory[] getMetricsSpec()
     {
+      return getMetricsSpec(Set.of());
+    }
+
+    /**
+     * The merged aggregators of the analyzed segments, leaving out those named in {@code declaredNames}.
+     * <p>
+     * The names are dropped before the merge rather than after it, because merging is what fails when the segments
+     * disagree: changing a declared aggregator's type leaves an interval holding both the old and the new under one
+     * name, and {@link AggregatorFactory#mergeAggregators} cannot reconcile those. A name the caller has declared is
+     * about to be replaced by that declaration, so its history never has to agree with itself.
+     */
+    public AggregatorFactory[] getMetricsSpec(Set<String> declaredNames)
+    {
       if (!needMetricsSpec) {
         throw new ISE("Not computing metricsSpec");
       }
@@ -1331,7 +1348,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
       final AggregatorFactory[] mergedAggregators = AggregatorFactory.mergeAggregators(
           aggregatorFactoryLists.stream()
-                                .map(xs -> xs.toArray(new AggregatorFactory[0]))
+                                .map(
+                                    xs -> xs.stream()
+                                            .filter(agg -> !declaredNames.contains(agg.getName()))
+                                            .toArray(AggregatorFactory[]::new)
+                                )
                                 .collect(Collectors.toList())
       );
 

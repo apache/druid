@@ -70,6 +70,7 @@ public class CatalogDataSourceCompactionConfigTest
   private static final String TEST_DS_NUMERIC_CLUSTER_KEY = "test_numeric_cluster_key";
   private static final String TEST_DS_UNDECLARED_CLUSTER_KEY = "test_undeclared_cluster_key";
   private static final String TEST_DS_ARRAY_CLUSTER_KEY = "test_array_cluster_key";
+  private static final String TEST_DS_UNTYPED_CLUSTER_KEY = "test_untyped_cluster_key";
   private static final String TEST_DS_SEGMENT_ONLY_CLUSTER_KEY = "test_segment_only_cluster_key";
   private static final String TEST_DS_SEALED_SEGMENT_ONLY_CLUSTER_KEY = "test_sealed_segment_only_cluster_key";
   private static final String TEST_DS_CLUSTERED_WITH_KEYS = "test_clustered_with_keys";
@@ -202,6 +203,20 @@ public class CatalogDataSourceCompactionConfigTest
                         )
                     )
                     .clusterColumns(new ClusterKeySpec("tags", false))
+                    .buildSpec()
+    );
+    // A cluster key on a declared column that carries no type. Catalog tables created through the API can hold these,
+    // and the catalog reads an absent type as a string.
+    METADATA_CATALOG.addSpec(
+        TableId.datasource(TEST_DS_UNTYPED_CLUSTER_KEY),
+        TableBuilder.datasource(TEST_DS_UNTYPED_CLUSTER_KEY, "P1D")
+                    .columns(
+                        ImmutableList.of(
+                            new ColumnSpec(ColumnHolder.TIME_COLUMN_NAME, Columns.SQL_TIMESTAMP, null),
+                            new ColumnSpec("untyped", null, null)
+                        )
+                    )
+                    .clusterColumns(new ClusterKeySpec("untyped", false))
                     .buildSpec()
     );
     METADATA_CATALOG.addSpec(
@@ -421,6 +436,19 @@ public class CatalogDataSourceCompactionConfigTest
     // type is not knowable from the catalog.
     Assertions.assertTrue(
         configFor(TEST_DS_UNDECLARED_CLUSTER_KEY)
+            .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.MSQ, null))
+            .isValid()
+    );
+  }
+
+  @Test
+  public void testValidateAllowsClusterKeyOnUntypedColumn()
+  {
+    // The catalog reads a column declared without a type as a string, both when it builds a row signature and when it
+    // builds a base table layout, so range partitioning by one is exactly what this check is looking for. Rejecting
+    // it here would refuse a configuration that compaction runs correctly.
+    Assertions.assertTrue(
+        configFor(TEST_DS_UNTYPED_CLUSTER_KEY)
             .validate(new ClusterCompactionConfig(null, null, null, null, CompactionEngine.MSQ, null))
             .isValid()
     );
