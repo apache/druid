@@ -5133,7 +5133,7 @@ libraries:
 
 name: snappy-java
 license_category: binary
-version: 1.1.10.8
+version: 1.1.10.11
 module: java-core
 license_name: Apache License version 2.0
 libraries:
