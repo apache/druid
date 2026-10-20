@@ -36,6 +36,7 @@ import org.apache.calcite.avatica.QueryState;
 import org.apache.calcite.avatica.remote.AvaticaRuntimeException;
 import org.apache.calcite.avatica.remote.Service.ErrorResponse;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.common.DateTimes;
@@ -43,7 +44,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -142,6 +146,7 @@ public class DruidMeta extends MetaImpl
 
   private final SqlStatementFactory sqlStatementFactory;
   private final QueryConfigProvider queryConfigProvider;
+  private final QueryContextConfig queryContextConfig;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
@@ -165,12 +170,14 @@ public class DruidMeta extends MetaImpl
       final QueryConfigProvider queryConfigProvider,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
-      final AuthenticatorMapper authMapper
+      final AuthenticatorMapper authMapper,
+      final QueryContextConfig queryContextConfig
   )
   {
     this(
         sqlStatementFactory,
         queryConfigProvider,
+        queryContextConfig,
         config,
         errorHandler,
         Executors.newSingleThreadScheduledExecutor(
@@ -187,6 +194,7 @@ public class DruidMeta extends MetaImpl
   public DruidMeta(
       final SqlStatementFactory sqlStatementFactory,
       final QueryConfigProvider queryConfigProvider,
+      final QueryContextConfig queryContextConfig,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final ScheduledExecutorService exec,
@@ -197,6 +205,7 @@ public class DruidMeta extends MetaImpl
     super(null);
     this.sqlStatementFactory = sqlStatementFactory;
     this.queryConfigProvider = queryConfigProvider;
+    this.queryContextConfig = queryContextConfig;
     this.config = config;
     this.errorHandler = errorHandler;
     this.exec = exec;
@@ -234,6 +243,13 @@ public class DruidMeta extends MetaImpl
     // this context key.
     QueryContextParameters.SQL_STRINGIFY_ARRAYS.set(contextMap, false);
     try {
+      // The session context of every statement of the connection, as SET statements aren't allowed over JDBC
+      try {
+        QueryContextParameterValidator.validate(contextMap, queryContextConfig.isRejectUnknownParameters());
+      }
+      catch (BadQueryContextException e) {
+        throw InvalidInput.exception(e, "%s", e.getMessage());
+      }
       openDruidConnection(ch.id, secret, contextMap);
     }
     catch (Throwable t) {

@@ -51,7 +51,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
@@ -62,6 +61,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -101,6 +101,7 @@ import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -318,7 +319,12 @@ public class SqlResourceTest extends CalciteTestBase
       }
     };
     engine = CalciteTests.createMockSqlEngine(walker, conglomerate, sqlStatementFactory);
-    resource = new SqlResource(
+    resource = createResource(QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG);
+  }
+
+  private SqlResource createResource(final QueryContextConfig queryContextConfig)
+  {
+    return new SqlResource(
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
@@ -329,7 +335,8 @@ public class SqlResourceTest extends CalciteTestBase
             DUMMY_DRUID_NODE
         ),
         DefaultQueryConfig.NIL,
-        new ServerConfig()
+        new ServerConfig(),
+        queryContextConfig
     );
   }
 
@@ -605,7 +612,8 @@ public class SqlResourceTest extends CalciteTestBase
             DUMMY_DRUID_NODE
         ),
         queryConfigWithTimezone,
-        new ServerConfig()
+        new ServerConfig(),
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
 
     final List<Map<String, Object>> rows = doPost(
@@ -1545,6 +1553,84 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testInvalidSetParameterReadBeforePlanningReturnsBadRequest() throws Exception
+  {
+    // The engine is read before the statement is created, so its value must already be validated.
+    final ErrorResponse errorResponse = postSyncForException(
+        "SET engine = 1; SELECT 1",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(errorResponse, "Query context parameter [engine] should be a string, but got [1]");
+    Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
+  }
+
+  @Test
+  public void testInvalidSqlQueryIdReturnsBadRequest() throws Exception
+  {
+    // The error response itself must not parse the invalid sqlQueryId, nor return it as a header
+    final Response response = resource.doPost(
+        new SqlQuery(
+            "SELECT 1",
+            null,
+            false,
+            false,
+            false,
+            ImmutableMap.of(QueryContextParameters.SQL_QUERY_ID.getName(), 1),
+            null
+        ),
+        req
+    );
+
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    validateInvalidSqlError(
+        deserializeResponse(response, ErrorResponse.class),
+        "Query context parameter [sqlQueryId] should be a string, but got [1]"
+    );
+  }
+
+  @Test
+  public void testUnknownContextParameterReturnsBadRequest() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        new SqlQuery(
+            "SELECT 1",
+            null,
+            false,
+            false,
+            false,
+            ImmutableMap.of(QueryContextParameters.SQL_QUERY_ID.getName(), "id", "useCahce", false),
+            null
+        ),
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(errorResponse, "Unknown query context parameter [useCahce]. Did you mean [useCache]?");
+    Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testUnknownContextParameterAcceptedIfNotRejected() throws Exception
+  {
+    resource = createResource(QueryContextConfig.DEFAULT);
+
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT COUNT(*) AS cnt FROM druid.foo",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            ImmutableMap.of("myTraceId", "abc-123"),
+            null
+        )
+    ).rhs;
+
+    Assertions.assertEquals(List.of(Map.of("cnt", 6)), rows);
+  }
+
+  @Test
   public void testCannotValidate() throws Exception
   {
     ErrorResponse errorResponse = postSyncForException(
@@ -1797,7 +1883,8 @@ public class SqlResourceTest extends CalciteTestBase
             DUMMY_DRUID_NODE
         ),
         DefaultQueryConfig.NIL,
-        new ServerConfig()
+        new ServerConfig(),
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
 
     String errorMessage = "This will be supported in Druid 9999";
@@ -2125,7 +2212,9 @@ public class SqlResourceTest extends CalciteTestBase
         QueryContextParameters.SQL_QUERY_ID.getName(),
         sqlQueryId
     );
-    final ErrorResponse errorResponse = doPost(
+    // The values of the context are validated when the request is parsed, so the error is returned before the response
+    // starts.
+    final ErrorResponse errorResponse = postSyncForException(
         new SqlQuery(
             "SELECT 1337",
             ResultFormat.OBJECT,
@@ -2134,19 +2223,13 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             queryContext,
             null
-        )
-    ).lhs;
-
-    validateLegacyQueryExceptionErrorResponse(
-        errorResponse,
-        QueryException.BAD_QUERY_CONTEXT_ERROR_CODE,
-        BadQueryContextException.ERROR_CLASS,
-        "2000'"
+        ),
+        Status.BAD_REQUEST.getStatusCode()
     );
-    checkSqlRequestLog(false);
+
+    validateInvalidInputError(errorResponse, "Query context parameter [timeout] should be in long format, but got [2000']");
+    Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assertions.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
-    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assertions.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test

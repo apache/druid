@@ -89,7 +89,7 @@ export const QUERY_CONTEXT_COMPLETIONS: JsonCompletionRule[] = [
         documentation: 'Maximum rows in subquery results',
       },
       {
-        value: 'enableParallelMerges',
+        value: 'enableParallelMerge',
         documentation: 'Enable parallel merge processing',
       },
       // Multi-stage query specific

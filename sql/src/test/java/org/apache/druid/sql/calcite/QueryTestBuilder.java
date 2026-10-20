@@ -102,6 +102,7 @@ public class QueryTestBuilder
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
   protected boolean skipVectorize;
+  protected boolean captureHook;
   protected boolean queryCannotVectorize;
   protected Predicate<List<Query<?>>> verifyNativeQueries = xs -> true;
   protected AuthConfig authConfig = new AuthConfig();
@@ -223,6 +224,15 @@ public class QueryTestBuilder
   public QueryTestBuilder skipVectorize(boolean skipVectorize)
   {
     this.skipVectorize = skipVectorize;
+    return this;
+  }
+
+  /**
+   * Captures the planner artifacts of the query with a {@link org.apache.druid.sql.calcite.planner.PlannerCaptureHook}.
+   */
+  public QueryTestBuilder captureHook(boolean captureHook)
+  {
+    this.captureHook = captureHook;
     return this;
   }
 

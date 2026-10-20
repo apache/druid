@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 
@@ -35,8 +36,9 @@ public class DartDruidMeta extends DruidMeta
       final DefaultQueryConfig defaultQueryConfig,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
-      final AuthenticatorMapper authMapper)
+      final AuthenticatorMapper authMapper,
+      final QueryContextConfig queryContextConfig)
   {
-    super(sqlStatementFactory, defaultQueryConfig, config, errorHandler, authMapper);
+    super(sqlStatementFactory, defaultQueryConfig, config, errorHandler, authMapper, queryContextConfig);
   }
 }

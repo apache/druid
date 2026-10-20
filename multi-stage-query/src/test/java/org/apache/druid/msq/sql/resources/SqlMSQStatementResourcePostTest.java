@@ -48,6 +48,7 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.NilStorageConnector;
@@ -82,7 +83,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         authorizerMapper,
         new DefaultQueryConfig(Map.of("debug", "false")),
         new ServerConfig(),
-        null
+        null,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
   }
 
@@ -181,6 +183,35 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         "The sql statement api currently does not support the provided execution mode [SYNC]. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
+    );
+  }
+
+  @Test
+  public void testInvalidContextReturnsBadRequest()
+  {
+    SqlStatementResourceTest.assertExceptionMessage(
+        resource.doPost(asyncQuery("SET debug = 2; select * from foo"), SqlStatementResourceTest.makeOkRequest()),
+        "Query context parameter [debug] should be a boolean, but got [2]",
+        Response.Status.BAD_REQUEST
+    );
+    // The resource rejects unknown parameters as configured
+    SqlStatementResourceTest.assertExceptionMessage(
+        resource.doPost(asyncQuery("SET useCahce = false; select * from foo"), SqlStatementResourceTest.makeOkRequest()),
+        "Unknown query context parameter [useCahce]. Did you mean [useCache]?",
+        Response.Status.BAD_REQUEST
+    );
+  }
+
+  private static SqlQuery asyncQuery(final String sql)
+  {
+    return new SqlQuery(
+        sql,
+        null,
+        false,
+        false,
+        false,
+        QueryContext.ofMap(QueryContextParameters.EXECUTION_MODE, ExecutionMode.ASYNC),
+        null
     );
   }
 
@@ -350,7 +381,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         authorizerMapper,
         DefaultQueryConfig.NIL,
         new ServerConfig(),
-        null
+        null,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
 
     String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "

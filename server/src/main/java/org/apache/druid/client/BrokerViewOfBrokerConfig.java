@@ -29,9 +29,13 @@ import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
@@ -50,6 +54,8 @@ import java.util.Map;
 public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynamicConfig>
     implements QueryConfigProvider
 {
+  private static final String DEFAULT_QUERY_CONTEXT_PROPERTY = "druid.query.default.context";
+
   private final CoordinatorClient coordinatorClient;
   private final DefaultQueryConfig defaultQueryConfig;
 
@@ -67,9 +73,11 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
       @Json final ObjectMapper jsonMapper,
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       @Coordinator final ServiceLocator serviceLocator,
-      final DefaultQueryConfig defaultQueryConfig
+      final DefaultQueryConfig defaultQueryConfig,
+      final QueryContextConfig queryContextConfig
   )
   {
+    validateDefaultQueryConfig(defaultQueryConfig, queryContextConfig);
     this.defaultQueryConfig = defaultQueryConfig;
     this.querySnapshot = new QueryConfigSnapshot(QueryContext.of(defaultQueryConfig.getContext()).asMap(), null);
     this.coordinatorClient =
@@ -86,12 +94,30 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   @VisibleForTesting
   public BrokerViewOfBrokerConfig(
       final CoordinatorClient coordinatorClient,
-      final DefaultQueryConfig defaultQueryConfig
+      final DefaultQueryConfig defaultQueryConfig,
+      final QueryContextConfig queryContextConfig
   )
   {
+    validateDefaultQueryConfig(defaultQueryConfig, queryContextConfig);
     this.coordinatorClient = coordinatorClient;
     this.defaultQueryConfig = defaultQueryConfig;
     this.querySnapshot = new QueryConfigSnapshot(QueryContext.of(defaultQueryConfig.getContext()).asMap(), null);
+  }
+
+  private static void validateDefaultQueryConfig(
+      final DefaultQueryConfig defaultQueryConfig,
+      final QueryContextConfig queryContextConfig
+  )
+  {
+    try {
+      QueryContextParameterValidator.validate(
+          defaultQueryConfig.getContext(),
+          queryContextConfig.isRejectUnknownParameters()
+      );
+    }
+    catch (BadQueryContextException e) {
+      throw new IAE(e, "Invalid default query context [%s]: %s", DEFAULT_QUERY_CONTEXT_PROPERTY, e.getMessage());
+    }
   }
 
   @Override

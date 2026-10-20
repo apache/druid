@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResultPusher;
@@ -88,6 +89,7 @@ public class SqlResource
   private final SqlEngineRegistry sqlEngineRegistry;
   private final QueryConfigProvider queryConfigProvider;
   private final ServerConfig serverConfig;
+  private final QueryContextConfig queryContextConfig;
 
   @VisibleForTesting
   @Inject
@@ -97,7 +99,8 @@ public class SqlResource
       final SqlEngineRegistry sqlEngineRegistry,
       final SqlResourceQueryResultPusherFactory resultPusherFactory,
       final QueryConfigProvider queryConfigProvider,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.resultPusherFactory = resultPusherFactory;
@@ -106,6 +109,7 @@ public class SqlResource
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
     this.queryConfigProvider = Preconditions.checkNotNull(queryConfigProvider, "queryConfigProvider");
     this.serverConfig = serverConfig;
+    this.queryContextConfig = queryContextConfig;
   }
 
   @GET
@@ -241,7 +245,8 @@ public class SqlResource
     final QueryContext queryContext;
 
     try {
-      final SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, queryConfigProvider.getContext());
+      final SqlQueryPlus sqlQueryPlus =
+          makeSqlQueryPlus(sqlQuery, req, queryConfigProvider.getContext(), queryContextConfig);
 
       // Redefine queryContext to include SET parameters and default context.
       queryContext = new QueryContext(sqlQueryPlus.context());
@@ -345,18 +350,21 @@ public class SqlResource
 
   /**
    * Create a {@link SqlQueryPlus}, which involves parsing the query from {@link SqlQuery#getQuery()} and
-   * extracing any SET parameters into the query context.
+   * extracing any SET parameters into the query context, which is validated as configured by
+   * {@code queryContextConfig}.
    */
   public static SqlQueryPlus makeSqlQueryPlus(
       final SqlQuery sqlQuery,
       final HttpServletRequest req,
-      final Map<String, Object> defaultQueryConfig
+      final Map<String, Object> defaultQueryConfig,
+      final QueryContextConfig queryContextConfig
   )
   {
     return SqlQueryPlus.builder()
                        .sql(sqlQuery.getQuery())
                        .systemDefaultContext(defaultQueryConfig)
                        .queryContext(sqlQuery.getContext())
+                       .rejectUnknownParameters(queryContextConfig.isRejectUnknownParameters())
                        .parameters(sqlQuery.getParameters())
                        .auth(AuthorizationUtils.authenticationResultFromRequest(req))
                        .build();
@@ -371,7 +379,9 @@ public class SqlResource
       final ErrorResponseTransformStrategy strategy
   )
   {
-    final String sqlQueryId = queryContext.get(QueryContextParameters.SQL_QUERY_ID);
+    // Not parsed, as the context may be the cause of the exception
+    final Object rawSqlQueryId = queryContext.asMap().get(QueryContextParameters.SQL_QUERY_ID.getName());
+    final String sqlQueryId = rawSqlQueryId instanceof String ? (String) rawSqlQueryId : null;
     final String errorId = sqlQueryId == null ? UUID.randomUUID().toString() : sqlQueryId;
 
     final DruidException druidException;

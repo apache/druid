@@ -39,6 +39,7 @@ import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,7 +80,8 @@ public class GrpcQueryTest extends BaseCalciteQueryTest
         plannerFixture.statementFactory(),
         new DefaultQueryConfig(Map.of()),
         sqlTestFramework.queryLifecycleFactory(),
-        TestServer.NOOP_SCHEDULER
+        TestServer.NOOP_SCHEDULER,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
     AuthenticatorMapper authMapper = new AuthenticatorMapper(
         ImmutableMap.of(
