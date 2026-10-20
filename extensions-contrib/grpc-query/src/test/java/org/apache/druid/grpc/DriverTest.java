@@ -130,7 +130,7 @@ public class DriverTest extends BaseCalciteQueryTest
                          + "  \"intervals\": [\"2000-01-01/2002-01-01\"],\n"
                          + "  \"granularity\": \"all\",\n"
                          + "  \"aggregations\": [{\"type\": \"count\", \"name\": \"cnt\"}],\n"
-                         + "  \"context\": {\"useCahce\": false}\n"
+                         + "  \"context\": {\"queryId\": \"invalidContext\", \"useCahce\": false}\n"
                          + "}";
     final QueryRequest request = QueryRequest.newBuilder()
                                              .setQuery(query)
@@ -140,6 +140,7 @@ public class DriverTest extends BaseCalciteQueryTest
     final QueryResponse response = driver.submitQuery(request, CalciteTests.REGULAR_USER_AUTH_RESULT);
 
     assertEquals(QueryStatus.REQUEST_ERROR, response.getStatus());
+    assertEquals("invalidContext", response.getQueryId());
     assertEquals(
         "Unknown query context parameter [useCahce]. Did you mean [useCache]?",
         response.getErrorMessage()
