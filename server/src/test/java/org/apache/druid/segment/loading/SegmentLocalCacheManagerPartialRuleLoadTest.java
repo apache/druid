@@ -167,6 +167,8 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   private static File DEEP_STORAGE_DIR;
   // the same segment, laid out as a legacy V10 segment whose only bundle is the root bundle
   private static File LEGACY_ROOT_ONLY_DEEP_STORAGE_DIR;
+  // as above, but also without per-column file lists
+  private static File LEGACY_ROOT_ONLY_NO_COLUMN_FILES_DEEP_STORAGE_DIR;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
@@ -207,7 +209,13 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
                                    .buildMMappedIndexFile();
     LEGACY_ROOT_ONLY_DEEP_STORAGE_DIR = writeRootOnlyCopy(
         DEEP_STORAGE_DIR,
-        SHARED_TEMPORARY_FOLDER.newFolder("legacy_" + ThreadLocalRandom.current().nextInt())
+        SHARED_TEMPORARY_FOLDER.newFolder("legacy_" + ThreadLocalRandom.current().nextInt()),
+        false
+    );
+    LEGACY_ROOT_ONLY_NO_COLUMN_FILES_DEEP_STORAGE_DIR = writeRootOnlyCopy(
+        DEEP_STORAGE_DIR,
+        SHARED_TEMPORARY_FOLDER.newFolder("legacy_no_column_files_" + ThreadLocalRandom.current().nextInt()),
+        true
     );
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
@@ -216,8 +224,11 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
    * Writes a copy of the V10 segment in {@code sourceDir} to {@code targetDir} with every container re-tagged to the
    * root bundle, the layout of a legacy segment written before bundle names were recorded. Container offsets are
    * relative to the end of the header, so only the metadata changes.
+   *
+   * @param dropColumnFiles also drop the per-column file lists, which legacy segments predate, so prefetches fall back
+   *                        to downloading whole bundles
    */
-  private static File writeRootOnlyCopy(File sourceDir, File targetDir) throws IOException
+  private static File writeRootOnlyCopy(File sourceDir, File targetDir, boolean dropColumnFiles) throws IOException
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final byte[] source = Files.readAllBytes(new File(sourceDir, IndexIO.V10_FILE_NAME).toPath());
@@ -235,7 +246,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
         metadata.getFiles(),
         metadata.getInterval(),
         metadata.getColumnDescriptors(),
-        metadata.getColumnFiles(),
+        dropColumnFiles ? null : metadata.getColumnFiles(),
         metadata.getProjections(),
         metadata.getBitmapEncoding()
     );
@@ -1283,6 +1294,55 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertEquals(loadsAfterRule, location.getWeakStats().getLoadCount(), "nothing new was loaded");
   }
 
+  @Test
+  void testOnDemandAcquireOfLegacyRootOnlySegmentWithoutColumnFiles() throws Exception
+  {
+    // Without column file lists the prefetch downloads whole bundles, and it must resolve the projection it matched
+    // to the root bundle that physically holds it, or it plans nothing and reading the columns fails.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    try (AcquireSegmentAction action =
+             manager.acquireSegment(plainSegment(LEGACY_ROOT_ONLY_NO_COLUMN_FILES_DEEP_STORAGE_DIR), AcquireMode.PARTIAL)) {
+      action.await();
+      try (Segment acquired = action.release().getSegment().orElseThrow()) {
+        final PartialSegmentFileMapperV10 mapper = weakReservedMetadata(location, SEGMENT_ID).getFileMapper();
+        Assertions.assertNotNull(mapper);
+        Assertions.assertNull(mapper.getSegmentFileMetadata().getColumnFiles(), "test setup: no column file lists");
+        Assertions.assertFalse(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+
+        Assertions.assertEquals(2, countRows(acquired, COUNT_BY_DIM1));
+        Assertions.assertTrue(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+      }
+    }
+  }
+
+  @Test
+  void testRuleHeldAcquireDownloadsSelectedRootBundleOfLegacySegmentWithoutColumnFiles() throws Exception
+  {
+    // The selected root bundle is not resident yet, so PARTIAL_RULE_HELD must download it on demand through the same
+    // whole-bundle prefetch.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    try (AcquireSegmentAction action =
+             manager.acquireSegment(plainSegment(LEGACY_ROOT_ONLY_NO_COLUMN_FILES_DEEP_STORAGE_DIR), AcquireMode.PARTIAL)) {
+      action.await();
+      action.release().getSegment().orElseThrow().close();
+    }
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    metadata.applyRule(FINGERPRINT, Set.of(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper);
+    Assertions.assertFalse(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+
+    final Segment cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).orElseThrow();
+    try (cached) {
+      Assertions.assertEquals(2, countRows(cached, COUNT_BY_DIM1));
+    }
+    Assertions.assertTrue(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+  }
+
   /**
    * Builds an async cursor over {@code segment} for {@code spec}, waits for it, and counts the rows it reads.
    */
@@ -1454,9 +1514,14 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
    */
   private DataSegment plainSegment()
   {
+    return plainSegment(DEEP_STORAGE_DIR);
+  }
+
+  private DataSegment plainSegment(File deepStorageDir)
+  {
     return DataSegment.builder(SEGMENT_ID)
                       .shardSpec(NoneShardSpec.instance())
-                      .loadSpec(Map.of("type", "local", "path", DEEP_STORAGE_DIR.getAbsolutePath()))
+                      .loadSpec(Map.of("type", "local", "path", deepStorageDir.getAbsolutePath()))
                       .size(0)
                       .build();
   }

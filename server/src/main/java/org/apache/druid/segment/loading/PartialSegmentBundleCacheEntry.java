@@ -651,20 +651,12 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
    *   <li>A future writer that legitimately writes some files to the root bundle <em>alongside</em> named bundles is
    *       unaffected: its reader asks for {@code __root__} by name, which exists, so the fallback never fires.</li>
    * </ul>
+   * Delegates to {@link PartialSegmentFileMapperV10#resolveBundleName}, which whole-bundle prefetch planning also
+   * uses, so the cache layer and the planner always agree on the physical bundle.
    */
   public static String resolveBundleName(PartialSegmentFileMapperV10 fileMapper, String requestedBundleName)
   {
-    if (!findContainersForBundle(fileMapper, requestedBundleName).isEmpty()) {
-      return requestedBundleName;
-    }
-    final Set<String> present = bundleNames(fileMapper);
-    // legacy v10 segments from before bundle field was persisted in the segment
-    if (present.size() == 1 && present.contains(SegmentFileBuilder.ROOT_BUNDLE_NAME)) {
-      return SegmentFileBuilder.ROOT_BUNDLE_NAME;
-    }
-    // Requested bundle is absent and there are named bundles present: leave the name as-is so the caller fails
-    // loudly (forBundle throws "no containers") rather than silently serving the wrong data.
-    return requestedBundleName;
+    return fileMapper.resolveBundleName(requestedBundleName);
   }
 
   /**
