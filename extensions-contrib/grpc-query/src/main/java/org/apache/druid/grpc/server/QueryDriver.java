@@ -45,6 +45,8 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -86,7 +88,7 @@ public class QueryDriver
 {
   private static final Logger log = new Logger(QueryDriver.class);
 
-  private static final String TIME_FIELD_KEY = "timeFieldKey";
+  private static final String TIME_FIELD_KEY = QueryContextParameters.TIME_FIELD_KEY.getName();
 
   /**
    * Internal runtime exception to report request errors.
@@ -104,13 +106,15 @@ public class QueryDriver
   private final QueryConfigProvider queryConfigProvider;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final QueryScheduler queryScheduler;
+  private final QueryContextConfig queryContextConfig;
 
   public QueryDriver(
       final ObjectMapper jsonMapper,
       final SqlStatementFactory sqlStatementFactory,
       final QueryConfigProvider queryConfigProvider,
       final QueryLifecycleFactory queryLifecycleFactory,
-      final QueryScheduler queryScheduler
+      final QueryScheduler queryScheduler,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
@@ -118,6 +122,7 @@ public class QueryDriver
     this.queryConfigProvider = queryConfigProvider;
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.queryScheduler = queryScheduler;
+    this.queryContextConfig = queryContextConfig;
   }
 
   /**
@@ -318,6 +323,7 @@ public class QueryDriver
                        .sql(request.getQuery())
                        .systemDefaultContext(queryConfigProvider.getContext())
                        .queryContext(translateContext(request))
+                       .rejectUnknownParameters(queryContextConfig.isRejectUnknownParameters())
                        .parameters(translateParameters(request))
                        .auth(authResult)
                        .build();

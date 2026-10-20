@@ -245,6 +245,7 @@ public class SqlQueryPlus
     private String sql;
     private Map<String, Object> systemDefaultContext;
     private Map<String, Object> queryContext;
+    private boolean rejectUnknownParameters;
     private List<ParameterBinding> parameters;
     private AuthenticationResult authResult;
 
@@ -285,6 +286,19 @@ public class SqlQueryPlus
       return this;
     }
 
+    /**
+     * Sets whether {@link #build()} rejects the parameters of the user-provided query context that are not declared in
+     * {@link org.apache.druid.query.context.QueryContextParameters}, as configured by
+     * {@link org.apache.druid.query.context.QueryContextConfig#isRejectUnknownParameters()}. Off by default.
+     * {@link #buildJdbc()} doesn't validate the context, which comes from the connection and is validated when the
+     * connection is opened.
+     */
+    public Builder rejectUnknownParameters(final boolean rejectUnknownParameters)
+    {
+      this.rejectUnknownParameters = rejectUnknownParameters;
+      return this;
+    }
+
     public Builder auth(final AuthenticationResult authResult)
     {
       this.authResult = authResult;
@@ -301,25 +315,28 @@ public class SqlQueryPlus
     public SqlQueryPlus build()
     {
       final StatementAndSetContext statementAndSetContext = DruidSqlParser.parse(sql, true);
+
+      final Map<String, Object> userProvidedContext;
+      if (statementAndSetContext.getSetContext().isEmpty()) {
+        userProvidedContext = queryContext == null ? Map.of() : queryContext;
+      } else {
+        userProvidedContext = QueryContexts.override(queryContext, statementAndSetContext.getSetContext());
+      }
+      // Before anything reads the context. System defaults are validated where they are configured.
       try {
-        QueryContextParameterValidator.validate(statementAndSetContext.getSetContext());
+        QueryContextParameterValidator.validate(userProvidedContext, rejectUnknownParameters);
       }
       catch (BadQueryContextException e) {
-        throw InvalidSqlInput.exception(e, "Invalid query context parameter value: %s", e.getMessage());
+        throw InvalidSqlInput.exception(e, "%s", e.getMessage());
       }
-      final Map<String, Object> userProvidedContext = statementAndSetContext.getSetContext().isEmpty()
-                                                      ? queryContext
-                                                      : QueryContexts.override(
-                                                          queryContext,
-                                                          statementAndSetContext.getSetContext()
-                                                      );
+
       final Map<String, Object> stmtContext = QueryContexts.withDefaults(systemDefaultContext, userProvidedContext);
       return new SqlQueryPlus(
           sql,
           statementAndSetContext.getMainStatement(),
           true,
           stmtContext,
-          userProvidedContext == null ? Set.of() : userProvidedContext.keySet(),
+          userProvidedContext.keySet(),
           parameters,
           authResult
       );

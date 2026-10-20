@@ -69,6 +69,7 @@ import org.apache.druid.metadata.MetadataStorageProvider;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
@@ -197,6 +198,8 @@ public class CliCoordinator extends ServerRunnable
 
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator", CoordinatorRunConfig.class);
+            // Checks the queryContext of Broker dynamic configuration updates
+            JsonConfigProvider.bind(binder, "druid.query.context", QueryContextConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.kill", CoordinatorKillConfigs.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.period", CoordinatorPeriodConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);

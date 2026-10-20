@@ -75,6 +75,7 @@ import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.rpc.HttpResponseException;
@@ -143,6 +144,7 @@ public class SqlStatementResource
   private final QueryConfigProvider queryConfigProvider;
   private final ServerConfig serverConfig;
   private final WireTransferableContext wireTransferableContext;
+  private final QueryContextConfig queryContextConfig;
 
   @Inject
   public SqlStatementResource(
@@ -153,7 +155,8 @@ public class SqlStatementResource
       final AuthorizerMapper authorizerMapper,
       final QueryConfigProvider queryConfigProvider,
       final ServerConfig serverConfig,
-      final WireTransferableContext wireTransferableContext
+      final WireTransferableContext wireTransferableContext,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -164,6 +167,7 @@ public class SqlStatementResource
     this.queryConfigProvider = queryConfigProvider;
     this.serverConfig = serverConfig;
     this.wireTransferableContext = wireTransferableContext;
+    this.queryContextConfig = queryContextConfig;
   }
 
   /**
@@ -208,7 +212,8 @@ public class SqlStatementResource
           QueryContext.builder()
                       .putAll(queryConfigProvider.getContext())
                       .put(QueryContextParameters.RESULT_FORMAT, sqlQuery.getResultFormat().toString())
-                      .toMap()
+                      .toMap(),
+          queryContextConfig
       );
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }

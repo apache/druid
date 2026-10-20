@@ -24,9 +24,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
@@ -53,7 +55,7 @@ public class BrokerViewOfBrokerConfigTest
     defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of("timeout", 30000, "useCache", true));
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
     Mockito.when(coordinatorClient.getBrokerDynamicConfig()).thenReturn(Futures.immediateFuture(config));
-    target = new BrokerViewOfBrokerConfig(coordinatorClient, defaultQueryConfig);
+    target = new BrokerViewOfBrokerConfig(coordinatorClient, defaultQueryConfig, QueryContextConfig.DEFAULT);
   }
 
   @Test
@@ -151,5 +153,42 @@ public class BrokerViewOfBrokerConfigTest
 
     Assertions.assertEquals(5, snapshot.getResolvedDefaultQueryContext().get("priority"));
     Assertions.assertEquals(9, target.getContext().get("priority"));
+  }
+
+  @Test
+  public void testUnknownStaticDefaultParameterIsRejectedIfConfigured()
+  {
+    final DefaultQueryConfig unknownDefault = new DefaultQueryConfig(ImmutableMap.of("useCahce", false));
+
+    // Ignored by default.
+    new BrokerViewOfBrokerConfig(coordinatorClient, unknownDefault, QueryContextConfig.DEFAULT);
+
+    final IAE e = Assertions.assertThrows(
+        IAE.class,
+        () -> new BrokerViewOfBrokerConfig(coordinatorClient, unknownDefault, new QueryContextConfig(true))
+    );
+    Assertions.assertEquals(
+        "Invalid default query context [druid.query.default.context]: "
+        + "Unknown query context parameter [useCahce]. Did you mean [useCache]?",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void testInvalidStaticDefaultValueIsRejected()
+  {
+    final IAE e = Assertions.assertThrows(
+        IAE.class,
+        () -> new BrokerViewOfBrokerConfig(
+            coordinatorClient,
+            new DefaultQueryConfig(ImmutableMap.of("maxRowsQueuedForOrdering", 0)),
+            QueryContextConfig.DEFAULT
+        )
+    );
+    Assertions.assertEquals(
+        "Invalid default query context [druid.query.default.context]: "
+        + "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]",
+        e.getMessage()
+    );
   }
 }
