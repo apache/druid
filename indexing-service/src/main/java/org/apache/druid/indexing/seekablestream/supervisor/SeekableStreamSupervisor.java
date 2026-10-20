@@ -2436,6 +2436,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             StringUtils.format(reasonFormat, args)
         );
       } else {
+        unblockPublishAsNotReady(id);
         taskQueue.get().shutdownWithSuccess(id, reasonFormat, args);
       }
     } else {
