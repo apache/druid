@@ -278,7 +278,7 @@ public class QueryContext
   @Nullable
   public <T> T get(final QueryContextParameter<T> parameter)
   {
-    return parseOrDefault(parameter, parameter.getDefaultValue().orElse(null));
+    return parseOrDefault(parameter, parameter.getLiteralDefault());
   }
 
   /**
@@ -289,12 +289,11 @@ public class QueryContext
    */
   public <T> T getOrDefault(final QueryContextParameter<T> parameter)
   {
-    return getOrDefault(
-        parameter,
-        parameter.getDefaultValue().orElseThrow(
-            () -> new ISE("Query context parameter [%s] has no declared default", parameter.getName())
-        )
-    );
+    final T literalDefault = parameter.getLiteralDefault();
+    if (literalDefault == null) {
+      throw new ISE("Query context parameter [%s] has no declared default", parameter.getName());
+    }
+    return getOrDefault(parameter, literalDefault);
   }
 
   /**
@@ -548,7 +547,7 @@ public class QueryContext
 
   public boolean isUseNestedForUnknownTypeInSubquery()
   {
-    return getOrDefault(QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
+    return isUseNestedForUnknownTypeInSubquery(false);
   }
 
   public int getUncoveredIntervalsLimit()

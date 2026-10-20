@@ -831,7 +831,7 @@ public class MSQCompactionRunnerTest
   {
     return new MSQTuningConfig(
         1,
-        QueryContextParameters.MAX_ROWS_IN_MEMORY.getDefaultValue().orElseThrow(),
+        QueryContextParameters.MAX_ROWS_IN_MEMORY.getLiteralDefault(),
         MAX_ROWS_PER_SEGMENT,
         null,
         createIndexSpec()

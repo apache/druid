@@ -141,7 +141,7 @@ public final class EmptyCursorHolder implements CursorHolder
       @Override
       public int getMaxVectorSize()
       {
-        return QueryContextParameters.VECTOR_SIZE.getDefaultValue().orElseThrow();
+        return QueryContextParameters.VECTOR_SIZE.getLiteralDefault();
       }
 
       @Override

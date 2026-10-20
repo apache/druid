@@ -96,7 +96,6 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> FINALIZE = booleanParameter("finalize")
       .since("0.1.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-      .defaultDescription("`N/A`")
       .description(
           """
           Flag indicating whether to "finalize" aggregation results.
@@ -114,13 +113,7 @@ public final class QueryContextParameters
           """
           Query priority.
           Queries with higher priority get precedence for computational resources.
-          """
-      )
-      .defaultDescription(
-          """
-          The default priority is one of the following: <ul><li>Value of `priority` in the query context, if
-          set</li><li>The value of the runtime property `druid.query.default.context.priority`, if set and
-          not null</li><li>`0` if the priority is not set in the query context or runtime properties</li></ul>
+          A cluster-wide default value for this query context can be specified via `druid.query.default.context.priority`.
           """
       )
       .build();
@@ -133,7 +126,6 @@ public final class QueryContextParameters
           See [Broker configuration](../configuration/index.md#broker) for more details.
           """
       )
-      .defaultDescription("`null`")
       .build();
 
   public static final QueryContextParameter<Long> TIMEOUT = longParameter("timeout")
@@ -145,7 +137,7 @@ public final class QueryContextParameters
           To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker).
           """
       )
-      .defaultDescription("`druid.server.http.defaultQueryTimeout`")
+      .defaultValue(DefaultValue.fromProperty("druid.server.http.defaultQueryTimeout"))
       .build();
 
   public static final QueryContextParameter<Long> PER_SEGMENT_TIMEOUT =
@@ -160,7 +152,6 @@ public final class QueryContextParameters
               A cluster-wide default value for this query context can be specified via `druid.query.default.context.perSegmentTimeout`.
               """
           )
-          .defaultDescription("`null`")
           .build();
 
   public static final QueryContextParameter<Long> MAX_SCATTER_GATHER_BYTES =
@@ -173,7 +164,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxScatterGatherBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxScatterGatherBytes"))
           .build();
 
   public static final QueryContextParameter<Long> MAX_QUEUED_BYTES =
@@ -186,7 +177,7 @@ public final class QueryContextParameters
               Zero means disabled.
               """
           )
-          .defaultDescription("`druid.broker.http.maxQueuedBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.broker.http.maxQueuedBytes"))
           .build();
 
   public static final QueryContextParameter<Long> DEFAULT_TIMEOUT = longParameter("defaultTimeout")
@@ -223,7 +214,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.initialYieldNumRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.initialYieldNumRows"))
           .build();
 
   public static final QueryContextParameter<Integer> PARALLEL_MERGE_SMALL_BATCH_ROWS =
@@ -235,7 +226,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.smallBatchNumRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.smallBatchNumRows"))
           .build();
 
   public static final QueryContextParameter<Integer> PARALLEL_MERGE_PARALLELISM =
@@ -247,7 +238,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) for more details.
               """
           )
-          .defaultDescription("`druid.processing.merge.parallelism`")
+          .defaultValue(DefaultValue.fromProperty("druid.processing.merge.parallelism"))
           .build();
 
   public static final QueryContextParameter<QueryContexts.Vectorize> VECTORIZE =
@@ -298,7 +289,7 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxSubqueryRows`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxSubqueryRows"))
           .build();
 
   /**
@@ -318,20 +309,19 @@ public final class QueryContextParameters
               See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
               """
           )
-          .defaultDescription("`druid.server.http.maxSubqueryBytes`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.maxSubqueryBytes"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY =
       booleanParameter("useNestedForUnknownTypeInSubquery")
           .since("27.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
-          .defaultValue(false)
           .description(
               """
               If true, when the Broker materializes subquery results as frames to enforce `maxSubqueryBytes`,
               it serializes columns of unknown type as nested JSON instead of failing to materialize them.
               """
           )
-          .defaultDescription("`druid.server.http.useNestedForUnknownTypeInSubquery`")
+          .defaultValue(DefaultValue.fromProperty("druid.server.http.useNestedForUnknownTypeInSubquery"))
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_FILTER_PUSH_DOWN =
@@ -472,7 +462,7 @@ public final class QueryContextParameters
               If false, the query fails instead.
               """
           )
-          .defaultDescription("`false`")
+          .defaultValue(false)
           .build();
 
   public static final QueryContextParameter<Boolean> USE_CACHE = booleanParameter("useCache")
@@ -545,7 +535,6 @@ public final class QueryContextParameters
               See [Router strategies](../design/router.md#router-strategies) for more details.
               """
           )
-          .defaultDescription("`null`")
           .build();
 
   public static final QueryContextParameter<Boolean> POPULATE_CACHE =
@@ -580,14 +569,14 @@ public final class QueryContextParameters
       booleanParameter("serializeDateTimeAsLong")
           .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("If true, DateTime is serialized as long in the result returned by Broker and the data transportation between Broker and compute process")
-          .defaultDescription("`false`")
+          .defaultValue(false)
           .build();
 
   public static final QueryContextParameter<Boolean> SERIALIZE_DATE_TIME_AS_LONG_INNER =
       booleanParameter("serializeDateTimeAsLongInner")
           .since("0.10.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("If true, DateTime is serialized as long in the data transportation between Broker and compute process")
-          .defaultDescription("`false`")
+          .defaultValue(false)
           .build();
 
   public static final QueryContextParameter<Integer> UNCOVERED_INTERVALS_LIMIT =
@@ -753,21 +742,21 @@ public final class QueryContextParameters
               This parameter affects how time functions and timestamp literals behave.
               """
           )
-          .defaultDescription("UTC")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.sqlTimeZone"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_APPROXIMATE_COUNT_DISTINCT =
       booleanParameter("useApproximateCountDistinct")
           .since("0.10.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description("Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.")
-          .defaultDescription("`true`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useApproximateCountDistinct"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_GROUPING_SET_FOR_EXACT_DISTINCT =
       booleanParameter("useGroupingSetForExactDistinct")
           .since("0.22.0").query(Query.SQL).engine(Engine.NATIVE)
           .description("Whether to use grouping sets to execute queries with multiple exact distinct aggregations.")
-          .defaultDescription("`false`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useGroupingSetForExactDistinct"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_APPROXIMATE_TOP_N =
@@ -779,7 +768,7 @@ public final class QueryContextParameters
               If `false`, Druid uses exact [GroupBy queries](groupbyquery.md) instead.
               """
           )
-          .defaultDescription("`true`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useApproximateTopN"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_LEXICOGRAPHIC_TOP_N =
@@ -792,7 +781,7 @@ public final class QueryContextParameters
               When both `useLexicographicTopN` and `useApproximateTopN` are `false`, TopN queries are never used.
               """
           )
-          .defaultDescription("`false`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useLexicographicTopN"))
           .build();
 
   public static final QueryContextParameter<Boolean> USE_NATIVE_QUERY_EXPLAIN =
@@ -806,7 +795,7 @@ public final class QueryContextParameters
               We don't recommend setting this parameter unless your application depends on the older behavior.
               """
           )
-          .defaultDescription("`true`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useNativeQueryExplain"))
           .build();
 
   public static final QueryContextParameter<Boolean> SQL_FINALIZE_OUTER_SKETCHES =
@@ -966,7 +955,7 @@ public final class QueryContextParameters
               If `druid.sql.planner.maxNumericInFilters` isn't set explicitly, Druid ignores this value.
               """
           )
-          .defaultDescription("`-1`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.maxNumericInFilters"))
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT =
@@ -1010,7 +999,6 @@ public final class QueryContextParameters
               To apply a cluster-wide default, set the `druid.query.default.context.maxPlanningTimeMs` runtime property (or the Broker's dynamic `queryContext` config); see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
               """
           )
-          .defaultDescription("`0` (disabled)")
           .build();
 
   public static final QueryContextParameter<Integer> IN_FUNCTION_THRESHOLD =
@@ -1101,7 +1089,7 @@ public final class QueryContextParameters
               Overrides `druid.sql.planner.computeInnerJoinCostAsFilter`.
               """
           )
-          .defaultDescription("`true`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.computeInnerJoinCostAsFilter"))
           .visibility(Visibility.HIDDEN)
           .build();
 
@@ -1115,7 +1103,7 @@ public final class QueryContextParameters
               Overrides `druid.sql.planner.forceExpressionVirtualColumns`.
               """
           )
-          .defaultDescription("`false`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.forceExpressionVirtualColumns"))
           .visibility(Visibility.HIDDEN)
           .build();
 
@@ -1129,7 +1117,7 @@ public final class QueryContextParameters
               Overrides `druid.sql.planner.requireTimeCondition`.
               """
           )
-          .defaultDescription("`false`")
+          .defaultValue(DefaultValue.fromProperty("druid.sql.planner.requireTimeCondition"))
           .visibility(Visibility.HIDDEN)
           .build();
 
@@ -1204,7 +1192,7 @@ public final class QueryContextParameters
       humanReadableBytesParameter("maxOnDiskStorage")
           .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.")
-          .defaultDescription("`druid.query.groupBy.defaultOnDiskStorage`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.defaultOnDiskStorage"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1212,7 +1200,7 @@ public final class QueryContextParameters
       integerParameter("maxSpillFileCount")
           .since("37.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.")
-          .defaultDescription("`druid.query.groupBy.maxSpillFileCount`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.maxSpillFileCount"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1220,7 +1208,7 @@ public final class QueryContextParameters
       humanReadableBytesParameter("minSpillFileSize")
           .since("38.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.")
-          .defaultDescription("`druid.query.groupBy.minSpillFileSize`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.minSpillFileSize"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1228,7 +1216,7 @@ public final class QueryContextParameters
       booleanParameter("groupByIsSingleThreaded")
           .since("0.9.1").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("Overrides the value of `druid.query.groupBy.singleThreaded` for this query.")
-          .defaultDescription("`druid.query.groupBy.singleThreaded`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.singleThreaded"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1236,7 +1224,7 @@ public final class QueryContextParameters
       integerParameter("bufferGrouperInitialBuckets")
           .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description("Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.")
-          .defaultDescription("`druid.query.groupBy.bufferGrouperInitialBuckets`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.bufferGrouperInitialBuckets"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1244,7 +1232,7 @@ public final class QueryContextParameters
       floatParameter("bufferGrouperMaxLoadFactor")
           .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description("Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.")
-          .defaultDescription("`druid.query.groupBy.bufferGrouperMaxLoadFactor`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.bufferGrouperMaxLoadFactor"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1252,7 +1240,7 @@ public final class QueryContextParameters
       booleanParameter("forceHashAggregation")
           .since("0.11.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description("Overrides the value of `druid.query.groupBy.forceHashAggregation`.")
-          .defaultDescription("`druid.query.groupBy.forceHashAggregation`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.forceHashAggregation"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1260,7 +1248,7 @@ public final class QueryContextParameters
       integerParameter("intermediateCombineDegree")
           .since("0.12.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("Overrides the value of `druid.query.groupBy.intermediateCombineDegree`.")
-          .defaultDescription("`druid.query.groupBy.intermediateCombineDegree`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.intermediateCombineDegree"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1268,7 +1256,7 @@ public final class QueryContextParameters
       integerParameter("numParallelCombineThreads")
           .since("0.12.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("Overrides the value of `druid.query.groupBy.numParallelCombineThreads`.")
-          .defaultDescription("`druid.query.groupBy.numParallelCombineThreads`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.numParallelCombineThreads"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1276,7 +1264,7 @@ public final class QueryContextParameters
       humanReadableBytesParameter("maxSelectorDictionarySize")
           .since("0.23.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description("Overrides the value of `druid.query.groupBy.maxSelectorDictionarySize`.")
-          .defaultDescription("`druid.query.groupBy.maxSelectorDictionarySize`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.maxSelectorDictionarySize"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1284,7 +1272,7 @@ public final class QueryContextParameters
       humanReadableBytesParameter("maxMergingDictionarySize")
           .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .description("Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`.")
-          .defaultDescription("`druid.query.groupBy.maxMergingDictionarySize`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.maxMergingDictionarySize"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1298,7 +1286,7 @@ public final class QueryContextParameters
               This tradeoff is beneficial when memory is plentiful.
               """
           )
-          .defaultDescription("`druid.query.groupBy.mergeThreadLocal`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.mergeThreadLocal"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1320,7 +1308,7 @@ public final class QueryContextParameters
               Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.
               """
           )
-          .defaultDescription("`druid.query.groupBy.forcePushDownLimit`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.forcePushDownLimit"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1333,7 +1321,7 @@ public final class QueryContextParameters
               This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.
               """
           )
-          .defaultDescription("`druid.query.groupBy.applyLimitPushDownToSegment`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.applyLimitPushDownToSegment"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1347,7 +1335,7 @@ public final class QueryContextParameters
               'false' returns an error if a multi value column is found as part of the grouping key.
               """
           )
-          .defaultDescription("`druid.query.groupBy.enableMultiValueUnnesting`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.enableMultiValueUnnesting"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1361,7 +1349,7 @@ public final class QueryContextParameters
               Non-vectorized queries only defer string-typed expressions of single string inputs.
               """
           )
-          .defaultDescription("`druid.query.groupBy.deferExpressionDimensions`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.deferExpressionDimensions"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
@@ -1402,7 +1390,7 @@ public final class QueryContextParameters
               Mainly used by tests to force spilling.
               """
           )
-          .defaultDescription("`druid.query.groupBy.bufferGrouperMaxSize`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.bufferGrouperMaxSize"))
           .queryType(QueryType.GROUP_BY)
           .visibility(Visibility.HIDDEN)
           .build();
@@ -1416,7 +1404,7 @@ public final class QueryContextParameters
               Overrides `druid.query.groupBy.forcePushDownNestedQuery`.
               """
           )
-          .defaultDescription("`druid.query.groupBy.forcePushDownNestedQuery`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.forcePushDownNestedQuery"))
           .queryType(QueryType.GROUP_BY)
           .visibility(Visibility.HIDDEN)
           .build();
@@ -1530,7 +1518,7 @@ public final class QueryContextParameters
               Overrides the identically named config.
               """
           )
-          .defaultDescription("`druid.query.scan.maxSegmentPartitionsOrderedInMemory`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.scan.maxSegmentPartitionsOrderedInMemory"))
           .queryType(QueryType.SCAN)
           .build();
 
@@ -1552,7 +1540,7 @@ public final class QueryContextParameters
       stringParameter("searchStrategy")
           .since("0.10.0").query(Query.JSON).engine(Engine.NATIVE)
           .description("Overrides the value of `druid.query.search.searchStrategy` for this query.")
-          .defaultDescription("`druid.query.search.searchStrategy`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.search.searchStrategy"))
           .queryType(QueryType.SEARCH)
           .build();
 
@@ -1684,7 +1672,7 @@ public final class QueryContextParameters
               Maximum number of rows to store in memory at once before flushing to disk during the segment generation process.
               Ignored for non-INSERT queries.
               In most cases, use the default value.
-              You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage.
+              You may need to override the default if you run into one of the [known issues](../multi-stage-query/known-issues.md) around memory usage.
               """
           )
           .statement(StatementType.INSERT, StatementType.REPLACE)
@@ -2414,7 +2402,7 @@ public final class QueryContextParameters
               Overrides the identically named config.
               """
           )
-          .defaultDescription("`druid.query.scan.maxRowsQueuedForOrdering`")
+          .defaultValue(DefaultValue.fromProperty("druid.query.scan.maxRowsQueuedForOrdering"))
           .queryType(QueryType.SCAN)
           .build();
 

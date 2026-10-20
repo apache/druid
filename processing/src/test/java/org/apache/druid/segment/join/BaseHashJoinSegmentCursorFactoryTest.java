@@ -59,8 +59,8 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
       true,
       true,
       true,
-      QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow(),
-      QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getDefaultValue().orElseThrow()
+      QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getLiteralDefault(),
+      QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getLiteralDefault()
   );
 
   public static final String FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX = "c1.";

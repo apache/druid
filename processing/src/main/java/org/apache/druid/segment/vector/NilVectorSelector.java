@@ -28,7 +28,7 @@ import java.util.Arrays;
 public class NilVectorSelector
     implements VectorValueSelector, VectorObjectSelector, SingleValueDimensionVectorSelector, IdLookup
 {
-  private static final int DEFAULT_VECTOR_SIZE = QueryContextParameters.VECTOR_SIZE.getDefaultValue().orElseThrow();
+  private static final int DEFAULT_VECTOR_SIZE = QueryContextParameters.VECTOR_SIZE.getLiteralDefault();
   private static final boolean[] DEFAULT_NULLS_VECTOR = new boolean[DEFAULT_VECTOR_SIZE];
   private static final int[] DEFAULT_INT_VECTOR = new int[DEFAULT_VECTOR_SIZE];
   private static final long[] DEFAULT_LONG_VECTOR = new long[DEFAULT_VECTOR_SIZE];
