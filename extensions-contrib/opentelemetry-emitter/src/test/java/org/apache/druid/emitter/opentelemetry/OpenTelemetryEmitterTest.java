@@ -125,6 +125,15 @@ public class OpenTelemetryEmitterTest
     }
   }
 
+  @Test
+  public void testModuleCreatesEmitterWithDefaultExporters()
+  {
+    Assertions.assertNotNull(
+        new OpenTelemetryEmitterModule()
+            .getEmitter(new OpenTelemetryEmitterConfig(), new ObjectMapper())
+    );
+  }
+
   // Check that we don't call "emitQueryTimeEvent" method for event that is not instance of ServiceMetricEvent
   @Test
   public void testNoEmitNotServiceMetric()

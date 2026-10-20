@@ -67,7 +67,6 @@ _*More about Druid configuration [here](https://druid.apache.org/docs/latest/con
 Create `docker-compose.yaml` in your working dir:
 
 ```yaml
-version: "2"
 services:
 
   zipkin-all-in-one:
@@ -76,30 +75,31 @@ services:
       - "9411:9411"
 
   otel-collector:
-    image: otel/opentelemetry-collector:latest
-    command: ["--config=otel-local-config.yaml", "${OTELCOL_ARGS}"]
+    image: otel/opentelemetry-collector-contrib:latest
     volumes:
-      - ${PWD}/config.yaml:/otel-local-config.yaml
+      - ${PWD}/config.yaml:/etc/otelcol-contrib/config.yaml
     ports:
       - "4317:4317"
+      - "4318:4318"
 ```
 
 Create `config.yaml` file with configuration for otel-collector:
 
 ```yaml
-version: "2"
-receivers:
 receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
 
 exporters:
   zipkin:
     endpoint: "http://zipkin-all-in-one:9411/api/v2/spans"
     format: proto
 
-  logging:
+  debug:
 
 processors:
   batch:
@@ -109,7 +109,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, zipkin]
+      exporters: [debug, zipkin]
 ```
 
 *_How to configure otel-collector you can read [here](https://opentelemetry.io/docs/collector/configuration/)._
@@ -138,6 +138,8 @@ Start the quickstart with the apppropriate environment variables for opentelemet
 ```
 OTEL_SERVICE_NAME="org.apache.druid" OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317" bin/start-micro-quickstart
 ```
+
+The exporter uses OTLP over gRPC by default. To use OTLP over HTTP instead, set `OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"` and point `OTEL_EXPORTER_OTLP_ENDPOINT` at port 4318.
 
 *_More about opentelemetry
 autoconfiguration [here](https://github.com/open-telemetry/opentelemetry-java/tree/main/sdk-extensions/autoconfigure)_
