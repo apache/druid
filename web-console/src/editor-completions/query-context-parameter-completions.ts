@@ -285,7 +285,9 @@ function queryContextParameterDocMarkdown(parameter: QueryContextParameterMetada
     );
   } else if (parameter.default_description) {
     sections.push(
-      `Default: ${queryContextDescriptionToDocMarkdown(parameter.default_description)}`,
+      `Default: ${queryContextDescriptionToDocMarkdown(parameter.default_description)}${
+        parameter.effective_source === 'UNAUTHORIZED' ? ' (the Broker may override it)' : ''
+      }`,
     );
   }
   sections.push(queryContextDescriptionToDocMarkdown(parameter.description));

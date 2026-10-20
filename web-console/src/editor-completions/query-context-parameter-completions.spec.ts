@@ -95,6 +95,31 @@ describe('query-context-parameter-completions', () => {
       });
     });
 
+    it('notes that the Broker may override a described default without CONFIG read access', () => {
+      const parameter: QueryContextParameterMetadata = {
+        name: 'sqlQueryId',
+        type: 'String',
+        description: 'SQL query ID.',
+        default_value: null,
+        default_description: 'auto-generated',
+        effective_value: null,
+        effective_source: 'UNAUTHORIZED',
+        deprecation: null,
+      };
+
+      expect(getQueryContextCompletions(false, [parameter])[0].doc).toEqual({
+        name: 'sqlQueryId',
+        descriptionMarkdown:
+          'Type: `String`\n\nDefault: auto-generated (the Broker may override it)\n\nSQL query ID.',
+      });
+      expect(
+        getQueryContextCompletions(false, [{ ...parameter, effective_source: null }])[0].doc,
+      ).toEqual({
+        name: 'sqlQueryId',
+        descriptionMarkdown: 'Type: `String`\n\nDefault: auto-generated\n\nSQL query ID.',
+      });
+    });
+
     it('describes a default that is the value of a runtime property', () => {
       const parameter: QueryContextParameterMetadata = {
         name: 'timeout',
