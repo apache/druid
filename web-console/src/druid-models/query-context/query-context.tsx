@@ -88,9 +88,11 @@ export interface QueryContextParameterMetadata {
     | 'UNAUTHORIZED'
     | null;
   deprecation: string | null;
+  /** The query languages that can provide the parameter, such as SQL or JSON (native queries) */
+  query_languages: string[] | null;
 }
 
-export const QUERY_CONTEXT_PARAMETERS_QUERY = `SELECT "name", "type", "description", "default_value", "default_description", "effective_value", "effective_source", "deprecation"
+export const QUERY_CONTEXT_PARAMETERS_QUERY = `SELECT "name", "type", "description", "default_value", "default_description", "effective_value", "effective_source", "deprecation", "query_languages"
 FROM sys.query_context_parameters
 WHERE "visibility" = 'PUBLIC'`;
 

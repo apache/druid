@@ -254,6 +254,7 @@ describe('sql-completions', () => {
           effective_value: null,
           effective_source: null,
           deprecation: null,
+          query_languages: ['JSON', 'SQL'],
         },
         {
           name: 'useCache',
@@ -264,6 +265,7 @@ describe('sql-completions', () => {
           effective_value: 'false',
           effective_source: 'BROKER_DYNAMIC_CONFIG',
           deprecation: 'Use `useResultLevelCache` instead.',
+          query_languages: ['JSON', 'SQL'],
         },
       ];
 

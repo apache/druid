@@ -67,16 +67,19 @@ const PARAMETER_COMPLETIONS = new WeakMap<
 function buildParameterCompletions(
   queryContextParameters: readonly QueryContextParameterMetadata[],
 ): ParameterCompletions {
-  const quoted = queryContextParameters.map(parameter => ({
-    label: parameter.name,
-    // Deprecated parameters sort after the others
-    boost: parameter.deprecation ? 40 : 50,
-    detail: 'context',
-    doc: {
-      name: parameter.name,
-      descriptionMarkdown: queryContextParameterDocMarkdown(parameter),
-    },
-  }));
+  // Parameters that SQL can't provide, such as bySegment, which SQL queries ignore, are not suggested after SET
+  const quoted = queryContextParameters
+    .filter(parameter => !parameter.query_languages || parameter.query_languages.includes('SQL'))
+    .map(parameter => ({
+      label: parameter.name,
+      // Deprecated parameters sort after the others
+      boost: parameter.deprecation ? 40 : 50,
+      detail: 'context',
+      doc: {
+        name: parameter.name,
+        descriptionMarkdown: queryContextParameterDocMarkdown(parameter),
+      },
+    }));
   return {
     quoted,
     unquoted: quoted.map(completion => ({

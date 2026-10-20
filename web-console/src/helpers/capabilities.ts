@@ -262,7 +262,12 @@ export class Capabilities {
           '/druid/v2/sql?capabilities-query-context-parameters',
           {
             query: QUERY_CONTEXT_PARAMETERS_QUERY,
-            context: { engine: 'native', timeout: Capabilities.STATUS_TIMEOUT },
+            // Arrays such as query_languages come back as arrays rather than JSON strings
+            context: {
+              engine: 'native',
+              timeout: Capabilities.STATUS_TIMEOUT,
+              sqlStringifyArrays: false,
+            },
           },
           { timeout: Capabilities.STATUS_TIMEOUT },
         )

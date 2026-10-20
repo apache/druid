@@ -38,6 +38,7 @@ describe('query-context-parameter-completions', () => {
           effective_value: null,
           effective_source: null,
           deprecation: null,
+          query_languages: ['JSON', 'SQL'],
         },
       ];
 
@@ -58,6 +59,7 @@ describe('query-context-parameter-completions', () => {
           effective_value: null,
           effective_source: 'UNAUTHORIZED',
           deprecation: null,
+          query_languages: ['JSON', 'SQL'],
         },
       ];
 
@@ -78,6 +80,7 @@ describe('query-context-parameter-completions', () => {
         effective_value: 'false',
         effective_source: 'DEFAULT_CONTEXT_PROPERTY',
         deprecation: null,
+        query_languages: ['JSON', 'SQL'],
       };
 
       expect(getQueryContextCompletions(false, [parameter])[0].doc).toEqual({
@@ -105,6 +108,7 @@ describe('query-context-parameter-completions', () => {
         effective_value: null,
         effective_source: 'UNAUTHORIZED',
         deprecation: null,
+        query_languages: ['JSON', 'SQL'],
       };
 
       expect(getQueryContextCompletions(false, [parameter])[0].doc).toEqual({
@@ -130,6 +134,7 @@ describe('query-context-parameter-completions', () => {
         effective_value: '60000',
         effective_source: 'RUNTIME_PROPERTY',
         deprecation: null,
+        query_languages: ['JSON', 'SQL'],
       };
       const doc = (overrides: Partial<QueryContextParameterMetadata>) =>
         getQueryContextCompletions(false, [{ ...parameter, ...overrides }])[0].doc;
@@ -158,6 +163,27 @@ describe('query-context-parameter-completions', () => {
       });
     });
 
+    it('does not suggest parameters that SQL can not provide', () => {
+      const parameter: QueryContextParameterMetadata = {
+        name: 'useCache',
+        type: 'Boolean',
+        description: 'Whether to use the cache.',
+        default_value: 'true',
+        default_description: null,
+        effective_value: null,
+        effective_source: null,
+        deprecation: null,
+        query_languages: ['JSON', 'SQL'],
+      };
+
+      expect(
+        getQueryContextCompletions(false, [
+          parameter,
+          { ...parameter, name: 'bySegment', query_languages: ['JSON'] },
+        ]).map(c => c.label),
+      ).toEqual(['useCache']);
+    });
+
     it('quotes a parameter name that needs it unless a quote is being typed', () => {
       const queryContextParameters: QueryContextParameterMetadata[] = [
         {
@@ -169,6 +195,7 @@ describe('query-context-parameter-completions', () => {
           effective_value: null,
           effective_source: null,
           deprecation: null,
+          query_languages: ['JSON', 'SQL'],
         },
       ];
 
