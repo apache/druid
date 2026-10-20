@@ -30,7 +30,9 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -140,6 +142,28 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
       });
       orderedTables.sort((e1, e2) -> e1.id().name().compareTo(e2.id().name()));
       return orderedTables;
+    }
+
+    /**
+     * Replace one entry with the authoritative row just read from the Coordinator, or remove it if the table no
+     * longer exists there. Unlike {@link #update}, this does not describe what changed, so no prior entry is
+     * expected: the row was read from the source of truth, and installing it is correct whether the entry was
+     * present, stale, or never seen. An entry newer than the row is kept, so a racing notification cannot be
+     * rolled back.
+     */
+    public synchronized void resync(String name, @Nullable TableMetadata table)
+    {
+      if (table == null) {
+        cache.remove(name);
+        return;
+      }
+      cache.compute(
+          name,
+          (k, v) -> v != null && v.table != null && v.table.updateTime() > table.updateTime()
+                    ? v
+                    : new TableEntry(table)
+      );
+      version = Math.max(version, table.updateTime());
     }
 
     public synchronized void update(UpdateEvent event)
@@ -339,6 +363,23 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
     SchemaEntry schemaEntry = entryFor(event.table.id().schema());
     if (schemaEntry != null) {
       schemaEntry.update(event);
+    } else {
+      resync();
+    }
+  }
+
+  /**
+   * Refresh one table from an authoritative read of the Coordinator: {@code table} is installed as the current
+   * entry, or the entry is removed when {@code table} is null. The incremental {@link #updated} events describe a
+   * change and so expect the cache to hold what came before; this does not, which makes it the right entry point
+   * for a caller that has just read the table's current state, such as the DDL write path freshening the issuing
+   * Broker ahead of the Coordinator's own notification.
+   */
+  public void resynced(TableId tableId, @Nullable TableMetadata table)
+  {
+    SchemaEntry schemaEntry = entryFor(tableId.schema());
+    if (schemaEntry != null) {
+      schemaEntry.resync(tableId.name(), table);
     } else {
       resync();
     }

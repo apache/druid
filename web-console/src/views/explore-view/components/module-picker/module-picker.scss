@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../../../variables';
+@use '../../../../variables' as *;
 
 .module-picker {
   .more-button.#{$bp-ns}-popover-target {

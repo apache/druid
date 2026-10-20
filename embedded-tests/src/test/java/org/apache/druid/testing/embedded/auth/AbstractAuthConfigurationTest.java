@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -35,7 +37,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Action;
@@ -54,8 +56,6 @@ import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -106,7 +106,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
           Action.READ
       ),
       new ResourceAction(
-          new Resource(QueryContexts.ENGINE, ResourceType.QUERY_CONTEXT),
+          new Resource(QueryContextParameters.ENGINE.getName(), ResourceType.QUERY_CONTEXT),
           Action.WRITE
       ),
       new ResourceAction(
@@ -808,7 +808,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   )
   {
     final Map<String, Object> dartContext = new HashMap<>(context);
-    dartContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
+    dartContext.put(QueryContextParameters.ENGINE.getName(), DartSqlEngine.NAME);
     return makeSQLQueryRequest(httpClient, query, "/druid/v2/sql", dartContext, expectedStatus);
   }
 

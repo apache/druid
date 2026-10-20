@@ -20,8 +20,12 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -33,6 +37,8 @@ import java.util.concurrent.TimeUnit;
 public class LocalTaskActionClient implements TaskActionClient
 {
   private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
+
+  private static final String RUN_TIME_METRIC = "task/action/run/time";
 
   private final Task task;
   private final TaskActionToolbox toolbox;
@@ -52,8 +58,31 @@ public class LocalTaskActionClient implements TaskActionClient
     log.debug("Performing action for task[%s]: %s", task.getId(), taskAction);
     final long performStartTime = System.currentTimeMillis();
     final RetType result = performAction(taskAction);
-    emitTimerMetric("task/action/run/time", taskAction, System.currentTimeMillis() - performStartTime);
+    emitTimerMetric(RUN_TIME_METRIC, taskAction, System.currentTimeMillis() - performStartTime);
     return result;
+  }
+
+  @Override
+  public <RetType> ListenableFuture<RetType> submitAsync(TaskAction<RetType> taskAction)
+  {
+    try {
+      if (taskAction.canPerformAsync(task, toolbox)) {
+        final Stopwatch actionRunTime = Stopwatch.createStarted();
+        return Futures.transform(
+            taskAction.performAsync(task, toolbox),
+            v -> {
+              emitTimerMetric(RUN_TIME_METRIC, taskAction, actionRunTime.millisElapsed());
+              return v;
+            },
+            MoreExecutors.directExecutor()
+        );
+      } else {
+        return Futures.immediateFuture(submit(taskAction));
+      }
+    }
+    catch (Exception e) {
+      return Futures.immediateFailedFuture(e);
+    }
   }
 
   private <R> R performAction(TaskAction<R> taskAction)

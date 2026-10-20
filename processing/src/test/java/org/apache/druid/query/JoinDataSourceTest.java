@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
@@ -39,6 +40,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
@@ -123,6 +125,61 @@ public class JoinDataSourceTest
   public void test_getChildren_tableToLookup()
   {
     Assertions.assertEquals(ImmutableList.of(fooTable, lookylooLookup), joinTableToLookup.getChildren());
+  }
+
+  @Test
+  public void test_getReservedColumns()
+  {
+    // The condition's left-hand column and the left filter's column are reserved, but not the right-hand column.
+    final JoinDataSource joinDataSource = JoinDataSource.create(
+        fooTable,
+        lookylooLookup,
+        "j.",
+        "x == \"j.k\"",
+        JoinType.LEFT,
+        DimFilters.dimEquals("dim1", "a"),
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+    );
+    Assertions.assertEquals(ImmutableSet.of("x", "dim1"), joinDataSource.getReservedColumns());
+  }
+
+  @Test
+  public void test_getReservedColumns_nested()
+  {
+    final JoinDataSource innerJoin = JoinDataSource.create(
+        new ProjectDataSource(
+            fooTable,
+            VirtualColumns.create(
+                new ExpressionVirtualColumn("v0", "concat(dim1, 'x')", ColumnType.STRING, ExprMacroTable.nil())
+            )
+        ),
+        lookylooLookup,
+        "j.",
+        "v0 == \"j.k\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+    );
+
+    // The outer condition reads "j.v" from the inner join's right-hand side, so it is not reserved, unlike "dim2".
+    final JoinDataSource outerJoin = JoinDataSource.create(
+        innerJoin,
+        lookylooLookup,
+        "_j.",
+        "(\"j.v\" == \"_j.k\") && (dim2 == \"_j.v\")",
+        JoinType.INNER,
+        null,
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+    );
+
+    Assertions.assertEquals(ImmutableSet.of("v0", "dim1"), innerJoin.getReservedColumns());
+    Assertions.assertEquals(ImmutableSet.of("v0", "dim1", "dim2"), outerJoin.getReservedColumns());
   }
 
   @Test

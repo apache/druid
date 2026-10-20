@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.base.Preconditions;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.server.security.Resource;
 
 import javax.annotation.Nullable;
@@ -83,13 +84,21 @@ public class DruidSchemaCatalog
 
   /**
    * Given the name of a {@link NamedSchema} and the name of a table or function that belongs to that schema, return
-   * the appropriate value to use for {@link Resource#getType()} during authorization
+   * the {@link Resource} to authorize against. Null means no authorization is needed.
    */
   @Nullable
-  public String getResourceType(String schema, String resourceName)
+  public Resource getResource(String schema, String resourceName)
   {
     final NamedSchema namedSchema = namedSchemas.get(schema);
-    return namedSchema == null ? null : namedSchema.getSchemaResourceType(resourceName);
+    if (namedSchema != null) {
+      return namedSchema.getSchemaResource(resourceName);
+    } else if (InformationSchema.INFORMATION_SCHEMA_NAME.equals(schema)) {
+      // Everyone can read INFORMATION_SCHEMA.
+      return null;
+    } else {
+      // We shouldn't need to get a Resource for a schema that doesn't exist.
+      throw DruidException.defensive("No schema named[%s]", schema);
+    }
   }
 
   @Override

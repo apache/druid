@@ -693,7 +693,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
 
             if (shouldProcess) {
-              final List<InputRow> rows = reader.parse(record.getData(), isEndOfShard(record.getSequenceNumber()));
+              final List<InputRow> rows = reader.parse(
+                  record.getData(),
+                  isEndOfShard(record.getSequenceNumber()),
+                  record.isFiltered()
+              );
               boolean isPersistRequired = false;
 
               final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToUse =
@@ -1229,6 +1233,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 errorMsg == null,
                 handoffWaitMs,
                 getPartitionStats(),
+                null,
                 null,
                 null
             )
@@ -2255,7 +2260,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected abstract boolean isEndOfShard(SequenceOffsetType seqNum);
 
   /**
-   * deserializes the checkpoints into of Map<sequenceId, Map<PartitionIdType, SequenceOffsetType>>
+   * deserializes the checkpoints into of {@code Map<sequenceId, Map<PartitionIdType, SequenceOffsetType>>}
    *
    * @param toolbox           task toolbox
    * @param checkpointsString the json-serialized checkpoint string

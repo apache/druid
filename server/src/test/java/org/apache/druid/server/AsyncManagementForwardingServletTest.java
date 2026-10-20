@@ -523,7 +523,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
               injector.getInstance(DruidHttpClientConfig.class),
               coordinatorLeaderSelector,
               overlordLeaderSelector,
-              new AuthorizerMapper(ImmutableMap.of("allowAll", new AllowAllAuthorizer(null)))
+              new AuthorizerMapper(ImmutableMap.of("allowAll", new AllowAllAuthorizer(null))),
+              injector.getInstance(ServerConfig.class)
           )
       );
 

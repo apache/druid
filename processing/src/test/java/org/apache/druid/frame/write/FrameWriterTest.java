@@ -75,8 +75,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -360,6 +362,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     int allocatorSize = 0;
 
     Pair<Frame, Integer> writeResult;
+    final Map<Integer, List<List<Object>>> expectedRowsByCount = new HashMap<>();
 
     do {
       allocatorMemory.limit(allocatorSize);
@@ -374,8 +377,13 @@ public class FrameWriterTest extends InitializedNullHandlingTest
         if (writeResult.rhs > 0 && writeResult.rhs < totalRows) {
           didWritePartial = true;
 
+          // Keep checking every allocator capacity, but sort each distinct partial row set only once.
+          final List<List<Object>> expectedRows = expectedRowsByCount.computeIfAbsent(
+              rowsWritten,
+              rowCount -> sortIfNeeded(rowSequence.limit(rowCount), signature, sortColumns).toList()
+          );
           verifyFrame(
-              sortIfNeeded(rowSequence.limit(rowsWritten), signature, sortColumns),
+              Sequences.simple(expectedRows),
               writeResult.lhs,
               signature
           );

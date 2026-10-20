@@ -28,6 +28,9 @@ import javax.annotation.Nullable;
  * Abstraction for the physical storage components of a column, allowing us to decouple a columns logical type from
  * how it is actually stored in a segment. Also provides methods to create {@link DimensionHandler} and
  * {@link DimensionSchema} for creating new columns with identical physical storage components.
+ *
+ * <p>Implementations should be immutable and implement {@link Object#equals} and {@link Object#hashCode}, because
+ * {@link ColumnBuilder} interns formats.
  */
 public interface ColumnFormat
 {

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -40,7 +39,6 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -107,7 +105,6 @@ import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
-import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
@@ -122,11 +119,12 @@ import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.test.MSQTestBase.MSQBaseComponentSupplier;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextTestUtils;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -136,6 +134,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -159,7 +158,9 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.AcquireMode;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -286,65 +287,62 @@ import static org.mockito.Mockito.mock;
 public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
-                  .put(QueryContexts.FINALIZE_KEY, true)
-                  .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                  .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
-                  .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
-                  .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity())
-                  .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
-                  .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) FrameType.latestRowBased().version())
-                  .build();
+      QueryContext.builder()
+                  .put(QueryContextParameters.SQL_QUERY_ID, "test-query")
+                  .put(QueryContextParameters.FINALIZE, true)
+                  .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
+                  .put(QueryContextParameters.MAX_NUM_TASKS, 2)
+                  .put(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 0L)
+                  .put(QueryContextParameters.USER, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity())
+                  .put(QueryContextParameters.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
+                  .put(QueryContextParameters.ROW_BASED_FRAME_TYPE, (int) FrameType.latestRowBased().version())
+                  .toMap();
 
   public static final Map<String, Object> SUPERUSER_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.SUPER_USER_AUTH_RESULT.getIdentity())
-                  .buildKeepingLast();
+                  .put(QueryContextParameters.USER, CalciteTests.SUPER_USER_AUTH_RESULT.getIdentity())
+                  .toMap();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true)
-                  .build();
+                  .put(QueryContextParameters.DURABLE_SHUFFLE_STORAGE, true)
+                  .toMap();
 
 
   public static final Map<String, Object> FAULT_TOLERANCE_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true)
-                  .build();
+                  .put(QueryContextParameters.FAULT_TOLERANCE, true)
+                  .toMap();
 
   public static final Map<String, Object> PARALLEL_MERGE_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
-                      MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                      QueryContextParameters.CLUSTER_STATISTICS_MERGE_MODE,
                       ClusterStatisticsMergeMode.PARALLEL.toString()
                   )
-                  .build();
+                  .toMap();
 
   public static final Map<String, Object> USE_COMBINER_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_USE_COMBINER, true)
-                  .build();
+                  .put(QueryContextParameters.USE_COMBINER, true)
+                  .toMap();
 
   public static final Map<String, Object> FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(
-                      MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT,
-                      true
-                  )
-                  .build();
+                  .put(QueryContextParameters.FAIL_ON_EMPTY_INSERT, true)
+                  .toMap();
 
   public static final Map<String, Object>
-      ROLLUP_CONTEXT_PARAMS = ImmutableMap.<String, Object>builder()
-                                          .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
-                                          .put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false)
-                                          .build();
+      ROLLUP_CONTEXT_PARAMS = QueryContext.builder()
+                                          .put(QueryContextParameters.FINALIZE_AGGREGATIONS, false)
+                                          .put(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING, false)
+                                          .toMap();
 
   public static final String FAULT_TOLERANCE = "fault_tolerance";
   public static final String DURABLE_STORAGE = "durable_storage";
@@ -376,8 +374,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected static final String TEST_CONTROLLER_TASK_ID = "query-test-query";
   // Fields in the query context to ignore during assertion.
   protected Set<String> ignoreFields = Set.of(
-      MultiStageQueryContext.CTX_START_TIME,
-      MultiStageQueryContext.CTX_QUERY_DEADLINE
+      QueryContextParameters.START_TIME.getName(),
+      QueryContextParameters.QUERY_DEADLINE.getName()
   );
 
   protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
@@ -534,7 +532,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
           config.storageDirectory = newTempFolder("storageDir");
           binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
-              new LocalDataSegmentPusher(config),
+              new LocalDataSegmentPusher(config, new DeepStorageSegmentConfig()),
               testSegmentManager
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
@@ -888,10 +886,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         SqlQueryPlus.builder()
                     .sql(query)
-                    .queryContext(context)
-                    .parameters(parameters)
+                    .queryContext(QueryContextTestUtils.asJsonContext(objectMapper, context))
                     .auth(authenticationResult)
                     .build()
+                    .withParameters(parameters)
     );
 
     final List<Object[]> sequence = stmt.execute().getResults().toList();
@@ -949,11 +947,26 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
     }
 
-    Assertions.assertEquals(expectedMSQSpec.getQuery().withOverriddenContext(ignoredContext), querySpecForTask.getQuery());
+    // Compare the queries in their JSON form, since the test submits its context as a client does: the contexts of the
+    // query and its subqueries then hold the JSON form of their values on both sides
+    Assertions.assertEquals(
+        jsonRoundTrip(expectedMSQSpec.getQuery().withOverriddenContext(ignoredContext)),
+        jsonRoundTrip(querySpecForTask.getQuery())
+    );
     Assertions.assertEquals(expectedMSQSpec.getAssignmentStrategy(), querySpecForTask.getAssignmentStrategy());
     Assertions.assertEquals(expectedMSQSpec.getColumnMappings(), querySpecForTask.getColumnMappings());
     Assertions.assertEquals(expectedMSQSpec.getDestination(), querySpecForTask.getDestination());
 
+  }
+
+  private Query<?> jsonRoundTrip(final Query<?> query)
+  {
+    try {
+      return objectMapper.readValue(objectMapper.writeValueAsBytes(query), Query.class);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void assertTuningConfig(
@@ -1032,8 +1045,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setQueryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
-      if (queryContext.containsKey(MSQTaskQueryMaker.USER_KEY)
-          && CalciteTests.TEST_SUPERUSER_NAME.equals(queryContext.get(MSQTaskQueryMaker.USER_KEY))) {
+      if (CalciteTests.TEST_SUPERUSER_NAME.equals(QueryContext.of(queryContext).get(QueryContextParameters.USER))) {
         this.authenticationResult = CalciteTests.SUPER_USER_AUTH_RESULT;
       }
       return asBuilder();
@@ -1463,46 +1475,47 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
-          FutureUtils.getUnchecked(
-              segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL).getSegmentFuture(),
-              false
-          );
-          final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
-          final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
+          // Keep the acquire open across the direct file reads below so the (possibly ephemeral) cache keeps the
+          // segment files on disk; closing the un-released action afterwards releases everything.
+          try (AcquireSegmentAction acquireAction = segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL)) {
+            acquireAction.await();
+            final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
+            final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 
-          // assert rowSignature
-          Assertions.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(cursorFactory.getRowSignature()));
+            // assert rowSignature
+            Assertions.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(cursorFactory.getRowSignature()));
 
-          // assert rollup
-          Assertions.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
+            // assert rollup
+            Assertions.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
 
-          // assert query granularity
-          Assertions.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
+            // assert query granularity
+            Assertions.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
 
-          // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
-          // so treat null as empty
-          Assertions.assertArrayEquals(
-              expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
-              queryableIndex.getMetadata().getAggregators() == null
-              ? new AggregatorFactory[0]
-              : queryableIndex.getMetadata().getAggregators()
-          );
+            // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
+            // so treat null as empty
+            Assertions.assertArrayEquals(
+                expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
+                queryableIndex.getMetadata().getAggregators() == null
+                ? new AggregatorFactory[0]
+                : queryableIndex.getMetadata().getAggregators()
+            );
 
-          if (expectedProjections != null) {
-            Assertions.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
-          }
+            if (expectedProjections != null) {
+              Assertions.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+            }
 
-          if (expectedClusterGroups != null) {
-            Assertions.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
-            Assertions.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
-          }
+            if (expectedClusterGroups != null) {
+              Assertions.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
+              Assertions.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
+            }
 
-          for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
-            // transforming rows for sketch assertions
-            List<Object> transformedRow = row.stream()
-                                             .map(MSQTestBase.this::segmentToAssertionValueMapper)
-                                             .collect(Collectors.toList());
-            segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
+            for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
+              // transforming rows for sketch assertions
+              List<Object> transformedRow = row.stream()
+                                               .map(MSQTestBase.this::segmentToAssertionValueMapper)
+                                               .collect(Collectors.toList());
+              segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
+            }
           }
         }
 

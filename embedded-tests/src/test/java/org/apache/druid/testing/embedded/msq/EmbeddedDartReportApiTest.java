@@ -21,17 +21,14 @@ package org.apache.druid.testing.embedded.msq;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.utils.IdUtils;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ThrowableMatcher;
-import org.apache.druid.guice.SleepModule;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -41,7 +38,8 @@ import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.security.Action;
@@ -53,18 +51,8 @@ import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.QueryInfo;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
-import org.apache.druid.testing.embedded.EmbeddedCoordinator;
-import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.EmbeddedHistorical;
-import org.apache.druid.testing.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.auth.EmbeddedBasicAuthResource;
 import org.apache.druid.testing.embedded.auth.HttpUtil;
-import org.apache.druid.testing.embedded.indexing.MoreResources;
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -72,7 +60,6 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -82,85 +69,20 @@ import java.util.stream.Collectors;
  * Embedded test for the Dart report API at {@code /druid/v2/sql/queries/{id}/reports}.
  * Uses batch ingestion to avoid dependency on Kafka/Docker.
  */
-public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
+public class EmbeddedDartReportApiTest extends BaseDartQueryTest
 {
-  private static final int MAX_RETAINED_REPORT_COUNT = 10;
-
   // Authentication constants - use shared constants from EmbeddedBasicAuthResource where available
   private static final String REGULAR_USER = "regularUser";
   private static final String REGULAR_PASSWORD = "helloworld";
 
-  private final EmbeddedBroker broker1 = new EmbeddedBroker();
-  private final EmbeddedBroker broker2 = new EmbeddedBroker();
-  private final EmbeddedIndexer indexer = new EmbeddedIndexer();
-  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  private final EmbeddedHistorical historical = new EmbeddedHistorical();
-  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-
-  private EmbeddedMSQApis msqApis;
-  private String ingestedDataSource;
   private HttpClient adminClient;
   private HttpClient regularUserClient;
 
-  private void configureBroker(EmbeddedBroker broker, int port)
-  {
-    broker.addProperty("druid.msq.dart.controller.heapFraction", "0.5")
-          .addProperty("druid.msq.dart.controller.maxRetainedReportCount", String.valueOf(MAX_RETAINED_REPORT_COUNT))
-          .addProperty("druid.query.default.context.maxConcurrentStages", "1")
-          .addProperty("druid.sql.planner.enableSysQueriesTable", "true")
-          .addProperty("druid.plaintextPort", String.valueOf(port));
-  }
-
-  @Override
-  protected EmbeddedDruidCluster createCluster()
-  {
-    coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
-    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-
-    // Enable Dart with report retention on both brokers, with different ports
-    configureBroker(broker1, 7082);
-    configureBroker(broker2, 7083);
-
-    historical.addProperty("druid.msq.dart.worker.heapFraction", "0.5")
-              .addProperty("druid.msq.dart.worker.concurrentQueries", "1");
-
-    indexer.setServerMemory(400_000_000)
-           .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
-           .addProperty("druid.processing.numThreads", "2")
-           .addProperty("druid.worker.capacity", "4");
-
-    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
-                               .addCommonProperty("druid.msq.dart.enabled", "true")
-                               .addResource(new EmbeddedBasicAuthResource())
-                               .useLatchableEmitter()
-                               .addServer(coordinator)
-                               .addServer(overlord)
-                               .addServer(broker1)
-                               .addServer(broker2)
-                               .addServer(indexer)
-                               .addServer(historical)
-                               .addExtension(SleepModule.class);
-  }
-
   @BeforeAll
-  protected void setupData()
+  protected void setupAuth()
   {
-    msqApis = new EmbeddedMSQApis(cluster, overlord);
-
-    // Set up HTTP clients for admin and regular user
     setupAdminClient();
     setupRegularUserAndClient();
-
-    // Ingest test data once, using batch ingestion.
-    ingestedDataSource = EmbeddedClusterApis.createTestDatasourceName();
-    final String taskId = IdUtils.getRandomId();
-    final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(ingestedDataSource).withId(taskId);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-
-    // Wait for segments to be available on both brokers
-    cluster.callApi().waitForAllSegmentsToBeAvailable(ingestedDataSource, coordinator, broker1);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(ingestedDataSource, coordinator, broker2);
   }
 
   private void setupAdminClient()
@@ -214,9 +136,11 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
                 false,
                 false,
                 false,
-                ImmutableMap.of(
-                    QueryContexts.ENGINE, "msq-dart",
-                    QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId
+                QueryContext.ofMap(
+                    QueryContextParameters.ENGINE,
+                    "msq-dart",
+                    QueryContextParameters.SQL_QUERY_ID,
+                    sqlQueryId
                 ),
                 null
             )
@@ -227,7 +151,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("10", result);
 
     // Now fetch the report using the SQL query ID
-    final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker1);
+    final GetQueryReportResponse reportResponse = waitForCompletedReports(sqlQueryId, broker1).get(0);
 
     // Verify the report response
     Assertions.assertNotNull(reportResponse, "Report response should not be null");
@@ -314,9 +238,11 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
                 false,
                 false,
                 false,
-                ImmutableMap.of(
-                    QueryContexts.ENGINE, "msq-dart",
-                    QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId
+                QueryContext.ofMap(
+                    QueryContextParameters.ENGINE,
+                    "msq-dart",
+                    QueryContextParameters.SQL_QUERY_ID,
+                    sqlQueryId
                 ),
                 null
             )
@@ -332,12 +258,12 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, sqlClients1.getAllClients().size(), "Broker1 should have 1 client (broker2)");
     Assertions.assertEquals(1, sqlClients2.getAllClients().size(), "Broker2 should have 1 client (broker1)");
 
-    // Fetch the report from both brokers, to verify cross-broker lookup is working
-    final GetQueryReportResponse reportFromBroker1 = msqApis.getDartQueryReport(sqlQueryId, broker1);
-    final GetQueryReportResponse reportFromBroker2 = msqApis.getDartQueryReport(sqlQueryId, broker2);
+    // Wait for the completed report to be available from both brokers. The SQL result can be returned
+    // before the controller is deregistered and its completed report is published.
+    final List<GetQueryReportResponse> completedReports = waitForCompletedReports(sqlQueryId, broker1, broker2);
 
     // Verify the report content
-    for (GetQueryReportResponse report : Arrays.asList(reportFromBroker1, reportFromBroker2)) {
+    for (GetQueryReportResponse report : completedReports) {
       Assertions.assertNotNull(report);
       final DartQueryInfo queryInfo = (DartQueryInfo) report.getQueryInfo();
       Assertions.assertEquals(sqlQueryId, queryInfo.getSqlQueryId());
@@ -362,7 +288,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
 
     // Step 1: Issue the query asynchronously.
     final ListenableFuture<String> queryFuture =
-        msqApis.submitDartSqlAsync(sql, Map.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId), broker1);
+        msqApis.submitDartSqlAsync(sql, QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, sqlQueryId), broker1);
 
     // Step 2: Get the report.
     final GetQueryReportResponse runningReport = waitForReport(sqlQueryId);
@@ -581,25 +507,32 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
   }
 
   /**
-   * Polls the report API on {@link #broker1} until a report is available.
+   * Polls the report API on the specified brokers until completed reports are available from all of them.
    */
-  private GetQueryReportResponse waitForReport(String sqlQueryId)
+  private List<GetQueryReportResponse> waitForCompletedReports(
+      final String sqlQueryId,
+      final EmbeddedBroker... targetBrokers
+  )
   {
     final long timeout = 30_000;
-    final long deadline = System.currentTimeMillis() + timeout;
-    while (System.currentTimeMillis() < deadline) {
-      final GetQueryReportResponse report = msqApis.getDartQueryReport(sqlQueryId, broker1);
-      if (report != null) {
-        return report;
-      }
-      try {
-        Thread.sleep(100);
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    throw new ISE("Timed out after[%,d] ms waiting for query to be in RUNNING state", timeout);
+    return cluster.callApi()
+                  .waitForResult(
+                      () -> {
+                        final List<GetQueryReportResponse> reports = new ArrayList<>(targetBrokers.length);
+                        for (final EmbeddedBroker targetBroker : targetBrokers) {
+                          reports.add(msqApis.getDartQueryReport(sqlQueryId, targetBroker));
+                        }
+                        return reports;
+                      },
+                      reports -> reports.stream().allMatch(
+                          report -> report != null
+                                    && report.getQueryInfo() instanceof DartQueryInfo queryInfo
+                                    && queryInfo.getDurationMs() != null
+                      )
+                  )
+                  .withTimeoutMillis(timeout)
+                  .withRetryMillis(100)
+                  .go();
   }
 
   /**

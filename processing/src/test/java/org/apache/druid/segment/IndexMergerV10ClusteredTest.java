@@ -39,6 +39,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
@@ -136,6 +137,38 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
         final String tenant = tenantSel.getRow().size() == 0 ? null : tenantSel.lookupName(tenantSel.getRow().get(0));
         final String region = regionSel.getRow().size() == 0 ? null : regionSel.lookupName(regionSel.getRow().get(0));
         out.add(Arrays.asList(tenant, region));
+        cursor.advance();
+      }
+    }
+    return out;
+  }
+
+  private static InputRow tagsRow(long ts, String tenant, Object tags)
+  {
+    return new MapBasedInputRow(ts, List.of("tenant", "tags"), Map.of("ts", ts, "tenant", tenant, "tags", tags));
+  }
+
+  /**
+   * Returns every row's {@code tags} values, in cursor order.
+   */
+  private static List<List<String>> scanTags(QueryableIndex index)
+  {
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        index,
+        QueryableIndexTimeBoundaryInspector.create(index)
+    );
+    final List<List<String>> out = new ArrayList<>();
+    try (CursorHolder holder = factory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = holder.asCursor();
+      final DimensionSelector tagsSel =
+          cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("tags"));
+      while (!cursor.isDone()) {
+        final IndexedInts row = tagsSel.getRow();
+        final List<String> values = new ArrayList<>(row.size());
+        for (int i = 0; i < row.size(); i++) {
+          values.add(tagsSel.lookupName(row.get(i)));
+        }
+        out.add(values);
         cursor.advance();
       }
     }
@@ -499,6 +532,38 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
         ),
         tuples.tuples()
     );
+  }
+
+  @Test
+  void testPersistMultiValueStringInLaterGroup()
+  {
+    // only the second group (globex) has a multi-value row, so only its column format learns that the column has
+    // multiple values
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time"),
+            new StringDimensionSchema("tags")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final QueryableIndex index = IndexBuilder.create()
+                                             .useV10()
+                                             .tmpDir(new File(tempDir, "multi-value"))
+                                             .segmentWriteOutMediumFactory(
+                                                 OffHeapMemorySegmentWriteOutMediumFactory.instance()
+                                             )
+                                             .schema(clusteredSchema(spec))
+                                             .rows(List.of(
+                                                 tagsRow(T0, "acme", "a"),
+                                                 tagsRow(T0 + 1, "globex", List.of("b", "c"))
+                                             ))
+                                             .buildMMappedIndex();
+
+    final List<TableClusterGroupSpec> groups = index.getClusteredBaseSummary().getClusterGroups();
+    final QueryableIndex globexGroup = index.getClusterGroupQueryableIndex(groups.get(1), false);
+    Assertions.assertTrue(globexGroup.getColumnCapabilities("tags").hasMultipleValues().isTrue());
+    Assertions.assertEquals(List.of(List.of("a"), List.of("b", "c")), scanTags(index));
   }
 
   @Test

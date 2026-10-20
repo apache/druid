@@ -50,18 +50,23 @@ class DependencyReportParser(HTMLParser):
 
     def parse(self, f):
         self.dep_to_license = {}
+        self.tables_started = 0
+        self.tables_finished = 0
         self.feed(f.read())
+        if self.tables_finished < self.tables_started:
+            raise Exception("Parsed only {} of {} compile dependency tables".format(self.tables_finished, self.tables_started))
         return self.dep_to_license
 
     def handle_starttag(self, tag, attrs):
         # print("current: {}, start tag: {}, attrs:{} ".format(self.state, tag, attrs))
+        if tag == "a" and dict(attrs).get("id") in ("Project_Dependencies_compile", "Project_Transitive_Dependencies_compile"):
+            self.state = "h3_end"
+            self.include_classifier = False
+            self.tables_started += 1
+
         if self.state == "none":
             if tag == "h2":
                 self.state = "h2_start"
-            elif tag == "a":
-                for attr in attrs:
-                    if attr[0] == "id" and attr[1] == "Project_Dependencies_compile":
-                        self.state = "modern_compile_anchor"
 
         if self.state == "h2_start":
             if tag == "a":
@@ -79,10 +84,6 @@ class DependencyReportParser(HTMLParser):
                 for attr in attrs:
                     if attr[0] == "name" and attr[1] == "compile":
                         self.state = "compile_start"
-
-        if self.state == "modern_compile_heading":
-            if tag == "h2":
-                self.state = "h3_end"
 
         if self.state == "h3_end":
             if tag == "table":
@@ -117,10 +118,6 @@ class DependencyReportParser(HTMLParser):
         if self.state == "project_dependencies_start":
             if tag == "a":
                 self.state = "project_dependencies_end"
-
-        if self.state == "modern_compile_anchor":
-            if tag == "a":
-                self.state = "modern_compile_heading"
 
         if self.state == "h2_start":
             if tag == "h2":
@@ -169,6 +166,7 @@ class DependencyReportParser(HTMLParser):
         if self.state == "row_end":
             if tag == "table":
                 self.state = "none"
+                self.tables_finished += 1
 
     def handle_data(self, data):
         if self.state == "td_start":
@@ -258,6 +256,7 @@ def build_compatible_license_names():
     compatible_licenses['BSD-2-Clause'] = 'BSD-2-Clause License'
     compatible_licenses['BSD 2-Clause license'] = 'BSD-2-Clause License'
     compatible_licenses['BSD 2-Clause License'] = 'BSD-2-Clause License'
+    compatible_licenses['The BSD 2-Clause License'] = 'BSD-2-Clause License'
 
     compatible_licenses['BSD-3-Clause License'] = 'BSD-3-Clause License'
     compatible_licenses['New BSD license'] = 'BSD-3-Clause License'
@@ -326,10 +325,12 @@ def build_compatible_license_names():
     compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
     compatible_licenses['SPDX-License-Identifier: MIT'] = 'MIT License'
     compatible_licenses['MIT'] = 'MIT License'
+    compatible_licenses['MIT license'] = 'MIT License'
 
     compatible_licenses['MIT-0'] = 'MIT No Attribution'
 
     compatible_licenses['The Go license'] = 'The Go license'
+    compatible_licenses['Go License'] = 'The Go license'
     compatible_licenses['Universal Permissive License, Version 1.0'] = 'Universal Permissive License, Version 1.0'
 
     compatible_licenses['-'] = '-'
@@ -386,6 +387,40 @@ def check_licenses(license_yaml, dependency_reports_root):
     skipping_licenses = {}
     with open(license_yaml, encoding='utf-8') as registry_file:
         licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
+    # Validate that every entry uses a known module tag. Core extensions use extensions/<output-dir>
+    # (matching how they appear in the binary distribution's extensions/ directory), and contrib
+    # extensions use extensions-contrib/<output-dir> so the release build can filter them out. This
+    # check enforces that any new contrib entry actually uses the contrib prefix, so it cannot
+    # silently leak into the release LICENSE/NOTICE under a stray/mistagged module name.
+    known_module_prefixes = (
+        'extensions/',
+        'extensions-contrib/',
+    )
+    known_module_exact = {
+        'java-core',
+        'web-console',
+    }
+    unknown_module_entries = []
+    for license in licenses_list:
+        module = license.get('module')
+        if module is None:
+            unknown_module_entries.append((license.get('name'), '<missing module>'))
+        elif module not in known_module_exact and not any(module.startswith(p) for p in known_module_prefixes):
+            unknown_module_entries.append((license.get('name'), module))
+    if unknown_module_entries:
+        print_log_to_stderr("Error: found {} licenses.yaml entries with unknown module tags".format(len(unknown_module_entries)))
+        for name, module in unknown_module_entries:
+            print_log_to_stderr("  name: {}, module: {}".format(name, module))
+        print_log_to_stderr(
+            "Every entry must use one of the known exact module tags [{}] or a module starting with one of [{}]. "
+            "Contrib extensions in particular must use the extensions-contrib/ prefix so the release "
+            "LICENSE/NOTICE generation can filter them out.".format(
+                ', '.join(sorted(known_module_exact)),
+                ', '.join(known_module_prefixes)
+            )
+        )
+        sys.exit(1)
+
     for license in licenses_list:
         if 'libraries' in license:
             for library in license['libraries']:

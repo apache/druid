@@ -20,12 +20,12 @@
 package org.apache.druid.java.util.http.client.response;
 
 import com.google.common.io.ByteSource;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -56,18 +56,21 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(response.getContent())) {
-      queue.put(channelStream);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
+    // Body content arrives via HttpContent chunks in Netty 4. Seed the queue with an empty stream so
+    // SequenceInputStream's constructor (which eagerly calls peekNextStream()) doesn't block before any
+    // chunks arrive. The placeholder is read once and yields zero bytes, then real chunks follow.
+    try {
+      queue.put(ByteSource.empty().openStream());
     }
     catch (InterruptedException e) {
-      log.error(e, "Queue appending interrupted");
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
-    byteCount.addAndGet(response.getContent().readableBytes());
+    catch (IOException e) {
+      // ByteSource.empty().openStream() never throws.
+      throw new RuntimeException(e);
+    }
+
     return ClientResponse.finished(
         new SequenceInputStream(
             new Enumeration<>()
@@ -102,20 +105,22 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleChunk(
       ClientResponse<InputStream> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    final ChannelBuffer channelBuffer = chunk.getContent();
-    final int bytes = channelBuffer.readableBytes();
+    final ByteBuf byteBuf = chunk.content();
+    final int bytes = byteBuf.readableBytes();
     if (bytes > 0) {
-      try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(channelBuffer)) {
-        queue.put(channelStream);
+      // Copy the bytes synchronously: the underlying pooled ByteBuf is released by
+      // SimpleChannelInboundHandler after channelRead0 returns, so we cannot retain
+      // a reference past this callback.
+      final byte[] copy = new byte[bytes];
+      byteBuf.readBytes(copy);
+      try {
+        queue.put(new ByteArrayInputStream(copy));
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
       }
       catch (InterruptedException e) {
         log.warn(e, "Thread interrupted while adding to queue");

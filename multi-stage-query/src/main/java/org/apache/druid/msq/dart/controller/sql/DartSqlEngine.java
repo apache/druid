@@ -47,10 +47,10 @@ import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -120,10 +120,12 @@ public class DartSqlEngine implements SqlEngine
   }
 
   /**
-   * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
-   * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID that becomes the {@link Controller#queryId()}.
+   * Dart queryId must be globally unique, so we cannot use the user-provided
+   * {@link org.apache.druid.query.context.QueryContextParameters#SQL_QUERY_ID}
+   * or {@link QueryContextParameters#QUERY_ID}. Instead we generate a UUID that becomes the {@link Controller#queryId()}.
    *
-   * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
+   * The user-provided {@link org.apache.druid.query.context.QueryContextParameters#SQL_QUERY_ID} is still registered
+   * with the {@link SqlLifecycleManager}
    * for purposes of query cancellation.
    */
   public static String generateExecutionId()
@@ -147,6 +149,7 @@ public class DartSqlEngine implements SqlEngine
       case WINDOW_LEAF_OPERATOR:
       case UNNEST:
       case ALLOW_BINDABLE_PLAN:
+      case CAN_DDL:
         return true;
 
       case CAN_INSERT:
@@ -185,7 +188,7 @@ public class DartSqlEngine implements SqlEngine
           ImmutableList.of(
               Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
           ),
-          ImmutableList.of(QueryContexts.CTX_FULL_REPORT)
+          ImmutableList.of(QueryContextParameters.FULL_REPORT.getName())
       );
     } else {
       return validatedRowType;
@@ -242,10 +245,10 @@ public class DartSqlEngine implements SqlEngine
     }
 
     // Set default query timeout if not already specified.
-    contextMap.putIfAbsent(QueryContexts.TIMEOUT_KEY, serverConfig.getDefaultQueryTimeout());
+    contextMap.putIfAbsent(QueryContextParameters.TIMEOUT.getName(), serverConfig.getDefaultQueryTimeout());
 
     // Add execution ID.
-    contextMap.put(QueryContexts.CTX_DART_QUERY_ID, generateExecutionId());
+    QueryContextParameters.DART_QUERY_ID.set(contextMap, generateExecutionId());
   }
 
   @Override
@@ -375,17 +378,28 @@ public class DartSqlEngine implements SqlEngine
   @Override
   public void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
-    final Object dartQueryId = plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID);
-    if (dartQueryId instanceof String) {
-      final ControllerHolder holder = controllerRegistry.getController((String) dartQueryId);
+    final String dartQueryId;
+    try {
+      dartQueryId = plannerContext.queryContext().get(QueryContextParameters.DART_QUERY_ID);
+    }
+    catch (BadQueryContextException e) {
+      log.warn(
+          e,
+          "Invalid %s for query[%s], cannot cancel.",
+          QueryContextParameters.DART_QUERY_ID,
+          plannerContext.getSqlQueryId()
+      );
+      return;
+    }
+    if (dartQueryId != null) {
+      final ControllerHolder holder = controllerRegistry.getController(dartQueryId);
       if (holder != null) {
         holder.cancel(CancellationReason.USER_REQUEST, null);
       }
     } else {
       log.warn(
-          "%s[%s] for query[%s] is not a string, cannot cancel.",
-          QueryContexts.CTX_DART_QUERY_ID,
-          dartQueryId,
+          "%s for query[%s] is not set, cannot cancel.",
+          QueryContextParameters.DART_QUERY_ID,
           plannerContext.getSqlQueryId()
       );
     }

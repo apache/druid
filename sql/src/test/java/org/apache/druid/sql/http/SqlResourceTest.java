@@ -52,19 +52,18 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
@@ -91,13 +90,11 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
@@ -120,7 +117,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -431,7 +427,7 @@ public class SqlResourceTest extends CalciteTestBase
         // We set uncoveredIntervalsLimit more for the funzies than anything.  The underlying setup of the test doesn't
         // actually look at it or operate with it.  Instead, we set the supplier of the ResponseContext to mock what
         // we would expect from the normal query pipeline
-        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id", "uncoveredIntervalsLimit", 1),
+        ImmutableMap.of(QueryContextParameters.SQL_QUERY_ID.getName(), "id", "uncoveredIntervalsLimit", 1),
         null
     );
 
@@ -576,7 +572,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles"),
+            QueryContext.ofMap(QueryContextParameters.SQL_TIME_ZONE, "America/Los_Angeles"),
             null
         )
     ).rhs;
@@ -594,7 +590,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     // Create a new SqlResource with a DefaultQueryConfig that sets sqlTimeZone
     final DefaultQueryConfig queryConfigWithTimezone = new DefaultQueryConfig(
-        ImmutableMap.of("sqlTimeZone", "America/Los_Angeles")
+        QueryContext.ofMap(QueryContextParameters.SQL_TIME_ZONE, "America/Los_Angeles")
     );
 
     // We need to create a new SqlResource instance with our custom DefaultQueryConfig
@@ -1483,12 +1479,10 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testExplainCountStar() throws Exception
   {
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.CTX_SQL_QUERY_ID,
-        DUMMY_SQL_QUERY_ID,
-        PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
-        "false"
-    );
+    Map<String, Object> queryContext = QueryContext.builder()
+        .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_QUERY_ID)
+        .putRaw(QueryContextParameters.USE_NATIVE_QUERY_EXPLAIN.getName(), "false")
+        .toMap();
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo",
@@ -1508,7 +1502,7 @@ public class SqlResourceTest extends CalciteTestBase
                 StringUtils.format(
                     "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"sqlQueryId\":\"%s\",\"%s\":\"%s\"}}], signature=[{a0:LONG}])\n",
                     DUMMY_SQL_QUERY_ID,
-                    PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
+                    QueryContextParameters.USE_NATIVE_QUERY_EXPLAIN.getName(),
                     "false"
                 ),
                 "RESOURCES",
@@ -1529,6 +1523,22 @@ public class SqlResourceTest extends CalciteTestBase
     validateInvalidSqlError(
         errorResponse,
         "Incorrect syntax near the keyword 'FROM' at line 1, column 1"
+    );
+    Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testInvalidSetParameterReturnsBadRequest() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SET maxRowsQueuedForOrdering = 0; SELECT 1",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
     );
     Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1600,6 +1610,66 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testInvalidTimestampLiteral() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT * FROM druid.foo WHERE __time BETWEEN '2026-09-10 00:00:00' AND '20260-09-11 00:00:00' LIMIT 1",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [20260-09-11 00:00:00]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
+  public void testInvalidTimestampExpressionWithoutCast() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT MILLIS_TO_TIMESTAMP(253402300800000)",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [MILLIS_TO_TIMESTAMP(253402300800000:BIGINT)]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
+  public void testInvalidTimestampLiteralWithExplicitCast() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT CAST('20260-09-11 00:00:00' AS TIMESTAMP)",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [20260-09-11 00:00:00]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
   public void testResourceLimitExceeded() throws Exception
   {
     final ErrorResponse errorResponse = doPost(
@@ -1609,7 +1679,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of(GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1, BaseQuery.SQL_QUERY_ID, "id"),
+            QueryContext.builder().put(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1).put(QueryContextParameters.SQL_QUERY_ID, "id").toMap(),
             null
         )
     ).lhs;
@@ -1642,7 +1712,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"),
+            ImmutableMap.of(QueryContextParameters.SQL_QUERY_ID.getName(), "id"),
             null
         ),
         DruidException.Category.INVALID_INPUT.getExpectedStatus()
@@ -1823,7 +1893,7 @@ public class SqlResourceTest extends CalciteTestBase
                   false,
                   false,
                   false,
-                  ImmutableMap.of("priority", -5, BaseQuery.SQL_QUERY_ID, sqlQueryId),
+                  ImmutableMap.of("priority", -5, QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId),
                   null
               ),
               makeRegularUserReq()
@@ -1846,7 +1916,7 @@ public class SqlResourceTest extends CalciteTestBase
                 false,
                 false,
                 false,
-                ImmutableMap.of("priority", -5, BaseQuery.SQL_QUERY_ID, sqlQueryId),
+                ImmutableMap.of("priority", -5, QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId),
                 null
             ),
             makeRegularUserReq()
@@ -1901,12 +1971,8 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryTimeoutException() throws Exception
   {
     final String sqlQueryId = "timeoutTest";
-    Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.TIMEOUT_KEY,
-        1,
-        BaseQuery.SQL_QUERY_ID,
-        sqlQueryId
-    );
+    Map<String, Object> queryContext = QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1L,
+                                                           QueryContextParameters.SQL_QUERY_ID, sqlQueryId);
 
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
@@ -2054,9 +2120,9 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String sqlQueryId = "badQueryContextTimeout";
     Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.TIMEOUT_KEY,
+        QueryContextParameters.TIMEOUT.getName(),
         "2000'",
-        BaseQuery.SQL_QUERY_ID,
+        QueryContextParameters.SQL_QUERY_ID.getName(),
         sqlQueryId
     );
     final ErrorResponse errorResponse = doPost(
@@ -2086,7 +2152,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testQueryContextKeyNotAllowed() throws Exception
   {
-    Map<String, Object> queryContext = ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, "all");
+    Map<String, Object> queryContext = QueryContext.ofMap(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY, "all");
     ErrorResponse exception = postSyncForException(
         new SqlQuery("SELECT 1337", ResultFormat.OBJECT, false, false, false, queryContext, null),
         Status.BAD_REQUEST.getStatusCode()
@@ -2119,7 +2185,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assertions.assertEquals(user, stats.get("identity"));
     Assertions.assertTrue(stats.containsKey("sqlQuery/time"));
     Assertions.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
-    Assertions.assertTrue(queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
+    Assertions.assertTrue(queryContext.containsKey(QueryContextParameters.SQL_QUERY_ID.getName()));
     if (success) {
       Assertions.assertTrue(stats.containsKey("sqlQuery/bytes"));
     } else {
@@ -2129,7 +2195,7 @@ public class SqlResourceTest extends CalciteTestBase
 
   private static SqlQuery createSimpleQueryWithId(String sqlQueryId, String sql)
   {
-    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, sqlQueryId), null);
+    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId), null);
   }
 
   private Pair<ErrorResponse, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
@@ -2188,8 +2254,8 @@ public class SqlResourceTest extends CalciteTestBase
   {
     MockHttpServletResponse response = MockHttpServletResponse.forRequest(req);
 
-    final Object explicitQueryId = query.getContext().get("queryId");
-    final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
+    final Object explicitQueryId = query.getContext().get(QueryContextParameters.QUERY_ID.getName());
+    final Object explicitSqlQueryId = query.getContext().get(QueryContextParameters.SQL_QUERY_ID.getName());
     Assertions.assertNull(resource.doPost(query, req));
 
     final Object actualQueryId = response.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
@@ -2214,8 +2280,8 @@ public class SqlResourceTest extends CalciteTestBase
 
   private Response postForSyncResponse(SqlQuery query, MockHttpServletRequest req)
   {
-    final Object explicitQueryId = query.getContext().get("queryId");
-    final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
+    final Object explicitQueryId = query.getContext().get(QueryContextParameters.QUERY_ID.getName());
+    final Object explicitSqlQueryId = query.getContext().get(QueryContextParameters.SQL_QUERY_ID.getName());
 
     final Response response = resource.doPost(query, req);
 

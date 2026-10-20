@@ -19,7 +19,7 @@ set -e
 set -x
 
 # Install node.js via maven frontend plugin (same approach as jacoco script)
-mvn -B com.github.eirslett:frontend-maven-plugin:install-node-and-npm@install-node-and-npm -pl web-console/
+./mvnw -B com.github.eirslett:frontend-maven-plugin:install-node-and-npm@install-node-and-npm -pl web-console/
 PATH+=:web-console/target/node/
 
 # docs
@@ -31,10 +31,7 @@ npm run spellcheck
 cd ..
 
 # web console
-mvn -B test -pl 'web-console'
-cd web-console
-{ for i in 1 2 3; do npm run codecov && break || sleep 15; done }
-cd ..
+./mvnw -B test -pl 'web-console'
 
 # web console end-to-end test
 ./.github/scripts/setup_generate_license.sh

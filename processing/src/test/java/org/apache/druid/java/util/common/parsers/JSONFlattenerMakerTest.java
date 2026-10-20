@@ -67,11 +67,11 @@ public class JSONFlattenerMakerTest
   {
     JsonNode node;
     Object result;
-    Integer i1 = 123;
+    final int i1 = 123;
     node = OBJECT_MAPPER.readTree(OBJECT_MAPPER.writeValueAsString(i1));
     Assertions.assertTrue(node.isInt());
     result = FLATTENER_MAKER.finalizeConversionForMap(node);
-    Assertions.assertEquals(i1.longValue(), result);
+    Assertions.assertEquals((long) i1, result);
 
     Long l1 = 1L + Integer.MAX_VALUE;
     node = OBJECT_MAPPER.readTree(OBJECT_MAPPER.writeValueAsString(l1));

@@ -57,6 +57,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -271,7 +272,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         if (((QueryDataSource) dataSource).getQuery().getContext() != null) {
           subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
         }
-        subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
+        QueryContextParameters.SORT_BY_DIMS_FIRST.set(subqueryContext, false);
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
 
         closer.register(() -> groupByStatsProvider.closeQuery(subquery.context().getQueryResourceId()));
@@ -394,7 +395,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public static boolean isNestedQueryPushDown(GroupByQuery q)
   {
     return q.getDataSource() instanceof QueryDataSource
-           && q.context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false)
+           && q.context().getOrDefault(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, false)
            && q.getSubtotalsSpec() == null;
   }
 

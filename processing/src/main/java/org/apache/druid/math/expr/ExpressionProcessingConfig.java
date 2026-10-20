@@ -35,6 +35,7 @@ public class ExpressionProcessingConfig
       "druid.expressions.homogenizeNullMultiValueStringArrays";
   public static final String ALLOW_VECTORIZE_FALLBACK = "druid.expressions.allowVectorizeFallback";
   public static final String USE_VECTOR_API = "druid.expressions.useVectorApi";
+  public static final String USE_VECTOR_MATH_API = "druid.expressions.useVectorMathApi";
 
   @JsonProperty("processArraysAsMultiValueStrings")
   private final boolean processArraysAsMultiValueStrings;
@@ -48,12 +49,16 @@ public class ExpressionProcessingConfig
   @JsonProperty("useVectorApi")
   private final boolean useVectorApi;
 
+  @JsonProperty("useVectorMathApi")
+  private final boolean useVectorMathApi;
+
   @JsonCreator
   public ExpressionProcessingConfig(
       @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings,
       @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays,
       @JsonProperty("allowVectorizeFallback") @Nullable Boolean allowVectorizeFallback,
-      @JsonProperty("useVectorApi") @Nullable Boolean useVectorApi
+      @JsonProperty("useVectorApi") @Nullable Boolean useVectorApi,
+      @JsonProperty("useVectorMathApi") @Nullable Boolean useVectorMathApi
   )
   {
     this.processArraysAsMultiValueStrings = getWithPropertyFallbackFalse(
@@ -70,6 +75,7 @@ public class ExpressionProcessingConfig
         "true"
     );
     this.useVectorApi = getWithPropertyFallbackFalse(useVectorApi, USE_VECTOR_API);
+    this.useVectorMathApi = getWithPropertyFallback(useVectorMathApi, USE_VECTOR_MATH_API, "true");
   }
 
   public boolean processArraysAsMultiValueStrings()
@@ -90,6 +96,11 @@ public class ExpressionProcessingConfig
   public boolean useVectorApi()
   {
     return useVectorApi;
+  }
+
+  public boolean useVectorMathApi()
+  {
+    return useVectorMathApi;
   }
 
   private static boolean getWithPropertyFallbackFalse(@Nullable Boolean value, String property)

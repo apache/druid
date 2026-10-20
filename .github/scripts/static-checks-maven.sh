@@ -19,22 +19,31 @@ set -e
 set -x
 
 echo 'Running Maven install...'
-mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
-mvn -B install -q -ff -pl 'distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true
+./mvnw -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
 
-mvn -B checkstyle:checkstyle --fail-at-end
+./mvnw -B checkstyle:checkstyle --fail-at-end
 
-./.github/scripts/license_checks_script.sh
+# Repo-wide RAT check. This is the only RAT pass in CI. It must run without -T:
+# apache-rat-plugin 0.17+ shares per-run state across modules, so parallel runs
+# can drop configured excludes or throw NPEs (RAT-553, fixed upstream by RAT-573).
+./mvnw -B apache-rat:check -Prat --fail-at-end \
+  -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+  -Drat.consoleOutput=true
+
+# The license dependency reports and check-licenses.py that used to run via
+# license_checks_script.sh are covered by the packaging-check job, which builds
+# the distribution with the apache-release profile. Not repeated here.
+# ./.github/scripts/license_checks_script.sh
 
 ./.github/scripts/analyze_dependencies_script.sh
 
-mvn -B animal-sniffer:check --fail-at-end
+./mvnw -B animal-sniffer:check --fail-at-end
 
-mvn -B enforcer:enforce --fail-at-end
+./mvnw -B enforcer:enforce --fail-at-end
 
-mvn -B forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+./mvnw -B forbiddenapis:check forbiddenapis:testCheck --fail-at-end
 
 # TODO: consider adding pmd:cpd-check
-mvn -B pmd:check --fail-at-end
+./mvnw -B pmd:check --fail-at-end
 
-mvn -B spotbugs:check --fail-at-end -pl '!benchmarks'
+./mvnw -B spotbugs:check --fail-at-end -pl '!benchmarks'

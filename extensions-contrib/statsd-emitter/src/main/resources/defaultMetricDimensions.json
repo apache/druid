@@ -43,6 +43,7 @@
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/events/filtered" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/messageGap" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/persists/count" : { "dimensions" : ["dataSource"], "type" : "count" },
@@ -55,6 +56,7 @@
   "ingest/merge/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/segments/oversized" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/rows/published": { "dimensions" : ["dataSource"], "type" : "count" },
 
   "ingest/realtime/segmentUpgrade/persisted" : { "dimensions" : ["dataSource", "interval", "version"], "type" : "count" },
@@ -181,6 +183,10 @@
   "coordinator/time" : { "dimensions" : [], "type" : "timer"},
   "coordinator/global/time" : { "dimensions" : ["dutyGroup"], "type" : "timer"},
 
+  "tier/storage/required": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/storage/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/segmentCache/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/segmentCache/used": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
   "tier/required/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
   "tier/total/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
   "tier/replication/factor" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },

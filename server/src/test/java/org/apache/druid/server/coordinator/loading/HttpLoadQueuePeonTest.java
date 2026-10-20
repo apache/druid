@@ -22,6 +22,10 @@ package org.apache.druid.server.coordinator.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -42,11 +46,6 @@ import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -474,7 +473,6 @@ public class HttpLoadQueuePeonTest
   private static void respond(HttpResponseHandler<?, ?> handler, HttpResponseStatus status)
   {
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
-    response.setContent(ChannelBuffers.buffer(0));
     handler.handleResponse(response, null);
   }
 
@@ -503,7 +501,6 @@ public class HttpLoadQueuePeonTest
     )
     {
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
 
       try {

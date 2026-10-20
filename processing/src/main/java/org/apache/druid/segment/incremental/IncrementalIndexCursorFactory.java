@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ConcatenatingCursor;
 import org.apache.druid.segment.Cursor;
@@ -135,6 +136,12 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
         {
           return projection.getCursorBuildSpec().getAggregators();
         }
+
+        @Override
+        public List<OrderBy> getOrdering()
+        {
+          return Cursors.trimOrdering(super.getOrdering(), spec.getVirtualColumns());
+        }
       };
     }
   }
@@ -153,6 +160,10 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
     }
 
     final RowSignature clusteringColumns = summary.getClusteringColumns();
+    // Capabilities come from the groups rather than the base index, since the base index's dimensions never see values
+    // computed by the cluster spec's virtual columns. Snapshot them like the per-group selector factories do.
+    final ColumnInspector allGroupsInspector =
+        column -> ColumnCapabilitiesImpl.snapshot(clusteredBaseTable.getColumnCapabilities(column), COERCE_LOGIC);
     final List<Object[]> clusteringValuesByGroup = new ArrayList<>(surviving.size());
     final List<Supplier<CursorHolder>> holderSuppliers = new ArrayList<>(surviving.size());
     final Closer closer = Closer.create();
@@ -201,6 +212,7 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
           clusteringValuesByGroup,
           descending,
           spec.getVirtualColumns(),
+          allGroupsInspector,
           plan.virtualColumnRemap(),
           closer
       );
@@ -212,7 +224,8 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
         clusteringValuesByGroup.getFirst(),
-        spec.getVirtualColumns()
+        spec.getVirtualColumns(),
+        allGroupsInspector
     );
     final ConcatenatingCursor cursor = new ConcatenatingCursor(
         holderSuppliers,
@@ -234,7 +247,7 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
       {
         // Groups are walked in clustering-value order and each group's rows follow the segment ordering with the
         // clustering prefix dropped, so the concatenated output is in the full segment ordering.
-        return summary.getOrdering();
+        return Cursors.trimOrdering(summary.getOrdering(), spec.getVirtualColumns());
       }
 
       @Override

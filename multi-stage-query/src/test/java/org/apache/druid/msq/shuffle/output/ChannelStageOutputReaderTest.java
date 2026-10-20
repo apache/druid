@@ -24,6 +24,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -167,12 +168,12 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       channel.writable().write(frame);
 
       // See that we can't write another frame.
-      final IllegalStateException e = Assertions.assertThrows(
-          IllegalStateException.class,
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
           () -> channel.writable().write(frame)
       );
 
-      ThrowableMatcher.of(IllegalStateException.class)
+      ThrowableMatcher.of(DruidException.class)
                      .expectMessage(message -> message.startsWith("Channel has no capacity"))
                      .assertThat(e);
 
@@ -192,12 +193,12 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       channel.writable().write(frame);
 
       // See that we can't write a fourth frame.
-      final IllegalStateException e2 = Assertions.assertThrows(
-          IllegalStateException.class,
+      final DruidException e2 = Assertions.assertThrows(
+          DruidException.class,
           () -> channel.writable().write(frame)
       );
 
-      ThrowableMatcher.of(IllegalStateException.class)
+      ThrowableMatcher.of(DruidException.class)
                      .expectMessage(message -> message.startsWith("Channel has no capacity"))
                      .assertThat(e2);
 
@@ -277,7 +278,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     private static final int EXPECTED_NUM_ROWS = 1209;
 
     private final BlockingQueueFrameChannel channel = new BlockingQueueFrameChannel(MAX_FRAMES);
-    private final ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), FrameTestUtil.WT_CONTEXT_LEGACY);
+    private ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), FrameTestUtil.WT_CONTEXT_LEGACY);
 
     @RegisterExtension
     public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
@@ -307,7 +308,9 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     @AfterEach
     public void tearDown()
     {
-      reader.close();
+      if (reader != null) {
+        reader.close();
+      }
     }
 
     @Test
@@ -334,6 +337,9 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
           IllegalStateException.class,
           reader::readLocally
       );
+
+      // Prevent close() in tearDown, which would fail.
+      reader = null;
     }
 
     @Test

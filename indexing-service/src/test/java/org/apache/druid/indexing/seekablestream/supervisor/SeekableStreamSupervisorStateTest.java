@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -43,6 +44,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -508,6 +510,85 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assertions.assertEquals(2, taskGroups.size());
     Assertions.assertEquals(3, taskGroups.get(0).tasks.size());
     Assertions.assertEquals(3, taskGroups.get(1).tasks.size());
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_throwsException_ifMetadataIsInvalid()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> supervisor.isTaskReadyToPublishSegments(
+            "task1",
+            new ObjectMetadata("abc")
+        )
+    );
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_returnsCompleted_ifNoConflictingTask()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
+        "task1",
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of("p1", "100"), Set.of())
+        )
+    );
+
+    Assertions.assertTrue(future.isDone());
+    Assertions.assertEquals(Boolean.TRUE, FutureUtils.getUnchecked(future, true));
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_waitsForEarlierTask()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "earlierGroupPendingCompletion", Map.of("p1", "0"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "laterGroupPendingCompletion", Map.of("p1", "10000"));
+
+    final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
+        "waitingTask",
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of("p1", "100"), Set.of())
+        )
+    );
+    Assertions.assertFalse(future.isDone());
+
+    // Mark the earlier task group as completed
+    final SeekableStreamSupervisor<?, ?, ?>.TaskGroup earlierTaskGroup =
+        supervisor.getPendingCompletionTaskGroups(0).get(0);
+    earlierTaskGroup.onCompleted();
+
+    // Verify that the task is now ready to publish even though the later task group is not complete yet
+    Assertions.assertTrue(future.isDone());
+    Assertions.assertEquals(Boolean.TRUE, FutureUtils.getUnchecked(future, true));
+
+    final SeekableStreamSupervisor<?, ?, ?>.TaskGroup laterTaskGroup =
+        supervisor.getPendingCompletionTaskGroups(1).get(0);
+    Assertions.assertFalse(laterTaskGroup.completed.get());
   }
 
   @Test
@@ -1668,7 +1749,18 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     replayAll();
 
-    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    final CountDownLatch handoffNoticeHandled = new CountDownLatch(1);
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor()
+    {
+      @Override
+      protected void emitNoticeProcessTime(String noticeType, long timeInMillis)
+      {
+        super.emitNoticeProcessTime(noticeType, timeInMillis);
+        if ("handoff_task_group_notice".equals(noticeType)) {
+          handoffNoticeHandled.countDown();
+        }
+      }
+    };
 
     supervisor.start();
     supervisor.runInternal();
@@ -1677,9 +1769,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assertions.assertNull(id1.getCurrentRunnerStatus());
     Assertions.assertEquals("NOT_STARTED", id1.getCurrentRunnerStatus());
 
-    while (supervisor.getNoticesQueueSize() > 0) {
-      Thread.sleep(100);
-    }
+    Assertions.assertTrue(
+        handoffNoticeHandled.await(5, TimeUnit.SECONDS),
+        "Handoff task group notice was not handled"
+    );
     supervisor.runInternal();
     verifyAll();
   }
@@ -2962,6 +3055,122 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   /**
+   * A bounded task group that has reached its configured end offsets is not topped up with replacement replicas,
+   * exercising the metadata-based completion path (non-empty range with committed offsets at the end).
+   */
+  @Test
+  public void testCreateNewTasks_boundedGroupReachedEnd_doesNotTopUpReplicas()
+  {
+    // replicas = 2, taskCount = 1, non-empty bounded range [0, 100).
+    final BoundedStreamConfig boundedConfig = new BoundedStreamConfig(
+        ImmutableMap.of("0", "0"),
+        ImmutableMap.of("0", "100")
+    );
+    final SeekableStreamSupervisorIOConfig ioConfig =
+        new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+            .withStream(STREAM)
+            .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+            .withReplicas(2)
+            .withTaskCount(1)
+            .withTaskDuration(new Period("PT1H"))
+            .withStartDelay(new Period("P1D"))
+            .withSupervisorRunPeriod(new Period("PT30S"))
+            .withUseEarliestSequenceNumber(false)
+            .withCompletionTimeout(new Period("PT30M"))
+            .withLagAggregator(LagAggregator.DEFAULT)
+            .withBoundedStreamConfig(boundedConfig)
+            .build();
+
+    // A single already-running task for group 0 whose committed offset ("100") has reached the configured end, so the
+    // group has one task, i.e. fewer than the configured replica count (2). That would normally trigger a top-up.
+    // minMsgTime/maxMsgTime and start sequences must match the injected task group so isTaskCurrent() keeps the task.
+    final SeekableStreamIndexTaskIOConfig taskIoConfig = createTaskIoConfigExt(
+        0,
+        Map.of("0", "100"),
+        Map.of("0", "100"),
+        "test",
+        null,
+        null,
+        Set.of(),
+        ioConfig
+    );
+    final TestSeekableStreamIndexTask task1 = createTestTask("task1", "0", null, taskIoConfig, recordSupplier);
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    // Metadata store reports committed offsets that have reached the end, with a bounded config matching the
+    // supervisor's, so hasTaskGroupReachedBoundedEnd() returns true through its metadata-offset path.
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID))
+            .andReturn(new TestSeekableStreamDataSourceMetadata(
+                new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of("0", "100")),
+                boundedConfig
+            ))
+            .anyTimes();
+
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of("0")).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("task1")).andReturn(Optional.of(TaskStatus.running("task1"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("task1")).andReturn(Optional.of(task1)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of(task1.getId(), task1))
+            .anyTimes();
+    // Task checkpoints match the reached-end committed offsets so the task is not killed as inconsistent.
+    final TreeMap<Integer, Map<String, String>> task1Checkpoints = new TreeMap<>();
+    task1Checkpoints.put(0, ImmutableMap.of("0", "100"));
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(task1Checkpoints))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCurrentOffsetsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of("0", "100")))
+            .anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
+
+    final Capture<Task> submittedTasks = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(submittedTasks))).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    // Pre-populate an actively-reading task group with the single running task. This keeps isBoundedWorkComplete()
+    // false (there is an active group), so runInternal() flows through to createNewTasks() rather than short-circuiting
+    // on completion, and it models the real churn scenario where a completed replica has exited leaving fewer tasks
+    // than the configured replica count.
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        0,
+        ImmutableMap.of("0", "100"),
+        null,
+        null,
+        Set.of("task1"),
+        Set.of(),
+        Map.of()
+    );
+    supervisor.runInternal();
+
+    Assertions.assertFalse(
+        submittedTasks.hasCaptured(),
+        "No replica top-up task should be submitted for a bounded task group that has reached its end offsets"
+    );
+    Assertions.assertEquals(1, supervisor.getActiveTaskGroup(0).tasks.size());
+
+    verifyAll();
+  }
+
+  /**
    * Verifies that when N stored offsets are all outside stream retention, all N partitions are collected in a single
    * pass and reset together in one {@code resetInternal()} call, producing exactly one exception event.
    */
@@ -3744,6 +3953,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     )
     {
       super(partitions);
+    }
+
+    public TestSeekableStreamDataSourceMetadata(
+            SeekableStreamSequenceNumbers<String, String> partitions,
+            BoundedStreamConfig boundedStreamConfig
+    )
+    {
+      super(partitions, boundedStreamConfig);
     }
 
     @Override

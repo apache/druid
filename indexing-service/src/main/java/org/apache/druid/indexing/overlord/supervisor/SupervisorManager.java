@@ -24,11 +24,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.guice.annotations.Json;
@@ -40,6 +43,9 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostMetrics;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -59,6 +65,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -591,14 +598,13 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
-   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
-   * that is currently waiting to publish offsets for the given partitions.
+   * Checks if the given {@code supervisorId} represents a {@link SeekableStreamSupervisor}
+   * and if the {@code taskId} is ready to publish its segments.
    *
-   * @return true only if the given {@param supervisorId} represents a
-   * {@link SeekableStreamSupervisor} and the supervisor has other tasks that
-   * are currently publishing offsets to an overlapping set of partitions.
+   * @return A future that completes successfully with true when the given
+   * {@code taskId} can proceed with publishing its segments.
    */
-  public boolean isAnotherTaskGroupPublishingToPartitions(
+  public ListenableFuture<Boolean> isTaskReadyToPublishSegments(
       String supervisorId,
       String taskId,
       DataSourceMetadata startMetadata
@@ -610,7 +616,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       throw NotFound.exception("Could not find supervisor[%s]", supervisorId);
     }
     if (!(supervisor.lhs instanceof SeekableStreamSupervisor<?, ?, ?>)) {
-      return false;
+      return Futures.immediateFuture(true);
     }
 
     if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?>)) {
@@ -620,24 +626,103 @@ public class SupervisorManager implements SupervisorStatsProvider
       );
     }
 
-    try {
-      final Set<Object> partitionIds = Set.copyOf(
-          ((SeekableStreamDataSourceMetadata<?, ?>) startMetadata)
-              .getSeekableStreamSequenceNumbers()
-              .getPartitionSequenceNumberMap()
-              .keySet()
-      );
-      return ((SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs)
-          .isAnotherTaskGroupPublishingToPartitions(taskId, partitionIds);
+    return ((SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs)
+        .isTaskReadyToPublishSegments(taskId, startMetadata);
+  }
+
+  /**
+   * Simulates the effects of the {@code costBased} auto-scaler by computing the
+   * optimal task count under various values of aggregate lag.
+   *
+   * @return Map containing a single entry with key {@code "data"} and value as
+   * the simulation rows.
+   */
+  public Map<String, Object> simulateAutoscaling(
+      String supervisorId,
+      CostBasedAutoScalerConfig config,
+      int maxProcessingRatePerTask,
+      @Nullable Integer requestedTaskCount
+  )
+  {
+    if (!config.getEnableTaskAutoScaler()) {
+      throw InvalidInput.exception("Cannot simulate autoscaling since 'enableTaskAutoScaler' is false");
     }
-    catch (Exception e) {
-      log.error(
-          e,
-          "Failed to check if a publish is pending for supervisor[%s], metadata[%s]",
-          supervisorId, startMetadata
+
+    // Validate that this is a SeekableStreamSupervisor
+    final Pair<SeekableStreamSupervisor, SeekableStreamSupervisorSpec> supervisorPair =
+        getSupervisorOfType(
+            supervisorId,
+            SeekableStreamSupervisor.class,
+            SeekableStreamSupervisorSpec.class,
+            "simulateAutoscaling"
+        );
+
+    // Validate the inputs
+    final long criticalLag = Configs.valueOrDefault(config.getCriticalLagThreshold(), 1_000_000);
+    InvalidInput.conditionalException(
+        criticalLag >= 1000,
+        "Value of critical lag[%d] must be 1000 or more",
+        criticalLag
+    );
+    InvalidInput.conditionalException(
+        maxProcessingRatePerTask >= 100,
+        "Value of maxProcessingRatePerTask[%d] must be 100 events per second or more",
+        maxProcessingRatePerTask
+    );
+    InvalidInput.conditionalException(
+        requestedTaskCount == null
+        || (requestedTaskCount >= config.getTaskCountMin() && requestedTaskCount <= config.getTaskCountMax()),
+        "Value of currentTaskCount[%d] must be within taskCountMin[%d] and taskCountMax[%d]",
+        requestedTaskCount, config.getTaskCountMin(), config.getTaskCountMax()
+    );
+
+    // Simulate from the supervisor's live task count unless the caller pins one.
+    final SeekableStreamSupervisorSpec supervisorSpec = Objects.requireNonNull(supervisorPair.rhs);
+    final int currentTaskCount = supervisorSpec.getIoConfig().getTaskCount();
+    final int simulationTaskCount = Math.max(
+        config.getTaskCountMin(),
+        Math.min(
+            Configs.valueOrDefault(requestedTaskCount, currentTaskCount),
+            config.getTaskCountMax()
+        )
+    );
+
+    // Use the partition count and task duration from the supervisor spec
+    final int partitionCount = Objects.requireNonNull(supervisorPair.lhs).getKnownPartitionCount();
+    if (partitionCount <= 0) {
+      throw InternalServerError.exception(
+          "Cannot simulate autoscaling since partition count for supervisor[%s] is unknown."
+          + " Retry once the supervisor has discovered the current partition count from stream.",
+          supervisorId
       );
-      return false;
     }
+    final long taskDurationSeconds = supervisorSpec.getIoConfig().getTaskDuration().getStandardSeconds();
+
+    // Assume that the tasks are fully used since there is some lag
+    final double idleRatio = config.getOptimalTaskIdleRatio();
+
+    // Invoke the cost function for lag in the range [0, 2 * criticalLagThreshold)
+    final Object[] rows = new Object[200];
+    final long lagStepSize = criticalLag / 100;
+    final CostBasedAutoScaler autoscaleSimulator = CostBasedAutoScaler.createSimulator(config, supervisorId);
+    for (int i = 0; i < 200; ++i) {
+      final double observedAggregateLag = (double) lagStepSize * i;
+      final CostMetrics costMetrics = new CostMetrics(
+          observedAggregateLag / partitionCount,
+          observedAggregateLag,
+          simulationTaskCount,
+          partitionCount,
+          idleRatio,
+          taskDurationSeconds,
+          maxProcessingRatePerTask,
+          maxProcessingRatePerTask * 1.0
+      );
+      final int optimalTaskCount = autoscaleSimulator.computeOptimalTaskCountInternal(costMetrics, true);
+      rows[i] = Map.of("lag", observedAggregateLag, "taskCount", optimalTaskCount);
+    }
+
+    // Collect the results and return
+    return Map.of("data", rows);
   }
 
   /**

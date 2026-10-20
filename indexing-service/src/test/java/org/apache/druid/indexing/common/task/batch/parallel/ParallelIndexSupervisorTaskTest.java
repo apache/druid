@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.Futures;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.Charsets;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -53,9 +55,6 @@ import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -400,8 +399,7 @@ public class ParallelIndexSupervisorTaskTest
 
       final OverlordClient client = mock(OverlordClient.class);
       final HttpResponse response = mock(HttpResponse.class);
-      expect(response.getContent()).andReturn(ChannelBuffers.buffer(0));
-      expect(response.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
+      expect(response.status()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
       EasyMock.replay(response);
 
       expect(client.taskReportAsMap(taskId)).andReturn(
@@ -422,8 +420,7 @@ public class ParallelIndexSupervisorTaskTest
 
       final OverlordClient client = mock(OverlordClient.class);
       final HttpResponse response = mock(HttpResponse.class);
-      expect(response.getContent()).andReturn(ChannelBuffers.buffer(0));
-      expect(response.getStatus()).andReturn(HttpResponseStatus.FORBIDDEN).anyTimes();
+      expect(response.status()).andReturn(HttpResponseStatus.FORBIDDEN).anyTimes();
       EasyMock.replay(response);
 
       expect(client.taskReportAsMap(taskId)).andReturn(

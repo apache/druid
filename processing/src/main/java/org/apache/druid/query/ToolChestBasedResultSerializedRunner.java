@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 
 /**
@@ -78,14 +79,10 @@ public class ToolChestBasedResultSerializedRunner<T> implements QueryRunner<T>
 
   private ResultSerializationMode getResultSerializationMode(Query<T> query)
   {
-    ResultSerializationMode serializationMode = query.context().getEnum(
-        ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-        ResultSerializationMode.class,
-        null
-    );
+    ResultSerializationMode serializationMode = query.context().get(QueryContextParameters.SERIALIZATION);
     if (serializationMode == null) {
       throw DruidException.defensive(
-          "Serialization mode [%s] is not setup correctly!", ResultSerializationMode.CTX_SERIALIZATION_PARAMETER
+          "Serialization mode [%s] is not setup correctly!", QueryContextParameters.SERIALIZATION
       );
     }
     return serializationMode;

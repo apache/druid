@@ -61,7 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * testclass. Ensure that it's loaded as the most outer-rule by using the right
  * ExtendWith order - or by specifying Order: <code>
  *   &#64;Order(0)
- *   @RegisterExtension
+ *   &#64;RegisterExtension
  *   public TestRule notYetSupportedRule = new NotYetSupportedProcessor(Scope.DECOUPLED);
  *
  *   &#64;NotYetSupported(NOT_ENOUGH_RULES)
@@ -94,7 +94,9 @@ public @interface NotYetSupported
     AGGREGATION_NOT_SUPPORT_TYPE(Scope.WINDOWING, DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
     ALLDATA_CSV(Scope.WINDOWING, DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(Scope.WINDOWING, DruidException.class, "Cannot apply '.' to arguments of type"),
-    VIEWS_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "Incorrect syntax near the keyword 'CREATE'"),
+    // CREATE starts a catalog DDL statement, so the parser now gets as far as the object being created before
+    // failing, rather than rejecting the CREATE keyword outright.
+    VIEWS_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "Received an unexpected token \\[VIEW\\]"),
     RESULT_MISMATCH(Scope.WINDOWING, AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
     LONG_CASTING(Scope.WINDOWING, AssertionError.class, "expected: java.lang.Long"),
     UNSUPPORTED_NULL_ORDERING(Scope.WINDOWING, DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
@@ -105,6 +107,7 @@ public @interface NotYetSupported
     SORT_REMOVE_TROUBLE(Scope.DECOUPLED, AssertionError.class, ""),
     UNNEST_INLINED(Scope.DECOUPLED, Exception.class, "Missing conversion is Uncollect"),
     UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
+    UNION_QUERY_OVER_UNION_DATASOURCE(Scope.DECOUPLED, NullPointerException.class, "Number of remaining responses"),
 
     DD_RESTRICTED_DATASOURCE_SUPPORT(Scope.DECOUPLED_DART, DruidException.class, "ForbiddenException: Unauthorized"),
     DD_RESTRICTED_DATASOURCE_SUPPORT2(Scope.DECOUPLED_DART, AssertionError.class, "Unauthorized"),

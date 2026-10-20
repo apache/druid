@@ -55,9 +55,11 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -93,6 +95,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -261,6 +264,8 @@ public class SystemSchema extends AbstractTableSchema
   private final HttpClient httpClient;
   private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
   private final PlannerConfig plannerConfig;
+  private final QueryConfigProvider queryConfigProvider;
+  private final Properties properties;
   private final AuthenticationResult authenticationResult;
   private final Set<String> allTableNames;
 
@@ -277,6 +282,8 @@ public class SystemSchema extends AbstractTableSchema
       final HttpClient httpClient,
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
       final PlannerConfig plannerConfig,
+      final QueryConfigProvider queryConfigProvider,
+      final Properties properties,
       final AuthenticationResult authenticationResult,
       final Set<String> allTableNames
   )
@@ -293,6 +300,8 @@ public class SystemSchema extends AbstractTableSchema
     this.httpClient = httpClient;
     this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
     this.plannerConfig = plannerConfig;
+    this.queryConfigProvider = queryConfigProvider;
+    this.properties = properties;
     this.authenticationResult = authenticationResult;
     this.allTableNames = allTableNames;
   }
@@ -332,6 +341,13 @@ public class SystemSchema extends AbstractTableSchema
           jsonMapper,
           authenticationResult
       );
+      case SystemQueryContextParametersTable.TABLE_NAME -> new SystemQueryContextParametersTable(
+          jsonMapper,
+          queryConfigProvider,
+          properties,
+          authorizerMapper,
+          authenticationResult
+      );
       case QUERIES_TABLE -> new QueriesTable(
           sqlEngineRegistryProvider,
           jsonMapper,
@@ -345,12 +361,12 @@ public class SystemSchema extends AbstractTableSchema
   @Override
   public Set<String> getTableNames()
   {
-    if (plannerConfig.isAuthorizeTableVisibility()) {
+    if (plannerConfig.isAuthorizeTableVisibility() && plannerConfig.isAuthorizeSystemTablesDirectly()) {
       return SchemaUtils.filterVisibleTables(
           authorizerMapper,
           authenticationResult,
           allTableNames,
-          _ -> plannerConfig.isAuthorizeSystemTablesDirectly() ? ResourceType.SYSTEM_TABLE : null
+          ResourceType.SYSTEM_TABLE
       );
     } else {
       // sys table authorization is not enabled, so all sys tables are visible to all users.
@@ -366,12 +382,12 @@ public class SystemSchema extends AbstractTableSchema
     if (!allTableNames.contains(sysTableName)) {
       // Short circuit that hides sys.queries if it is disabled server-wide.
       return false;
-    } else if (plannerConfig.isAuthorizeTableVisibility()) {
+    } else if (plannerConfig.isAuthorizeTableVisibility() && plannerConfig.isAuthorizeSystemTablesDirectly()) {
       return SchemaUtils.isTableVisible(
           authorizerMapper,
           authenticationResult,
           sysTableName,
-          _ -> plannerConfig.isAuthorizeSystemTablesDirectly() ? ResourceType.SYSTEM_TABLE : null
+          ResourceType.SYSTEM_TABLE
       );
     } else {
       // sys table authorization is not enabled, so all sys tables are visible to all users.
@@ -441,10 +457,11 @@ public class SystemSchema extends AbstractTableSchema
           : new HashSet<>();
 
       // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
-      // Coordinator. This may include both published and realtime segments.
-      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments(dataSourceFilter);
+      // Coordinator. This may include both published and realtime segments. Fetched on first read, so a scan that is
+      // never read holds no Coordinator response.
+      final Closer closer = Closer.create();
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments))
+          .from(() -> getAuthorizedPublishedSegments(closer.register(metadataView.getSegments(dataSourceFilter))))
           .transform(val -> {
             final DataSegment segment = val.getDataSegment();
             final AvailableSegmentMetadata availableSegmentMetadata =
@@ -549,7 +566,7 @@ public class SystemSchema extends AbstractTableSchema
           Iterables.concat(publishedSegments, availableSegments)
       );
 
-      return Linq4j.asEnumerable(allSegments)
+      return Linq4j.asEnumerable(() -> wrap(allSegments.iterator(), closer))
                    .where(Objects::nonNull)
                    .select(row -> projectSegmentsRow(row, projects, jsonMapper));
     }

@@ -58,6 +58,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -100,7 +101,6 @@ import java.util.stream.Collectors;
 public class SinkQuerySegmentWalker implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(SinkQuerySegmentWalker.class);
-  private static final String CONTEXT_SKIP_INCREMENTAL_SEGMENT = "skipIncrementalSegment";
 
   private static final Set<String> SEGMENT_QUERY_METRIC = ImmutableSet.of(DefaultQueryMetrics.QUERY_SEGMENT_TIME);
   private static final Set<String> SEGMENT_CACHE_AND_WAIT_METRICS = ImmutableSet.of(
@@ -189,7 +189,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    final boolean skipIncrementalSegment = query.context().getBoolean(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
+    final boolean skipIncrementalSegment =
+        query.context().getOrDefault(QueryContextParameters.SKIP_INCREMENTAL_SEGMENT);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     // Make sure this query type can handle the subquery, if present.

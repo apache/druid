@@ -261,6 +261,18 @@ The valid credentials cache size. The cache uses a LRU policy.<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 100
 
+**`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupBaseDn`**
+
+The base DN for searching LDAP groups. When set together with `groupSearch`, Druid performs a reverse group lookup to populate the `memberOf` attribute during authentication. This is needed when the LDAP server does not return `memberOf` in user search results. If not set, Druid relies on the `memberOf` attribute being returned directly by the user search.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
+**`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupSearch`**
+
+The LDAP search filter for finding groups that contain a user. The filter must contain a literal `%s` placeholder, which is replaced with the user's full DN. Note that `%%s` does not count, as it is a placeholder escaped for `String.format`. For example, `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`. A filter without the placeholder is rejected at startup because it would match all groups under `groupBaseDn` for every user.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.skipOnFailure`**
 
 If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.<br />
@@ -404,7 +416,11 @@ Array of LDAP group filters used to filter out the allowed set of groups returne
 
 #### ReadOnly Authorizer
 
-The ReadOnly authorizer allows all READ operations and denies all other operations (WRITE, DELETE, etc.).
+The ReadOnly authorizer allows READ on **all** resources of every type and denies all other actions (WRITE, DELETE, etc.).
+Please take extra care to consider if you actually intend to grant READ this broadly before using this authorizer. A few of the more sensitive resources that this authorizer grants READ access to include:
+
+- [`CONFIG`](../../operations/security-user-auth.md#config) and [`STATE`](../../operations/security-user-auth.md#state) resources, which expose cluster configuration and state that is generally not intended for low-trust users.
+- The [`EXTERNAL`](../../operations/security-user-auth.md#external) resource, which lets users run SQL queries with the `EXTERN` function and input source table functions. These queries can read any data the Druid services can reach, such as files on the local filesystem of Druid servers, HTTP endpoints, and cloud object storage.
 
 Example configuration:
 

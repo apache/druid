@@ -41,7 +41,6 @@ export async function createPage(browser: playwright.Browser): Promise<playwrigh
   const page = await context.newPage();
   await page.setViewportSize({ width: WIDTH, height: HEIGHT });
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   page.on('response', async response => {
     if (response.status() < 400) return;
 
@@ -106,8 +105,13 @@ export async function setInput(
   input: playwright.ElementHandle<Element>,
   value: string,
 ): Promise<void> {
-  await input.fill('');
-  await input.type(value);
+  await input.fill(value);
+}
+
+export async function setQueryInput(page: playwright.Page, value: string): Promise<void> {
+  // The query input is a CodeMirror editor, its editable surface is a contenteditable div
+  const editor = await page.waitForSelector('div.flexible-query-input .cm-content');
+  await editor.fill(value);
 }
 
 function buttonSelector(text: string) {

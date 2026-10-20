@@ -39,9 +39,12 @@ import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -69,8 +72,6 @@ import java.util.Set;
 
 import static org.apache.calcite.plan.RelOptRule.any;
 import static org.apache.calcite.plan.RelOptRule.operand;
-import static org.apache.druid.sql.calcite.planner.CalciteRulesManager.BLOAT_PROPERTY;
-import static org.apache.druid.sql.calcite.planner.CalciteRulesManager.DEFAULT_BLOAT;
 
 @ExtendWith(EasyMockExtension.class)
 public class CalcitePlannerModuleTest extends CalciteTestBase
@@ -114,8 +115,10 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     EasyMock.expect(druidSchema2.getSchema()).andStubReturn(schema2);
     EasyMock.expect(druidSchema1.getSchemaName()).andStubReturn(SCHEMA_1);
     EasyMock.expect(druidSchema2.getSchemaName()).andStubReturn(SCHEMA_2);
-    EasyMock.expect(druidSchema1.getSchemaResourceType(EasyMock.anyString())).andStubReturn(ResourceType.DATASOURCE);
-    EasyMock.expect(druidSchema2.getSchemaResourceType(EasyMock.anyString())).andStubReturn("test");
+    EasyMock.expect(druidSchema1.getSchemaResource(EasyMock.anyString()))
+            .andStubReturn(new Resource("resource", ResourceType.DATASOURCE));
+    EasyMock.expect(druidSchema2.getSchemaResource(EasyMock.anyString()))
+            .andStubReturn(new Resource("resource", "test"));
     EasyMock.replay(druidSchema1, druidSchema2);
     aggregators = ImmutableSet.of();
     operatorConversions = ImmutableSet.of();
@@ -143,6 +146,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
                 .toInstance(new ConstantDruidSchemaCatalogProvider(rootSchema));
           binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
           binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+          binder.bind(CatalogTableWriter.class).toInstance(CatalogTableWriter.NOT_AVAILABLE);
         },
         target,
         binder -> {
@@ -207,6 +211,26 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   }
 
   @Test
+  public void testGeneratedSqlQueryIdIsStoredInContext()
+  {
+    final PlannerToolbox toolbox = injector.getInstance(PlannerFactory.class);
+    final String sql = "SELECT 1";
+    final PlannerContext context = PlannerContext.create(
+        toolbox,
+        sql,
+        DruidSqlParser.parse(sql, false).getMainStatement(),
+        new NativeSqlEngine(queryLifecycleFactory, new DefaultObjectMapper(), (SqlStatementFactory) null),
+        null, // Don't need an authentication result
+        Collections.emptySet(),
+        Collections.emptyMap(),
+        null
+    );
+
+    Assertions.assertNotNull(context.getSqlQueryId());
+    Assertions.assertEquals(context.getSqlQueryId(), context.queryContext().get(QueryContextParameters.SQL_QUERY_ID));
+  }
+
+  @Test
   public void testConfigurableBloat()
   {
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -220,7 +244,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
             null, // Don't need an authentication result
             Collections.emptySet(),
-            Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
+            QueryContext.ofMap(QueryContextParameters.SQL_PLANNER_BLOAT, BLOAT),
             null
     );
 
@@ -236,7 +260,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     );
 
     assertBloat(contextWithBloat, BLOAT);
-    assertBloat(contextWithoutBloat, DEFAULT_BLOAT);
+    assertBloat(contextWithoutBloat, QueryContextParameters.SQL_PLANNER_BLOAT.getLiteralDefault());
   }
 
   private void assertBloat(PlannerContext context, int expectedBloat)

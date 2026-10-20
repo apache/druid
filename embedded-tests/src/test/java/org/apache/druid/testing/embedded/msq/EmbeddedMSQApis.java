@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.msq;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
@@ -32,7 +33,8 @@ import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.HttpResponseException;
@@ -42,7 +44,6 @@ import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public class EmbeddedMSQApis
                 false,
                 false,
                 false,
-                Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+                QueryContext.ofMap(QueryContextParameters.ENGINE, DartSqlEngine.NAME),
                 null
             )
         )
@@ -211,7 +212,7 @@ public class EmbeddedMSQApis
   )
   {
     final Map<String, Object> fullContext = new HashMap<>(context);
-    fullContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
+    fullContext.put(QueryContextParameters.ENGINE.getName(), DartSqlEngine.NAME);
 
     return cluster.callApi().onTargetBrokerAsync(
         targetBroker,

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -98,7 +99,6 @@ import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -127,7 +127,10 @@ public class DruidCoordinator
   private final ServiceEmitter emitter;
   private final OverlordClient overlordClient;
   private final ScheduledExecutorFactory executorFactory;
+
+  @GuardedBy("lock")
   private final List<DutiesRunnable> dutiesRunnables = new ArrayList<>();
+
   private final LoadQueueTaskMaster taskMaster;
   private final SegmentLoadQueueManager loadQueueManager;
   private final CoordinatorCustomDutyGroups customDutyGroups;
@@ -352,7 +355,13 @@ public class DruidCoordinator
 
   public List<DutyGroupStatus> getStatusOfDuties()
   {
-    return dutiesRunnables.stream().map(r -> r.dutyGroup.getStatus()).collect(Collectors.toList());
+    // Only the copy needs the coordinator lock. Each getStatus() call synchronizes on its own duty group,
+    // so keep that work outside the lock to avoid delaying leadership changes or duty runs.
+    final List<DutiesRunnable> runnables;
+    synchronized (lock) {
+      runnables = new ArrayList<>(dutiesRunnables);
+    }
+    return runnables.stream().map(r -> r.dutyGroup.getStatus()).collect(Collectors.toList());
   }
 
   @LifecycleStart
@@ -655,7 +664,7 @@ public class DruidCoordinator
       final Throwable rootCause = Throwables.getRootCause(e);
       if (rootCause instanceof HttpResponseException) {
         HttpResponseStatus status = ((HttpResponseException) rootCause).getResponse().getStatus();
-        if (status.getCode() == 404) {
+        if (status.code() == 404) {
           log.warn(
               "Could not mark segments as unused since Overlord is on an older version."
               + " Upgrade the Overlord to a newer version to allow updating segments."

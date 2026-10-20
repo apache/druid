@@ -48,6 +48,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
+import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
@@ -61,6 +62,7 @@ import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
@@ -72,6 +74,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -365,6 +368,14 @@ public class CoordinatorSimulationBuilder
     }
 
     @Override
+    public List<SegmentHolder> getQueuedSegments(DruidServer server)
+    {
+      return coordinator.getLoadManagementPeons()
+                        .get(server.getName())
+                        .getSegmentsInQueue();
+    }
+
+    @Override
     public void removeServer(DruidServer server)
     {
       env.inventory.removeServer(server);
@@ -405,6 +416,13 @@ public class CoordinatorSimulationBuilder
     public double getLoadPercentage(String datasource)
     {
       return coordinator.getDatasourceToLoadStatus().get(datasource);
+    }
+
+    @Nullable
+    @Override
+    public ServerCloneStatus getCloneStatus(DruidServer cloneTarget)
+    {
+      return env.cloneStatusManager.getStatusForServer(cloneTarget.getName());
     }
 
     @Override

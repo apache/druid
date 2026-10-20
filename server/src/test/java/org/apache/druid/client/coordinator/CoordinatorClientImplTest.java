@@ -28,17 +28,22 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -62,10 +67,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -78,6 +79,7 @@ import javax.ws.rs.core.MediaType;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -575,10 +577,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segments)
     );
 
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, true),
         true
-    );
+    ).get();
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
@@ -606,10 +608,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segments)
     );
 
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, false),
         true
-    );
+    ).get();
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
@@ -620,6 +622,26 @@ public class CoordinatorClientImplTest
                       .map(SegmentStatusInCluster::getDataSegment)
                       .collect(ImmutableList.toImmutableList())
     );
+  }
+
+  @Test
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_closeBeforeIteratingReleasesTheResponse()
+      throws JsonProcessingException
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT1))
+    );
+
+    final ResourceHolder<Iterator<SegmentStatusInCluster>> segments = FutureUtils.getUnchecked(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, false),
+        true
+    );
+    segments.close();
+
+    Assertions.assertThrows(QueryInterruptedException.class, () -> segments.get().hasNext());
   }
 
   @Test
@@ -635,10 +657,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT3))
     );
 
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc"), true),
         true
-    );
+    ).get();
 
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
@@ -666,10 +688,10 @@ public class CoordinatorClientImplTest
     );
 
     Set<String> dataSources = new LinkedHashSet<>(List.of("xyz", "abc"));
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(dataSources, true),
         true
-    );
+    ).get();
 
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
@@ -696,10 +718,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(List.of(SEGMENT3))
     );
 
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc"), false),
         true
-    );
+    ).get();
 
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {

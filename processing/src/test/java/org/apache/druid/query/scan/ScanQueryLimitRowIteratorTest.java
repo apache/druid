@@ -20,12 +20,13 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
@@ -111,7 +112,7 @@ public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                             .resultFormat(RESULT_FORMAT)
-                            .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
+                            .context(QueryContext.ofMap(QueryContextParameters.SCAN_OUTERMOST, false))
                             .build();
     QueryPlus<ScanResultValue> queryPlus = QueryPlus.wrap(query);
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
@@ -191,7 +192,7 @@ public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                             .resultFormat(RESULT_FORMAT)
-                            .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
+                            .context(QueryContext.ofMap(QueryContextParameters.SCAN_OUTERMOST, false))
                             .build();
 
     QueryPlus<ScanResultValue> queryPlus = QueryPlus.wrap(query);

@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -467,6 +468,37 @@ public class SQLMetadataConnectorTest
             expectedIndices
         )
     );
+  }
+
+  @Test
+  public void testGetTableColumns()
+  {
+    final String tableName = "test_get_columns";
+    connector.getDBI().withHandle(
+        handle -> {
+          handle.execute(
+              StringUtils.format(
+                  "CREATE TABLE %s (id VARCHAR(255) NOT NULL, used BOOLEAN NOT NULL, PRIMARY KEY(id))",
+                  tableName
+              )
+          );
+          return null;
+        }
+    );
+
+    Assertions.assertEquals(
+        ImmutableList.of("ID", "USED"),
+        connector.getTableColumns(StringUtils.toUpperCase(tableName))
+    );
+    // A table name in the wrong case must still resolve: the database folds unquoted identifiers
+    // (Derby to uppercase, PostgreSQL to lowercase), while the metadata lookup is case-sensitive
+    Assertions.assertEquals(
+        ImmutableList.of("ID", "USED"),
+        connector.getTableColumns(StringUtils.toLowerCase(tableName))
+    );
+    Assertions.assertEquals(ImmutableList.of(), connector.getTableColumns("NON_EXISTENT_TABLE"));
+
+    dropTable(tableName);
   }
 
   static class TestSQLMetadataConnector extends SQLMetadataConnector

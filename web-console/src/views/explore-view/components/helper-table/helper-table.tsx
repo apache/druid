@@ -123,15 +123,20 @@ export const HelperTable = React.memo(function HelperTable(props: HelperTablePro
     >
       <div className="helper-header">
         <div className="helper-title">{expression.name}</div>
-        <ButtonGroup minimal>
+        <ButtonGroup variant="minimal">
           <Button
             icon={IconNames.SEARCH}
             data-tooltip="Search values"
-            minimal
+            variant="minimal"
             active={showSearch}
             onClick={() => setShowSearch(!showSearch)}
           />
-          <Button icon={IconNames.CROSS} data-tooltip="Remove table" minimal onClick={onDelete} />
+          <Button
+            icon={IconNames.CROSS}
+            data-tooltip="Remove table"
+            variant="minimal"
+            onClick={onDelete}
+          />
         </ButtonGroup>
       </div>
       {showSearch && (
@@ -165,8 +170,8 @@ export const HelperTable = React.memo(function HelperTable(props: HelperTablePro
                           : Boolean(myFilterPattern && myFilterPattern.values.includes(d.v)),
                         !ALWAYS_SHOW_CHECKS && Boolean(myFilterPattern?.negated),
                       )}
-                      small
-                      minimal
+                      size="small"
+                      variant="minimal"
                       onClick={e => {
                         e.stopPropagation();
                         if (myFilterPattern) {

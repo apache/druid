@@ -192,7 +192,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
               queryContext={content.queryContext || {}}
               changeQueryContext={queryContext => setContent({ ...content, queryContext })}
               defaultQueryContext={serverQueryContext}
-              minimal
+              variant="minimal"
             />
           }
         />

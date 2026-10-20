@@ -81,4 +81,20 @@ public class Cursors
   {
     return TIME_DESCENDING_ORDER;
   }
+
+  /**
+   * Returns the longest prefix of {@code ordering} that is not shadowed by any column in {@code virtualColumns}.
+   */
+  public static List<OrderBy> trimOrdering(
+      final List<OrderBy> ordering,
+      final VirtualColumns virtualColumns
+  )
+  {
+    for (int i = 0; i < ordering.size(); i++) {
+      if (virtualColumns.exists(ordering.get(i).getColumnName())) {
+        return ordering.subList(0, i);
+      }
+    }
+    return ordering;
+  }
 }

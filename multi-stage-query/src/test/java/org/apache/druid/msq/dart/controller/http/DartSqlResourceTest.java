@@ -54,13 +54,14 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.DataSourcePlanners;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
@@ -236,7 +237,7 @@ public class DartSqlResourceTest extends MSQTestBase
           @Override
           public String queryId()
           {
-            return getQueryContext().getString(QueryContexts.CTX_DART_QUERY_ID);
+            return getQueryContext().getString(QueryContextParameters.DART_QUERY_ID.getName());
           }
 
           @Override
@@ -268,7 +269,7 @@ public class DartSqlResourceTest extends MSQTestBase
                 )
             )
         ),
-        new DartQueryKitSpecFactory(),
+        new DartQueryKitSpecFactory(new DataSourcePlanners(Map.of())),
         injector.getInstance(MultiQueryKit.class),
         new ServerConfig(),
         new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),
@@ -522,7 +523,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+        QueryContext.ofMap(QueryContextParameters.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
@@ -549,7 +550,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+        QueryContext.ofMap(QueryContextParameters.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
@@ -582,7 +583,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+        QueryContext.ofMap(QueryContextParameters.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
@@ -609,7 +610,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+        QueryContext.ofMap(QueryContextParameters.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
@@ -645,7 +646,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+        QueryContext.ofMap(QueryContextParameters.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
@@ -680,7 +681,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true, QueryContexts.ENGINE, DartSqlEngine.NAME),
+        QueryContext.ofMap(QueryContextParameters.FULL_REPORT, true, QueryContextParameters.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
@@ -721,10 +722,13 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(
-            QueryContexts.CTX_FULL_REPORT, true,
-            QueryContexts.TIMEOUT_KEY, 1,
-            QueryContexts.ENGINE, DartSqlEngine.NAME
+        QueryContext.ofMap(
+            QueryContextParameters.FULL_REPORT,
+            true,
+            QueryContextParameters.TIMEOUT,
+            1L,
+            QueryContextParameters.ENGINE,
+            DartSqlEngine.NAME
         ),
         Collections.emptyList()
     );
@@ -766,7 +770,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true, QueryContexts.ENGINE, DartSqlEngine.NAME),
+        QueryContext.ofMap(QueryContextParameters.FULL_REPORT, true, QueryContextParameters.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
@@ -839,10 +843,13 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(
-            QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId,
-            QueryContexts.CTX_FULL_REPORT, fullReport,
-            QueryContexts.ENGINE, DartSqlEngine.NAME
+        QueryContext.ofMap(
+            QueryContextParameters.SQL_QUERY_ID,
+            sqlQueryId,
+            QueryContextParameters.FULL_REPORT,
+            fullReport,
+            QueryContextParameters.ENGINE,
+            DartSqlEngine.NAME
         ),
         Collections.emptyList()
     );

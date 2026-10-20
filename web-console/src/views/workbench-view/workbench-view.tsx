@@ -23,16 +23,15 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import copy from 'copy-to-clipboard';
 import type { SqlQuery } from 'druid-query-toolkit';
 import { SqlExpression } from 'druid-query-toolkit';
 import React from 'react';
 
-import { MenuCheckbox, SplitterLayout } from '../../components';
+import { forgetEditorState, MenuCheckbox, SplitterLayout } from '../../components';
 import { SpecDialog, StringInputDialog, SupervisorToSqlDialog } from '../../dialogs';
 import type {
   CapacityInfo,
@@ -52,12 +51,12 @@ import type { Capabilities } from '../../helpers';
 import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
 import { getLink } from '../../links';
 import { AppToaster } from '../../singletons';
-import { AceEditorStateCache } from '../../singletons/ace-editor-state-cache';
 import { ExecutionStateCache } from '../../singletons/execution-state-cache';
 import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
 import type { ColumnMetadata } from '../../utils';
 import {
   assemble,
+  copyToClipboard,
   deepSet,
   generate8HexId,
   localStorageGet,
@@ -102,7 +101,7 @@ function cleanupTabEntry(tabEntry: TabEntry): void {
   const discardedId = tabEntry.id;
   WorkbenchRunningPromises.deletePromise(discardedId);
   ExecutionStateCache.deleteState(discardedId);
-  AceEditorStateCache.deleteState(discardedId);
+  forgetEditorState(discardedId);
 }
 
 function externalDataTabId(tabId: string | undefined): boolean {
@@ -120,11 +119,10 @@ type MoreMenuItem =
   | 'druid-sql-documentation'
   | 'load-demo-queries';
 
-export interface WorkbenchViewProps
-  extends Pick<
-    QueryTabProps,
-    'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
-  > {
+export interface WorkbenchViewProps extends Pick<
+  QueryTabProps,
+  'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
+> {
   capabilities: Capabilities;
   tabId: string | undefined;
   onTabChange(newTabId: string): void;
@@ -139,11 +137,9 @@ export interface WorkbenchViewProps
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   hideToolbar?: boolean;
   maxTasksOptions?:
-    | QueryTabProps['maxTasksOptions']
-    | ((engine: DruidEngine) => QueryTabProps['maxTasksOptions']);
+    QueryTabProps['maxTasksOptions'] | ((engine: DruidEngine) => QueryTabProps['maxTasksOptions']);
   hiddenOptions?:
-    | QueryTabProps['hiddenOptions']
-    | ((engine: DruidEngine) => QueryTabProps['hiddenOptions']);
+    QueryTabProps['hiddenOptions'] | ((engine: DruidEngine) => QueryTabProps['hiddenOptions']);
 }
 
 export interface WorkbenchViewState {
@@ -189,7 +185,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     const showCurrentDartPanel = Boolean(
       queryEngines.includes('sql-msq-dart') &&
-        localStorageGetJson(LocalStorageKeys.WORKBENCH_DART_PANEL),
+      localStorageGetJson(LocalStorageKeys.WORKBENCH_DART_PANEL),
     );
 
     const tabEntries =
@@ -604,8 +600,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               )}
             >
               {active ? (
-                <Popover
-                  position="bottom"
+                <PopoverNext
+                  placement="bottom"
                   content={
                     <Menu>
                       <MenuItem
@@ -617,7 +613,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                         icon={IconNames.CLIPBOARD}
                         text="Copy tab"
                         onClick={() => {
-                          copy(currentTabEntry.query.toString(), { format: 'text/plain' });
+                          copyToClipboard(currentTabEntry.query.toString());
                           AppToaster.show({
                             message: `Tab '${currentTabEntry.tabName}' copied to clipboard.`,
                             intent: Intent.SUCCESS,
@@ -675,19 +671,21 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                       />
                     </Menu>
                   }
+                  lazy
+                  shouldReturnFocusOnClose={false}
                 >
                   <Button
                     className="tab-name"
                     text={tabEntry.tabName}
-                    minimal
+                    variant="minimal"
                     onDoubleClick={() => this.setState({ renamingTab: tabEntry })}
                   />
-                </Popover>
+                </PopoverNext>
               ) : (
                 <Button
                   className="tab-name"
                   text={tabEntry.tabName}
-                  minimal
+                  variant="minimal"
                   onClick={() => {
                     localStorageSet(LocalStorageKeys.WORKBENCH_LAST_TAB, currentId);
                     onTabChange(currentId);
@@ -698,8 +696,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                 className="tab-close"
                 icon={IconNames.CROSS}
                 data-tooltip={`Close tab: ${tabEntry.tabName}`}
-                small
-                minimal
+                size="small"
+                variant="minimal"
                 onClick={() => {
                   cleanupTabEntry(tabEntry);
                   this.handleQueriesChange(
@@ -718,7 +716,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           className="new-tab"
           icon={IconNames.PLUS}
           data-tooltip="New tab"
-          minimal
+          variant="minimal"
           onClick={() => {
             this.handleNewTab(this.getInitWorkbenchQuery());
           }}
@@ -743,10 +741,10 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               connectExternalDataDialogOpen: true,
             });
           }}
-          minimal
+          variant="minimal"
         />
-        <Popover
-          position="bottom-right"
+        <PopoverNext
+          placement="bottom-end"
           content={
             <Menu>
               <MenuCheckbox
@@ -771,9 +769,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               />
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
-          <Button icon={IconNames.DRAWER_RIGHT} minimal data-tooltip="Open helper panels" />
-        </Popover>
+          <Button
+            icon={IconNames.DRAWER_RIGHT}
+            variant="minimal"
+            data-tooltip="Open helper panels"
+          />
+        </PopoverNext>
       </ButtonGroup>
     );
   }

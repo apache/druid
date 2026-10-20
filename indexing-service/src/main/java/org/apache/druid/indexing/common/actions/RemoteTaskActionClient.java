@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -30,7 +31,6 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;

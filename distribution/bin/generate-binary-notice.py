@@ -32,6 +32,17 @@ def print_outfile(string):
 def print_log_to_stderr(string):
     print(string, file=sys.stderr)
 
+def normalize_module_for_output(module):
+    # Core extensions are already tagged extensions/<output-dir-name> and need no normalization.
+    # Contrib entries use the extensions-contrib/ prefix so the release build can filter them out,
+    # but if a build DOES include contrib (via the bundle-contrib-exts profile, not distributed as
+    # part of the Apache release), collapse the prefix to extensions/ so section headers match the
+    # binary output directory layout (contrib extensions land alongside core in the same extensions/
+    # dir when bundled).
+    if module.startswith('extensions-contrib/'):
+        return 'extensions/' + module[len('extensions-contrib/'):]
+    return module
+
 def print_notice(dependency):
     # note that a dependency may either supply a global notice in the 'notice' field, or, a per jar notice in the
     # 'notices' field
@@ -51,13 +62,27 @@ def print_notice(dependency):
                 print_outfile("{} {}-{}.jar {}".format(dependencyHeaderLine, jar, dependency['version'], dependencyHeaderLine))
                 print_outfile("{}\n\n\n\n".format(notice))
 
-def generate_notice(source_notice, dependences_yaml):
+def generate_notice(source_notice, dependences_yaml, exclude_module_prefixes):
     print_log_to_stderr("=== Generating the contents of NOTICE.BINARY file ===\n")
 
     # Print Apache license first.
     print_outfile(source_notice)
     with open(dependences_yaml, encoding='utf-8') as registry_file:
         dependencies = list(yaml.load_all(registry_file, Loader=yaml.Loader))
+
+    # Filter out entries whose module matches any of the excluded prefixes. Used by the release build
+    # to skip contrib extension entries (module: extensions-contrib/*) since contrib extensions are not
+    # bundled in the Apache release binary. check-licenses.py validates that every entry uses a known
+    # module prefix, so this filter can rely on contrib entries always being tagged extensions-contrib/*
+    # rather than smuggled in under some other prefix.
+    if exclude_module_prefixes:
+        filtered = []
+        for dependency in dependencies:
+            if any(dependency.get('module', '').startswith(prefix) for prefix in exclude_module_prefixes):
+                print_log_to_stderr("Excluding notice entry for module [{}] (matched exclude prefix)".format(dependency.get('module')))
+            else:
+                filtered.append(dependency)
+        dependencies = filtered
 
     # Group dependencies by module
     modules_map = defaultdict(list)
@@ -67,7 +92,7 @@ def generate_notice(source_notice, dependences_yaml):
 
     # print notice(s) of dependencies by module
     for module_name, dependencies_of_module in modules_map.items():
-        print_outfile("{} BINARY/{} {}\n".format(moduleHeaderLine, module_name.upper(), moduleHeaderLine))
+        print_outfile("{} BINARY/{} {}\n".format(moduleHeaderLine, normalize_module_for_output(module_name).upper(), moduleHeaderLine))
         for dependency in dependencies_of_module:
             print_notice(dependency)
 
@@ -78,6 +103,15 @@ if __name__ == "__main__":
         parser.add_argument('notice', metavar='<path to apache notice file>', type=str)
         parser.add_argument('license_yaml', metavar='<path to license.yaml>', type=str)
         parser.add_argument('out_path', metavar='<path to output file>', type=str)
+        parser.add_argument(
+            '--exclude-module-prefix',
+            action='append',
+            default=[],
+            help='Skip licenses.yaml entries whose module starts with this prefix. Repeatable. Used by '
+                 'the release build to exclude contrib extension entries '
+                 '(--exclude-module-prefix=extensions-contrib/) since contrib extensions are not '
+                 'bundled in the Apache release binary. Omit to disable filtering (include everything).'
+        )
         args = parser.parse_args()
 
         with open(args.notice, encoding="ascii") as apache_notice_file:
@@ -85,7 +119,7 @@ if __name__ == "__main__":
         dependencies_yaml = args.license_yaml
 
         with open(args.out_path, "w", encoding="utf-8") as outfile:
-            generate_notice(source_notice, dependencies_yaml)
+            generate_notice(source_notice, dependencies_yaml, args.exclude_module_prefix)
 
     except KeyboardInterrupt:
         print('Interrupted, closing.')

@@ -67,7 +67,7 @@ public class SimpleVectorMathUnivariateProcessorFactory extends VectorMathUnivar
   @Override
   public final ExprVectorProcessor<long[]> longProcessor(Expr.VectorInputBindingInspector inspector, Expr arg)
   {
-    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeLongUnary(arg.asVectorProcessor(inspector), simdOp, longFunction);
     }
     return new LongUnivariateLongFunctionVectorProcessor(
@@ -79,7 +79,7 @@ public class SimpleVectorMathUnivariateProcessorFactory extends VectorMathUnivar
   @Override
   public final ExprVectorProcessor<double[]> doubleProcessor(Expr.VectorInputBindingInspector inspector, Expr arg)
   {
-    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeDoubleUnary(arg.asVectorProcessor(inspector), simdOp, doubleFunction);
     }
     return new DoubleUnivariateDoubleFunctionVectorProcessor(
