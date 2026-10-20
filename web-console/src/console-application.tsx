@@ -23,8 +23,14 @@ import type { JSX } from 'react';
 import React from 'react';
 
 import { HeaderBar, Loader } from './components';
+import { QueryContextParametersProvider } from './contexts/query-context-parameters-context';
 import { SqlFunctionsProvider } from './contexts/sql-functions-context';
-import type { ConsoleViewId, QueryContext, QueryWithContext } from './druid-models';
+import type {
+  ConsoleViewId,
+  QueryContext,
+  QueryContextParameterMetadata,
+  QueryWithContext,
+} from './druid-models';
 import type { AvailableFunctions } from './helpers';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { AppToaster } from './singletons';
@@ -88,6 +94,7 @@ export interface ConsoleApplicationProps {
 export interface ConsoleApplicationState {
   capabilities: Capabilities;
   availableSqlFunctions?: AvailableFunctions;
+  queryContextParameters?: readonly QueryContextParameterMetadata[];
   capabilitiesLoading: boolean;
   hashPath: string;
 }
@@ -98,7 +105,7 @@ export class ConsoleApplication extends React.PureComponent<
 > {
   private readonly capabilitiesQueryManager: QueryManager<
     null,
-    [Capabilities, AvailableFunctions | undefined]
+    [Capabilities, AvailableFunctions | undefined, QueryContextParameterMetadata[] | undefined]
   >;
 
   static shownServiceNotification() {
@@ -139,12 +146,13 @@ export class ConsoleApplication extends React.PureComponent<
 
         if (!capabilities) {
           ConsoleApplication.shownServiceNotification();
-          return [Capabilities.FULL, undefined];
+          return [Capabilities.FULL, undefined, undefined];
         }
 
         return Promise.all([
           Capabilities.detectCapacity(capabilities),
           Capabilities.detectAvailableSqlFunctions(capabilities),
+          Capabilities.detectQueryContextParameters(capabilities),
         ]);
       },
       onStateChange: ({ data, loading, error }) => {
@@ -153,9 +161,11 @@ export class ConsoleApplication extends React.PureComponent<
         }
         const capabilities = data?.[0] || Capabilities.FULL;
         const availableSqlFunctions = data?.[1];
+        const queryContextParameters = data?.[2];
         this.setState({
           capabilities,
           availableSqlFunctions,
+          queryContextParameters,
           capabilitiesLoading: loading,
         });
       },
@@ -481,7 +491,7 @@ export class ConsoleApplication extends React.PureComponent<
   }
 
   render() {
-    const { availableSqlFunctions, capabilitiesLoading } = this.state;
+    const { availableSqlFunctions, queryContextParameters, capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
       return (
@@ -494,7 +504,9 @@ export class ConsoleApplication extends React.PureComponent<
     return (
       <HotkeysProvider>
         <SqlFunctionsProvider availableSqlFunctions={availableSqlFunctions}>
-          <div className="console-application">{this.renderView()}</div>
+          <QueryContextParametersProvider queryContextParameters={queryContextParameters}>
+            <div className="console-application">{this.renderView()}</div>
+          </QueryContextParametersProvider>
         </SqlFunctionsProvider>
       </HotkeysProvider>
     );

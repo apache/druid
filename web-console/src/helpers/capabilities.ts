@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-import type { DruidEngine } from '../druid-models';
+import type { DruidEngine, QueryContextParameterMetadata } from '../druid-models';
+// Imported from its module rather than the druid-models barrel, which imports helpers (a circular import)
+import { QUERY_CONTEXT_PARAMETERS_QUERY } from '../druid-models/query-context/query-context';
 import { Api } from '../singletons';
 import { filterMap } from '../utils';
 
@@ -241,6 +243,31 @@ export class Capabilities {
       );
     } catch (e) {
       console.error(e);
+      return;
+    }
+  }
+
+  /**
+   * The query context parameters, for SET completions. Undefined when they can not be loaded (an
+   * older Druid or no access to sys tables), in which case the completions fall back to the well-known context keys.
+   */
+  static async detectQueryContextParameters(
+    capabilities: Capabilities,
+  ): Promise<QueryContextParameterMetadata[] | undefined> {
+    if (!capabilities.hasSql()) return;
+
+    try {
+      return (
+        await Api.instance.post<QueryContextParameterMetadata[]>(
+          '/druid/v2/sql?capabilities-query-context-parameters',
+          {
+            query: QUERY_CONTEXT_PARAMETERS_QUERY,
+            context: { engine: 'native', timeout: Capabilities.STATUS_TIMEOUT },
+          },
+          { timeout: Capabilities.STATUS_TIMEOUT },
+        )
+      ).data;
+    } catch {
       return;
     }
   }
