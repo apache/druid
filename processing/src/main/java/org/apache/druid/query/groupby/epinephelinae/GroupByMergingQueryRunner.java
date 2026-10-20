@@ -406,8 +406,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       if (cause instanceof TimeoutException) {
         throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query timeout, cancelling pending results for query [%s]. Per-segment timeout exceeded.", query.getId()));
       }
-      Throwables.throwIfUnchecked(cause);
-      throw new RuntimeException(cause);
+      if (cause instanceof DruidException) {
+        throw (DruidException) cause;
+      }
+      throw new RuntimeException(e);
     }
   }
 }

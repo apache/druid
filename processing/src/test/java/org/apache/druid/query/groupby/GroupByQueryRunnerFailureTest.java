@@ -377,7 +377,7 @@ public class GroupByQueryRunnerFailureTest
     };
 
     QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(
-        Execs.directExecutor(),
+        processingPool,
         List.of(runner, failingRunner)
     );
 
