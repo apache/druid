@@ -141,6 +141,8 @@ OTEL_SERVICE_NAME="org.apache.druid" OTEL_EXPORTER_OTLP_ENDPOINT="http://localho
 
 The exporter uses OTLP over gRPC by default. To use OTLP over HTTP instead, set `OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"` and point `OTEL_EXPORTER_OTLP_ENDPOINT` at port 4318.
 
+The emitter only exports spans. The OpenTelemetry SDK's own metrics and logs are not exported unless you set `OTEL_METRICS_EXPORTER` or `OTEL_LOGS_EXPORTER`, for example to `otlp`.
+
 *_More about opentelemetry
 autoconfiguration [here](https://github.com/open-telemetry/opentelemetry-java/tree/main/sdk-extensions/autoconfigure)_
 

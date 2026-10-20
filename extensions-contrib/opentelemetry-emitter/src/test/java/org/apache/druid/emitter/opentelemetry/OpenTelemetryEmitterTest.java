@@ -134,6 +134,35 @@ public class OpenTelemetryEmitterTest
     );
   }
 
+  @Test
+  public void testDefaultExportersOnlyExportSpans()
+  {
+    try (OpenTelemetrySdk sdk = OpenTelemetryEmitterModule.buildOpenTelemetrySdk()) {
+      final String providers = sdk.toString();
+      Assertions.assertTrue(providers.contains("OtlpGrpcSpanExporter"), providers);
+      Assertions.assertFalse(providers.contains("MetricExporter"), providers);
+      Assertions.assertFalse(providers.contains("LogRecordExporter"), providers);
+    }
+  }
+
+  @Test
+  public void testSystemPropertyOverridesDefaultMetricsExporter()
+  {
+    final String previousMetricsExporter = System.getProperty("otel.metrics.exporter");
+    System.setProperty("otel.metrics.exporter", "otlp");
+    try (OpenTelemetrySdk sdk = OpenTelemetryEmitterModule.buildOpenTelemetrySdk()) {
+      final String providers = sdk.toString();
+      Assertions.assertTrue(providers.contains("OtlpGrpcMetricExporter"), providers);
+    }
+    finally {
+      if (previousMetricsExporter == null) {
+        System.clearProperty("otel.metrics.exporter");
+      } else {
+        System.setProperty("otel.metrics.exporter", previousMetricsExporter);
+      }
+    }
+  }
+
   // Check that we don't call "emitQueryTimeEvent" method for event that is not instance of ServiceMetricEvent
   @Test
   public void testNoEmitNotServiceMetric()
