@@ -2284,7 +2284,7 @@ context). If query does have `maxQueuedBytes` in the context, then that value is
 
 ### Query context validation
 
-The Broker checks the parameters that a query sets in its context. This applies to the top-level context of native queries submitted over HTTP, and to the context and `SET` statements of SQL queries, including the connection properties of JDBC connections.
+The Broker checks the parameters that a query sets in its context. This applies to the top-level context of native queries, and to the context and `SET` statements of SQL queries, including the connection properties of JDBC connections.
 
 The Broker always rejects a recognized parameter with an invalid value. If you set `druid.query.context.rejectUnknownParameters` to `true`, it also rejects a parameter that Druid doesn't recognize, such as a misspelled parameter name, instead of ignoring it. The error names an invalid parameter and, for an unrecognized parameter, suggests the parameters with similar names, if any. For example: `Unknown query context parameter [useCahce]. Did you mean [useCache]?`
 
