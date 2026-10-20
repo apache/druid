@@ -68,7 +68,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.core.Response;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -315,6 +317,22 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Assertions.assertEquals(200, response.getStatus());
     Assertions.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
+  }
+
+  @Test
+  public void testSpecPost_skipRestartIfUnmodifiedQueryParam_defaultsToTrue() throws NoSuchMethodException
+  {
+    // JAX-RS applies @DefaultValue only when binding an actual HTTP request, so a direct call to
+    // specPost(spec, null, ...) can't exercise that default.
+    Method specPost = SupervisorResource.class.getMethod(
+        "specPost",
+        SupervisorSpec.class,
+        Boolean.class,
+        HttpServletRequest.class
+    );
+    DefaultValue defaultValue = specPost.getParameters()[1].getAnnotation(DefaultValue.class);
+    Assertions.assertNotNull(defaultValue);
+    Assertions.assertEquals("true", defaultValue.value());
   }
 
   @Test
