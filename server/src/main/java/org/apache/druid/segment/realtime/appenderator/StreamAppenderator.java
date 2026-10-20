@@ -401,8 +401,7 @@ public class StreamAppenderator implements Appenderator
           }
         }
 
-        if (!skipBytesInMemoryOverheadCheck
-            && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+        if (!skipBytesInMemoryOverheadCheck && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
           // We are still over maxBytesTuningConfig even after persisting.
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(
@@ -810,9 +809,8 @@ public class StreamAppenderator implements Appenderator
           final List<DataSegment> dataSegments = new ArrayList<>();
           final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
-          log.info(
-              "Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
-              rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
+          log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
+                   rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
           );
 
           log.debug(
@@ -868,8 +866,7 @@ public class StreamAppenderator implements Appenderator
   private ListenableFuture<?> pushBarrier()
   {
     return intermediateTempExecutor.submit(
-        (Runnable) () -> pushExecutor.submit(() -> {
-        })
+        (Runnable) () -> pushExecutor.submit(() -> {})
     );
   }
 
@@ -946,8 +943,8 @@ public class StreamAppenderator implements Appenderator
       final File mergedFile;
       final DataSegment mergedSegment;
       final Stopwatch mergeStopwatch = Stopwatch.createStarted();
-      final long mergeTimeNanos;
       final long mergeTimeMillis;
+      final long mergeTimeNanos;
       final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
       Closer closer = Closer.create();
@@ -1193,17 +1190,11 @@ public class StreamAppenderator implements Appenderator
   public enum PendingSegmentUpgradeResult
   {
     ANNOUNCED(null),
-    /**
-     * The task holds no pending segment matching upgradedFromSegmentId (request targeted the wrong task).
-     */
+    /** The task holds no pending segment matching upgradedFromSegmentId (request targeted the wrong task). */
     SKIPPED_UNKNOWN_BASE("unknown base sink"),
-    /**
-     * The base sink is gone even though this task once held it.
-     */
+    /** The base sink is gone even though this task once held it. */
     SKIPPED_NO_SINK("base sink already dropped"),
-    /**
-     * The base sink is being dropped (handoff in progress); the durable path re-announces at the new version.
-     */
+    /** The base sink is being dropped (handoff in progress); the durable path re-announces at the new version. */
     SKIPPED_DROPPING("dropping base sink");
 
     @Nullable
@@ -1224,13 +1215,11 @@ public class StreamAppenderator implements Appenderator
     }
   }
 
-  public PendingSegmentUpgradeResult registerUpgradedPendingSegment(PendingSegmentRecord pendingSegmentRecord)
-      throws IOException
+  public PendingSegmentUpgradeResult registerUpgradedPendingSegment(PendingSegmentRecord pendingSegmentRecord) throws IOException
   {
     SegmentIdWithShardSpec basePendingSegment = idToPendingSegment.get(pendingSegmentRecord.getUpgradedFromSegmentId());
     SegmentIdWithShardSpec upgradedPendingSegment = pendingSegmentRecord.getId();
-    if (basePendingSegment == null || droppingSinks.contains(basePendingSegment) || !sinks.containsKey(
-        basePendingSegment)) {
+    if (basePendingSegment == null || droppingSinks.contains(basePendingSegment) || !sinks.containsKey(basePendingSegment)) {
       if (basePendingSegment == null) {
         // This task never allocated a segment matching upgradedFromSegmentId, i.e. the request targeted the wrong task.
         return PendingSegmentUpgradeResult.SKIPPED_UNKNOWN_BASE;
@@ -1255,12 +1244,7 @@ public class StreamAppenderator implements Appenderator
     segmentAnnouncer.announceSegment(newSegment);
     baseSegmentToUpgradedSegments.get(basePendingSegment).add(upgradedPendingSegment);
     upgradedSegmentToBaseSegment.put(upgradedPendingSegment, basePendingSegment);
-    log.info(
-        "Announced upgraded segment[%s] for base segment[%s] on task[%s]",
-        upgradedPendingSegment,
-        basePendingSegment,
-        myId
-    );
+    log.info("Announced upgraded segment[%s] for base segment[%s] on task[%s]", upgradedPendingSegment, basePendingSegment, myId);
     return PendingSegmentUpgradeResult.ANNOUNCED;
   }
 

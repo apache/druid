@@ -103,21 +103,13 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     }
     emitter.emit(builder.setMetric("ingest/events/unparseable", unparseable));
 
-    final long processedWithError = rowIngestionMetersTotals.getProcessedWithError()
-                                    - previousRowIngestionMetersTotals.getProcessedWithError();
+    final long processedWithError = rowIngestionMetersTotals.getProcessedWithError() - previousRowIngestionMetersTotals.getProcessedWithError();
     if (processedWithError > 0) {
-      log.error(
-          "[%,d] events processed with errors! Set logParseExceptions to true in the ingestion spec to log these errors.",
-          processedWithError
-      );
+      log.error("[%,d] events processed with errors! Set logParseExceptions to true in the ingestion spec to log these errors.", processedWithError);
     }
     emitter.emit(builder.setMetric("ingest/events/processedWithError", processedWithError));
 
-    emitter.emit(builder.setMetric(
-        "ingest/events/processed",
-        rowIngestionMetersTotals.getProcessed()
-        - previousRowIngestionMetersTotals.getProcessed()
-    ));
+    emitter.emit(builder.setMetric("ingest/events/processed", rowIngestionMetersTotals.getProcessed() - previousRowIngestionMetersTotals.getProcessed()));
 
     final long filtered = rowIngestionMetersTotals.getFiltered() - previousRowIngestionMetersTotals.getFiltered();
     emitter.emit(builder.setMetric("ingest/events/filtered", filtered));
@@ -134,49 +126,24 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
         )
     );
 
+    emitter.emit(builder.setMetric("ingest/rows/output", metrics.rowOutput() - previousSegmentGenerationMetrics.rowOutput()));
+    emitter.emit(builder.setMetric("ingest/persists/count", metrics.numPersists() - previousSegmentGenerationMetrics.numPersists()));
     // Subtract in nanoseconds and convert once, to avoid accumulating a rounding error from converting each total first.
     final long persistTimeDeltaNanos = metrics.persistTimeNanos() - previousSegmentGenerationMetrics.persistTimeNanos();
-    final long mergeTimeDeltaNanos = metrics.mergeTimeNanos() - previousSegmentGenerationMetrics.mergeTimeNanos();
-
-    emitter.emit(builder.setMetric(
-        "ingest/rows/output",
-        metrics.rowOutput() - previousSegmentGenerationMetrics.rowOutput()
-    ));
-    emitter.emit(builder.setMetric(
-        "ingest/persists/count",
-        metrics.numPersists() - previousSegmentGenerationMetrics.numPersists()
-    ));
-    emitter.emit(builder.setMetric(
-        "ingest/persists/time",
-        TimeUnit.NANOSECONDS.toMillis(persistTimeDeltaNanos)
-    ));
-    emitter.emit(builder.setMetric(
-        "ingest/persists/cpu",
-        metrics.persistCpuTime() - previousSegmentGenerationMetrics.persistCpuTime()
-    ));
+    emitter.emit(builder.setMetric("ingest/persists/time", TimeUnit.NANOSECONDS.toMillis(persistTimeDeltaNanos)));
+    emitter.emit(builder.setMetric("ingest/persists/cpu", metrics.persistCpuTime() - previousSegmentGenerationMetrics.persistCpuTime()));
     emitter.emit(
         builder.setMetric(
             "ingest/persists/backPressure",
             metrics.persistBackPressureMillis() - previousSegmentGenerationMetrics.persistBackPressureMillis()
         )
     );
-    emitter.emit(builder.setMetric(
-        "ingest/persists/failed",
-        metrics.failedPersists() - previousSegmentGenerationMetrics.failedPersists()
-    ));
-    emitter.emit(builder.setMetric(
-        "ingest/handoff/failed",
-        metrics.failedHandoffs() - previousSegmentGenerationMetrics.failedHandoffs()
-    ));
+    emitter.emit(builder.setMetric("ingest/persists/failed", metrics.failedPersists() - previousSegmentGenerationMetrics.failedPersists()));
+    emitter.emit(builder.setMetric("ingest/handoff/failed", metrics.failedHandoffs() - previousSegmentGenerationMetrics.failedHandoffs()));
+    final long mergeTimeDeltaNanos = metrics.mergeTimeNanos() - previousSegmentGenerationMetrics.mergeTimeNanos();
     emitter.emit(builder.setMetric("ingest/merge/time", TimeUnit.NANOSECONDS.toMillis(mergeTimeDeltaNanos)));
-    emitter.emit(builder.setMetric(
-        "ingest/merge/cpu",
-        metrics.mergeCpuTime() - previousSegmentGenerationMetrics.mergeCpuTime()
-    ));
-    emitter.emit(builder.setMetric(
-        "ingest/handoff/count",
-        metrics.handOffCount() - previousSegmentGenerationMetrics.handOffCount()
-    ));
+    emitter.emit(builder.setMetric("ingest/merge/cpu", metrics.mergeCpuTime() - previousSegmentGenerationMetrics.mergeCpuTime()));
+    emitter.emit(builder.setMetric("ingest/handoff/count", metrics.handOffCount() - previousSegmentGenerationMetrics.handOffCount()));
     emitter.emit(builder.setMetric("ingest/sink/count", metrics.sinkCount()));
 
     long messageGap = metrics.messageGap();

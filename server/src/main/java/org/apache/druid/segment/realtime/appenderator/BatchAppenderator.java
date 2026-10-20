@@ -502,10 +502,8 @@ public class BatchAppenderator implements Appenderator
   private void clear(Map<SegmentIdWithShardSpec, Sink> sinksToClear, boolean removeOnDiskData)
   {
     // Drop commit metadata, then abandon all segments.
-    log.info(
-        "Clearing all[%d] sinks & their hydrants, removing data on disk: [%s]",
-        sinksToClear.size(), removeOnDiskData
-    );
+    log.info("Clearing all[%d] sinks & their hydrants, removing data on disk: [%s]",
+             sinksToClear.size(), removeOnDiskData);
     // Drop everything.
     Iterator<Map.Entry<SegmentIdWithShardSpec, Sink>> sinksIterator = sinksToClear.entrySet().iterator();
     sinksIterator.forEachRemaining(entry -> {
@@ -574,9 +572,8 @@ public class BatchAppenderator implements Appenderator
             // the invariant of exactly one, always swappable, sink with exactly one unpersisted hydrant must hold
             int totalHydrantsForSink = hydrants.size();
             if (totalHydrantsForSink != 1) {
-              throw new ISE(
-                  "There should be only one hydrant for identifier[%s] but there are[%s]",
-                  identifier, totalHydrantsForSink
+              throw new ISE("There should be only one hydrant for identifier[%s] but there are[%s]",
+                            identifier, totalHydrantsForSink
               );
             }
             totalHydrantsCount++;
@@ -625,14 +622,14 @@ public class BatchAppenderator implements Appenderator
           }
           finally {
             metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
-            final long persistMillis = persistStopwatch.nanosElapsed();
-            metrics.incrementPersistTimeNanos(persistMillis);
+            final long persistNanos = persistStopwatch.nanosElapsed();
+            final long persistMillis = TimeUnit.NANOSECONDS.toMillis(persistNanos);
+            metrics.incrementPersistTimeNanos(persistNanos);
             metrics.incrementNumPersists();
             persistStopwatch.stop();
             // make sure no push can start while persisting:
-            log.info(
-                "Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory in[%d] millis",
-                numPersistedRows, bytesPersisted, persistMillis
+            log.info("Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory in[%d] millis",
+                     numPersistedRows, bytesPersisted, persistMillis
             );
             log.info("Persist is done.");
           }
@@ -652,7 +649,6 @@ public class BatchAppenderator implements Appenderator
   /**
    * All sinks will be persisted so do a shallow copy of the Sinks map, reset
    * the map and metadata (i.e. memory consumption counters) so that ingestion can go on
-   *
    * @return The map of sinks to persist, this map will be garbage collected after
    * persist is complete since we will not be keeping a reference to it...
    */
@@ -737,9 +733,8 @@ public class BatchAppenderator implements Appenderator
               log.warn("mergeAndPush[%s] returned null, skipping.", identifier);
             }
           }
-          log.info(
-              "Push done: total sinks merged[%d], total hydrants merged[%d]",
-              identifiers.size(), totalHydrantsMerged
+          log.info("Push done: total sinks merged[%d], total hydrants merged[%d]",
+                   identifiers.size(), totalHydrantsMerged
           );
 
           return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchemaMapping);
@@ -752,8 +747,8 @@ public class BatchAppenderator implements Appenderator
   /**
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted.
    *
-   * @param identifier sink identifier
-   * @param sink       sink to push
+   * @param identifier    sink identifier
+   * @param sink          sink to push
    * @return segment descriptor along with schema, or null if the sink is no longer valid
    */
   private DataSegmentWithMetadata mergeAndPush(
@@ -783,10 +778,8 @@ public class BatchAppenderator implements Appenderator
     if (sm == null) {
       log.warn("Sink metadata not found just before merge for identifier [%s]", identifier);
     } else if (numHydrants != sm.getNumHydrants()) {
-      throw new ISE(
-          "Number of restored hydrants[%d] for identifier[%s] does not match expected value[%d]",
-          numHydrants, identifier, sm.getNumHydrants()
-      );
+      throw new ISE("Number of restored hydrants[%d] for identifier[%s] does not match expected value[%d]",
+                    numHydrants, identifier, sm.getNumHydrants());
     }
 
     try {
@@ -1277,14 +1270,12 @@ public class BatchAppenderator implements Appenderator
    */
   private static class SinkMetadata
   {
-    /**
-     * This is used to maintain the rows in the sink accross persists of the sink
+    /** This is used to maintain the rows in the sink accross persists of the sink
      * used for functionality (i.e. to detect whether an incremental push
      * is needed {@link AppenderatorDriverAddResult#isPushRequired(Integer, Long)}
      **/
     private int numRowsInSegment;
-    /**
-     * For sanity check as well as functionality: to make sure that all hydrants for a sink are restored from disk at
+    /** For sanity check as well as functionality: to make sure that all hydrants for a sink are restored from disk at
      * push time and also to remember the fire hydrant "count" when persisting it.
      */
     private int numHydrants;
