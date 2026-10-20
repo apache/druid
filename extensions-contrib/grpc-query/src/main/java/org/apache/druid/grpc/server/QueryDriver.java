@@ -175,8 +175,10 @@ public class QueryDriver
       QueryContextParameterValidator.validate(query.getContext(), queryContextConfig.isRejectUnknownParameters());
     }
     catch (BadQueryContextException e) {
+      // Not parsed, as the context may be the cause of the exception
+      final Object queryId = query.getContext().get(QueryContextParameters.QUERY_ID.getName());
       return QueryResponse.newBuilder()
-                          .setQueryId("")
+                          .setQueryId(queryId instanceof String ? (String) queryId : "")
                           .setStatus(QueryStatus.REQUEST_ERROR)
                           .setErrorMessage(e.getMessage())
                           .build();
