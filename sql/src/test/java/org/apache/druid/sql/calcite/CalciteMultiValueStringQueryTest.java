@@ -2435,6 +2435,25 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testMultiValuedFilterExpressionOnSingleValuedColumnFilter()
+  {
+    // filtering a single valued column can leave rows with no values, which must still be treated as null even
+    // though the expression delegate has no indexes to answer the filter
+    testFilteredMultiValueResults(
+        "SELECT COUNT(*) FROM druid.foo WHERE MV_FILTER_ONLY(UPPER(dim1), ARRAY['ABC']) IS NULL",
+        ImmutableList.of(new Object[]{5L})
+    );
+    testFilteredMultiValueResults(
+        "SELECT COUNT(*) FROM druid.foo WHERE MV_FILTER_ONLY(UPPER(dim1), ARRAY['ABC']) = 'ABC'",
+        ImmutableList.of(new Object[]{1L})
+    );
+    testFilteredMultiValueResults(
+        "SELECT COUNT(*) FROM druid.foo WHERE MV_FILTER_PREFIX(UPPER(dim1), 'AB') IS NULL",
+        ImmutableList.of(new Object[]{5L})
+    );
+  }
+
+  @Test
   public void testMultiValuedFilterOnlyMultiInputExpression()
   {
     // expressions with more than one input cannot use a dictionary backed delegate, so plan to a plain expression
