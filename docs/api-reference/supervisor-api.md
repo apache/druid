@@ -2290,7 +2290,7 @@ The following table lists the properties of a supervisor spec:
 
 When called on an existing supervisor, Druid compares the submitted spec with the running one. If the change requires a restart, the supervisor signals its tasks to stop reading and begin publishing, then exits. Druid creates a new supervisor using the submitted spec, retaining existing publishing tasks and starting new tasks from the previous task offsets. This allows configuration changes without interrupting data processing.
 
-Otherwise, if the spec is unchanged or does not require a restart (e.g. only `taskCount` differs while task auto-scaling is enabled), Druid updates the stored spec without restarting the supervisor.
+Otherwise, Druid does not restart the supervisor. If the spec is unchanged, the call is a no-op. If the only difference is `taskCount` while task auto-scaling is enabled, Druid persists the updated `taskCount` without restarting the supervisor.
 
 Set `skipRestartIfUnmodified` to false to always restart the supervisor and its tasks, even when the spec is effectively unchanged.
 
