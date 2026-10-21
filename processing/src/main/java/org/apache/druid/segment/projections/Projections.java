@@ -143,6 +143,9 @@ public class Projections
       }
     }
     if (name != null) {
+      if (projections.stream().noneMatch(projection -> name.equals(projection.getSchema().getName()))) {
+        throw InvalidInput.exception("Projection[%s] does not exist", name);
+      }
       throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
     }
     if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.FORCE_PROJECTIONS)) {
