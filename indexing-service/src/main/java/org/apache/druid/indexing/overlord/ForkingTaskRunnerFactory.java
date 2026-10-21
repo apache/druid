@@ -27,7 +27,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.server.security.SensitiveProperties;
 import org.apache.druid.tasklogs.TaskLogPusher;
 
 import java.util.Properties;
@@ -43,7 +43,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
   private final ObjectMapper jsonMapper;
   private final TaskLogPusher persistentTaskLogs;
   private final DruidNode node;
-  private final StartupLoggingConfig startupLoggingConfig;
+  private final SensitiveProperties sensitiveProperties;
   private final TaskStorageDirTracker dirTracker;
   private ForkingTaskRunner runner;
 
@@ -56,7 +56,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
       final ObjectMapper jsonMapper,
       final TaskLogPusher persistentTaskLogs,
       @Self DruidNode node,
-      final StartupLoggingConfig startupLoggingConfig,
+      final SensitiveProperties sensitiveProperties,
       final TaskStorageDirTracker dirTracker
   )
   {
@@ -67,7 +67,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
     this.jsonMapper = jsonMapper;
     this.persistentTaskLogs = persistentTaskLogs;
     this.node = node;
-    this.startupLoggingConfig = startupLoggingConfig;
+    this.sensitiveProperties = sensitiveProperties;
     this.dirTracker = dirTracker;
   }
 
@@ -82,7 +82,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
         persistentTaskLogs,
         jsonMapper,
         node,
-        startupLoggingConfig,
+        sensitiveProperties,
         dirTracker
     );
     return runner;
