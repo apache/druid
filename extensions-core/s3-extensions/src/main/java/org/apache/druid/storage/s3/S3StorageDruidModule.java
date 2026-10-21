@@ -152,7 +152,8 @@ public class S3StorageDruidModule implements DruidModule
         clientConfig,
         null,
         null,
-        intermediateRoleConfig
+        intermediateRoleConfig,
+        endpointConfig
     );
   }
 

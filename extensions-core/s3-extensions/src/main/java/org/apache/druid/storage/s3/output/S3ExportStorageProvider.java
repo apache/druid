@@ -118,7 +118,8 @@ public class S3ExportStorageProvider implements ExportStorageProvider
           awsClientConfig,
           null,
           this,
-          intermediateRoleConfig
+          intermediateRoleConfig,
+          awsEndpointConfig
       ).build();
     });
   }

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.retries.api.RetryStrategy;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -70,6 +71,15 @@ public class ServerSideEncryptingAmazonS3Test
     public String getSigningRegion()
     {
       return "us-east-1";
+    }
+  };
+
+  private static final AWSEndpointConfig INTERMEDIATE_REGION_CONFIG = new AWSEndpointConfig()
+  {
+    @Override
+    public String getSigningRegion()
+    {
+      return "eu-south-1";
     }
   };
 
@@ -306,11 +316,51 @@ public class ServerSideEncryptingAmazonS3Test
         clientConfig,
         null,
         null,
+        null,
         null
     );
 
     Assertions.assertEquals(2, issued.size(), "one strategy per client, sync and async");
     Assertions.assertNotSame(issued.get(0), issued.get(1));
+  }
+
+  @Test
+  public void testSpecCredentialsAssumeTheRoleTheSpecNamesDirectly() throws Exception
+  {
+    final ServerSideEncryptingAmazonS3 s3 = ServerSideEncryptingAmazonS3.builder(
+        AnonymousCredentialsProvider.create(),
+        new S3StorageConfig(new NoopServerSideEncryption(), new S3TransferConfig()),
+        null,
+        REGION_CONFIG,
+        new AWSClientConfig(),
+        new S3InputSourceConfig(() -> "specAccessKey", () -> "specSecretKey", TARGET_ROLE_ARN, null, null),
+        null,
+        new S3IntermediateRoleConfig(INTERMEDIATE_ROLE_ARN),
+        null
+    ).build();
+
+    final StsAssumeRoleCredentialsProvider target = assumeRoleProvider(
+        s3.getS3Client().serviceClientConfiguration().credentialsProvider(),
+        "the S3 client should assume a role"
+    );
+    final Field stsClientField = StsCredentialsProvider.class.getDeclaredField("stsClient");
+    stsClientField.setAccessible(true);
+    final StsClient targetStsClient = (StsClient) stsClientField.get(target);
+
+    try {
+      Assertions.assertEquals(TARGET_ROLE_ARN, roleArnRequestedBy(target));
+      Assertions.assertFalse(
+          targetStsClient.serviceClientConfiguration().credentialsProvider() instanceof StsAssumeRoleCredentialsProvider,
+          "the spec's own credentials assume the spec's role without the intermediate role"
+      );
+      Assertions.assertEquals(
+          "specAccessKey",
+          targetStsClient.serviceClientConfiguration().credentialsProvider().resolveIdentity().join().accessKeyId()
+      );
+    }
+    finally {
+      target.close();
+    }
   }
 
   @Test
@@ -324,7 +374,8 @@ public class ServerSideEncryptingAmazonS3Test
         new AWSClientConfig(),
         new S3InputSourceConfig(null, null, TARGET_ROLE_ARN, null, null),
         null,
-        new S3IntermediateRoleConfig(INTERMEDIATE_ROLE_ARN)
+        new S3IntermediateRoleConfig(INTERMEDIATE_ROLE_ARN),
+        INTERMEDIATE_REGION_CONFIG
     ).build();
 
     final StsAssumeRoleCredentialsProvider target = assumeRoleProvider(
@@ -351,6 +402,11 @@ public class ServerSideEncryptingAmazonS3Test
           INTERMEDIATE_ROLE_ARN,
           roleArnRequestedBy(intermediate),
           "and it does so with credentials from assuming the intermediate role first"
+      );
+      Assertions.assertEquals(Region.US_EAST_1, targetStsClient.serviceClientConfiguration().region());
+      Assertions.assertEquals(
+          Region.EU_SOUTH_1,
+          ((StsClient) stsClientField.get(intermediate)).serviceClientConfiguration().region()
       );
     }
     finally {

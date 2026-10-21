@@ -323,7 +323,8 @@ public class ServerSideEncryptingAmazonS3
       @Nullable AWSClientConfig awsClientConfig,
       @Nullable S3InputSourceConfig s3InputSourceConfig,
       @Nullable S3ExportStorageProvider s3ExportStorageProvider,
-      @Nullable S3IntermediateRoleConfig intermediateRoleConfig
+      @Nullable S3IntermediateRoleConfig intermediateRoleConfig,
+      @Nullable AWSEndpointConfig intermediateRoleEndpointConfig
   )
   {
     if (s3InputSourceConfig != null && s3ExportStorageProvider != null) {
@@ -412,11 +413,14 @@ public class ServerSideEncryptingAmazonS3
 
     // Apply assume role if configured
     if (!Strings.isNullOrEmpty(assumeRoleArn)) {
-      credentialsProvider = maybeAssumeIntermediateRole(
-          credentialsProvider,
-          intermediateRoleConfig,
-          awsClientConfig
-      );
+      if (s3InputSourceConfig == null || !s3InputSourceConfig.isCredentialsConfigured()) {
+        credentialsProvider = maybeAssumeIntermediateRole(
+            credentialsProvider,
+            intermediateRoleConfig,
+            intermediateRoleEndpointConfig,
+            awsClientConfig
+        );
+      }
 
       credentialsProvider = createAssumeRoleCredentialsProvider(
           assumeRoleArn,
@@ -435,7 +439,8 @@ public class ServerSideEncryptingAmazonS3
                                        .setS3ClientSupplier(clientBuilder::build)
                                        .setS3AsyncClientSupplier(asyncClientBuilder::build)
                                        .setS3StorageConfig(s3StorageConfig)
-                                       .setIntermediateRoleConfig(intermediateRoleConfig);
+                                       .setIntermediateRoleConfig(intermediateRoleConfig)
+                                       .setIntermediateRoleEndpointConfig(intermediateRoleEndpointConfig);
   }
 
   /**
@@ -472,9 +477,10 @@ public class ServerSideEncryptingAmazonS3
   /**
    * Assumes an intermediate role if one is configured.
    */
-  public static AwsCredentialsProvider maybeAssumeIntermediateRole(
+  private static AwsCredentialsProvider maybeAssumeIntermediateRole(
       AwsCredentialsProvider baseCredentialsProvider,
       @Nullable S3IntermediateRoleConfig intermediateRoleConfig,
+      @Nullable AWSEndpointConfig intermediateRoleEndpointConfig,
       @Nullable AWSClientConfig awsClientConfig
   )
   {
@@ -487,7 +493,7 @@ public class ServerSideEncryptingAmazonS3
     return createAssumeRoleCredentialsProvider(
         intermediateAssumeRoleArn,
         null,
-        null,
+        intermediateRoleEndpointConfig,
         baseCredentialsProvider,
         awsClientConfig
     );
@@ -534,6 +540,8 @@ public class ServerSideEncryptingAmazonS3
     private S3StorageConfig s3StorageConfig = new S3StorageConfig(new NoopServerSideEncryption(), null);
     @Nullable
     private S3IntermediateRoleConfig intermediateRoleConfig;
+    @Nullable
+    private AWSEndpointConfig intermediateRoleEndpointConfig;
 
     public Builder setS3ClientSupplier(Supplier<S3Client> s3ClientSupplier)
     {
@@ -568,6 +576,18 @@ public class ServerSideEncryptingAmazonS3
     public S3IntermediateRoleConfig getIntermediateRoleConfig()
     {
       return this.intermediateRoleConfig;
+    }
+
+    public Builder setIntermediateRoleEndpointConfig(@Nullable AWSEndpointConfig intermediateRoleEndpointConfig)
+    {
+      this.intermediateRoleEndpointConfig = intermediateRoleEndpointConfig;
+      return this;
+    }
+
+    @Nullable
+    public AWSEndpointConfig getIntermediateRoleEndpointConfig()
+    {
+      return this.intermediateRoleEndpointConfig;
     }
 
     /**
