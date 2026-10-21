@@ -1502,7 +1502,7 @@ Queues early handoff for streaming ingestion tasks (`index_kafka`, `index_kinesi
 
 This is a best-effort API. It does not shut down the worker, kill tasks, or terminate supervisors. Handoff uses the same supervisor notice path as [handoff task groups for a supervisor early](supervisor-api.md#handoff-task-groups-for-a-supervisor-early): pause, persist, publish, then wait for Historicals. Only task groups that have a running task on this worker are queued. Other groups of the same supervisor on other workers are left running. Replicas of a selected task group on another worker still publish, which is existing task-group handoff behavior.
 
-Omit `types` or send `{}` to include every early-handoff-capable type on that worker. Unknown types return 400. Types that cannot early-handoff, such as `compact`, are skipped when omitted from the request and return 400 when they are the only requested types.
+Omit `types` or send `{}` to include every early-handoff-capable type on that worker. If `types` is set and none of the values are `index_kafka` or `index_kinesis`, the request returns 400. Other listed types are ignored.
 
 #### URL
 
@@ -1523,7 +1523,7 @@ Omit `types` or send `{}` to include every early-handoff-capable type on that wo
 
 <br/>
 
-*The `types` filter is unknown or none of the requested types support early handoff.*
+*None of the requested `types` support early handoff.*
 
 </TabItem>
 <TabItem value="82" label="404 NOT FOUND">

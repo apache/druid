@@ -25,7 +25,6 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -49,14 +48,6 @@ public final class WorkerHandoffHelper
   private static final Logger LOG = new Logger(WorkerHandoffHelper.class);
 
   static final Set<String> EARLY_HANDOFF_TASK_TYPES = ImmutableSet.of("index_kafka", "index_kinesis");
-  private static final Set<String> KNOWN_NON_HANDOFF_TASK_TYPES = ImmutableSet.of(
-      "compact",
-      "index_parallel",
-      "index",
-      "kill",
-      "index_hadoop",
-      "noop"
-  );
 
   private WorkerHandoffHelper()
   {
@@ -88,8 +79,6 @@ public final class WorkerHandoffHelper
       }
       if (EARLY_HANDOFF_TASK_TYPES.contains(type)) {
         anyHandoffType = true;
-      } else if (!KNOWN_NON_HANDOFF_TASK_TYPES.contains(type)) {
-        return Optional.of(StringUtils.format("Unknown task type [%s]", type));
       }
     }
     if (!anyHandoffType) {
@@ -104,9 +93,18 @@ public final class WorkerHandoffHelper
       @Nullable List<String> requestedTypes
   )
   {
-    final Set<String> typeFilter = CollectionUtils.isNullOrEmpty(requestedTypes)
-                                   ? EARLY_HANDOFF_TASK_TYPES
-                                   : ImmutableSet.copyOf(requestedTypes);
+    final Set<String> typeFilter;
+    if (CollectionUtils.isNullOrEmpty(requestedTypes)) {
+      typeFilter = EARLY_HANDOFF_TASK_TYPES;
+    } else {
+      final ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+      for (String type : requestedTypes) {
+        if (EARLY_HANDOFF_TASK_TYPES.contains(type)) {
+          builder.add(type);
+        }
+      }
+      typeFilter = builder.build();
+    }
     final Map<String, Set<Integer>> grouped = new LinkedHashMap<>();
     for (String taskId : runningTaskIds) {
       final Optional<Task> taskOptional = taskLookup.apply(taskId);

@@ -72,19 +72,23 @@ public class WorkerHandoffHelperTest
   }
 
   @Test
-  public void testValidateTypesUnknownIsError()
+  public void testValidateTypesRejectsWhenNoneSupportEarlyHandoff()
   {
-    final Optional<String> error = WorkerHandoffHelper.validateTypes(ImmutableList.of("not_a_type"));
-    Assertions.assertTrue(error.isPresent());
-    Assertions.assertTrue(error.get().contains("Unknown task type"));
+    final Optional<String> unknown = WorkerHandoffHelper.validateTypes(ImmutableList.of("not_a_type"));
+    Assertions.assertTrue(unknown.isPresent());
+    Assertions.assertTrue(unknown.get().contains("do not support early handoff"));
+
+    final Optional<String> compact = WorkerHandoffHelper.validateTypes(ImmutableList.of("compact"));
+    Assertions.assertTrue(compact.isPresent());
+    Assertions.assertTrue(compact.get().contains("do not support early handoff"));
   }
 
   @Test
-  public void testValidateTypesOnlyNonHandoffIsError()
+  public void testValidateTypesIgnoresExtraTypesWhenOneSupportsHandoff()
   {
-    final Optional<String> error = WorkerHandoffHelper.validateTypes(ImmutableList.of("compact"));
-    Assertions.assertTrue(error.isPresent());
-    Assertions.assertTrue(error.get().contains("do not support early handoff"));
+    Assertions.assertFalse(
+        WorkerHandoffHelper.validateTypes(ImmutableList.of("index_kafka", "not_a_type")).isPresent()
+    );
   }
 
   @Test
