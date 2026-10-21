@@ -1879,6 +1879,21 @@ public final class QueryContextParameters
           .statement(StatementType.INSERT, StatementType.REPLACE)
           .build();
 
+  public static final QueryContextParameter<Boolean> FAIL_ON_MULTI_VALUED_RANGE_PARTITION =
+      booleanParameter("failOnMultiValuedRangePartition")
+          .since("39.0.0").query(Query.SQL).engine(Engine.MSQ)
+          .defaultValue(false)
+          .description(
+              """
+              Set by Druid when it compacts a datasource whose partitioning is by range.
+              An ingestion query falls back to dynamic partitioning when the data turns out to hold multi-valued fields, since it stores the rows either way.
+              Compaction cannot, because the segments it writes would then disagree with the partitioning its config asks for, so it fails instead.
+              """
+          )
+          .statement(StatementType.REPLACE)
+          .visibility(Visibility.SYSTEM)
+          .build();
+
   public static final QueryContextParameter<Boolean> REMOVE_NULL_BYTES =
       booleanParameter("removeNullBytes")
           .since("31.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)

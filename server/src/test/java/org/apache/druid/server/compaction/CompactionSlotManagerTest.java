@@ -99,6 +99,7 @@ public class CompactionSlotManagerTest
         null,
         null,
         null,
+        null,
         context,
         new ClientCompactionRunnerInfo(CompactionEngine.MSQ)
     );
