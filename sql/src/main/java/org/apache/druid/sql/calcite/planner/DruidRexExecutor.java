@@ -225,6 +225,9 @@ public class DruidRexExecutor implements RexExecutor
               }
             }
             literal = rexBuilder.makeLiteral(resultAsBooleanList, constExp.getType(), true);
+          } else if (constExp.getType().getComponentType().getSqlTypeName() == SqlTypeName.OTHER) {
+            // array of complex constants is not reducible either, so just leave it as an expression
+            literal = constExp;
           } else {
             literal = rexBuilder.makeLiteral(Arrays.asList(array), constExp.getType(), true);
           }

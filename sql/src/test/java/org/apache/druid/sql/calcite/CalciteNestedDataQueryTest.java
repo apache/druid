@@ -6999,6 +6999,20 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestJsonQueryArrayOfConstantJson()
+  {
+    // https://github.com/apache/druid/issues/20631
+    testBuilder()
+        .sql(
+            "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[{\"b\":1}]}') AS j) t "
+            + "CROSS JOIN UNNEST(JSON_QUERY_ARRAY(t.j, '$.a')) AS u(v)"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedResults(ImmutableList.of(new Object[]{"{\"b\":1}"}))
+        .run();
+  }
+
+  @Test
   public void testUnnestJsonQueryArrays()
   {
     testBuilder()
