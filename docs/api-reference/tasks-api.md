@@ -1496,6 +1496,107 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 </details>
 
+### Handoff streaming tasks on a worker early
+
+Queues early handoff for streaming ingestion tasks (`index_kafka`, `index_kinesis`) running on one Middle Manager. `{host}` is the worker identity registered with the Overlord (`hostname:port`), the same value used by worker enable and disable.
+
+This is a best-effort API. It does not shut down the worker, kill tasks, or terminate supervisors. Handoff uses the same supervisor notice path as [handoff task groups for a supervisor early](supervisor-api.md#handoff-task-groups-for-a-supervisor-early): pause, persist, publish, then wait for Historicals. Only task groups that have a running task on this worker are queued. Other groups of the same supervisor on other workers are left running. Replicas of a selected task group on another worker still publish, which is existing task-group handoff behavior.
+
+Omit `types` or send `{}` to include every early-handoff-capable type on that worker. Unknown types return 400. Types that cannot early-handoff, such as `compact`, are skipped when omitted from the request and return 400 when they are the only requested types.
+
+#### URL
+
+`POST` `/druid/indexer/v1/worker/{host}/handoff`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="80" label="202 ACCEPTED">
+
+<br/>
+
+*Handoff notices were queued for the matching task groups. An empty `taskGroups` object means the worker had no matching streaming tasks.*
+
+</TabItem>
+<TabItem value="81" label="400 BAD REQUEST">
+
+<br/>
+
+*The `types` filter is unknown or none of the requested types support early handoff.*
+
+</TabItem>
+<TabItem value="82" label="404 NOT FOUND">
+
+<br/>
+
+*No worker is registered with that host.*
+
+</TabItem>
+<TabItem value="83" label="503 SERVICE UNAVAILABLE">
+
+<br/>
+
+*This Overlord is not the leader.*
+
+</TabItem>
+</Tabs>
+
+#### Sample request
+
+The following example hands off streaming tasks on worker `mm-0.druid.default.svc.cluster.local:8091`.
+
+<Tabs>
+
+<TabItem value="84" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/worker/mm-0.druid.default.svc.cluster.local:8091/handoff" \
+--header 'Content-Type: application/json' \
+--data-raw '{}'
+```
+
+</TabItem>
+<TabItem value="85" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/worker/mm-0.druid.default.svc.cluster.local:8091/handoff HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{}
+```
+
+</TabItem>
+</Tabs>
+
+To restrict the request to Kafka tasks:
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/worker/mm-0.druid.default.svc.cluster.local:8091/handoff" \
+--header 'Content-Type: application/json' \
+--data-raw '{"types": ["index_kafka"]}'
+```
+
+#### Sample response
+
+<details>
+  <summary>202 Accepted</summary>
+
+  ```json
+  {
+    "host": "mm-0.druid.default.svc.cluster.local:8091",
+    "taskGroups": {
+      "wikipedia": [0, 2],
+      "wikipedia_ha": [1]
+    }
+  }
+  ```
+
+</details>
+
 ## Task management
 
 ### Retrieve status objects for tasks

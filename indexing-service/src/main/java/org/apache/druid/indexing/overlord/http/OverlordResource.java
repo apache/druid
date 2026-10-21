@@ -50,16 +50,20 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DruidOverlord;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
+import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
+import org.apache.druid.indexing.overlord.WorkerHandoffHelper;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -770,6 +774,79 @@ public class OverlordResource
   public Response disableWorker(@PathParam("host") final String host)
   {
     return changeWorkerStatus(host, WorkerTaskRunner.ActionType.DISABLE);
+  }
+
+  /**
+   * Queue early handoff for streaming tasks running on one Middle Manager.
+   * {@code host} is the worker identity registered with the Overlord ({@code hostname:port}),
+   * the same value used by {@link #enableWorker} and {@link #disableWorker}.
+   * This is a best-effort API; handoff runs asynchronously via supervisor notices.
+   */
+  @POST
+  @Path("/worker/{host}/handoff")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response handoffWorkerTasks(
+      @PathParam("host") final String host,
+      @Nullable final WorkerHandoffRequest request
+  )
+  {
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        taskRunner -> {
+          if (!(taskRunner instanceof WorkerTaskRunner)) {
+            log.debug(
+                "Task runner[%s] of type[%s] does not support worker handoff",
+                taskRunner,
+                taskRunner.getClass().getName()
+            );
+            return Response.serverError()
+                           .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
+                           .build();
+          }
+
+          final Optional<ImmutableWorkerInfo> workerInfo = WorkerHandoffHelper.findWorker(
+              ((WorkerTaskRunner) taskRunner).getWorkers(),
+              host
+          );
+          if (!workerInfo.isPresent()) {
+            return Response.status(Status.NOT_FOUND)
+                           .entity(ImmutableMap.of(
+                               "error",
+                               StringUtils.format("Worker on host [%s] does not exist", host)
+                           ))
+                           .build();
+          }
+
+          final List<String> types = request == null ? null : request.getTypes();
+          final Optional<String> typeError = WorkerHandoffHelper.validateTypes(types);
+          if (typeError.isPresent()) {
+            return Response.status(Status.BAD_REQUEST)
+                           .entity(ImmutableMap.of("error", typeError.get()))
+                           .build();
+          }
+
+          final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+          final Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
+          if (!taskQueue.isPresent() || !supervisorManager.isPresent()) {
+            return Response.status(Status.SERVICE_UNAVAILABLE).build();
+          }
+
+          final Map<String, List<Integer>> taskGroups = WorkerHandoffHelper.groupTaskGroups(
+              workerInfo.get().getRunningTasks(),
+              taskQueue.get()::getActiveTask,
+              types
+          );
+          final Map<String, List<Integer>> accepted = WorkerHandoffHelper.submitHandoffs(
+              supervisorManager.get(),
+              taskGroups
+          );
+          return Response.status(Status.ACCEPTED)
+                         .entity(ImmutableMap.of("host", host, "taskGroups", accepted))
+                         .build();
+        }
+    );
   }
 
   private Response changeWorkerStatus(String host, WorkerTaskRunner.ActionType action)
