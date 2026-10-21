@@ -1832,6 +1832,7 @@ public final class QueryContextParameters
               Overrides how leaf stages acquire segments from the segment cache.
               `FULL` downloads each segment up front, while `PARTIAL` downloads only the parts a query reads.
               `PARTIAL` falls back to `FULL` where partial downloads are unavailable.
+              `PARTIAL_RULE_HELD` reads only the parts a segment's partial-load rule selected, and nothing from segments without one.
               Intended for testing, debugging and performance comparison.
               """
           )
