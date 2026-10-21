@@ -35,7 +35,7 @@ import java.util.Objects;
  *   <li>number of rows in the segment</li>
  *   <li>if the segment is realtime</li>
  * </ul>
- * <br></br>
+ * <br>
  * Objects of this class are used to sync the state of segments from the Coordinator to different services, typically the Broker.
  * The {@link #compareTo} method considers only the {@link SegmentId}.
  */

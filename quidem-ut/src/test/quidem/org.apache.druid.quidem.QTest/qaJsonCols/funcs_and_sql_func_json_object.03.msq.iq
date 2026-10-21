@@ -612,8 +612,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_object(KEY 'a' value 'b') c
 FROM test_json_cols;
-Query could not be planned
-!error
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_object TEST_ID: A140
@@ -623,8 +636,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_object('a':'b') c
 FROM test_json_cols;
-Query could not be planned
-!error
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_object TEST_ID: A141
@@ -677,7 +703,6 @@ FROM test_json_cols;
         "resultFormat" : "compactedList",
         "columns" : [ "v0" ],
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -775,7 +800,6 @@ FROM test_json_cols;
         "resultFormat" : "compactedList",
         "columns" : [ "v0" ],
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,

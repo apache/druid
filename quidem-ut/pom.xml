@@ -30,7 +30,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>39.0.0-SNAPSHOT</version>
+        <version>40.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -465,12 +465,6 @@
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-testkit</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.github.os72</groupId>
-            <artifactId>protobuf-dynamic</artifactId>
-            <version>1.0.1</version>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.github.kgyrtkirk.datasets</groupId>

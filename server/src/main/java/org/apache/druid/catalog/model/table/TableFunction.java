@@ -36,7 +36,7 @@ import java.util.Map;
  * The parameters tell Calcite the allowed parameters. Functions created from
  * this class are most useful when used with named arguments:<code><pre>
  * SELECT ... FROM TABLE(thisFn(foo -> "bar", answer -> 42))
- * </pre</code>
+ * </pre></code>
  * <p>
  * Calcite provides actual arguments as an array, with null values for arguments
  * which the user did not provide. That form is not helpful for this use case.

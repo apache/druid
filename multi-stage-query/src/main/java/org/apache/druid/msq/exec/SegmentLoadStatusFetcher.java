@@ -131,7 +131,7 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
   }
 
   /**
-   * Uses broker client to check if all segments created by the ingestion have been loaded and updates the {@link #status)}
+   * Uses broker client to check if all segments created by the ingestion have been loaded and updates the {@link #status}
    * periodically.
    * <br>
    * If an exception is thrown during operation, this will log the exception and return without failing the task,

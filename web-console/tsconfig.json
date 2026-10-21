@@ -15,12 +15,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "removeComments": true,
-    "rootDirs": ["lib", "src"],
     "skipLibCheck": true,
     "strict": true,
     "useUnknownInCatchVariables": false,
     "target": "es2022",
-    "types": ["jest"]
+    "types": ["jest", "node"]
   },
   "include": ["src", "e2e-tests", "typings"]
 }

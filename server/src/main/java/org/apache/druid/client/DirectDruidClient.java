@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileConstants;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -64,6 +63,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.utils.CloseableUtils;
@@ -92,6 +92,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#QUERY_FAIL_TIME} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String QUERY_FAIL_TIME = "queryFailTime";
 
   private static final Logger log = new Logger(DirectDruidClient.class);
@@ -172,7 +176,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       final long requestStartTimeNs = System.nanoTime();
       final QueryContext queryContext = query.context();
       // Will NPE if the value is not set.
-      final long timeoutAt = queryContext.getLong(QUERY_FAIL_TIME);
+      final long timeoutAt = queryContext.get(QueryContextParameters.QUERY_FAIL_TIME);
       final long maxScatterGatherBytes = queryContext.getMaxScatterGatherBytes();
       final AtomicLong totalBytesGathered = context.getTotalBytes();
       final long maxQueuedBytes = queryContext.getMaxQueuedBytes(0);
@@ -222,8 +226,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
 
-        private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
-
         private QueryMetrics<? super Query<T>> queryMetrics;
         private long responseStartTimeNs;
 
@@ -257,7 +259,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           return !usingBackpressure || currentQueuedByteCount < maxQueuedBytes;
         }
 
-        private InputStream dequeue() throws InterruptedException
+        private InputStream dequeue(TrafficCop trafficCop) throws InterruptedException
         {
           final InputStreamHolder holder = queue.poll(checkQueryTimeout(), TimeUnit.MILLISECONDS);
           if (holder == null) {
@@ -266,8 +268,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           final long currentQueuedByteCount = queuedByteCount.addAndGet(-holder.getLength());
           if (usingBackpressure && currentQueuedByteCount < maxQueuedBytes) {
-            long backPressureTime = Preconditions.checkNotNull(trafficCopRef.get(), "No TrafficCop, how can this be?")
-                                                 .resume(holder.getChunkNum());
+            long backPressureTime = trafficCop.resume(holder.getChunkNum());
             channelSuspendedTime.addAndGet(backPressureTime);
           }
 
@@ -424,7 +425,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
-          trafficCopRef.set(trafficCop);
           checkQueryTimeout();
           // Netty 4: the initial HttpResponse carries no body, so the status and Content-Type are recorded
           // here and the body itself is inspected on the first HttpContent chunk. The goal is to detect a
@@ -511,7 +511,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       }
 
                       try {
-                        return dequeue();
+                        return dequeue(trafficCop);
                       }
                       catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -529,20 +529,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 @Override
                 public void close()
                 {
-                  final TrafficCop trafficCop;
-                  synchronized (done) {
-                    if (done.get()) {
-                      return;
-                    }
-                    // Stop buffering further chunks (see enqueue()) and drop anything already buffered so the
-                    // underlying Netty ChannelBuffers can be released.
-                    discard.set(true);
-                    queue.clear();
-                    trafficCop = trafficCopRef.get();
-                  }
-                  if (trafficCop == null) {
-                    return;
-                  }
+                  discard.set(true);
+                  queue.clear();
                   trafficCop.abort();
                 }
               },

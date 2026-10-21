@@ -31,11 +31,11 @@ import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React from 'react';
-import AceEditor from 'react-ace';
 
-import { Loader } from '../../../components';
+import { CodeEditor, Loader } from '../../../components';
 import type { DruidEngine, QueryContext, QueryWithContext } from '../../../druid-models';
 import { isEmptyContext } from '../../../druid-models';
+import { hjson } from '../../../editor-languages/hjson';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import type { QueryExplanation } from '../../../utils';
@@ -128,18 +128,12 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
     return (
       <div className="query-explanation">
         <FormGroup className="query-group">
-          <AceEditor
-            mode="hjson"
-            theme="solarized_dark"
+          <CodeEditor
+            language={hjson()}
             className="query-string"
-            name="ace-editor"
-            fontSize={12}
-            width="100%"
-            height="100%"
-            showGutter
-            showPrintMargin={false}
-            value={queryString}
             readOnly
+            showLineNumbers
+            value={queryString}
           />
         </FormGroup>
         <FormGroup className="signature-group" label="Signature">

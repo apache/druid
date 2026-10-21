@@ -467,6 +467,29 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     Assertions.assertEquals(0, exec.cancelableProcessorCount());
   }
 
+  @Test
+  public void test_runAllFully_cancelWhileWaitingForFirstProcessor()
+  {
+    final String cancellationId = "xyzzy";
+    exec.registerCancellationId(cancellationId);
+
+    // This manager never returns a processor, so all runnables park with no processors outstanding.
+    final ListenableFuture<Long> future = exec.runAllFully(
+        possiblyDelay(ensureClose(new NeverResolvingProcessorManager())),
+        maxOutstandingProcessors,
+        bouncer,
+        cancellationId
+    );
+
+    exec.cancel(cancellationId);
+
+    Assertions.assertTrue(future.isCancelled());
+
+    // The processor manager must be closed even though no processor was ever outstanding. (tearDown checks this
+    // too, and additionally checks that it happens exactly once.)
+    Assertions.assertEquals(1, closed.get(), "Processor manager closed");
+  }
+
   /**
    * Wrap in {@link DelayedProcessorManager} if {@link #delayed} is set.
    */
@@ -641,6 +664,32 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     {
       delegate.close();
       throw new ISE("error!");
+    }
+  }
+
+  /**
+   * Processor manager whose {@link #next()} future never resolves, so callers park with no processors outstanding.
+   */
+  private static class NeverResolvingProcessorManager implements ProcessorManager<Object, Long>
+  {
+    private final SettableFuture<Optional<ProcessorAndCallback<Object>>> future = SettableFuture.create();
+
+    @Override
+    public ListenableFuture<Optional<ProcessorAndCallback<Object>>> next()
+    {
+      return future;
+    }
+
+    @Override
+    public Long result()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void close()
+    {
+      future.cancel(false);
     }
   }
 

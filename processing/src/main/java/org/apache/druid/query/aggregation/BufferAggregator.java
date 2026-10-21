@@ -38,7 +38,7 @@ import java.nio.ByteBuffer;
  * Unlike {@link Aggregator}, BufferAggregators are never used by multiple threads at once. Implementations are not
  * required to be thread safe.
  *
- * @see VectorAggregator, the vectorized version
+ * @see VectorAggregator the vectorized version
  */
 @ExtensionPoint
 public interface BufferAggregator extends HotLoopCallee

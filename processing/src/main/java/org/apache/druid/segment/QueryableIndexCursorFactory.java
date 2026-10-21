@@ -34,6 +34,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
+import org.apache.druid.segment.projections.ClusteredColumnInspector;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
@@ -86,7 +87,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
   {
     QueryableProjection<QueryableIndex> projection = index.getProjection(spec);
     if (projection != null) {
-      return makeAggregateProjectionCursorHolder(projection);
+      return makeAggregateProjectionCursorHolder(spec, projection);
     }
 
     // Cluster-group dispatch runs after aggregate-projection match, before the regular base-table fallback
@@ -105,7 +106,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
   )
   {
     if (projection != null) {
-      return makeAggregateProjectionCursorHolder(projection);
+      return makeAggregateProjectionCursorHolder(spec, projection);
     }
 
     // Cluster-group dispatch runs after aggregate-projection match, before the regular base-table fallback
@@ -197,10 +198,11 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     }
 
     // Omit cluster key from ordering if the caller requests (and is granted) time ordering.
-    // This way, the returned ordering will begin with {@code __time}.
     final ClusteredValueGroupsBaseTableSchema summary = valueGroup.getSummary();
-    final List<OrderBy> ordering =
-        Projections.useTimeOrderedCursors(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering();
+    final List<OrderBy> ordering = Cursors.trimOrdering(
+        Projections.useTimeOrderedCursors(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering(),
+        spec.getVirtualColumns()
+    );
 
     if (plan.virtualColumnRemap().isEmpty()) {
       return new QueryableIndexCursorHolder(
@@ -295,6 +297,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
           clusteringValuesByGroup,
           descending,
           spec.getVirtualColumns(),
+          this,
           plan.virtualColumnRemap(),
           closer
       );
@@ -315,7 +318,8 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
   /**
    * Build the row signature for a clustered segment. Top-level columns are empty, so column types are sourced from:
    *   - the summary's clustering {@link RowSignature} for clustering columns;
-   *   - the first cluster group's sub-index for everything else (all groups share the same data-column shape).
+   *   - the cluster groups' column descriptors for everything else, combined across groups by
+   *     {@link ClusteredColumnInspector}.
    */
   private RowSignature getClusteredRowSignature(ClusteredValueGroupsBaseTableSchema clusterSummary)
   {
@@ -337,7 +341,10 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     return builder.build();
   }
 
-  private static CursorHolder makeAggregateProjectionCursorHolder(QueryableProjection<QueryableIndex> projection)
+  private static CursorHolder makeAggregateProjectionCursorHolder(
+      CursorBuildSpec spec,
+      QueryableProjection<QueryableIndex> projection
+  )
   {
     return new QueryableIndexCursorHolder(
         projection.getRowSelector(),
@@ -379,6 +386,12 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       {
         return projection.getCursorBuildSpec().getAggregators();
       }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return Cursors.trimOrdering(super.getOrdering(), spec.getVirtualColumns());
+      }
     };
   }
 
@@ -403,14 +416,16 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
         clusteringValuesByGroup.get(0),
-        spec.getVirtualColumns()
+        spec.getVirtualColumns(),
+        inspector
     );
     final ClusteringVectorColumnSelectorFactory vectorWrapperFactory = new ClusteringVectorColumnSelectorFactory(
         UNINITIALIZED_VECTOR_DELEGATE,
         clusteringColumns,
         clusteringValuesByGroup.get(0),
         vectorSize,
-        spec.getVirtualColumns()
+        spec.getVirtualColumns(),
+        inspector
     );
 
     final ConcatenatingCursor cursor = new ConcatenatingCursor(
@@ -432,8 +447,17 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final Filter queryFilter = spec.getFilter();
     final boolean filterCanVectorize =
         queryFilter == null || queryFilter.canVectorizeMatcher(spec.getVirtualColumns().wrapInspector(inspector));
-    // we still check that the first holder is vectorizable to make sure all the non-filter parts can be vectorized
-    final boolean canVectorize = filterCanVectorize && holderSuppliers.getFirst().get().canVectorize();
+    // we still check that the first holder is vectorizable to make sure all the non-filter parts can be vectorized,
+    // and also check virtual columns and aggregators against every group's columns, since the first group's may not
+    // hold for the others (e.g. a column may have multiple values in only some groups)
+    final boolean canVectorize = filterCanVectorize
+                                 && QueryableIndexCursorHolder.canVectorizeVirtualColumnsAndAggregators(
+                                     spec.getVirtualColumns(),
+                                     spec.getAggregators(),
+                                     spec.getQueryContext(),
+                                     inspector
+                                 )
+                                 && holderSuppliers.getFirst().get().canVectorize();
 
     return new CursorHolder()
     {
@@ -462,7 +486,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
         // and within each group rows are sorted by the segment ordering's tail (clustering prefix dropped). So
         // back-to-back walking yields rows in the full segment ordering; the writer-side contract makes the
         // concatenation order-preserving without any merge work at read time.
-        return clusterSummary.getOrdering();
+        return Cursors.trimOrdering(clusterSummary.getOrdering(), spec.getVirtualColumns());
       }
 
       @Override

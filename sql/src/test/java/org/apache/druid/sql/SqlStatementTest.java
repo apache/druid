@@ -37,9 +37,9 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
@@ -533,13 +533,13 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("select 1 + ?")
-        .queryContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
+        .queryContext(ImmutableMap.of(QueryContextParameters.BY_SEGMENT.getName(), "true"))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.context();
     // should contain only query id, not bySegment since it is not valid for SQL
-    Assertions.assertEquals(Collections.singleton(QueryContexts.CTX_SQL_QUERY_ID), context.keySet());
+    Assertions.assertEquals(Collections.singleton(QueryContextParameters.SQL_QUERY_ID.getName()), context.keySet());
   }
 
   private SqlStatementFactory buildSqlStatementFactory()
@@ -595,7 +595,7 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
-        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 100))
+        .queryContext(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 100))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
 
@@ -636,7 +636,7 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
-        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 50))
+        .queryContext(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 50))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
 

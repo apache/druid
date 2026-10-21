@@ -165,6 +165,27 @@ notice: |
 
 ---
 
+name: Maven Wrapper scripts from Apache Maven Wrapper
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+version: 3.3.4
+source_paths:
+  - mvnw
+  - mvnw.cmd
+notice: |
+  Apache Maven Wrapper
+  Copyright 2013-2022 The Apache Software Foundation
+
+  This product includes software developed at
+  The Apache Software Foundation (http://www.apache.org/).
+
+  The original idea and initial implementation of the maven-wrapper module is derived
+  from the Gradle Wrapper which was written originally by Hans Dockter and Adam Murdoch.
+  Copyright 2007 the original author or authors.
+
+---
+
 name: LDAP string encoding function from OWASP ESAPI
 license_category: source
 module: extensions/druid-basic-security
@@ -240,7 +261,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.55.1
+version: 2.55.6
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -322,7 +343,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-databind
@@ -375,7 +396,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -425,7 +446,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.2.4
+version: 3.3.0
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -465,7 +486,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.7.1-jre
+version: 33.7.2-jre
 libraries:
   - com.google.guava: guava
 
@@ -627,7 +648,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.22.1
+version: 1.23.0
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -799,13 +820,13 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.20.0
+version: 3.21.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
   - commons-lang3: |
       Apache Commons Lang
-      Copyright 2001-2025 The Apache Software Foundation
+      Copyright 2001-2026 The Apache Software Foundation
 
       This product includes software developed at
       The Apache Software Foundation (https://www.apache.org/).
@@ -937,7 +958,7 @@ name: pac4j-oidc java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.10
+version: 5.8.0
 libraries:
   - org.pac4j: pac4j-oidc
 
@@ -947,7 +968,7 @@ name: pac4j-core java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.10
+version: 5.8.0
 libraries:
   - org.pac4j: pac4j-core
 
@@ -957,7 +978,7 @@ name: pac4j-javaee java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 5.7.10
+version: 5.8.0
 libraries:
   - org.pac4j: pac4j-javaee
 
@@ -1028,9 +1049,10 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.9.0
+version: 8.0.0
 libraries:
   - io.fabric8: kubernetes-client-api
+  - io.fabric8: kubernetes-client
   - io.fabric8: kubernetes-model-batch
   - io.fabric8: kubernetes-model-core
   - io.fabric8: kubernetes-model-admissionregistration
@@ -1056,13 +1078,73 @@ libraries:
   - io.fabric8: kubernetes-httpclient-vertx
   - io.fabric8: kubernetes-httpclient-jdk
   - io.fabric8: kubernetes-httpclient-okhttp
+  - io.fabric8: zjsonpatch
+---
+
+name: Jackson 3
+license_category: binary
+module: extensions/druid-kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 3.2.3
+additional_license_statement: includes FastDoubleParser and Schubfach code under MIT, Boost Software License 1.0, and BSD-2-Clause licenses
+license_file_path:
+  - licenses/bin/jackson3-FastDoubleParser.LICENSE
+  - licenses/bin/jackson3-FastDoubleParser-ThirdParty.LICENSE
+  - licenses/bin/jackson3-Schubfach.LICENSE
+libraries:
+  - tools.jackson.core: jackson-core
+  - tools.jackson.core: jackson-databind
+  - tools.jackson.dataformat: jackson-dataformat-yaml
+notice: |
+  # Jackson JSON processor
+
+  Jackson is a high-performance, Free/Open Source JSON processing library.
+  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+  been in development since 2007.
+  It is currently developed by a community of developers.
+
+  ## Copyright
+
+  Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+
+  ## Licensing
+
+  Jackson 3.x core and extension components are licensed under Apache License 2.0
+  To find the details that apply to this artifact see the accompanying LICENSE file.
+
+  ## Credits
+
+  A list of contributors may be found from CREDITS file, which is included
+  in some artifacts (usually source distributions); but is always available
+  from the source code management (SCM) system project uses.
+
+  ## FastDoubleParser
+
+  jackson-core bundles a shaded copy of FastDoubleParser <https://github.com/wrandelshofer/FastDoubleParser>.
+  That code is available under an MIT license <https://github.com/wrandelshofer/FastDoubleParser/blob/main/LICENSE>
+  under the following copyright.
+
+  Copyright © 2023 Werner Randelshofer, Switzerland. MIT License.
+
+  See FastDoubleParser-LICENSE and also FastDoubleParser-ThirdParty-LICENSE for details of other source code
+  included in FastDoubleParser and the licenses and copyrights that apply to that code.
+
+  ## Schubfach
+
+  jackson-core bundles a copy of the Schubfach number writing code <https://github.com/c4f7fcce9cb06515/Schubfach>.
+  That code is available under an MIT license <https://github.com/c4f7fcce9cb06515/Schubfach/blob/master/todec/LICENSE>
+  under the following copyright.
+
+  Copyright 2018-2020 Raffaello Giulietti
+
+  See Schubfach-LICENSE.
 ---
 
 name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1093,7 +1175,7 @@ name: vertx
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 4.5.31
+version: 4.5.34
 libraries:
   - io.vertx: vertx-auth-common
   - io.vertx: vertx-core
@@ -1312,7 +1394,7 @@ name: org.snakeyaml snakeyaml-engine
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 3.0.1
+version: 3.1.1
 libraries:
   - org.snakeyaml: snakeyaml-engine
 
@@ -1725,7 +1807,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.14.3
+version: 2.15.0
 libraries:
   - joda-time: joda-time
 notices:
@@ -1790,7 +1872,7 @@ name: jackson-jq
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.3
+version: 1.6.5
 libraries:
   - net.thisptr: jackson-jq
 
@@ -1997,14 +2079,24 @@ name: Apache HttpCore 5
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.4.3
+version: 5.4.4
 libraries:
   - org.apache.httpcomponents.core5: httpcore5
-  - org.apache.httpcomponents.core5: httpcore5-h2
 notices:
   - httpcore5: |
       Apache HttpComponents Core HTTP/1.1
       Copyright 2005-2021 The Apache Software Foundation
+
+---
+
+name: Apache HttpCore 5 HTTP/2
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.4.3
+libraries:
+  - org.apache.httpcomponents.core5: httpcore5-h2
+notices:
   - httpcore5-h2: |
       Apache HttpComponents Core HTTP/2
       Copyright 2005-2021 The Apache Software Foundation
@@ -2055,24 +2147,36 @@ name: Apache Maven
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6.0
+version: 3.9.16
 libraries:
   - org.apache.maven: maven-repository-metadata
   - org.apache.maven: maven-builder-support
+  - org.apache.maven: maven-model
+  - org.apache.maven: maven-model-builder
+  - org.apache.maven: maven-resolver-provider
 notices:
   - maven-repository-metadata: |
       Maven Repository Metadata Model
-      Copyright 2001-2018 The Apache Software Foundation
+      Copyright 2001-2026 The Apache Software Foundation
   - maven-builder-support: |
       Maven Builder Support
-      Copyright 2001-2018 The Apache Software Foundation
+      Copyright 2001-2026 The Apache Software Foundation
+  - maven-model: |
+      Maven Model
+      Copyright 2001-2026 The Apache Software Foundation
+  - maven-model-builder: |
+      Maven Model Builder
+      Copyright 2001-2026 The Apache Software Foundation
+  - maven-resolver-provider: |
+      Maven Artifact Resolver Provider
+      Copyright 2001-2026 The Apache Software Foundation
 ---
 
 name: Apache Maven Artifact
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.9.16
+version: 3.10.0
 libraries:
   - org.apache.maven: maven-artifact
 notices:
@@ -2085,7 +2189,7 @@ name: Maven Artifact Resolver Connector Basic
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.23
+version: 2.0.24
 libraries:
   - org.apache.maven.resolver: maven-resolver-connector-basic
   - org.apache.maven.resolver: maven-resolver-spi
@@ -2114,13 +2218,17 @@ name: Maven Artifact Resolver Transport Apache
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.23
+version: 2.0.24
 libraries:
   - org.apache.maven.resolver: maven-resolver-transport-apache
+  - org.apache.maven.resolver: maven-resolver-transport-file
 notices:
   - maven-resolver-transport-apache: |
       Maven Artifact Resolver Transport Apache
       Copyright 2001-2026 The Apache Software Foundation
+  - maven-resolver-transport-file: |
+      Maven Artifact Resolver Transport File
+      Copyright 2010-2026 The Apache Software Foundation
 
 ---
 
@@ -2128,13 +2236,17 @@ name: Maven Artifact Resolver Implementation
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.23
+version: 2.0.24
 libraries:
   - org.apache.maven.resolver: maven-resolver-impl
+  - org.apache.maven.resolver: maven-resolver-named-locks
 notices:
   - maven-resolver-impl: |
       Maven Artifact Resolver Implementation
       Copyright 2001-2026 The Apache Software Foundation
+  - maven-resolver-named-locks: |
+      Maven Artifact Resolver Named Locks
+      Copyright 2010-2026 The Apache Software Foundation
 ---
 
 name: Plexus Component Annotations
@@ -2189,7 +2301,7 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.8.6
+version: 3.8.7
 libraries:
   - org.apache.zookeeper: zookeeper
   - org.apache.zookeeper: zookeeper-jute
@@ -2214,7 +2326,7 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.13
+version: 3.0.14
 libraries:
   - org.asynchttpclient: async-http-client
 
@@ -2251,7 +2363,7 @@ name: Plexus Interpolation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.25
+version: 1.29
 libraries:
   - org.codehaus.plexus: plexus-interpolation
 
@@ -2293,7 +2405,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
-version: 12.1.13
+version: 12.1.14
 libraries:
   - org.eclipse.jetty: jetty-alpn-client
   - org.eclipse.jetty: jetty-client
@@ -2461,7 +2573,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.6.1
+version: 7.7.0
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -2499,7 +2611,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.11.3
+version: 1.12.0
 libraries:
   - at.yawk.lz4: lz4-java
 
@@ -2540,7 +2652,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.23
+version: 1.6.24
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -2730,7 +2842,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2740,7 +2852,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -2753,7 +2865,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
 notice: |
@@ -2784,7 +2896,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.datatype: jackson-datatype-jsr310
 notice: |
@@ -2813,7 +2925,7 @@ notice: |
 
 name: Kinesis Client
 license_category: binary
-version: 3.5.2
+version: 3.5.3
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 libraries:
@@ -3210,6 +3322,18 @@ notices:
 
 ---
 
+name: Amazon MSK Library for AWS Identity and Access Management
+license_category: binary
+module: extensions/druid-kafka-indexing-service
+license_name: Apache License version 2.0
+version: 2.3.9
+libraries:
+  - software.amazon.msk: aws-msk-iam-auth
+notice: |
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+---
+
 
 name: Apache Parquet
 license_category: binary
@@ -3297,7 +3421,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 4.2.3
+version: 4.3.0
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
@@ -3344,7 +3468,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.0.18
+version: 2.0.20
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
@@ -3432,7 +3556,7 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 9.10.1
+version: 9.11
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
@@ -3957,7 +4081,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.73.0
+version: 2.75.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -3967,7 +4091,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.68.0
+version: 2.70.0
 libraries:
   - com.google.api: api-common
 
@@ -4069,7 +4193,7 @@ name: stax2-api
 license_category: binary
 module: extensions-contrib/druid-iceberg-extensions
 license_name: BSD-2-Clause License
-version: 4.3.0
+version: 4.3.1
 copyright: 2008+, FasterXML, LLC
 license_file_path: licenses/bin/stax2-api.BSD2
 libraries:
@@ -4091,7 +4215,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.85.0
+version: 2.87.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4103,7 +4227,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.73.0
+version: 2.75.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4171,7 +4295,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.76.0
+version: 2.78.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4181,7 +4305,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.71.0
+version: 1.73.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4191,7 +4315,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.52.0
+version: 1.54.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4202,7 +4326,7 @@ name: google-auto-value
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.11.0
+version: 1.11.1
 libraries:
   - com.google.auto.value: auto-value-annotations
 
@@ -4212,7 +4336,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.75.0
+version: 2.77.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
@@ -4369,6 +4493,18 @@ notices:
 
       This project contains the following code copied from Apache Hive:
       streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
+
+---
+
+name: Amazon MSK Library for AWS Identity and Access Management
+license_category: binary
+module: extensions/druid-kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 2.3.9
+libraries:
+  - software.amazon.msk: aws-msk-iam-auth
+notice: |
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 ---
 
@@ -4981,7 +5117,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 7.2.2
+version: 7.3.0
 module: extensions-contrib/druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5041,7 +5177,7 @@ libraries:
 
 name: snappy-java
 license_category: binary
-version: 1.1.10.8
+version: 1.1.10.11
 module: java-core
 license_name: Apache License version 2.0
 libraries:
@@ -5410,6 +5546,66 @@ version: 6.3.6
 
 ---
 
+name: "@codemirror/autocomplete"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.20.3
+license_file_path: licenses/bin/@codemirror-autocomplete.MIT
+
+---
+
+name: "@codemirror/commands"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.11.1
+license_file_path: licenses/bin/@codemirror-commands.MIT
+
+---
+
+name: "@codemirror/language"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.12.4
+license_file_path: licenses/bin/@codemirror-language.MIT
+
+---
+
+name: "@codemirror/search"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.7.2
+license_file_path: licenses/bin/@codemirror-search.MIT
+
+---
+
+name: "@codemirror/state"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.7.6
+license_file_path: licenses/bin/@codemirror-state.MIT
+
+---
+
+name: "@codemirror/view"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.43.13
+license_file_path: licenses/bin/@codemirror-view.MIT
+
+---
+
 name: "@emotion/babel-plugin"
 license_category: binary
 module: web-console
@@ -5649,6 +5845,46 @@ license_file_path: licenses/bin/@jridgewell-trace-mapping.MIT
 
 ---
 
+name: "@lezer/common"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.5.3
+license_file_path: licenses/bin/@lezer-common.MIT
+
+---
+
+name: "@lezer/highlight"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.2.5
+license_file_path: licenses/bin/@lezer-highlight.MIT
+
+---
+
+name: "@lezer/lr"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.4.10
+license_file_path: licenses/bin/@lezer-lr.MIT
+
+---
+
+name: "@marijn/find-cluster-break"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.0.4
+license_file_path: licenses/bin/@marijn-find-cluster-break.MIT
+
+---
+
 name: "@popperjs/core"
 license_category: binary
 module: web-console
@@ -5725,16 +5961,6 @@ license_name: MIT License
 copyright: Microsoft Corporation.
 version: 19.3.0
 license_file_path: licenses/bin/@types-react.MIT
-
----
-
-name: "ace-builds"
-license_category: binary
-module: web-console
-license_name: BSD-3-Clause License
-copyright: Ajax.org B.V.
-version: 1.44.0
-license_file_path: licenses/bin/ace-builds.BSD3
 
 ---
 
@@ -5904,6 +6130,16 @@ license_name: MIT License
 copyright: David Clark
 version: 7.1.0
 license_file_path: licenses/bin/cosmiconfig.MIT
+
+---
+
+name: "crelt"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.0.7
+license_file_path: licenses/bin/crelt.MIT
 
 ---
 
@@ -6087,15 +6323,6 @@ license_file_path: licenses/bin/delayed-stream.MIT
 
 ---
 
-name: "diff-match-patch"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Google
-version: 1.0.5
-
----
-
 name: "diff"
 license_category: binary
 module: web-console
@@ -6211,16 +6438,6 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 4.0.0
 license_file_path: licenses/bin/escape-string-regexp.MIT
-
----
-
-name: "fast-equals"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Tony Quetano
-version: 5.4.3
-license_file_path: licenses/bin/fast-equals.MIT
 
 ---
 
@@ -6723,16 +6940,6 @@ license_file_path: licenses/bin/proxy-from-env.MIT
 
 ---
 
-name: "react-ace"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: James Hrisho
-version: 15.0.0
-license_file_path: licenses/bin/react-ace.MIT
-
----
-
 name: "react-day-picker"
 license_category: binary
 module: web-console
@@ -6903,6 +7110,16 @@ license_file_path: licenses/bin/source-map.BSD3
 
 ---
 
+name: "style-mod"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 4.1.4
+license_file_path: licenses/bin/style-mod.MIT
+
+---
+
 name: "stylis"
 license_category: binary
 module: web-console
@@ -6980,6 +7197,16 @@ license_name: MIT License
 copyright: Robert Kieffer and other contributors
 version: 14.0.2
 license_file_path: licenses/bin/uuid.MIT
+
+---
+
+name: "w3c-keyname"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 2.2.8
+license_file_path: licenses/bin/w3c-keyname.MIT
 
 ---
 
@@ -7230,7 +7457,7 @@ libraries:
 ---
 
 name: Kafka Schema Registry Client
-version: 8.3.1
+version: 8.3.2
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -7243,7 +7470,7 @@ libraries:
 ---
 
 name: Jackson Datatype JDK8
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -7263,7 +7490,7 @@ libraries:
 ---
 
 name: Confluent Kafka Client
-version: 8.3.1-ccs
+version: 8.3.2-ccs
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0

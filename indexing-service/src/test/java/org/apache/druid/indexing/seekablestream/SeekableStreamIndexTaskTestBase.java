@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.client.cache.CacheConfig;
@@ -619,7 +620,6 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
               @Nullable DataSourceMetadata previousDataSourceMetadata
           )
           {
-            // log.info("Adding checkpoint hash to the set");
             checkpointRequestsHash.add(
                 Objects.hash(
                     supervisorId,
@@ -628,6 +628,16 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
                 )
             );
             return true;
+          }
+
+          @Override
+          public ListenableFuture<Boolean> isTaskReadyToPublishSegments(
+              String supervisorId,
+              String taskId,
+              DataSourceMetadata startMetadata
+          )
+          {
+            return Futures.immediateFuture(true);
           }
         },
         objectMapper

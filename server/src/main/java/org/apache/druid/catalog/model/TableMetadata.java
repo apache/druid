@@ -40,7 +40,7 @@ import java.util.Objects;
  * the object. (Providing partial information avoids the need to query
  * the DB for information that won't actually be used.)
  *
- * @see {@link ResolvedTable} for the semantic representation.
+ * @see ResolvedTable for the semantic representation.
  */
 @PublicApi
 public class TableMetadata

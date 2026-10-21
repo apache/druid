@@ -590,6 +590,7 @@ export interface IoConfig {
   appendToExisting?: boolean;
   topic?: string;
   topicPattern?: string;
+  partitionIds?: (number | string)[];
   consumerProperties?: any;
   replicas?: number;
   taskCount?: number;
@@ -1157,6 +1158,23 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: 'The name of the Kafka topic to ingest from.',
         },
         {
+          name: 'partitionIds',
+          label: 'Partition IDs',
+          type: 'string-array',
+          // Keep the field visible while it holds a value, so it can still be cleared after switching to topicPattern.
+          defined: ioConfig =>
+            ioConfig.type === 'kafka' && (Boolean(ioConfig.topic) || ioConfig.partitionIds != null),
+          placeholder: 'Optional; comma-separated, e.g. 0, 2',
+          hideInMore: ioConfig => ioConfig.partitionIds == null,
+          // Only plain decimal digits become numbers. Anything else stays a string so that validation rejects it,
+          // as the server does, instead of being coerced (e.g. "1e3" or "0x10").
+          valueAdjustment: partitionIds =>
+            partitionIds?.length
+              ? partitionIds.map((id: string) => (/^\d+$/.test(id) ? Number(id) : id))
+              : undefined,
+          info: 'Optional comma-separated partition IDs, such as 0,2. Omit to read all partitions. IDs must exist when Kafka metadata is discovered.',
+        },
+        {
           name: 'topicPattern',
           type: 'string',
           required: true,
@@ -1319,6 +1337,16 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
   throw new Error(`unknown input type ${ingestionComboType}`);
 }
 
+// The server reads partition IDs as Java ints, accepting JSON integers and integer strings such as "1".
+const MAX_KAFKA_PARTITION_ID = 2147483647;
+
+function isValidKafkaPartitionId(id: unknown): boolean {
+  if (typeof id === 'number')
+    return Number.isInteger(id) && id >= 0 && id <= MAX_KAFKA_PARTITION_ID;
+  if (typeof id === 'string') return /^\+?\d+$/.test(id) && Number(id) <= MAX_KAFKA_PARTITION_ID;
+  return false;
+}
+
 export function issueWithIoConfig(
   ioConfig: IoConfig | undefined,
   ignoreInputFormat = false,
@@ -1335,6 +1363,16 @@ export function issueWithIoConfig(
 
     case 'kafka':
       if (!ioConfig.topic && !ioConfig.topicPattern) return 'must have a topic or topicPattern';
+      if (ioConfig.partitionIds != null) {
+        if (ioConfig.topicPattern) return 'partitionIds requires a single topic';
+        if (
+          !Array.isArray(ioConfig.partitionIds) ||
+          !ioConfig.partitionIds.length ||
+          !ioConfig.partitionIds.every(isValidKafkaPartitionId)
+        ) {
+          return `partitionIds must be a nonempty array of integers between 0 and ${MAX_KAFKA_PARTITION_ID}`;
+        }
+      }
       break;
 
     case 'kinesis':

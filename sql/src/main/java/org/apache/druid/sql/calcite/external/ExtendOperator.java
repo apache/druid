@@ -36,7 +36,7 @@ import org.apache.druid.java.util.common.ISE;
  * is said to have been added for Apache Phoenix, and which we repurpose to
  * supply a schema for an ingest input table.
  *
- * @see {@link SchemaAwareUserDefinedTableMacro} for details
+ * @see SchemaAwareUserDefinedTableMacro for details
  */
 public class ExtendOperator extends SqlInternalOperator
 {
