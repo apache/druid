@@ -36,6 +36,7 @@ import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
@@ -46,6 +47,130 @@ import java.util.stream.Collectors;
  */
 class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
 {
+  @Test
+  void testWithAdditionalMetricsAppendsAfterDeclaredAggregators()
+  {
+    final RollupTableProjectionSpec spec = pagesSpec().withAdditionalMetrics(
+        new AggregatorFactory[]{new LongSumAggregatorFactory("extra", "extra")}
+    );
+
+    Assertions.assertEquals(
+        ImmutableList.of("total", "rows", "extra"),
+        Arrays.stream(spec.getMetrics()).map(AggregatorFactory::getName).collect(Collectors.toList())
+    );
+    // Metric columns are stored after the grouping columns and are not part of the sort order, so neither the
+    // grouping columns nor the ordering move.
+    Assertions.assertEquals(pagesSpec().getGroupingColumns(), spec.getGroupingColumns());
+    Assertions.assertEquals(pagesSpec().getOrdering(), spec.getOrdering());
+  }
+
+  @Test
+  void testWithAdditionalMetricsNullAndEmptyAreNoOps()
+  {
+    final RollupTableProjectionSpec spec = pagesSpec();
+    Assertions.assertSame(spec, spec.withAdditionalMetrics(null));
+    Assertions.assertSame(spec, spec.withAdditionalMetrics(new AggregatorFactory[0]));
+  }
+
+  @Test
+  void testWithAdditionalMetricsRejectsDuplicateOfDeclaredName()
+  {
+    // 'page' is a grouping column and 'total' a declared aggregator; either collision is a real conflict rather than
+    // something to silently merge.
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> pagesSpec().withAdditionalMetrics(
+            new AggregatorFactory[]{new LongSumAggregatorFactory("total", "total")}
+        )
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> pagesSpec().withAdditionalMetrics(
+            new AggregatorFactory[]{new LongSumAggregatorFactory("page", "page")}
+        )
+    );
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsAppendedColumns()
+  {
+    final RollupTableProjectionSpec declared = pagesSpec();
+    final RollupTableProjectionSpec recorded =
+        declared.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("city")));
+
+    // What a non-sealed compaction records is a superset of what the config declares; comparing it strictly would
+    // recompact the datasource on every run.
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded));
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded, false));
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+    // Equality is the zero-appended-columns case.
+    Assertions.assertTrue(declared.hasEqualCompactionState(declared, true));
+    // The relaxation is one-directional: dropping a declared grouping column is still a change.
+    Assertions.assertFalse(recorded.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsAppendedMetrics()
+  {
+    final RollupTableProjectionSpec declared = pagesSpec();
+    final RollupTableProjectionSpec recorded = declared.withAdditionalMetrics(
+        new AggregatorFactory[]{new LongSumAggregatorFactory("extra", "extra")}
+    );
+
+    // Unsealed rollup compaction absorbs metrics the table does not declare, so the recorded spec carries more
+    // aggregators than the config. Comparing them strictly would leave the interval permanently pending.
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded));
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded, false));
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+    // One-directional, as with grouping columns: losing a declared aggregator is still a change.
+    Assertions.assertFalse(recorded.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsBothAppends()
+  {
+    final RollupTableProjectionSpec declared = pagesSpec();
+    final RollupTableProjectionSpec recorded = declared
+        .withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("city")))
+        .withAdditionalMetrics(new AggregatorFactory[]{new LongSumAggregatorFactory("extra", "extra")});
+
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsStillComparesAggregators()
+  {
+    final RollupTableProjectionSpec declared = pagesSpec();
+
+    // Query granularity is compared by its own check, so it is excluded from both sides here too.
+    Assertions.assertTrue(
+        declared.hasEqualCompactionState(declared.withQueryGranularity(Granularities.HOUR), true)
+    );
+    // Only appended aggregators are forgiven. A recorded spec that drops or replaces a declared one is a real change
+    // even when the grouping columns still line up.
+    final RollupTableProjectionSpec droppedAgg = RollupTableProjectionSpec
+        .builder()
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
+        .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(droppedAgg, true));
+    final RollupTableProjectionSpec reorderedAggs = RollupTableProjectionSpec
+        .builder()
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("rows", "rows"), new LongSumAggregatorFactory("total", "total"))
+        .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(reorderedAggs, true));
+    // A spec of a different type is never equivalent.
+    Assertions.assertFalse(
+        declared.hasEqualCompactionState(
+            TableProjectionSpec.builder()
+                .columns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+                .build(),
+            true
+        )
+    );
+  }
+
   private static RollupTableProjectionSpec pagesSpec()
   {
     return RollupTableProjectionSpec.builder()

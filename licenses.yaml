@@ -648,7 +648,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.22.1
+version: 1.23.0
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -2405,7 +2405,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
-version: 12.1.13
+version: 12.1.14
 libraries:
   - org.eclipse.jetty: jetty-alpn-client
   - org.eclipse.jetty: jetty-client
@@ -2652,7 +2652,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.23
+version: 1.6.24
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -3322,6 +3322,18 @@ notices:
 
 ---
 
+name: Amazon MSK Library for AWS Identity and Access Management
+license_category: binary
+module: extensions/druid-kafka-indexing-service
+license_name: Apache License version 2.0
+version: 2.3.9
+libraries:
+  - software.amazon.msk: aws-msk-iam-auth
+notice: |
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+---
+
 
 name: Apache Parquet
 license_category: binary
@@ -3544,7 +3556,7 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 9.10.1
+version: 9.11
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
@@ -4484,6 +4496,18 @@ notices:
 
 ---
 
+name: Amazon MSK Library for AWS Identity and Access Management
+license_category: binary
+module: extensions/druid-kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 2.3.9
+libraries:
+  - software.amazon.msk: aws-msk-iam-auth
+notice: |
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+---
+
 name: Microsoft Azure SDK For Key Vault Core
 license_category: binary
 module: extensions/druid-azure-extensions
@@ -5153,7 +5177,7 @@ libraries:
 
 name: snappy-java
 license_category: binary
-version: 1.1.10.8
+version: 1.1.10.11
 module: java-core
 license_name: Apache License version 2.0
 libraries:

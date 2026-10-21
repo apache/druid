@@ -599,6 +599,13 @@ public class QueryContextTest
         QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "PARTIAL").toContext()
                     .getSegmentAcquireMode(AcquireMode.FULL)
     );
+    assertEquals(
+        AcquireMode.PARTIAL_RULE_HELD,
+        QueryContext.builder()
+                    .putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "partial_rule_held")
+                    .toContext()
+                    .getSegmentAcquireMode(AcquireMode.FULL)
+    );
     assertThrows(
         BadQueryContextException.class,
         () -> QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "dummy").toContext()

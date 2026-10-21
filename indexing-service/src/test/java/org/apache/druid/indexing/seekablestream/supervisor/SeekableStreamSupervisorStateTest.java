@@ -592,6 +592,47 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void test_isTaskReadyToPublishSegments_returnsFalse_ifTaskIsStoppedAfterEarlierTaskTimesOut()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("earlierTask"))
+            .andReturn(Optional.of(TaskStatus.running("earlierTask"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("laterTask"))
+            .andReturn(Optional.of(TaskStatus.running("laterTask"))).anyTimes();
+
+    taskQueue.shutdown(EasyMock.eq("earlierTask"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(indexTaskClient.stopAsync("laterTask", false))
+            .andReturn(Futures.immediateFuture(true)).atLeastOnce();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "earlierTask", Map.of(SHARD_ID, "0"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "laterTask", Map.of(SHARD_ID, "100"));
+
+    final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
+        "laterTask",
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of(SHARD_ID, "100"), Set.of())
+        )
+    );
+    Assertions.assertFalse(future.isDone());
+
+    // Expire the earlier task group so that the supervisor kills it and stops the later task group
+    supervisor.getPendingCompletionTaskGroups(0).get(0).completionTimeout = DateTimes.nowUtc().minusMinutes(1);
+    supervisor.runInternal();
+
+    Assertions.assertTrue(future.isDone());
+    Assertions.assertEquals(Boolean.FALSE, FutureUtils.getUnchecked(future, true));
+    verifyAll();
+  }
+
+  @Test
   public void testConnectingToStreamFail()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
