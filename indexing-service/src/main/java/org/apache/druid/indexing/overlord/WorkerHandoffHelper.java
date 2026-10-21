@@ -124,12 +124,9 @@ public final class WorkerHandoffHelper
         LOG.info("Skipping task [%s]: streaming task has no taskGroupId", taskId);
         continue;
       }
-      String supervisorId = streamTask.getSupervisorId();
+      final String supervisorId = streamTask.getSupervisorId();
       if (supervisorId == null || supervisorId.isEmpty()) {
-        supervisorId = streamTask.getDataSource();
-      }
-      if (supervisorId == null || supervisorId.isEmpty()) {
-        LOG.info("Skipping task [%s]: streaming task has no supervisorId or dataSource", taskId);
+        LOG.info("Skipping task [%s]: streaming task has no supervisorId", taskId);
         continue;
       }
       grouped.computeIfAbsent(supervisorId, ignored -> new TreeSet<>()).add(taskGroupId);

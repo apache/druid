@@ -126,7 +126,7 @@ public class WorkerHandoffHelperTest
   }
 
   @Test
-  public void testGroupTaskGroupsFallsBackToDataSource()
+  public void testGroupTaskGroupsSkipsEmptySupervisorId()
   {
     final Task task = streamTask("index_kafka", "", "cAdvisor", 3);
     final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
@@ -134,7 +134,7 @@ public class WorkerHandoffHelperTest
         id -> Optional.of(task),
         null
     );
-    Assertions.assertEquals(ImmutableList.of(3), groups.get("cAdvisor"));
+    Assertions.assertTrue(groups.isEmpty());
   }
 
   @Test
