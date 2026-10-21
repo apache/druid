@@ -26,6 +26,7 @@ import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -219,6 +220,34 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
             new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems", 205L}
         )
     );
+  }
+
+  @Test
+  public void test_getOrdering_endsAtPostJoinVirtualColumn()
+  {
+    final List<OrderBy> baseOrdering;
+    try (CursorHolder baseHolder = factSegment.as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      baseOrdering = baseHolder.getOrdering();
+    }
+    Assertions.assertEquals("channel", baseOrdering.get(1).getColumnName());
+
+    // This virtual column reads a joined column, so it applies on top of the join, which must end the ordering at the
+    // base column it shadows.
+    final List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        makeExpressionVirtualColumn(
+            StringUtils.format("concat(\"%scountryName\", '!')", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
+            "channel"
+        )
+    );
+    try (CursorHolder holder = new HashJoinSegmentCursorFactory(
+        factSegment.as(CursorFactory.class),
+        null,
+        joinableClauses,
+        makeDefaultConfigPreAnalysis(null, joinableClauses, virtualColumns)
+    ).makeCursorHolder(CursorBuildSpec.builder().setVirtualColumns(virtualColumns).build())) {
+      Assertions.assertEquals(baseOrdering.subList(0, 1), holder.getOrdering());
+    }
   }
 
   @Test

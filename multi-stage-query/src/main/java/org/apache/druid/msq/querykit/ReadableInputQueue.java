@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -32,11 +33,13 @@ import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartition;
+import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -68,25 +71,25 @@ public class ReadableInputQueue implements Closeable
    * Partitions to be read.
    */
   @GuardedBy("this")
-  private final Queue<ReadablePartition> readablePartitions = new ArrayDeque<>();
+  private final Queue<NumberedItem<ReadablePartition>> readablePartitions = new ArrayDeque<>();
 
   /**
    * Segments to be loaded.
    */
   @GuardedBy("this")
-  private final Queue<LoadableSegment> loadableSegments = new ArrayDeque<>();
+  private final Queue<NumberedItem<LoadableSegment>> loadableSegments = new ArrayDeque<>();
 
   /**
    * Realtime servers to be queried.
    */
   @GuardedBy("this")
-  private final Queue<DataServerQueryHandler> queryableServers = new ArrayDeque<>();
+  private final Queue<NumberedItem<DataServerQueryHandler>> queryableServers = new ArrayDeque<>();
 
   /**
    * Segments currently being loaded: the acquire handle mapped to the future its delivery (or failure) completes.
    */
   @GuardedBy("this")
-  private final LinkedHashMap<AcquireSegmentAction, SettableFuture<ReadableInput>> loadingSegments =
+  private final LinkedHashMap<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> loadingSegments =
       new LinkedHashMap<>();
 
   /**
@@ -99,14 +102,14 @@ public class ReadableInputQueue implements Closeable
    * Futures that are sitting ready to be handed out by a call to {@link #nextInput()}.
    */
   @GuardedBy("this")
-  private final Set<ListenableFuture<ReadableInput>> pendingNextInputs = Sets.newIdentityHashSet();
+  private final Set<ListenableFuture<NumberedReadableInput>> pendingNextInputs = Sets.newIdentityHashSet();
 
   /**
    * Futures whose delivery is mid-flight and have been removed from {@link #loadingSegments} by {@link #onSegmentReady}
    * but not yet completed ({@link #close()} fails these too).
    */
   @GuardedBy("this")
-  private final Set<SettableFuture<ReadableInput>> inFlightDeliveries = Sets.newIdentityHashSet();
+  private final Set<SettableFuture<NumberedReadableInput>> inFlightDeliveries = Sets.newIdentityHashSet();
 
   /**
    * Set by {@link #close()}; checked by {@link #onSegmentReady} just before completing a delivery successfully.
@@ -131,8 +134,19 @@ public class ReadableInputQueue implements Closeable
   private final BooleanSupplier canSkipRemaining;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
+  /**
+   * Creates a new queue.
+   *
+   * @param partitionReader Reader for {@link StageInputSlice}
+   * @param inputNumbers array of input numbers, one per input
+   * @param slices array of slices, one per input (same length as inputNumbers)
+   * @param loadahead number of items to load ahead of the queue
+   * @param acquireMode acquire mode for {@link SegmentCacheManager}
+   * @param canSkipRemaining whether the caller needs no more inputs; see {@link #canSkipRemaining}
+   */
   public ReadableInputQueue(
       final StandardPartitionReader partitionReader,
+      final IntList inputNumbers,
       final List<PhysicalInputSlice> slices,
       final int loadahead,
       final AcquireMode acquireMode,
@@ -144,10 +158,25 @@ public class ReadableInputQueue implements Closeable
     this.acquireMode = acquireMode;
     this.canSkipRemaining = canSkipRemaining;
 
-    for (final PhysicalInputSlice slice : slices) {
-      loadableSegments.addAll(slice.getLoadableSegments());
-      queryableServers.addAll(slice.getQueryableServers());
-      slice.getReadablePartitions().forEach(readablePartitions::add);
+    if (inputNumbers.size() != slices.size()) {
+      throw DruidException.defensive("Got input numbers[%s] for slices[%s]", inputNumbers, slices);
+    }
+
+    for (int i = 0; i < slices.size(); i++) {
+      final int inputNumber = inputNumbers.getInt(i);
+      final PhysicalInputSlice slice = slices.get(i);
+
+      for (final LoadableSegment segment : slice.getLoadableSegments()) {
+        loadableSegments.add(new NumberedItem<>(inputNumber, segment));
+      }
+
+      for (final DataServerQueryHandler server : slice.getQueryableServers()) {
+        queryableServers.add(new NumberedItem<>(inputNumber, server));
+      }
+
+      for (final ReadablePartition partition : slice.getReadablePartitions()) {
+        readablePartitions.add(new NumberedItem<>(inputNumber, partition));
+      }
     }
   }
 
@@ -163,9 +192,11 @@ public class ReadableInputQueue implements Closeable
     if (started.compareAndSet(false, true)) {
       // (1) acquire all locally-cached segments
       synchronized (this) {
-        final List<LoadableSegment> toLoad = new ArrayList<>(); // Temporarily store all non-cached segments
-        LoadableSegment loadableSegment;
-        while ((loadableSegment = loadableSegments.poll()) != null) {
+        // Temporarily store all non-cached segments.
+        final List<NumberedItem<LoadableSegment>> toLoad = new ArrayList<>();
+        NumberedItem<LoadableSegment> nextItem;
+        while ((nextItem = loadableSegments.poll()) != null) {
+          final LoadableSegment loadableSegment = nextItem.item();
           final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(acquireMode);
           if (cachedSegment.isPresent()) {
             final SegmentReferenceHolder holder = new SegmentReferenceHolder(
@@ -173,9 +204,13 @@ public class ReadableInputQueue implements Closeable
                 loadableSegment.description()
             );
             loadedSegments.add(holder);
-            pendingNextInputs.add(Futures.immediateFuture(ReadableInput.segment(holder)));
+            pendingNextInputs.add(
+                Futures.immediateFuture(
+                    new NumberedReadableInput(nextItem.inputNumber(), ReadableInput.segment(holder))
+                )
+            );
           } else {
-            toLoad.add(loadableSegment);
+            toLoad.add(nextItem);
           }
         }
         loadableSegments.addAll(toLoad); // Put non-cached segments back into loadableSegments
@@ -201,10 +236,10 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Returns the next {@link ReadableInput}. The future resolves when the input is ready to read.
+   * Returns the next {@link NumberedReadableInput}. The future resolves when the input is ready to read.
    */
   @Nullable
-  public ListenableFuture<ReadableInput> nextInput()
+  public ListenableFuture<NumberedReadableInput> nextInput()
   {
     if (!started.get()) {
       throw DruidException.defensive("Not started, must call start() first");
@@ -214,7 +249,7 @@ public class ReadableInputQueue implements Closeable
       return null;
     }
 
-    ListenableFuture<ReadableInput> future;
+    ListenableFuture<NumberedReadableInput> future;
 
     future = nextServerInput();
     if (future != null) {
@@ -238,9 +273,9 @@ public class ReadableInputQueue implements Closeable
    * Returns the next input from {@link #queryableServers}, if any. Returns null if none remain.
    */
   @Nullable
-  private ListenableFuture<ReadableInput> nextServerInput()
+  private ListenableFuture<NumberedReadableInput> nextServerInput()
   {
-    final DataServerQueryHandler handler;
+    final NumberedItem<DataServerQueryHandler> handler;
     synchronized (this) {
       handler = queryableServers.poll();
     }
@@ -249,33 +284,39 @@ public class ReadableInputQueue implements Closeable
       return null;
     }
 
-    return Futures.immediateFuture(ReadableInput.dataServerQuery(handler));
+    return Futures.immediateFuture(
+        new NumberedReadableInput(handler.inputNumber(), ReadableInput.dataServerQuery(handler.item()))
+    );
   }
 
   /**
    * Returns the next input from {@link #readablePartitions}, if any. Returns null if none remain.
    */
   @Nullable
-  private ListenableFuture<ReadableInput> nextChannelInput()
+  private ListenableFuture<NumberedReadableInput> nextChannelInput()
   {
-    final ReadablePartition readablePartition;
+    final NumberedItem<ReadablePartition> nextItem;
     synchronized (this) {
-      readablePartition = readablePartitions.poll();
+      nextItem = readablePartitions.poll();
     }
 
-    if (readablePartition == null) {
+    if (nextItem == null) {
       return null;
     }
 
+    final ReadablePartition readablePartition = nextItem.item();
     ReadableFrameChannel channel = null;
     try {
       channel = partitionReader.openChannel(readablePartition);
       return Futures.immediateFuture(
-          ReadableInput.channel(
-              channel,
-              partitionReader.frameReader(readablePartition.getStageNumber()),
-              readablePartition.getStageNumber(),
-              readablePartition.getPartitionNumber()
+          new NumberedReadableInput(
+              nextItem.inputNumber(),
+              ReadableInput.channel(
+                  channel,
+                  partitionReader.frameReader(readablePartition.getStageNumber()),
+                  readablePartition.getStageNumber(),
+                  readablePartition.getPartitionNumber()
+              )
           )
       );
     }
@@ -288,12 +329,12 @@ public class ReadableInputQueue implements Closeable
    * Returns the next input from {@link #loadableSegments}, if any. Returns null if none remain.
    */
   @Nullable
-  private ListenableFuture<ReadableInput> nextSegmentInput()
+  private ListenableFuture<NumberedReadableInput> nextSegmentInput()
   {
     // Pick a loadahead future, preferring ones that are already loaded.
-    ListenableFuture<ReadableInput> selectedLoadaheadFuture = null;
+    ListenableFuture<NumberedReadableInput> selectedLoadaheadFuture = null;
     synchronized (this) {
-      for (ListenableFuture<ReadableInput> f : pendingNextInputs) {
+      for (ListenableFuture<NumberedReadableInput> f : pendingNextInputs) {
         if (selectedLoadaheadFuture == null || f.isDone()) {
           selectedLoadaheadFuture = f;
           if (f.isDone()) {
@@ -319,23 +360,26 @@ public class ReadableInputQueue implements Closeable
    * if {@link #loadableSegments} is empty, or if {@link #canSkipRemaining} is true.
    */
   @Nullable
-  private ListenableFuture<ReadableInput> loadNextSegment()
+  private ListenableFuture<NumberedReadableInput> loadNextSegment()
   {
     if (canSkipRemaining.getAsBoolean()) {
       return null;
     }
 
     synchronized (this) {
-      final LoadableSegment nextLoadableSegment = loadableSegments.poll();
-      if (nextLoadableSegment == null) {
+      final NumberedItem<LoadableSegment> nextItem = loadableSegments.poll();
+      if (nextItem == null) {
         return null;
       }
 
-      final SettableFuture<ReadableInput> future = SettableFuture.create();
+      final LoadableSegment nextLoadableSegment = nextItem.item();
+      final SettableFuture<NumberedReadableInput> future = SettableFuture.create();
       final AcquireSegmentAction acquireSegmentAction = nextLoadableSegment.acquire(acquireMode);
       loadingSegments.put(acquireSegmentAction, future);
       // may fire immediately on this thread for an already-ready acquire; the queue monitor is reentrant
-      acquireSegmentAction.addReadyCallback(() -> onSegmentReady(nextLoadableSegment, acquireSegmentAction));
+      acquireSegmentAction.addReadyCallback(
+          () -> onSegmentReady(nextItem.inputNumber(), nextLoadableSegment, acquireSegmentAction)
+      );
       return future;
     }
   }
@@ -347,11 +391,15 @@ public class ReadableInputQueue implements Closeable
    * racing {@link #close()} are arbitrated by a closed re-check plus {@link SettableFuture}'s behavior where the first
    * write wins (close() also fails in-flight futures but the losing write is a harmless no-op).
    */
-  private void onSegmentReady(LoadableSegment loadableSegment, AcquireSegmentAction acquireSegmentAction)
+  private void onSegmentReady(
+      final int inputNumber,
+      final LoadableSegment loadableSegment,
+      final AcquireSegmentAction acquireSegmentAction
+  )
   {
     ReadableInput readableInput = null;
     Throwable failure = null;
-    final SettableFuture<ReadableInput> future;
+    final SettableFuture<NumberedReadableInput> future;
 
     synchronized (this) {
       future = loadingSegments.remove(acquireSegmentAction);
@@ -415,7 +463,7 @@ public class ReadableInputQueue implements Closeable
     } else if (queueClosed) {
       future.setException(DruidException.defensive("Input queue closed while segment load was in flight"));
     } else {
-      future.set(readableInput);
+      future.set(new NumberedReadableInput(inputNumber, readableInput));
     }
     synchronized (this) {
       inFlightDeliveries.remove(future);
@@ -428,7 +476,7 @@ public class ReadableInputQueue implements Closeable
    */
   private boolean addLoadaheadFuture()
   {
-    final ListenableFuture<ReadableInput> nextFuture = loadNextSegment();
+    final ListenableFuture<NumberedReadableInput> nextFuture = loadNextSegment();
     if (nextFuture != null) {
       synchronized (this) {
         pendingNextInputs.add(nextFuture);
@@ -444,7 +492,7 @@ public class ReadableInputQueue implements Closeable
   {
     final List<AcquireSegmentAction> handlesToClose;
     final List<SegmentReferenceHolder> holdersToDrain;
-    final List<SettableFuture<ReadableInput>> futuresToFail;
+    final List<SettableFuture<NumberedReadableInput>> futuresToFail;
 
     // Snapshot and clear everything under the monitor, but do the actual closing OUTSIDE it: closing a handle can
     // synchronously run its canceler (a deferred acquire's canceler takes its own stage lock and may complete the
@@ -501,8 +549,22 @@ public class ReadableInputQueue implements Closeable
     // Explicitly fail the futures of the loads we just canceled. Closing a handle fires its pending ready callback,
     // but that callback finds its entry already claimed from loadingSegments above and returns without completing the
     // future, so without this the frame processors awaiting these futures would hang forever.
-    for (final SettableFuture<ReadableInput> future : futuresToFail) {
+    for (final SettableFuture<NumberedReadableInput> future : futuresToFail) {
       future.setException(DruidException.defensive("Input queue closed while segment load was in flight"));
     }
+  }
+
+  /**
+   * A {@link ReadableInput} along with the input number it came from.
+   */
+  public record NumberedReadableInput(int inputNumber, ReadableInput input)
+  {
+  }
+
+  /**
+   * An item that is yet to be turned into a {@link ReadableInput}, along with the input number it came from.
+   */
+  private record NumberedItem<T>(int inputNumber, T item)
+  {
   }
 }

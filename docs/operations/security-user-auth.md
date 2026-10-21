@@ -81,6 +81,10 @@ This section describes the resource names available for each resource type.
 ### `DATASOURCE`
 Resource names for this type are datasource names. Specifying a datasource permission allows the administrator to grant users access to specific datasources.
 
+:::info
+Any authenticated user can read the contents of any [lookup](../querying/lookups.md). Avoid storing sensitive data in lookups.
+:::
+
 ### `CONFIG`
 There are two possible resource names for the "CONFIG" resource type, "CONFIG" and "security". Granting a user access to CONFIG resources allows them to access the following endpoints.
 
@@ -160,6 +164,7 @@ Queries on the [system schema tables](../querying/sql-metadata-tables.md#system-
 - `server_segments`: The user requires STATE READ permissions. Druid filters segments according to DATASOURCE READ permissions.
 - `tasks`: Druid filters tasks according to DATASOURCE READ permissions.
 - `supervisors`: Druid filters supervisors according to DATASOURCE READ permissions.
+- `query_context_parameters`: No additional permissions are required. The `effective_value` and `effective_source` columns require CONFIG READ permissions; without them, they show null and `UNAUTHORIZED`.
 
 When the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, users also require  `SYSTEM_TABLE` authorization on a system schema table to query it.
 

@@ -26,8 +26,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfigTest;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -61,7 +63,7 @@ import java.util.Objects;
  * stays zero because {@code virtualStoragePartialDownloadsEnabled=false} makes the worker mount segments as complete
  * cache entries and download them in full instead of via range reads).
  * <p>
- * Separately, {@link QueryContexts#SEGMENT_ACQUIRE_MODE} overrides the leaf processor's default acquire mode while
+ * Separately, {@link QueryContextParameters#SEGMENT_ACQUIRE_MODE} overrides the leaf processor's default acquire mode while
  * partial downloads stay enabled; forcing {@code FULL} shows up as more {@link StorageMonitor#VSF_LOAD_BYTES} than the
  * default {@code PARTIAL} acquire for the same query.
  */
@@ -167,7 +169,7 @@ class EmbeddedMSQPartialDownloadsTest extends EmbeddedClusterTestBase
     final long partialLoadBytes = runMsqSelectAndGetLoadBytes(emitter, Collections.emptyMap());
     final long fullLoadBytes = runMsqSelectAndGetLoadBytes(
         emitter,
-        Map.of(QueryContexts.SEGMENT_ACQUIRE_MODE, "FULL")
+        QueryContext.ofMap(QueryContextParameters.SEGMENT_ACQUIRE_MODE, AcquireMode.FULL)
     );
 
     Assertions.assertTrue(partialLoadBytes > 0, "expected the default PARTIAL acquire to download some bytes");

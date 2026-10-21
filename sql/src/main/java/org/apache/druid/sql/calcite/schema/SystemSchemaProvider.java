@@ -29,6 +29,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -36,6 +37,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.http.SqlEngineRegistry;
 
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 
 public class SystemSchemaProvider implements SchemaProvider
@@ -52,6 +54,8 @@ public class SystemSchemaProvider implements SchemaProvider
   private final HttpClient httpClient;
   private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
   private final PlannerConfig plannerConfig;
+  private final QueryConfigProvider queryConfigProvider;
+  private final Properties properties;
   private final Set<String> allTableNames;
 
   @Inject
@@ -67,7 +71,9 @@ public class SystemSchemaProvider implements SchemaProvider
       final ObjectMapper jsonMapper,
       @EscalatedClient final HttpClient httpClient,
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
-      final PlannerConfig plannerConfig
+      final PlannerConfig plannerConfig,
+      final QueryConfigProvider queryConfigProvider,
+      final Properties properties
   )
   {
     this.segmentMetadataCache = segmentMetadataCache;
@@ -82,6 +88,8 @@ public class SystemSchemaProvider implements SchemaProvider
     this.httpClient = httpClient;
     this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
     this.plannerConfig = plannerConfig;
+    this.queryConfigProvider = queryConfigProvider;
+    this.properties = properties;
     this.allTableNames = computeAllTableNames(plannerConfig);
   }
 
@@ -97,6 +105,7 @@ public class SystemSchemaProvider implements SchemaProvider
     allTableNames.add(SystemSchema.TASKS_TABLE);
     allTableNames.add(SystemSchema.SUPERVISOR_TABLE);
     allTableNames.add(SystemServerPropertiesTable.TABLE_NAME);
+    allTableNames.add(SystemQueryContextParametersTable.TABLE_NAME);
 
     if (plannerConfig.isEnableSysQueriesTable()) {
       allTableNames.add(SystemSchema.QUERIES_TABLE);
@@ -121,6 +130,8 @@ public class SystemSchemaProvider implements SchemaProvider
         httpClient,
         sqlEngineRegistryProvider,
         plannerConfig,
+        queryConfigProvider,
+        properties,
         authenticationResult,
         allTableNames
     );

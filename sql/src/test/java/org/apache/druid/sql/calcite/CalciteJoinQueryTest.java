@@ -91,7 +91,6 @@ import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTimeZone;
@@ -128,8 +127,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
 
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
-    context.put(QueryContextParameters.MIN_TOP_N_THRESHOLD.getName(), 1);
+    QueryContextParameters.USE_APPROXIMATE_TOP_N.set(context, false);
+    QueryContextParameters.MIN_TOP_N_THRESHOLD.set(context, 1);
     testQuery(
         "select t1.b1 from (select __time as b1 from numfoo group by 1 order by 1) as t1 inner join (\n"
         + "  select __time as b2 from foo group by 1 order by 1\n"
@@ -190,9 +189,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testExactTopNOnInnerJoinWithLimit()
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
-    context.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
-    context.put(QueryContextParameters.MIN_TOP_N_THRESHOLD.getName(), 1);
+    QueryContextParameters.USE_APPROXIMATE_TOP_N.set(context, false);
+    QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N.set(context, true);
+    QueryContextParameters.MIN_TOP_N_THRESHOLD.set(context, 1);
     testQuery(
         "select f1.\"dim4\", sum(\"m1\") from numfoo f1 inner join (\n"
         + "  select \"dim4\" from numfoo where dim4 <> 'a' group by 1\n"
@@ -2686,9 +2685,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     }
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT DISTINCT __time FROM druid.foo WHERE __time IN (SELECT MAX(__time) FROM druid.foo)",
         updatedQueryContext,
@@ -2734,9 +2733,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT DISTINCT __time FROM druid.foo WHERE __time NOT IN (SELECT MAX(__time) FROM druid.foo)",
         updatedQueryContext,
@@ -3536,6 +3535,73 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @MethodSource("provideQueryContexts")
+  @ParameterizedTest(name = "{0}")
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.EQUIV_PLAN)
+  public void testGroupByOverGroupByOverInnerJoinOfInlineAndLookupReadingRightColumn(Map<String, Object> queryContext)
+  {
+    cannotVectorize();
+
+    // The inner query reads a right-hand column that the outer query does not, so the join must not be rewritten
+    // into a filter on the left-hand side.
+    testQuery(
+        "SELECT cnt, COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT l.v, COUNT(*) AS cnt\n"
+        + "  FROM (VALUES ('a'), ('a'), ('abc')) AS t(x) INNER JOIN lookup.lookyloo l ON t.x = l.k\n"
+        + "  GROUP BY 1\n"
+        + ")\n"
+        + "GROUP BY 1",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(
+                                                join(
+                                                    InlineDataSource.fromIterable(
+                                                        ImmutableList.of(
+                                                            new Object[]{"a", "a"},
+                                                            new Object[]{"a", "a"},
+                                                            new Object[]{"abc", "abc"}
+                                                        ),
+                                                        RowSignature.builder()
+                                                                    .add("x", ColumnType.STRING)
+                                                                    .add("x0", ColumnType.STRING)
+                                                                    .build()
+                                                    ),
+                                                    new LookupDataSource("lookyloo"),
+                                                    "j0.",
+                                                    equalsCondition(
+                                                        makeColumnExpression("x0"),
+                                                        makeColumnExpression("j0.k")
+                                                    ),
+                                                    JoinType.INNER
+                                                )
+                                            )
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(new DefaultDimensionSpec("j0.v", "d0", ColumnType.STRING))
+                                            .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                                            .setContext(queryContext)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(new DefaultDimensionSpec("a0", "d0", ColumnType.LONG))
+                        .setAggregatorSpecs(new CountAggregatorFactory("_a0"))
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L},
+            new Object[]{2L, 1L}
+        )
+    );
+  }
+
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_LEFT_DIRECT_ACCESS)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
@@ -3736,7 +3802,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // this leads to cost(left join) < cost(converted inner join) for the below query
     queryContext = QueryContexts.override(
         queryContext,
-        ImmutableMap.of("computeInnerJoinCostAsFilter", "false")
+        QueryContext.ofMap(QueryContextParameters.COMPUTE_INNER_JOIN_COST_AS_FILTER, false)
     );
     testQuery(
         "SELECT dim1, l1.k\n"
@@ -4043,9 +4109,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     }
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM foo\n"
         + "WHERE dim1 IN ('abc', 'def')"
@@ -4106,11 +4172,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
-    minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(minTimeQueryContext, "a0");
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM foo\n"
         + "WHERE dim1 IN ('abc', 'def')\n"
@@ -4211,11 +4277,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    updatedQueryContext.put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING.getName(), true);
     Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
-    minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(minTimeQueryContext, "a0");
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
-    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
+    QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(maxTimeQueryContext, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM\n"
         + "foo\n"
@@ -5302,7 +5368,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   {
     final Map<String, Object> contextWithLexicographicTopN =
-        QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+        QueryContexts.override(queryContext, QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N, true);
     testQuery(
         "SELECT druid.broadcast.dim4, COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -5713,7 +5779,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     String query = "SELECT l1 FROM numfoo WHERE l1 IN (4842, 4844, 4845, 14905, 4853, 29064)";
 
     Map<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    queryContext.put(QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY, 3);
+    queryContext.put(QueryContextParameters.IN_SUB_QUERY_THRESHOLD.getName(), 3);
 
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -5768,7 +5834,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     final Map<String, Object> contextWithLexicographicTopN =
-        QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+        QueryContexts.override(queryContext, QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N, true);
     testQuery(
         "select\n" +
         "count(*) filter (where trim(both from dim1) in (select dim2 from foo)),\n" +
@@ -5879,8 +5945,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testJoinWithAliasAndOrderByNoGroupBy()
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
-    context.put(QueryContextParameters.MIN_TOP_N_THRESHOLD.getName(), 1);
+    QueryContextParameters.USE_APPROXIMATE_TOP_N.set(context, false);
+    QueryContextParameters.MIN_TOP_N_THRESHOLD.set(context, 1);
     testQuery(
         "select t1.__time from druid.foo as t1 join\n"
         + "  druid.numfoo as t2 on t1.dim2 = t2.dim2\n"

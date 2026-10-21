@@ -30,14 +30,12 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
 
@@ -51,13 +49,13 @@ public class NativeSqlEngine implements SqlEngine
   private static final Logger LOG = new Logger(NativeSqlEngine.class);
 
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS = ImmutableSet.of(
-      TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME,
-      TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME,
-      GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD,
-      GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
-      GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX,
-      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-      DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS
+      QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.getName(),
+      QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.getName(),
+      QueryContextParameters.TIMESTAMP_RESULT_FIELD.getName(),
+      QueryContextParameters.TIMESTAMP_RESULT_FIELD_GRANULARITY.getName(),
+      QueryContextParameters.TIMESTAMP_RESULT_FIELD_IN_ORIGINAL_DIMENSIONS.getName(),
+      QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY.getName(),
+      QueryContextParameters.SQL_REPLACE_TIME_CHUNKS.getName()
   );
 
   public static final String NAME = "native";
@@ -174,12 +172,13 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   /**
-   * Validates that {@link PlannerContext#CTX_SQL_JOIN_ALGORITHM} is {@link JoinAlgorithm#BROADCAST}. This is the
+   * Validates that {@link QueryContextParameters#SQL_JOIN_ALGORITHM} is {@link JoinAlgorithm#BROADCAST}. This is the
    * only join algorithm supported by native queries.
    */
   private static void validateJoinAlgorithm(final Map<String, Object> queryContext)
   {
-    final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+    final JoinAlgorithm joinAlgorithm =
+        QueryContext.of(queryContext).getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
 
     if (joinAlgorithm != JoinAlgorithm.BROADCAST) {
       throw InvalidSqlInput.exception("Join algorithm [%s] is not supported by engine [%s]", joinAlgorithm, NAME);

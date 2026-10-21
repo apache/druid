@@ -174,6 +174,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexSpec;
@@ -186,7 +187,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.timeline.CompactionState;
@@ -437,6 +437,7 @@ public class ControllerImpl implements Controller
           MultiStageQueryContext.getSketchEncoding(querySpec.getContext())
       );
       closer.register(workerSketchFetcher::close);
+      closer.register(() -> workerManager.stop(true));
 
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory = makeInputSpecSlicerFactory(
@@ -1759,11 +1760,7 @@ public class ControllerImpl implements Controller
       @SuppressWarnings("unchecked")
       Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
 
-      boolean storeCompactionState = querySpec.getContext()
-          .getBoolean(
-              Tasks.STORE_COMPACTION_STATE_KEY,
-              Tasks.DEFAULT_STORE_COMPACTION_STATE
-          );
+      boolean storeCompactionState = querySpec.getContext().getOrDefault(QueryContextParameters.STORE_COMPACTION_STATE);
 
       final String indexingStateFingerprint = querySpec.getContext().getString(Tasks.INDEXING_STATE_FINGERPRINT_KEY);
 
@@ -1890,7 +1887,7 @@ public class ControllerImpl implements Controller
     } else {
       granularitySpec = new UniformGranularitySpec(
           segmentGranularity,
-          querySpec.getContext().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
+          querySpec.getContext().getGranularity(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY.getName(), jsonMapper),
           dataSchema.getGranularitySpec().isRollup(),
           // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
           destination.getReplaceTimeChunks()
@@ -2542,7 +2539,6 @@ public class ControllerImpl implements Controller
       log.debug("Query [%s] starting task launcher.", queryDef.getQueryId());
 
       workerTaskLauncherFuture = workerManager.start();
-      closer.register(() -> workerManager.stop(true));
 
       workerTaskLauncherFuture.addListener(
           () ->

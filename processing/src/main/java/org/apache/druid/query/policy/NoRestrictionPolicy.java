@@ -22,6 +22,8 @@ package org.apache.druid.query.policy;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.segment.CursorBuildSpec;
 
+import java.util.Set;
+
 /**
  * Represents a special kind of policy restriction, indicating that this table is restricted, but doesn't impose any restriction
  * to a user.
@@ -42,6 +44,12 @@ public class NoRestrictionPolicy implements Policy
   public CursorBuildSpec visit(CursorBuildSpec spec)
   {
     return spec;
+  }
+
+  @Override
+  public Set<String> getReservedColumns()
+  {
+    return Set.of();
   }
 
   @Override

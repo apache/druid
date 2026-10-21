@@ -19,7 +19,7 @@
 import { Button, Icon, Intent, Menu, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import type { Column, QueryResult, SqlExpression, SqlQueryBase } from 'druid-query-toolkit';
 import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar, SqlType } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
@@ -91,7 +91,11 @@ function isStringJsonString(value: string): boolean {
   }
 }
 
-function getExpressionIfAlias(query: SqlQuery, columnIndex: number, numColumns: number): string {
+function getExpressionIfAlias(
+  query: SqlQueryBase,
+  columnIndex: number,
+  numColumns: number,
+): string {
   const selectExpressionsArray = query.getSelectExpressionsArray();
   // If there is a * before
   if (

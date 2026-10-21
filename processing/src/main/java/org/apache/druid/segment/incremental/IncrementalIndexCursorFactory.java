@@ -136,6 +136,12 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
         {
           return projection.getCursorBuildSpec().getAggregators();
         }
+
+        @Override
+        public List<OrderBy> getOrdering()
+        {
+          return Cursors.trimOrdering(super.getOrdering(), spec.getVirtualColumns());
+        }
       };
     }
   }
@@ -241,7 +247,7 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
       {
         // Groups are walked in clustering-value order and each group's rows follow the segment ordering with the
         // clustering prefix dropped, so the concatenated output is in the full segment ordering.
-        return summary.getOrdering();
+        return Cursors.trimOrdering(summary.getOrdering(), spec.getVirtualColumns());
       }
 
       @Override

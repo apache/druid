@@ -96,12 +96,12 @@ public abstract class AbstractStatement implements Closeable
     if (this.queryContext.remove(QueryContextParameters.BY_SEGMENT.getName()) != null) {
       log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
     }
-    this.queryContext.putIfAbsent(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+    this.queryContext.putIfAbsent(QueryContextParameters.SQL_QUERY_ID.getName(), UUID.randomUUID().toString());
   }
 
   public String sqlQueryId()
   {
-    return QueryContexts.parseString(queryContext, QueryContexts.CTX_SQL_QUERY_ID);
+    return QueryContexts.parseString(queryContext, QueryContextParameters.SQL_QUERY_ID.getName());
   }
 
   /**
