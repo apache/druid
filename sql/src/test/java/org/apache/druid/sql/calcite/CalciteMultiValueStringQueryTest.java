@@ -2500,7 +2500,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testBuilder()
         .sql(sql)
         .queryContext(
-            QueryContexts.override(QUERY_CONTEXT_DEFAULT, ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true))
+            QueryContexts.override(
+                QUERY_CONTEXT_DEFAULT,
+                QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true)
+            )
         )
         .expectedResults(expectedResults)
         .run();
@@ -2969,8 +2972,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 
   /**
    * Tests a query grouping on a multi-value string filtering function, verifying the native query using the default
-   * query context, and that results match those of the same query with {@link PlannerContext#CTX_SQL_USE_EXTRACTION_FNS}
-   * enabled.
+   * query context, and that results match those of the same query with
+   * {@link QueryContextParameters#SQL_USE_EXTRACTION_FNS} enabled.
    */
   private void testGroupByFilteredMultiValueExpression(
       String sql,
@@ -2998,7 +3001,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testBuilder()
         .sql(sql)
         .queryContext(
-            QueryContexts.override(QUERY_CONTEXT_DEFAULT, ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true))
+            QueryContexts.override(
+                QUERY_CONTEXT_DEFAULT,
+                QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true)
+            )
         )
         .expectedResults(expectedResults)
         .run();
