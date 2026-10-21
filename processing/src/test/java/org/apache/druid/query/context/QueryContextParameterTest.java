@@ -24,6 +24,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
@@ -69,7 +71,8 @@ class QueryContextParameterTest
     assertEquals("maxThings", parameter.getName());
     assertEquals(Integer.class, parameter.getValueType());
     assertEquals(12, parameter.parse("12"));
-    assertEquals(10, parameter.getDefaultValue().orElseThrow());
+    assertEquals(new DefaultValue.Literal<>(10), parameter.getDefaultValue());
+    assertEquals(10, parameter.getLiteralDefault());
     assertTrue(parameter.isNullable());
     assertFalse(parameter.isDeprecated());
     assertNull(parameter.getDeprecationMessage());
@@ -317,8 +320,38 @@ class QueryContextParameterTest
 
     assertTrue(parameter.isDeprecated());
     assertEquals("Use `newTag` instead.", parameter.getDeprecationMessage());
-    assertTrue(parameter.getDefaultValue().isEmpty());
+    assertEquals(DefaultValue.none(), parameter.getDefaultValue());
+    assertNull(parameter.getLiteralDefault());
     assertNull(parameter.getDocumentation().getSince().orElse(null));
+  }
+
+  @Test
+  void testDefaultFromProperty()
+  {
+    final QueryContextParameter<Long> parameter = QueryContextParameter
+        .builder("maxThings", Long.class, value -> ((Number) value).longValue())
+        .description("Test parameter.")
+        .defaultValue(DefaultValue.fromProperty("druid.test.maxThings"))
+        .build();
+
+    assertEquals(new DefaultValue.FromProperty<>("druid.test.maxThings"), parameter.getDefaultValue());
+    // The code reading the parameter supplies the property value, so there is no literal default to fall back to
+    assertNull(parameter.getLiteralDefault());
+    assertNull(QueryContext.empty().get(parameter));
+    assertEquals(7L, QueryContext.empty().getOrDefault(parameter, 7L));
+    assertThrows(ISE.class, () -> QueryContext.empty().getOrDefault(parameter));
+  }
+
+  @Test
+  void testNoLiteralDefaultLooksLikeAPropertyReference()
+  {
+    // sys.query_context_parameters shows a property default as ${property} in default_value
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      final Object literalDefault = parameter.getLiteralDefault();
+      if (literalDefault != null) {
+        assertFalse(String.valueOf(literalDefault).startsWith("${"), parameter.getName());
+      }
+    }
   }
 
   @Test
@@ -329,7 +362,7 @@ class QueryContextParameterTest
         assertThrows(
             IAE.class,
             () -> QueryContextParameter.builder("undocumented", String.class, String::valueOf)
-                                       .visibility(Visibility.INTERNAL)
+                                       .visibility(Visibility.SYSTEM)
                                        .since("39.0.0")
                                        .build()
         ).getMessage()
@@ -403,5 +436,55 @@ class QueryContextParameterTest
         assertEquals(constant, parameter.parse(jsonForm), description);
       }
     }
+  }
+
+  @Test
+  void testTypeIsInferredFromValueType()
+  {
+    assertEquals(QueryContextParameter.Type.INTEGER, QueryContextParameters.PRIORITY.getType());
+    assertEquals(QueryContextParameter.Type.ENUM, QueryContextParameters.VECTORIZE.getType());
+    assertEquals("HumanReadableNumber", QueryContextParameter.Type.HUMAN_READABLE_NUMBER.getDisplayName());
+
+    final IAE exception = assertThrows(
+        IAE.class,
+        () -> QueryContextParameter.builder("unmapped", Map.class, value -> (Map<?, ?>) value)
+    );
+    assertEquals("No query context parameter type for value type [java.util.Map]", exception.getMessage());
+  }
+
+  @Test
+  void testSqlTimeZoneStringifiesNonStringValues()
+  {
+    assertEquals("America/Los_Angeles", QueryContextParameters.SQL_TIME_ZONE.parse("America/Los_Angeles"));
+    assertEquals("8", QueryContextParameters.SQL_TIME_ZONE.parse(8));
+  }
+
+  @Test
+  void testEnumParameterWithCustomLookup()
+  {
+    final QueryContextParameter<JoinAlgorithm> parameter = QueryContextParameters.SQL_JOIN_ALGORITHM;
+
+    assertEquals(JoinAlgorithm.SORT_MERGE, parameter.parse("sortMerge"));
+    assertEquals(JoinAlgorithm.BROADCAST, parameter.parse(JoinAlgorithm.BROADCAST));
+    assertEquals(
+        "Query context parameter [sqlJoinAlgorithm] should be one of [broadcast, sortMerge], but got [SORT_MERGE]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("SORT_MERGE")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1));
+  }
+
+  @Test
+  void testSqlCurrentTimestamp()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameters.SQL_CURRENT_TIMESTAMP;
+    assertEquals("2000-01-01T00:00:00Z", parameter.parse("2000-01-01T00:00:00Z"));
+    // Milliseconds since the epoch are accepted as the equivalent ISO 8601 timestamp
+    assertEquals("2000-01-01T00:00:00.000Z", parameter.parse(946684800000L));
+    assertEquals(
+        "Query context parameter [sqlCurrentTimestamp] should be an ISO 8601 timestamp or milliseconds since the epoch,"
+        + " but got [yesterday]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("yesterday")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5));
   }
 }

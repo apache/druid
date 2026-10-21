@@ -20,7 +20,7 @@ import { Button } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Timezone } from 'chronoshift';
 import type { SqlExpression, SqlOrderByDirection } from 'druid-query-toolkit';
-import { C, F } from 'druid-query-toolkit';
+import { C, F, SqlQuery } from 'druid-query-toolkit';
 import { useMemo } from 'react';
 
 import { Loader } from '../../../../components';
@@ -279,7 +279,7 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
         const { query, columnHints } = queryAndHints;
 
         let result = await runSqlQuery({ query, timezone }, signal);
-        if (result.sqlQuery) {
+        if (result.sqlQuery instanceof SqlQuery) {
           result = result.attachQuery(
             { query: '' },
             result.sqlQuery.changeWhereExpression(globalWhere),

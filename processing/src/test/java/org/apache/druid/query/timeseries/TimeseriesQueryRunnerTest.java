@@ -38,7 +38,6 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -374,11 +373,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                                               .aggregators(List.of(maxQuality));
     // construct a query to ignore projection
     Map<String, Object> contextNoProjection = makeContext();
-    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    contextNoProjection.put(QueryContextParameters.NO_PROJECTIONS.getName(), "true");
     TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
     // construct a query to use projection
     Map<String, Object> contextWithProjection = makeContext();
-    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_market_maxQuality");
+    contextWithProjection.put(QueryContextParameters.USE_PROJECTION.getName(), "daily_market_maxQuality");
     TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
 
 
@@ -405,11 +404,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                                               .aggregators(List.of(countAgg));
     // construct a query to ignore projection
     Map<String, Object> contextNoProjection = makeContext();
-    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    contextNoProjection.put(QueryContextParameters.NO_PROJECTIONS.getName(), "true");
     TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
     // construct a query to use projection
     Map<String, Object> contextWithProjection = makeContext();
-    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_countAndQualityCardinalityAndMaxLongNullable");
+    contextWithProjection.put(QueryContextParameters.USE_PROJECTION.getName(), "daily_countAndQualityCardinalityAndMaxLongNullable");
     TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
 
 
@@ -436,11 +435,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                                               .aggregators(List.of(longNullableMax));
     // construct a query to ignore projection
     Map<String, Object> contextNoProjection = makeContext();
-    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    contextNoProjection.put(QueryContextParameters.NO_PROJECTIONS.getName(), "true");
     TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
     // construct a query to use projection
     Map<String, Object> contextWithProjection = makeContext();
-    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_countAndQualityCardinalityAndMaxLongNullable");
+    contextWithProjection.put(QueryContextParameters.USE_PROJECTION.getName(), "daily_countAndQualityCardinalityAndMaxLongNullable");
     TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
 
 
@@ -648,7 +647,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   )
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
-                                  .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                  .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, true))
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = new ArrayList<>();
@@ -2752,7 +2751,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(
                                       makeContext(
                                           QueryContext.builder()
-                                                      .putRaw(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
+                                                      .put(QueryContextParameters.TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
                                                       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
                                                       .toMap()
                                       )
@@ -2868,7 +2867,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(
                                       makeContext(
                                           QueryContext.builder()
-                                                      .putRaw(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
+                                                      .put(QueryContextParameters.TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
                                                       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
                                                       .toMap()
                                       )
@@ -3060,7 +3059,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .descending(descending)
                                   .context(
                                       makeContext(
-                                          ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, "myTimestamp")
+                                          QueryContext.ofMap(QueryContextParameters.TIMESTAMP_RESULT_FIELD, "myTimestamp")
                                       )
                                   )
                                   .build();

@@ -23,13 +23,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
@@ -38,7 +37,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -70,17 +68,19 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
-  private static final Map<String, Object> DEFAULT_QUERY_CONTEXT = ImmutableMap.of(
-      QueryContextParameters.DEBUG.getName(), true,
-      QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false
+  private static final Map<String, Object> DEFAULT_QUERY_CONTEXT = QueryContext.ofMap(
+      QueryContextParameters.DEBUG,
+      true,
+      QueryContextParameters.SQL_STRINGIFY_ARRAYS,
+      false
   );
 
   private static final Map<String, Object> DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_QUERY_CONTEXT)
-                  .put(QueryContextParameters.MAX_SUBQUERY_BYTES.getName(), "100000")
-                  .put(QueryContextParameters.MAX_SUBQUERY_ROWS.getName(), "0")
-                  .build();
+                  .put(QueryContextParameters.MAX_SUBQUERY_BYTES, "100000")
+                  .put(QueryContextParameters.MAX_SUBQUERY_ROWS, 0)
+                  .toMap();
 
   public static Object[] parametersForWindowQueryTest() throws Exception
   {
@@ -223,10 +223,10 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .skipVectorize(true)
           .sql(testCase.getSql())
           .queryContext(
-              ImmutableMap.<String, Object>builder()
+              QueryContext.builder()
                   .putAll(DEFAULT_QUERY_CONTEXT)
                   .putAll(testCase.getQueryContext())
-                  .build()
+                  .toMap()
           )
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
@@ -247,10 +247,10 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .skipVectorize(true)
           .sql(testCase.getSql())
           .queryContext(
-              ImmutableMap.<String, Object>builder()
+              QueryContext.builder()
                           .putAll(DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES)
                           .putAll(testCase.getQueryContext())
-                          .build()
+                          .toMap()
           )
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
@@ -313,11 +313,13 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                  + "from wikipedia\n"
                  + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                  + "order by 1, 2, 3")
-            .queryContext(ImmutableMap.of(
-                QueryContextParameters.DEBUG.getName(), true,
-                QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false,
-                PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, true
-            ))
+            .queryContext(
+                QueryContext.builder()
+                    .put(QueryContextParameters.DEBUG, true)
+                    .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
+                    .put(QueryContextParameters.ENABLE_RAC_OVER_WIRE, true)
+                    .toMap()
+            )
             .run()
     );
 

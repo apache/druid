@@ -22,7 +22,6 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -36,6 +35,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -178,14 +178,13 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
       // We only want to do this operation once at the very, very top of the execution tree.  So we check and set
       // a context parameter so that if this merge code runs anywhere else, it will skip this part.
       final WindowOperatorQuery query = (WindowOperatorQuery) queryPlus.getQuery();
-      if (query.context().getBoolean("unravel", true)) {
+      if (query.context().getOrDefault(QueryContextParameters.UNRAVEL)) {
         final Sequence<RowsAndColumns> baseSequence = baseQueryRunner.run(
-            queryPlus.withQuery(query.withOverriddenContext(ImmutableMap.of("unravel", false))),
+            queryPlus.withQuery(query.withOverriddenContext(QueryContextParameters.UNRAVEL, false)),
             responseContext
         );
-        final ResultSerializationMode serializationMode = query.context().getEnum(
-            ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-            ResultSerializationMode.class,
+        final ResultSerializationMode serializationMode = query.context().getOrDefault(
+            QueryContextParameters.SERIALIZATION,
             ResultSerializationMode.ROWS
         );
         switch (serializationMode) {

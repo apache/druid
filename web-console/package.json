@@ -1,6 +1,6 @@
 {
   "name": "web-console",
-  "version": "39.0.0",
+  "version": "40.0.0",
   "description": "A web console for Apache Druid",
   "author": "Apache Druid Developers <dev@druid.apache.org>",
   "license": "Apache-2.0",
@@ -76,7 +76,7 @@
     "d3-shape": "^3.2.0",
     "d3-time-format": "^4.1.0",
     "dayjs": "^1.11.15",
-    "druid-query-toolkit": "^1.2.2",
+    "druid-query-toolkit": "^1.7.0",
     "echarts": "^6.1.0",
     "file-saver": "^2.0.5",
     "hjson": "^3.2.2",
@@ -151,5 +151,10 @@
     "playwright-chromium": true,
     "@parcel/watcher": false,
     "unrs-resolver": false
+  },
+  "overrides": {
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "^4.1.1"
+    }
   }
 }
