@@ -2527,7 +2527,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmo
 
 The response includes the following fields:
 - `id`: The supervisor ID.
-- `modified`: A boolean indicating whether the submitted spec was persisted as a change to the existing one.
+- `modified`: A boolean indicating whether the submitted spec was different from the existing spec and was persisted as a new version.
 - `restarted`: A boolean indicating whether the supervisor was restarted. When `skipRestartIfUnmodified` is set to `true` and the supervisor spec is unchanged, this field will be `false`; otherwise, it will be `true`.
 
 ### Suspend a running supervisor
