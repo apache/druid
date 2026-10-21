@@ -34,7 +34,6 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -65,41 +64,6 @@ public class WorkerHandoffHelperTest
   }
 
   @Test
-  public void testValidateTypesAllowsOmittedAndEmpty()
-  {
-    Assertions.assertFalse(WorkerHandoffHelper.validateTypes(null).isPresent());
-    Assertions.assertFalse(WorkerHandoffHelper.validateTypes(Collections.emptyList()).isPresent());
-  }
-
-  @Test
-  public void testValidateTypesRejectsWhenNoneSupportEarlyHandoff()
-  {
-    final Optional<String> unknown = WorkerHandoffHelper.validateTypes(ImmutableList.of("not_a_type"));
-    Assertions.assertTrue(unknown.isPresent());
-    Assertions.assertTrue(unknown.get().contains("do not support early handoff"));
-
-    final Optional<String> compact = WorkerHandoffHelper.validateTypes(ImmutableList.of("compact"));
-    Assertions.assertTrue(compact.isPresent());
-    Assertions.assertTrue(compact.get().contains("do not support early handoff"));
-  }
-
-  @Test
-  public void testValidateTypesIgnoresExtraTypesWhenOneSupportsHandoff()
-  {
-    Assertions.assertFalse(
-        WorkerHandoffHelper.validateTypes(ImmutableList.of("index_kafka", "not_a_type")).isPresent()
-    );
-  }
-
-  @Test
-  public void testValidateTypesKafkaIsOk()
-  {
-    Assertions.assertFalse(
-        WorkerHandoffHelper.validateTypes(ImmutableList.of("index_kafka")).isPresent()
-    );
-  }
-
-  @Test
   public void testGroupTaskGroupsUsesSupervisorIdNotDataSource()
   {
     final Task primary = streamTask("index_kafka", "KubeState", "KubeState", 0);
@@ -116,8 +80,7 @@ public class WorkerHandoffHelperTest
 
     final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("primary", "ha"),
-        lookup,
-        null
+        lookup
     );
 
     Assertions.assertEquals(ImmutableList.of(0), groups.get("KubeState"));
@@ -126,13 +89,24 @@ public class WorkerHandoffHelperTest
   }
 
   @Test
+  public void testGroupTaskGroupsIncludesRabbit()
+  {
+    final Task rabbit = streamTask("index_rabbit", "orders", "orders", 2);
+    final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
+        ImmutableList.of("r1"),
+        id -> Optional.of(rabbit)
+    );
+    Assertions.assertEquals(ImmutableList.of(2), groups.get("orders"));
+    Assertions.assertEquals(1, groups.size());
+  }
+
+  @Test
   public void testGroupTaskGroupsSkipsEmptySupervisorId()
   {
     final Task task = streamTask("index_kafka", "", "cAdvisor", 3);
     final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("t1"),
-        id -> Optional.of(task),
-        null
+        id -> Optional.of(task)
     );
     Assertions.assertTrue(groups.isEmpty());
   }
@@ -141,32 +115,14 @@ public class WorkerHandoffHelperTest
   public void testGroupTaskGroupsSkipsCompact()
   {
     final Task compact = EasyMock.mock(Task.class);
-    EasyMock.expect(compact.getType()).andReturn("compact").anyTimes();
     EasyMock.replay(compact);
 
     final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("c1"),
-        id -> Optional.of(compact),
-        null
+        id -> Optional.of(compact)
     );
     Assertions.assertTrue(groups.isEmpty());
     EasyMock.verify(compact);
-  }
-
-  @Test
-  public void testGroupTaskGroupsHonorsTypeFilter()
-  {
-    final Task kafka = streamTask("index_kafka", "s1", "ds", 0);
-    final Task kinesis = streamTask("index_kinesis", "s2", "ds", 1);
-    final Function<String, Optional<Task>> lookup = id -> Optional.of("k".equals(id) ? kafka : kinesis);
-
-    final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
-        ImmutableList.of("k", "n"),
-        lookup,
-        ImmutableList.of("index_kafka")
-    );
-    Assertions.assertEquals(Collections.singleton("s1"), groups.keySet());
-    Assertions.assertEquals(ImmutableList.of(0), groups.get("s1"));
   }
 
   @Test
@@ -174,8 +130,7 @@ public class WorkerHandoffHelperTest
   {
     final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("noop"),
-        id -> Optional.of(NoopTask.create()),
-        null
+        id -> Optional.of(NoopTask.create())
     );
     Assertions.assertTrue(groups.isEmpty());
   }

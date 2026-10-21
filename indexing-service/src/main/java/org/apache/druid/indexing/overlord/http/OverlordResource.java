@@ -784,12 +784,10 @@ public class OverlordResource
    */
   @POST
   @Path("/worker/{host}/handoff")
-  @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
   public Response handoffWorkerTasks(
-      @PathParam("host") final String host,
-      @Nullable final WorkerHandoffRequest request
+      @PathParam("host") final String host
   )
   {
     return asLeaderWith(
@@ -819,14 +817,6 @@ public class OverlordResource
                            .build();
           }
 
-          final List<String> types = request == null ? null : request.getTypes();
-          final Optional<String> typeError = WorkerHandoffHelper.validateTypes(types);
-          if (typeError.isPresent()) {
-            return Response.status(Status.BAD_REQUEST)
-                           .entity(ImmutableMap.of("error", typeError.get()))
-                           .build();
-          }
-
           final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
           final Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
           if (!taskQueue.isPresent() || !supervisorManager.isPresent()) {
@@ -835,8 +825,7 @@ public class OverlordResource
 
           final Map<String, List<Integer>> taskGroups = WorkerHandoffHelper.groupTaskGroups(
               workerInfo.get().getRunningTasks(),
-              taskQueue.get()::getActiveTask,
-              types
+              taskQueue.get()::getActiveTask
           );
           final Map<String, List<Integer>> accepted = WorkerHandoffHelper.submitHandoffs(
               supervisorManager.get(),

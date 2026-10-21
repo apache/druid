@@ -102,7 +102,7 @@ public class OverlordResourceWorkerHandoffTest
             .andReturn(true);
     EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
 
-    final Response response = resource.handoffWorkerTasks(HOST, new WorkerHandoffRequest(null));
+    final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
     @SuppressWarnings("unchecked")
     final Map<String, Object> entity = (Map<String, Object>) response.getEntity();
@@ -122,7 +122,7 @@ public class OverlordResourceWorkerHandoffTest
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
 
-    final Response response = resource.handoffWorkerTasks(HOST, new WorkerHandoffRequest(null));
+    final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
     @SuppressWarnings("unchecked")
     final Map<String, Object> entity = (Map<String, Object>) response.getEntity();
@@ -136,39 +136,13 @@ public class OverlordResourceWorkerHandoffTest
     EasyMock.expect(taskRunner.getWorkers()).andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("t1"))));
     EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
 
-    final Response response = resource.handoffWorkerTasks("missing:8091", new WorkerHandoffRequest(null));
+    final Response response = resource.handoffWorkerTasks("missing:8091");
     Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     EasyMock.verify(taskMaster, taskRunner);
   }
 
   @Test
-  public void testHandoffUnknownTypeIsBadRequest()
-  {
-    EasyMock.expect(taskRunner.getWorkers()).andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("t1"))));
-    EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
-
-    final Response response = resource.handoffWorkerTasks(
-        HOST,
-        new WorkerHandoffRequest(ImmutableList.of("not_a_type"))
-    );
-    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-  }
-
-  @Test
-  public void testHandoffCompactOnlyIsBadRequest()
-  {
-    EasyMock.expect(taskRunner.getWorkers()).andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("c1"))));
-    EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
-
-    final Response response = resource.handoffWorkerTasks(
-        HOST,
-        new WorkerHandoffRequest(ImmutableList.of("compact"))
-    );
-    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-  }
-
-  @Test
-  public void testHandoffSkipsCompactWhenTypesOmitted()
+  public void testHandoffSkipsNonStreamingTasks()
   {
     EasyMock.expect(taskRunner.getWorkers()).andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("noop-task"))));
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
@@ -176,7 +150,7 @@ public class OverlordResourceWorkerHandoffTest
     EasyMock.expect(taskQueue.getActiveTask("noop-task")).andReturn(Optional.of(NoopTask.create()));
     EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
 
-    final Response response = resource.handoffWorkerTasks(HOST, null);
+    final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
     @SuppressWarnings("unchecked")
     final Map<String, Object> entity = (Map<String, Object>) response.getEntity();
@@ -202,7 +176,7 @@ public class OverlordResourceWorkerHandoffTest
         EasyMock.mock(AuthConfig.class),
         TestHelper.JSON_MAPPER
     );
-    final Response response = notLeader.handoffWorkerTasks(HOST, new WorkerHandoffRequest(null));
+    final Response response = notLeader.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.SERVICE_UNAVAILABLE.getStatusCode(), response.getStatus());
   }
 

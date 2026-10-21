@@ -1317,8 +1317,7 @@ public class OverlordResourceTest
     replayAll();
 
     final Response response = overlordResource.handoffWorkerTasks(
-        "mm-0.svc.ns.svc.cluster.local:8091",
-        new WorkerHandoffRequest(null)
+        "mm-0.svc.ns.svc.cluster.local:8091"
     );
 
     Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), response.getStatus());

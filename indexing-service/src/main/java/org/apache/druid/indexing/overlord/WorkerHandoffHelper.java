@@ -20,15 +20,12 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.utils.CollectionUtils;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,8 +44,6 @@ public final class WorkerHandoffHelper
 {
   private static final Logger LOG = new Logger(WorkerHandoffHelper.class);
 
-  static final Set<String> EARLY_HANDOFF_TASK_TYPES = ImmutableSet.of("index_kafka", "index_kinesis");
-
   private WorkerHandoffHelper()
   {
   }
@@ -64,47 +59,11 @@ public final class WorkerHandoffHelper
     );
   }
 
-  /**
-   * Returns an error message when {@code types} is invalid, or absent when the filter is usable.
-   */
-  public static Optional<String> validateTypes(@Nullable List<String> types)
-  {
-    if (CollectionUtils.isNullOrEmpty(types)) {
-      return Optional.absent();
-    }
-    boolean anyHandoffType = false;
-    for (String type : types) {
-      if (type == null || type.isEmpty()) {
-        return Optional.of("Task type filter cannot contain a null or empty value");
-      }
-      if (EARLY_HANDOFF_TASK_TYPES.contains(type)) {
-        anyHandoffType = true;
-      }
-    }
-    if (!anyHandoffType) {
-      return Optional.of("None of the requested task types support early handoff");
-    }
-    return Optional.absent();
-  }
-
   public static Map<String, List<Integer>> groupTaskGroups(
       Collection<String> runningTaskIds,
-      Function<String, Optional<Task>> taskLookup,
-      @Nullable List<String> requestedTypes
+      Function<String, Optional<Task>> taskLookup
   )
   {
-    final Set<String> typeFilter;
-    if (CollectionUtils.isNullOrEmpty(requestedTypes)) {
-      typeFilter = EARLY_HANDOFF_TASK_TYPES;
-    } else {
-      final ImmutableSet.Builder<String> builder = ImmutableSet.builder();
-      for (String type : requestedTypes) {
-        if (EARLY_HANDOFF_TASK_TYPES.contains(type)) {
-          builder.add(type);
-        }
-      }
-      typeFilter = builder.build();
-    }
     final Map<String, Set<Integer>> grouped = new LinkedHashMap<>();
     for (String taskId : runningTaskIds) {
       final Optional<Task> taskOptional = taskLookup.apply(taskId);
@@ -112,9 +71,6 @@ public final class WorkerHandoffHelper
         continue;
       }
       final Task task = taskOptional.get();
-      if (!typeFilter.contains(task.getType())) {
-        continue;
-      }
       if (!(task instanceof SeekableStreamIndexTask<?, ?, ?>)) {
         continue;
       }
