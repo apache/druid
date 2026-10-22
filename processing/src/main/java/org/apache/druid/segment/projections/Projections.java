@@ -72,6 +72,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Projections
 {
@@ -113,6 +114,31 @@ public class Projections
       Function<String, T> getRowSelector
   )
   {
+    return findMatchingProjection(
+        cursorBuildSpec,
+        projections,
+        dataInterval,
+        physicalChecker,
+        getRowSelector,
+        name -> projections.stream().anyMatch(projection -> name.equals(projection.getSchema().getName()))
+    );
+  }
+
+  /**
+   * Like {@link #findMatchingProjection(CursorBuildSpec, SortedSet, Interval, PhysicalColumnChecker, Function)}, but
+   * {@code projectionExists} checks the complete segment projection metadata, independently of the projections
+   * eligible for matching. This matters when a caller restricts matching to currently servable projections.
+   */
+  @Nullable
+  public static <T> QueryableProjection<T> findMatchingProjection(
+      CursorBuildSpec cursorBuildSpec,
+      SortedSet<AggregateProjectionMetadata> projections,
+      Interval dataInterval,
+      PhysicalColumnChecker physicalChecker,
+      Function<String, T> getRowSelector,
+      Predicate<String> projectionExists
+  )
+  {
     if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.NO_PROJECTIONS)) {
       return null;
     }
@@ -143,7 +169,7 @@ public class Projections
       }
     }
     if (name != null) {
-      if (projections.stream().noneMatch(projection -> name.equals(projection.getSchema().getName()))) {
+      if (!projectionExists.test(name)) {
         throw InvalidInput.exception("Projection[%s] does not exist", name);
       }
       throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
