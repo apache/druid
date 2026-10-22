@@ -20,12 +20,14 @@
 name: "PR Merged"
 
 on:
-  pull_request_target:
-    types: [closed]
+  push:
+    branches: [master]
+
+permissions: {}
 
 jobs:
   add-milestone:
-    if: github.repository == 'apache/druid' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'master'
+    if: github.repository == 'apache/druid'
     permissions:
       contents: read
       pull-requests: write
@@ -34,6 +36,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Install xmllint
         run: |
@@ -44,4 +48,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          .github/scripts/auto-add-milestone.sh "${{ github.event.pull_request.number }}" "${{ github.repository }}"
+          PR_NUMBER=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+            --jq ".[] | select(.merged_at != null and .base.ref == \"master\" and .merge_commit_sha == \"$GITHUB_SHA\") | .number" | head -n1)
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::warning::No pull request was merged as $GITHUB_SHA"
+            exit 0
+          fi
+          .github/scripts/auto-add-milestone.sh "$PR_NUMBER" "$GITHUB_REPOSITORY"
