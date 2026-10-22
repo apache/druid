@@ -33,7 +33,9 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
+import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.PersonaBasedErrorTransformStrategy;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
@@ -216,6 +218,9 @@ public class QueryResourceTest
       + "    \"context\": { \"priority\": -1 }"
       + "}";
 
+  private static final String PERSONA_HIDDEN_MESSAGE_PREFIX =
+      "Internal server error, please contact your administrator with Error ID [";
+
   private static final String SIMPLE_TIMESERIES_QUERY_WRITE_EXCEPTION_AS_ROW =
       "{\n"
       + "    \"queryType\": \"timeseries\",\n"
@@ -333,7 +338,7 @@ public class QueryResourceTest
         jsonMapper,
         queryScheduler,
         authorizerMapper,
-        new QueryResourceQueryResultPusherFactory(jsonMapper, responseContextConfig, DRUID_NODE),
+        new QueryResourceQueryResultPusherFactory(jsonMapper, responseContextConfig, DRUID_NODE, serverConfig),
         new ResourceIOReaderWriterFactory(jsonMapper, responseMapper),
         serverConfig
     );
@@ -482,6 +487,140 @@ public class QueryResourceTest
     Assertions.assertEquals(
         overrideConfigValue,
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
+    );
+  }
+
+  @Test
+  public void testFailureAfterResultsStartedIsTransformedInTrailer() throws IOException
+  {
+    queryResource = createQueryResourceFailingAfterFirstRow(
+        DruidException.forPersona(DruidException.Persona.OPERATOR)
+                      .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                      .build("internal detail"),
+        new ServerConfig(PersonaBasedErrorTransformStrategy.INSTANCE)
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
+        queryResource
+    );
+
+    final String trailerMessage = response.getTrailerFields().get().get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER);
+    Assertions.assertTrue(trailerMessage.startsWith(PERSONA_HIDDEN_MESSAGE_PREFIX), trailerMessage);
+  }
+
+  @Test
+  public void testFailureAfterResultsStartedIsTransformedInExceptionRow() throws IOException
+  {
+    queryResource = createQueryResourceFailingAfterFirstRow(
+        DruidException.forPersona(DruidException.Persona.OPERATOR)
+                      .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                      .build("internal detail"),
+        new ServerConfig(PersonaBasedErrorTransformStrategy.INSTANCE)
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        SIMPLE_TIMESERIES_QUERY_WRITE_EXCEPTION_AS_ROW.getBytes(StandardCharsets.UTF_8),
+        queryResource
+    );
+
+    final String body = response.baos.toString(Charset.defaultCharset());
+    Assertions.assertTrue(body.contains(PERSONA_HIDDEN_MESSAGE_PREFIX), body);
+    Assertions.assertFalse(body.contains("internal detail"), body);
+  }
+
+  @Test
+  public void testBadQueryIsTransformedByStrategy() throws IOException
+  {
+    queryResource = createQueryResource(
+        createQueryLifecycleFactory(),
+        null,
+        queryScheduler,
+        ResponseContextConfig.newConfig(true),
+        smileMapper,
+        new ServerConfig(new AllowedRegexErrorResponseTransformStrategy(List.of()))
+    );
+
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
+    Assertions.assertNull(e.getMessage());
+  }
+
+  private QueryResource createQueryResourceFailingAfterFirstRow(
+      final RuntimeException failure,
+      final ServerConfig serverConfig
+  )
+  {
+    return createQueryResource(
+        new QueryLifecycleFactory(
+            CONGLOMERATE,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(
+                  Query<T> query,
+                  Iterable<Interval> intervals
+              )
+              {
+                return (queryPlus, responseContext) -> new Sequence<T>()
+                {
+                  @Override
+                  public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                  {
+                    accumulator.accumulate(
+                        null,
+                        (T) new TimeBoundaryResultValue(ImmutableMap.of("maxTime", DateTimes.of("2014-08-02")))
+                    );
+                    throw failure;
+                  }
+
+                  @Override
+                  public <OutType> Yielder<OutType> toYielder(
+                      OutType initValue,
+                      YieldingAccumulator<OutType, T> accumulator
+                  )
+                  {
+                    throw new UnsupportedOperationException();
+                  }
+                };
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(
+                  Query<T> query,
+                  Iterable<SegmentDescriptor> specs
+              )
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
+            new DefaultGenericQueryMetricsFactory(),
+            emitter,
+            testRequestLogger,
+            new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            new DefaultQueryConfig(Map.of()),
+            null
+        ),
+        null,
+        queryScheduler,
+        ResponseContextConfig.newConfig(true),
+        smileMapper,
+        serverConfig
     );
   }
 
@@ -1214,7 +1353,7 @@ public class QueryResourceTest
     DruidExceptionMatcher.assertThat(
         entity.getUnderlyingException(),
         new DruidExceptionMatcher(
-            DruidException.Persona.OPERATOR,
+            DruidException.Persona.USER,
             DruidException.Category.TIMEOUT,
             "legacyQueryException"
         ).expectMessageIs(
@@ -1494,7 +1633,7 @@ public class QueryResourceTest
           DruidExceptionMatcher.assertThat(
               entity.getUnderlyingException(),
               new DruidExceptionMatcher(
-                  DruidException.Persona.OPERATOR,
+                  DruidException.Persona.USER,
                   DruidException.Category.CAPACITY_EXCEEDED,
                   "legacyQueryException"
               ).expectMessageIs(
@@ -1568,7 +1707,7 @@ public class QueryResourceTest
           DruidExceptionMatcher.assertThat(
               entity.getUnderlyingException(),
               new DruidExceptionMatcher(
-                  DruidException.Persona.OPERATOR,
+                  DruidException.Persona.USER,
                   DruidException.Category.CAPACITY_EXCEEDED,
                   "legacyQueryException"
               ).expectMessageIs(
@@ -1648,7 +1787,7 @@ public class QueryResourceTest
           DruidExceptionMatcher.assertThat(
               entity.getUnderlyingException(),
               new DruidExceptionMatcher(
-                  DruidException.Persona.OPERATOR,
+                  DruidException.Persona.USER,
                   DruidException.Category.CAPACITY_EXCEEDED,
                   "legacyQueryException"
               ).expectMessageIs(
