@@ -2075,7 +2075,7 @@ name: Apache HttpClient 5
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.6.4
+version: 5.6.5
 libraries:
   - org.apache.httpcomponents.client5: httpclient5
 notices:
@@ -2103,7 +2103,7 @@ name: Apache HttpCore 5 HTTP/2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.4.3
+version: 5.4.4
 libraries:
   - org.apache.httpcomponents.core5: httpcore5-h2
 notices:
