@@ -237,7 +237,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
     joinCursorThread.setUncaughtExceptionHandler(exceptionHandler);
     joinCursorThread.start();
 
-    countDownLatch.await(1, TimeUnit.SECONDS);
+    assertTrue(countDownLatch.await(1, TimeUnit.SECONDS));
     joinCursorThread.interrupt();
 
     // Wait for a max of 1 sec for the exception to be set.
