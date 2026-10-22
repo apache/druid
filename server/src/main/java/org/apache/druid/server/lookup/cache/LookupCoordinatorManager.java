@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StreamUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -67,7 +68,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -739,7 +739,7 @@ public class LookupCoordinatorManager
     final String hostAndPort = port < 0
                                ? HostAndPort.fromHost(druidNode.getHostText()).toString()
                                : HostAndPort.fromParts(druidNode.getHostText(), port).toString();
-    return URI.create(druidNode.getScheme() + "://" + hostAndPort + path).toURL();
+    return URIs.toURL(druidNode.getScheme() + "://" + hostAndPort + path);
   }
 
   private static boolean httpStatusIsSuccess(int statusCode)

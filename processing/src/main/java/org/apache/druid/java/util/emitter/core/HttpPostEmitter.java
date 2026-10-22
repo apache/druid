@@ -28,6 +28,7 @@ import org.apache.druid.concurrent.ConcurrentAwaitableCounter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -41,8 +42,6 @@ import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -171,9 +170,9 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     this.client = client;
     this.jsonMapper = jsonMapper;
     try {
-      this.url = URI.create(config.getRecipientBaseUrl()).toURL().toString();
+      this.url = URIs.toURL(config.getRecipientBaseUrl()).toString();
     }
-    catch (MalformedURLException | IllegalArgumentException e) {
+    catch (MalformedURLException e) {
       throw new ISE(e, "Bad URL: %s", config.getRecipientBaseUrl());
     }
     emittingThread = new EmittingThread(config);

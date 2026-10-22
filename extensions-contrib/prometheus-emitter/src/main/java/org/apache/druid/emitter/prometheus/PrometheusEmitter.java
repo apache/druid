@@ -28,6 +28,7 @@ import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.exporter.PushGateway;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
@@ -36,7 +37,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
@@ -128,7 +128,7 @@ public class PrometheusEmitter implements Emitter
   private static URL createURLSneakily(final String urlString)
   {
     try {
-      return URI.create(urlString).toURL();
+      return URIs.toURL(urlString);
     }
     catch (MalformedURLException e) {
       throw new RuntimeException(e);

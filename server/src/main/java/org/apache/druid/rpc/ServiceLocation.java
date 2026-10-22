@@ -26,6 +26,7 @@ import com.google.common.net.HostAndPort;
 import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
@@ -215,13 +216,13 @@ public class ServiceLocation
 
     try {
       // Build the URI from a string rather than the multi-arg URI constructors, since the path is already encoded.
-      return URI.create(
+      return URIs.toURL(
           scheme
           + "://"
           + HostAndPort.fromParts(host, portToUse)
           + basePath
           + (encodedPathAndQueryString == null ? "" : encodedPathAndQueryString)
-      ).toURL();
+      );
     }
     catch (MalformedURLException e) {
       throw new IllegalArgumentException(e);

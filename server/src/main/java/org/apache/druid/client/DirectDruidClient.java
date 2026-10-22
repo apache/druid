@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -74,7 +75,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
-import java.net.URI;
 import java.util.Enumeration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -780,7 +780,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         future = httpClient.go(
             new Request(
                 HttpMethod.POST,
-                URI.create(url).toURL()
+                URIs.toURL(url)
             ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
              .setHeader(
                  HttpHeaders.Names.CONTENT_TYPE,
@@ -867,7 +867,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     Runnable cancelRunnable = () -> {
       try {
         Future<StatusResponseHolder> responseFuture = httpClient.go(
-            new Request(HttpMethod.DELETE, URI.create(cancelUrl).toURL())
+            new Request(HttpMethod.DELETE, URIs.toURL(cancelUrl))
             .setContent(objectMapper.writeValueAsBytes(query))
             .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
             StatusResponseHandler.getInstance(),

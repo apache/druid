@@ -22,7 +22,9 @@ package org.apache.druid.java.util.common;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 
 public class URIsTest
 {
@@ -66,5 +68,36 @@ public class URIsTest
     Assertions.assertNull(uri.getUserInfo());
     Assertions.assertEquals("127.0.0.1", uri.getHost());
     Assertions.assertEquals(8000, uri.getPort());
+  }
+
+  @Test
+  public void testToURL() throws MalformedURLException
+  {
+    final URL url = URIs.toURL("https://127.0.0.1:8000/test/path?test-query");
+
+    Assertions.assertEquals("https", url.getProtocol());
+    Assertions.assertEquals("127.0.0.1", url.getHost());
+    Assertions.assertEquals(8000, url.getPort());
+    Assertions.assertEquals("/test/path", url.getPath());
+    Assertions.assertEquals("test-query", url.getQuery());
+  }
+
+  @Test
+  public void testToURLInvalidUri()
+  {
+    final MalformedURLException e = Assertions.assertThrows(
+        MalformedURLException.class,
+        () -> URIs.toURL("http://bad host/path")
+    );
+
+    Assertions.assertEquals("Invalid URL [http://bad host/path]", e.getMessage());
+    Assertions.assertInstanceOf(IllegalArgumentException.class, e.getCause());
+  }
+
+  @Test
+  public void testToURLNotAbsolute()
+  {
+    // A relative URI is valid, but cannot be converted to a URL; new URL(String) also threw MalformedURLException.
+    Assertions.assertThrows(MalformedURLException.class, () -> URIs.toURL("/relative/path"));
   }
 }

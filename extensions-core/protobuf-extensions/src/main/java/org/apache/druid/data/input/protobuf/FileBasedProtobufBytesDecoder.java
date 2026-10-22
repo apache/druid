@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.DescriptorProtos;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.util.Objects;
 
@@ -66,9 +66,9 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
       if (fin == null) {
         URL url;
         try {
-          url = URI.create(descriptorFilePath).toURL();
+          url = URIs.toURL(descriptorFilePath);
         }
-        catch (MalformedURLException | IllegalArgumentException e) {
+        catch (MalformedURLException e) {
           throw new ParseException(
               descriptorFilePath,
               e,
