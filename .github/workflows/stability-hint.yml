@@ -1,0 +1,66 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Points flaky-related PRs to the Stability Runner - once per PR.
+# pull_request_target: the token must be able to comment on fork PRs; no PR code is checked out.
+# See dev/stability-runner.md
+
+name: "Stability Runner (hint)"
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  hint:
+    # contains() is case-insensitive
+    if: >-
+      (github.event_name == 'pull_request_target' && (
+        contains(github.event.pull_request.title, 'flak') ||
+        contains(github.event.pull_request.body, 'flak') ||
+        contains(github.event.pull_request.labels.*.name, 'Flaky Test')))
+      || (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+        contains(github.event.comment.body, 'flak'))
+    permissions:
+      pull-requests: write
+      issues: write
+    concurrency:
+      group: stability-hint-${{ github.event.pull_request.number || github.event.issue.number }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post hint unless already posted
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+          DOC: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.repository.default_branch }}/dev/stability-runner.md
+        run: |
+          MARKER='<!-- stability-runner-hint -->'
+          BODIES=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq '.[].body')
+          if grep -qF "$MARKER" <<< "$BODIES"; then
+            echo "Hint already posted."
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@- <<EOF
+          $MARKER
+          🤖 Posted automatically because this PR mentions flaky tests. If that's a misfire, ignore it.
+
+          🔁 Flaky test involved? Verify with the [Stability Runner]($DOC) - 64 runs of the given tests.
+          A committer triggers it by submitting a review containing:
+          ~~~
+          STABILITY_MAVEN_ARGS=-pl <module> -Dtest=<TestClass>
+          ~~~
+          EOF
