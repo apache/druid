@@ -1514,7 +1514,7 @@ This is a best-effort API. It does not shut down the worker, kill tasks, or term
 
 <br/>
 
-*Handoff notices were queued for the matching task groups. An empty `taskGroups` object means the worker had no matching streaming tasks.*
+*202 means notices were accepted, not that handoff finished. `taskGroups` is the set that was queued (empty if none). `skipped` lists seekable-stream task ids that were not queued. Reasons are `missing_taskGroupId`, `missing_supervisorId`, `supervisor_not_found`, and `handoff_unsupported`. Compact, kill, and batch tasks are omitted from `skipped`.*
 
 </TabItem>
 <TabItem value="82" label="404 NOT FOUND">
@@ -1567,9 +1567,12 @@ Host: http://ROUTER_IP:ROUTER_PORT
   {
     "host": "mm-0.druid.default.svc.cluster.local:8091",
     "taskGroups": {
-      "wikipedia": [0, 2],
-      "wikipedia_ha": [1]
-    }
+      "wikipedia": [0, 2]
+    },
+    "skipped": [
+      { "id": "index_kafka_legacy_abc", "reason": "missing_taskGroupId" },
+      { "id": "index_kafka_manual_xyz", "reason": "missing_supervisorId" }
+    ]
   }
   ```
 

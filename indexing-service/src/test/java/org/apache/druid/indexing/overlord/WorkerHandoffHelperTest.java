@@ -34,8 +34,7 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Collections;
 import java.util.function.Function;
 
 public class WorkerHandoffHelperTest
@@ -78,37 +77,85 @@ public class WorkerHandoffHelperTest
       return Optional.absent();
     };
 
-    final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
+    final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("primary", "ha"),
         lookup
     );
 
-    Assertions.assertEquals(ImmutableList.of(0), groups.get("KubeState"));
-    Assertions.assertEquals(ImmutableList.of(1), groups.get("KubeState_gcp_moncevents"));
-    Assertions.assertEquals(2, groups.size());
+    Assertions.assertEquals(ImmutableList.of(0), grouping.getTaskGroups().get("KubeState"));
+    Assertions.assertEquals(ImmutableList.of(1), grouping.getTaskGroups().get("KubeState_gcp_moncevents"));
+    Assertions.assertEquals(2, grouping.getTaskGroups().size());
+    Assertions.assertEquals(Collections.emptyList(), grouping.getSkipped());
   }
 
   @Test
   public void testGroupTaskGroupsIncludesRabbit()
   {
     final Task rabbit = streamTask("index_rabbit", "orders", "orders", 2);
-    final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
+    final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("r1"),
         id -> Optional.of(rabbit)
     );
-    Assertions.assertEquals(ImmutableList.of(2), groups.get("orders"));
-    Assertions.assertEquals(1, groups.size());
+    Assertions.assertEquals(ImmutableList.of(2), grouping.getTaskGroups().get("orders"));
+    Assertions.assertEquals(1, grouping.getTaskGroups().size());
+    Assertions.assertEquals(Collections.emptyList(), grouping.getSkipped());
   }
 
   @Test
   public void testGroupTaskGroupsSkipsEmptySupervisorId()
   {
     final Task task = streamTask("index_kafka", "", "cAdvisor", 3);
-    final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
+    final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("t1"),
         id -> Optional.of(task)
     );
-    Assertions.assertTrue(groups.isEmpty());
+    Assertions.assertTrue(grouping.getTaskGroups().isEmpty());
+    Assertions.assertEquals(
+        ImmutableList.of(new WorkerHandoffHelper.SkippedTask("t1", WorkerHandoffHelper.REASON_MISSING_SUPERVISOR_ID)),
+        grouping.getSkipped()
+    );
+  }
+
+  @Test
+  public void testGroupTaskGroupsSkipsNullTaskGroupId()
+  {
+    final Task task = streamTask("index_kafka", "wikipedia", "wikipedia", null);
+    final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
+        ImmutableList.of("index_kafka_legacy_abc"),
+        id -> Optional.of(task)
+    );
+    Assertions.assertTrue(grouping.getTaskGroups().isEmpty());
+    Assertions.assertEquals(
+        ImmutableList.of(
+            new WorkerHandoffHelper.SkippedTask(
+                "index_kafka_legacy_abc",
+                WorkerHandoffHelper.REASON_MISSING_TASK_GROUP_ID
+            )
+        ),
+        grouping.getSkipped()
+    );
+  }
+
+  @Test
+  public void testGroupTaskGroupsOmitsUnknownTaskLikeCompact()
+  {
+    final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
+        ImmutableList.of("missing-task"),
+        id -> Optional.absent()
+    );
+    Assertions.assertTrue(grouping.getTaskGroups().isEmpty());
+    Assertions.assertEquals(Collections.emptyList(), grouping.getSkipped());
+  }
+
+  @Test
+  public void testGroupTaskGroupsSkipsBlankTaskId()
+  {
+    final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
+        Collections.singletonList(""),
+        id -> Optional.absent()
+    );
+    Assertions.assertTrue(grouping.getTaskGroups().isEmpty());
+    Assertions.assertEquals(Collections.emptyList(), grouping.getSkipped());
   }
 
   @Test
@@ -117,22 +164,24 @@ public class WorkerHandoffHelperTest
     final Task compact = EasyMock.mock(Task.class);
     EasyMock.replay(compact);
 
-    final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
+    final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("c1"),
         id -> Optional.of(compact)
     );
-    Assertions.assertTrue(groups.isEmpty());
+    Assertions.assertTrue(grouping.getTaskGroups().isEmpty());
+    Assertions.assertEquals(Collections.emptyList(), grouping.getSkipped());
     EasyMock.verify(compact);
   }
 
   @Test
   public void testGroupTaskGroupsSkipsNoop()
   {
-    final Map<String, List<Integer>> groups = WorkerHandoffHelper.groupTaskGroups(
+    final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
         ImmutableList.of("noop"),
         id -> Optional.of(NoopTask.create())
     );
-    Assertions.assertTrue(groups.isEmpty());
+    Assertions.assertTrue(grouping.getTaskGroups().isEmpty());
+    Assertions.assertEquals(Collections.emptyList(), grouping.getSkipped());
   }
 
   @Test
@@ -143,16 +192,24 @@ public class WorkerHandoffHelperTest
     EasyMock.expect(manager.handoffTaskGroupsEarly("KubeState_gcp_moncevents", ImmutableList.of(1))).andReturn(true);
     EasyMock.replay(manager);
 
-    final Map<String, List<Integer>> accepted = WorkerHandoffHelper.submitHandoffs(
+    final WorkerHandoffHelper.Result result = WorkerHandoffHelper.submitHandoffs(
         manager,
-        ImmutableMap.of(
-            "KubeState", ImmutableList.of(0),
-            "KubeState_gcp_moncevents", ImmutableList.of(1)
+        new WorkerHandoffHelper.Grouping(
+            ImmutableMap.of(
+                "KubeState", ImmutableList.of(0),
+                "KubeState_gcp_moncevents", ImmutableList.of(1)
+            ),
+            ImmutableMap.of(
+                "KubeState", ImmutableList.of("primary"),
+                "KubeState_gcp_moncevents", ImmutableList.of("ha")
+            ),
+            Collections.emptyList()
         )
     );
 
-    Assertions.assertEquals(ImmutableList.of(0), accepted.get("KubeState"));
-    Assertions.assertEquals(ImmutableList.of(1), accepted.get("KubeState_gcp_moncevents"));
+    Assertions.assertEquals(ImmutableList.of(0), result.getTaskGroups().get("KubeState"));
+    Assertions.assertEquals(ImmutableList.of(1), result.getTaskGroups().get("KubeState_gcp_moncevents"));
+    Assertions.assertEquals(Collections.emptyList(), result.getSkipped());
     EasyMock.verify(manager);
   }
 
@@ -163,11 +220,43 @@ public class WorkerHandoffHelperTest
     EasyMock.expect(manager.handoffTaskGroupsEarly("gone", ImmutableList.of(0))).andReturn(false);
     EasyMock.replay(manager);
 
-    final Map<String, List<Integer>> accepted = WorkerHandoffHelper.submitHandoffs(
+    final WorkerHandoffHelper.Result result = WorkerHandoffHelper.submitHandoffs(
         manager,
-        ImmutableMap.of("gone", ImmutableList.of(0))
+        new WorkerHandoffHelper.Grouping(
+            ImmutableMap.of("gone", ImmutableList.of(0)),
+            ImmutableMap.of("gone", ImmutableList.of("t1")),
+            Collections.emptyList()
+        )
     );
-    Assertions.assertTrue(accepted.isEmpty());
+    Assertions.assertTrue(result.getTaskGroups().isEmpty());
+    Assertions.assertEquals(
+        ImmutableList.of(new WorkerHandoffHelper.SkippedTask("t1", WorkerHandoffHelper.REASON_SUPERVISOR_NOT_FOUND)),
+        result.getSkipped()
+    );
+    EasyMock.verify(manager);
+  }
+
+  @Test
+  public void testSubmitHandoffsSkipsUnsupportedSupervisor()
+  {
+    final SupervisorManager manager = EasyMock.mock(SupervisorManager.class);
+    EasyMock.expect(manager.handoffTaskGroupsEarly("batch", ImmutableList.of(0)))
+            .andThrow(new UnsupportedOperationException("no early handoff"));
+    EasyMock.replay(manager);
+
+    final WorkerHandoffHelper.Result result = WorkerHandoffHelper.submitHandoffs(
+        manager,
+        new WorkerHandoffHelper.Grouping(
+            ImmutableMap.of("batch", ImmutableList.of(0)),
+            ImmutableMap.of("batch", ImmutableList.of("t1")),
+            Collections.emptyList()
+        )
+    );
+    Assertions.assertTrue(result.getTaskGroups().isEmpty());
+    Assertions.assertEquals(
+        ImmutableList.of(new WorkerHandoffHelper.SkippedTask("t1", WorkerHandoffHelper.REASON_HANDOFF_UNSUPPORTED)),
+        result.getSkipped()
+    );
     EasyMock.verify(manager);
   }
 
@@ -182,16 +271,17 @@ public class WorkerHandoffHelperTest
     );
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked"})
-  private static SeekableStreamIndexTask streamTask(
+  private static SeekableStreamIndexTask<?, ?, ?> streamTask(
       String type,
       String supervisorId,
       String dataSource,
-      int taskGroupId
+      Integer taskGroupId
   )
   {
+    @SuppressWarnings({"rawtypes", "unchecked"})
     final SeekableStreamIndexTaskIOConfig ioConfig = EasyMock.mock(SeekableStreamIndexTaskIOConfig.class);
     EasyMock.expect(ioConfig.getTaskGroupId()).andReturn(taskGroupId).anyTimes();
+    @SuppressWarnings({"rawtypes", "unchecked"})
     final SeekableStreamIndexTask task = EasyMock.mock(SeekableStreamIndexTask.class);
     EasyMock.expect(task.getType()).andReturn(type).anyTimes();
     EasyMock.expect(task.getSupervisorId()).andReturn(supervisorId).anyTimes();

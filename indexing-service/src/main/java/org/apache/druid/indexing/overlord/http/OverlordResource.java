@@ -780,7 +780,8 @@ public class OverlordResource
    * Queue early handoff for streaming tasks running on one Middle Manager.
    * {@code host} is the worker identity registered with the Overlord ({@code hostname:port}),
    * the same value used by {@link #enableWorker} and {@link #disableWorker}.
-   * This is a best-effort API; handoff runs asynchronously via supervisor notices.
+   * This is a best-effort API; 202 means notices were queued, not that handoff finished.
+   * {@link WorkerHandoffResponse#getSkipped()} lists seekable-stream tasks that were not queued.
    */
   @POST
   @Path("/worker/{host}/handoff")
@@ -823,16 +824,20 @@ public class OverlordResource
             return Response.status(Status.SERVICE_UNAVAILABLE).build();
           }
 
-          final Map<String, List<Integer>> taskGroups = WorkerHandoffHelper.groupTaskGroups(
+          final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
               workerInfo.get().getRunningTasks(),
               taskQueue.get()::getActiveTask
           );
-          final Map<String, List<Integer>> accepted = WorkerHandoffHelper.submitHandoffs(
+          final WorkerHandoffHelper.Result result = WorkerHandoffHelper.submitHandoffs(
               supervisorManager.get(),
-              taskGroups
+              grouping
           );
           return Response.status(Status.ACCEPTED)
-                         .entity(ImmutableMap.of("host", host, "taskGroups", accepted))
+                         .entity(new WorkerHandoffResponse(
+                             host,
+                             result.getTaskGroups(),
+                             result.getSkipped()
+                         ))
                          .build();
         }
     );

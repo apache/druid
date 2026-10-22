@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskQueue;
+import org.apache.druid.indexing.overlord.WorkerHandoffHelper;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
@@ -50,8 +51,6 @@ import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 public class OverlordResourceWorkerHandoffTest
 {
@@ -104,13 +103,11 @@ public class OverlordResourceWorkerHandoffTest
 
     final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
-    @SuppressWarnings("unchecked")
-    final Map<String, Object> entity = (Map<String, Object>) response.getEntity();
-    Assertions.assertEquals(HOST, entity.get("host"));
-    @SuppressWarnings("unchecked")
-    final Map<String, List<Integer>> taskGroups = (Map<String, List<Integer>>) entity.get("taskGroups");
-    Assertions.assertEquals(ImmutableList.of(0), taskGroups.get("KubeState"));
-    Assertions.assertEquals(ImmutableList.of(1), taskGroups.get("KubeState_gcp_moncevents"));
+    final WorkerHandoffResponse entity = (WorkerHandoffResponse) response.getEntity();
+    Assertions.assertEquals(HOST, entity.getHost());
+    Assertions.assertEquals(ImmutableList.of(0), entity.getTaskGroups().get("KubeState"));
+    Assertions.assertEquals(ImmutableList.of(1), entity.getTaskGroups().get("KubeState_gcp_moncevents"));
+    Assertions.assertEquals(Collections.emptyList(), entity.getSkipped());
     EasyMock.verify(taskMaster, taskRunner, taskQueue, supervisorManager);
   }
 
@@ -124,9 +121,9 @@ public class OverlordResourceWorkerHandoffTest
 
     final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
-    @SuppressWarnings("unchecked")
-    final Map<String, Object> entity = (Map<String, Object>) response.getEntity();
-    Assertions.assertEquals(ImmutableMap.of(), entity.get("taskGroups"));
+    final WorkerHandoffResponse entity = (WorkerHandoffResponse) response.getEntity();
+    Assertions.assertEquals(Collections.emptyMap(), entity.getTaskGroups());
+    Assertions.assertEquals(Collections.emptyList(), entity.getSkipped());
     EasyMock.verify(taskMaster, taskRunner, taskQueue, supervisorManager);
   }
 
@@ -152,9 +149,62 @@ public class OverlordResourceWorkerHandoffTest
 
     final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
-    @SuppressWarnings("unchecked")
-    final Map<String, Object> entity = (Map<String, Object>) response.getEntity();
-    Assertions.assertEquals(ImmutableMap.of(), entity.get("taskGroups"));
+    final WorkerHandoffResponse entity = (WorkerHandoffResponse) response.getEntity();
+    Assertions.assertEquals(Collections.emptyMap(), entity.getTaskGroups());
+    Assertions.assertEquals(Collections.emptyList(), entity.getSkipped());
+  }
+
+  @Test
+  public void testHandoffReportsNullTaskGroupIdAsSkipped()
+  {
+    final Task queued = streamTask("index_kafka", "wikipedia", "wikipedia", 0);
+    final Task legacy = streamTask("index_kafka", "wikipedia", "wikipedia", null);
+    EasyMock.expect(taskRunner.getWorkers())
+            .andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("queued", "index_kafka_legacy_abc"))));
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(taskQueue.getActiveTask("queued")).andReturn(Optional.of(queued));
+    EasyMock.expect(taskQueue.getActiveTask("index_kafka_legacy_abc")).andReturn(Optional.of(legacy));
+    EasyMock.expect(supervisorManager.handoffTaskGroupsEarly("wikipedia", ImmutableList.of(0))).andReturn(true);
+    EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
+
+    final Response response = resource.handoffWorkerTasks(HOST);
+    Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
+    final WorkerHandoffResponse entity = (WorkerHandoffResponse) response.getEntity();
+    Assertions.assertEquals(ImmutableList.of(0), entity.getTaskGroups().get("wikipedia"));
+    Assertions.assertEquals(
+        ImmutableList.of(
+            new WorkerHandoffHelper.SkippedTask(
+                "index_kafka_legacy_abc",
+                WorkerHandoffHelper.REASON_MISSING_TASK_GROUP_ID
+            )
+        ),
+        entity.getSkipped()
+    );
+  }
+
+  @Test
+  public void testHandoffResponseJsonUsesIdAndReason() throws Exception
+  {
+    final WorkerHandoffResponse body = new WorkerHandoffResponse(
+        HOST,
+        ImmutableMap.of("wikipedia", ImmutableList.of(0, 2)),
+        ImmutableList.of(
+            new WorkerHandoffHelper.SkippedTask(
+                "index_kafka_legacy_abc",
+                WorkerHandoffHelper.REASON_MISSING_TASK_GROUP_ID
+            ),
+            new WorkerHandoffHelper.SkippedTask(
+                "index_kafka_manual_xyz",
+                WorkerHandoffHelper.REASON_MISSING_SUPERVISOR_ID
+            )
+        )
+    );
+    final String json = TestHelper.JSON_MAPPER.writeValueAsString(body);
+    Assertions.assertTrue(json.contains("\"id\":\"index_kafka_legacy_abc\""));
+    Assertions.assertTrue(json.contains("\"reason\":\"missing_taskGroupId\""));
+    Assertions.assertTrue(json.contains("\"id\":\"index_kafka_manual_xyz\""));
+    Assertions.assertTrue(json.contains("\"reason\":\"missing_supervisorId\""));
   }
 
   @Test
@@ -191,16 +241,17 @@ public class OverlordResourceWorkerHandoffTest
     );
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked"})
-  private static SeekableStreamIndexTask streamTask(
+  private static SeekableStreamIndexTask<?, ?, ?> streamTask(
       String type,
       String supervisorId,
       String dataSource,
-      int taskGroupId
+      Integer taskGroupId
   )
   {
+    @SuppressWarnings({"rawtypes", "unchecked"})
     final SeekableStreamIndexTaskIOConfig ioConfig = EasyMock.mock(SeekableStreamIndexTaskIOConfig.class);
     EasyMock.expect(ioConfig.getTaskGroupId()).andReturn(taskGroupId).anyTimes();
+    @SuppressWarnings({"rawtypes", "unchecked"})
     final SeekableStreamIndexTask task = EasyMock.mock(SeekableStreamIndexTask.class);
     EasyMock.expect(task.getType()).andReturn(type).anyTimes();
     EasyMock.expect(task.getSupervisorId()).andReturn(supervisorId).anyTimes();
