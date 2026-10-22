@@ -50,6 +50,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -89,7 +90,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
     log.debug("Generating: %s", hostname);
     URL url;
     try {
-      url = new URL(hostname);
+      url = URI.create(hostname).toURL();
     }
     catch (MalformedURLException e) {
       throw new RuntimeException(e);

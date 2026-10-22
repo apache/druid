@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -724,22 +725,21 @@ public class LookupCoordinatorManager
 
   static URL getLookupsURL(HostAndPortWithScheme druidNode) throws MalformedURLException
   {
-    return new URL(
-        druidNode.getScheme(),
-        druidNode.getHostText(),
-        druidNode.getPortOrDefault(-1),
-        LOOKUP_BASE_REQUEST_PATH
-    );
+    return lookupsURL(druidNode, LOOKUP_BASE_REQUEST_PATH);
   }
 
   static URL getLookupsUpdateURL(HostAndPortWithScheme druidNode) throws MalformedURLException
   {
-    return new URL(
-        druidNode.getScheme(),
-        druidNode.getHostText(),
-        druidNode.getPortOrDefault(-1),
-        LOOKUP_UPDATE_REQUEST_PATH
-    );
+    return lookupsURL(druidNode, LOOKUP_UPDATE_REQUEST_PATH);
+  }
+
+  private static URL lookupsURL(HostAndPortWithScheme druidNode, String path) throws MalformedURLException
+  {
+    final int port = druidNode.getPortOrDefault(-1);
+    final String hostAndPort = port < 0
+                               ? HostAndPort.fromHost(druidNode.getHostText()).toString()
+                               : HostAndPort.fromParts(druidNode.getHostText(), port).toString();
+    return URI.create(druidNode.getScheme() + "://" + hostAndPort + path).toURL();
   }
 
   private static boolean httpStatusIsSuccess(int statusCode)

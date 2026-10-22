@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.Objects;
 
@@ -65,9 +66,9 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
       if (fin == null) {
         URL url;
         try {
-          url = new URL(descriptorFilePath);
+          url = URI.create(descriptorFilePath).toURL();
         }
-        catch (MalformedURLException e) {
+        catch (MalformedURLException | IllegalArgumentException e) {
           throw new ParseException(
               descriptorFilePath,
               e,

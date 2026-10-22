@@ -195,12 +195,7 @@ public class CommonCacheNotifier
   private URL getListenerURL(DruidNode druidNode, String baseUrl)
   {
     try {
-      return new URL(
-          druidNode.getServiceScheme(),
-          druidNode.getHost(),
-          druidNode.getPortToUse(),
-          baseUrl
-      );
+      return druidNode.getUriToUse().resolve(baseUrl).toURL();
     }
     catch (MalformedURLException mue) {
       LOG.error(callerName + ": Malformed url for DruidNode[%s] and baseUrl[%s]", druidNode, baseUrl);

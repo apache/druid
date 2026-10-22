@@ -22,6 +22,7 @@ package org.apache.druid.rpc;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.net.HostAndPort;
 import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -213,12 +214,14 @@ public class ServiceLocation
     }
 
     try {
-      return new URL(
-          scheme,
-          host,
-          portToUse,
-          basePath + (encodedPathAndQueryString == null ? "" : encodedPathAndQueryString)
-      );
+      // Build the URI from a string rather than the multi-arg URI constructors, since the path is already encoded.
+      return URI.create(
+          scheme
+          + "://"
+          + HostAndPort.fromParts(host, portToUse)
+          + basePath
+          + (encodedPathAndQueryString == null ? "" : encodedPathAndQueryString)
+      ).toURL();
     }
     catch (MalformedURLException e) {
       throw new IllegalArgumentException(e);

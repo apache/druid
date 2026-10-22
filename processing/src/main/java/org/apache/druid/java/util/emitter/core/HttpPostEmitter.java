@@ -41,6 +41,7 @@ import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -170,9 +171,9 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     this.client = client;
     this.jsonMapper = jsonMapper;
     try {
-      this.url = new URL(config.getRecipientBaseUrl()).toString();
+      this.url = URI.create(config.getRecipientBaseUrl()).toURL().toString();
     }
-    catch (MalformedURLException e) {
+    catch (MalformedURLException | IllegalArgumentException e) {
       throw new ISE(e, "Bad URL: %s", config.getRecipientBaseUrl());
     }
     emittingThread = new EmittingThread(config);

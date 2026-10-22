@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.Objects;
 
@@ -140,8 +141,8 @@ public class TaskLocation
       throw new IAE("Path must start with '/'");
     }
 
-    // Use URL constructor, not URI, since the path is already encoded.
-    return new URL(scheme, host, portToUse, encodedPathAndQueryString);
+    // Build the URI from a string rather than the multi-arg URI constructors, since the path is already encoded.
+    return URI.create(scheme + "://" + HostAndPort.fromParts(host, portToUse) + encodedPathAndQueryString).toURL();
   }
 
   @Override

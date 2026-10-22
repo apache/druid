@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 
+import java.net.URI;
 import java.net.URL;
 import java.util.Set;
 
@@ -65,7 +66,7 @@ public class CoordinatorRedirectInfo implements RedirectInfo
         location = StringUtils.format("%s?%s", location, queryString);
       }
 
-      return new URL(location);
+      return URI.create(location).toURL();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
