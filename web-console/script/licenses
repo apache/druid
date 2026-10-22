@@ -24,7 +24,10 @@ const START_MARKER_LINE = '# Web console modules start';
 const END_MARKER_LINE = '# Web console modules end';
 const SEPARATOR = '\n\n---\n\n';
 
-const extraLinesForLib = {};
+const extraLinesForLib = {
+  // Category B licenses need a homepage for the label in the binary README
+  '@fontsource/open-sans': 'homepage: https://fontsource.org/fonts/open-sans',
+};
 
 const extraPackages = {
   // This is a OSS font so it is not listed by the npm scraper but we still want to attribute it so pretend to inject it
