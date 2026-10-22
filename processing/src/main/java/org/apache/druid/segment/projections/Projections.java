@@ -72,6 +72,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Projections
 {
@@ -113,6 +114,32 @@ public class Projections
       Function<String, T> getRowSelector
   )
   {
+    return findMatchingProjection(
+        cursorBuildSpec,
+        projections,
+        projectionName -> true,
+        dataInterval,
+        physicalChecker,
+        getRowSelector
+    );
+  }
+
+  /**
+   * Like {@link #findMatchingProjection(CursorBuildSpec, SortedSet, Interval, PhysicalColumnChecker, Function)}, but
+   * only projections accepted by {@code servableProjections} are matching candidates. A projection named by
+   * {@link QueryContextParameters#USE_PROJECTION} that is in {@code projections} but not servable is reported as not
+   * satisfying the query rather than as not existing.
+   */
+  @Nullable
+  public static <T> QueryableProjection<T> findMatchingProjection(
+      CursorBuildSpec cursorBuildSpec,
+      SortedSet<AggregateProjectionMetadata> projections,
+      Predicate<String> servableProjections,
+      Interval dataInterval,
+      PhysicalColumnChecker physicalChecker,
+      Function<String, T> getRowSelector
+  )
+  {
     if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.NO_PROJECTIONS)) {
       return null;
     }
@@ -121,6 +148,9 @@ public class Projections
     if (cursorBuildSpec.isAggregate()) {
       for (AggregateProjectionMetadata spec : projections) {
         if (name != null && !name.equals(spec.getSchema().getName())) {
+          continue;
+        }
+        if (!servableProjections.test(spec.getSchema().getName())) {
           continue;
         }
         final ProjectionMatch match = matchAggregateProjection(
