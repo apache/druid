@@ -375,7 +375,8 @@ public class PartialQueryableIndex implements QueryableIndex
         servable,
         dataInterval,
         this::checkProjectionHasColumn,
-        this::getProjectionQueryableIndex
+        this::getProjectionQueryableIndex,
+        projectionsMap::containsKey
     );
   }
 
