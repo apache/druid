@@ -361,9 +361,38 @@ def find_druid_module_name(dirpath):
         # Druid core
         return "core"
 
+def check_license_files(license_yaml, licenses_list):
+    # Every license_file_path must exist, and every file in licenses/bin must be referenced by a license_file_path,
+    # because the binary distribution ships the whole licenses/ directory.
+    repo_root = os.path.dirname(os.path.abspath(license_yaml))
+    referenced_files = set()
+    for license in licenses_list:
+        license_file_path = license.get('license_file_path')
+        if license_file_path:
+            referenced_files.update(license_file_path if type(license_file_path) == list else [license_file_path])
+
+    missing_files = sorted(f for f in referenced_files if not os.path.isfile(os.path.join(repo_root, f)))
+    bin_files = {'licenses/bin/' + f for f in os.listdir(os.path.join(repo_root, 'licenses', 'bin')) if not f.startswith('.')}
+    unreferenced_files = sorted(bin_files - referenced_files)
+
+    if missing_files:
+        print_log_to_stderr("Error: found {} license_file_path entries pointing at missing files".format(len(missing_files)))
+        for f in missing_files:
+            print_log_to_stderr("  {}".format(f))
+    if unreferenced_files:
+        print_log_to_stderr("Error: found {} files in licenses/bin that no license_file_path references. Delete them or reference them in licenses.yaml.".format(len(unreferenced_files)))
+        for f in unreferenced_files:
+            print_log_to_stderr("  {}".format(f))
+    if missing_files or unreferenced_files:
+        sys.exit(1)
+
 def check_licenses(license_yaml, dependency_reports_root):
     # Build a dictionary to facilitate comparing reported licenses and registered ones.
     # These dictionaries are the mapping of (group_id, artifact_id, version) to license_name.
+
+    with open(license_yaml, encoding='utf-8') as registry_file:
+        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
+    check_license_files(license_yaml, licenses_list)
 
     # Build reported license dictionary.
     reported_dep_to_licenses = {}
@@ -387,8 +416,6 @@ def check_licenses(license_yaml, dependency_reports_root):
     # Build registered license dictionary.
     registered_dep_to_licenses = {}
     skipping_licenses = {}
-    with open(license_yaml, encoding='utf-8') as registry_file:
-        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
     # Validate that every entry uses a known module tag. Core extensions use extensions/<output-dir>
     # (matching how they appear in the binary distribution's extensions/ directory), and contrib
     # extensions use extensions-contrib/<output-dir> so the release build can filter them out. This
