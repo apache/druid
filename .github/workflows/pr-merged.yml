@@ -49,7 +49,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
-            --jq ".[] | select(.merged_at != null and .base.ref == \"master\" and .merge_commit_sha == \"$GITHUB_SHA\") | .number" | head -n1)
+            --jq "first(.[] | select(.merged_at != null and .base.ref == \"master\" and .merge_commit_sha == \"$GITHUB_SHA\") | .number)")
           if [ -z "$PR_NUMBER" ]; then
             echo "::warning::No pull request was merged as $GITHUB_SHA"
             exit 0
