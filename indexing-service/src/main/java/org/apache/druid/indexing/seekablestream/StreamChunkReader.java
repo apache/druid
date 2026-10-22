@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.segment.transform.Transformer;
+import org.apache.druid.segment.transform.BaseTransformSpec;
+import org.apache.druid.segment.transform.BaseTransformer;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -57,7 +57,7 @@ class StreamChunkReader<RecordType extends ByteEntity>
   StreamChunkReader(
       InputFormat inputFormat,
       InputRowSchema inputRowSchema,
-      TransformSpec transformSpec,
+      BaseTransformSpec transformSpec,
       File indexingTmpDir,
       InputRowFilter rowFilter,
       RowIngestionMeters rowIngestionMeters,
@@ -65,7 +65,11 @@ class StreamChunkReader<RecordType extends ByteEntity>
   )
   {
     InvalidInput.notNull(inputFormat, "inputFormat");
-    final Transformer transformer = transformSpec.toTransformer();
+    // Pass DataSchema's already-computed dimension exclusions so a spec that generates its own new
+    // columns (e.g. ScanTransformSpec) doesn't re-discover an excluded field as a dimension.
+    final BaseTransformer transformer = transformSpec.toTransformer(
+        inputRowSchema.getDimensionsSpec().getDimensionExclusions()
+    );
     this.byteEntityReader = new SettableByteEntityReader<>(
         inputFormat,
         inputRowSchema,
@@ -91,7 +95,7 @@ class StreamChunkReader<RecordType extends ByteEntity>
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
-  private static InputRowFilter withTransformFilter(final Transformer transformer, final InputRowFilter rowFilter)
+  private static InputRowFilter withTransformFilter(final BaseTransformer transformer, final InputRowFilter rowFilter)
   {
     final InputRowFilter transformFilter = row ->
         transformer.rowMatchesFilter(row) ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.CUSTOM_FILTER;

@@ -22,24 +22,26 @@ package org.apache.druid.segment.transform;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
+import java.util.List;
 
 public class TransformingInputEntityReader implements InputEntityReader
 {
   private final InputEntityReader delegate;
-  private final Transformer transformer;
+  private final BaseTransformer transformer;
   private final boolean applyFilter;
 
-  public TransformingInputEntityReader(final InputEntityReader delegate, final Transformer transformer)
+  public TransformingInputEntityReader(final InputEntityReader delegate, final BaseTransformer transformer)
   {
     this(delegate, transformer, true);
   }
 
   public static TransformingInputEntityReader withoutFilter(
       final InputEntityReader delegate,
-      final Transformer transformer
+      final BaseTransformer transformer
   )
   {
     return new TransformingInputEntityReader(delegate, transformer, false);
@@ -47,7 +49,7 @@ public class TransformingInputEntityReader implements InputEntityReader
 
   private TransformingInputEntityReader(
       final InputEntityReader delegate,
-      final Transformer transformer,
+      final BaseTransformer transformer,
       final boolean applyFilter
   )
   {
@@ -59,12 +61,19 @@ public class TransformingInputEntityReader implements InputEntityReader
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
+    if (transformer.hasMultiRowTransform()) {
+      return delegate.read().flatMap(row -> {
+        final List<InputRow> rows = transformer.transformToList(row);
+        return CloseableIterators.withEmptyBaggage(rows.iterator());
+      });
+    }
     if (applyFilter) {
       return delegate.read().map(transformer::transform);
     } else {
       return delegate.read().map(transformer::transformWithoutFilter);
     }
   }
+
 
   @Override
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
