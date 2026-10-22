@@ -22,7 +22,7 @@ get_milestone_number() {
   local number=$(gh api "repos/$REPOSITORY/milestones" --jq ".[] | select(.title==\"$milestone_title\") | .number")
 
   if [ -z "$number" ]; then
-    echo "Creating milestone: $milestone_title"
+    echo "Creating milestone: $milestone_title" >&2
     number=$(gh api "repos/$REPOSITORY/milestones" -f title="$milestone_title" --jq '.number')
   fi
 
