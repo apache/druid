@@ -58,7 +58,7 @@ env:
 jobs:
   execute:
     name: "${{ inputs.key }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ inputs.execute }}
     steps:
       - name: Checkout repository
