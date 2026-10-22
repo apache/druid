@@ -36,6 +36,7 @@ Druid uses the following resource types:
 * DATASOURCE &ndash; Each Druid table (i.e., `tables` in the `druid` schema in SQL) is a resource.
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
 * EXTERNAL &ndash; External data read through the [EXTERN function](../multi-stage-query/concepts.md#read-external-data-with-extern) in SQL.
+* LOOKUP &ndash; Lookup configuration, status, and introspection endpoints when `druid.auth.enableLookupAuthorization` is true.
 * STATE &ndash; Cluster-wide state resources.
 * SYSTEM_TABLE &ndash; when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, then Druid uses this resource type to authorize the system tables in the `sys` schema in SQL.
 
@@ -84,6 +85,16 @@ Resource names for this type are datasource names. Specifying a datasource permi
 :::info
 Any authenticated user can read the contents of any [lookup](../querying/lookups.md). Avoid storing sensitive data in lookups.
 :::
+
+### `LOOKUP`
+
+When `druid.auth.enableLookupAuthorization` is true, lookup endpoints authorize against `LOOKUP` resources named `tier/lookup`. The tier comes from the URL, bulk request body, coordinator lookup state or the serving node. `READ` covers GET requests, including lookup configuration, status, node status and introspection. `WRITE` covers POST, PUT and DELETE requests.
+
+This setting applies to lookup HTTP endpoints. It does not currently change lookup use in SQL or native queries, i.e., query execution does not check `LOOKUP` permissions.
+
+Bulk GET responses omit lookups for which the caller lacks `READ` authorization. To list an empty tier, grant `READ` on `LOOKUP:<tier>`.
+
+Bulk writes check `WRITE` on every affected lookup before making changes. Deleting an empty tier checks `WRITE` on `LOOKUP:<tier>`. An empty coordinator-wide write, such as `POST /druid/coordinator/v1/lookups/config` with `{}`, checks `WRITE` on `LOOKUP:LOOKUP`.
 
 ### `CONFIG`
 There are two possible resource names for the "CONFIG" resource type, "CONFIG" and "security". Granting a user access to CONFIG resources allows them to access the following endpoints.

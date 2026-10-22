@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.ServletResourceUtils;
+import org.apache.druid.server.security.ForbiddenException;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
@@ -104,6 +105,9 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     final Object returnObj;
     try {
       returnObj = post(inObjMap);
+    }
+    catch (ForbiddenException e) {
+      throw e;
     }
     catch (Exception e) {
       LOG.error(e, "Error handling request");

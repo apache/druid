@@ -35,10 +35,11 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupsState;
-import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.LookupResourceFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.ForbiddenException;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -70,13 +71,15 @@ import java.util.stream.Collectors;
  * Contains information about lookups exposed through the coordinator
  */
 @Path("/druid/coordinator/v1/lookups")
-@ResourceFilters(ConfigResourceFilter.class)
+@ResourceFilters(LookupResourceFilter.class)
 public class LookupCoordinatorResource
 {
   private static final Logger LOG = new Logger(LookupCoordinatorResource.class);
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final ObjectMapper smileMapper;
   private final ObjectMapper jsonMapper;
+  @Context
+  private HttpServletRequest request;
 
   @Inject
   public LookupCoordinatorResource(
@@ -105,13 +108,14 @@ public class LookupCoordinatorResource
         if (knownLookups != null) {
           discovered.addAll(knownLookups.keySet());
         }
-        return Response.ok().entity(discovered).build();
+        return Response.ok().entity(LookupResourceFilter.filterBulk(request, discovered, knownLookups)).build();
       }
 
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
-        return Response.ok().entity(knownLookups.keySet()).build();
+        return Response.ok().entity(LookupResourceFilter.filterBulk(request, knownLookups).keySet())
+                       .build();
       }
     }
     catch (Exception e) {
@@ -131,7 +135,7 @@ public class LookupCoordinatorResource
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
-        return Response.ok().entity(knownLookups).build();
+        return Response.ok().entity(LookupResourceFilter.filterBulk(request, knownLookups)).build();
       }
     }
     catch (Exception ex) {
@@ -159,11 +163,15 @@ public class LookupCoordinatorResource
       catch (IOException e) {
         return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(e)).build();
       }
+      LookupResourceFilter.filterBulk(req, map);
       if (lookupCoordinatorManager.updateLookups(map, AuthorizationUtils.buildAuditInfo(req))) {
         return Response.status(Response.Status.ACCEPTED).entity(map).build();
       } else {
         throw new RuntimeException("Unknown error updating configuration");
       }
+    }
+    catch (ForbiddenException e) {
+      throw e;
     }
     catch (Exception e) {
       LOG.error(e, "Error creating new lookups");
@@ -186,11 +194,18 @@ public class LookupCoordinatorResource
                        .build();
       }
 
+      LookupResourceFilter.filterBulk(req, tier, () -> {
+        final Map<String, Map<String, LookupExtractorFactoryMapContainer>> known = lookupCoordinatorManager.getKnownLookups();
+        return known == null ? null : known.get(tier);
+      });
       if (lookupCoordinatorManager.deleteTier(tier, AuthorizationUtils.buildAuditInfo(req))) {
         return Response.status(Response.Status.ACCEPTED).build();
       } else {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
+    }
+    catch (ForbiddenException e) {
+      throw e;
     }
     catch (Exception e) {
       LOG.error(e, "Error deleting tier [%s]", tier);
@@ -340,10 +355,12 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.sanitizeException(new RE("Tier [%s] not found", tier)))
                        .build();
       }
+      final Map<String, LookupExtractorFactoryMapContainer> readable =
+          LookupResourceFilter.filterBulk(request, tier, tierLookups);
       if (detailed) {
-        return Response.ok().entity(tierLookups).build();
+        return Response.ok().entity(readable).build();
       } else {
-        return Response.ok().entity(tierLookups.keySet()).build();
+        return Response.ok().entity(readable.keySet()).build();
       }
     }
     catch (Exception e) {
@@ -393,7 +410,7 @@ public class LookupCoordinatorResource
         }
       }
 
-      return Response.ok(result).build();
+      return Response.ok(LookupResourceFilter.filterBulk(request, result)).build();
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status");
@@ -439,7 +456,7 @@ public class LookupCoordinatorResource
         );
       }
 
-      return Response.ok(lookupStatusMap).build();
+      return Response.ok(LookupResourceFilter.filterBulk(request, tier, lookupStatusMap)).build();
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status for tier [%s].", tier);
@@ -560,7 +577,7 @@ public class LookupCoordinatorResource
         // lookups to load per host by version
         result = getSimpleAllNodeStatus(lookupsStateOnHosts, tiers);
       }
-      return Response.ok(result).build();
+      return Response.ok(LookupResourceFilter.filterBulk(request, result)).build();
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status.");
@@ -592,7 +609,7 @@ public class LookupCoordinatorResource
         }
       }
 
-      return Response.ok(tierNodesStatus).build();
+      return Response.ok(LookupResourceFilter.filterBulk(request, tier, tierNodesStatus)).build();
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status for tier [%s].", tier);
@@ -618,7 +635,7 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.jsonize("Node [%s] status is unknown.", hostAndPort))
                        .build();
       } else {
-        return Response.ok(lookupsState).build();
+        return Response.ok(LookupResourceFilter.filterBulk(request, tier, lookupsState)).build();
       }
 
     }

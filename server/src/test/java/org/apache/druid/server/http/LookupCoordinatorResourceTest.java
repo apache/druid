@@ -30,6 +30,7 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.lookup.LookupsState;
+import org.apache.druid.server.http.security.LookupResourceFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.server.security.AuthConfig;
@@ -1125,6 +1126,8 @@ public class LookupCoordinatorResourceTest
     if (hasJsonPayload) {
       EasyMock.expect(request.getContentType()).andReturn(MediaType.APPLICATION_JSON).once();
     }
+    EasyMock.expect(request.getAttribute(LookupResourceFilter.class.getName() + ".bulkFilter"))
+            .andReturn(null).anyTimes();
     EasyMock.expect(request.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn("some author").once();
     EasyMock.expect(request.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn("some comment").once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(AUTH_RESULT).once();
