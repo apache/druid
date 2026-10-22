@@ -1579,6 +1579,7 @@
                 <artifactId>re2j</artifactId>
                 <version>1.8</version>
             </dependency>
+            <!-- GraalJS dependencies that libraries-bom would otherwise downgrade to an older GraalVM version -->
             <dependency>
                 <groupId>org.graalvm.sdk</groupId>
                 <artifactId>nativeimage</artifactId>
