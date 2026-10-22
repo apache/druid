@@ -1025,26 +1025,6 @@ libraries:
 
 ---
 
-name: javax.activation activation
-license_category: binary
-module: extensions/druid-pac4j
-license_name: COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
-version: 1.1.1
-libraries:
-  - javax.activation: activation
-
----
-
-name: com.sun.mail javax.mail
-license_category: binary
-module: extensions/druid-pac4j
-license_name: CDDL 1.1
-version: 1.6.2
-libraries:
-  - com.sun.mail: javax.mail
-
----
-
 name: kubernetes fabric java client
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
@@ -1508,7 +1488,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.18.Final
+version: 4.2.19.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2075,7 +2055,7 @@ name: Apache HttpClient 5
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.6.4
+version: 5.6.5
 libraries:
   - org.apache.httpcomponents.client5: httpclient5
 notices:
@@ -2103,7 +2083,7 @@ name: Apache HttpCore 5 HTTP/2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.4.3
+version: 5.4.4
 libraries:
   - org.apache.httpcomponents.core5: httpcore5-h2
 notices:
@@ -2346,6 +2326,7 @@ name: Public Suffix List bundled by AsyncHttpClient
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
+homepage: https://publicsuffix.org/
 license_file_path: licenses/bin/public-suffix-list.MPL2
 
 ---
@@ -2415,6 +2396,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
+homepage: https://jetty.org
 version: 12.1.14
 libraries:
   - org.eclipse.jetty: jetty-alpn-client
@@ -2787,6 +2769,7 @@ name: JTS
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
+homepage: https://www.locationtech.org/projects/technology.jts
 version: 1.19.0
 libraries:
   - org.locationtech.jts: jts-core
@@ -2804,6 +2787,7 @@ name: JTS
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Eclipse Public License 2.0
+homepage: https://www.locationtech.org/projects/technology.jts
 version: 1.20.0
 libraries:
   - org.locationtech.jts: jts-core
@@ -3017,8 +3001,9 @@ libraries:
 name: osgi-resource-locator
 version: 1.0.3
 license_category: binary
-module: extensions/druid-avro-extensions
+module: extensions/druid-kerberos
 license_name: Eclipse Public License 2.0
+homepage: https://github.com/eclipse-ee4j/glassfish-hk2-extra
 libraries:
   - org.glassfish.hk2: osgi-resource-locator
 
@@ -3027,8 +3012,9 @@ libraries:
 name: jakarta.inject
 version: 2.6.1
 license_category: binary
-module: extensions/druid-avro-extensions
+module: extensions/druid-kerberos
 license_name: Eclipse Public License 2.0
+homepage: https://github.com/eclipse-ee4j/glassfish-hk2
 libraries:
   - org.glassfish.hk2.external: jakarta.inject
 
@@ -3037,8 +3023,9 @@ libraries:
 name: jakarta.annotation
 version: 1.3.5
 license_category: binary
-module: extensions/druid-avro-extensions
+module: extensions/druid-kerberos
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.ca
 libraries:
   - jakarta.annotation: jakarta.annotation-api
 
@@ -3049,6 +3036,7 @@ version: 3.0.0
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.ca
 libraries:
   - jakarta.annotation: jakarta.annotation-api
 
@@ -3059,28 +3047,9 @@ version: 1.3.3
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.jta
 libraries:
   - jakarta.transaction: jakarta.transaction-api
-
----
-
-name: javax.ws.rs-api
-version: 2.1.1
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Eclipse Public License 2.0
-libraries:
-  - javax.ws.rs: javax.ws.rs-api
-
----
-
-name: jakarta.ws.rs-api
-version: 2.1.6
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Eclipse Public License 2.0
-libraries:
-  - jakarta.ws.rs: jakarta.ws.rs-api
 
 ---
 
@@ -3224,8 +3193,9 @@ notices:
 
 name: Javax Annotation API
 license_category: binary
-module: extensions/druid-avro-extensions
+module: extensions/druid-kubernetes-extensions
 license_name: CDDL 1.1
+homepage: https://jcp.org/en/jsr/detail?id=250
 version: 1.3.2
 copyright: Oracle and/or its affiliates
 license_file_path: licenses/bin/javax.annotation-api.CDDL11
@@ -3254,16 +3224,6 @@ license_name: Apache License version 2.0
 version: 2.3.1
 libraries:
   - com.google.code.gson: gson
-
----
-
-name: jaxb
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: CDDL 1.1
-version: 2.2.3-1
-libraries:
-  - com.sun.xml.bind: jaxb-impl
 
 ---
 
@@ -3469,6 +3429,7 @@ name: Jakarta Servlet API (shaded in hadoop-client-runtime)
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.servlet
 version: 4.0.4
 additional_license_statement: dual-licensed under EPL 2.0 or GPLv2 with Classpath Exception, distributed here under EPL 2.0
 license_file_path: licenses/bin/jakarta.EPL2
@@ -3479,6 +3440,7 @@ name: Jakarta Server Pages API (shaded in hadoop-client-runtime)
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.jsp
 version: 2.3.6
 additional_license_statement: dual-licensed under EPL 2.0 or GPLv2 with Classpath Exception, distributed here under EPL 2.0
 license_file_path: licenses/bin/jakarta.EPL2
@@ -3489,6 +3451,7 @@ name: Jakarta RESTful Web Services API (shaded in hadoop-client-runtime)
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Eclipse Public License 2.0
+homepage: https://github.com/eclipse-ee4j/jaxrs-api
 version: 2.1.6
 additional_license_statement: dual-licensed under EPL 2.0 or GPLv2 with Classpath Exception, distributed here under EPL 2.0
 license_file_path: licenses/bin/jakarta.EPL2
@@ -3499,6 +3462,7 @@ name: Public Suffix List bundled by Apache HttpClient (shaded in hadoop-client-r
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Mozilla Public License Version 2.0
+homepage: https://publicsuffix.org/
 license_file_path: licenses/bin/public-suffix-list.MPL2
 
 ---
@@ -3906,22 +3870,11 @@ libraries:
 
 ---
 
-name: JavaBeans Activation Framework
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 1.2.0
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.activation.CDDL11
-libraries:
-  - com.sun.activation: javax.activation
-
----
-
 name: Jersey
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
+homepage: https://github.com/javaee/jersey-1.x
 version: 1.19.4
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
@@ -3929,7 +3882,6 @@ libraries:
   - com.sun.jersey: jersey-core
   - com.sun.jersey: jersey-server
   - com.sun.jersey: jersey-servlet
-  - com.sun.jersey: contribs
   - com.sun.jersey.contribs: jersey-guice
 
 ---
@@ -3938,6 +3890,7 @@ name: Jakarta Expression Language API
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.el
 version: 6.0.1
 libraries:
   - jakarta.el: jakarta.el-api
@@ -3948,6 +3901,7 @@ name: Java Servlet API
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
+homepage: https://javaee.github.io/servlet-spec/
 version: 4.0.1
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/javax.CDDL11
@@ -3960,6 +3914,7 @@ name: JSR311 API
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
+homepage: https://github.com/javaee/jsr311
 version: 1.1.1
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jsr311-api.CDDL11
@@ -3992,18 +3947,6 @@ libraries:
 
 ---
 
-name: Extended StAX API
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 1.8
-copyright: Oracle and/or its affiliates
-license_file_path: licenses/bin/jaxb-runtime.CDDL11
-libraries:
-  - org.jvnet.staxex: stax-ex
-
----
-
 name: Istack Common Utility Code Runtime
 license_category: binary
 module: java-core
@@ -4030,6 +3973,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
+homepage: https://github.com/javaee/jersey-1.x
 version: 1.19.4
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
@@ -4038,50 +3982,11 @@ libraries:
 
 ---
 
-name: OkHttp Aether Connector
-license_category: binary
-module: java-core
-license_name: Eclipse Public License 1.0
-version: 0.0.9
-copyright: to original author or authors
-license_file_path: licenses/bin/aether-connector-okhttp.EPL1
-libraries:
-  - io.tesla.aether: aether-connector-okhttp
-
----
-
-name: Tesla Aether
-license_category: binary
-module: java-core
-license_name: Eclipse Public License 1.0
-version: 0.0.5
-copyright: to original author or authors
-license_file_path: licenses/bin/tesla-aether.EPL1
-libraries:
-  - io.tesla.aether: tesla-aether
-
----
-
-name: Eclipse Aether libraries
-license_category: binary
-module: java-core
-license_name: Eclipse Public License 1.0
-version: 0.9.0.M2
-copyright: Sonatype, Inc.
-license_file_path: licenses/bin/aether-core.EPL1
-libraries:
-  - org.eclipse.aether: aether-api
-  - org.eclipse.aether: aether-connector-file
-  - org.eclipse.aether: aether-impl
-  - org.eclipse.aether: aether-spi
-  - org.eclipse.aether: aether-util
-
----
-
 name: Rhino
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
+homepage: https://mozilla.github.io/rhino/
 version: 1.9.1
 copyright: Mozilla and individual contributors.
 license_file_path: licenses/bin/rhino.MPL2
@@ -4784,6 +4689,7 @@ name: JavaBeans Activation Framework API
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
+homepage: https://github.com/javaee/activation
 version: 1.2.0
 copyright: Oracle and/or its affiliates
 license_file_path: licenses/bin/javax.activation-api.CDDL11
@@ -5325,6 +5231,7 @@ license_category: binary
 version: 1.19.3
 module: extensions-contrib/druid-ranger-security
 license_name: CDDL 1.1
+homepage: https://github.com/javaee/jersey-1.x
 libraries:
   - com.sun.jersey: jersey-bundle
 
@@ -5579,7 +5486,7 @@ libraries:
 ---
 name: jakarta.activation
 license_category: binary
-module: extensions/druid-avro-extensions
+module: java-core
 license_name: Eclipse Distribution License 1.0
 version: 2.0.1
 libraries:
@@ -5609,7 +5516,6 @@ license_category: binary
 module: java-core
 license_name: Apache License version 2.0
 version: 9.2.1
-license_file_path: licenses/bin/cron-utils.APACHE2
 libraries:
   - com.cronutils: cron-utils
 
@@ -5654,6 +5560,7 @@ name: Expressly
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.expressly
 version: 6.0.0
 license_file_path: licenses/bin/jakarta.EPL2
 libraries:
@@ -5668,17 +5575,6 @@ license_name: MIT License
 version: 2.0.5
 libraries:
   - org.testcontainers: testcontainers
-
----
-
-name: Junit
-license_category: binary
-module: extensions/druid-testcontainers
-license_name: Eclipse Public License 1.0
-version: 4.13.2
-license_file_path: licenses/bin/junit.EPL
-libraries:
-  - junit: junit
 
 ---
 
@@ -5703,17 +5599,6 @@ license_name: MIT License
 version: 1.0.8
 libraries:
   - org.rnorth.duct-tape: duct-tape
-
----
-
-# Dependency of Testcontainers
-name: jakarta.activation
-license_category: binary
-module: extensions/druid-testcontainers
-license_name: Eclipse Distribution License 1.0
-version: 2.0.1
-libraries:
-  - com.sun.activation: jakarta.activation
 
 ---
 
@@ -6120,6 +6005,7 @@ license_name: SIL Open Font License 1.1
 copyright: Google Inc.
 version: 5.3.0
 license_file_path: licenses/bin/@fontsource-open-sans.OFL
+homepage: https://fontsource.org/fonts/open-sans
 
 ---
 
@@ -7635,6 +7521,7 @@ name: Jakarta Servlet JSP API
 license_category: binary
 module: extensions/druid-kerberos
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.jsp
 version: 2.3.6
 libraries:
   - jakarta.servlet.jsp: jakarta.servlet.jsp-api
@@ -7672,6 +7559,7 @@ name: HK2
 license_category: binary
 module: extensions/druid-kerberos
 license_name: Eclipse Public License 2.0
+homepage: https://github.com/eclipse-ee4j/glassfish-hk2
 version: 2.6.1
 libraries:
   - org.glassfish.hk2: hk2-api
@@ -7685,6 +7573,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-kerberos
 license_name: Eclipse Public License 2.0
+homepage: https://projects.eclipse.org/projects/ee4j.jersey
 version: '2.46'
 libraries:
   - org.glassfish.jersey.containers: jersey-container-servlet
@@ -7700,6 +7589,7 @@ name: Javassist
 license_category: binary
 module: extensions/druid-kerberos
 license_name: MPL 1.1
+homepage: https://www.javassist.org/
 version: 3.30.2-GA
 libraries:
   - org.javassist: javassist
@@ -7776,6 +7666,7 @@ name: Eclipse Collections
 license_category: binary
 module: extensions-contrib/druid-iceberg-extensions
 license_name: Eclipse Public License 1.0
+homepage: https://www.eclipse.org/collections/
 version: 11.1.0
 libraries:
   - org.eclipse.collections: eclipse-collections

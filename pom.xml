@@ -73,7 +73,6 @@
         <java.version>25</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
-        <aether.version>1.1.0</aether.version>
         <maven.resolver.version>2.0.24</maven.resolver.version>
         <apache.curator.version>5.9.0</apache.curator.version>
         <apache.kafka.version>4.3.1</apache.kafka.version>
@@ -114,7 +113,7 @@
         <log4j.version>2.26.1</log4j.version>
         <mysql.version>26.7.0</mysql.version>
         <mariadb.version>3.5.10</mariadb.version>
-        <netty4.version>4.2.18.Final</netty4.version>
+        <netty4.version>4.2.19.Final</netty4.version>
         <postgresql.version>42.7.13</postgresql.version>
         <protobuf.version>4.36.2</protobuf.version>
         <resilience4j.version>2.4.0</resilience4j.version>
@@ -1043,27 +1042,6 @@
                 <version>${protobuf.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.tesla.aether</groupId>
-                <artifactId>tesla-aether</artifactId>
-                <version>0.0.5</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.aether</groupId>
-                <artifactId>aether-api</artifactId>
-                <version>${aether.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.aether</groupId>
-                <artifactId>aether-util</artifactId>
-                <version>${aether.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.maven.resolver</groupId>
                 <artifactId>maven-resolver-api</artifactId>
                 <version>${maven.resolver.version}</version>
@@ -1096,7 +1074,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents.client5</groupId>
                 <artifactId>httpclient5</artifactId>
-                <version>5.6.4</version>
+                <version>5.6.5</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents.core5</groupId>
@@ -2384,7 +2362,6 @@
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>
                                 <exclude>NOTICE.BINARY</exclude>
-                                <exclude>LABELS</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
