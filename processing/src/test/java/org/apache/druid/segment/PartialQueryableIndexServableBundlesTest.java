@@ -284,7 +284,117 @@ class PartialQueryableIndexServableBundlesTest extends PartialQueryableIndexCurs
           DruidException.class,
           () -> opened.index().planCursorPrefetch(spec, BIG_PROJECTION::equals)
       );
-      Assertions.assertTrue(e.getMessage().contains("does not satisfy query"), e.getMessage());
+      Assertions.assertEquals(
+          "Projection[" + SMALL_PROJECTION + "] specified, but does not satisfy query",
+          e.getMessage()
+      );
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    }
+  }
+
+  @Test
+  void testUseProjectionNamingMissingProjectionFails() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "missing_projection")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(Map.of(
+                                                          QueryContexts.USE_PROJECTION,
+                                                          "does_not_exist"
+                                                      ))
+                                                  )
+                                                  .build();
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> opened.index().planCursorPrefetch(spec, bundle -> false)
+      );
+      Assertions.assertEquals("Projection[does_not_exist] does not exist", e.getMessage());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    }
+  }
+
+  @Test
+  void testUseProjectionNamingServableProjectionSucceeds() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "named_servable")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(Map.of(
+                                                          QueryContexts.USE_PROJECTION,
+                                                          SMALL_PROJECTION
+                                                      ))
+                                                  )
+                                                  .build();
+      final PartialQueryableIndex.CursorPrefetchPlan plan =
+          opened.index().planCursorPrefetch(spec, SMALL_PROJECTION::equals);
+      Assertions.assertEquals(SMALL_PROJECTION, plan.matchedProjection().getName());
+    }
+  }
+
+  @Test
+  void testUseProjectionNamingIncompatibleProjectionFails() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "named_incompatible")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(CursorBuildSpec.FULL_SCAN)
+                                                  .setQueryContext(
+                                                      QueryContext.of(Map.of(
+                                                          QueryContexts.USE_PROJECTION,
+                                                          SMALL_PROJECTION
+                                                      ))
+                                                  )
+                                                  .build();
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> opened.index().planCursorPrefetch(spec, SMALL_PROJECTION::equals)
+      );
+      Assertions.assertEquals(
+          "Projection[" + SMALL_PROJECTION + "] specified, but does not satisfy query",
+          e.getMessage()
+      );
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    }
+  }
+
+  @Test
+  void testForceProjectionWithNothingServableFails() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "force_unservable")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(Map.of(
+                                                          QueryContexts.FORCE_PROJECTION,
+                                                          true
+                                                      ))
+                                                  )
+                                                  .build();
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> opened.index().planCursorPrefetch(spec, bundle -> false)
+      );
+      Assertions.assertEquals("Force projections specified, but none satisfy query", e.getMessage());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+    }
+  }
+
+  @Test
+  void testNoProjectionsDisablesNamedProjectionValidation() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "no_projections")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(Map.of(
+                                                          QueryContexts.USE_PROJECTION, "does_not_exist",
+                                                          QueryContexts.NO_PROJECTIONS, true
+                                                      ))
+                                                  )
+                                                  .build();
+      final PartialQueryableIndex.CursorPrefetchPlan plan =
+          opened.index().planCursorPrefetch(spec, bundle -> false);
+      Assertions.assertNull(plan.matchedProjection());
+      Assertions.assertTrue(plan.bundles().isEmpty());
     }
   }
 
