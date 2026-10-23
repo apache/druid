@@ -44,10 +44,13 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -66,8 +69,8 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 @LazySingleton
@@ -137,15 +140,15 @@ public class QueryResource implements QueryCountStatsProvider
     if (log.isDebugEnabled()) {
       log.debug("Received cancel request for query [%s]", queryId);
     }
-    Set<String> datasources = queryScheduler.getQueryDatasources(queryId);
-    if (datasources == null) {
+    Set<Resource> resources = queryScheduler.getQueryResources(queryId);
+    if (resources == null) {
       log.warn("QueryId [%s] not registered with QueryScheduler, cannot cancel", queryId);
-      datasources = new TreeSet<>();
+      resources = Collections.emptySet();
     }
 
     AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
-        Iterables.transform(datasources, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
+        Iterables.transform(resources, resource -> new ResourceAction(resource, Action.WRITE)),
         authorizerMapper
     );
 

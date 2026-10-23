@@ -46,7 +46,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -66,10 +65,10 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -371,46 +370,22 @@ public class QueryLifecycle
   }
 
   /**
-   * Returns the READ resource actions for the datasources of the query. Tables are authorized as
-   * {@link ResourceType#DATASOURCE} resources. System tables aren't Druid datasources: like the SQL {@code sys}
-   * schema, they need {@link ResourceType#SYSTEM_TABLE} READ only when
+   * Returns the READ resource actions for the datasources of the query. System tables aren't Druid datasources: like
+   * the SQL {@code sys} schema, they need {@link ResourceType#SYSTEM_TABLE} READ only when
    * {@link AuthConfig#isAuthorizeSystemTablesDirectly()} is set, and otherwise rely on the table's own row
    * authorization.
    */
   private Iterable<ResourceAction> dataSourceResourcesToAuthorize()
   {
-    final DataSource dataSource = baseQuery.getDataSource();
-    if (!containsSystemTable(dataSource)) {
-      return Iterables.transform(dataSource.getTableNames(), AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR);
+    final List<ResourceAction> resourceActions = new ArrayList<>();
+    for (final Resource resource : AuthorizationUtils.getDataSourceResources(baseQuery.getDataSource())) {
+      if (ResourceType.SYSTEM_TABLE.equals(resource.getType()) && !authConfig.isAuthorizeSystemTablesDirectly()) {
+        // Like the SQL sys schema, system tables have no table-level check unless authorizeSystemTablesDirectly is set.
+        continue;
+      }
+      resourceActions.add(new ResourceAction(resource, Action.READ));
     }
-    final Set<ResourceAction> resourceActions = new LinkedHashSet<>();
-    addDataSourceResourceActions(dataSource, resourceActions);
     return resourceActions;
-  }
-
-  private void addDataSourceResourceActions(final DataSource dataSource, final Set<ResourceAction> resourceActions)
-  {
-    if (dataSource instanceof SystemTableDataSource systemTableDataSource) {
-      if (authConfig.isAuthorizeSystemTablesDirectly()) {
-        resourceActions.add(
-            new ResourceAction(new Resource(systemTableDataSource.getTable(), ResourceType.SYSTEM_TABLE), Action.READ)
-        );
-      }
-    } else if (dataSource.getChildren().isEmpty()) {
-      for (final String tableName : dataSource.getTableNames()) {
-        resourceActions.add(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(tableName));
-      }
-    } else {
-      for (final DataSource child : dataSource.getChildren()) {
-        addDataSourceResourceActions(child, resourceActions);
-      }
-    }
-  }
-
-  private static boolean containsSystemTable(final DataSource dataSource)
-  {
-    return dataSource instanceof SystemTableDataSource
-           || dataSource.getChildren().stream().anyMatch(QueryLifecycle::containsSystemTable);
   }
 
   private void preAuthorized(

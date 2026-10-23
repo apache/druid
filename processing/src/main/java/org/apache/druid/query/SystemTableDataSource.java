@@ -42,8 +42,8 @@ public class SystemTableDataSource extends LeafDataSource
   private final String table;
 
   /**
-   * QueryScheduler uses table names as cancellation authorization resources. Namespace the synthetic datasource name
-   * so a system table cannot collide with a regular Druid datasource that has the same unqualified name.
+   * Name reported by {@link #getTableNames()}, for metrics, thread names and query blocklist rules. It isn't used for
+   * authorization: system tables are authorized as SYSTEM_TABLE resources named {@link #table}.
    */
   private final String qualifiedTableName;
 

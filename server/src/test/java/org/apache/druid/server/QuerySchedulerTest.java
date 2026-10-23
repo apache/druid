@@ -70,6 +70,8 @@ import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.WeightedQueryLaningStrategy;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceType;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterEach;
@@ -101,7 +103,7 @@ public class QuerySchedulerTest
   private ListeningExecutorService executorService;
   private ObservableQueryScheduler scheduler;
 
-  /** System-table node queries attach a stable datasource authorization resource for cancellation. */
+  /** System-table queries are cancelled with a SYSTEM_TABLE resource, not a datasource named after the table. */
   @Test
   public void testSystemTableCancellationHasAuthorizationResource()
   {
@@ -115,7 +117,10 @@ public class QuerySchedulerTest
 
     scheduler.registerQueryFuture(query, future);
 
-    Assertions.assertEquals(Set.of("sys.tasks"), scheduler.getQueryDatasources(query.getId()));
+    Assertions.assertEquals(
+        Set.of(new Resource("tasks", ResourceType.SYSTEM_TABLE)),
+        scheduler.getQueryResources(query.getId())
+    );
     scheduler.cancelQuery(query.getId());
     Assertions.assertTrue(future.isCancelled());
   }
