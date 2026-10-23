@@ -23,6 +23,7 @@ import type { EditorView } from '@codemirror/view';
 import React from 'react';
 
 import { CodeEditor } from '../../../components';
+import { useQueryContextParameters } from '../../../contexts/query-context-parameters-context';
 import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import { NATIVE_JSON_QUERY_COMPLETIONS } from '../../../druid-models';
 import { dsql } from '../../../editor-languages/dsql';
@@ -71,6 +72,7 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
   } = props;
 
   const availableSqlFunctions = useAvailableSqlFunctions();
+  const queryContextParameters = useQueryContextParameters();
   const editorViewRef = React.useRef<EditorView | undefined>(undefined);
   React.useImperativeHandle(ref, () => editorViewRef.current);
 
@@ -108,8 +110,8 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
     () =>
       isJson
         ? hjson({ jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS })
-        : dsql({ columnMetadata, availableSqlFunctions }),
-    [isJson, columnMetadata, availableSqlFunctions],
+        : dsql({ columnMetadata, availableSqlFunctions, queryContextParameters }),
+    [isJson, columnMetadata, availableSqlFunctions, queryContextParameters],
   );
 
   return (

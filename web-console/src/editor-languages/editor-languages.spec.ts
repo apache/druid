@@ -234,6 +234,18 @@ dataSource: wikipedia`;
       expect(complete(hjson(), '{\n  que|')).toBeUndefined();
     });
 
+    it('completes query context parameters right after the SET keyword in dsql', () => {
+      expect(complete(dsql(), 'SET |')).toContain('sqlTimeZone');
+      expect(complete(dsql(), 'SELECT 1;\nset |')).toContain('sqlTimeZone');
+      // However long the whitespace after SET is
+      expect(complete(dsql(), `SET\n${' '.repeat(40)}|`)).toContain('sqlTimeZone');
+      expect(complete(dsql(), 'SELECT |')).toBeUndefined();
+      // Not the SET keyword
+      expect(complete(dsql(), "SELECT * FROM t WHERE x = 'foo set |")).toBeUndefined();
+      expect(complete(dsql(), '-- set |')).toBeUndefined();
+      expect(complete(dsql(), 'SELECT * FROM t LIMIT 1 OFFSET |')).toBeUndefined();
+    });
+
     it('is off in read only editors', () => {
       expect(complete(dsql(), 'SELECT COU|', true)).toBeUndefined();
     });

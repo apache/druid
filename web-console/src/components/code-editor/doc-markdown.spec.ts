@@ -49,6 +49,15 @@ describe('renderDocMarkdown', () => {
     expect(renderToHtml('\\- not a list item')).toEqual('- not a list item');
   });
 
+  it('renders links to https URLs and leaves other links as text', () => {
+    expect(
+      renderToHtml('See [the `docs`](https://druid.apache.org/docs/latest/querying/sql) now'),
+    ).toEqual(
+      'See <a href="https://druid.apache.org/docs/latest/querying/sql" target="_blank" rel="noopener noreferrer">the <code>docs</code></a> now',
+    );
+    expect(renderToHtml('[click](javascript:alert(1))')).toEqual('[click](javascript:alert(1))');
+  });
+
   it('renders line breaks', () => {
     expect(renderToHtml('First.\n\nSecond.')).toEqual('First.<br><br>Second.');
   });
