@@ -22,7 +22,7 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -49,11 +49,27 @@ public class DruidServerConfig
   @JsonProperty
   private int priority = DruidServer.DEFAULT_PRIORITY;
 
+  public static final Set<String> DEFAULT_HIDDEN_PROPERTIES = ImmutableSet.of(
+      "druid.s3.accessKey",
+      "druid.s3.secretKey",
+      "druid.metadata.storage.connector.password",
+      "password",
+      "key",
+      "token",
+      "pwd",
+      "secret",
+      "passphrase",
+      "basicAuthentication",
+      "druid.emitter.kafka.producer.hiddenProperties"
+  );
+
+  /**
+   * Names of sensitive runtime properties, or substrings of them, matched case-insensitively. See
+   * {@link org.apache.druid.server.security.SensitiveProperties}.
+   */
   @JsonProperty
   @NotNull
-  private Set<String> hiddenProperties = Sets.newHashSet("druid.s3.accessKey", "druid.s3.secretKey",
-                                                         "druid.metadata.storage.connector.password",
-                                                         "password", "key", "token", "pwd");
+  private Set<String> hiddenProperties = DEFAULT_HIDDEN_PROPERTIES;
 
   private final RuntimeInfo runtimeInfo;
   private SegmentLoaderConfig segmentLoaderConfig;
