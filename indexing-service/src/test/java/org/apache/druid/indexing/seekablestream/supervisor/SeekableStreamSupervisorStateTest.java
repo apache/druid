@@ -4514,16 +4514,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
    * without hitting unmocked calls. Returns a dedicated emitter for the caller to pass into the
    * notice handler so dynamic-allocation events can be asserted in isolation.
    */
-  private StubServiceEmitter setupSupervisorForAutoScalingTest(
+  private void setupSupervisorForAutoScalingTest(
       long minScaleUpDelayMillis,
       long minScaleDownDelayMillis,
       int initialTaskCount
   )
   {
-    return setupSupervisorForAutoScalingTest(minScaleUpDelayMillis, minScaleDownDelayMillis, initialTaskCount, 1, 100);
+    setupSupervisorForAutoScalingTest(minScaleUpDelayMillis, minScaleDownDelayMillis, initialTaskCount, 1, 100);
   }
 
-  private StubServiceEmitter setupSupervisorForAutoScalingTest(
+  private void setupSupervisorForAutoScalingTest(
       long minScaleUpDelayMillis,
       long minScaleDownDelayMillis,
       int initialTaskCount,
@@ -4542,7 +4542,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         autoScalerConfig,
         null
     );
-    return resetSpecAndTaskMasterForScaling(ioConfig);
+    resetSpecAndTaskMasterForScaling(ioConfig);
   }
 
   /**
@@ -4622,10 +4622,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     };
   }
 
-  private StubServiceEmitter resetSpecAndTaskMasterForScaling(SeekableStreamSupervisorIOConfig ioConfig)
+  private void resetSpecAndTaskMasterForScaling(SeekableStreamSupervisorIOConfig ioConfig)
   {
-    final StubServiceEmitter scalingEmitter = new StubServiceEmitter("scaling", "localhost");
-
     EasyMock.reset(spec, taskMaster);
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
@@ -4642,6 +4640,5 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
 
     replayAll();
-    return scalingEmitter;
   }
 }

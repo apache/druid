@@ -121,7 +121,7 @@ public class LagBasedAutoScalerTest
 
   private LagBasedAutoScaler createAutoScaler()
   {
-    return new LagBasedAutoScaler(mockSupervisor, config, mockSpec, mockEmitter);
+    return new LagBasedAutoScaler(mockSupervisor, config, mockSpec);
   }
 
   private List<Long> createLagSamples(long lag)
