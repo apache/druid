@@ -145,6 +145,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
 
   private final Map<MetricName, AtomicLong> counters = new HashMap<>();
   private final AtomicDouble pollIdleRatioAvg = new AtomicDouble(1.0d);
+  private final RunningAverage runningAvgPollIdleRatio = new RunningAverage();
 
   public KafkaConsumerMonitor(
       final KafkaConsumer<?, ?> consumer,
@@ -197,7 +198,9 @@ public class KafkaConsumerMonitor extends AbstractMonitor
       // Capture `poll-idle-ratio-avg` metric for autoscaler purposes.
       if (POLL_IDLE_RATIO_METRIC_NAME.equals(metricName.name())) {
         if (entry.getValue().metricValue() != null) {
-          pollIdleRatioAvg.set(((Number) entry.getValue().metricValue()).doubleValue());
+          final double newValue = ((Number) entry.getValue().metricValue()).doubleValue();
+          pollIdleRatioAvg.set(newValue);
+          runningAvgPollIdleRatio.addSample(newValue);
         }
       }
     }
@@ -218,5 +221,31 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   public double getPollIdleRatioAvg()
   {
     return pollIdleRatioAvg.get();
+  }
+
+  /**
+   * Cumulative average poll-to-idle ratio over the lifetime of the task
+   * as opposed to {@link #getPollIdleRatioAvg()} which only reflects Kafka's own short sampling window.
+   */
+  public double getRunningAvgPollIdleRatio()
+  {
+    return runningAvgPollIdleRatio.getAvg();
+  }
+
+  private static class RunningAverage
+  {
+    private double sum = 0.0d;
+    private long count = 0L;
+
+    synchronized void addSample(final double value)
+    {
+      sum += value;
+      count++;
+    }
+
+    synchronized double getAvg()
+    {
+      return count == 0 ? 1.0d : sum / count;
+    }
   }
 }

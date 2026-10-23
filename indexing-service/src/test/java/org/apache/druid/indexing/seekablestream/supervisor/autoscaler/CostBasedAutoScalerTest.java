@@ -441,7 +441,7 @@ public class CostBasedAutoScalerTest
     Map<String, Map<String, Object>> nonNumberRatio = new HashMap<>();
     Map<String, Object> taskStats3 = new HashMap<>();
     Map<String, Object> autoscalerMetrics = new HashMap<>();
-    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY, "not-a-number");
+    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG, "not-a-number");
     taskStats3.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, autoscalerMetrics);
     nonNumberRatio.put("0", Collections.singletonMap("task-0", taskStats3));
     Assertions.assertEquals(
@@ -856,7 +856,7 @@ public class CostBasedAutoScalerTest
   private Map<String, Object> buildTaskStatsWithPollIdle(double pollIdleRatio)
   {
     Map<String, Object> autoscalerMetrics = new HashMap<>();
-    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY, pollIdleRatio);
+    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG, pollIdleRatio);
 
     Map<String, Object> taskStats = new HashMap<>();
     taskStats.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, autoscalerMetrics);
