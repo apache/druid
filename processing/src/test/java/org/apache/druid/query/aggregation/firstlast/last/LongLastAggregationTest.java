@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.TestLongColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -233,6 +234,65 @@ public class LongLastAggregationTest extends InitializedNullHandlingTest
     AggregatorFactory deserialized = mapper.readValue(longSpecJson, AggregatorFactory.class);
     Assertions.assertEquals(longLastAggFactory, deserialized);
     Assertions.assertArrayEquals(longLastAggFactory.getCacheKey(), deserialized.getCacheKey());
+  }
+
+  /**
+   * Round-trips the factory through Jackson instead of only reading a hard-coded JSON string.
+   * The pre-existing {@link #testSerde()} test never serializes, so it cannot observe the type id
+   * Jackson actually writes out. A regression where an anonymous class reached the jackson-facing
+   * surface would produce a type id such as {@code LongLastAggregatorFactory$1}, which the old
+   * test would not catch because it never produces the JSON.
+   */
+  @Test
+  public void testSerdeRoundTrip() throws Exception
+  {
+    final DefaultObjectMapper mapper = new DefaultObjectMapper();
+    final String serialized = mapper.writeValueAsString(longLastAggFactory);
+
+    // The serialized form must carry the registered type id, never a generated $N class name.
+    Assertions.assertFalse(
+        serialized.contains("AggregatorFactory$"),
+        "Serialized aggregator factory leaked an anonymous class name: " + serialized
+    );
+
+    final AggregatorFactory deserialized = mapper.readValue(serialized, AggregatorFactory.class);
+    Assertions.assertEquals(longLastAggFactory, deserialized);
+    Assertions.assertEquals(longLastAggFactory.getName(), deserialized.getName());
+    Assertions.assertArrayEquals(longLastAggFactory.getCacheKey(), deserialized.getCacheKey());
+
+    // A second round trip must be stable, i.e. the first pass produced canonical JSON.
+    Assertions.assertEquals(serialized, mapper.writeValueAsString(deserialized));
+  }
+
+  /**
+   * Covers the missing-column branch: when the value selector is a {@link NilColumnValueSelector}
+   * {@link LongLastAggregatorFactory#factorize} returns the shared NIL aggregator. That aggregator
+   * is a runtime object handed to the query engine, not a Jackson-serialized one, so the contract
+   * to assert here is that it is functional (no-op aggregate) and that it is not what gets
+   * serialized when the factory itself is written out.
+   */
+  @Test
+  public void testNilAggregatorIsUsedForMissingColumn() throws Exception
+  {
+    final ColumnSelectorFactory nilColumnSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    EasyMock.expect(nilColumnSelectorFactory.makeColumnValueSelector("nilly"))
+            .andReturn(NilColumnValueSelector.instance())
+            .anyTimes();
+    EasyMock.replay(nilColumnSelectorFactory);
+
+    final Aggregator nilAggregator = longLastAggFactory.factorize(nilColumnSelectorFactory);
+    Assertions.assertNotNull(nilAggregator);
+
+    // aggregate() must be a no-op and must not throw.
+    nilAggregator.aggregate();
+
+    // factorize must keep returning the same shared instance rather than allocating per call.
+    Assertions.assertSame(nilAggregator, longLastAggFactory.factorize(nilColumnSelectorFactory));
+
+    // The NIL aggregator is a runtime object; serializing the factory must never surface its class.
+    final String serialized = new DefaultObjectMapper().writeValueAsString(longLastAggFactory);
+    Assertions.assertFalse(serialized.contains("NilLongLastAggregator"), serialized);
+    EasyMock.verify(nilColumnSelectorFactory);
   }
 
   @Test
