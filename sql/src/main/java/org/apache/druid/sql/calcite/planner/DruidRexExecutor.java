@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutor;
@@ -181,6 +182,10 @@ public class DruidRexExecutor implements RexExecutor
           final Object[] array = exprResult.asArray();
           if (array == null) {
             literal = rexBuilder.makeNullLiteral(constExp.getType());
+          } else if (isArrayOfComplex(constExp.getType())) {
+            // arrays of complex constants, including nested arrays, are not reducible, so just leave them as an
+            // expression
+            literal = constExp;
           } else if (SqlTypeName.NUMERIC_TYPES.contains(constExp.getType().getComponentType().getSqlTypeName())) {
             if (exprResult.type().getElementType().is(ExprType.LONG)) {
               List<BigDecimal> resultAsBigDecimalList = new ArrayList<>(array.length);
@@ -225,9 +230,6 @@ public class DruidRexExecutor implements RexExecutor
               }
             }
             literal = rexBuilder.makeLiteral(resultAsBooleanList, constExp.getType(), true);
-          } else if (constExp.getType().getComponentType().getSqlTypeName() == SqlTypeName.OTHER) {
-            // array of complex constants is not reducible either, so just leave it as an expression
-            literal = constExp;
           } else {
             literal = rexBuilder.makeLiteral(Arrays.asList(array), constExp.getType(), true);
           }
@@ -247,6 +249,18 @@ public class DruidRexExecutor implements RexExecutor
         reducedValues.add(literal);
       }
     }
+  }
+
+  ///
+  /// Whether the leaf element type of an array type, looking through any nested arrays, is a complex type.
+  ///
+  private static boolean isArrayOfComplex(final RelDataType arrayType)
+  {
+    RelDataType elementType = arrayType.getComponentType();
+    while (elementType != null && elementType.getSqlTypeName() == SqlTypeName.ARRAY) {
+      elementType = elementType.getComponentType();
+    }
+    return elementType != null && elementType.getSqlTypeName() == SqlTypeName.OTHER;
   }
 
   private static String getInputValueOrExpression(final RexNode constExp)
