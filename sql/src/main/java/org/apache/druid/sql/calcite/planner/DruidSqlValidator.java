@@ -830,7 +830,15 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       aliasSelectItems((SqlSelect) node);
     }
 
-    return super.performUnconditionalRewrites(node, underFrom);
+    final SqlNode rewritten = super.performUnconditionalRewrites(node, underFrom);
+
+    // Rewrite "x::TYPE" to standard CAST.
+    if (rewritten instanceof SqlCall cast
+        && SqlLibraryOperators.INFIX_CAST.equals(((SqlCall) rewritten).getOperator())) {
+      return SqlStdOperatorTable.CAST.createCall(cast.getParserPosition(), cast.getOperandList());
+    }
+
+    return rewritten;
   }
 
   /**

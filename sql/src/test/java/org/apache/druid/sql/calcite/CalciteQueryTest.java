@@ -5061,6 +5061,61 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testInfixCastToLong()
+  {
+    testQuery(
+        "SELECT dim1::LONG FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                .columns("v0")
+                .columnTypes(ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{10L},
+            new Object[]{2L},
+            new Object[]{1L},
+            new Object[]{null},
+            new Object[]{null}
+        ),
+        RowSignature.builder().add("dim1", ColumnType.LONG).build()
+    );
+  }
+
+  @Test
+  public void testInfixCastMixedWithCastInGroupBy()
+  {
+    // "x::TYPE" and CAST(x AS TYPE) are the same expression for the purposes of GROUP BY.
+    testQuery(
+        "SELECT CAST(m1 AS BIGINT), COUNT(*) FROM foo GROUP BY m1::BIGINT",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L},
+            new Object[]{2L, 1L},
+            new Object[]{3L, 1L},
+            new Object[]{4L, 1L},
+            new Object[]{5L, 1L},
+            new Object[]{6L, 1L}
+        )
+    );
+  }
+
+  @Test
   public void testSimpleLongAggregations()
   {
     testQuery(
