@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.net.HostAndPort;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.URIs;
 
 import javax.annotation.Nullable;
 import java.net.MalformedURLException;
@@ -140,8 +141,8 @@ public class TaskLocation
       throw new IAE("Path must start with '/'");
     }
 
-    // Use URL constructor, not URI, since the path is already encoded.
-    return new URL(scheme, host, portToUse, encodedPathAndQueryString);
+    // Build the URI from a string rather than the multi-arg URI constructors, since the path is already encoded.
+    return URIs.toURL(scheme + "://" + HostAndPort.fromParts(host, portToUse) + encodedPathAndQueryString);
   }
 
   @Override
