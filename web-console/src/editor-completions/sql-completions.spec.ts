@@ -38,6 +38,13 @@ describe('sql-completions', () => {
       return getSqlCompletions(context, word, options);
     }
 
+    // The keywords suggested with the cursor at the |
+    function keywordsAt(textWithCursor: string): string[] {
+      return completionsAt(textWithCursor)
+        .filter(c => c.detail === 'keyword')
+        .map(c => c.label);
+    }
+
     const columnMetadata: ColumnMetadata[] = [
       {
         TABLE_SCHEMA: 'druid',
@@ -128,6 +135,54 @@ describe('sql-completions', () => {
       expect(keywordValues).toContain('DISTINCT');
       expect(keywordValues).toContain('ALL');
       expect(keywordValues).not.toContain('SELECT');
+    });
+
+    it('suggests NULLS FIRST / NULLS LAST after an ORDER BY direction', () => {
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC |')).toEqual(['NULLS']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 ASC |')).toEqual(['NULLS']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS |')).toEqual(['FIRST', 'LAST']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS LAST |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS FIRST |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 nulls\n  first |')).toEqual([]);
+
+      // FIRST is still followed by ROW / ROWS in a FETCH
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 FETCH FIRST |')).toEqual(['ROW', 'ROWS']);
+    });
+
+    it('suggests keywords based on the two keywords before the cursor', () => {
+      // BY
+      expect(keywordsAt('SELECT * FROM t GROUP BY |')).toEqual(['GROUPING', 'ROLLUP', 'CUBE']);
+      expect(keywordsAt('REPLACE INTO t SELECT * FROM s PARTITIONED BY |')).toEqual([
+        'ALL',
+        'HOUR',
+        'DAY',
+        'MONTH',
+        'YEAR',
+      ]);
+      expect(keywordsAt('SELECT * FROM t ORDER BY |')).toEqual([]);
+      expect(keywordsAt('SELECT ROW_NUMBER() OVER (PARTITION BY |')).toEqual([]);
+      expect(
+        keywordsAt('REPLACE INTO t SELECT * FROM s PARTITIONED BY DAY CLUSTERED BY |'),
+      ).toEqual([]);
+
+      // ALL
+      expect(keywordsAt('REPLACE INTO t SELECT * FROM s PARTITIONED BY ALL |')).toEqual(['TIME']);
+      expect(keywordsAt('SELECT ALL |')).toEqual([]);
+      expect(keywordsAt('SELECT 1 UNION ALL |')).toEqual(['SELECT']);
+
+      // DISTINCT
+      expect(keywordsAt('SELECT DISTINCT |')).toEqual([]);
+      expect(keywordsAt('SELECT COUNT(DISTINCT |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t WHERE x IS |')).toEqual(['NOT', 'DISTINCT']);
+      expect(keywordsAt('SELECT * FROM t WHERE x IS NOT |')).toEqual(['DISTINCT']);
+      expect(keywordsAt('SELECT * FROM t WHERE x IS DISTINCT |')).toEqual(['FROM']);
+      expect(keywordsAt('SELECT * FROM t WHERE x IS NOT DISTINCT |')).toEqual(['FROM']);
+
+      // Others
+      expect(keywordsAt('SELECT * FROM t LEFT OUTER |')).toEqual(['JOIN']);
+      expect(keywordsAt('SELECT SUM(x) OVER (ORDER BY y ROWS CURRENT ROW |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t FETCH FIRST ROW |')).toEqual(['ONLY']);
+      expect(keywordsAt('EXPLAIN PLAN FOR |')).toEqual(['SELECT', 'INSERT', 'REPLACE']);
     });
 
     it('looks at the keyword on an earlier line and past comments', () => {

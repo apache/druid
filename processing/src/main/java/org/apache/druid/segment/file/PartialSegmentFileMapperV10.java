@@ -413,6 +413,27 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
+   * The bundle that physically holds {@code requestedBundleName}, across this mapper and its externals. Normally the
+   * name itself, but when no container carries that name and {@link SegmentFileBuilder#ROOT_BUNDLE_NAME} is the
+   * segment's only bundle, the root bundle: legacy V10 segments written before bundle names were recorded keep
+   * everything there. Any other unknown name is returned unchanged, so callers fail loudly rather than silently reading
+   * the wrong data.
+   */
+  public String resolveBundleName(String requestedBundleName)
+  {
+    final Set<String> present = new HashSet<>(getBundleNames());
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      present.addAll(external.getBundleNames());
+    }
+    if (!present.contains(requestedBundleName)
+        && present.size() == 1
+        && present.contains(SegmentFileBuilder.ROOT_BUNDLE_NAME)) {
+      return SegmentFileBuilder.ROOT_BUNDLE_NAME;
+    }
+    return requestedBundleName;
+  }
+
+  /**
    * Indices, into this mapper's {@link SegmentFileMetadata#getContainers()} list, of the containers belonging to
    * {@code bundleName}; empty if this mapper has no containers in that bundle.
    */
@@ -663,9 +684,15 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   /**
    * Plan the parallel-capped range reads for every not-yet-resident file in {@code bundleName}'s containers, across
    * this mapper AND every attached external mapper so runs come back paired with their owning mapper, unlike the
-   * self-scoped {@link #planParallelFetch}. Empty for an unknown bundle.
+   * self-scoped {@link #planParallelFetch}. The name is first resolved by {@link #resolveBundleName}, so on a legacy
+   * root-only segment any bundle name plans the root bundle. Empty for an unknown bundle.
    */
   public List<PlannedFetch> planParallelFetchBundle(String bundleName)
+  {
+    return planParallelFetchResolvedBundle(resolveBundleName(bundleName));
+  }
+
+  private List<PlannedFetch> planParallelFetchResolvedBundle(String bundleName)
   {
     checkClosed();
     final List<PlannedFetch> fetches = new ArrayList<>();
@@ -690,7 +717,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       }
     }
     for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
-      fetches.addAll(external.planParallelFetchBundle(bundleName));
+      // already resolved against the whole segment, so don't re-resolve against the external's bundles alone
+      fetches.addAll(external.planParallelFetchResolvedBundle(bundleName));
     }
     return fetches;
   }

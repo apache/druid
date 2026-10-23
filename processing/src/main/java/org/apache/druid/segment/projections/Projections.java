@@ -29,10 +29,10 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
@@ -72,6 +72,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Projections
 {
@@ -113,14 +114,43 @@ public class Projections
       Function<String, T> getRowSelector
   )
   {
-    if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.NO_PROJECTIONS, false)) {
+    return findMatchingProjection(
+        cursorBuildSpec,
+        projections,
+        projectionName -> true,
+        dataInterval,
+        physicalChecker,
+        getRowSelector
+    );
+  }
+
+  /**
+   * Like {@link #findMatchingProjection(CursorBuildSpec, SortedSet, Interval, PhysicalColumnChecker, Function)}, but
+   * only projections accepted by {@code servableProjections} are matching candidates. A projection named by
+   * {@link QueryContextParameters#USE_PROJECTION} that is in {@code projections} but not servable is reported as not
+   * satisfying the query rather than as not existing.
+   */
+  @Nullable
+  public static <T> QueryableProjection<T> findMatchingProjection(
+      CursorBuildSpec cursorBuildSpec,
+      SortedSet<AggregateProjectionMetadata> projections,
+      Predicate<String> servableProjections,
+      Interval dataInterval,
+      PhysicalColumnChecker physicalChecker,
+      Function<String, T> getRowSelector
+  )
+  {
+    if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.NO_PROJECTIONS)) {
       return null;
     }
-    final String name = cursorBuildSpec.getQueryContext().getString(QueryContexts.USE_PROJECTION);
+    final String name = cursorBuildSpec.getQueryContext().get(QueryContextParameters.USE_PROJECTION);
 
     if (cursorBuildSpec.isAggregate()) {
       for (AggregateProjectionMetadata spec : projections) {
         if (name != null && !name.equals(spec.getSchema().getName())) {
+          continue;
+        }
+        if (!servableProjections.test(spec.getSchema().getName())) {
           continue;
         }
         final ProjectionMatch match = matchAggregateProjection(
@@ -143,9 +173,12 @@ public class Projections
       }
     }
     if (name != null) {
+      if (projections.stream().noneMatch(projection -> name.equals(projection.getSchema().getName()))) {
+        throw InvalidInput.exception("Projection[%s] does not exist", name);
+      }
       throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
     }
-    if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.FORCE_PROJECTION, false)) {
+    if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.FORCE_PROJECTIONS)) {
       throw InvalidInput.exception("Force projections specified, but none satisfy query");
     }
     return null;

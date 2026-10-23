@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -203,8 +204,8 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
                  .granularity(Granularities.HOUR)
                  .aggregators(new CountAggregatorFactory("rows"))
                  .context(
-                     ImmutableMap.of(
-                         DirectDruidClient.QUERY_FAIL_TIME,
+                     QueryContext.ofMap(
+                         QueryContextParameters.QUERY_FAIL_TIME,
                          System.currentTimeMillis() + 10000
                      )
                  )

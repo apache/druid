@@ -1106,9 +1106,9 @@ public class DruidQuery
       String bound = minTime ? TimeBoundaryQuery.MIN_TIME : TimeBoundaryQuery.MAX_TIME;
       Map<String, Object> context = new HashMap<>(plannerContext.queryContextMap());
       if (minTime) {
-        context.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, aggregatorFactory.getName());
+        QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(context, aggregatorFactory.getName());
       } else {
-        context.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, aggregatorFactory.getName());
+        QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(context, aggregatorFactory.getName());
       }
       return new TimeBoundaryQuery(
           newDataSource,
@@ -1165,8 +1165,8 @@ public class DruidQuery
         return null;
       }
 
-      theContext.put(
-          TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD,
+      QueryContextParameters.TIMESTAMP_RESULT_FIELD.set(
+          theContext,
           Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec().getOutputName()
       );
       if (sorting != null) {
@@ -1457,12 +1457,15 @@ public class DruidQuery
         int timestampDimensionIndexInDimensions = grouping.getDimensions().indexOf(dimensionExpression);
 
         // these settings will only affect the most inner query sent to the down streaming compute nodes
-        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionExpression.getOutputName());
-        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampDimensionIndexInDimensions);
+        QueryContextParameters.TIMESTAMP_RESULT_FIELD.set(theContext, dimensionExpression.getOutputName());
+        QueryContextParameters.TIMESTAMP_RESULT_FIELD_IN_ORIGINAL_DIMENSIONS.set(
+            theContext,
+            timestampDimensionIndexInDimensions
+        );
 
         try {
-          theContext.put(
-              GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
+          QueryContextParameters.TIMESTAMP_RESULT_FIELD_GRANULARITY.set(
+              theContext,
               plannerContext.getJsonMapper().writeValueAsString(queryGranularity)
           );
         }
@@ -1474,7 +1477,7 @@ public class DruidQuery
 
     if (grouping.getDimensions().isEmpty() && grouping.hasGroupingDimensionsDropped()) {
       // GROUP BY ().
-      theContext.put(GroupByQuery.CTX_HAS_DROPPED_DIMENSIONS, grouping.hasGroupingDimensionsDropped());
+      QueryContextParameters.HAS_DROPPED_DIMENSIONS.set(theContext, grouping.hasGroupingDimensionsDropped());
     }
 
     if (theContext.isEmpty()) {
@@ -1528,9 +1531,9 @@ public class DruidQuery
     // This would cause MSQ queries to plan as
     // Window over an inner scan and avoid
     // leaf operators
-    boolean pushLeafOperator = plannerContext.queryContext()
-                                             .getBoolean(PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, false)
-                               && !plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR);
+    boolean pushLeafOperator =
+        plannerContext.queryContext().getOrDefault(QueryContextParameters.ENABLE_RAC_OVER_WIRE)
+        && !plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR);
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,

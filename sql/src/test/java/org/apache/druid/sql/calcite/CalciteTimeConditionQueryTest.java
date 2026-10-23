@@ -35,6 +35,7 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -42,7 +43,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +50,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Tests for the {@link PlannerContext#CTX_SQL_TIME_CONDITION} context parameter.
+ * Tests for the {@link QueryContextParameters#SQL_TIME_CONDITION} context parameter.
  */
 public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
 {
@@ -563,7 +563,7 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
   {
     return ImmutableMap.<String, Object>builder()
                        .putAll(QUERY_CONTEXT_DEFAULT)
-                       .put(PlannerContext.CTX_SQL_TIME_CONDITION, timeCondition)
+                       .put(QueryContextParameters.SQL_TIME_CONDITION.getName(), timeCondition)
                        .build();
   }
 }

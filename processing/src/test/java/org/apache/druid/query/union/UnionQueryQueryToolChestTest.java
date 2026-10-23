@@ -34,6 +34,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.ResultSerializationMode;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryQueryToolChestTest;
@@ -197,7 +198,6 @@ public class UnionQueryQueryToolChestTest
 
   private static Query<?> serializedAsRows(Query<?> query)
   {
-    return query
-        .withOverriddenContext(ImmutableMap.of(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, "rows"));
+    return query.withOverriddenContext(QueryContextParameters.SERIALIZATION, ResultSerializationMode.ROWS);
   }
 }

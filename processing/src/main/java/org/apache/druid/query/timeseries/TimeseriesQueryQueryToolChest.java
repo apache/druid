@@ -25,7 +25,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -58,6 +57,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapters;
@@ -139,9 +139,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       final Sequence<Result<TimeseriesResultValue>> baseResults = resultMergeQueryRunner.run(
           queryPlus.withQuery(
               queryPlus.getQuery()
-                       .withOverriddenContext(
-                           ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false)
-                       )
+                       .withOverriddenContext(QueryContextParameters.GRAND_TOTAL, false)
           ),
           responseContext
       );

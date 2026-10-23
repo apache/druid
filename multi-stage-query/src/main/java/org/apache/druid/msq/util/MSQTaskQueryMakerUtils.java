@@ -30,6 +30,7 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import java.util.List;
 import java.util.Set;
@@ -76,7 +77,7 @@ public class MSQTaskQueryMakerUtils
   }
 
   /**
-   * Validates that each element of {@link MultiStageQueryContext#CTX_SORT_ORDER}, if provided, appears in the
+   * Validates that each element of {@link QueryContextParameters#SEGMENT_SORT_ORDER}, if provided, appears in the
    * final output.
    */
   public static void validateContextSortOrderColumnsExist(
@@ -89,7 +90,7 @@ public class MSQTaskQueryMakerUtils
         throw InvalidSqlInput.exception(
             "Column[%s] from context parameter[%s] does not appear in the query output",
             column,
-            MultiStageQueryContext.CTX_SORT_ORDER
+            QueryContextParameters.SEGMENT_SORT_ORDER
         );
       }
     }
@@ -109,7 +110,7 @@ public class MSQTaskQueryMakerUtils
                                  + "REALTIME segments included. Ingest to a different datasource, or disable querying "
                                  + "of realtime segments by modifying [%s] in the query context.",
                                  ((DataSourceMSQDestination) destination).getDataSource(),
-                                 MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE
+                                 QueryContextParameters.INCLUDE_SEGMENT_SOURCE
                           );
     }
   }

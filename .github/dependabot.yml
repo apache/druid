@@ -9,6 +9,9 @@ updates:
       # Protect against not-yet-discovered regressions or security issues in new releases of dependencies
       # https://github.blog/changelog/2025-07-01-dependabot-supports-configuration-of-a-minimum-package-age/
       default-days: 14
+    commit-message:
+      prefix: "build"
+      include: "scope"
     groups:
       # The individual org.apache.maven.resolver:* artifacts must move together: they are all
       # pinned to the same version in services/pom.xml and server/pom.xml, and a 1.x -> 2.x major
@@ -18,24 +21,37 @@ updates:
         patterns:
           - "org.apache.maven.resolver:*"
     ignore:
-      # pin ZooKeeper dependencies to 3.5.x
-      - dependency-name: "org.apache.zookeeper"
-        versions: "[3.6,)"
-      # pin Jetty dependencies to 9.4.x
-      - dependency-name: "org.eclipse.jetty"
-        versions: "[9.5,)"
-      # pin Testng dependencies to 7.3.0
-      - dependency-name: "org.testng"
-        versions: "[7.4.0,)"
+      # zstd-jni 1.5.7-13 and later cannot decode legacy (pre-1.0) zstd frames in .zst batch input.
+      # Version updates are ignored; security updates still open PRs.
+      - dependency-name: "com.github.luben:zstd-jni"
       # skip AWS SDK v2 patch releases, which ship almost daily; minor bumps still come through
       - dependency-name: "software.amazon.awssdk:*"
         update-types: ["version-update:semver-patch"]
+      # Major upgrades of the following dependencies need code or build changes, so they are done by hand.
+      # Dependabot still proposes their minor and patch updates.
+      # Vert.x must stay on the major version used by the Fabric8 Kubernetes client
+      - dependency-name: "io.vertx:*"
+        update-types: ["version-update:semver-major"]
+      # pac4j 6 breaks source compatibility and changes session serialization
+      - dependency-name: "org.pac4j:*"
+        update-types: ["version-update:semver-major"]
+      # javacc-maven-plugin 3 generates a Druid SQL parser that does not compile
+      - dependency-name: "org.codehaus.mojo:javacc-maven-plugin"
+        update-types: ["version-update:semver-major"]
+      # Guice 7 requires migrating from javax to jakarta packages
+      - dependency-name: "com.google.inject:*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "com.google.inject.extensions:*"
+        update-types: ["version-update:semver-major"]
 
   # Don't run dependabot on website
   - package-ecosystem: "npm"
     directory: "/website/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
@@ -45,6 +61,9 @@ updates:
     directory: "/web-console/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]

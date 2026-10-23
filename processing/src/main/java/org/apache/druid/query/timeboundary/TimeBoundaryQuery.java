@@ -49,7 +49,15 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   private static final QuerySegmentSpec DEFAULT_SEGMENT_SPEC = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
   public static final String MAX_TIME = "maxTime";
   public static final String MIN_TIME = "minTime";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MAX_TIME_ARRAY_OUTPUT_NAME} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_TIME_ARRAY_OUTPUT_NAME = "maxTimeArrayOutputName";
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MIN_TIME_ARRAY_OUTPUT_NAME} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MIN_TIME_ARRAY_OUTPUT_NAME = "minTimeArrayOutputName";
 
   private static final byte CACHE_TYPE_ID = 0x0;

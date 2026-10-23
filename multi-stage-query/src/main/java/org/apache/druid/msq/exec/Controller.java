@@ -29,7 +29,6 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
@@ -47,7 +46,8 @@ public interface Controller
    * Unique task/query ID for the batch query run by this controller.
    *
    * Controller IDs must be globally unique. For tasks, this is the task ID from {@link MSQControllerTask#getId()}.
-   * For Dart, this is {@link QueryContexts#CTX_DART_QUERY_ID}, set by {@link SqlEngine#initContextMap(Map)}.
+   * For Dart, this is {@link org.apache.druid.query.context.QueryContextParameters#DART_QUERY_ID}, set by
+   * {@link SqlEngine#initContextMap(Map)}.
    */
   String queryId();
 

@@ -75,9 +75,11 @@ class SubQueryMarker extends GutterMarker {
     button.setAttribute('data-tooltip', 'Run this query');
     button.append(icon);
 
-    const fragment = document.createDocumentFragment();
-    fragment.append(button, String(this.lineNumber));
-    return fragment;
+    // The gutter expects a single node per marker (it removes just the one node when the marker goes away) so the button
+    // and the line number must be wrapped together
+    const wrapper = document.createElement('span');
+    wrapper.append(button, String(this.lineNumber));
+    return wrapper;
   }
 }
 

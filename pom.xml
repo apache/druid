@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>39.0.0-SNAPSHOT</version>
+    <version>40.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -73,8 +73,7 @@
         <java.version>25</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
-        <aether.version>1.1.0</aether.version>
-        <maven.resolver.version>2.0.23</maven.resolver.version>
+        <maven.resolver.version>2.0.24</maven.resolver.version>
         <apache.curator.version>5.9.0</apache.curator.version>
         <apache.kafka.version>4.3.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
@@ -101,12 +100,12 @@
         <errorprone.version>2.50.0</errorprone.version>
         <fabric8.version>8.0.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>33.7.1-jre</guava.version>
+        <guava.version>33.7.2-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
         <iceberg.core.version>1.12.0</iceberg.core.version>
         <arrow.version>19.0.0</arrow.version>
-        <jetty.version>12.1.13</jetty.version>
+        <jetty.version>12.1.14</jetty.version>
         <jspecify.version>1.0.1</jspecify.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.22.3</jackson.version>
@@ -114,7 +113,7 @@
         <log4j.version>2.26.1</log4j.version>
         <mysql.version>26.7.0</mysql.version>
         <mariadb.version>3.5.10</mariadb.version>
-        <netty4.version>4.2.18.Final</netty4.version>
+        <netty4.version>4.2.19.Final</netty4.version>
         <postgresql.version>42.7.13</postgresql.version>
         <protobuf.version>4.36.2</protobuf.version>
         <resilience4j.version>2.4.0</resilience4j.version>
@@ -128,6 +127,7 @@
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.55.6</aws.sdk.v2.version>
+        <aws.msk.iam.auth.version>2.3.9</aws.msk.iam.auth.version>
         <caffeine.version>3.3.0</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
@@ -136,11 +136,9 @@
         <okhttp.version>5.5.0</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.7</zookeeper.version>
-        <checkerframework.version>4.2.3</checkerframework.version>
-        <com.google.apis.client.version>2.7.2</com.google.apis.client.version>
-        <com.google.http.client.apis.version>2.2.0</com.google.http.client.apis.version>
+        <checkerframework.version>4.3.0</checkerframework.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.cloud.storage.version>2.74.0</com.google.cloud.storage.version>
+        <com.google.cloud.libraries-bom.version>26.90.0</com.google.cloud.libraries-bom.version>
         <jdk.strong.encapsulation.argLine>
             <!-- Strong encapsulation parameters -->
             <!-- When updating this list, update all four locations: -->
@@ -314,7 +312,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.22.1</version>
+                <version>1.23.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -415,6 +413,11 @@
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>aws-crt-client</artifactId>
                 <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.msk</groupId>
+                <artifactId>aws-msk-iam-auth</artifactId>
+                <version>${aws.msk.iam.auth.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.minidev</groupId>
@@ -781,12 +784,12 @@
             <dependency>
                 <groupId>org.glassfish.grizzly</groupId>
                 <artifactId>grizzly-http</artifactId>
-                <version>5.0.2</version>
+                <version>5.0.3</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.grizzly</groupId>
                 <artifactId>grizzly-http-server</artifactId>
-                <version>5.0.2</version>
+                <version>5.0.3</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.jaxb</groupId>
@@ -932,7 +935,7 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.14.4</version>
+                <version>2.15.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
@@ -1026,7 +1029,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.8</version>
+                <version>1.1.10.11</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -1034,25 +1037,9 @@
                 <version>${protobuf.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.tesla.aether</groupId>
-                <artifactId>tesla-aether</artifactId>
-                <version>0.0.5</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.aether</groupId>
-                <artifactId>aether-api</artifactId>
-                <version>${aether.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.aether</groupId>
-                <artifactId>aether-util</artifactId>
-                <version>${aether.version}</version>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java-util</artifactId>
+                <version>${protobuf.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.maven.resolver</groupId>
@@ -1087,7 +1074,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents.client5</groupId>
                 <artifactId>httpclient5</artifactId>
-                <version>5.6.4</version>
+                <version>5.6.5</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents.core5</groupId>
@@ -1163,7 +1150,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>1.6.23</version>
+                <version>1.6.24</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>
@@ -1183,12 +1170,12 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>9.10.1</version>
+                <version>9.11</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>9.10.1</version>
+                <version>9.11</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
@@ -1263,7 +1250,7 @@
             <dependency>
                 <groupId>org.apache.maven</groupId>
                 <artifactId>maven-artifact</artifactId>
-                <version>3.9.16</version>
+                <version>3.10.0</version>
             </dependency>
             <dependency>
                 <groupId>javax.ws.rs</groupId>
@@ -1415,58 +1402,11 @@
            </dependency>
 
             <!-- GCP -->
-            <dependency>
-                <groupId>com.google.api-client</groupId>
-                <artifactId>google-api-client</artifactId>
-                <version>${com.google.apis.client.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.google.code.findbugs</groupId>
-                        <artifactId>jsr305</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.google.guava</groupId>
-                        <artifactId>guava-jdk5</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.apache.httpcomponents</groupId>
-                        <artifactId>httpcore</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.apache.httpcomponents</groupId>
-                        <artifactId>httpclient</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
             <!-- Transitive dependency of google-api-client. -->
             <dependency>
                 <groupId>com.google.auto.value</groupId>
                 <artifactId>auto-value-annotations</artifactId>
                 <version>1.11.1</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.http-client</groupId>
-                <artifactId>google-http-client</artifactId>
-                <version>${com.google.http.client.apis.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.http-client</groupId>
-                <artifactId>google-http-client-jackson2</artifactId>
-                <version>${com.google.http.client.apis.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.apache.httpcomponents</groupId>
-                        <artifactId>httpclient</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.google.j2objc</groupId>
@@ -1616,6 +1556,25 @@
                 <groupId>com.google.re2j</groupId>
                 <artifactId>re2j</artifactId>
                 <version>1.8</version>
+            </dependency>
+            <!-- GraalJS dependencies that libraries-bom would otherwise downgrade to an older GraalVM version -->
+            <dependency>
+                <groupId>org.graalvm.sdk</groupId>
+                <artifactId>nativeimage</artifactId>
+                <version>${graaljs.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.graalvm.sdk</groupId>
+                <artifactId>word</artifactId>
+                <version>${graaljs.version}</version>
+            </dependency>
+            <!-- Imported last so that the explicit versions above take precedence -->
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>libraries-bom</artifactId>
+                <version>${com.google.cloud.libraries-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -2403,7 +2362,6 @@
                                 <exclude>LICENSE.BINARY</exclude>
                                 <exclude>NOTICE</exclude>
                                 <exclude>NOTICE.BINARY</exclude>
-                                <exclude>LABELS</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>

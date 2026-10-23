@@ -22,13 +22,14 @@ package org.apache.druid.query.groupby.orderby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
@@ -187,7 +188,7 @@ public class DefaultLimitSpecTest
                     .setInterval("1000/3000")
                     .setDimensions(new DefaultDimensionSpec("k1", "k1", ColumnType.DOUBLE))
                     .setGranularity(Granularities.ALL)
-                    .overrideContext(ImmutableMap.of(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true))
+                    .overrideContext(QueryContext.ofMap(QueryContextParameters.SORT_BY_DIMS_FIRST, true))
                     .build()
     );
 
@@ -211,7 +212,7 @@ public class DefaultLimitSpecTest
                     .setInterval("1000/3000")
                     .setDimensions(new DefaultDimensionSpec("k1", "k1", ColumnType.DOUBLE))
                     .setGranularity(Granularities.NONE)
-                    .overrideContext(ImmutableMap.of(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true))
+                    .overrideContext(QueryContext.ofMap(QueryContextParameters.SORT_BY_DIMS_FIRST, true))
                     .build()
     );
 

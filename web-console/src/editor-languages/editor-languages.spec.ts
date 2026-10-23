@@ -66,6 +66,21 @@ line */ SELECT`;
     expect(tokenOf(dsqlLanguage, sql, '(x AS VARCHAR)')).toEqual('Parens');
   });
 
+  it('highlights NULLS FIRST / NULLS LAST as keywords', () => {
+    expect(tokenize(dsqlLanguage, 'ORDER BY 2 DESC NULLS LAST, 1 NULLS FIRST')).toEqual([
+      ['Keyword', 'ORDER'],
+      ['Keyword', 'BY'],
+      ['Number', '2'],
+      ['Keyword', 'DESC'],
+      ['Keyword', 'NULLS'],
+      ['Keyword', 'LAST'],
+      ['Punctuation', ','],
+      ['Number', '1'],
+      ['Keyword', 'NULLS'],
+      ['Keyword', 'FIRST'],
+    ]);
+  });
+
   it('highlights unterminated DruidSQL tokens', () => {
     expect(tokenOf(dsqlLanguage, 'SELECT /* not closed', '/* not closed')).toEqual('BlockComment');
     // An unterminated literal or quoted identifier lasts until the end of the line

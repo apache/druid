@@ -27,7 +27,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>39.0.0-SNAPSHOT</version>
+        <version>40.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -45,12 +45,6 @@
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-indexing-service</artifactId>
             <version>${project.parent.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.eclipse.aether</groupId>
-                    <artifactId>aether-api</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>

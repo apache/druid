@@ -1272,7 +1272,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("sortByDimsFirst", true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.SORT_BY_DIMS_FIRST, true))
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
@@ -1401,7 +1401,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec(dimName, "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING, false))
         .build();
 
     if (!vectorize) {
@@ -1421,8 +1421,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                   "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
                   + " Consider setting '%s' to true in your query context.",
                   dimName,
-                  GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
-                  GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+                  QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING,
+                  QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING
               )
           )
       );
@@ -3070,7 +3070,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 1))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, HumanReadableBytes.valueOf(0)))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1))
         .build();
 
     final ResourceLimitExceededException exception = Assertions.assertThrows(
@@ -3092,7 +3093,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("maxSpillFileCount", 1, GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_SPILL_FILE_COUNT, 1))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1))
         .build();
 
     final String expectedMessage;
@@ -3122,7 +3124,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 1, GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, HumanReadableBytes.valueOf(1)))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1))
         .build();
 
     final String expectedMessage;
@@ -3157,12 +3160,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null
             )
         )
-        .overrideContext(
-            ImmutableMap.of(
-                "maxOnDiskStorage", Integer.MAX_VALUE,
-                "bufferGrouperMaxSize", Integer.MAX_VALUE
-            )
-        )
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, HumanReadableBytes.valueOf(Integer.MAX_VALUE)))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, Integer.MAX_VALUE))
         .build();
 
     final GroupByQuery query = makeQueryBuilder()
@@ -3170,7 +3169,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 0))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, HumanReadableBytes.valueOf(0)))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 0))
         .build();
 
     final ResourceLimitExceededException exception = Assertions.assertThrows(
@@ -3593,9 +3593,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
-    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
-    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
-        QueryContexts.USE_PROJECTION,
+    GroupByQuery queryNoProjection = queryBuilder
+        .setContext(QueryContext.ofMap(QueryContextParameters.NO_PROJECTIONS, true))
+        .build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(QueryContext.ofMap(
+        QueryContextParameters.USE_PROJECTION,
         "daily_countAndQualityCardinalityAndMaxLongNullable"
     )).build();
     // act
@@ -3628,9 +3630,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setInterval("2011-01-21T00:00:00.000Z/P1D")
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
-    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
-    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
-        QueryContexts.USE_PROJECTION,
+    GroupByQuery queryNoProjection = queryBuilder
+        .setContext(QueryContext.ofMap(QueryContextParameters.NO_PROJECTIONS, true))
+        .build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(QueryContext.ofMap(
+        QueryContextParameters.USE_PROJECTION,
         "daily_countAndQualityCardinalityAndMaxLongNullable"
     )).build();
 
@@ -5196,7 +5200,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("sortByDimsFirst", true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.SORT_BY_DIMS_FIRST, true))
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
@@ -8855,7 +8859,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ImmutableList.of()
         ))
         .setLimitSpec(DefaultLimitSpec.builder().limit(25).orderBy("placement", "market").build())
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
@@ -11784,7 +11788,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 2
             )
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
@@ -11830,7 +11834,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 2
             )
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
@@ -11873,7 +11877,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 6
             )
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
@@ -11960,7 +11964,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 20
             )
         )
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -12031,7 +12035,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 5
             )
         )
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -12097,7 +12101,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 5
             )
         )
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -12164,7 +12168,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 3
             )
         )
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -12236,9 +12240,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 5
             )
         )
-        .overrideContext(
-            ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true)
-        )
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -12317,12 +12319,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 5
             )
         )
-        .overrideContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
-                true
-            )
-        )
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -12395,12 +12392,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setPostAggregatorSpecs(
             Collections.singletonList(new ConstantPostAggregator("constant", 1))
         )
-        .overrideContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
-                true
-            )
-        )
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .build();
 
     final UnsupportedOperationException exception = Assertions.assertThrows(
@@ -12613,7 +12605,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.FORCE_LIMIT_PUSH_DOWN, true))
         .setHavingSpec(new GreaterThanHavingSpec("rows", 10))
         .build();
     final IAE exception = Assertions.assertThrows(IAE.class, query::isApplyLimitPushDown);
@@ -12762,7 +12754,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, false))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, false))
         .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec(
             "nullable",
             OrderByColumnSpec.Direction.ASCENDING
@@ -14092,11 +14084,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
   private Map<String, Object> makeContext()
   {
-    return ImmutableMap.<String, Object>builder()
-                       .put(QueryContextParameters.VECTORIZE.getName(), vectorize ? "force" : "false")
-                       .put(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.getName(), vectorize ? "force" : "false")
-                       .put("vectorSize", 16) // Small vector size to ensure we use more than one.
-                       .build();
+    return QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        vectorize ? QueryContexts.Vectorize.FORCE : QueryContexts.Vectorize.FALSE,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorize ? QueryContexts.Vectorize.FORCE : QueryContexts.Vectorize.FALSE,
+        QueryContextParameters.VECTOR_SIZE,
+        16 // Small vector size to ensure we use more than one.
+    );
   }
 
   private void verifyGroupByMetricsForSmallBufferConfig(boolean skipMergeDictionaryMetric)
