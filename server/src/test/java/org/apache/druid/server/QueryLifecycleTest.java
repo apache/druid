@@ -53,6 +53,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
@@ -93,6 +94,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1143,14 +1145,16 @@ public class QueryLifecycleTest
   }
 
   /**
-   * A native system-table query requires DATASOURCE READ on its namespaced table name whatever the value of
-   * {@code X-Druid-Native-Query-Route}: the header selects where the query runs, it doesn't bypass authorization.
+   * With {@code druid.auth.authorizeSystemTablesDirectly}, a native system-table query requires SYSTEM_TABLE READ on
+   * the table whatever the value of {@code X-Druid-Native-Query-Route}: the header selects where the query runs, it
+   * doesn't bypass authorization.
    */
   @ParameterizedTest(name = "route = {0}")
   @NullSource
   @ValueSource(strings = {QueryResource.NATIVE_QUERY_ROUTE_LOCAL, "LOCAL", "remote"})
-  public void testSystemTableQueryIsDeniedWithoutTableReadForAnyRoute(@Nullable final String route)
+  public void testSystemTableQueryIsDeniedWithoutSystemTableReadForAnyRoute(@Nullable final String route)
   {
+    authConfig = AuthConfig.newBuilder().setAuthorizeSystemTablesDirectly(true).build();
     final AtomicInteger handlerCalls = new AtomicInteger();
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
@@ -1158,7 +1162,7 @@ public class QueryLifecycleTest
     EasyMock.expect(
         authorizer.authorize(
             authenticationResult,
-            new Resource("sys.server_properties", ResourceType.DATASOURCE),
+            new Resource("server_properties", ResourceType.SYSTEM_TABLE),
             Action.READ
         )
     ).andReturn(Access.DENIED).once();
@@ -1177,7 +1181,8 @@ public class QueryLifecycleTest
   /**
    * The system-table handler receives the identity that authenticated the HTTP request, so the table's own checks
    * (such as STATE READ for {@code server_properties}) apply to the caller for every value of
-   * {@code X-Druid-Native-Query-Route}.
+   * {@code X-Druid-Native-Query-Route}. Without {@code druid.auth.authorizeSystemTablesDirectly}, the table has no
+   * table-level check, as in the SQL {@code sys} schema, so the authorizer isn't called.
    */
   @ParameterizedTest(name = "route = {0}")
   @NullSource
@@ -1188,13 +1193,6 @@ public class QueryLifecycleTest
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(
-        authorizer.authorize(
-            authenticationResult,
-            new Resource("sys.server_properties", ResourceType.DATASOURCE),
-            Action.READ
-        )
-    ).andReturn(Access.OK).once();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
     replayAll();
 
@@ -1206,6 +1204,44 @@ public class QueryLifecycleTest
     Assertions.assertTrue(lifecycle.authorize(mockRequest(route)).allowAccessWithNoRestriction());
     lifecycle.execute();
     Assertions.assertEquals(1, handlerCalls.get());
+  }
+
+  /**
+   * In a query that reads both a table and a system table, the table still needs DATASOURCE READ, and the system
+   * table needs SYSTEM_TABLE READ only with {@code druid.auth.authorizeSystemTablesDirectly}. The system table's
+   * {@code sys.}-prefixed name is never authorized as a datasource.
+   */
+  @ParameterizedTest(name = "authorizeSystemTablesDirectly = {0}")
+  @ValueSource(booleans = {false, true})
+  public void testTableAndSystemTableAuthorization(final boolean authorizeSystemTablesDirectly)
+  {
+    authConfig = AuthConfig.newBuilder().setAuthorizeSystemTablesDirectly(authorizeSystemTablesDirectly).build();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(
+        authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ)
+    ).andReturn(Access.OK).once();
+    if (authorizeSystemTablesDirectly) {
+      EasyMock.expect(
+          authorizer.authorize(authenticationResult, new Resource("tasks", ResourceType.SYSTEM_TABLE), Action.READ)
+      ).andReturn(Access.OK).once();
+    }
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle(countingHandler(new AtomicInteger(), null));
+    lifecycle.initialize(
+        Druids.newScanQueryBuilder()
+              .dataSource(
+                  new UnionDataSource(List.of(new TableDataSource(DATASOURCE), new SystemTableDataSource("tasks")))
+              )
+              .eternityInterval()
+              .build()
+    );
+
+    Assertions.assertTrue(lifecycle.authorize(mockRequest()).allowAccessWithNoRestriction());
+    EasyMock.verify(authorizer);
   }
 
   private static ScanQuery serverPropertiesScan()
@@ -1288,13 +1324,6 @@ public class QueryLifecycleTest
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(
-        authorizer.authorize(
-            authenticationResult,
-            new Resource("sys.tasks", ResourceType.DATASOURCE),
-            Action.READ
-        )
-    ).andReturn(Access.OK).once();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
     replayAll();
 

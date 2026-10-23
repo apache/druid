@@ -52,8 +52,9 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
 
   private HttpClient druid99;
-  private HttpClient sysDatasourceUser;
-  private HttpClient sysDatasourceWithStateUser;
+  private HttpClient sysTableUser;
+  private HttpClient sysTableWithStateUser;
+  private HttpClient stateWithoutSysTableUser;
 
   @Override
   protected EmbeddedResource getAuthResource()
@@ -68,14 +69,15 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   /**
-   * With DATASOURCE READ on {@code sys.server_properties}, a native query passes the datasource check, so STATE READ,
-   * which {@code sys.server_properties} requires, decides the result on every route.
+   * With {@code druid.auth.authorizeSystemTablesDirectly}, a native {@code sys.server_properties} query needs both
+   * SYSTEM_TABLE READ on the table and STATE READ, which the table's row authorizer requires, on every route.
    */
   @Test
-  public void test_nativeSystemTableQuery_requiresStateRead()
+  public void test_nativeSystemTableQuery_requiresSystemTableAndStateRead()
   {
-    assertNativeSystemTableQueryStatus(sysDatasourceUser, HttpResponseStatus.FORBIDDEN);
-    assertNativeSystemTableQueryStatus(sysDatasourceWithStateUser, HttpResponseStatus.OK);
+    assertNativeSystemTableQueryStatus(sysTableWithStateUser, HttpResponseStatus.OK);
+    assertNativeSystemTableQueryStatus(sysTableUser, HttpResponseStatus.FORBIDDEN);
+    assertNativeSystemTableQueryStatus(stateWithoutSysTableUser, HttpResponseStatus.FORBIDDEN);
   }
 
   @Override
@@ -163,32 +165,18 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
         httpClient
     );
 
-    final ResourceAction readSysDatasources =
-        new ResourceAction(new Resource("sys\\..*", ResourceType.DATASOURCE), Action.READ);
+    final ResourceAction readServerPropertiesTable =
+        new ResourceAction(new Resource("server_properties", ResourceType.SYSTEM_TABLE), Action.READ);
+    final ResourceAction readState = new ResourceAction(new Resource(".*", ResourceType.STATE), Action.READ);
     // The Router sets queryId on native queries it forwards, and this cluster authorizes query context keys.
     final ResourceAction writeQueryId =
         new ResourceAction(new Resource(QueryContextParameters.QUERY_ID.getName(), ResourceType.QUERY_CONTEXT), Action.WRITE);
-    createUserAndRoleWithPermissions(
-        "sysDatasourceUser",
-        "helloworld",
-        "sysDatasourceRole",
-        List.of(readSysDatasources, writeQueryId)
+    sysTableUser = createUserWithClient("sysTableUser", List.of(readServerPropertiesTable, writeQueryId));
+    sysTableWithStateUser = createUserWithClient(
+        "sysTableWithStateUser",
+        List.of(readServerPropertiesTable, readState, writeQueryId)
     );
-    sysDatasourceUser = new CredentialedHttpClient(new BasicCredentials("sysDatasourceUser", "helloworld"), httpClient);
-    createUserAndRoleWithPermissions(
-        "sysDatasourceWithStateUser",
-        "helloworld",
-        "sysDatasourceWithStateRole",
-        List.of(
-            readSysDatasources,
-            writeQueryId,
-            new ResourceAction(new Resource(".*", ResourceType.STATE), Action.READ)
-        )
-    );
-    sysDatasourceWithStateUser = new CredentialedHttpClient(
-        new BasicCredentials("sysDatasourceWithStateUser", "helloworld"),
-        httpClient
-    );
+    stateWithoutSysTableUser = createUserWithClient("stateWithoutSysTableUser", List.of(readState, writeQueryId));
   }
 
   @Override
@@ -231,6 +219,12 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
     connectionProperties.setProperty("user", user.getName());
     connectionProperties.setProperty("password", user.getPassword());
     return connectionProperties;
+  }
+
+  private HttpClient createUserWithClient(final String user, final List<ResourceAction> permissions)
+  {
+    createUserAndRoleWithPermissions(user, "helloworld", user + "Role", permissions);
+    return new CredentialedHttpClient(new BasicCredentials(user, "helloworld"), httpClient);
   }
 
   private void createUserAndRoleWithPermissions(

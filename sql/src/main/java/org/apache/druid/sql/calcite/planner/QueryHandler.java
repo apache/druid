@@ -622,7 +622,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                           .collect(Collectors.toSet());
         final Set<String> authorizationTrackedDataSourceNames = new HashSet<>(druidRel.getDataSourceNames());
         if (plannerContext.allowNativeFunctionsForSystemTables()
-            && !plannerContext.getPlannerConfig().isAuthorizeSystemTablesDirectly()) {
+            && !plannerContext.getPlannerConfig().isAuthorizeSystemTablesDirectly()
+            && !plannerContext.getPlannerToolbox().getAuthConfig().isAuthorizeSystemTablesDirectly()) {
           // Native system tables preserve the traditional row-level authorization model. They therefore have no
           // SQL resource action unless direct system-table authorization is enabled, and must not make this
           // datasource-resource sanity check fail.

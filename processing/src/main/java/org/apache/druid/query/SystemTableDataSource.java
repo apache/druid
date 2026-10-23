@@ -22,9 +22,14 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.PolicyEnforcer;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -36,10 +41,17 @@ public class SystemTableDataSource extends LeafDataSource
 
   private final String table;
 
+  /**
+   * QueryScheduler uses table names as cancellation authorization resources. Namespace the synthetic datasource name
+   * so a system table cannot collide with a regular Druid datasource that has the same unqualified name.
+   */
+  private final String qualifiedTableName;
+
   @JsonCreator
   public SystemTableDataSource(@JsonProperty("table") final String table)
   {
     this.table = Preconditions.checkNotNull(table, "table");
+    this.qualifiedTableName = "sys." + table;
   }
 
   @JsonProperty
@@ -51,9 +63,22 @@ public class SystemTableDataSource extends LeafDataSource
   @Override
   public Set<String> getTableNames()
   {
-    // QueryScheduler uses table names as cancellation authorization resources. Namespace the synthetic datasource
-    // name so a system table cannot collide with a regular Druid datasource that has the same unqualified name.
-    return Collections.singleton("sys." + table);
+    return Collections.singleton(qualifiedTableName);
+  }
+
+  /**
+   * System tables have no row or column policies: their rows are authorized by the table's own row authorizer. Fails
+   * rather than ignoring a policy that an authorizer returned for this table.
+   */
+  @Override
+  public DataSource withPolicies(final Map<String, Optional<Policy>> policyMap, final PolicyEnforcer policyEnforcer)
+  {
+    if (policyMap.getOrDefault(qualifiedTableName, Optional.empty()).isPresent()) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build("System table[%s] doesn't support policies", table);
+    }
+    return this;
   }
 
   @Override

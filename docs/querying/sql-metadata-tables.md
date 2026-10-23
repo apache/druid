@@ -391,7 +391,7 @@ The `sys.query_context_parameters` table is experimental. Its columns and their 
 
 The `query_context_parameters` table lists the [query context parameters](query-context.md) that users can set, along with their types, defaults, and where they apply. Each row represents one parameter. Parameters that only Druid sets internally are not listed.
 
-Unlike other `sys` tables that expose cluster state, such as `servers`, this table doesn't require `READ` permission on the `STATE` resource. Any user who can query `sys` tables can read it; when `druid.sql.planner.authorizeSystemTablesDirectly` is true, that means `READ` permission on the `SYSTEM_TABLE` resource `query_context_parameters`. Only the `effective_value` and `effective_source` columns, which come from the Broker configuration, require `READ` permission on the `CONFIG` resource. Without it, the query still succeeds, but `effective_value` is null and `effective_source` is `UNAUTHORIZED` in every row.
+Unlike other `sys` tables that expose cluster state, such as `servers`, this table doesn't require `READ` permission on the `STATE` resource. Any user who can query `sys` tables can read it; when `druid.auth.authorizeSystemTablesDirectly` is true, that means `READ` permission on the `SYSTEM_TABLE` resource `query_context_parameters`. Only the `effective_value` and `effective_source` columns, which come from the Broker configuration, require `READ` permission on the `CONFIG` resource. Without it, the query still succeeds, but `effective_value` is null and `effective_source` is `UNAUTHORIZED` in every row.
 
 |Column|Type|Notes|
 |------|-----|-----|

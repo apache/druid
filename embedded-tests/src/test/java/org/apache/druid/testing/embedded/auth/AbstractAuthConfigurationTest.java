@@ -267,7 +267,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         .addCommonProperty("druid.auth.unsecuredPaths", "[\"/druid/coordinator/v1/loadqueue\"]")
         .addCommonProperty("druid.auth.authorizeQueryContextParams", "true")
         .addCommonProperty("druid.msq.dart.enabled", "true")
-        .addCommonProperty("druid.sql.planner.authorizeSystemTablesDirectly", "true")
+        .addCommonProperty("druid.auth.authorizeSystemTablesDirectly", "true")
         .addCommonProperty("druid.server.http.allowedHttpMethods", "[\"OPTIONS\"]")
         .addServer(coordinator)
         .addServer(overlord)
@@ -655,8 +655,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   {
     assertNativeSystemTableQueryStatus(getHttpClient(User.ADMIN), HttpResponseStatus.OK);
 
-    // Neither user has DATASOURCE READ on sys.server_properties, so both are denied before the table's own
-    // STATE READ check runs.
+    // Neither user has SYSTEM_TABLE READ on server_properties, so both are denied before the table's own STATE READ
+    // check runs.
     for (final User user : List.of(User.DATASOURCE_ONLY_USER, User.DATASOURCE_AND_SYS_USER)) {
       assertNativeSystemTableQueryStatus(getHttpClient(user), HttpResponseStatus.FORBIDDEN);
     }
