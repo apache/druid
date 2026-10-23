@@ -1704,10 +1704,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   void handleDynamicAllocationTasksNotice(
       Callable<Integer> scaleAction,
-      Runnable onSuccessfulScale
+      Runnable onSuccessfulScale,
+      boolean isRolloverInProgress
   )
   {
-    new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, false).handle();
+    new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, isRolloverInProgress).handle();
   }
 
   private Runnable buildRunTask()
@@ -4071,11 +4072,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             "Updating taskCount for supervisor[%s] from [%d] to [%d] during rollover.",
             supervisorId, currentTaskCount, rolloverTaskCount
         );
-        new DynamicAllocationTasksNotice(
+        handleDynamicAllocationTasksNotice(
             () -> rolloverTaskCount,
             () -> {},
             true
-        ).handle();
+        );
       } else {
         // Reset last scale time even if taskCount is not being changed.
         // Otherwise, we might have a scaling event right after the task rollover.

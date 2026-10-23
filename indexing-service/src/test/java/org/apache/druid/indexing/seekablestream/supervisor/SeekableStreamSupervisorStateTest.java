@@ -4260,7 +4260,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
     // minScaleUpDelay = 0 means any scale-up is immediately allowed.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, false);
 
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
@@ -4280,11 +4280,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
     // First scale-up succeeds and stamps the last-scale timestamp.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, false);
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-up is within the 1h minScaleUpDelay window and must be blocked.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {}, false);
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount(), "Second scale-up must not take effect");
 
     final List<ServiceMetricEvent> events =
@@ -4297,6 +4297,25 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void test_dynamicAllocation_allowsScaleUpDuringRollover_evenIfCooldownNotElapsed()
+  {
+    final long scaleUpCooldown = Duration.standardHours(1).getMillis();
+    final long unusedCooldown = Duration.standardHours(1).getMillis();
+    setupSupervisorForAutoScalingTest(scaleUpCooldown, unusedCooldown, 2);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, true);
+
+    Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assertions.assertEquals(1, events.size(), "Exactly one required-tasks emission expected");
+    assertScaledToTaskCount(events.get(0), 5);
+  }
+
+  @Test
   public void testDynamicAllocationScaleDownAllowedWhenCooldownElapsed()
   {
     final long unusedCooldown = Duration.standardHours(1).getMillis();
@@ -4306,7 +4325,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
     // minScaleDownDelay = 0 means any scale-down is immediately allowed.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, false);
 
     Assertions.assertEquals(2, supervisor.getIoConfig().getTaskCount());
 
@@ -4326,11 +4345,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
     // First scale-down succeeds and stamps the last-scale timestamp.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, false);
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-down is within the 1h minScaleDownDelay window and must be blocked.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, false);
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount(), "Second scale-down must not take effect");
 
     final List<ServiceMetricEvent> events =
@@ -4341,6 +4360,25 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void test_dynamicAllocation_allowsScaleDownDuringRollover_evenIfCooldownNotElapsed()
+  {
+    final long unusedCooldown = Duration.standardHours(1).getMillis();
+    final long scaleDownCooldown = Duration.standardHours(1).getMillis();
+    setupSupervisorForAutoScalingTest(unusedCooldown, scaleDownCooldown, 5);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, false);
+
+    Assertions.assertEquals(2, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assertions.assertEquals(1, events.size(), "Exactly one required-tasks emission expected");
+    assertScaledToTaskCount(events.get(0), 2);
+  }
+
+  @Test
   public void testDynamicAllocationClampsDesiredAboveMaxToMax()
   {
     // Scaler returns 20, but taskCountMax=10. Supervisor must clamp and scale to 10.
@@ -4348,7 +4386,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 20, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 20, () -> {}, false);
 
     // Task count is clamped to max (10), not the scaler's desired (20).
     Assertions.assertEquals(10, supervisor.getIoConfig().getTaskCount());
@@ -4369,7 +4407,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, false);
 
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
@@ -4388,7 +4426,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 15, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 15, () -> {}, false);
 
     Assertions.assertEquals(10, supervisor.getIoConfig().getTaskCount(), "Task count must not change when at max");
 
@@ -4407,7 +4445,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, false);
 
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount(), "Task count must not change when at min");
 
@@ -4425,7 +4463,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, false);
 
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
@@ -4443,7 +4481,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> -1, () -> {});
+    supervisor.handleDynamicAllocationTasksNotice(() -> -1, () -> {}, false);
 
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount(), "Task count must not change on pathological return");
 
