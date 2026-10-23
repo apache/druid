@@ -449,7 +449,7 @@ public class QueryContextTest
     assertEquals(Integer.MAX_VALUE, context1.getInFunctionThreshold());
 
     final QueryContext context2 = QueryContext.empty();
-    assertEquals(QueryContextParameters.IN_FUNCTION_THRESHOLD.getDefaultValue().orElseThrow(), context2.getInFunctionThreshold());
+    assertEquals(QueryContextParameters.IN_FUNCTION_THRESHOLD.getLiteralDefault(), context2.getInFunctionThreshold());
   }
 
   @Test
@@ -459,7 +459,7 @@ public class QueryContextTest
     assertEquals(Integer.MAX_VALUE, context1.getInFunctionExprThreshold());
 
     final QueryContext context2 = QueryContext.empty();
-    assertEquals(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD.getDefaultValue().orElseThrow(), context2.getInFunctionExprThreshold());
+    assertEquals(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD.getLiteralDefault(), context2.getInFunctionExprThreshold());
   }
 
   @Test
@@ -597,6 +597,13 @@ public class QueryContextTest
     assertEquals(
         AcquireMode.PARTIAL,
         QueryContext.builder().putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "PARTIAL").toContext()
+                    .getSegmentAcquireMode(AcquireMode.FULL)
+    );
+    assertEquals(
+        AcquireMode.PARTIAL_RULE_HELD,
+        QueryContext.builder()
+                    .putRaw(QueryContextParameters.SEGMENT_ACQUIRE_MODE.getName(), "partial_rule_held")
+                    .toContext()
                     .getSegmentAcquireMode(AcquireMode.FULL)
     );
     assertThrows(

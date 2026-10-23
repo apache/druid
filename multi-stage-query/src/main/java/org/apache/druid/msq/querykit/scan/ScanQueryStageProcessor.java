@@ -124,6 +124,13 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
   }
 
   @Override
+  protected boolean canSkipRemainingInputs()
+  {
+    return runningCountForLimit != null
+           && runningCountForLimit.get() >= ScanQueryFrameProcessor.getOffsetPlusLimit(query);
+  }
+
+  @Override
   protected AcquireMode getDefaultAcquireMode()
   {
     // Scan reads segments through the async cursor API, so acquire them partially: only the columns the query

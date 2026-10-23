@@ -587,7 +587,8 @@ public class QueryContexts
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
   /**
-   * @deprecated Use the declared default of {@link QueryContextParameters#USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY} instead.
+   * @deprecated The default of {@link QueryContextParameters#USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY} is the value of the
+   * {@code druid.server.http.useNestedForUnknownTypeInSubquery} runtime property.
    */
   @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;

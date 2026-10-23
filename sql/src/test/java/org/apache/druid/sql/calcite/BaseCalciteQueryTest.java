@@ -175,7 +175,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
                   .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
                   .put(
                       QueryContextParameters.DEFAULT_TIMEOUT,
-                      QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+                      QueryContextParameters.DEFAULT_TIMEOUT.getLiteralDefault()
                   )
                   .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
                   .toMap();
@@ -195,7 +195,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
       .put(
           QueryContextParameters.DEFAULT_TIMEOUT,
-          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+          QueryContextParameters.DEFAULT_TIMEOUT.getLiteralDefault()
       )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
@@ -206,7 +206,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
       .put(
           QueryContextParameters.DEFAULT_TIMEOUT,
-          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+          QueryContextParameters.DEFAULT_TIMEOUT.getLiteralDefault()
       )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
@@ -223,7 +223,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
       .put(
           QueryContextParameters.DEFAULT_TIMEOUT,
-          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+          QueryContextParameters.DEFAULT_TIMEOUT.getLiteralDefault()
       )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
@@ -234,7 +234,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
       .put(
           QueryContextParameters.DEFAULT_TIMEOUT,
-          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+          QueryContextParameters.DEFAULT_TIMEOUT.getLiteralDefault()
       )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
@@ -246,7 +246,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
       .put(
           QueryContextParameters.DEFAULT_TIMEOUT,
-          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+          QueryContextParameters.DEFAULT_TIMEOUT.getLiteralDefault()
       )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .put(QueryContextParameters.SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
@@ -290,7 +290,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     QueryContextParameters.SKIP_EMPTY_BUCKETS.set(TIMESERIES_CONTEXT_LOS_ANGELES, true);
     QueryContextParameters.DEFAULT_TIMEOUT.set(
         TIMESERIES_CONTEXT_LOS_ANGELES,
-        QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+        QueryContextParameters.DEFAULT_TIMEOUT.getLiteralDefault()
     );
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), Long.MAX_VALUE);
 
@@ -1254,7 +1254,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     return (boolean) queryContext.getOrDefault(
         QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getName(),
-        QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow()
+        QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getLiteralDefault()
     );
   }
 

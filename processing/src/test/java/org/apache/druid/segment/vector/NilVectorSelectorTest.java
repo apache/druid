@@ -34,7 +34,7 @@ public class NilVectorSelectorTest extends InitializedNullHandlingTest
   @Test
   public void testDefaultSizedVector()
   {
-    testVectorSize(QueryContextParameters.VECTOR_SIZE.getDefaultValue().orElseThrow());
+    testVectorSize(QueryContextParameters.VECTOR_SIZE.getLiteralDefault());
   }
 
   @Test

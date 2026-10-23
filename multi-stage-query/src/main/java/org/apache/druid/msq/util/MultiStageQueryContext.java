@@ -487,6 +487,17 @@ public class MultiStageQueryContext
     return queryContext.getOrDefault(QueryContextParameters.FAIL_ON_EMPTY_INSERT);
   }
 
+  /**
+   * Whether range partitioning that cannot be honored because the data holds multi-valued fields should fail rather
+   * than fall back to dynamic partitioning. Ingestion wants the fallback, which stores the rows either way; compaction
+   * does not, because the segments it writes would then disagree with the partitionsSpec its config asks for, and it
+   * would keep recompacting the interval trying to reach a layout it never produces.
+   */
+  public static boolean isFailOnMultiValuedRangePartition(final QueryContext queryContext)
+  {
+    return queryContext.getOrDefault(QueryContextParameters.FAIL_ON_MULTI_VALUED_RANGE_PARTITION);
+  }
+
   public static boolean shouldWaitForSegmentLoad(final QueryContext queryContext)
   {
     return queryContext.getOrDefault(QueryContextParameters.WAIT_UNTIL_SEGMENTS_LOAD);

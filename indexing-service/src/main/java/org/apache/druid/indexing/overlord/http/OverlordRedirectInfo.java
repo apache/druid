@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.server.http.RedirectInfo;
 
@@ -72,7 +73,7 @@ public class OverlordRedirectInfo implements RedirectInfo
         location = StringUtils.format("%s?%s", location, queryString);
       }
 
-      return new URL(location);
+      return URIs.toURL(location);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

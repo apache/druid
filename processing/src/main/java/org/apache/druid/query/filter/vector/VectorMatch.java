@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  */
 public class VectorMatch implements ReadableVectorMatch
 {
-  private static final int[] DEFAULT_ALL_TRUE_VECTOR = new int[QueryContextParameters.VECTOR_SIZE.getDefaultValue().orElseThrow()];
+  private static final int[] DEFAULT_ALL_TRUE_VECTOR = new int[QueryContextParameters.VECTOR_SIZE.getLiteralDefault()];
 
   private static final VectorMatch ALL_FALSE = new VectorMatch(new int[0], 0);
 

@@ -193,7 +193,7 @@ public class MultiStageQueryContextTest
   public void getMaxNumTasks_unset_returnsDefaultValue()
   {
     Assertions.assertEquals(
-        QueryContextParameters.MAX_NUM_TASKS.getDefaultValue().orElseThrow(),
+        QueryContextParameters.MAX_NUM_TASKS.getLiteralDefault(),
         MultiStageQueryContext.getMaxNumTasks(QueryContext.empty())
     );
   }
@@ -209,7 +209,7 @@ public class MultiStageQueryContextTest
   public void getRowsPerSegment_unset_returnsDefaultValue()
   {
     Assertions.assertEquals(
-        QueryContextParameters.ROWS_PER_SEGMENT.getDefaultValue().orElseThrow(),
+        QueryContextParameters.ROWS_PER_SEGMENT.getLiteralDefault(),
         MultiStageQueryContext.getRowsPerSegment(QueryContext.empty())
     );
   }
@@ -225,7 +225,7 @@ public class MultiStageQueryContextTest
   public void getMaxRowsInMemory_unset_returnsDefaultValue()
   {
     Assertions.assertEquals(
-        QueryContextParameters.MAX_ROWS_IN_MEMORY.getDefaultValue().orElseThrow(),
+        QueryContextParameters.MAX_ROWS_IN_MEMORY.getLiteralDefault(),
         MultiStageQueryContext.getMaxRowsInMemory(QueryContext.empty())
     );
   }

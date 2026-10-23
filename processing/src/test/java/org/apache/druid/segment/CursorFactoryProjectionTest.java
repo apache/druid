@@ -1449,6 +1449,27 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testTimeseriesQueryMissingNamedProjection()
+  {
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("test")
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .granularity(Granularities.DAY)
+                                        .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                                        .context(QueryContext.ofMap(QueryContextParameters.USE_PROJECTION, "does_not_exist"))
+                                        .build();
+
+    final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> projectionsCursorFactory.makeCursorHolder(buildSpec)
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+    Assertions.assertEquals("Projection[does_not_exist] does not exist", e.getMessage());
+  }
+
+  @Test
   public void testTimeseriesQueryOrderByNotCompatibleWithProjection()
   {
     // Query has `__time ASC` ordering, but projection has `b ASC` ordering, so no projection can be used.

@@ -113,7 +113,7 @@ public class LongCompressionBenchmark
   @Benchmark
   public void readVectorizedContinuous(Blackhole bh)
   {
-    long[] vector = new long[QueryContextParameters.VECTOR_SIZE.getDefaultValue().orElseThrow()];
+    long[] vector = new long[QueryContextParameters.VECTOR_SIZE.getLiteralDefault()];
     ColumnarLongs columnarLongs = supplier.get();
     int count = columnarLongs.size();
     for (int i = 0; i < count; i++) {

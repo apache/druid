@@ -197,6 +197,53 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
+  public void testRangePartitioningCompactionAsksToFailRatherThanFallBack() throws JsonProcessingException
+  {
+    // MSQ ingestion quietly falls back to dynamic partitioning when the data turns out to hold multi-valued fields.
+    // Compaction cannot live with that: the segments would disagree with the partitionsSpec its config asks for, so
+    // the interval would never read as compacted and would be resubmitted on every coordinator run.
+    final CompactionTask rangePartitioned = createCompactionTask(
+        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
+        null,
+        Collections.emptyMap(),
+        null,
+        null
+    );
+    final List<MSQControllerTask> tasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
+        rangePartitioned,
+        INTERVAL_DATASCHEMAS
+    );
+    Assertions.assertEquals(
+        true,
+        Iterables.getOnlyElement(tasks)
+                 .getContext()
+                 .get(QueryContextParameters.FAIL_ON_MULTI_VALUED_RANGE_PARTITION.getName())
+    );
+  }
+
+  @Test
+  public void testDynamicPartitioningCompactionKeepsTheFallback() throws JsonProcessingException
+  {
+    // Nothing to disagree with: dynamic partitioning is what the fallback would have produced anyway.
+    final CompactionTask dynamicPartitioned = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap(),
+        null,
+        null
+    );
+    final List<MSQControllerTask> tasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
+        dynamicPartitioned,
+        INTERVAL_DATASCHEMAS
+    );
+    Assertions.assertNull(
+        Iterables.getOnlyElement(tasks)
+                 .getContext()
+                 .get(QueryContextParameters.FAIL_ON_MULTI_VALUED_RANGE_PARTITION.getName())
+    );
+  }
+
+  @Test
   public void testHashedPartitionsSpecIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
@@ -690,7 +737,8 @@ public class MSQCompactionRunnerTest
         ),
         null,
         null,
-        baseTable
+        baseTable,
+        null
     );
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
@@ -831,7 +879,7 @@ public class MSQCompactionRunnerTest
   {
     return new MSQTuningConfig(
         1,
-        QueryContextParameters.MAX_ROWS_IN_MEMORY.getDefaultValue().orElseThrow(),
+        QueryContextParameters.MAX_ROWS_IN_MEMORY.getLiteralDefault(),
         MAX_ROWS_PER_SEGMENT,
         null,
         createIndexSpec()

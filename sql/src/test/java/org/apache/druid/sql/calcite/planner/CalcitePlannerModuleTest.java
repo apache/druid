@@ -260,7 +260,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     );
 
     assertBloat(contextWithBloat, BLOAT);
-    assertBloat(contextWithoutBloat, QueryContextParameters.SQL_PLANNER_BLOAT.getDefaultValue().orElseThrow());
+    assertBloat(contextWithoutBloat, QueryContextParameters.SQL_PLANNER_BLOAT.getLiteralDefault());
   }
 
   private void assertBloat(PlannerContext context, int expectedBloat)

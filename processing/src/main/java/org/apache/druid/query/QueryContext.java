@@ -278,7 +278,7 @@ public class QueryContext
   @Nullable
   public <T> T get(final QueryContextParameter<T> parameter)
   {
-    return parseOrDefault(parameter, parameter.getDefaultValue().orElse(null));
+    return parseOrDefault(parameter, parameter.getLiteralDefault());
   }
 
   /**
@@ -289,12 +289,11 @@ public class QueryContext
    */
   public <T> T getOrDefault(final QueryContextParameter<T> parameter)
   {
-    return getOrDefault(
-        parameter,
-        parameter.getDefaultValue().orElseThrow(
-            () -> new ISE("Query context parameter [%s] has no declared default", parameter.getName())
-        )
-    );
+    final T literalDefault = parameter.getLiteralDefault();
+    if (literalDefault == null) {
+      throw new ISE("Query context parameter [%s] has no declared default", parameter.getName());
+    }
+    return getOrDefault(parameter, literalDefault);
   }
 
   /**
@@ -548,7 +547,7 @@ public class QueryContext
 
   public boolean isUseNestedForUnknownTypeInSubquery()
   {
-    return getOrDefault(QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
+    return isUseNestedForUnknownTypeInSubquery(false);
   }
 
   public int getUncoveredIntervalsLimit()
@@ -907,7 +906,9 @@ public class QueryContext
    * {@link AcquireMode#PARTIAL} degrades to {@link AcquireMode#FULL} where partial downloads are unavailable, such as
    * when they are disabled by configuration or the segment is not range-readable. Forcing {@link AcquireMode#PARTIAL}
    * where the engine defaults to {@link AcquireMode#FULL} fails at cursor creation if the engine reads segments through
-   * the synchronous cursor API.
+   * the synchronous cursor API. The same applies to {@link AcquireMode#PARTIAL_RULE_HELD}, which never degrades: it
+   * reads only the bundles selected by each segment's partial-load rule, so it is only meaningful on servers that apply
+   * those rules (Historicals) and reads nothing elsewhere.
    */
   public AcquireMode getSegmentAcquireMode(AcquireMode defaultValue)
   {

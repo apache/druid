@@ -388,7 +388,7 @@ public class CompactionSlotManager
     }
     catch (BadQueryContextException e) {
       log.warn(e, "Counting MSQ compaction task with the default number of task slots");
-      return QueryContextParameters.MAX_NUM_TASKS.getDefaultValue().orElseThrow();
+      return QueryContextParameters.MAX_NUM_TASKS.getLiteralDefault();
     }
   }
 }

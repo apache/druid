@@ -183,8 +183,8 @@ public class IndexedTableJoinCursorBenchmark
                     enableFilterPushdown,
                     enableFilterRewrite,
                     enableFilterRewriteValueFilters,
-                    QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getDefaultValue().orElseThrow(),
-                    QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getDefaultValue().orElseThrow()
+                    QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getLiteralDefault(),
+                    QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getLiteralDefault()
                 ),
                 clauses,
                 VirtualColumns.EMPTY,

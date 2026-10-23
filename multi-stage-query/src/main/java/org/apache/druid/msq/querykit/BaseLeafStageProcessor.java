@@ -308,6 +308,15 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
   }
 
   /**
+   * Whether this stage's processors need no more base inputs, because they have already produced all the output the
+   * stage needs. Once this returns true, the {@link ReadableInputQueue} stops loading and handing out inputs.
+   */
+  protected boolean canSkipRemainingInputs()
+  {
+    return false;
+  }
+
+  /**
    * Read base inputs, where "base" is meant in the same sense as in {@link ExecutionVertex}: the primary datasource
    * that drives query processing.
    *
@@ -349,7 +358,8 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
         inputNumbers,
         filteredSlices,
         context.segmentLoadAheadCount(),
-        context.workOrder().getWorkerContext().getSegmentAcquireMode(getDefaultAcquireMode())
+        context.workOrder().getWorkerContext().getSegmentAcquireMode(getDefaultAcquireMode()),
+        this::canSkipRemainingInputs
     );
   }
 
