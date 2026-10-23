@@ -9,6 +9,9 @@ updates:
       # Protect against not-yet-discovered regressions or security issues in new releases of dependencies
       # https://github.blog/changelog/2025-07-01-dependabot-supports-configuration-of-a-minimum-package-age/
       default-days: 14
+    commit-message:
+      prefix: "build"
+      include: "scope"
     groups:
       # The individual org.apache.maven.resolver:* artifacts must move together: they are all
       # pinned to the same version in services/pom.xml and server/pom.xml, and a 1.x -> 2.x major
@@ -46,6 +49,9 @@ updates:
     directory: "/website/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
@@ -55,6 +61,9 @@ updates:
     directory: "/web-console/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]

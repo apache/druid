@@ -54,6 +54,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 
 /**
  * Queue for returning {@link ReadableInput} from a list of {@link PhysicalInputSlice}.
@@ -125,6 +126,12 @@ public class ReadableInputQueue implements Closeable
    * {@link LoadableSegment#acquireIfCached(AcquireMode)}.
    */
   private final AcquireMode acquireMode;
+
+  /**
+   * Whether the caller needs no more inputs. Once true, {@link #nextInput()} returns null and no new segment loads
+   * start; inputs that were already acquired are released by {@link #close()}.
+   */
+  private final BooleanSupplier canSkipRemaining;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   /**
@@ -135,18 +142,21 @@ public class ReadableInputQueue implements Closeable
    * @param slices array of slices, one per input (same length as inputNumbers)
    * @param loadahead number of items to load ahead of the queue
    * @param acquireMode acquire mode for {@link SegmentCacheManager}
+   * @param canSkipRemaining whether the caller needs no more inputs; see {@link #canSkipRemaining}
    */
   public ReadableInputQueue(
       final StandardPartitionReader partitionReader,
       final IntList inputNumbers,
       final List<PhysicalInputSlice> slices,
       final int loadahead,
-      final AcquireMode acquireMode
+      final AcquireMode acquireMode,
+      final BooleanSupplier canSkipRemaining
   )
   {
     this.partitionReader = partitionReader;
     this.loadahead = loadahead;
     this.acquireMode = acquireMode;
+    this.canSkipRemaining = canSkipRemaining;
 
     if (inputNumbers.size() != slices.size()) {
       throw DruidException.defensive("Got input numbers[%s] for slices[%s]", inputNumbers, slices);
@@ -233,6 +243,10 @@ public class ReadableInputQueue implements Closeable
   {
     if (!started.get()) {
       throw DruidException.defensive("Not started, must call start() first");
+    }
+
+    if (canSkipRemaining.getAsBoolean()) {
+      return null;
     }
 
     ListenableFuture<NumberedReadableInput> future;
@@ -343,11 +357,15 @@ public class ReadableInputQueue implements Closeable
 
   /**
    * Load the next segment from {@link #loadableSegments} and return a future to its reference. Returns null
-   * if {@link #loadableSegments} is empty.
+   * if {@link #loadableSegments} is empty, or if {@link #canSkipRemaining} is true.
    */
   @Nullable
   private ListenableFuture<NumberedReadableInput> loadNextSegment()
   {
+    if (canSkipRemaining.getAsBoolean()) {
+      return null;
+    }
+
     synchronized (this) {
       final NumberedItem<LoadableSegment> nextItem = loadableSegments.poll();
       if (nextItem == null) {

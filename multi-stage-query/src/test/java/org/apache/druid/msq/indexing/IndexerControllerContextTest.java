@@ -24,11 +24,10 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
-import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -45,12 +44,12 @@ public class IndexerControllerContextTest
   public void testMakeTaskContextCopiesOnlyWorkerStartupKeys()
   {
     final Map<String, Object> queryContext = ImmutableMap.of(
-        BaseQuery.QUERY_ID, "query-id",
-        BaseQuery.SQL_QUERY_ID, "sql-query-id",
-        MultiStageQueryContext.CTX_MAX_THREADS, 2,
+        QueryContextParameters.QUERY_ID.getName(), "query-id",
+        QueryContextParameters.SQL_QUERY_ID.getName(), "sql-query-id",
+        QueryContextParameters.MAX_THREADS.getName(), 2,
         Tasks.STORE_EMPTY_COLUMNS_KEY, false,
-        MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false,
-        MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array"
+        QueryContextParameters.FINALIZE_AGGREGATIONS.getName(), false,
+        QueryContextParameters.ARRAY_INGEST_MODE.getName(), "array"
     );
 
     final LegacyMSQSpec querySpec =
@@ -79,17 +78,17 @@ public class IndexerControllerContextTest
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of());
 
     // Keys that workers read from the task context at startup.
-    Assertions.assertEquals("query-id", taskContext.get(BaseQuery.QUERY_ID));
-    Assertions.assertEquals("sql-query-id", taskContext.get(BaseQuery.SQL_QUERY_ID));
-    Assertions.assertEquals(2, taskContext.get(MultiStageQueryContext.CTX_MAX_THREADS));
+    Assertions.assertEquals("query-id", taskContext.get(QueryContextParameters.QUERY_ID.getName()));
+    Assertions.assertEquals("sql-query-id", taskContext.get(QueryContextParameters.SQL_QUERY_ID.getName()));
+    Assertions.assertEquals(2, taskContext.get(QueryContextParameters.MAX_THREADS.getName()));
     Assertions.assertEquals(false, taskContext.get(Tasks.STORE_EMPTY_COLUMNS_KEY));
     Assertions.assertEquals(
         TaskReportMSQDestination.instance().toSelectDestination().getName(),
-        taskContext.get(MultiStageQueryContext.CTX_SELECT_DESTINATION)
+        taskContext.get(QueryContextParameters.SELECT_DESTINATION.getName())
     );
 
     // Other query context keys reach workers through the work order, not the task context.
-    Assertions.assertFalse(taskContext.containsKey(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS));
-    Assertions.assertFalse(taskContext.containsKey(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE));
+    Assertions.assertFalse(taskContext.containsKey(QueryContextParameters.FINALIZE_AGGREGATIONS.getName()));
+    Assertions.assertFalse(taskContext.containsKey(QueryContextParameters.ARRAY_INGEST_MODE.getName()));
   }
 }

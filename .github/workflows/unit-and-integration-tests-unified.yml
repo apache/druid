@@ -60,7 +60,7 @@ jobs:
 
   actions-timeline:
     needs: [unit-tests, docker-tests]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ !cancelled() }}
     steps:
       # Third-party actions must be pinned to a SHA on the ASF allowlist
