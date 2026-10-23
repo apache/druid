@@ -4751,6 +4751,61 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testInfixCastToMultiWordType()
+  {
+    // Type names containing spaces are parsed in full after "::".
+    testQuery(
+        "SELECT ARRAY[cnt]::VARCHAR ARRAY, STRING_TO_ARRAY(dim1, ',')::DOUBLE ARRAY, m1::DOUBLE PRECISION FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "CAST(array(\"cnt\"), 'ARRAY<STRING>')", ColumnType.STRING_ARRAY),
+                    expressionVirtualColumn(
+                        "v1",
+                        "CAST(string_to_array(\"dim1\",','), 'ARRAY<DOUBLE>')",
+                        ColumnType.DOUBLE_ARRAY
+                    ),
+                    expressionVirtualColumn("v2", "\"m1\"", ColumnType.DOUBLE)
+                )
+                .columns("v0", "v1", "v2")
+                .columnTypes(ColumnType.STRING_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.DOUBLE)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"1\"]", "[null]", 1.0},
+            new Object[]{"[\"1\"]", "[10.1]", 2.0},
+            new Object[]{"[\"1\"]", "[2.0]", 3.0},
+            new Object[]{"[\"1\"]", "[1.0]", 4.0},
+            new Object[]{"[\"1\"]", "[null]", 5.0},
+            new Object[]{"[\"1\"]", "[null]", 6.0}
+        )
+    );
+  }
+
+  @Test
+  public void testInfixCastToComplexType()
+  {
+    // Fails the same way as CAST(... AS TYPE('COMPLEX<...>')), since complex types are not resolvable in queries.
+    testQueryThrows(
+        "SELECT unique_dim1::TYPE('COMPLEX<hyperUnique>') FROM foo",
+        invalidSqlContains("Unknown identifier 'COMPLEX<hyperUnique>'")
+    );
+  }
+
+  @Test
+  public void testCastToComplexType()
+  {
+    testQueryThrows(
+        "SELECT CAST(unique_dim1 AS TYPE('COMPLEX<hyperUnique>')) FROM foo",
+        invalidSqlContains("Unknown identifier 'COMPLEX<hyperUnique>'")
+    );
+  }
+
+  @Test
   public void testSimpleLongAggregations()
   {
     testQuery(
