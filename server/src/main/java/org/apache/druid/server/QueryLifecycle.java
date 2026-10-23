@@ -510,7 +510,7 @@ public class QueryLifecycle
         continue;
       }
       if (descendantHandler != null && descendantHandler != childHandler) {
-        throw new ISE("Multiple datasource query handlers are required for datasource[%s]", dataSource);
+        throw DruidException.defensive("Multiple datasource query handlers are required for datasource[%s]", dataSource);
       }
       descendantHandler = childHandler;
     }

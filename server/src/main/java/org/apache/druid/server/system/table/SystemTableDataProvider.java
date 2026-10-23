@@ -27,7 +27,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Supplies storage-prefiltered rows authorized for the internal caller of one native system table.
+ * Supplies storage-prefiltered rows of one native system table. Authorization isn't applied here: the table's
+ * {@link SystemTableDescriptor#getRowAuthorizer()} filters these rows wherever they are consumed.
  * The implementation is deployed in related service.
  * For example, the data provider of sys.tasks is deployed in overlord module
  * */

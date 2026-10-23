@@ -33,6 +33,7 @@ import org.apache.druid.segment.TestHelper;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.net.URL;
+import java.util.Map;
 
 public class HttpUtil
 {
@@ -58,11 +59,24 @@ public class HttpUtil
       HttpResponseStatus expectedStatus
   )
   {
+    return makeRequest(httpClient, method, url, content, Map.of(), expectedStatus);
+  }
+
+  public static StatusResponseHolder makeRequest(
+      HttpClient httpClient,
+      HttpMethod method,
+      String url,
+      @Nullable Object content,
+      Map<String, String> headers,
+      HttpResponseStatus expectedStatus
+  )
+  {
     try {
       Request request = new Request(method, new URL(url));
       if (content != null) {
         request.setContent(MediaType.APPLICATION_JSON, MAPPER.writeValueAsBytes(content));
       }
+      headers.forEach(request::setHeader);
       StatusResponseHolder response = httpClient.go(request, RESPONSE_HANDLER).get();
 
       if (!response.getStatus().equals(expectedStatus)) {

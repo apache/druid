@@ -135,7 +135,7 @@ WHERE "IS_AGGREGATOR" = 'YES'
 The "sys" schema provides visibility into Druid segments, servers and tasks.
 
 :::info
- By default, "sys" tables use the SQL-layer execution path and support only standard SQL functions. You can enable
+ By default, the Broker evaluates queries on "sys" tables with a built-in SQL interpreter, which supports only standard SQL functions. You can enable
  experimental [native query execution](#native-query-execution) for supported system tables, which enables expressions and
  aggregations that the native SQL engine can translate.
 :::
@@ -176,19 +176,12 @@ execution:
 
 After Druid retrieves the system-table rows, the native engine applies the remaining filters, expressions,
 aggregations, sorting, and result processing. A system table that doesn't advertise native query support continues to
-use its existing SQL-layer execution path, even when `allowNativeFunctionsForSystemTables` is `true`.
+use the Broker's SQL interpreter, even when `allowNativeFunctionsForSystemTables` is `true`.
 
 The parameter defaults to `false`. During a rolling upgrade, leave it disabled until the Broker and all nodes
 that serve the native system tables have been upgraded. After the upgrade, you can enable it by query or set
 `druid.query.default.context.allowNativeFunctionsForSystemTables=true` on Brokers as the cluster-wide default. For more
 information, see [SQL query context](sql-query-context.md).
-
-Native system-table queries sent to the Router use distributed Broker execution by default. To execute a native
-system-table Scan against only the contacted node, set the HTTP header
-`X-Druid-Native-Query-Route: local`. Local execution uses the authenticated request identity and applies the table's
-authorization rules. The Broker uses the same header for remote node fan-out requests. If the Broker itself is
-one of the selected nodes, it executes that node Scan in-process without an HTTP request. The header
-controls routing and doesn't grant additional permissions.
 
 ### SEGMENTS table
 

@@ -21,10 +21,10 @@ package org.apache.druid.server.system.handler;
 
 import com.google.inject.Inject;
 import org.apache.druid.client.DirectDruidClient;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
@@ -75,22 +75,22 @@ public class SystemTableQueryHandler implements DataSourceQueryHandler
   )
   {
     if (!(query instanceof ScanQuery)) {
-      throw new BadQueryContextException(
+      throw InvalidInput.exception(
           "Local system-table execution requires a Scan query with a SystemTableDataSource at the query root"
       );
     }
     if (!(query.getDataSource() instanceof SystemTableDataSource dataSource)) {
-      throw new BadQueryContextException(
+      throw InvalidInput.exception(
           "Local system-table execution requires a Scan query with a SystemTableDataSource at the query root"
       );
     }
     final SystemTableDataProvider dataSupplier = dataSuppliers.get(dataSource.getTable());
     if (dataSupplier == null) {
-      throw new ISE("System table[%s] is not served by this node", dataSource.getTable());
+      throw InvalidInput.exception("System table[%s] is not served by this node", dataSource.getTable());
     }
     final SystemTableDescriptor descriptor = tableDescriptors.get(dataSource.getTable());
     if (descriptor == null) {
-      throw new ISE("No descriptor is registered for system table[%s]", dataSource.getTable());
+      throw DruidException.defensive("No descriptor is registered for system table[%s]", dataSource.getTable());
     }
 
     return (queryPlus, responseContext) -> {

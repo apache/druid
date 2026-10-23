@@ -20,7 +20,7 @@
 package org.apache.druid.server.system.handler;
 
 import com.google.inject.Inject;
-import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SystemTableDataSource;
@@ -52,9 +52,7 @@ public class SystemTableBrokerQueryHandler implements DataSourceQueryHandler
   {
     if (executeLocally) {
       if (!(query.getDataSource() instanceof SystemTableDataSource)) {
-        throw new BadQueryContextException(
-            "Local system-table execution requires a SystemTableDataSource at the query root"
-        );
+        throw InvalidInput.exception("Local system-table execution requires a SystemTableDataSource at the query root");
       }
       return localQueryHandler.createRunner(query, authenticationResult, true);
     }

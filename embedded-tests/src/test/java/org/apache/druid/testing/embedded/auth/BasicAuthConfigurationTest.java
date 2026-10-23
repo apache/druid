@@ -25,9 +25,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +52,8 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
 
   private HttpClient druid99;
+  private HttpClient sysDatasourceUser;
+  private HttpClient sysDatasourceWithStateUser;
 
   @Override
   protected EmbeddedResource getAuthResource()
@@ -59,6 +65,17 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   public void test_druid99User_hasNodeAccess()
   {
     checkNodeAccess(druid99);
+  }
+
+  /**
+   * With DATASOURCE READ on {@code sys.server_properties}, a native query passes the datasource check, so STATE READ,
+   * which {@code sys.server_properties} requires, decides the result on every route.
+   */
+  @Test
+  public void test_nativeSystemTableQuery_requiresStateRead()
+  {
+    assertNativeSystemTableQueryStatus(sysDatasourceUser, HttpResponseStatus.FORBIDDEN);
+    assertNativeSystemTableQueryStatus(sysDatasourceWithStateUser, HttpResponseStatus.OK);
   }
 
   @Override
@@ -143,6 +160,33 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 
     druid99 = new CredentialedHttpClient(
         new BasicCredentials("druid99", "helloworld"),
+        httpClient
+    );
+
+    final ResourceAction readSysDatasources =
+        new ResourceAction(new Resource("sys\\..*", ResourceType.DATASOURCE), Action.READ);
+    // The Router sets queryId on native queries it forwards, and this cluster authorizes query context keys.
+    final ResourceAction writeQueryId =
+        new ResourceAction(new Resource(QueryContextParameters.QUERY_ID.getName(), ResourceType.QUERY_CONTEXT), Action.WRITE);
+    createUserAndRoleWithPermissions(
+        "sysDatasourceUser",
+        "helloworld",
+        "sysDatasourceRole",
+        List.of(readSysDatasources, writeQueryId)
+    );
+    sysDatasourceUser = new CredentialedHttpClient(new BasicCredentials("sysDatasourceUser", "helloworld"), httpClient);
+    createUserAndRoleWithPermissions(
+        "sysDatasourceWithStateUser",
+        "helloworld",
+        "sysDatasourceWithStateRole",
+        List.of(
+            readSysDatasources,
+            writeQueryId,
+            new ResourceAction(new Resource(".*", ResourceType.STATE), Action.READ)
+        )
+    );
+    sysDatasourceWithStateUser = new CredentialedHttpClient(
+        new BasicCredentials("sysDatasourceWithStateUser", "helloworld"),
         httpClient
     );
   }

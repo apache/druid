@@ -27,7 +27,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
@@ -81,11 +81,13 @@ public class SystemTableNodeLocator
                      .findFirst()
                      .map(List::of)
                      .orElseThrow(
-                         () -> new ISE(
-                             "Current leader[%s] for role[%s] is not present in service discovery",
-                             leaderUri,
-                             leaderRole
-                         )
+                         () -> DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                             .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
+                                             .build(
+                                                 "Current leader[%s] for role[%s] is not present in service discovery",
+                                                 leaderUri,
+                                                 leaderRole
+                                             )
                      );
   }
 
@@ -107,7 +109,7 @@ public class SystemTableNodeLocator
   {
     final SystemTableLeaderLocator leaderLocator = leaderLocators.get(nodeRole);
     if (leaderLocator == null) {
-      throw new ISE("Leader-only system-table routing is not supported for role[%s]", nodeRole);
+      throw DruidException.defensive("Leader-only system-table routing is not supported for role[%s]", nodeRole);
     }
 
     final ListenableFuture<URI> leaderFuture = leaderLocator.findCurrentLeader();

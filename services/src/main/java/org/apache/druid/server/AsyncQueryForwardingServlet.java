@@ -32,6 +32,7 @@ import org.apache.calcite.avatica.remote.ProtobufTranslationImpl;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.client.selector.Server;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -341,7 +342,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     request.setAttribute(NODE_LOCAL_ATTRIBUTE, true);
     if (localQueryContainer == null) {
-      throw new IAE("Router local query container is not available");
+      throw DruidException.defensive("Router local query container is not available");
     }
     localQueryContainer.service(new CachedBodyRequest(request, objectMapper.writeValueAsBytes(query)), response);
   }
@@ -353,7 +354,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     request.setAttribute(NODE_LOCAL_ATTRIBUTE, true);
     if (localQueryContainer == null) {
-      throw new IAE("Router local query container is not available");
+      throw DruidException.defensive("Router local query container is not available");
     }
     localQueryContainer.service(new NodeLocalRequest(request), response);
   }
@@ -532,7 +533,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   ) throws ServletException, IOException
   {
     if (Boolean.TRUE.equals(request.getAttribute(NODE_LOCAL_ATTRIBUTE))) {
-      throw new IAE("Node-local system table queries must not be proxied");
+      throw DruidException.defensive("Node-local system table queries must not be proxied");
     }
     // Just call the superclass service method. Overridden in tests.
     super.service(request, response);

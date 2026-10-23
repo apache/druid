@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.system.handler;
 
-import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryRunner;
@@ -85,7 +85,7 @@ public class SystemTableBrokerQueryHandlerTest
                                   .build();
 
     Assertions.assertThrows(
-        BadQueryContextException.class,
+        DruidException.class,
         () -> brokerHandler.createRunner(query, AUTHENTICATION_RESULT, true)
     );
     Mockito.verifyNoInteractions(queryClient, localHandler);

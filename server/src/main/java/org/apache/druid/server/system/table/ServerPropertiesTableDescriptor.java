@@ -23,14 +23,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthorizationResult;
-import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
 
-import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -49,17 +42,6 @@ public class ServerPropertiesTableDescriptor implements SystemTableDescriptor
       .build();
 
   private static final Set<NodeRole> NODE_ROLES = Set.of(NodeRole.values());
-  private static final SystemTableRowAuthorizer ROW_AUTHORIZER = (rows, authenticationResult, authorizerMapper) -> {
-    final AuthorizationResult authorizationResult = AuthorizationUtils.authorizeAllResourceActions(
-        authenticationResult,
-        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
-        authorizerMapper
-    );
-    if (!authorizationResult.allowAccessWithNoRestriction()) {
-      throw new ForbiddenException(authorizationResult.getErrorMessage());
-    }
-    return rows;
-  };
 
   @Override
   public String getTableName()
@@ -82,7 +64,7 @@ public class ServerPropertiesTableDescriptor implements SystemTableDescriptor
   @Override
   public SystemTableRowAuthorizer getRowAuthorizer()
   {
-    return ROW_AUTHORIZER;
+    return SystemTableAuthorization.STATE_READ_ROW_AUTHORIZER;
   }
 
   @Override

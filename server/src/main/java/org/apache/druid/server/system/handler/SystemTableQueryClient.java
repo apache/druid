@@ -23,11 +23,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import io.netty.channel.ChannelException;
+import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -35,12 +36,11 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
@@ -81,12 +81,12 @@ import java.net.UnknownHostException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 /**
@@ -145,11 +145,11 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
             query.getDataSource(),
             query,
             authenticationResult,
-            responseContext,
             nodeSequencesCloser
         );
         final Query<T> resolvedQuery = query.withDataSource(resolvedDataSource).withOverriddenContext(
-            Map.of(QueryContexts.QUERY_RESOURCE_ID, UUID.randomUUID().toString())
+            QueryContextParameters.QUERY_RESOURCE_ID,
+            UUID.randomUUID().toString()
         );
         final QueryRunner<T> queryRunner = querySegmentWalker.getQueryRunnerForIntervals(
             resolvedQuery,
@@ -170,7 +170,6 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
       final DataSource dataSource,
       final Query<?> owningQuery,
       final AuthenticationResult authenticationResult,
-      final ResponseContext responseContext,
       final NodeSequencesCloser nodeSequencesCloser
   )
   {
@@ -179,7 +178,6 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
           systemTableDataSource,
           owningQuery,
           authenticationResult,
-          responseContext,
           nodeSequencesCloser
       );
     }
@@ -190,10 +188,10 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
       final Query<?> childQuery = queryDataSource.getQuery();
       // An inner query may tighten the outer guardrails, but must not discard them before node fanout.
       childOwningQuery = childQuery.withOverriddenContext(
-          Map.of(
-              QueryContextParameters.QUERY_FAIL_TIME.getName(),
+          QueryContext.ofMap(
+              QueryContextParameters.QUERY_FAIL_TIME,
               Math.min(getNodeFailTime(owningQuery), getNodeFailTime(childQuery)),
-              QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(),
+              QueryContextParameters.MAX_SCATTER_GATHER_BYTES,
               Math.min(owningQuery.context().getMaxScatterGatherBytes(), childQuery.context().getMaxScatterGatherBytes())
           )
       );
@@ -209,7 +207,6 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
               child,
               childOwningQuery,
               authenticationResult,
-              responseContext,
               nodeSequencesCloser
           )
       );
@@ -221,13 +218,12 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
       final SystemTableDataSource dataSource,
       final Query<?> owningQuery,
       final AuthenticationResult authenticationResult,
-      final ResponseContext responseContext,
       final NodeSequencesCloser nodeSequencesCloser
   )
   {
     final SystemTableDescriptor descriptor = tableDescriptors.get(dataSource.getTable());
     if (descriptor == null) {
-      throw new ISE("No routing descriptor is registered for system table[%s]", dataSource.getTable());
+      throw DruidException.defensive("No routing descriptor is registered for system table[%s]", dataSource.getTable());
     }
 
     final ScanQuery nodeQuery = makeNodeQuery(dataSource, descriptor, owningQuery);
@@ -237,7 +233,9 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
         nodeSequencesCloser
     );
     if (nodeRunners.isEmpty() && !descriptor.isEmptyDiscoveryAllowed()) {
-      throw new ISE("No node is available to serve system table[%s]", dataSource.getTable());
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
+                          .build("No node is available to serve system table[%s]", dataSource.getTable());
     }
 
     /*
@@ -249,10 +247,13 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
      */
     final NodeSequenceCloser nodeSequenceCloser = new NodeSequenceCloser();
     nodeSequencesCloser.add(nodeSequenceCloser);
+    // Node scans get their own response context. Sharing the caller's would add the node scans' row counts to the
+    // Broker query's, and a Scan with a limit returns no rows once that count reaches the limit. For example, the
+    // node scans of a join's right side would empty a limited Scan over the join before it read its left side.
     final Iterable<Object[]> nodeRows = scanNodeRows(
         nodeRunners,
         nodeQuery,
-        responseContext,
+        DirectDruidClient.makeResponseContextForQuery(),
         nodeSequenceCloser
     );
     final Iterable<Object[]> authorizedRows = descriptor.getRowAuthorizer().filterAuthorizedRows(
@@ -272,12 +273,17 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
       final Query<?> owningQuery
   )
   {
-    final Map<String, Object> nodeContext = new LinkedHashMap<>(owningQuery.getContext());
     final DimFilter nodeFilter = nodeFilter(dataSource, owningQuery);
-    nodeContext.put(QueryContextParameters.QUERY_FAIL_TIME.getName(), getNodeFailTime(owningQuery));
     // The node endpoint always returns plain ScanResultValue objects. bySegment belongs to the user-facing query and
     // would make DirectDruidClient deserialize this private transport using an incompatible result type.
-    nodeContext.put(QueryContexts.BY_SEGMENT_KEY, false);
+    final Map<String, Object> nodeContext = owningQuery.withOverriddenContext(
+        QueryContext.ofMap(
+            QueryContextParameters.QUERY_FAIL_TIME,
+            getNodeFailTime(owningQuery),
+            QueryContextParameters.BY_SEGMENT,
+            false
+        )
+    ).getContext();
     return Druids.newScanQueryBuilder()
                  .dataSource(dataSource)
                  .eternityInterval()
@@ -331,10 +337,10 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
     final String nodeResourceId = UUID.randomUUID().toString();
     final String nodeQueryId = SystemTableDataSource.NODE_QUERY_ID_PREFIX + UUID.randomUUID();
     final ScanQuery subNativeQuery = nodeQuery.withOverriddenContext(
-        Map.of(
-            BaseQuery.QUERY_ID,
+        QueryContext.ofMap(
+            QueryContextParameters.QUERY_ID,
             nodeQueryId,
-            QueryContexts.QUERY_RESOURCE_ID,
+            QueryContextParameters.QUERY_RESOURCE_ID,
             nodeResourceId
         )
     );
@@ -529,7 +535,7 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
   {
     if (failure instanceof RuntimeException runtimeException) {
       return runtimeException;
-    } else if (failure instanceof java.util.concurrent.TimeoutException) {
+    } else if (failure instanceof TimeoutException) {
       return new QueryTimeoutException(failure.getMessage());
     } else {
       if (failure instanceof InterruptedException) {
@@ -578,7 +584,7 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
       public Iterator<T> iterator()
       {
         if (iterated) {
-          throw new ISE("A native system table result sequence can only be consumed once");
+          throw DruidException.defensive("A native system table result sequence can only be consumed once");
         }
         iterated = true;
 
@@ -756,7 +762,7 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
         return true;
       }
       catch (Exception e) {
-        return recoverOrThrow(e) ? hasNext() : true;
+        return !recoverOrThrow(e) || hasNext();
       }
     }
 

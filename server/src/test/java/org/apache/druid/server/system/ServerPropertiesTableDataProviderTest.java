@@ -24,12 +24,8 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.Authorizer;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.system.table.ServerPropertiesTableDataProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -50,7 +46,7 @@ public class ServerPropertiesTableDataProviderTest
     properties.setProperty("druid.test.visible", "visible");
     properties.setProperty("druid.test.password", "hidden");
 
-    final ServerPropertiesTableDataProvider supplier = supplier(properties, allowAllAuthorizerMapper());
+    final ServerPropertiesTableDataProvider supplier = supplier(properties);
     final List<Object[]> rows = toRows(supplier.getRows(List.of(), AUTHENTICATION_RESULT));
 
     Assertions.assertEquals(1, rows.size());
@@ -67,10 +63,38 @@ public class ServerPropertiesTableDataProviderTest
     );
   }
 
+  /** Configured {@code druid.server.hiddenProperties} are matched as case-insensitive substrings of property names. */
+  @Test
+  public void testMasksConfiguredHiddenProperties()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.test.visible", "visible");
+    properties.setProperty("druid.test.MySecretValue", "hidden");
+    properties.setProperty("druid.mysecret.endpoint", "hidden");
+
+    final ServerPropertiesTableDataProvider supplier = new ServerPropertiesTableDataProvider(
+        new DruidNode("overlord", "localhost", false, 8080, null, true, false),
+        Set.of(NodeRole.OVERLORD),
+        properties,
+        new DruidServerConfig(null, null)
+        {
+          @Override
+          public Set<String> getHiddenProperties()
+          {
+            return Set.of("mySecret");
+          }
+        }
+    );
+    final List<Object[]> rows = toRows(supplier.getRows(List.of(), AUTHENTICATION_RESULT));
+
+    Assertions.assertEquals(1, rows.size());
+    Assertions.assertEquals("druid.test.visible", rows.getFirst()[3]);
+  }
+
   @Test
   public void testAppliesServerAndServiceNameFilters()
   {
-    final ServerPropertiesTableDataProvider supplier = supplier(new Properties(), allowAllAuthorizerMapper());
+    final ServerPropertiesTableDataProvider supplier = supplier(new Properties());
     final DimFilter wrongServer = new SelectorDimFilter("server", "other:8080", null);
     final DimFilter wrongService = new SelectorDimFilter("service_name", "broker", null);
 
@@ -89,7 +113,7 @@ public class ServerPropertiesTableDataProviderTest
   @Test
   public void testReturnsPlaceholderWhenNoPropertiesExist()
   {
-    final ServerPropertiesTableDataProvider supplier = supplier(new Properties(), allowAllAuthorizerMapper());
+    final ServerPropertiesTableDataProvider supplier = supplier(new Properties());
     final List<Object[]> rows = toRows(supplier.getRows(List.of(), AUTHENTICATION_RESULT));
 
     Assertions.assertEquals(1, rows.size());
@@ -98,50 +122,14 @@ public class ServerPropertiesTableDataProviderTest
     Assertions.assertNull(rows.get(0)[5]);
   }
 
-  @Test
-  public void testRejectsUnauthorizedRequest()
-  {
-    final Authorizer denyAll = (authenticationResult, resource, action) -> Access.DENIED;
-    final AuthorizerMapper authorizerMapper = new AuthorizerMapper(null)
-    {
-      @Override
-      public Authorizer getAuthorizer(final String name)
-      {
-        return denyAll;
-      }
-    };
-    final ServerPropertiesTableDataProvider supplier = supplier(new Properties(), authorizerMapper);
-
-    Assertions.assertThrows(
-        ForbiddenException.class,
-        () -> supplier.getRows(List.of(), AUTHENTICATION_RESULT)
-    );
-  }
-
-  private static ServerPropertiesTableDataProvider supplier(
-      final Properties properties,
-      final AuthorizerMapper authorizerMapper
-  )
+  private static ServerPropertiesTableDataProvider supplier(final Properties properties)
   {
     return new ServerPropertiesTableDataProvider(
         new DruidNode("overlord", "localhost", false, 8080, null, true, false),
         Set.of(NodeRole.OVERLORD),
-        authorizerMapper,
         properties,
         new DruidServerConfig(null, null)
     );
-  }
-
-  private static AuthorizerMapper allowAllAuthorizerMapper()
-  {
-    return new AuthorizerMapper(null)
-    {
-      @Override
-      public Authorizer getAuthorizer(final String name)
-      {
-        return (authenticationResult, resource, action) -> Access.OK;
-      }
-    };
   }
 
   private static List<Object[]> toRows(final Iterable<Object[]> rows)

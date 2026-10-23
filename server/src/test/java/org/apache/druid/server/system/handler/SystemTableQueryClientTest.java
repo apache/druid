@@ -26,6 +26,7 @@ import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -45,6 +46,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
@@ -75,12 +77,15 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.server.system.SystemTableNotLeaderException;
 import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableDescriptor;
@@ -171,7 +176,7 @@ public class SystemTableQueryClientTest
     Assertions.assertEquals(2, remainingRows.size());
     Assertions.assertArrayEquals(new Object[]{"task-b"}, remainingRows.get(0));
     Assertions.assertArrayEquals(new Object[]{"task-c"}, remainingRows.get(1));
-    Assertions.assertThrows(IllegalStateException.class, rows::iterator);
+    Assertions.assertThrows(DruidException.class, rows::iterator);
   }
 
   /**
@@ -311,6 +316,113 @@ public class SystemTableQueryClientTest
     );
   }
 
+  /**
+   * Nodes are queried with the escalated identity, so the caller's own STATE READ permission for
+   * {@code server_properties} must be checked on the Broker, against the caller's identity.
+   */
+  @Test
+  public void testServerPropertiesFanoutRejectsCallerWithoutStateRead()
+  {
+    final ServerPropertiesTableDescriptor descriptor = new ServerPropertiesTableDescriptor();
+    final DiscoveryDruidNode brokerNode = testNode();
+    final SystemTableNodeLocator nodeLocator = Mockito.mock(SystemTableNodeLocator.class);
+    final SystemTableNode node = new SystemTableNode(brokerNode);
+    node.addNodeRole(brokerNode.getNodeRole());
+    Mockito.when(nodeLocator.locate(Mockito.eq(descriptor), ArgumentMatchers.any())).thenReturn(List.of(node));
+
+    final AuthenticationResult escalatedAuthenticationResult =
+        new AuthenticationResult("system", "allow", "system", null);
+    final Escalator escalator = Mockito.mock(Escalator.class);
+    Mockito.when(escalator.createEscalatedAuthenticationResult()).thenReturn(escalatedAuthenticationResult);
+    final SystemTableQueryHandler localQueryHandler = Mockito.mock(SystemTableQueryHandler.class);
+    Mockito.doAnswer(
+        ignored -> (QueryRunner<ScanResultValue>) (queryPlus, responseContext) -> Sequences.simple(
+            List.of(scanResult(new Object[]{"localhost:8082", "druid/broker", "[broker]", "druid.host", "x", null}))
+        )
+    ).when(localQueryHandler).createRunner(
+        ArgumentMatchers.any(),
+        Mockito.same(escalatedAuthenticationResult),
+        Mockito.eq(true)
+    );
+
+    final QuerySegmentWalker querySegmentWalker = Mockito.mock(QuerySegmentWalker.class);
+    Mockito.when(querySegmentWalker.getQueryRunnerForIntervals(ArgumentMatchers.any(), ArgumentMatchers.any()))
+           .thenAnswer(ignored -> passthroughRunner(descriptor.getRowSignature()));
+    final Authorizer denyState = (authenticationResult, resource, action) ->
+        ResourceType.STATE.equals(resource.getType()) ? Access.DENIED : Access.OK;
+    final SystemTableQueryClient client = new SystemTableQueryClient(
+        nodeLocator,
+        Mockito.mock(DirectDruidClientFactory.class),
+        Mockito.mock(QueryScheduler.class),
+        querySegmentWalker,
+        Map.of(descriptor.getTableName(), descriptor),
+        new AuthorizerMapper(Map.of("allow", new AllowAllAuthorizer(null), "denyState", denyState)),
+        localQueryHandler,
+        escalator,
+        brokerNode.getDruidNode()
+    );
+    final ScanQuery query = query(descriptor, Collections.emptyMap());
+    final AuthenticationResult caller = new AuthenticationResult("caller", "denyState", "test", null);
+
+    final ForbiddenException e = Assertions.assertThrows(
+        ForbiddenException.class,
+        () -> client.createRunner(query, caller, false).run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList()
+    );
+    Assertions.assertTrue(e.getMessage().startsWith("Insufficient permission to view servers"), e.getMessage());
+  }
+
+  /**
+   * Node scans must not share the caller's response context. A Scan with a limit returns no rows once the context's
+   * scanned-row count reaches the limit, so counting node rows there emptied limited Scans over joins.
+   */
+  @Test
+  public void testNodeScansDoNotShareCallerResponseContext()
+  {
+    final SystemTableDescriptor descriptor = new TestSystemTableDescriptor();
+    final DiscoveryDruidNode brokerNode = testNode();
+    final SystemTableNodeLocator nodeLocator = Mockito.mock(SystemTableNodeLocator.class);
+    final SystemTableNode node = new SystemTableNode(brokerNode);
+    node.addNodeRole(brokerNode.getNodeRole());
+    Mockito.when(nodeLocator.locate(Mockito.eq(descriptor), ArgumentMatchers.any())).thenReturn(List.of(node));
+
+    final ResponseContext callerResponseContext = ResponseContext.createEmpty();
+    callerResponseContext.initializeRowScanCount();
+    final List<ResponseContext> nodeResponseContexts = new ArrayList<>();
+    final SystemTableQueryHandler localQueryHandler = Mockito.mock(SystemTableQueryHandler.class);
+    Mockito.doAnswer(
+        ignored -> (QueryRunner<ScanResultValue>) (queryPlus, responseContext) -> {
+          nodeResponseContexts.add(responseContext);
+          responseContext.addRowScanCount(100);
+          return Sequences.simple(List.of(scanResult(new Object[]{"local"})));
+        }
+    ).when(localQueryHandler).createRunner(ArgumentMatchers.any(), ArgumentMatchers.any(), Mockito.eq(true));
+
+    final QuerySegmentWalker querySegmentWalker = Mockito.mock(QuerySegmentWalker.class);
+    Mockito.when(querySegmentWalker.getQueryRunnerForIntervals(ArgumentMatchers.any(), ArgumentMatchers.any()))
+           .thenAnswer(ignored -> passthroughRunner(descriptor.getRowSignature()));
+    final SystemTableQueryClient client = new SystemTableQueryClient(
+        nodeLocator,
+        Mockito.mock(DirectDruidClientFactory.class),
+        Mockito.mock(QueryScheduler.class),
+        querySegmentWalker,
+        Map.of(descriptor.getTableName(), descriptor),
+        new AuthorizerMapper(Map.of("allow", new AllowAllAuthorizer(null))),
+        localQueryHandler,
+        new NoopEscalator(),
+        brokerNode.getDruidNode()
+    );
+    final ScanQuery query = query(descriptor, Collections.emptyMap());
+
+    final List<ScanResultValue> results = client.createRunner(query, AUTHENTICATION_RESULT, false)
+                                                .run(QueryPlus.wrap(query), callerResponseContext)
+                                                .toList();
+
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(1, nodeResponseContexts.size());
+    Assertions.assertNotSame(callerResponseContext, nodeResponseContexts.get(0));
+    Assertions.assertEquals(0L, callerResponseContext.getRowScanCount());
+  }
+
   /** Delayed node responses verify concurrent fanout through the real {@link DirectDruidClient} transport path. */
   @Test
   public void testDirectClientsStartRequestsBeforeWaitingForDelayedResponses() throws Exception
@@ -324,7 +436,7 @@ public class SystemTableQueryClientTest
                                              .dataSource(new SystemTableDataSource("test"))
                                              .eternityInterval()
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                             .context(Map.of(QueryContextParameters.QUERY_FAIL_TIME.getName(), Long.MAX_VALUE))
+                                             .context(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, Long.MAX_VALUE))
                                              .build();
       final List<QueryRunner<ScanResultValue>> nodeRunners = List.of(
           directClient(objectMapper, httpClient, "localhost:8081", cancellationExecutor),
@@ -684,7 +796,7 @@ public class SystemTableQueryClientTest
           return Sequences.empty();
         }
     );
-    final ScanQuery query = query(descriptor, Map.of(QueryContexts.BY_SEGMENT_KEY, true));
+    final ScanQuery query = query(descriptor, QueryContext.ofMap(QueryContextParameters.BY_SEGMENT, true));
 
     client.createRunner(query, AUTHENTICATION_RESULT, false)
           .run(QueryPlus.wrap(query), ResponseContext.createEmpty())
@@ -714,10 +826,15 @@ public class SystemTableQueryClientTest
         }
     );
     final long deadline = System.currentTimeMillis() + 1_000L;
-    final ScanQuery inner = query(descriptor, Map.of(QueryContextParameters.TIMEOUT.getName(), innerTimeout));
+    final ScanQuery inner = query(descriptor, QueryContext.ofMap(QueryContextParameters.TIMEOUT, innerTimeout));
     final ScanQuery outer = query(
         descriptor,
-        Map.of(QueryContextParameters.QUERY_FAIL_TIME.getName(), deadline, QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), 1_234L)
+        QueryContext.ofMap(
+            QueryContextParameters.QUERY_FAIL_TIME,
+            deadline,
+            QueryContextParameters.MAX_SCATTER_GATHER_BYTES,
+            1_234L
+        )
     )
         .withDataSource(new QueryDataSource(inner));
 
@@ -725,7 +842,7 @@ public class SystemTableQueryClientTest
           .run(QueryPlus.wrap(outer), ResponseContext.createEmpty())
           .toList();
 
-    Assertions.assertEquals(deadline, captured.get().context().getLong(QueryContextParameters.QUERY_FAIL_TIME.getName()));
+    Assertions.assertEquals(deadline, captured.get().context().get(QueryContextParameters.QUERY_FAIL_TIME));
     Assertions.assertEquals(1_234L, captured.get().context().getMaxScatterGatherBytes());
   }
 
@@ -745,10 +862,10 @@ public class SystemTableQueryClientTest
     );
     final ScanQuery query = query(
         descriptor,
-        Map.of(
-            QueryContexts.TIMEOUT_KEY,
+        QueryContext.ofMap(
+            QueryContextParameters.TIMEOUT,
             QueryContexts.NO_TIMEOUT,
-            QueryContextParameters.QUERY_FAIL_TIME.getName(),
+            QueryContextParameters.QUERY_FAIL_TIME,
             0L
         )
     );
@@ -759,7 +876,7 @@ public class SystemTableQueryClientTest
 
     Assertions.assertEquals(
         JodaUtils.MAX_INSTANT,
-        capturedNodeQuery.get().context().getLong(QueryContextParameters.QUERY_FAIL_TIME.getName())
+        capturedNodeQuery.get().context().get(QueryContextParameters.QUERY_FAIL_TIME)
     );
   }
 

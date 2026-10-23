@@ -29,14 +29,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.AuthorizationResult;
-import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -59,7 +52,6 @@ public class ServerPropertiesTableDataProvider implements SystemTableDataProvide
 
   private final DruidNode selfNode;
   private final Set<NodeRole> selfNodeRoles;
-  private final AuthorizerMapper authorizerMapper;
   private final Properties properties;
   private final DruidServerConfig druidServerConfig;
 
@@ -67,14 +59,12 @@ public class ServerPropertiesTableDataProvider implements SystemTableDataProvide
   public ServerPropertiesTableDataProvider(
       @Self final DruidNode selfNode,
       @Self final Set<NodeRole> selfNodeRoles,
-      final AuthorizerMapper authorizerMapper,
       final Properties properties,
       final DruidServerConfig druidServerConfig
   )
   {
     this.selfNode = selfNode;
     this.selfNodeRoles = selfNodeRoles;
-    this.authorizerMapper = authorizerMapper;
     this.properties = properties;
     this.druidServerConfig = druidServerConfig;
   }
@@ -91,8 +81,6 @@ public class ServerPropertiesTableDataProvider implements SystemTableDataProvide
       final AuthenticationResult internalAuthenticationResult
   )
   {
-    authorizeServerRead(internalAuthenticationResult);
-
     String serverFilter = null;
     String serviceNameFilter = null;
     for (final DimFilter filter : filters) {
@@ -118,20 +106,6 @@ public class ServerPropertiesTableDataProvider implements SystemTableDataProvide
                  .forEach(serverProperties.nodeRoles::add);
 
     return buildRows(serverProperties);
-  }
-
-  private void authorizeServerRead(final AuthenticationResult authenticationResult)
-  {
-    final AuthorizationResult authorizationResult = AuthorizationUtils.authorizeAllResourceActions(
-        authenticationResult,
-        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
-        authorizerMapper
-    );
-    if (!authorizationResult.allowAccessWithNoRestriction()) {
-      throw new ForbiddenException(
-          "Insufficient permission to view servers: " + authorizationResult.getErrorMessage()
-      );
-    }
   }
 
   private List<Object[]> buildRows(final ServerProperties serverProperties)

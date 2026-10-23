@@ -86,6 +86,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nullable;
@@ -1139,6 +1140,127 @@ public class QueryLifecycleTest
   public void testNonExactNativeQueryRouteIsNotLocal()
   {
     assertNativeQueryRoute("LOCAL", false);
+  }
+
+  /**
+   * A native system-table query requires DATASOURCE READ on its namespaced table name whatever the value of
+   * {@code X-Druid-Native-Query-Route}: the header selects where the query runs, it doesn't bypass authorization.
+   */
+  @ParameterizedTest(name = "route = {0}")
+  @NullSource
+  @ValueSource(strings = {QueryResource.NATIVE_QUERY_ROUTE_LOCAL, "LOCAL", "remote"})
+  public void testSystemTableQueryIsDeniedWithoutTableReadForAnyRoute(@Nullable final String route)
+  {
+    final AtomicInteger handlerCalls = new AtomicInteger();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(
+        authorizer.authorize(
+            authenticationResult,
+            new Resource("sys.server_properties", ResourceType.DATASOURCE),
+            Action.READ
+        )
+    ).andReturn(Access.DENIED).once();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle(countingHandler(handlerCalls, null));
+    lifecycle.initialize(serverPropertiesScan());
+
+    Assertions.assertFalse(lifecycle.authorize(mockRequest(route)).allowBasicAccess());
+    Assertions.assertThrows(DruidException.class, lifecycle::execute);
+    Assertions.assertEquals(0, handlerCalls.get());
+    EasyMock.verify(authorizer);
+  }
+
+  /**
+   * The system-table handler receives the identity that authenticated the HTTP request, so the table's own checks
+   * (such as STATE READ for {@code server_properties}) apply to the caller for every value of
+   * {@code X-Druid-Native-Query-Route}.
+   */
+  @ParameterizedTest(name = "route = {0}")
+  @NullSource
+  @ValueSource(strings = {QueryResource.NATIVE_QUERY_ROUTE_LOCAL, "LOCAL", "remote"})
+  public void testSystemTableHandlerReceivesRequestIdentityForAnyRoute(@Nullable final String route)
+  {
+    final AtomicInteger handlerCalls = new AtomicInteger();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(
+        authorizer.authorize(
+            authenticationResult,
+            new Resource("sys.server_properties", ResourceType.DATASOURCE),
+            Action.READ
+        )
+    ).andReturn(Access.OK).once();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle(
+        countingHandler(handlerCalls, QueryResource.NATIVE_QUERY_ROUTE_LOCAL.equals(route))
+    );
+    lifecycle.initialize(serverPropertiesScan());
+
+    Assertions.assertTrue(lifecycle.authorize(mockRequest(route)).allowAccessWithNoRestriction());
+    lifecycle.execute();
+    Assertions.assertEquals(1, handlerCalls.get());
+  }
+
+  private static ScanQuery serverPropertiesScan()
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource(new SystemTableDataSource("server_properties"))
+                 .eternityInterval()
+                 .build();
+  }
+
+  /**
+   * Returns a handler that counts its calls and checks it receives {@link #authenticationResult}, the identity that
+   * {@link #mockRequest(String)} attaches to the request. A null {@code expectedExecuteLocally} skips that check.
+   */
+  private DataSourceQueryHandler countingHandler(
+      final AtomicInteger handlerCalls,
+      @Nullable final Boolean expectedExecuteLocally
+  )
+  {
+    return new DataSourceQueryHandler()
+    {
+      @Override
+      public <T> QueryRunner<T> createRunner(
+          final Query<T> query,
+          final AuthenticationResult handlerAuthenticationResult,
+          final boolean executeLocally
+      )
+      {
+        handlerCalls.incrementAndGet();
+        Assertions.assertSame(authenticationResult, handlerAuthenticationResult);
+        if (expectedExecuteLocally != null) {
+          Assertions.assertEquals(expectedExecuteLocally, executeLocally);
+        }
+        return (queryPlus, responseContext) -> Sequences.empty();
+      }
+    };
+  }
+
+  private QueryLifecycle systemTableLifecycle(final DataSourceQueryHandler handler)
+  {
+    return new QueryLifecycle(
+        conglomerate,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        authConfig,
+        policyEnforcer,
+        new QueryConfigSnapshot(ImmutableMap.of(), BrokerDynamicConfig.builder().build()),
+        Map.of(SystemTableDataSource.class, handler),
+        serverConfig,
+        System.currentTimeMillis(),
+        System.nanoTime()
+    );
   }
 
   private void assertNativeQueryRoute(final String route, final boolean expectedExecuteLocally)

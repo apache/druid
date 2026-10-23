@@ -21,8 +21,8 @@ package org.apache.druid.server.system;
 
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -43,6 +43,8 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.server.system.handler.SystemTableQueryHandler;
 import org.apache.druid.server.system.table.ServerPropertiesTableDataProvider;
 import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
@@ -58,6 +60,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.StreamSupport;
 
 public class SystemTableQueryHandlerTest
 {
@@ -112,12 +115,12 @@ public class SystemTableQueryHandlerTest
       @Override
       public SystemTableRowAuthorizer getRowAuthorizer()
       {
-        return (rows, authenticationResult, authorizerMapper) -> {
+        return (rows, authenticationResult, _) -> {
           authorizationCalls.incrementAndGet();
           Assertions.assertEquals("alice", authenticationResult.getIdentity());
-          return () -> java.util.stream.StreamSupport.stream(rows.spliterator(), false)
-                                                      .filter(row -> !"task-a".equals(row[0]))
-                                                      .iterator();
+          return () -> StreamSupport.stream(rows.spliterator(), false)
+                                    .filter(row -> !"task-a".equals(row[0]))
+                                    .iterator();
         };
       }
     };
@@ -178,7 +181,6 @@ public class SystemTableQueryHandlerTest
     final ServerPropertiesTableDataProvider provider = new ServerPropertiesTableDataProvider(
         new DruidNode("overlord", "localhost", false, 8080, null, true, false),
         Set.of(NodeRole.OVERLORD),
-        authorizerMapper,
         properties,
         new DruidServerConfig(null, null)
     );
@@ -214,6 +216,49 @@ public class SystemTableQueryHandlerTest
     Assertions.assertEquals(List.of(List.of("druid.test.visible", "visible")), result.get(0).getEvents());
   }
 
+  /**
+   * Node-local execution applies the table's row authorizer to the request identity. For {@code server_properties}
+   * that requires STATE READ, which the provider itself no longer checks.
+   */
+  @Test
+  public void testServerPropertiesRejectsCallerWithoutStateRead()
+  {
+    final AuthorizerMapper denyState = new AuthorizerMapper(null)
+    {
+      @Override
+      public Authorizer getAuthorizer(final String name)
+      {
+        return (authenticationResult, resource, action) ->
+            ResourceType.STATE.equals(resource.getType()) ? Access.DENIED : Access.OK;
+      }
+    };
+    final SystemTableQueryHandler handler = new SystemTableQueryHandler(
+        Map.of(
+            ServerPropertiesTableDescriptor.TABLE_NAME,
+            new ServerPropertiesTableDataProvider(
+                new DruidNode("overlord", "localhost", false, 8080, null, true, false),
+                Set.of(NodeRole.OVERLORD),
+                new Properties(),
+                new DruidServerConfig(null, null)
+            )
+        ),
+        Map.of(ServerPropertiesTableDescriptor.TABLE_NAME, new ServerPropertiesTableDescriptor()),
+        new ScanQueryEngine(),
+        denyState
+    );
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource(new SystemTableDataSource(ServerPropertiesTableDescriptor.TABLE_NAME))
+                                  .eternityInterval()
+                                  .build();
+
+    Assertions.assertThrows(
+        ForbiddenException.class,
+        () -> handler.createRunner(query, new AuthenticationResult("alice", "deny", null, null), true)
+                     .run(QueryPlus.wrap(query), ResponseContext.createEmpty())
+                     .toList()
+    );
+  }
+
   /** A node-local handler rejects a composite root instead of casting it to a system-table datasource. */
   @Test
   public void testRejectsCompositeDataSource()
@@ -235,7 +280,7 @@ public class SystemTableQueryHandlerTest
                                   .build();
 
     Assertions.assertThrows(
-        BadQueryContextException.class,
+        DruidException.class,
         () -> handler.createRunner(
             query,
             new AuthenticationResult("alice", "allow", "external", null),

@@ -40,6 +40,7 @@ import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -51,6 +52,7 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
@@ -60,8 +62,11 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
@@ -154,12 +159,9 @@ public class DirectDruidClientTest
     Sequence s1 = client1.run(queryPlus, responseContext);
     List<Request> requests = queuedHttpClient.getRequests();
     Assertions.assertFalse(requests.isEmpty());
-    Assertions.assertEquals(url, requests.get(0).getUrl());
-    Assertions.assertEquals(HttpMethod.POST, requests.get(0).getMethod());
-    Assertions.assertEquals(
-        QueryResource.NATIVE_QUERY_ROUTE_LOCAL,
-        requests.get(0).getHeaders().get(QueryResource.HEADER_NATIVE_QUERY_ROUTE).iterator().next()
-    );
+    Assertions.assertEquals(url, requests.getFirst().getUrl());
+    Assertions.assertEquals(HttpMethod.POST, requests.getFirst().getMethod());
+    Assertions.assertTrue(requests.getFirst().getHeaders().get(QueryResource.HEADER_NATIVE_QUERY_ROUTE).isEmpty());
     Assertions.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout on second request
@@ -223,7 +225,7 @@ public class DirectDruidClientTest
     blockingExecutorService.finishNextPendingTask();
     Assertions.assertTrue(blockingExecutorService.hasPendingTasks());
     ISE observedException = Assertions.assertThrows(ISE.class, () -> blockingExecutorService.finishNextPendingTask());
-    Assertions.assertTrue(observedException.getCause() instanceof CancellationException);
+    Assertions.assertInstanceOf(CancellationException.class, observedException.getCause());
 
   }
 
@@ -245,6 +247,37 @@ public class DirectDruidClientTest
         "http://" + hostName + "/druid/v2/some%20query%2Fid%23needing%3Fencoding",
         requests.get(1).getUrl().toString()
     );
+  }
+
+  @Test
+  public void testSystemTableQueryRequestsUseLocalNativeQueryRoute()
+  {
+    final Query<ScanResultValue> query = Druids.newScanQueryBuilder()
+                                               .dataSource(new SystemTableDataSource("server_properties"))
+                                               .intervals(new MultipleIntervalSegmentSpec(List.of(Intervals.ETERNITY)))
+                                               .columns("server")
+                                               .context(
+                                                   QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, Long.MAX_VALUE)
+                                               )
+                                               .build()
+                                               .withId("system-table-query");
+    final QueuedTestHttpClient queuedHttpClient = new QueuedTestHttpClient();
+    queuedHttpClient.enqueue(Futures.immediateCancelledFuture());
+
+    // Canceled query future causes the client to submit a cancel task, which issues the DELETE request.
+    makeDirectDruidClient(queuedHttpClient).run(QueryPlus.wrap(query), responseContext);
+    blockingExecutorService.finishNextPendingTask();
+
+    final List<Request> requests = queuedHttpClient.getRequests();
+    Assertions.assertEquals(2, requests.size());
+    Assertions.assertEquals(HttpMethod.POST, requests.get(0).getMethod());
+    Assertions.assertEquals(HttpMethod.DELETE, requests.get(1).getMethod());
+    for (final Request request : requests) {
+      Assertions.assertEquals(
+          List.of(QueryResource.NATIVE_QUERY_ROUTE_LOCAL),
+          List.copyOf(request.getHeaders().get(QueryResource.HEADER_NATIVE_QUERY_ROUTE))
+      );
+    }
   }
 
   @Test

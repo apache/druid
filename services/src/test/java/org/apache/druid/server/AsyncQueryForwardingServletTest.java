@@ -268,7 +268,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     assertNativeQueryRouteForDelete("LOCAL", false);
   }
 
-  /** A Router-local system table query reports the length of its reserialized body, not the original request body. */
+  /**
+   * A Router-local system table query reports the length of its reserialized body, not the original request body.
+   * It also keeps the caller's identity and isn't marked as authorized, so the Router's local
+   * {@code QueryResource} authorizes the caller as any other node would.
+   */
   @Test
   public void testLocalNativeQueryRouteUsesReserializedBodyLength() throws Exception
   {
@@ -335,6 +339,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
            .thenReturn(String.valueOf(originalBody.length));
     Mockito.when(request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE))
            .thenReturn(QueryResource.NATIVE_QUERY_ROUTE_LOCAL);
+    final AuthenticationResult caller = new AuthenticationResult("caller", "basic", "basic", null);
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(caller);
 
     servlet.service(request, response);
 
@@ -357,6 +363,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         reserializedBody.length,
         reserializedRequest.getIntHeader(HttpHeader.CONTENT_LENGTH.asString())
     );
+
+    Assertions.assertSame(caller, reserializedRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT));
+    Assertions.assertEquals(
+        QueryResource.NATIVE_QUERY_ROUTE_LOCAL,
+        reserializedRequest.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE)
+    );
+    Mockito.verify(request, Mockito.never())
+           .setAttribute(Mockito.eq(AuthConfig.DRUID_AUTHORIZATION_CHECKED), Mockito.any());
   }
 
   private void assertNativeQueryRouteForDelete(final String route, final boolean expectedLocal) throws Exception

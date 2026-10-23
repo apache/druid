@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
@@ -62,6 +63,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -778,15 +780,17 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       openConnections.getAndIncrement();
       try {
         future = httpClient.go(
-            new Request(
-                HttpMethod.POST,
-                URIs.toURL(url)
-            ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
-             .setHeader(
-                 HttpHeaders.Names.CONTENT_TYPE,
-                 isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-             )
-             .setHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE, QueryResource.NATIVE_QUERY_ROUTE_LOCAL),
+            withNativeQueryRoute(
+                query,
+                new Request(
+                    HttpMethod.POST,
+                    URIs.toURL(url)
+                ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
+                 .setHeader(
+                     HttpHeaderNames.CONTENT_TYPE.toString(),
+                     isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+                 )
+            ),
             responseHandler,
             Duration.millis(timeLeft)
         );
@@ -863,18 +867,32 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     return retVal;
   }
 
+  /**
+   * System-table queries sent by the Broker to individual nodes must run against that node only, so they carry
+   * {@link QueryResource#HEADER_NATIVE_QUERY_ROUTE}. Other queries don't need the header.
+   */
+  private static Request withNativeQueryRoute(final Query<?> query, final Request request)
+  {
+    if (query.getDataSource() instanceof SystemTableDataSource) {
+      request.setHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE, QueryResource.NATIVE_QUERY_ROUTE_LOCAL);
+    }
+    return request;
+  }
+
   private void cancelQuery(Query<T> query, String cancelUrl)
   {
     Runnable cancelRunnable = () -> {
       try {
         Future<StatusResponseHolder> responseFuture = httpClient.go(
-            new Request(HttpMethod.DELETE, URIs.toURL(cancelUrl))
-                .setContent(objectMapper.writeValueAsBytes(query))
-                .setHeader(
-                    HttpHeaders.Names.CONTENT_TYPE,
-                    isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-                )
-                .setHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE, QueryResource.NATIVE_QUERY_ROUTE_LOCAL),
+            withNativeQueryRoute(
+                query,
+                new Request(HttpMethod.DELETE, URIs.toURL(cancelUrl))
+                    .setContent(objectMapper.writeValueAsBytes(query))
+                    .setHeader(
+                        HttpHeaders.Names.CONTENT_TYPE,
+                        isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+                    )
+            ),
             StatusResponseHandler.getInstance(),
             Duration.standardSeconds(1));
 
