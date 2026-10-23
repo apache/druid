@@ -215,10 +215,11 @@ public class ColumnProcessors
       @Nullable final ColumnCapabilities columnCapabilities
   )
   {
+    final ExtractionFn extractionFn = dimensionSpec.getExtractionFnForMetadata();
     if (dimensionSpec.mustDecorate()) {
       // Decorating DimensionSpecs could do anything. We can't pass along any useful info other than the type.
       return new ColumnCapabilitiesImpl().setType(ColumnType.STRING);
-    } else if (dimensionSpec.getExtractionFn() != null) {
+    } else if (extractionFn != null) {
       // DimensionSpec is applying an extractionFn but *not* decorating. We have some insight into how the
       // extractionFn will behave, so let's use it.
       final boolean dictionaryEncoded;
@@ -237,9 +238,9 @@ public class ColumnProcessors
       return new ColumnCapabilitiesImpl()
           .setType(ColumnType.STRING)
           .setDictionaryEncoded(dictionaryEncoded)
-          .setDictionaryValuesSorted(sorted && dimensionSpec.getExtractionFn().preservesOrdering())
+          .setDictionaryValuesSorted(sorted && extractionFn.preservesOrdering())
           .setDictionaryValuesUnique(
-              unique && dimensionSpec.getExtractionFn().getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
+              unique && extractionFn.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
           )
           .setHasMultipleValues(mayBeMultiValue(columnCapabilities));
     } else {
