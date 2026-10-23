@@ -83,6 +83,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  * Managers {@link org.apache.druid.query.lookup.LookupExtractorFactoryContainer} specifications, distributing them
@@ -255,10 +256,24 @@ public class LookupCoordinatorManager
 
   public boolean deleteTier(final String tier, AuditInfo auditInfo)
   {
+    return deleteTier(tier, auditInfo, ignored -> {});
+  }
+
+  /**
+   * Calls {@code checkLookups} under the same lock used to delete the tier.
+   * The callback receives null when the tier is absent.
+   */
+  public boolean deleteTier(
+      final String tier,
+      AuditInfo auditInfo,
+      Consumer<Map<String, LookupExtractorFactoryMapContainer>> checkLookups
+  )
+  {
     Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
 
     synchronized (this) {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
+      checkLookups.accept(priorSpec == null ? null : priorSpec.get(tier));
       if (priorSpec == null) {
         LOG.warn("Requested delete tier [%s]. But no lookups exist!", tier);
         return false;

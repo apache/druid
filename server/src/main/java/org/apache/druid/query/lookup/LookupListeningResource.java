@@ -103,7 +103,9 @@ class LookupListeningResource extends ListenerResource
                 manager.remove(lookName, state.getToLoad().getOrDefault(lookName, null));
               });
 
-              return Response.status(Response.Status.ACCEPTED).entity(manager.getAllLookupsState()).build();
+              return Response.status(Response.Status.ACCEPTED)
+                             .entity(LookupResourceFilter.filterBulkRead(request, manager.getAllLookupsState()))
+                             .build();
             }
             catch (ForbiddenException e) {
               throw e;

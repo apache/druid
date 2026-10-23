@@ -194,11 +194,11 @@ public class LookupCoordinatorResource
                        .build();
       }
 
-      LookupResourceFilter.filterBulk(req, tier, () -> {
-        final Map<String, Map<String, LookupExtractorFactoryMapContainer>> known = lookupCoordinatorManager.getKnownLookups();
-        return known == null ? null : known.get(tier);
-      });
-      if (lookupCoordinatorManager.deleteTier(tier, AuthorizationUtils.buildAuditInfo(req))) {
+      if (lookupCoordinatorManager.deleteTier(
+          tier,
+          AuthorizationUtils.buildAuditInfo(req),
+          lookups -> LookupResourceFilter.filterBulk(req, tier, lookups)
+      )) {
         return Response.status(Response.Status.ACCEPTED).build();
       } else {
         return Response.status(Response.Status.NOT_FOUND).build();
@@ -626,6 +626,13 @@ public class LookupCoordinatorResource
   )
   {
     try {
+      // A node from another tier must not be authorized using the tier in this URL.
+      if (LookupResourceFilter.isBulkAuthorizationEnabled(request)
+          && !lookupCoordinatorManager.discoverNodesInTier(tier).contains(hostAndPort)) {
+        return Response.status(Response.Status.NOT_FOUND)
+                       .entity(ServletResourceUtils.jsonize("Node [%s] status is unknown.", hostAndPort))
+                       .build();
+      }
       Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager
           .getLastKnownLookupsStateOnNodes();
 

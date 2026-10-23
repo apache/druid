@@ -175,15 +175,88 @@ public class LookupResourceFilterTest
   }
 
   @Test
+  public void testReadableCoordinatorTiers()
+  {
+    final Map<String, Map<String, Integer>> tiers = ImmutableMap.of(
+        "prod", ImmutableMap.of("orders", 1, "users", 2),
+        "dev", ImmutableMap.of("orders", 3),
+        "empty", ImmutableMap.of()
+    );
+    assertEquals(
+        ImmutableMap.of("prod", ImmutableMap.of("orders", 1), "empty", ImmutableMap.of()),
+        LookupResourceFilter.readable(ImmutableSet.of("prod/orders", "empty"), null, tiers)
+    );
+  }
+
+  @Test
   public void testNodeStatusDoesNotExposeHostsWithoutReadableLookups()
   {
-    final HostAndPort host = HostAndPort.fromString("example:8080");
+    final HostAndPort readableHost = HostAndPort.fromString("readable:8080");
+    final HostAndPort deniedHost = HostAndPort.fromString("denied:8080");
     final Map<HostAndPort, LookupsState<Integer>> states = ImmutableMap.of(
-        host,
-        new LookupsState<>(ImmutableMap.of("denied", 1), ImmutableMap.of(), ImmutableSet.of())
+        readableHost, new LookupsState<>(ImmutableMap.of("allowed", 1), ImmutableMap.of(), ImmutableSet.of()),
+        deniedHost, new LookupsState<>(ImmutableMap.of("denied", 1), ImmutableMap.of(), ImmutableSet.of())
     );
 
-    assertEquals(ImmutableMap.of(), LookupResourceFilter.readable(ImmutableSet.of(), "tier", states));
+    assertEquals(
+        ImmutableMap.of(readableHost, new LookupsState<>(ImmutableMap.of("allowed", 1), ImmutableMap.of(), ImmutableSet.of())),
+        LookupResourceFilter.readable(ImmutableSet.of("tier/allowed"), "tier", states)
+    );
+    assertEquals(
+        ImmutableMap.of(
+            "tier",
+            ImmutableMap.of(readableHost, new LookupsState<>(ImmutableMap.of("allowed", 1), ImmutableMap.of(), ImmutableSet.of()))
+        ),
+        LookupResourceFilter.readable(ImmutableSet.of("tier/allowed"), null, ImmutableMap.of("tier", states))
+    );
+    assertEquals(states.keySet(), LookupResourceFilter.readable(ImmutableSet.of("tier"), "tier", states).keySet());
+  }
+
+  @Test
+  public void testBulkWriteResponseFiltersByReadPermission()
+  {
+    final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
+    final Injector injector = mock(Injector.class);
+    final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
+    final ContainerRequest request = mock(ContainerRequest.class);
+    final UriInfo uriInfo = mock(UriInfo.class);
+    final Map<String, Object> attributes = new HashMap<>();
+    final List<Action> checked = new ArrayList<>();
+    attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT,
+                   new AuthenticationResult("user", "authorizer", null, null));
+    when(servletRequest.getAttribute(anyString())).thenAnswer(call -> attributes.get(call.getArgument(0)));
+    doAnswer(call -> {
+      attributes.put(call.getArgument(0), call.getArgument(1));
+      return null;
+    }).when(servletRequest).setAttribute(anyString(), any());
+    when(servletRequest.getMethod()).thenReturn("POST");
+    when(request.getMethod()).thenReturn("POST");
+    when(uriInfo.getPathParameters()).thenReturn(new MultivaluedMapImpl());
+    when(injector.getInstance(LookupNodeService.class)).thenReturn(new LookupNodeService("tier"));
+    when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, action) -> {
+      checked.add(action);
+      return action == Action.WRITE || "tier/allowed".equals(resource.getName()) ? Access.OK : Access.DENIED;
+    });
+
+    final LookupResourceFilter filter = new LookupResourceFilter(
+        mapper,
+        AuthConfig.newBuilder().setEnableLookupAuthorization(true).build(),
+        injector
+    );
+    filter.uriInfo = uriInfo;
+    filter.setReq(servletRequest);
+    filter.filter(request);
+    LookupResourceFilter.filterBulk(
+        servletRequest,
+        new LookupsState<>(null, ImmutableMap.of("allowed", 3), null)
+    );
+
+    final LookupsState<Integer> state = new LookupsState<>(
+        ImmutableMap.of("allowed", 1, "denied", 2), ImmutableMap.of(), ImmutableSet.of()
+    );
+    final LookupsState<Integer> readable = LookupResourceFilter.filterBulkRead(servletRequest, state);
+    assertEquals(ImmutableSet.of("allowed"), readable.getCurrent().keySet());
+    assertEquals(ImmutableList.of(Action.WRITE, Action.READ, Action.READ), checked);
   }
 
   @Test

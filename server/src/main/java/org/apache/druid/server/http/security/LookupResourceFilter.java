@@ -46,7 +46,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 
 /**
  * Use this resource filter for API endpoints that contain {@code lookups} in their request path.
@@ -113,13 +112,11 @@ public class LookupResourceFilter extends AbstractResourceFilter
   }
 
   /**
-   * Loads a tier's current lookups only when bulk authorization is active for this request.
+   * Filters a write response using READ permissions instead of the request's WRITE action.
    */
-  public static void filterBulk(HttpServletRequest request, String tier, Supplier<?> value)
+  public static <T> T filterBulkRead(HttpServletRequest request, T value)
   {
-    if (request != null && request.getAttribute(BULK_FILTER) != null) {
-      filterBulk(request, tier, value.get());
-    }
+    return filterBulk(request, null, value, true);
   }
 
   /**
@@ -127,6 +124,11 @@ public class LookupResourceFilter extends AbstractResourceFilter
    * An empty value uses the tier name, or {@link ResourceType#LOOKUP} when no tier is available.
    */
   public static <T> T filterBulk(HttpServletRequest request, String tier, T value)
+  {
+    return filterBulk(request, tier, value, false);
+  }
+
+  private static <T> T filterBulk(HttpServletRequest request, String tier, T value, boolean readResponse)
   {
     final LookupResourceFilter filter = request == null ? null : (LookupResourceFilter) request.getAttribute(BULK_FILTER);
     if (filter == null) {
@@ -142,11 +144,32 @@ public class LookupResourceFilter extends AbstractResourceFilter
     if (names.isEmpty()) {
       names.add(name(targetTier, null));
     }
+    if (readResponse) {
+      // The write already marked this request as authorized. Check READ without marking it again.
+      if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
+        return value;
+      }
+      final Set<String> readable = ImmutableSet.copyOf(AuthorizationUtils.filterAuthorizedResources(
+          AuthorizationUtils.authenticationResultFromRequest(request),
+          names,
+          target -> ImmutableList.of(lookupAction(target, Action.READ)),
+          filter.getAuthorizerMapper()
+      ));
+      return readable(readable, targetTier, value);
+    }
     if ("GET".equals(method)) {
       return readable(filter.readableNames(request, names), targetTier, value);
     }
     filter.authorize(Iterables.transform(names, target -> lookupAction(target, action)));
     return value;
+  }
+
+  /**
+   * Returns whether this request uses lookup authorization for a bulk route.
+   */
+  public static boolean isBulkAuthorizationEnabled(HttpServletRequest request)
+  {
+    return request != null && request.getAttribute(BULK_FILTER) != null;
   }
 
   /**
@@ -277,14 +300,32 @@ public class LookupResourceFilter extends AbstractResourceFilter
     }
     if (value instanceof Map) {
       final Map<Object, Object> result = new LinkedHashMap<>();
+      if (tier != null && !canReadTier(allowed, tier)) {
+        return (T) result;
+      }
       ((Map<?, ?>) value).forEach((key, entry) -> {
-        final boolean topLevelTier = tier == null && key instanceof String;
-        final String nextTier = topLevelTier ? (String) key : tier;
-        if (tier != null && key instanceof String
-            ? allowed.contains(name(tier, (String) key))
-            : canReadTier(allowed, nextTier)) {
-          result.put(key, readable(allowed, nextTier, entry));
+        // String keys within a tier are lookup names.
+        if (tier != null && key instanceof String) {
+          if (allowed.contains(name(tier, (String) key))) {
+            result.put(key, entry);
+          }
+          return;
         }
+
+        // The outer map supplies the tier when the route does not.
+        final String entryTier = tier == null ? (String) key : tier;
+        if (tier == null && !canReadTier(allowed, entryTier)) {
+          return;
+        }
+        final Object filtered = readable(allowed, entryTier, entry);
+        // Do not reveal a node with no readable lookups unless the tier itself is readable.
+        if (filtered instanceof LookupsState && !allowed.contains(entryTier)) {
+          final LookupsState<?> state = (LookupsState<?>) filtered;
+          if (state.getCurrent().isEmpty() && state.getToLoad().isEmpty() && state.getToDrop().isEmpty()) {
+            return;
+          }
+        }
+        result.put(key, filtered);
       });
       return (T) result;
     }
