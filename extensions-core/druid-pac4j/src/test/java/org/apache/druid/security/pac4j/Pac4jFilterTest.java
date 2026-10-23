@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.pac4j.core.client.direct.AnonymousClient;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.exception.http.ForbiddenAction;
 import org.pac4j.core.exception.http.FoundAction;
@@ -41,6 +42,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
@@ -105,24 +108,47 @@ public class Pac4jFilterTest
   }
 
   @Test
-  public void testDoFilterWithNullAuthenticationResult() throws IOException, ServletException
+  public void testDoFilterWithPac4jFailure() throws IOException, ServletException
   {
-    // Mock request without authentication result
+    // The mocked Config has no clients, so pac4j throws a TechnicalException
     Mockito.when(request.getAttribute(DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
     Mockito.when(request.getRequestURI()).thenReturn("/some/path");
-    
-    // This will attempt to do authentication, which may throw due to missing pac4j config
-    // but we're mainly testing the basic flow
-    try {
-      pac4jFilter.doFilter(request, response, filterChain);
-    }
-    catch (Exception e) {
-      // Expected due to mock limitations, but we verified the basic flow
-    }
-    
-    // Verify that the authentication attribute was checked
-    Mockito.verify(request).getAttribute(DRUID_AUTHENTICATION_RESULT);
-    Mockito.verify(request).getRequestURI();
+
+    pac4jFilter.doFilter(request, response, filterChain);
+
+    Mockito.verify(response).sendError(
+        HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+        "OIDC authentication failed. See the server log for details."
+    );
+    Mockito.verifyNoInteractions(filterChain);
+  }
+
+  @Test
+  public void testDoFilterRethrowsDownstreamFailure() throws IOException, ServletException
+  {
+    // pac4j passes the profile along as a request attribute, so the request has to keep its attributes
+    Map<String, Object> attributes = new HashMap<>();
+    Mockito.doAnswer(invocation -> attributes.put(invocation.getArgument(0), invocation.getArgument(1)))
+           .when(request).setAttribute(any(), any());
+    Mockito.when(request.getAttribute(any())).thenAnswer(invocation -> attributes.get(invocation.getArgument(0)));
+    Mockito.when(request.getRequestURI()).thenReturn("/some/path");
+    Mockito.when(request.getRequestURL()).thenReturn(new StringBuffer("http://localhost/some/path"));
+    RuntimeException downstream = new RuntimeException("downstream");
+    Mockito.doThrow(downstream).when(filterChain).doFilter(request, response);
+
+    Pac4jFilter filter = new Pac4jFilter(
+        "test",
+        "testAuthorizer",
+        new Config(new AnonymousClient()),
+        "/callback",
+        "testPassphrase"
+    );
+
+    Assertions.assertSame(downstream, Assertions.assertThrows(
+        RuntimeException.class,
+        () -> filter.doFilter(request, response, filterChain)
+    ));
+    Mockito.verify(response, Mockito.never()).sendError(Mockito.anyInt(), Mockito.anyString());
   }
 
   @Test
