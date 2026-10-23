@@ -42,6 +42,7 @@ import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -53,6 +54,7 @@ import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
@@ -824,7 +826,38 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
 
+    if (node instanceof SqlSelect) {
+      aliasSelectItems((SqlSelect) node);
+    }
+
     return super.performUnconditionalRewrites(node, underFrom);
+  }
+
+  /**
+   * Wraps select items in "AS" when {@link #deriveSelectItemAlias} has a better name for them. This must run
+   * before other rewrites, since it looks at the syntax the user wrote.
+   */
+  private static void aliasSelectItems(final SqlSelect select)
+  {
+    final SqlNodeList selectList = select.getSelectList();
+    final List<String> aliases = new ArrayList<>(selectList.size());
+    final List<String> names = new ArrayList<>(selectList.size());
+    for (final SqlNode item : selectList) {
+      if (item instanceof SqlIdentifier && ((SqlIdentifier) item).isStar()) {
+        // Keep all defaults, since we can't tell which names the star expands to.
+        return;
+      }
+      final String alias = deriveSelectItemAlias(item);
+      aliases.add(alias);
+      names.add(alias != null ? alias : SqlValidatorUtil.alias(item));
+    }
+    for (int i = 0; i < selectList.size(); i++) {
+      final String alias = aliases.get(i);
+      // Skip duplicate names, since we can't have two output columns with the same name and different types.
+      if (alias != null && Collections.frequency(names, alias) == 1) {
+        selectList.set(i, SqlValidatorUtil.addAlias(selectList.get(i), alias));
+      }
+    }
   }
 
   /**
@@ -884,6 +917,29 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     );
   }
 
+  /**
+   * Returns a preferred name for a select item. We use this so "x::TYPE" can be automatically named "x".
+   */
+  @Nullable
+  private static String deriveSelectItemAlias(final SqlNode item)
+  {
+    if (item.getKind() == SqlKind.CAST) {
+      final SqlCall cast = (SqlCall) item;
+
+      // This rule is only for infix cast (x::TYPE), not regular CAST.
+      if (SqlLibraryOperators.INFIX_CAST.equals(cast.getOperator())) {
+        final SqlNode operand = cast.operand(0);
+        if (operand instanceof SqlIdentifier identifier && !identifier.isStar()) {
+          return Util.last(identifier.names);
+        } else {
+          return deriveSelectItemAlias(operand);
+        }
+      }
+    }
+
+    return null;
+  }
+
   private SqlNode getSqlNodeFor(SqlInsert insert, int idx)
   {
     SqlNode src = insert.getSource();
@@ -903,7 +959,4 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
            && call.getFunctionQuantifier() != null
            && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT;
   }
-
-
-
 }

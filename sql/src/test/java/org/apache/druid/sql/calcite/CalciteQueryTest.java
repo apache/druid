@@ -4806,6 +4806,261 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testInfixCastSelectItemName()
+  {
+    testQuery(
+        "SELECT dim1::BIGINT FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                .columns("v0")
+                .columnTypes(ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{10L},
+            new Object[]{2L},
+            new Object[]{1L},
+            new Object[]{null},
+            new Object[]{null}
+        ),
+        RowSignature.builder().add("dim1", ColumnType.LONG).build()
+    );
+  }
+
+  @Test
+  public void testInfixCastSelectItemNameQualified()
+  {
+    testQuery(
+        "SELECT foo.dim1::BIGINT FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                .columns("v0")
+                .columnTypes(ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{10L},
+            new Object[]{2L},
+            new Object[]{1L},
+            new Object[]{null},
+            new Object[]{null}
+        ),
+        RowSignature.builder().add("dim1", ColumnType.LONG).build()
+    );
+  }
+
+  @Test
+  public void testInfixCastSelectItemNameChained()
+  {
+    testQuery(
+        "SELECT dim1::VARCHAR::BIGINT FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                .columns("v0")
+                .columnTypes(ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{10L},
+            new Object[]{2L},
+            new Object[]{1L},
+            new Object[]{null},
+            new Object[]{null}
+        ),
+        RowSignature.builder().add("dim1", ColumnType.LONG).build()
+    );
+  }
+
+  @Test
+  public void testInfixCastSelectItemNameDefault()
+  {
+    // CAST(x AS T) keeps its default name, and so does "::" applied to an expression that has no name.
+    testQuery(
+        "SELECT CAST(dim1 AS BIGINT), (dim1 || 'x')::VARCHAR FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "concat(\"dim1\",'x')", ColumnType.STRING)
+                )
+                .columns("v0", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, "x"},
+            new Object[]{10L, "10.1x"},
+            new Object[]{2L, "2x"},
+            new Object[]{1L, "1x"},
+            new Object[]{null, "defx"},
+            new Object[]{null, "abcx"}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.STRING)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testInfixCastSelectItemNameExplicitAlias()
+  {
+    testQuery(
+        "SELECT dim1::BIGINT AS dim1_long FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                .columns("v0")
+                .columnTypes(ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{10L},
+            new Object[]{2L},
+            new Object[]{1L},
+            new Object[]{null},
+            new Object[]{null}
+        ),
+        RowSignature.builder().add("dim1_long", ColumnType.LONG).build()
+    );
+  }
+
+  @Test
+  public void testInfixCastSelectItemNameDuplicate()
+  {
+    // Names that would duplicate another select item's name keep the default.
+    testQuery(
+        "SELECT dim1, dim1::BIGINT, m1::BIGINT, m1::DOUBLE, cnt::VARCHAR FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "CAST(\"m1\", 'LONG')", ColumnType.LONG),
+                    expressionVirtualColumn("v2", "\"m1\"", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v3", "CAST(\"cnt\", 'STRING')", ColumnType.STRING)
+                )
+                .columns("dim1", "v0", "v1", "v2", "v3")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.STRING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", null, 1L, 1.0, "1"},
+            new Object[]{"10.1", 10L, 2L, 2.0, "1"},
+            new Object[]{"2", 2L, 3L, 3.0, "1"},
+            new Object[]{"1", 1L, 4L, 4.0, "1"},
+            new Object[]{"def", null, 5L, 5.0, "1"},
+            new Object[]{"abc", null, 6L, 6.0, "1"}
+        ),
+        RowSignature.builder()
+                    .add("dim1", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .add("EXPR$3", ColumnType.DOUBLE)
+                    .add("cnt", ColumnType.STRING)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testInfixCastSelectItemNameStar()
+  {
+    // A star may expand to any name, so nothing in the select list is named.
+    testQuery(
+        "SELECT *, dim1::BIGINT FROM (SELECT dim1 FROM foo)",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                .columns("dim1", "v0")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", null},
+            new Object[]{"10.1", 10L},
+            new Object[]{"2", 2L},
+            new Object[]{"1", 1L},
+            new Object[]{"def", null},
+            new Object[]{"abc", null}
+        ),
+        RowSignature.builder()
+                    .add("dim1", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testInfixCastSelectItemNameOrderBy()
+  {
+    // ORDER BY dim1 refers to the select item named dim1, not the column, so it sorts numerically.
+    testQuery(
+        "SELECT dim1::BIGINT FROM foo GROUP BY dim1 ORDER BY dim1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setPostAggregatorSpecs(expressionPostAgg("p0", "CAST(\"d0\", 'LONG')", ColumnType.LONG))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec("p0", Direction.ASCENDING, StringComparators.NUMERIC)
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{1L},
+            new Object[]{2L},
+            new Object[]{10L}
+        ),
+        RowSignature.builder().add("dim1", ColumnType.LONG).build()
+    );
+  }
+
+  @Test
   public void testSimpleLongAggregations()
   {
     testQuery(
