@@ -54,6 +54,12 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- The version grpc-protobuf declares, ahead of the one from the inherited libraries-bom -->
+      <dependency>
+        <groupId>com.google.api.grpc</groupId>
+        <artifactId>proto-google-common-protos</artifactId>
+        <version>2.64.1</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
