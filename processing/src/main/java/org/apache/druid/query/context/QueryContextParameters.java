@@ -46,6 +46,7 @@ import org.apache.druid.segment.loading.AcquireMode;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -2512,11 +2513,36 @@ public final class QueryContextParameters
         name,
         Boolean.class,
         value -> {
-          if (value instanceof String) {
-            // Matches the established QueryContexts coercion: any string other than "true" (ignoring case) is false.
-            return Boolean.parseBoolean((String) value);
+          if (value instanceof String string) {
+            if ("true".equalsIgnoreCase(string) || "1".equals(string)) {
+              return true;
+            } else if ("false".equalsIgnoreCase(string) || "0".equals(string)) {
+              return false;
+            }
+          } else if (value instanceof Integer || value instanceof Long || value instanceof Short || value instanceof Byte) {
+            // Integers only, such as from "SET flag = 1". Floating-point numbers such as 1.0 are rejected.
+            final long number = ((Number) value).longValue();
+            if (number == 1) {
+              return true;
+            } else if (number == 0) {
+              return false;
+            }
+          } else if (value instanceof BigInteger bigInteger) {
+            // A context built in Java, or read from JSON by a mapper that keeps integers as BigInteger,
+            // such as one with DeserializationFeature.USE_BIG_INTEGER_FOR_INTS
+            if (BigInteger.ONE.equals(bigInteger)) {
+              return true;
+            } else if (BigInteger.ZERO.equals(bigInteger)) {
+              return false;
+            }
           }
-          throw invalidValueException(name, "a boolean", value);
+          throw new BadQueryContextException(
+              StringUtils.format(
+                  "Query context parameter [%s] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [%s]",
+                  name,
+                  value
+              )
+          );
         }
     );
   }

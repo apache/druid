@@ -33,7 +33,8 @@ class QueryContextParameterValidatorTest
   {
     assertThrows(BadQueryContextException.class, () -> QueryContextParameterValidator.validate("maxRowsQueuedForOrdering", -1));
     assertThrows(BadQueryContextException.class, () -> QueryContextParameterValidator.validate("maxRowsQueuedForOrdering", "not-an-int"));
-    assertThrows(BadQueryContextException.class, () -> QueryContextParameterValidator.validate("useResultLevelCache", 1));
+    assertThrows(BadQueryContextException.class, () -> QueryContextParameterValidator.validate("useResultLevelCache", 2));
+    QueryContextParameterValidator.validate("useResultLevelCache", 1);
     QueryContextParameterValidator.validate("maxRowsQueuedForOrdering", Integer.MAX_VALUE);
     QueryContextParameterValidator.validate("maxRowsQueuedForOrdering", null);
     QueryContextParameterValidator.validate("unmigratedParameter", -1);
