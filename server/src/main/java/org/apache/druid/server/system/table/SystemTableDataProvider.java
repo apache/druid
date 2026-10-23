@@ -21,7 +21,6 @@ package org.apache.druid.server.system.table;
 
 import jakarta.validation.constraints.NotNull;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.server.security.AuthenticationResult;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,8 +38,5 @@ public interface SystemTableDataProvider
     return Collections.emptyList();
   }
 
-  Iterable<Object[]> getRows(
-      @NotNull List<DimFilter> filters,
-      AuthenticationResult internalAuthenticationResult
-  );
+  Iterable<Object[]> getRows(@NotNull List<DimFilter> filters);
 }

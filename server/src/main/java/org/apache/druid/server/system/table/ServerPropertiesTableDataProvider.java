@@ -29,7 +29,6 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.security.AuthenticationResult;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -76,10 +75,7 @@ public class ServerPropertiesTableDataProvider implements SystemTableDataProvide
   }
 
   @Override
-  public Iterable<Object[]> getRows(
-      final List<DimFilter> filters,
-      final AuthenticationResult internalAuthenticationResult
-  )
+  public Iterable<Object[]> getRows(final List<DimFilter> filters)
   {
     String serverFilter = null;
     String serviceNameFilter = null;

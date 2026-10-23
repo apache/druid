@@ -24,8 +24,6 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.system.table.ServerPropertiesTableDataProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -36,9 +34,6 @@ import java.util.Set;
 
 public class ServerPropertiesTableDataProviderTest
 {
-  private static final AuthenticationResult AUTHENTICATION_RESULT =
-      new AuthenticationResult("test-user", AuthConfig.ALLOW_ALL_NAME, null, null);
-
   @Test
   public void testReturnsVisiblePropertiesAndNodeMetadata()
   {
@@ -47,7 +42,7 @@ public class ServerPropertiesTableDataProviderTest
     properties.setProperty("druid.test.password", "hidden");
 
     final ServerPropertiesTableDataProvider supplier = supplier(properties);
-    final List<Object[]> rows = toRows(supplier.getRows(List.of(), AUTHENTICATION_RESULT));
+    final List<Object[]> rows = toRows(supplier.getRows(List.of()));
 
     Assertions.assertEquals(1, rows.size());
     Assertions.assertArrayEquals(
@@ -85,7 +80,7 @@ public class ServerPropertiesTableDataProviderTest
           }
         }
     );
-    final List<Object[]> rows = toRows(supplier.getRows(List.of(), AUTHENTICATION_RESULT));
+    final List<Object[]> rows = toRows(supplier.getRows(List.of()));
 
     Assertions.assertEquals(1, rows.size());
     Assertions.assertEquals("druid.test.visible", rows.getFirst()[3]);
@@ -98,14 +93,11 @@ public class ServerPropertiesTableDataProviderTest
     final DimFilter wrongServer = new SelectorDimFilter("server", "other:8080", null);
     final DimFilter wrongService = new SelectorDimFilter("service_name", "broker", null);
 
-    Assertions.assertTrue(toRows(supplier.getRows(List.of(wrongServer), AUTHENTICATION_RESULT)).isEmpty());
-    Assertions.assertTrue(toRows(supplier.getRows(List.of(wrongService), AUTHENTICATION_RESULT)).isEmpty());
+    Assertions.assertTrue(toRows(supplier.getRows(List.of(wrongServer))).isEmpty());
+    Assertions.assertTrue(toRows(supplier.getRows(List.of(wrongService))).isEmpty());
     Assertions.assertFalse(
         toRows(
-            supplier.getRows(
-                List.of(new SelectorDimFilter("server", "localhost:8080", null)),
-                AUTHENTICATION_RESULT
-            )
+            supplier.getRows(List.of(new SelectorDimFilter("server", "localhost:8080", null)))
         ).isEmpty()
     );
   }
@@ -114,7 +106,7 @@ public class ServerPropertiesTableDataProviderTest
   public void testReturnsPlaceholderWhenNoPropertiesExist()
   {
     final ServerPropertiesTableDataProvider supplier = supplier(new Properties());
-    final List<Object[]> rows = toRows(supplier.getRows(List.of(), AUTHENTICATION_RESULT));
+    final List<Object[]> rows = toRows(supplier.getRows(List.of()));
 
     Assertions.assertEquals(1, rows.size());
     Assertions.assertNull(rows.get(0)[3]);

@@ -78,10 +78,7 @@ public class SystemTableQueryHandlerTest
     final SystemTableDataProvider supplier = new SystemTableDataProvider()
     {
       @Override
-      public Iterable<Object[]> getRows(
-          final List<DimFilter> filters,
-          final AuthenticationResult authenticationResult
-      )
+      public Iterable<Object[]> getRows(final List<DimFilter> filters)
       {
         getRowsCalls.incrementAndGet();
         return Arrays.asList(

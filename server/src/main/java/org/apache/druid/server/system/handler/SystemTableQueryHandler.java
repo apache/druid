@@ -95,8 +95,7 @@ public class SystemTableQueryHandler implements DataSourceQueryHandler
 
     return (queryPlus, responseContext) -> {
       final Iterable<Object[]> suppliedRows = () -> dataSupplier.getRows(
-          SystemTablePushdownFilter.extract(query, dataSupplier.getPushdownFilters()),
-          requestAuthenticationResult
+          SystemTablePushdownFilter.extract(query, dataSupplier.getPushdownFilters())
       ).iterator();
       final Iterable<Object[]> authorizedRows = descriptor.getRowAuthorizer().filterAuthorizedRows(
           suppliedRows,
