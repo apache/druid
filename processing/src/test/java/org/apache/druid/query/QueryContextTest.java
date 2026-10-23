@@ -431,12 +431,13 @@ public class QueryContextTest
     assertEquals("100", parameter.parse(100));
     assertEquals("1000000000", parameter.parse(1e9));
 
+    assertEquals("1GiB", parameter.parse("1GiB"));
+    assertEquals("256 MiB", parameter.parse("256 MiB"));
     assertEquals(
-        "Query context parameter [maxSubqueryBytes] should be 'auto', 'disabled' or a non-negative number of bytes, "
-        + "but got [true]",
+        "Query context parameter [maxSubqueryBytes] should be 'auto', 'disabled' or a non-negative number of bytes, such as '10 K' or '256 MiB', but got [true]",
         assertThrows(BadQueryContextException.class, () -> parameter.parse(true)).getMessage()
     );
-    assertThrows(BadQueryContextException.class, () -> parameter.parse("1GiB"));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("-1K"));
     assertThrows(BadQueryContextException.class, () -> parameter.parse("-1"));
     assertThrows(BadQueryContextException.class, () -> parameter.parse(-1));
     assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5));

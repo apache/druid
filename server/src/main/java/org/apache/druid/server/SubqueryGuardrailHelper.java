@@ -21,6 +21,8 @@ package org.apache.druid.server;
 
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -77,25 +79,19 @@ public class SubqueryGuardrailHelper
       return autoLimitBytes;
     }
 
-    long retVal;
     try {
-      retVal = Long.parseLong(maxSubqueryLimit);
+      // Such as 1000000, 10 K or 256 MiB
+      return HumanReadableBytes.parse(maxSubqueryLimit);
     }
-    catch (NumberFormatException e) {
+    catch (IAE e) {
       throw InvalidInput.exception(
           e,
           "Unable to parse the provided maxSubqueryLimit [%s] to a valid number. Valid values for the "
-          + "maxSubqueryLimits can be 'auto', 'disabled' or a positive integer representing bytes to reserve.",
+          + "maxSubqueryLimits can be 'auto', 'disabled' or a non-negative number of bytes, such as '10 K' or "
+          + "'256 MiB'.",
           maxSubqueryLimit
       );
     }
-
-    // This can happen if the provided number is greater than Longs.MAX_VALUE
-    if (retVal < 0) {
-      throw InvalidInput.exception("Limit too large");
-    }
-
-    return retVal;
   }
 
   /**

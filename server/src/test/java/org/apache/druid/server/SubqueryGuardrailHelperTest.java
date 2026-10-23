@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
@@ -120,6 +121,19 @@ public class SubqueryGuardrailHelperTest
     );
   }
 
+
+  @Test
+  public void testConvertSubqueryLimitStringToLongWithSize()
+  {
+    final SubqueryGuardrailHelper helper = fetchSubqueryLimitUtilsForNoLookups(humanReadableSizeToBytes("512MiB"), 25);
+    Assertions.assertEquals(1_000_000L, helper.convertSubqueryLimitStringToLong("1000000"));
+    Assertions.assertEquals(256L * 1024 * 1024, helper.convertSubqueryLimitStringToLong("256MiB"));
+    Assertions.assertEquals(256L * 1024 * 1024, helper.convertSubqueryLimitStringToLong("256 MiB"));
+    Assertions.assertEquals(10_000L, helper.convertSubqueryLimitStringToLong("10 K"));
+
+    Assertions.assertThrows(DruidException.class, () -> helper.convertSubqueryLimitStringToLong("-1"));
+    Assertions.assertThrows(DruidException.class, () -> helper.convertSubqueryLimitStringToLong("abc"));
+  }
 
   private SubqueryGuardrailHelper fetchSubqueryLimitUtilsForNoLookups(long maxMemoryInJvm, int brokerNumHttpConnections)
   {
