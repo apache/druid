@@ -21,17 +21,18 @@ package org.apache.druid.iceberg.input;
 
 import com.google.common.collect.Maps;
 import org.apache.arrow.vector.FieldVector;
+import org.apache.druid.data.input.BatchInputSourceReader;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.iceberg.CombinedScanTask;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.Schema;
@@ -57,8 +58,8 @@ import java.util.stream.Collectors;
 /**
  * Reads an Iceberg table via iceberg-arrow's {@link ArrowReader}, yielding {@link InputRow} objects.
  *
- * Type coercion and compatible schema evolution are handled by the Iceberg library. Druid only consumes
- * the resulting {@link ColumnarBatch} batches and maps them to {@link MapBasedInputRow}.
+ * Type coercion and compatible schema evolution are handled by the Iceberg library. Druid consumes
+ * the resulting {@link ColumnarBatch} batches directly or maps them to {@link MapBasedInputRow}.
  *
  * Column projection and predicate push-down are applied at scan planning time so only requested
  * columns and matching files are read from storage.
@@ -67,7 +68,7 @@ import java.util.stream.Collectors;
  * {@link UnsupportedOperationException} at read time. Delete-file snapshots are rejected because
  * iceberg-arrow does not apply equality or positional deletes.
  */
-public class IcebergArrowInputSourceReader implements InputSourceReader
+public class IcebergArrowInputSourceReader implements BatchInputSourceReader
 {
   static final int DEFAULT_BATCH_SIZE = 1024;
 
@@ -138,6 +139,52 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
           tasks,
           inputStats != null ? inputStats : new NoopInputStats(),
           scan.schema(),
+          extensionClassLoader
+      );
+      ownershipTransferred = true;
+      return iterator;
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(originalClassLoader);
+      if (!ownershipTransferred) {
+        try {
+          if (arrowReader != null) {
+            arrowReader.close();
+          }
+        }
+        finally {
+          tasks.close();
+        }
+      }
+    }
+  }
+
+  @Override
+  public CloseableIterator<RowsAndColumns> readBatches(@Nullable final InputStats inputStats) throws IOException
+  {
+    final TableScan scan = buildScan();
+    validateNoDeleteFiles(scan);
+    validateDecimalPrecision(scan);
+    final CloseableIterable<CombinedScanTask> tasks = TableScanUtil.planTasks(
+        scan.planFiles(),
+        scan.targetSplitSize(),
+        scan.splitLookback(),
+        scan.splitOpenFileCost()
+    );
+    final ClassLoader extensionClassLoader = IcebergArrowInputSourceReader.class.getClassLoader();
+    final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+    ArrowReader arrowReader = null;
+    boolean ownershipTransferred = false;
+    try {
+      Thread.currentThread().setContextClassLoader(extensionClassLoader);
+      arrowReader = new ArrowReader(scan, batchSize, true);
+      final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter = arrowReader.open(tasks);
+      final CloseableIterator<RowsAndColumns> iterator = new ArrowRowsAndColumnsIterator(
+          batchIter,
+          arrowReader,
+          tasks,
+          inputStats != null ? inputStats : new NoopInputStats(),
+          new IcebergArrowRowsAndColumns.Layout(scan.schema()),
           extensionClassLoader
       );
       ownershipTransferred = true;
@@ -340,6 +387,119 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     }
   }
 
+  private static RuntimeException translateBatchReadException(final RuntimeException exception)
+  {
+    if (exception.getMessage() != null && exception.getMessage().contains("vector")) {
+      return DruidException.forPersona(DruidException.Persona.USER)
+                           .ofCategory(DruidException.Category.UNSUPPORTED)
+                           .build(
+                               exception,
+                               "Arrow reader does not support snapshots with data files written using "
+                               + "different schemas. Use the standard Iceberg reader."
+                           );
+    }
+    return exception;
+  }
+
+  private static long estimateBatchBytes(final ColumnarBatch batch)
+  {
+    long bytes = 0;
+    for (int col = 0; col < batch.numCols(); col++) {
+      final FieldVector vector = batch.column(col).getFieldVector();
+      if (vector != null) {
+        bytes += vector.getBufferSize();
+      }
+    }
+    return bytes;
+  }
+
+  private static class ArrowRowsAndColumnsIterator implements CloseableIterator<RowsAndColumns>
+  {
+    private final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter;
+    private final ArrowReader arrowReader;
+    private final CloseableIterable<CombinedScanTask> tasks;
+    private final InputStats inputStats;
+    private final IcebergArrowRowsAndColumns.Layout layout;
+    private final ClassLoader extensionClassLoader;
+
+    ArrowRowsAndColumnsIterator(
+        final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter,
+        final ArrowReader arrowReader,
+        final CloseableIterable<CombinedScanTask> tasks,
+        final InputStats inputStats,
+        final IcebergArrowRowsAndColumns.Layout layout,
+        final ClassLoader extensionClassLoader
+    )
+    {
+      this.batchIter = batchIter;
+      this.arrowReader = arrowReader;
+      this.tasks = tasks;
+      this.inputStats = inputStats;
+      this.layout = layout;
+      this.extensionClassLoader = extensionClassLoader;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+      try {
+        Thread.currentThread().setContextClassLoader(extensionClassLoader);
+        return batchIter.hasNext();
+      }
+      catch (RuntimeException e) {
+        throw translateBatchReadException(e);
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(originalClassLoader);
+      }
+    }
+
+    @Override
+    public RowsAndColumns next()
+    {
+      final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+      try {
+        Thread.currentThread().setContextClassLoader(extensionClassLoader);
+        if (!batchIter.hasNext()) {
+          throw new NoSuchElementException();
+        }
+        final ColumnarBatch batch = batchIter.next();
+        inputStats.incrementProcessedBytes(estimateBatchBytes(batch));
+        return new IcebergArrowRowsAndColumns(batch, layout);
+      }
+      catch (RuntimeException e) {
+        throw translateBatchReadException(e);
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(originalClassLoader);
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+      try {
+        Thread.currentThread().setContextClassLoader(extensionClassLoader);
+        try {
+          batchIter.close();
+        }
+        finally {
+          try {
+            arrowReader.close();
+          }
+          finally {
+            tasks.close();
+          }
+        }
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(originalClassLoader);
+      }
+    }
+  }
+
   private class ArrowInputRowIterator implements CloseableIterator<InputRow>
   {
     private final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter;
@@ -423,31 +583,10 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
         }
       }
       catch (RuntimeException e) {
-        if (e.getMessage() != null && e.getMessage().contains("vector")) {
-          throw DruidException.forPersona(DruidException.Persona.USER)
-                              .ofCategory(DruidException.Category.UNSUPPORTED)
-                              .build(
-                                  e,
-                                  "Arrow reader does not support snapshots with data files written using "
-                                  + "different schemas. Use the standard Iceberg reader."
-                              );
-        }
-        throw e;
+        throw translateBatchReadException(e);
       }
       exhausted = true;
       return false;
-    }
-
-    private long estimateBatchBytes(final ColumnarBatch batch)
-    {
-      long bytes = 0;
-      for (int col = 0; col < batch.numCols(); col++) {
-        final FieldVector vector = batch.column(col).getFieldVector();
-        if (vector != null) {
-          bytes += vector.getBufferSize();
-        }
-      }
-      return bytes;
     }
 
     @Override
