@@ -1,5 +1,7 @@
-Copyright (c) 2002-2006, Marc Prud'hommeaux <mwp1@cornell.edu>
+Copyright (c) 2002-2018, the original author or authors.
 All rights reserved.
+
+http://www.opensource.org/licenses/bsd-license.php
 
 Redistribution and use in source and binary forms, with or
 without modification, are permitted provided that the following
@@ -30,3 +32,4 @@ AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 OF THE POSSIBILITY OF SUCH DAMAGE.
+

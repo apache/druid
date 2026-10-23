@@ -65,6 +65,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -353,6 +354,25 @@ public class PartialQueryableIndex implements QueryableIndex
     );
   }
 
+  /**
+   * {@link #getProjection} restricted to the projections whose bundle {@code servableBundles} accepts.
+   */
+  @Nullable
+  private QueryableProjection<QueryableIndex> getServableProjection(
+      CursorBuildSpec cursorBuildSpec,
+      Predicate<String> servableBundles
+  )
+  {
+    return Projections.findMatchingProjection(
+        cursorBuildSpec,
+        projections,
+        servableBundles,
+        dataInterval,
+        this::checkProjectionHasColumn,
+        this::getProjectionQueryableIndex
+    );
+  }
+
   private boolean checkProjectionHasColumn(String projectionName, String columnName)
   {
     final ProjectionMetadata meta = projectionSpecs.get(projectionName);
@@ -524,14 +544,31 @@ public class PartialQueryableIndex implements QueryableIndex
    */
   CursorPrefetchPlan planCursorPrefetch(CursorBuildSpec spec)
   {
-    final QueryableProjection<QueryableIndex> matched = getProjection(spec);
+    return planCursorPrefetch(spec, null);
+  }
+
+  /**
+   * Like {@link #planCursorPrefetch(CursorBuildSpec)}, but when {@code servableBundles} is non-null, plans only over
+   * the bundles it accepts, as if they were the whole segment. Only accepted projections are matching candidates, and
+   * only accepted cluster groups are planned. If the plan would otherwise need an unaccepted base table bundle, it has
+   * no bundles at all, meaning the spec reads no rows. A matched projection's base table parent bundle is a dependency
+   * of the projection rather than a row selector of its own, so it is planned regardless.
+   */
+  CursorPrefetchPlan planCursorPrefetch(CursorBuildSpec spec, @Nullable Predicate<String> servableBundles)
+  {
+    final QueryableProjection<QueryableIndex> matched = servableBundles == null
+                                                        ? getProjection(spec)
+                                                        : getServableProjection(spec, servableBundles);
     if (matched == null && clusteredBaseSummary != null) {
       // Clustered base table: metadata-only group resolution; only the groups whose clustering tuples survive the
       // query's filters plan any downloads, one bundle per surviving group.
-      final ClusterGroupQueryPlan clusterGroupPlan = Projections.planClusterGroupQuery(
-          new ArrayList<>(getClusterGroupSchemas()),
-          spec
-      );
+      final List<TableClusterGroupSpec> candidateGroups = new ArrayList<>(getClusterGroupSchemas());
+      if (servableBundles != null) {
+        candidateGroups.removeIf(
+            group -> !servableBundles.test(Projections.getClusterGroupBundleName(group.getClusteringValueIds()))
+        );
+      }
+      final ClusterGroupQueryPlan clusterGroupPlan = Projections.planClusterGroupQuery(candidateGroups, spec);
       final List<PrefetchBundle> bundles = new ArrayList<>(clusterGroupPlan.survivingGroups().size());
       for (TableClusterGroupSpec group : clusterGroupPlan.survivingGroups()) {
         final QueryableIndex groupIndex = getClusterGroupQueryableIndex(group, true);
@@ -554,6 +591,10 @@ public class PartialQueryableIndex implements QueryableIndex
     // parents.
     final QueryableIndex rowSelector = matched != null ? matched.getRowSelector() : this;
     final String bundleName = matched != null ? matched.getName() : Projections.BASE_TABLE_PROJECTION_NAME;
+    if (servableBundles != null && !servableBundles.test(bundleName)) {
+      // only reachable for the base table, since a matched projection was already accepted
+      return new CursorPrefetchPlan(null, null, List.of());
+    }
     final Set<String> required = requiredColumns(rowSelector, matched, spec);
     final List<PrefetchBundle> bundles = new ArrayList<>(2);
     bundles.add(
