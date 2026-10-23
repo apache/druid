@@ -19,7 +19,8 @@ set -e
 
 get_milestone_number() {
   local milestone_title="$1"
-  local number=$(gh api "repos/$REPOSITORY/milestones?state=all&per_page=100" --paginate --jq ".[] | select(.title==\"$milestone_title\") | .number")
+  local number
+  number=$(gh api "repos/$REPOSITORY/milestones?state=all&per_page=100" --paginate --jq ".[] | select(.title==\"$milestone_title\") | .number") || return 1
 
   if [ -z "$number" ]; then
     echo "Creating milestone: $milestone_title" >&2
