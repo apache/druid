@@ -24,12 +24,7 @@ get_milestone_number() {
 
   if [ -z "$number" ]; then
     echo "Creating milestone: $milestone_title" >&2
-    number=$(gh api "repos/$REPOSITORY/milestones" -f title="$milestone_title" --jq '.number')
-  fi
-
-  if ! [[ "$number" =~ ^[0-9]+$ ]]; then
-    echo "Error: Could not get milestone number for $milestone_title" >&2
-    return 1
+    number=$(gh api "repos/$REPOSITORY/milestones" -f title="$milestone_title" --jq '.number') || return 1
   fi
 
   echo "$number"
