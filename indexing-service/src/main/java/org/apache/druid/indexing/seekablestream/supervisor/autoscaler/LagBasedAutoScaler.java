@@ -114,7 +114,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     allocationExec.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale, emitter),
+        supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis() + lagBasedAutoScalerConfig
             .getLagCollectionRangeMillis(),
         lagBasedAutoScalerConfig.getScaleActionPeriodMillis(),
