@@ -4321,7 +4321,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     final long unusedCooldown = 0L;
     final long scaleDownCooldown = Duration.standardHours(1).getMillis();
-    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(unusedCooldown, scaleDownCooldown, 5);
+    setupSupervisorForAutoScalingTest(unusedCooldown, scaleDownCooldown, 5);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
@@ -4334,7 +4334,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount(), "Second scale-down must not take effect");
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(2, events.size(), "Two required-tasks emissions expected (one applied, one skipped)");
     assertScaledToTaskCount(events.get(0), 3);
     assertScaleSkipped(events.get(1), 1, "Scale cooldown not elapsed yet");

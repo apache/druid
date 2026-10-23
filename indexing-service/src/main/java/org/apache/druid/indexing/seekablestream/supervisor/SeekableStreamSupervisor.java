@@ -4074,8 +4074,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         new DynamicAllocationTasksNotice(
             () -> rolloverTaskCount,
             () -> {},
-            true,
-            emitter
+            true
         ).handle();
       } else {
         // Reset last scale time even if taskCount is not being changed.
