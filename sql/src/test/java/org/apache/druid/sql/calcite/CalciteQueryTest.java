@@ -4696,6 +4696,61 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterOnStringAsNumberInfixCast()
+  {
+    testQuery(
+        "SELECT distinct dim1 FROM druid.foo WHERE dim1::float > 9 and dim1::float <= 10.5",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDimFilter(
+                            range("dim1", ColumnType.FLOAT, 9.0, 10.5, true, false)
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1"}
+        )
+    );
+  }
+
+  @Test
+  public void testInfixCastPrecedence()
+  {
+    // "::" binds tighter than unary minus and binary operators.
+    testQuery(
+        "SELECT -m1::BIGINT, 1 + dim1::BIGINT, 'x' || cnt::VARCHAR FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "(- CAST(\"m1\", 'LONG'))", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "(1 + CAST(\"dim1\", 'LONG'))", ColumnType.LONG),
+                    expressionVirtualColumn("v2", "concat('x',CAST(\"cnt\", 'STRING'))", ColumnType.STRING)
+                )
+                .columns("v0", "v1", "v2")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.STRING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{-1L, null, "x1"},
+            new Object[]{-2L, 11L, "x1"},
+            new Object[]{-3L, 3L, "x1"},
+            new Object[]{-4L, 2L, "x1"},
+            new Object[]{-5L, null, "x1"},
+            new Object[]{-6L, null, "x1"}
+        )
+    );
+  }
+
+  @Test
   public void testSimpleLongAggregations()
   {
     testQuery(

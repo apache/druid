@@ -106,6 +106,23 @@ SqlTypeNameSpec DruidType() :
   }
 }
 
+// Parses the PostgreSQL-style infix cast operator (e.g. x::BIGINT).
+void InfixCast(List<Object> list, ExprContext exprContext, Span s) :
+{
+  final SqlDataTypeSpec dt;
+}
+{
+  <INFIX_CAST>
+  {
+    checkNonQueryExpression(exprContext);
+    list.add(new SqlParserUtil.ToTreeListItem(SqlLibraryOperators.INFIX_CAST, getPos()));
+  }
+  dt = DataType()
+  {
+    list.add(dt);
+  }
+}
+
 // Parses the supported file formats for export.
 SqlIdentifier FileFormat() :
 {
