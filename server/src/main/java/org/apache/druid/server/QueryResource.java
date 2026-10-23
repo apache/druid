@@ -40,6 +40,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -66,6 +67,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
@@ -89,7 +91,8 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String ERROR_MESSAGE_TRAILER_HEADER = "X-Error-Message";
   public static final String RESPONSE_COMPLETE_TRAILER_HEADER = "X-Druid-Response-Complete";
   public static final String HEADER_ETAG = "ETag";
-  public static final String WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW = "writeExceptionBodyAsResponseRow";
+  public static final String WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW =
+      QueryContextParameters.WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW.getName();
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
   protected final ObjectMapper jsonMapper;
@@ -287,6 +290,16 @@ public class QueryResource implements QueryCountStatsProvider
     void incrementTimedOut();
   }
 
+  /**
+   * Validates the context of a query as received from the client, before Druid adds any parameter to it. Data servers
+   * accept any context, since their queries come from the Broker.
+   *
+   * @throws org.apache.druid.query.QueryException if the context is invalid
+   */
+  protected void validateQueryContext(final Map<String, Object> context)
+  {
+  }
+
   private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
@@ -303,6 +316,7 @@ public class QueryResource implements QueryCountStatsProvider
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
     }
+    validateQueryContext(baseQuery.getContext());
 
     String prevEtag = getPreviousEtag(req);
     if (prevEtag == null) {

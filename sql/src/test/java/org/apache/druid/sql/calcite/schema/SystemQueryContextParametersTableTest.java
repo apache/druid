@@ -24,6 +24,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
@@ -142,7 +143,8 @@ public class SystemQueryContextParametersTableTest
   {
     final DefaultQueryConfig runtimeConfig = new DefaultQueryConfig(Map.of("timeout", 30000, "useCache", false));
     // The Broker's own view of its dynamic configuration, as bound for QueryConfigProvider on Brokers
-    final BrokerViewOfBrokerConfig brokerConfig = new BrokerViewOfBrokerConfig(null, runtimeConfig);
+    final BrokerViewOfBrokerConfig brokerConfig =
+        new BrokerViewOfBrokerConfig(null, runtimeConfig, QueryContextConfig.DEFAULT);
     brokerConfig.setDynamicConfig(
         BrokerDynamicConfig.builder()
                            .withQueryContext(QueryContext.of(Map.of("useCache", true, "vectorize", "force")))
@@ -214,7 +216,8 @@ public class SystemQueryContextParametersTableTest
   public void testNullDynamicOverrideUnsetsRuntimeProperty()
   {
     final DefaultQueryConfig runtimeConfig = new DefaultQueryConfig(Map.of("priority", 5, "timeout", 30000));
-    final BrokerViewOfBrokerConfig brokerConfig = new BrokerViewOfBrokerConfig(null, runtimeConfig);
+    final BrokerViewOfBrokerConfig brokerConfig =
+        new BrokerViewOfBrokerConfig(null, runtimeConfig, QueryContextConfig.DEFAULT);
     final Map<String, Object> dynamicContext = new HashMap<>();
     dynamicContext.put("priority", null);
     dynamicContext.put("timeout", null);

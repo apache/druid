@@ -32,7 +32,7 @@ import java.util.Map;
 public class SqlQueryPlusTest
 {
   @Test
-  public void testSetAcceptsUnmigratedParameters()
+  public void testSetValuesAreFoldedIntoContext()
   {
     final SqlQueryPlus query = SqlQueryPlus.builder("SET lane = 'fast'; SELECT 1")
                                            .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
@@ -42,40 +42,63 @@ public class SqlQueryPlusTest
   }
 
   @Test
-  public void testSetParameterConstraintIsValidated()
+  public void testInvalidValuesAreRejected()
   {
-    final DruidException e = Assertions.assertThrows(
-        DruidException.class,
-        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 0; SELECT 1")
-                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
-                          .build()
-    );
-
     BaseCalciteQueryTest.assertDruidException(
-        e,
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 0; SELECT 1")
+                              .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                              .build()
+        ),
         DruidExceptionMatcher
             .invalidSqlInput()
             .expectMessageContains(
                 "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
             )
     );
+
+    BaseCalciteQueryTest.assertDruidException(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> SqlQueryPlus.builder("SELECT 1")
+                              .queryContext(Map.of("sqlQueryId", 1))
+                              .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                              .build()
+        ),
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains("Query context parameter [sqlQueryId] should be a string, but got [1]")
+    );
   }
 
   @Test
-  public void testSetParameterParserFailureIsInvalidSqlInput()
+  public void testUnknownParametersAreRejectedIfConfigured()
   {
-    final DruidException e = Assertions.assertThrows(
-        DruidException.class,
-        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 'not-an-int'; SELECT 1")
-                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
-                          .build()
-    );
+    final SqlQueryPlus.Builder builder = SqlQueryPlus.builder("SET myTraceId = 'abc-123'; SELECT 1")
+                                                     .auth(CalciteTests.REGULAR_USER_AUTH_RESULT);
+    builder.build();
 
     BaseCalciteQueryTest.assertDruidException(
-        e,
+        Assertions.assertThrows(DruidException.class, () -> builder.rejectUnknownParameters(true).build()),
         DruidExceptionMatcher
             .invalidSqlInput()
-            .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] should be in integer format, but got [not-an-int]")
+            .expectMessageContains("Unknown query context parameter [myTraceId].")
+    );
+  }
+
+  @Test
+  public void testSystemDefaultsAndJdbcContextAreNotValidated()
+  {
+    // System defaults are validated where they are configured, and the JDBC context when the connection opens.
+    final SqlQueryPlus.Builder builder = SqlQueryPlus.builder("SELECT 1")
+                                                     .systemDefaultContext(Map.of("myTraceId", "abc-123"))
+                                                     .rejectUnknownParameters(true)
+                                                     .auth(CalciteTests.REGULAR_USER_AUTH_RESULT);
+    Assertions.assertEquals("abc-123", builder.build().context().get("myTraceId"));
+    Assertions.assertEquals(
+        Map.of("myTraceId", "abc-123"),
+        builder.queryContext(Map.of("myTraceId", "abc-123")).buildJdbc().context()
     );
   }
 

@@ -95,13 +95,14 @@ public class BrokerClientImpl implements BrokerClient
   @Override
   public ListenableFuture<List<ExplainPlan>> fetchExplainPlan(final ClientSqlQuery sqlQuery)
   {
+    // Explain with the query's context, so that the Broker validates the context as it would for the query itself.
     final ClientSqlQuery explainSqlQuery = new ClientSqlQuery(
         StringUtils.format("EXPLAIN PLAN FOR %s", sqlQuery.getQuery()),
         null,
         false,
         false,
         false,
-        null,
+        sqlQuery.getContext(),
         null
     );
     return FutureUtils.transform(
