@@ -75,7 +75,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <maven.resolver.version>2.0.24</maven.resolver.version>
         <apache.curator.version>5.9.0</apache.curator.version>
-        <apache.kafka.version>4.3.1</apache.kafka.version>
+        <apache.kafka.version>4.4.0</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-contrib/druid-ranger-security/pom.xml  -->
         <apache.ranger.version>2.9.0</apache.ranger.version>
@@ -731,7 +731,7 @@
             <dependency>
                 <groupId>com.github.luben</groupId>
                 <artifactId>zstd-jni</artifactId>
-                <version>1.5.7-11</version>
+                <version>1.5.7-17</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
