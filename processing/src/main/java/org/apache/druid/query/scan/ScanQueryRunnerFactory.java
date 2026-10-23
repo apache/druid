@@ -24,14 +24,14 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.collections.StableLimitingSorter;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -43,13 +43,13 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -111,46 +111,16 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           return returnedRows;
         }
       } else {
-        List<Interval> intervalsOrdered = getIntervalsFromSpecificQuerySpec(query.getQuerySegmentSpec());
-        List<QueryRunner<ScanResultValue>> queryRunnersOrdered = Lists.newArrayList(queryRunners);
-
-        if (Order.DESCENDING.equals(query.getTimeOrder())) {
-          intervalsOrdered = Lists.reverse(intervalsOrdered);
-          queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
-        }
+        final List<Pair<Interval, QueryRunner<ScanResultValue>>> intervalsAndRunnersOrdered =
+            getIntervalsAndRunnersOrdered(query, queryRunners);
         int maxRowsQueuedForOrdering = (query.getMaxRowsQueuedForOrdering() == null
                                         ? scanQueryConfig.getMaxRowsQueuedForOrdering()
                                         : query.getMaxRowsQueuedForOrdering());
         if (query.getScanRowsLimit() <= maxRowsQueuedForOrdering) {
           // Use priority queue strategy
-          try {
-            return stableLimitingSort(
-                Sequences.concat(Sequences.map(
-                    Sequences.simple(queryRunnersOrdered),
-                    input -> input.run(queryPlus, responseContext)
-                )),
-                query,
-                intervalsOrdered
-            );
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
+          return stableLimitingSort(intervalsAndRunnersOrdered, queryPlus, responseContext);
         } else {
           // Use n-way merge strategy
-          List<Pair<Interval, QueryRunner<ScanResultValue>>> intervalsAndRunnersOrdered = new ArrayList<>();
-          if (intervalsOrdered.size() == queryRunnersOrdered.size()) {
-            for (int i = 0; i < queryRunnersOrdered.size(); i++) {
-              intervalsAndRunnersOrdered.add(new Pair<>(intervalsOrdered.get(i), queryRunnersOrdered.get(i)));
-            }
-          } else if (queryRunners instanceof SinkQueryRunners) {
-            ((SinkQueryRunners<ScanResultValue>) queryRunners).runnerIntervalMappingIterator()
-                                                              .forEachRemaining(intervalsAndRunnersOrdered::add);
-          } else {
-            throw new ISE("Number of segment descriptors does not equal number of "
-                          + "query runners...something went wrong!");
-          }
-
           // Group the list of pairs by interval.  The LinkedHashMap will have an interval paired with a list of all the
           // query runners for that segment
           LinkedHashMap<Interval, List<Pair<Interval, QueryRunner<ScanResultValue>>>> partitionsGroupedByInterval =
@@ -180,12 +150,12 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             // there should be no interval overlap.  We create a list of lists so we can create a sequence of sequences.
             // There's no easy way to convert a LinkedHashMap to a sequence because it's non-iterable.
             List<List<QueryRunner<ScanResultValue>>> groupedRunners =
-                partitionsGroupedByInterval.entrySet()
+                partitionsGroupedByInterval.values()
                                            .stream()
-                                           .map(entry -> entry.getValue()
-                                                              .stream()
-                                                              .map(segQueryRunnerPair -> segQueryRunnerPair.rhs)
-                                                              .collect(Collectors.toList()))
+                                           .map(pairs -> pairs
+                                               .stream()
+                                               .map(segQueryRunnerPair -> segQueryRunnerPair.rhs)
+                                               .collect(Collectors.toList()))
                                            .collect(Collectors.toList());
 
             return nWayMergeAndLimit(groupedRunners, queryPlus, responseContext);
@@ -206,17 +176,18 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   }
 
   /**
-   * Returns a sorted and limited copy of the provided {@param inputSequence}. Materializes the full sequence
-   * in memory before returning it. The amount of memory use is limited by the limit of the {@param scanQuery}.
+   * Returns the first rows, up to the limit of the query, from the provided runners in the order given by
+   * {@link ScanQuery#getResultOrdering()}. Runs the runners one at a time, in the provided order, and materializes the
+   * result in memory. Skips runners that could not possibly contribute to the results.
    */
   @VisibleForTesting
   Sequence<ScanResultValue> stableLimitingSort(
-      Sequence<ScanResultValue> inputSequence,
-      ScanQuery scanQuery,
-      List<Interval> intervalsOrdered
-  ) throws IOException
+      final List<Pair<Interval, QueryRunner<ScanResultValue>>> intervalsAndRunnersOrdered,
+      final QueryPlus<ScanResultValue> queryPlus,
+      final ResponseContext responseContext
+  )
   {
-    Comparator<ScanResultValue> comparator = scanQuery.getResultOrdering();
+    final ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
 
     if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
       throw new UOE(
@@ -227,52 +198,92 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
     // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
     // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-    int limit = Math.toIntExact(scanQuery.getScanRowsLimit());
+    final int limit = Math.toIntExact(scanQuery.getScanRowsLimit());
 
-    final StableLimitingSorter<ScanResultValue> sorter = new StableLimitingSorter<>(comparator, limit);
+    final StableLimitingSorter<ScanResultValue> sorter =
+        new StableLimitingSorter<>(scanQuery.getResultOrdering(), limit);
 
-    Yielder<ScanResultValue> yielder = Yielders.each(inputSequence);
+    for (final Pair<Interval, QueryRunner<ScanResultValue>> intervalAndRunner : intervalsAndRunnersOrdered) {
+      QueryPlus<ScanResultValue> runnerQueryPlus = queryPlus;
 
-    try {
-      boolean doneScanning = yielder.isDone();
-      // We need to scan limit elements and anything else in the last segment
-      int numRowsScanned = 0;
-      Interval finalInterval = null;
-      while (!doneScanning) {
-        ScanResultValue next = yielder.get();
-        List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
-        for (ScanResultValue srv : singleEventScanResultValues) {
-          numRowsScanned++;
-          // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
-          // needs to be preserved for queries using the compactedList result format
-          sorter.add(srv);
-
-          // Finish scanning the interval containing the limit row
-          if (numRowsScanned > limit && finalInterval == null) {
-            long timestampOfLimitRow = srv.getFirstEventTimestamp(scanQuery.getResultFormat());
-            for (Interval interval : intervalsOrdered) {
-              if (interval.contains(timestampOfLimitRow)) {
-                finalInterval = interval;
-              }
-            }
-            if (finalInterval == null) {
-              throw new ISE("Row came from an unscanned interval");
-            }
-          }
+      if (sorter.size() == limit) {
+        final Interval includableInterval = computeIncludableInterval(scanQuery, sorter.peekLast());
+        if (!intervalAndRunner.lhs.overlaps(includableInterval)) {
+          continue;
         }
-        yielder = yielder.next(null);
-        doneScanning = yielder.isDone() ||
-                       (finalInterval != null &&
-                        !finalInterval.contains(next.getFirstEventTimestamp(scanQuery.getResultFormat())));
+
+        // Narrow to the part of this runner's interval that could still be included, so its cursor can skip the rest.
+        // The overlap is non-null, since we just checked that the intervals overlap.
+        final Interval narrowedInterval = intervalAndRunner.lhs.overlap(includableInterval);
+        runnerQueryPlus = queryPlus.withQuery(
+            scanQuery.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(List.of(narrowedInterval)))
+        );
       }
 
-      final List<ScanResultValue> sortedElements = new ArrayList<>(sorter.size());
-      Iterators.addAll(sortedElements, sorter.drain());
-      return Sequences.simple(sortedElements);
+      intervalAndRunner.rhs.run(runnerQueryPlus, responseContext).accumulate(
+          sorter,
+          (theSorter, batch) -> {
+            for (final ScanResultValue srv : batch.toSingleEventScanResultValues()) {
+              // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
+              // needs to be preserved for queries using the compactedList result format
+              theSorter.add(srv);
+            }
+            return theSorter;
+          }
+      );
     }
-    finally {
-      yielder.close();
+
+    final List<ScanResultValue> sortedElements = new ArrayList<>(sorter.size());
+    Iterators.addAll(sortedElements, sorter.drain());
+    return Sequences.simple(sortedElements);
+  }
+
+  /**
+   * Returns the timestamps that a row must have to be included in the result, given that the result is full and its
+   * current last row is {@code lastRow}. Includes the timestamp of {@code lastRow}, since rows with equal timestamps
+   * are ordered by segment ID, so a later row with that timestamp may still be included.
+   */
+  private static Interval computeIncludableInterval(final ScanQuery query, final ScanResultValue lastRow)
+  {
+    final long lastTimestamp = lastRow.getFirstEventTimestamp(query.getResultFormat());
+    if (Order.DESCENDING.equals(query.getTimeOrder())) {
+      return Intervals.utc(lastTimestamp, JodaUtils.MAX_INSTANT);
+    } else {
+      return Intervals.utc(JodaUtils.MIN_INSTANT, lastTimestamp + 1);
     }
+  }
+
+  /**
+   * Returns each runner paired with the interval of the segment it reads, in the order given by
+   * {@link ScanQuery#getTimeOrder()}.
+   */
+  private List<Pair<Interval, QueryRunner<ScanResultValue>>> getIntervalsAndRunnersOrdered(
+      final ScanQuery query,
+      final Iterable<QueryRunner<ScanResultValue>> queryRunners
+  )
+  {
+    final List<Pair<Interval, QueryRunner<ScanResultValue>>> intervalsAndRunners = new ArrayList<>();
+
+    if (queryRunners instanceof SinkQueryRunners) {
+      ((SinkQueryRunners<ScanResultValue>) queryRunners).runnerIntervalMappingIterator()
+                                                        .forEachRemaining(intervalsAndRunners::add);
+    } else {
+      final List<Interval> intervals = getIntervalsFromSpecificQuerySpec(query.getQuerySegmentSpec());
+      final List<QueryRunner<ScanResultValue>> runners = Lists.newArrayList(queryRunners);
+      if (intervals.size() != runners.size()) {
+        throw DruidException.defensive(
+            "Number of segment descriptors[%d] does not equal number of query runners[%d]",
+            intervals.size(),
+            runners.size()
+        );
+      }
+      for (int i = 0; i < runners.size(); i++) {
+        intervalsAndRunners.add(Pair.of(intervals.get(i), runners.get(i)));
+      }
+    }
+
+    // Descriptors and runners are in ascending time order.
+    return Order.DESCENDING.equals(query.getTimeOrder()) ? Lists.reverse(intervalsAndRunners) : intervalsAndRunners;
   }
 
   @VisibleForTesting
