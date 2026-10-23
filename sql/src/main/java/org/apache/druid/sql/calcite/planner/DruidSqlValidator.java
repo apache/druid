@@ -850,14 +850,16 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     final SqlNodeList selectList = select.getSelectList();
     final List<String> aliases = new ArrayList<>(selectList.size());
     final List<String> names = new ArrayList<>(selectList.size());
-    for (final SqlNode item : selectList) {
+    for (int i = 0; i < selectList.size(); i++) {
+      final SqlNode item = selectList.get(i);
       if (item instanceof SqlIdentifier && ((SqlIdentifier) item).isStar()) {
         // Keep all defaults, since we can't tell which names the star expands to.
         return;
       }
       final String alias = deriveSelectItemAlias(item);
       aliases.add(alias);
-      names.add(alias != null ? alias : SqlValidatorUtil.alias(item));
+      // Use the ordinal, so unnamed items reserve the "EXPR$i" names that Calcite will generate for them.
+      names.add(alias != null ? alias : SqlValidatorUtil.alias(item, i));
     }
     for (int i = 0; i < selectList.size(); i++) {
       final String alias = aliases.get(i);

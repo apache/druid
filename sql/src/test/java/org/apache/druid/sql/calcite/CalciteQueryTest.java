@@ -4993,6 +4993,41 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testInfixCastSelectItemNameDuplicateGenerated()
+  {
+    // Names that would duplicate a name generated for an unnamed select item keep the default.
+    testQuery(
+        "SELECT 'x', EXPR$0::BIGINT FROM (SELECT dim1 AS EXPR$0 FROM foo)",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "'x'", ColumnType.STRING),
+                    expressionVirtualColumn("v1", "CAST(\"dim1\", 'LONG')", ColumnType.LONG)
+                )
+                .columns("v0", "v1")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"x", null},
+            new Object[]{"x", 10L},
+            new Object[]{"x", 2L},
+            new Object[]{"x", 1L},
+            new Object[]{"x", null},
+            new Object[]{"x", null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testInfixCastSelectItemNameStar()
   {
     // A star may expand to any name, so nothing in the select list is named.
