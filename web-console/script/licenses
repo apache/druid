@@ -23,6 +23,7 @@ const LICENSES_FILE = '../licenses.yaml';
 const START_MARKER_LINE = '# Web console modules start';
 const END_MARKER_LINE = '# Web console modules end';
 const SEPARATOR = '\n\n---\n\n';
+const LICENSE_FILE_REGEX = /licenses\/bin\/[^\s'"]+/g;
 
 const extraLinesForLib = {
   // Category B licenses need a homepage for the label in the binary README
@@ -73,10 +74,21 @@ function injectConsoleLicenses(consoleLicenses) {
   if (state === 'main') throw new Error(`missing ending marker '${END_MARKER_LINE}'`);
 
   // Write out the new file
-  fs.writeFileSync(
-    LICENSES_FILE,
-    [beforeLines.join('\n'), consoleLicenses.join(SEPARATOR), afterLines.join('\n')].join('\n'),
-  );
+  const newText = [
+    beforeLines.join('\n'),
+    consoleLicenses.join(SEPARATOR),
+    afterLines.join('\n'),
+  ].join('\n');
+  fs.writeFileSync(LICENSES_FILE, newText);
+
+  // Delete the license files of packages that are no longer bundled
+  const stillReferenced = new Set(newText.match(LICENSE_FILE_REGEX));
+  for (const licenseFile of new Set(text.match(LICENSE_FILE_REGEX))) {
+    if (!stillReferenced.has(licenseFile)) {
+      fs.rmSync(`../${licenseFile}`, { force: true });
+      console.log(`Deleted '${licenseFile}', it is no longer referenced`);
+    }
+  }
 }
 
 async function main() {
