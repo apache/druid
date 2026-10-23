@@ -25,6 +25,7 @@ on:
       - 'web-console/**'
       - 'website/**'
       # PR automation that the build and tests do not use
+      - '.github/dependabot.yml'
       - '.github/labeler.yml'
       - '.github/scripts/auto-add-milestone.sh'
       - '.github/scripts/backport-pr.sh'
@@ -47,6 +48,7 @@ on:
       - 'web-console/**'
       - 'website/**'
       # PR automation that the build and tests do not use
+      - '.github/dependabot.yml'
       - '.github/labeler.yml'
       - '.github/scripts/auto-add-milestone.sh'
       - '.github/scripts/backport-pr.sh'
