@@ -209,8 +209,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       // during conversion, however, we've just worked out the granularity, so we
       // do it here instead.
       try {
-        QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY.set(
-            plannerContext.queryContextMap(),
+        plannerContext.setQueryContextParameter(
+            QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
             plannerContext.getPlannerToolbox().jsonMapper().writeValueAsString(effectiveGranularity)
         );
       }
@@ -231,8 +231,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     // know names and we match by name.) Thus, we'd have to validate (to know names and types)
     // to get the target types, but we need the target types to validate. Catch-22. So, we punt.
     final SqlValidatorScope scope;
-    if (source instanceof SqlSelect) {
-      final SqlSelect sqlSelect = (SqlSelect) source;
+    if (source instanceof SqlSelect sqlSelect) {
       validateSelect(sqlSelect, unknownType);
       scope = null;
     } else {
@@ -267,7 +266,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     if (tableMetadata != null && !plannerContext.queryContext().has(QueryContextParameters.ROWS_PER_SEGMENT)) {
       final Integer targetSegmentRows = tableMetadata.targetSegmentRows();
       if (targetSegmentRows != null) {
-        QueryContextParameters.ROWS_PER_SEGMENT.set(plannerContext.queryContextMap(), targetSegmentRows);
+        plannerContext.setQueryContextParameter(QueryContextParameters.ROWS_PER_SEGMENT, targetSegmentRows);
       }
     }
   }

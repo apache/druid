@@ -128,8 +128,8 @@ public abstract class IngestHandler extends QueryHandler
           operationName()
       );
     } else {
-      QueryContextParameters.EXPORT_FILE_FORMAT.set(
-          handlerContext.plannerContext().queryContextMap(),
+      handlerContext.plannerContext().setQueryContextParameter(
+          QueryContextParameters.EXPORT_FILE_FORMAT,
           exportFileFormat.toString()
       );
     }
@@ -407,7 +407,10 @@ public abstract class IngestHandler extends QueryHandler
       );
       if (replaceIntervalsList != null) {
         replaceIntervals = String.join(",", replaceIntervalsList);
-        QueryContextParameters.SQL_REPLACE_TIME_CHUNKS.set(handlerContext.queryContextMap(), replaceIntervals);
+        handlerContext.plannerContext().setQueryContextParameter(
+            QueryContextParameters.SQL_REPLACE_TIME_CHUNKS,
+            replaceIntervals
+        );
       }
     }
 
