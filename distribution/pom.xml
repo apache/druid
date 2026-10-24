@@ -319,6 +319,16 @@
                                 </configuration>
                             </execution>
                             <execution>
+                                <id>test-check-licenses</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/test_check_licenses.py</executable>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>check-licenses</id>
                                 <phase>test</phase>
                                 <goals>
@@ -329,6 +339,10 @@
                                     <arguments>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.basedir}/target/license-reports</argument>
+                                        <!-- Keep these under bundle-contrib-exts too: the check guards the Apache release
+                                             LICENSE, which leaves out contrib entries. -->
+                                        <argument>--exclude-module-prefix=extensions-contrib/</argument>
+                                        <argument>--exclude-module-prefix=extensions/druid-testcontainers</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
