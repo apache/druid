@@ -4077,7 +4077,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             () -> {},
             true
         );
-      } else {
+      } else if (rolloverTaskCount != SupervisorTaskAutoScaler.CANNOT_COMPUTE) {
         // Reset last scale time even if taskCount is not being changed.
         // Otherwise, we might have a scaling event right after the task rollover.
         dynamicTriggerLastScaleRunTime = System.currentTimeMillis();

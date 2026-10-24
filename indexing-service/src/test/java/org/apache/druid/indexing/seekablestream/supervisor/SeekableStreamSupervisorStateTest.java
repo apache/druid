@@ -4305,14 +4305,19 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, true);
-
+    // First scale-up succeeds and stamps the last-scale timestamp.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, false);
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+
+    // Second scale-up also succeeds since cooldown is ignored on rollover
+    supervisor.handleDynamicAllocationTasksNotice(() -> 10, () -> {}, true);
+    Assertions.assertEquals(10, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assertions.assertEquals(1, events.size(), "Exactly one required-tasks emission expected");
+    Assertions.assertEquals(2, events.size(), "Exactly one required-tasks emission expected");
     assertScaledToTaskCount(events.get(0), 5);
+    assertScaledToTaskCount(events.get(1), 10);
   }
 
   @Test
@@ -4368,14 +4373,19 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, false);
+    // First scale-down succeeds and stamps the last-scale timestamp.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, false);
+    Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
-    Assertions.assertEquals(2, supervisor.getIoConfig().getTaskCount());
+    // Second scale down also passes since cooldown is ignored
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, true);
+    Assertions.assertEquals(1, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assertions.assertEquals(1, events.size(), "Exactly one required-tasks emission expected");
-    assertScaledToTaskCount(events.get(0), 2);
+    Assertions.assertEquals(2, events.size(), "Exactly one required-tasks emission expected");
+    assertScaledToTaskCount(events.get(0), 3);
+    assertScaledToTaskCount(events.get(1), 1);
   }
 
   @Test
