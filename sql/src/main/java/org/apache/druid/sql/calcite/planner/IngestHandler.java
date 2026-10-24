@@ -158,6 +158,16 @@ public abstract class IngestHandler extends QueryHandler
           operationName()
       );
     }
+
+    // Fail the query if sqlTimeCondition is specified, since it limits the rows read without limiting the time
+    // chunks that are overwritten, so REPLACE would delete data outside the condition.
+    if (handlerContext.queryContext().has(QueryContextParameters.SQL_TIME_CONDITION)) {
+      throw InvalidSqlInput.exception(
+          "Context parameter [%s] cannot be provided on operator [%s]",
+          QueryContextParameters.SQL_TIME_CONDITION,
+          operationName()
+      );
+    }
     DruidSqlIngest ingestNode = ingestNode();
     DruidSqlIngest validatedNode = (DruidSqlIngest) validate(ingestNode);
     validatedQueryNode = validatedNode.getSource();

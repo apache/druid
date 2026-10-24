@@ -1660,6 +1660,21 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertWithSqlTimeCondition()
+  {
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(QueryContextParameters.SQL_TIME_CONDITION.getName(), "2000/2001");
+
+    testIngestionQuery()
+        .context(context)
+        .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            invalidSqlIs("Context parameter [sqlTimeCondition] cannot be provided on operator [INSERT]")
+        )
+        .verify();
+  }
+
+  @Test
   public void testErrorWithUnableToConstructColumnSignatureWithExtern()
   {
     final String sqlString = "insert into dst \n"
