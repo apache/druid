@@ -6999,6 +6999,66 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestJsonQueryArrayOfConstantJson()
+  {
+    // https://github.com/apache/druid/issues/20631
+    testBuilder()
+        .sql(
+            "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[{\"b\":1}]}') AS j) t "
+            + "CROSS JOIN UNNEST(JSON_QUERY_ARRAY(t.j, '$.a')) AS u(v)"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedResults(ImmutableList.of(new Object[]{"{\"b\":1}"}))
+        .run();
+  }
+
+  @Test
+  public void testUnnestJsonQueryArrayOfConstantJsonEmptyArray()
+  {
+    // https://github.com/apache/druid/issues/20631
+    testBuilder()
+        .sql(
+            "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[]}') AS j) t "
+            + "CROSS JOIN UNNEST(JSON_QUERY_ARRAY(t.j, '$.a')) AS u(v)"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedResults(ImmutableList.of())
+        .run();
+  }
+
+  @Test
+  public void testUnnestJsonQueryArrayOfConstantJsonMissingPath()
+  {
+    // https://github.com/apache/druid/issues/20631
+    // Array complex JSON isn't supported
+    msqIncompatible();
+    testBuilder()
+        .sql(
+            "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[{\"b\":1}]}') AS j) t "
+            + "CROSS JOIN UNNEST(JSON_QUERY_ARRAY(t.j, '$.missing')) AS u(v)"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedResults(ImmutableList.of())
+        .run();
+  }
+
+  @Test
+  public void testJsonQueryArrayOfArraysOfConstantJson()
+  {
+    // https://github.com/apache/druid/issues/20631
+    // Array complex JSON isn't supported
+    msqIncompatible();
+    testBuilder()
+        .sql(
+            "SELECT ARRAY[JSON_QUERY_ARRAY(j, '$.a'), JSON_QUERY_ARRAY(j, '$.c')] "
+            + "FROM (SELECT PARSE_JSON('{\"a\":[{\"b\":1}],\"c\":[{\"d\":2}]}') AS j) t"
+        )
+        .queryContext(QUERY_CONTEXT_DEFAULT)
+        .expectedResults(ImmutableList.of(new Object[]{"[[{\"b\":1}],[{\"d\":2}]]"}))
+        .run();
+  }
+
+  @Test
   public void testUnnestJsonQueryArrays()
   {
     testBuilder()
