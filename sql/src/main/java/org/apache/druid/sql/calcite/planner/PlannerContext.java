@@ -77,7 +77,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -847,52 +846,32 @@ public class PlannerContext
   }
 
   /**
-   * Parses the value of {@link QueryContextParameters#SQL_TIME_CONDITION}, which may be a comma-separated string of
-   * ISO8601 intervals or an array of ISO8601 interval strings. Returns null if the value is null. Throws an error if
-   * the string is empty or if there are empty items after splitting on commas. The returned intervals are condensed
-   * and sorted.
+   * Parses the value of {@link QueryContextParameters#SQL_TIME_CONDITION}, a comma-separated string of ISO8601
+   * intervals. Returns null if the value is null. Throws an error if the string is empty or if there are empty items
+   * after splitting on commas. The returned intervals are condensed and sorted.
    */
   @Nullable
-  static List<Interval> parseTimeCondition(@Nullable final Object value)
+  static List<Interval> parseTimeCondition(@Nullable final String value)
   {
     if (value == null) {
       return null;
     }
 
-    final List<?> intervalStrings;
-    if (value instanceof String) {
-      intervalStrings = Arrays.asList(((String) value).split(",", -1));
-    } else if (value instanceof List) {
-      intervalStrings = (List<?>) value;
-    } else {
-      throw invalidTimeConditionException(value, null);
-    }
-
     final List<Interval> intervals = new ArrayList<>();
-    for (final Object intervalString : intervalStrings) {
-      if (!(intervalString instanceof String)) {
-        throw invalidTimeConditionException(value, null);
-      }
-
+    for (final String intervalString : value.split(",", -1)) {
       try {
-        intervals.add(Intervals.of(((String) intervalString).trim()));
+        intervals.add(Intervals.of(intervalString.trim()));
       }
       catch (DruidException e) {
-        throw invalidTimeConditionException(value, e);
+        throw InvalidInput.exception(
+            e,
+            "Query context parameter [%s] must be a comma-separated string of ISO8601 intervals, but got [%s]",
+            QueryContextParameters.SQL_TIME_CONDITION,
+            value
+        );
       }
     }
 
     return JodaUtils.condenseIntervals(intervals);
-  }
-
-  private static DruidException invalidTimeConditionException(final Object value, @Nullable final Throwable cause)
-  {
-    return InvalidInput.exception(
-        cause,
-        "Query context parameter [%s] must be a comma-separated string of ISO8601 intervals, or an array of "
-        + "ISO8601 interval strings, but got [%s]",
-        QueryContextParameters.SQL_TIME_CONDITION.getName(),
-        value
-    );
   }
 }

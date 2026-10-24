@@ -818,9 +818,8 @@ public class DruidQuery
    * a join datasource, the datasource may be altered and left filter of join datasource may
    * be rid of time filters.
    *
-   * @param timeCondition intervals to AND with the filtration intervals if the datasource is table-based, from
-   *                      {@link PlannerContext#getTimeCondition()}. Must be sorted and non-overlapping. Null means
-   *                      no additional condition.
+   * @param timeCondition intervals to AND with the filtration intervals if the datasource is table-based. Must be
+   *                      sorted and non-overlapping. Null means no additional condition.
    */
   @VisibleForTesting
   static Pair<DataSource, Filtration> getFiltration(
@@ -865,7 +864,7 @@ public class DruidQuery
    * and the arms of a union are combined. Relies on every layer passing {@code __time} through unchanged, as the
    * datasources we plan do.
    *
-   * @param timeCondition intervals from {@link PlannerContext#getTimeCondition()}, or null for no condition
+   * @param timeCondition intervals to apply to each table, or null for no condition
    */
   private static List<Interval> getBaseIntervals(
       final DataSource dataSource,

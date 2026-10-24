@@ -25,8 +25,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -62,29 +60,11 @@ public class PlannerContextTest
   }
 
   @Test
-  public void test_parseTimeCondition_array()
-  {
-    Assertions.assertEquals(
-        List.of(Intervals.of("2000-01-01/2000-01-02"), Intervals.of("2001-01-01/2001-01-02")),
-        PlannerContext.parseTimeCondition(List.of("2001-01-01/2001-01-02", "2000-01-01/2000-01-02"))
-    );
-  }
-
-  @Test
   public void test_parseTimeCondition_timeZoneOffset()
   {
     Assertions.assertEquals(
         List.of(Intervals.of("2000-01-01T08:00:00Z/2000-01-02T08:00:00Z")),
         PlannerContext.parseTimeCondition("2000-01-01T00:00:00-08:00/2000-01-02T00:00:00-08:00")
-    );
-  }
-
-  @Test
-  public void test_parseTimeCondition_emptyArray()
-  {
-    Assertions.assertEquals(
-        Collections.emptyList(),
-        PlannerContext.parseTimeCondition(Collections.emptyList())
     );
   }
 
@@ -112,25 +92,13 @@ public class PlannerContextTest
     assertInvalidTimeCondition("2000-01-01/2000-01-02,foo", "2000-01-01/2000-01-02,foo");
   }
 
-  @Test
-  public void test_parseTimeCondition_nonStringArrayElement()
-  {
-    assertInvalidTimeCondition(Arrays.asList("2000-01-01/2000-01-02", 3), "[2000-01-01/2000-01-02, 3]");
-  }
-
-  @Test
-  public void test_parseTimeCondition_wrongType()
-  {
-    assertInvalidTimeCondition(3, "3");
-  }
-
-  private static void assertInvalidTimeCondition(final Object value, final String expectedValueString)
+  private static void assertInvalidTimeCondition(final String value, final String expectedValueString)
   {
     DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(DruidException.class, () -> PlannerContext.parseTimeCondition(value)),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Query context parameter [sqlTimeCondition] must be a comma-separated string of ISO8601 intervals, "
-            + "or an array of ISO8601 interval strings, but got [" + expectedValueString + "]"
+            + "but got [" + expectedValueString + "]"
         )
     );
   }

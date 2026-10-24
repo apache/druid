@@ -25,11 +25,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -44,6 +46,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -139,31 +142,15 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithArray()
+  public void testArrayIsInvalid()
   {
-    final Map<String, Object> context = makeContext(List.of("2001-01-01/2001-01-03", "2000-01-01/2000-01-02"));
-
-    testQuery(
-        "SELECT dim2, COUNT(*) FROM foo GROUP BY dim2",
-        context,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE1)
-                        .setInterval(
-                            querySegmentSpec(
-                                Intervals.of("2000-01-01/2000-01-02"),
-                                Intervals.of("2001-01-01/2001-01-03")
-                            )
-                        )
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
-                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                        .setContext(context)
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"a", 2L},
-            new Object[]{"abc", 1L}
+    testQueryThrows(
+        "SELECT COUNT(*) FROM foo",
+        makeContext(List.of("2000/2001")),
+        BadQueryContextException.class,
+        e -> Assertions.assertEquals(
+            "Query context parameter [sqlTimeCondition] should be a string, but got [[2000/2001]]",
+            e.getMessage()
         )
     );
   }
@@ -545,6 +532,67 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_RESTRICTED_DATASOURCE_SUPPORT)
+  @Test
+  public void testRestrictedTable()
+  {
+    final Map<String, Object> context = makeContext("2001-01-01/2001-01-03");
+
+    testBuilder()
+        .sql("SELECT COUNT(*) FROM druid.restrictedDatasource_m1_is_6")
+        .queryContext(context)
+        .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newTimeseriesQueryBuilder()
+                      .dataSource(
+                          RestrictedDataSource.create(
+                              TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
+                              CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER
+                          )
+                      )
+                      .intervals(querySegmentSpec(Intervals.of("2001-01-01/2001-01-03")))
+                      .granularity(Granularities.ALL)
+                      .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                      .context(context)
+                      .build()
+            )
+        )
+        .expectedResults(ImmutableList.of(new Object[]{2L}))
+        .run();
+  }
+
+  @NotYetSupported(Modes.DD_RESTRICTED_DATASOURCE_SUPPORT)
+  @Test
+  public void testRestrictedTable2()
+  {
+    final Map<String, Object> context = makeContext("2001-01-01/2001-01-03");
+
+    // The policy only admits the row with m1 = 6, at 2001-01-03, which is outside the time condition.
+    testBuilder()
+        .sql("SELECT COUNT(*) FROM druid.restrictedDatasource_m1_is_6")
+        .queryContext(context)
+        .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newTimeseriesQueryBuilder()
+                      .dataSource(
+                          RestrictedDataSource.create(
+                              TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
+                              CalciteTests.POLICY_RESTRICTION
+                          )
+                      )
+                      .intervals(querySegmentSpec(Intervals.of("2001-01-01/2001-01-03")))
+                      .granularity(Granularities.ALL)
+                      .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                      .context(context)
+                      .build()
+            )
+        )
+        .expectedResults(ImmutableList.of(new Object[]{0L}))
+        .run();
+  }
+
   @Test
   public void testInvalidTimeCondition()
   {
@@ -554,7 +602,7 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
         DruidException.class,
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Query context parameter [sqlTimeCondition] must be a comma-separated string of ISO8601 intervals, "
-            + "or an array of ISO8601 interval strings, but got [2000/2001,foo]"
+            + "but got [2000/2001,foo]"
         )
     );
   }

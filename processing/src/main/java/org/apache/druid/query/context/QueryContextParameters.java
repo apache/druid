@@ -871,15 +871,13 @@ public final class QueryContextParameters
           .description("Whether to consider the [pull-up rewrite](lookups.md#pull-up) of the `LOOKUP` function during SQL planning.")
           .build();
 
-  public static final QueryContextParameter<Object> SQL_TIME_CONDITION =
-      // An object parameter, since the value may be a string or an array. The SQL planner parses it.
-      objectParameter("sqlTimeCondition")
+  public static final QueryContextParameter<String> SQL_TIME_CONDITION =
+      // The SQL planner parses the intervals.
+      stringParameter("sqlTimeCondition")
           .since("40.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description(
               """
-              Time condition to apply to all tables that the query reads.
-              Provide either a comma-separated string of ISO8601 intervals, such as `"2000-01-01/2000-02-01,2001-01-01/2001-02-01"`, or an array of ISO8601 interval strings.
-              An empty array matches nothing.
+              Time condition to apply to all tables that the query reads, as a comma-separated string of ISO8601 intervals, such as `"2000-01-01/2000-02-01,2001-01-01/2001-02-01"`.
               An empty string is an error.\
               <br /><br />Druid ANDs this condition with any other condition you provide on the `__time` column.
               Intervals without an explicit offset are in UTC; `sqlTimeZone` doesn't affect them.\
