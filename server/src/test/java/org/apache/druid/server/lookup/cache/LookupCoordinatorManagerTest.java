@@ -903,7 +903,11 @@ public class LookupCoordinatorManagerTest
       ).andReturn(SetResult.ok()).once();
       EasyMock.replay(configManager);
       Assertions.assertThrows(ForbiddenException.class, () -> manager.deleteTier(
-          LOOKUP_TIER, auditInfo, lookups -> { throw new ForbiddenException(); }
+          LOOKUP_TIER,
+          auditInfo,
+          lookups -> {
+            throw new ForbiddenException();
+          }
       ));
       Assertions.assertTrue(manager.deleteTier(LOOKUP_TIER, auditInfo, lookups -> {
         Assertions.assertTrue(Thread.holdsLock(manager));

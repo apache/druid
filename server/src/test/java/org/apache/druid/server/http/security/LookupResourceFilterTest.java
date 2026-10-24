@@ -19,22 +19,11 @@
 
 package org.apache.druid.server.http.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.net.HostAndPort;
-import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.query.lookup.LookupsState;
-import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
-import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -42,23 +31,12 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.UriInfo;
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -66,422 +44,97 @@ import static org.mockito.Mockito.when;
 public class LookupResourceFilterTest
 {
   @Test
-  public void testBulkReadReturnsOnlyAuthorizedLookups()
+  public void testSingleRoutes()
   {
-    final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
-    final Injector injector = mock(Injector.class);
-    final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-    final ContainerRequest request = mock(ContainerRequest.class);
-    final LookupCoordinatorManager coordinator = mock(LookupCoordinatorManager.class);
-    final Map<String, Object> attributes = new HashMap<>();
-    final List<PathSegment> segments = Arrays.stream("druid/coordinator/v1/lookups/config/tier".split("/"))
-                                             .map(segment -> {
-                                               final PathSegment pathSegment = mock(PathSegment.class);
-                                               when(pathSegment.getPath()).thenReturn(segment);
-                                               return pathSegment;
-                                             })
-                                             .collect(Collectors.toList());
-    when(request.getPathSegments()).thenReturn(segments);
-    when(request.getMethod()).thenReturn("GET");
-    when(servletRequest.getMethod()).thenReturn("GET");
-    when(servletRequest.getAttribute(anyString())).thenAnswer(call -> attributes.get(call.getArgument(0)));
-    doAnswer(call -> {
-      attributes.put(call.getArgument(0), call.getArgument(1));
-      return null;
-    }).when(servletRequest).setAttribute(anyString(), any());
-    attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                   new AuthenticationResult("user", "authorizer", null, null));
-    when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, action) ->
-        "tier/allowed".equals(resource.getName()) ? Access.OK : Access.DENIED);
-    when(injector.getInstance(LookupCoordinatorManager.class)).thenReturn(coordinator);
-    when(coordinator.getKnownLookups()).thenReturn(ImmutableMap.of(
-        "tier", ImmutableMap.of(
-            "allowed", mock(LookupExtractorFactoryMapContainer.class),
-            "denied", mock(LookupExtractorFactoryMapContainer.class)
-        )
-    ));
-
-    final LookupResourceFilter filter = new LookupResourceFilter(
-        mapper,
-        AuthConfig.newBuilder().setEnableLookupAuthorization(true).build(),
-        injector
-    );
-    final UriInfo uriInfo = mock(UriInfo.class);
-    final MultivaluedMapImpl pathParams = new MultivaluedMapImpl();
-    pathParams.add("tier", "tier");
-    when(uriInfo.getPathParameters()).thenReturn(pathParams);
-    filter.uriInfo = uriInfo;
-    filter.setReq(servletRequest);
-    filter.filter(request);
-    final Map<String, LookupExtractorFactoryMapContainer> readable = LookupResourceFilter.filterBulk(
-        servletRequest,
-        "tier",
-        coordinator.getKnownLookups().get("tier")
-    );
-
-    assertEquals(ImmutableSet.of("allowed"), readable.keySet());
-    verify(servletRequest).setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    assertRoute("tier", "lookup", "name", "GET", "LOOKUP:tier/name:READ");
+    assertRoute("tier", "lookup", "name", "HEAD", "LOOKUP:tier/name:READ");
+    assertRoute("tier", "lookup", "name", "POST", "LOOKUP:tier/name:WRITE");
+    assertRoute(null, "lookupId", "name", "GET", "LOOKUP:node/name:READ");
+    assertRoute(null, "id", "name", "DELETE", "LOOKUP:node/name:WRITE");
+    assertRoute("a/x", "lookup", "y", "GET", "LOOKUP:a%2Fx/y:READ");
+    assertRoute("a", "lookup", "x/y", "GET", "LOOKUP:a/x%2Fy:READ");
+    assertRoute("a%", "lookup", "x", "GET", "LOOKUP:a%25/x:READ");
   }
 
   @Test
-  public void testBulkTierReadDoesNotModifyInput()
+  public void testBulkRouteIsAuthorizedByResourceMethod()
   {
-    final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
-    final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-    final ContainerRequest request = mock(ContainerRequest.class);
-    final UriInfo uriInfo = mock(UriInfo.class);
-    final Map<String, Object> attributes = new HashMap<>();
-    attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                   new AuthenticationResult("user", "authorizer", null, null));
-    when(servletRequest.getAttribute(anyString())).thenAnswer(call -> attributes.get(call.getArgument(0)));
-    doAnswer(call -> {
-      attributes.put(call.getArgument(0), call.getArgument(1));
-      return null;
-    }).when(servletRequest).setAttribute(anyString(), any());
-    when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, action) ->
-        "tier/allowed".equals(resource.getName()) ? Access.OK : Access.DENIED);
-    when(uriInfo.getPathParameters()).thenReturn(new MultivaluedMapImpl());
-
-    final LookupResourceFilter filter = new LookupResourceFilter(
-        mapper,
-        AuthConfig.newBuilder().setEnableLookupAuthorization(true).build(),
-        mock(Injector.class)
-    );
-    filter.uriInfo = uriInfo;
-    filter.setReq(servletRequest);
-    filter.filter(request);
-
-    final ImmutableSet<String> tiers = ImmutableSet.of("tier", "empty");
-    final Set<String> filtered = LookupResourceFilter.filterBulk(
-        servletRequest,
-        tiers,
-        ImmutableMap.of("tier", ImmutableMap.of("allowed", 1))
-    );
-    assertEquals(ImmutableSet.of("tier"), filtered);
-    assertEquals(ImmutableSet.of("tier", "empty"), tiers);
+    final Fixture fixture = new Fixture(true, true);
+    fixture.filter(null, null, null).filter(fixture.request("GET"));
+    assertEquals(ImmutableList.of(), fixture.checked);
   }
 
   @Test
-  public void testReadableStateWithUnknownNodeState()
+  public void testDeniedSingleRoute()
   {
-    final LookupsState<Object> readable = LookupResourceFilter.readable(
-        ImmutableSet.of(),
-        "tier",
-        new LookupsState<>(null, null, null)
+    final Fixture fixture = new Fixture(true, false);
+    assertThrows(
+        ForbiddenException.class,
+        () -> fixture.filter("tier", "lookup", "name").filter(fixture.request("GET"))
     );
-    assertEquals(ImmutableMap.of(), readable.getCurrent());
-    assertEquals(ImmutableMap.of(), readable.getToLoad());
-    assertEquals(ImmutableSet.of(), readable.getToDrop());
-  }
-
-  @Test
-  public void testReadableCoordinatorTiers()
-  {
-    final Map<String, Map<String, Integer>> tiers = ImmutableMap.of(
-        "prod", ImmutableMap.of("orders", 1, "users", 2),
-        "dev", ImmutableMap.of("orders", 3),
-        "empty", ImmutableMap.of()
-    );
-    assertEquals(
-        ImmutableMap.of("prod", ImmutableMap.of("orders", 1), "empty", ImmutableMap.of()),
-        LookupResourceFilter.readable(ImmutableSet.of("prod/orders", "empty"), null, tiers)
-    );
-  }
-
-  @Test
-  public void testNodeStatusDoesNotExposeHostsWithoutReadableLookups()
-  {
-    final HostAndPort readableHost = HostAndPort.fromString("readable:8080");
-    final HostAndPort deniedHost = HostAndPort.fromString("denied:8080");
-    final Map<HostAndPort, LookupsState<Integer>> states = ImmutableMap.of(
-        readableHost, new LookupsState<>(ImmutableMap.of("allowed", 1), ImmutableMap.of(), ImmutableSet.of()),
-        deniedHost, new LookupsState<>(ImmutableMap.of("denied", 1), ImmutableMap.of(), ImmutableSet.of())
-    );
-
-    assertEquals(
-        ImmutableMap.of(readableHost, new LookupsState<>(ImmutableMap.of("allowed", 1), ImmutableMap.of(), ImmutableSet.of())),
-        LookupResourceFilter.readable(ImmutableSet.of("tier/allowed"), "tier", states)
-    );
-    assertEquals(
-        ImmutableMap.of(
-            "tier",
-            ImmutableMap.of(readableHost, new LookupsState<>(ImmutableMap.of("allowed", 1), ImmutableMap.of(), ImmutableSet.of()))
-        ),
-        LookupResourceFilter.readable(ImmutableSet.of("tier/allowed"), null, ImmutableMap.of("tier", states))
-    );
-    assertEquals(states.keySet(), LookupResourceFilter.readable(ImmutableSet.of("tier"), "tier", states).keySet());
-  }
-
-  @Test
-  public void testBulkWriteResponseFiltersByReadPermission()
-  {
-    final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
-    final Injector injector = mock(Injector.class);
-    final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-    final ContainerRequest request = mock(ContainerRequest.class);
-    final UriInfo uriInfo = mock(UriInfo.class);
-    final Map<String, Object> attributes = new HashMap<>();
-    final List<Action> checked = new ArrayList<>();
-    attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                   new AuthenticationResult("user", "authorizer", null, null));
-    when(servletRequest.getAttribute(anyString())).thenAnswer(call -> attributes.get(call.getArgument(0)));
-    doAnswer(call -> {
-      attributes.put(call.getArgument(0), call.getArgument(1));
-      return null;
-    }).when(servletRequest).setAttribute(anyString(), any());
-    when(servletRequest.getMethod()).thenReturn("POST");
-    when(request.getMethod()).thenReturn("POST");
-    when(uriInfo.getPathParameters()).thenReturn(new MultivaluedMapImpl());
-    when(injector.getInstance(LookupNodeService.class)).thenReturn(new LookupNodeService("tier"));
-    when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, action) -> {
-      checked.add(action);
-      return action == Action.WRITE || "tier/allowed".equals(resource.getName()) ? Access.OK : Access.DENIED;
-    });
-
-    final LookupResourceFilter filter = new LookupResourceFilter(
-        mapper,
-        AuthConfig.newBuilder().setEnableLookupAuthorization(true).build(),
-        injector
-    );
-    filter.uriInfo = uriInfo;
-    filter.setReq(servletRequest);
-    filter.filter(request);
-    LookupResourceFilter.filterBulk(
-        servletRequest,
-        new LookupsState<>(null, ImmutableMap.of("allowed", 3), null)
-    );
-
-    final LookupsState<Integer> state = new LookupsState<>(
-        ImmutableMap.of("allowed", 1, "denied", 2), ImmutableMap.of(), ImmutableSet.of()
-    );
-    final LookupsState<Integer> readable = LookupResourceFilter.filterBulkRead(servletRequest, state);
-    assertEquals(ImmutableSet.of("allowed"), readable.getCurrent().keySet());
-    assertEquals(ImmutableList.of(Action.WRITE, Action.READ, Action.READ), checked);
-  }
-
-  @Test
-  public void testNamedLookups()
-  {
-    assertLookupResources("druid/coordinator/v1/lookups/config/tier/name", "GET", null, "LOOKUP:tier/name:READ");
-    assertLookupResources("druid/coordinator/v1/lookups/status/tier/name", "GET", null, "LOOKUP:tier/name:READ");
-    assertLookupResources("druid/coordinator/v1/lookups/config/tier/name", "POST", null, "LOOKUP:tier/name:WRITE");
-    assertLookupResources("druid/coordinator/v1/lookups/config/tier/name", "PUT", null, "LOOKUP:tier/name:WRITE");
-    assertLookupResources("druid/coordinator/v1/lookups/config/tier/name", "DELETE", null, "LOOKUP:tier/name:WRITE");
-    assertLookupResources("druid/v1/lookups/introspect/name/keys", "GET", null, "LOOKUP:tier/name:READ");
-    assertLookupResources("druid/listen/v1/lookups/name", "GET", null, "LOOKUP:tier/name:READ");
-    assertLookupResources("druid/listen/v1/lookups/introspect", "GET", null, "LOOKUP:tier/introspect:READ");
-    assertLookupResources("druid/listen/v1/lookups/updates", "GET", null, "LOOKUP:tier/updates:READ");
-    assertLookupResources("druid/listen/v1/lookups/name", "POST", null, "LOOKUP:tier/name:WRITE");
-    assertLookupResources("druid/listen/v1/lookups/updates", "DELETE", null, "LOOKUP:tier/updates:WRITE");
-  }
-
-  @Test
-  public void testLookupInTierNamedAllRequiresReadPermission()
-  {
-    final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
-    final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-    final ContainerRequest request = mock(ContainerRequest.class);
-    final Injector injector = mock(Injector.class);
-    final List<PathSegment> segments = Arrays.stream("druid/coordinator/v1/lookups/config/all/name".split("/"))
-                                             .map(segment -> {
-                                               final PathSegment pathSegment = mock(PathSegment.class);
-                                               when(pathSegment.getPath()).thenReturn(segment);
-                                               return pathSegment;
-                                             })
-                                             .collect(Collectors.toList());
-    when(request.getPathSegments()).thenReturn(segments);
-    when(request.getMethod()).thenReturn("GET");
-    when(servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .thenReturn(new AuthenticationResult("user", "authorizer", null, null));
-    when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, action) -> Access.DENIED);
-
-    final LookupResourceFilter filter = new LookupResourceFilter(
-        mapper,
-        AuthConfig.newBuilder().setEnableLookupAuthorization(true).build(),
-        injector
-    );
-    final UriInfo uriInfo = mock(UriInfo.class);
-    final MultivaluedMapImpl pathParams = new MultivaluedMapImpl();
-    pathParams.add("tier", "all");
-    pathParams.add("lookup", "name");
-    when(uriInfo.getPathParameters()).thenReturn(pathParams);
-    filter.uriInfo = uriInfo;
-    filter.setReq(servletRequest);
-
-    assertThrows(ForbiddenException.class, () -> filter.filter(request));
-  }
-
-  @Test
-  public void testBulkLookups()
-  {
-    assertBulkResources(null, ImmutableMap.of("tier", ImmutableMap.of("name", 1)), Action.WRITE,
-                        "LOOKUP:tier/name:WRITE");
-    assertBulkResources(null, ImmutableMap.of("empty", ImmutableMap.of()), Action.WRITE,
-                        "LOOKUP:empty:WRITE");
-    assertBulkResources(null, ImmutableMap.of(), Action.WRITE, "LOOKUP:LOOKUP:WRITE");
-    assertBulkResources("tier", ImmutableMap.of("name", 1), Action.WRITE, "LOOKUP:tier/name:WRITE");
-    assertBulkResources("tier", ImmutableMap.of(), Action.WRITE, "LOOKUP:tier:WRITE");
-    assertBulkResources("tier", new LookupsState<>(
-        ImmutableMap.of(), ImmutableMap.of("name", 1), ImmutableSet.of("other")
-    ), Action.WRITE, "LOOKUP:tier/name:WRITE", "LOOKUP:tier/other:WRITE");
-    assertBulkResources(null, ImmutableMap.of("tier", ImmutableMap.of(
-        HostAndPort.fromString("example:8080"),
-        new LookupsState<>(ImmutableMap.of("name", 1), ImmutableMap.of(), ImmutableSet.of())
-    )), Action.READ, "LOOKUP:tier/name:READ");
   }
 
   @Test
   public void testDisabledUsesConfig()
   {
-    final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
-    final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-    final ContainerRequest request = mock(ContainerRequest.class);
-    final List<String> checked = new ArrayList<>();
-    when(servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .thenReturn(new AuthenticationResult("user", "authorizer", null, null));
-    when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, action) -> {
-      checked.add(resource.getType() + ":" + resource.getName() + ":" + action);
-      return Access.OK;
-    });
-    when(request.getMethod()).thenReturn("GET");
-
-    final LookupResourceFilter filter = new LookupResourceFilter(mapper, new AuthConfig(), mock(Injector.class));
-    filter.setReq(servletRequest);
-    filter.filter(request);
-
-    assertEquals(Arrays.asList("CONFIG:CONFIG:READ"), checked);
-    verify(servletRequest).setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    final Fixture fixture = new Fixture(false, true);
+    fixture.filter(null, null, null).filter(fixture.request("GET"));
+    assertEquals(ImmutableList.of("CONFIG:CONFIG:READ"), fixture.checked);
+    verify(fixture.servletRequest).setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
   }
 
-  private static void assertLookupResources(String path, String method, String body, String... expected)
+  private static void assertRoute(String tier, String param, String lookup, String method, String expected)
   {
-    final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
-    final Injector injector = mock(Injector.class);
-    final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-    final ContainerRequest request = mock(ContainerRequest.class);
-    final LookupCoordinatorManager coordinator = mock(LookupCoordinatorManager.class);
-    final List<String> checked = new ArrayList<>();
-    final String route = path.split("\\?", 2)[0];
-    final List<PathSegment> segments = Arrays.stream(route.split("/"))
-                                             .map(segment -> {
-                                               final PathSegment pathSegment = mock(PathSegment.class);
-                                               when(pathSegment.getPath()).thenReturn(segment);
-                                               return pathSegment;
-                                             })
-                                             .collect(Collectors.toList());
-    when(request.getPathSegments()).thenReturn(segments);
-    when(request.getMethod()).thenReturn(method);
-    if (path.endsWith("?discover=true")) {
-      final MultivaluedMapImpl queryParameters = new MultivaluedMapImpl();
-      queryParameters.add("discover", "true");
-      when(request.getQueryParameters()).thenReturn(queryParameters);
+    final Fixture fixture = new Fixture(true, true);
+    fixture.filter(tier, param, lookup).filter(fixture.request(method));
+    assertEquals(ImmutableList.of(expected), fixture.checked);
+  }
+
+  private static class Fixture
+  {
+    private final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
+    private final LookupNodeService lookupNodeService = new LookupNodeService("node");
+    private final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
+    private final List<String> checked = new ArrayList<>();
+    private final boolean enabled;
+
+    private Fixture(boolean enabled, boolean allowed)
+    {
+      this.enabled = enabled;
+      when(servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+          .thenReturn(new AuthenticationResult("user", "authorizer", null, null));
+      when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, action) -> {
+        checked.add(resource.getType() + ":" + resource.getName() + ":" + action);
+        return allowed ? Access.OK : Access.DENIED;
+      });
     }
-    when(servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .thenReturn(new AuthenticationResult("user", "authorizer", null, null));
-    when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, action) -> {
-      checked.add(resource.getType() + ":" + resource.getName() + ":" + action);
-      return Access.OK;
-    });
-    when(injector.getInstance(LookupNodeService.class)).thenReturn(new LookupNodeService("tier"));
-    when(injector.getInstance(LookupCoordinatorManager.class)).thenReturn(coordinator);
-    when(coordinator.getKnownLookups()).thenReturn(ImmutableMap.of(
-        "tier", ImmutableMap.of("name", mock(LookupExtractorFactoryMapContainer.class)),
-        "empty", ImmutableMap.of()
-    ));
-    final HostAndPort host = HostAndPort.fromString("example:8080");
-    when(coordinator.discoverTiers()).thenReturn(ImmutableSet.of("tier"));
-    when(coordinator.discoverNodesInTier("tier")).thenReturn(ImmutableList.of(host));
-    when(coordinator.discoverNodesInTier("empty")).thenReturn(ImmutableList.of());
-    when(coordinator.discoverNodesInTier("future")).thenReturn(ImmutableList.of());
-    when(coordinator.getLastKnownLookupsStateOnNodes()).thenReturn(ImmutableMap.of(
-        host,
-        new LookupsState<>(
-            ImmutableMap.of("name", mock(LookupExtractorFactoryMapContainer.class)),
-            ImmutableMap.of(),
-            ImmutableSet.of()
-        )
-    ));
-    if (body != null) {
-      when(request.getEntityInputStream()).thenReturn(
-          new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8))
+
+    private LookupResourceFilter filter(String tier, String param, String lookup)
+    {
+      final LookupResourceFilter filter = new LookupResourceFilter(
+          mapper,
+          AuthConfig.newBuilder().setEnableLookupAuthorization(enabled).build()
       );
-      when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(new ObjectMapper());
+      filter.lookupNodeService = lookupNodeService;
+      final UriInfo uriInfo = mock(UriInfo.class);
+      final MultivaluedMapImpl params = new MultivaluedMapImpl();
+      if (tier != null) {
+        params.add("tier", tier);
+      }
+      if (param != null) {
+        params.add(param, lookup);
+      }
+      when(uriInfo.getPathParameters()).thenReturn(params);
+      filter.uriInfo = uriInfo;
+      filter.setReq(servletRequest);
+      return filter;
     }
 
-    final LookupResourceFilter filter = new LookupResourceFilter(
-        mapper,
-        AuthConfig.newBuilder().setEnableLookupAuthorization(true).build(),
-        injector
-    );
-    final UriInfo uriInfo = mock(UriInfo.class);
-    when(uriInfo.getPathParameters()).thenReturn(matchedPathParams(route, method));
-    filter.uriInfo = uriInfo;
-    filter.setReq(servletRequest);
-    filter.filter(request);
-
-    assertEquals(Arrays.asList(expected), checked);
-    verify(servletRequest).setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-  }
-
-  private static MultivaluedMapImpl matchedPathParams(String route, String method)
-  {
-    final MultivaluedMapImpl params = new MultivaluedMapImpl();
-    final String[] segments = route.split("/");
-    if (route.startsWith("druid/coordinator/v1/lookups/")) {
-      if (segments.length > 5
-          && !(segments.length == 6 && "config".equals(segments[4]) && "all".equals(segments[5]))) {
-        params.add("tier", segments[5]);
-      }
-      if (segments.length > 6 && !"nodeStatus".equals(segments[4])) {
-        params.add("lookup", segments[6]);
-      } else if (segments.length > 6) {
-        params.add("hostAndPort", segments[6]);
-      }
-    } else if (route.startsWith("druid/v1/lookups/introspect/")) {
-      params.add("lookupId", segments[4]);
-    } else if (segments.length > 4 && !("POST".equals(method) && "updates".equals(segments[4]))) {
-      params.add("id", segments[4]);
+    private ContainerRequest request(String method)
+    {
+      final ContainerRequest request = mock(ContainerRequest.class);
+      when(request.getMethod()).thenReturn(method);
+      return request;
     }
-    return params;
-  }
-
-  private static void assertBulkResources(String tier, Object value, Action action, String... expected)
-  {
-    final AuthorizerMapper mapper = mock(AuthorizerMapper.class);
-    final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-    final ContainerRequest request = mock(ContainerRequest.class);
-    final Injector injector = mock(Injector.class);
-    final UriInfo uriInfo = mock(UriInfo.class);
-    final Map<String, Object> attributes = new HashMap<>();
-    final List<String> checked = new ArrayList<>();
-    final String method = action == Action.READ ? "GET" : "POST";
-    when(request.getMethod()).thenReturn(method);
-    when(servletRequest.getMethod()).thenReturn(method);
-    when(uriInfo.getPathParameters()).thenReturn(new MultivaluedMapImpl());
-    when(servletRequest.getAttribute(anyString())).thenAnswer(call -> attributes.get(call.getArgument(0)));
-    doAnswer(call -> {
-      attributes.put(call.getArgument(0), call.getArgument(1));
-      return null;
-    }).when(servletRequest).setAttribute(anyString(), any());
-    attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                   new AuthenticationResult("user", "authorizer", null, null));
-    when(mapper.getAuthorizer("authorizer")).thenReturn((authentication, resource, checkedAction) -> {
-      checked.add(resource.getType() + ":" + resource.getName() + ":" + checkedAction);
-      return Access.OK;
-    });
-    when(injector.getInstance(LookupNodeService.class)).thenReturn(new LookupNodeService("tier"));
-
-    final LookupResourceFilter filter = new LookupResourceFilter(
-        mapper,
-        AuthConfig.newBuilder().setEnableLookupAuthorization(true).build(),
-        injector
-    );
-    filter.uriInfo = uriInfo;
-    filter.setReq(servletRequest);
-    filter.filter(request);
-    LookupResourceFilter.filterBulk(servletRequest, tier, value);
-
-    assertEquals(Arrays.asList(expected), checked);
-    verify(servletRequest).setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
   }
 }

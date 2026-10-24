@@ -90,6 +90,10 @@ Any authenticated user can read the contents of any [lookup](../querying/lookups
 
 When `druid.auth.enableLookupAuthorization` is true, lookup endpoints authorize against `LOOKUP` resources named `tier/lookup`. The tier comes from the URL, bulk request body, coordinator lookup state or the serving node. `READ` covers GET requests, including lookup configuration, status, node status and introspection. `WRITE` covers POST, PUT and DELETE requests.
 
+In resource names, `%` and `/` in each tier or lookup name are encoded as `%25` and `%2F` before the parts are joined. For example, lookup `x/y` in tier `a` uses `LOOKUP:a/x%2Fy`, while lookup `y` in tier `a/x` uses `LOOKUP:a%2Fx/y`.
+
+The setting is false by default, so existing lookup endpoints continue to use `CONFIG:CONFIG` until it is enabled. Before enabling it with Druid basic security, add `LOOKUP` `READ` and `WRITE` on `.*` to the existing permissions for the `admin` and `druid_system` roles. Existing roles are not updated automatically when the resource type is added.
+
 This setting applies to lookup HTTP endpoints. It does not currently change lookup use in SQL or native queries, i.e., query execution does not check `LOOKUP` permissions.
 
 Bulk GET responses omit lookups for which the caller lacks `READ` authorization. To list an empty tier, grant `READ` on `LOOKUP:<tier>`.
