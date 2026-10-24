@@ -5409,6 +5409,51 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @Test
+  public void testRequireTimeConditionBroadcastRightSidePositive()
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    // A broadcast table joined directly on the right-hand side does not need a time condition. Only the left-hand
+    // side, which reads segments, does.
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT druid.broadcast.dim4, COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4\n"
+        + "WHERE numfoo.__time >= TIMESTAMP '2000-01-02 00:00:00' AND numfoo.__time < TIMESTAMP '2001-01-02 00:00:00'\n"
+        + "GROUP BY 1",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE3),
+                                new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
+                                "j0.",
+                                equalsCondition(
+                                    makeColumnExpression("dim4"),
+                                    makeColumnExpression("j0.dim4")
+                                ),
+                                JoinType.INNER
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Intervals.of("2000-01-02/2001-01-02")))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.dim4", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 6L},
+            new Object[]{"b", 3L}
+        )
+    );
+  }
+
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")

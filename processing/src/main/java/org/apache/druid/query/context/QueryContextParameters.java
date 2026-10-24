@@ -877,7 +877,8 @@ public final class QueryContextParameters
           .since("40.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description(
               """
-              Time condition to apply to all tables that the query reads, as a comma-separated string of ISO8601 intervals, such as `"2000-01-01/2000-02-01,2001-01-01/2001-02-01"`.
+              Time condition to apply to all tables that the query reads, except global tables on the right side of a JOIN.
+              Comma-separated string of ISO8601 intervals, such as `"2000-01-01/2000-02-01,2001-01-01/2001-02-01"`.
               An empty string is an error.\
               <br /><br />Druid ANDs this condition with any other condition you provide on the `__time` column.
               Intervals without an explicit offset are in UTC; `sqlTimeZone` doesn't affect them.\

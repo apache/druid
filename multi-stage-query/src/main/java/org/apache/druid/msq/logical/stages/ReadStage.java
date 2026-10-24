@@ -42,6 +42,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
 import org.apache.druid.sql.calcite.rel.logical.DruidFilter;
+import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidProject;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
@@ -122,37 +123,59 @@ public class ReadStage extends AbstractFrameProcessorStage
   {
     DruidLogicalNode node = stack.getNode();
     if (node instanceof DruidValues || node instanceof DruidTableScan) {
-      return translateViaSourceDesc(stack.getPlannerContext(), (SourceDescProducer) node);
+      return translateViaSourceDesc(stack, (SourceDescProducer) node);
     }
     return Optional.empty();
   }
 
-  private static Optional<ReadStage> translateViaSourceDesc(PlannerContext plannerContext, SourceDescProducer node)
+  private static Optional<ReadStage> translateViaSourceDesc(DruidNodeStack stack, SourceDescProducer node)
   {
+    PlannerContext plannerContext = stack.getPlannerContext();
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
-    InputSpec inputSpec = translateDataSource(plannerContext, sd.dataSource);
+    InputSpec inputSpec = translateDataSource(plannerContext, sd.dataSource, isDirectRightOfBroadcastJoin(stack));
     ReadStage stage = new ReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec, sd.rowSignature));
     return Optional.of(stage);
   }
 
   @Nonnull
-  private static InputSpec translateDataSource(PlannerContext plannerContext, DataSource dataSource)
+  private static InputSpec translateDataSource(
+      PlannerContext plannerContext,
+      DataSource dataSource,
+      boolean directRightOfBroadcastJoin
+  )
   {
-    if (dataSource instanceof TableDataSource) {
-      TableDataSource ids = (TableDataSource) dataSource;
+    if (dataSource instanceof TableDataSource ids) {
+      // Don't apply the time condition to global tables that are joined directly on the right-hand side.
+      final boolean applyTimeCondition = !(ids.isGlobal() && directRightOfBroadcastJoin);
+
       // TableInputSpec treats null intervals as eternity.
-      TableInputSpec inputSpec = new TableInputSpec(ids.getName(), plannerContext.getTimeCondition(), null);
-      return inputSpec;
+      return new TableInputSpec(ids.getName(), applyTimeCondition ? plannerContext.getTimeCondition() : null, null);
     }
-    if (dataSource instanceof InlineDataSource) {
-      InlineDataSource ids = (InlineDataSource) dataSource;
+    if (dataSource instanceof InlineDataSource ids) {
       InlineInputSpec inputSpec = new InlineInputSpec(ids);
       return inputSpec;
     }
-    if (dataSource instanceof LookupDataSource) {
-      LookupDataSource lookupDataSource = (LookupDataSource) dataSource;
+    if (dataSource instanceof LookupDataSource lookupDataSource) {
       return new LookupInputSpec(lookupDataSource.getLookupName());
     }
     throw DruidException.defensive("This type of data source [%s] is not currently supported.", dataSource.getClass());
+  }
+
+  /**
+   * Whether the node at the top of the stack is a right-hand input of a broadcast join, possibly through projections
+   * that only remap columns.
+   */
+  private static boolean isDirectRightOfBroadcastJoin(DruidNodeStack stack)
+  {
+    for (int i = 0; i < stack.size() - 1; i++) {
+      final DruidLogicalNode parent = stack.getNode(i + 1).node;
+      if (parent instanceof DruidJoin join) {
+        return stack.getNode(i).operandIndex > 0
+               && !join.getJoinAlgorithm(stack.getPlannerContext()).requiresSubquery();
+      } else if (!(parent instanceof DruidProject project) || !project.isMapping()) {
+        return false;
+      }
+    }
+    return false;
   }
 }

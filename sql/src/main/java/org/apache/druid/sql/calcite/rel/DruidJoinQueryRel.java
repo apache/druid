@@ -430,18 +430,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     // ideally this would involve JoinableFactory.isDirectlyJoinable to check that the global datasources
     // are in fact possibly joinable, but for now isGlobal is coupled to joinability
     return !(DruidRels.isScanOrMapping(right, false)
-             && DruidRels.druidTableIfLeafRel(right)
-                         .filter(table -> canUseDirectlyOnRight(plannerContext, table.getDataSource()))
-                         .isPresent());
-  }
-
-  /**
-   * Whether a datasource can be used directly as the right-hand side of a join, rather than through a subquery.
-   */
-  public static boolean canUseDirectlyOnRight(final PlannerContext plannerContext, final DataSource dataSource)
-  {
-    return dataSource.isGlobal()
-           && (plannerContext.getTimeCondition() == null || dataSource.getTableNames().isEmpty());
+             && DruidRels.druidTableIfLeafRel(right).filter(table -> table.getDataSource().isGlobal()).isPresent());
   }
 
   public static Set<String> findExistingJoinPrefixes(DataSource... dataSources)

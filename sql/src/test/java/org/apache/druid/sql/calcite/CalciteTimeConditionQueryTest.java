@@ -331,7 +331,7 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
 
     final Map<String, Object> context = makeContext("2000-01-01/2001-01-02");
 
-    // The broadcast table on the right-hand side is read through a subquery, so the time condition applies to it.
+    // The broadcast table on the right-hand side is joined directly, so the time condition does not apply to it.
     testQuery(
         "SELECT broadcast.dim4, COUNT(*)\n"
         + "FROM numfoo INNER JOIN broadcast ON numfoo.dim4 = broadcast.dim4\n"
@@ -342,15 +342,7 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
                         .setDataSource(
                             join(
                                 new TableDataSource(CalciteTests.DATASOURCE3),
-                                new QueryDataSource(
-                                    newScanQueryBuilder()
-                                        .dataSource(new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE))
-                                        .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-02")))
-                                        .columns("dim4")
-                                        .columnTypes(ColumnType.STRING)
-                                        .context(context)
-                                        .build()
-                                ),
+                                new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("dim4"), makeColumnExpression("j0.dim4")),
                                 JoinType.INNER
@@ -365,7 +357,7 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a", 9L},
-            new Object[]{"b", 1L}
+            new Object[]{"b", 3L}
         )
     );
   }
@@ -532,7 +524,6 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DD_RESTRICTED_DATASOURCE_SUPPORT)
   @Test
   public void testRestrictedTable_superUser()
   {
