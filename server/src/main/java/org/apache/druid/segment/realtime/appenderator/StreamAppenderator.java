@@ -943,7 +943,6 @@ public class StreamAppenderator implements Appenderator
       final File mergedFile;
       final DataSegment mergedSegment;
       final Stopwatch mergeStopwatch = Stopwatch.createStarted();
-      final long mergeTimeMillis;
       final long mergeTimeNanos;
       final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
@@ -972,10 +971,9 @@ public class StreamAppenderator implements Appenderator
 
         metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
         mergeTimeNanos = mergeStopwatch.nanosElapsed();
-        mergeTimeMillis = TimeUnit.NANOSECONDS.toMillis(mergeTimeNanos);
         metrics.setMergeTime(mergeTimeNanos);
 
-        log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
+        log.debug("Segment[%s] built in %,dms.", identifier, TimeUnit.NANOSECONDS.toMillis(mergeTimeNanos));
         QueryableIndex index = indexIO.loadIndex(mergedFile);
         closer.register(index);
         // Clustered segments have no top-level columns (getAvailableDimensions() is empty); their logical
@@ -1016,7 +1014,7 @@ public class StreamAppenderator implements Appenderator
           segment.getSize(),
           segment.getTotalRows(),
           indexes.size(),
-          mergeTimeMillis,
+          TimeUnit.NANOSECONDS.toMillis(mergeTimeNanos),
           pushTimeMillis,
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
