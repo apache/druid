@@ -135,9 +135,53 @@ WHERE "IS_AGGREGATOR" = 'YES'
 The "sys" schema provides visibility into Druid segments, servers and tasks.
 
 :::info
- Note: "sys" tables do not currently support Druid-specific functions like `TIME_PARSE` and
- `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+ By default, the Broker evaluates queries on "sys" tables with a built-in SQL interpreter, which supports only standard SQL functions. You can enable
+ experimental [native query execution](#native-query-execution) for supported system tables, which enables expressions and
+ aggregations that the native SQL engine can translate.
 :::
+
+### Native query execution
+
+:::caution Experimental
+Native query execution for system tables is an experimental, opt-in feature. Its behavior and interfaces may change.
+:::
+
+The native SQL engine can plan supported system tables as native datasources. To enable this behavior for a query, set
+`useQueryEngineForSystemTables` to `true` in the SQL query context:
+
+```json
+{
+  "query": "SELECT COUNT(DISTINCT server) FROM sys.server_properties",
+  "context": {
+    "useQueryEngineForSystemTables": true
+  }
+}
+```
+
+For clients that support setting query context parameters with SQL statements, you can enable native system-table
+execution with `SET`:
+
+```sql
+SET useQueryEngineForSystemTables = 'true';
+SELECT COUNT(DISTINCT server) FROM sys.server_properties;
+```
+
+Native system-table execution is available when the resolved SQL engine is `native`. You don't need to explicitly set
+the `engine` context parameter when `native` is already the default engine. The following tables support native query
+execution:
+
+|Table|Source of rows|
+|-----|--------------|
+|[`sys.server_properties`](#server_properties-table)|The Druid server processes discovered in the cluster. Filters on `server` and `service_name` can avoid reading properties from nodes that don't match.|
+
+After Druid retrieves the system-table rows, the native engine applies the remaining filters, expressions,
+aggregations, sorting, and result processing. A system table that doesn't advertise native query support continues to
+use the Broker's SQL interpreter, even when `useQueryEngineForSystemTables` is `true`.
+
+The parameter defaults to `false`. During a rolling upgrade, leave it disabled until the Broker and all nodes
+that serve the native system tables have been upgraded. After the upgrade, you can enable it by query or set
+`druid.query.default.context.useQueryEngineForSystemTables=true` on Brokers as the cluster-wide default. For more
+information, see [SQL query context](sql-query-context.md).
 
 ### SEGMENTS table
 
@@ -347,7 +391,7 @@ The `sys.query_context_parameters` table is experimental. Its columns and their 
 
 The `query_context_parameters` table lists the [query context parameters](query-context.md) that users can set, along with their types, defaults, and where they apply. Each row represents one parameter. Parameters that only Druid sets internally are not listed.
 
-Unlike other `sys` tables that expose cluster state, such as `servers`, this table doesn't require `READ` permission on the `STATE` resource. Any user who can query `sys` tables can read it; when `druid.sql.planner.authorizeSystemTablesDirectly` is true, that means `READ` permission on the `SYSTEM_TABLE` resource `query_context_parameters`. Only the `effective_value` and `effective_source` columns, which come from the Broker configuration, require `READ` permission on the `CONFIG` resource. Without it, the query still succeeds, but `effective_value` is null and `effective_source` is `UNAUTHORIZED` in every row.
+Unlike other `sys` tables that expose cluster state, such as `servers`, this table doesn't require `READ` permission on the `STATE` resource. Any user who can query `sys` tables can read it; when `druid.auth.authorizeSystemTablesDirectly` is true, that means `READ` permission on the `SYSTEM_TABLE` resource `query_context_parameters`. Only the `effective_value` and `effective_source` columns, which come from the Broker configuration, require `READ` permission on the `CONFIG` resource. Without it, the query still succeeds, but `effective_value` is null and `effective_source` is `UNAUTHORIZED` in every row.
 
 |Column|Type|Notes|
 |------|-----|-----|

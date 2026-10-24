@@ -20,11 +20,18 @@
 package org.apache.druid.cli;
 
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.server.system.handler.SystemTableQueryResource;
+import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
+import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Stream;
 
@@ -50,5 +57,28 @@ public class MainTest
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assertions.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
+  }
+
+  @Test
+  public void testMiddleManagerNativeServerPropertiesInjection()
+  {
+    final CliMiddleManager middleManager = new CliMiddleManager();
+    final Injector injector = GuiceInjectors.makeStartupInjector();
+    injector.injectMembers(middleManager);
+
+    final Injector middleManagerInjector = middleManager.makeInjector(
+        middleManager.getNodeRoles(new Properties())
+    );
+
+    // Middle Managers expose /druid/v2 through the resource restricted to internal system-table scans.
+    Assertions.assertNotNull(middleManagerInjector.getInstance(SystemTableQueryResource.class));
+    Assertions.assertTrue(
+        systemTableDataProviders(middleManagerInjector).containsKey(ServerPropertiesTableDescriptor.TABLE_NAME)
+    );
+  }
+
+  private static Map<String, SystemTableDataProvider> systemTableDataProviders(final Injector injector)
+  {
+    return injector.getInstance(Key.get(new TypeLiteral<>() {}));
   }
 }

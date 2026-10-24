@@ -422,7 +422,8 @@ public class CalciteTests
         () -> new SqlEngineRegistry(Collections.emptySet()),
         plannerConfig,
         new DefaultQueryConfig(null),
-        new Properties()
+        new Properties(),
+        new AuthConfig()
     );
   }
 

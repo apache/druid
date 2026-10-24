@@ -48,6 +48,8 @@ class ParameterDocumentationGeneratorTest
   private static final String SQL_TABLE = "|Parameter|Description|Default value|\n|---|---|---|\n";
   private static final String SQL_MARKER =
       "<!-- GENERATED QUERY CONTEXT PARAMETER: sqlQueryId -->";
+  private static final String SYSTEM_TABLE_MARKER =
+      "<!-- GENERATED QUERY CONTEXT PARAMETER: useQueryEngineForSystemTables -->";
 
   @TempDir
   Path temporaryFolder;
@@ -58,7 +60,7 @@ class ParameterDocumentationGeneratorTest
     writeDocuments(
         "general header\n|stale| " + GENERAL_MARKER,
         "scan header\n|stale| " + SCAN_MARKER,
-        "sql header\n" + SQL_TABLE + "|stale| " + SQL_MARKER
+        "sql header\n" + SQL_TABLE + "|stale| " + SQL_MARKER + "\n|stale| " + SYSTEM_TABLE_MARKER
     );
 
     final Path generatedOutput = temporaryFolder.resolve("generated");
@@ -82,6 +84,8 @@ class ParameterDocumentationGeneratorTest
     assertTrue(sql.startsWith("sql header\n"));
     assertTrue(sql.contains("|`sqlQueryId`|"));
     assertTrue(sql.contains(SQL_MARKER));
+    assertTrue(sql.contains("|`useQueryEngineForSystemTables`|"));
+    assertTrue(sql.contains("|`false`| " + SYSTEM_TABLE_MARKER));
     assertFalse(sql.contains("dartQueryId"));
     // Undocumented parameters have descriptions but are left out of the generated tables.
     assertFalse(sql.contains("prePlanned"));

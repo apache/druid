@@ -57,6 +57,7 @@ public class DruidLogicalRules
                 DruidLogicalConvention.instance(),
                 DruidTableScanRule.class.getSimpleName()
             ),
+            new DruidBindableTableScanRule(),
             new DruidAggregateRule(
                 LogicalAggregate.class,
                 Convention.NONE,

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.URIs;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 
 import java.net.URL;
@@ -34,7 +35,9 @@ public class CoordinatorRedirectInfo implements RedirectInfo
 {
   private static final Set<String> LOCAL_PATHS = ImmutableSet.of(
       "/druid/coordinator/v1/leader",
-      "/druid/coordinator/v1/isLeader"
+      "/druid/coordinator/v1/isLeader",
+      "/druid/v2",
+      "/druid/v2/"
   );
 
   private final DruidCoordinator coordinator;
@@ -48,7 +51,10 @@ public class CoordinatorRedirectInfo implements RedirectInfo
   @Override
   public boolean doLocal(String requestURI)
   {
-    return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || coordinator.isLeader();
+    return (requestURI != null
+            && (LOCAL_PATHS.contains(requestURI)
+                || requestURI.startsWith("/druid/v2/" + SystemTableDataSource.NODE_QUERY_ID_PREFIX)))
+           || coordinator.isLeader();
   }
 
   @Override

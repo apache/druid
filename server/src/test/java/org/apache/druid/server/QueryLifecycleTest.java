@@ -29,25 +29,31 @@ import com.google.inject.Scopes;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
+import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContextTest;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.RestrictedDataSource;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
@@ -59,9 +65,11 @@ import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -78,13 +86,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 @LazySingleton
 public class QueryLifecycleTest
@@ -119,6 +133,8 @@ public class QueryLifecycleTest
   AuthorizerMapper authzMapper;
 
   QueryConfigProvider queryConfig;
+  @Bind
+  ServerConfig serverConfig = new ServerConfig();
   @Bind(lazy = true)
   QueryConfigProvider queryConfigProvider;
 
@@ -160,8 +176,156 @@ public class QueryLifecycleTest
 
     injector = Guice.createInjector(
         BoundFieldModule.of(this),
-        binder -> binder.bindScope(LazySingleton.class, Scopes.SINGLETON)
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          DruidBinders.dataSourceQueryHandlerBinder(binder);
+        }
     );
+  }
+
+  /// Handler-backed queries must receive the server default before local execution or node fanout.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerUsesServerDefaultTimeout(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    final long before = System.currentTimeMillis();
+    executeHandler(lifecycle, Map.of(), local);
+
+    Assertions.assertEquals(5_000L, captured.get().context().getTimeout());
+    Assertions.assertEquals(1_234L, captured.get().context().getMaxScatterGatherBytes());
+    assertHandlerDeadline(captured.get(), before, 5_000L);
+  }
+
+  /// A zero timeout is bounded by the server maximum, not an unlimited node deadline.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerZeroTimeoutUsesServerMaximum(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    final long before = System.currentTimeMillis();
+    executeHandler(lifecycle, Map.of(QueryContextParameters.TIMEOUT.getName(), 0L), local);
+
+    assertHandlerDeadline(captured.get(), before, 10_000L);
+  }
+
+  /// An explicit timeout below the server maximum is retained.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerPreservesExplicitTimeout(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    final long before = System.currentTimeMillis();
+    executeHandler(lifecycle, Map.of(QueryContextParameters.TIMEOUT.getName(), 7_000L), local);
+
+    Assertions.assertEquals(7_000L, captured.get().context().getTimeout());
+    assertHandlerDeadline(captured.get(), before, 7_000L);
+  }
+
+  /// Reject excessive timeouts before creating a handler runner or starting provider work.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerRejectsTimeoutAboveServerMaximum(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    Assertions.assertThrows(
+        BadQueryContextException.class,
+        () -> executeHandler(lifecycle, Map.of(QueryContextParameters.TIMEOUT.getName(), 10_001L), local)
+    );
+    Assertions.assertNull(captured.get());
+  }
+
+  /// Normalization must not extend a deadline inherited from an earlier query stage.
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void testHandlerPreservesEarlierDeadline(final boolean local)
+  {
+    final AtomicReference<Query<?>> captured = new AtomicReference<>();
+    final QueryLifecycle lifecycle = handlerLifecycle(captured, local);
+    final long deadline = System.currentTimeMillis() + 1_000L;
+    executeHandler(lifecycle, Map.of(DirectDruidClient.QUERY_FAIL_TIME, deadline), local);
+
+    Assertions.assertEquals(deadline, captured.get().context().getLong(DirectDruidClient.QUERY_FAIL_TIME));
+  }
+
+  private QueryLifecycle handlerLifecycle(final AtomicReference<Query<?>> captured, final boolean local)
+  {
+    serverConfig = new ServerConfig()
+    {
+      @Override
+      public long getDefaultQueryTimeout()
+      {
+        return 5_000L;
+      }
+
+      @Override
+      public long getMaxQueryTimeout()
+      {
+        return 10_000L;
+      }
+
+      @Override
+      public long getMaxScatterGatherBytes()
+      {
+        return 1_234L;
+      }
+    };
+    final DataSourceQueryHandler handler = new DataSourceQueryHandler()
+    {
+      @Override
+      public <T> QueryRunner<T> createRunner(
+          final Query<T> query,
+          final AuthenticationResult authentication,
+          final boolean executeLocally
+      )
+      {
+        captured.set(query);
+        Assertions.assertEquals(local, executeLocally);
+        return (queryPlus, responseContext) -> {
+          Assertions.assertSame(query, queryPlus.getQuery());
+          return Sequences.empty();
+        };
+      }
+    };
+    injector = Guice.createInjector(
+        BoundFieldModule.of(this),
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          DruidBinders.dataSourceQueryHandlerBinder(binder).addBinding(SystemTableDataSource.class).toInstance(handler);
+        }
+    );
+    EasyMock.expect(queryConfig.getContext()).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(Access.OK).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).anyTimes();
+    replayAll();
+    return createLifecycle();
+  }
+
+  private void executeHandler(final QueryLifecycle lifecycle, final Map<String, Object> context, final boolean local)
+  {
+    lifecycle.initialize(
+        Druids.newScanQueryBuilder()
+              .dataSource(new SystemTableDataSource("server_properties"))
+              .eternityInterval()
+              .context(context)
+              .build()
+    );
+    lifecycle.authorize(mockRequest(local ? QueryResource.NATIVE_QUERY_ROUTE_LOCAL : null));
+    lifecycle.execute();
+  }
+
+  private void assertHandlerDeadline(final Query<?> query, final long before, final long timeout)
+  {
+    final long deadline = query.context().getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+    Assertions.assertTrue(deadline >= before + timeout);
+    Assertions.assertTrue(deadline <= System.currentTimeMillis() + timeout);
   }
 
   private QueryLifecycle createLifecycle()
@@ -193,6 +357,7 @@ public class QueryLifecycleTest
   {
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .once();
@@ -205,6 +370,34 @@ public class QueryLifecycleTest
 
     QueryLifecycle lifecycle = createLifecycle();
     lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
+  }
+
+  /**
+   * Native query form of:
+   *
+   * <pre>{@code
+   * SELECT COUNT(*)
+   * FROM
+   * (
+   *   SELECT
+   *     task_id,
+   *     COUNT(*) AS task_count
+   *   FROM sys.tasks
+   *   GROUP BY task_id
+   * )
+   * WHERE task_count > 0
+   * }</pre>
+   *
+   * The handler is registered for the leaf datasource and must be found below the query root.
+   */
+  @Test
+  public void testSystemTableHandlerHandlesQueryDataSource()
+  {
+    final Query<?> innerQuery = Druids.newScanQueryBuilder()
+                                      .dataSource(new SystemTableDataSource("tasks"))
+                                      .eternityInterval()
+                                      .build();
+    assertWrappedSystemTableUsesHandler(new QueryDataSource(innerQuery));
   }
 
   @Test
@@ -919,6 +1112,11 @@ public class QueryLifecycleTest
 
   private HttpServletRequest mockRequest()
   {
+    return mockRequest(null);
+  }
+
+  private HttpServletRequest mockRequest(@Nullable final String nativeQueryRoute)
+  {
     HttpServletRequest request = EasyMock.createNiceMock(HttpServletRequest.class);
     EasyMock.expect(request.getAttribute(EasyMock.eq(AuthConfig.DRUID_AUTHENTICATION_RESULT)))
             .andReturn(authenticationResult).anyTimes();
@@ -926,8 +1124,279 @@ public class QueryLifecycleTest
             .andReturn(null).anyTimes();
     EasyMock.expect(request.getAttribute(EasyMock.eq(AuthConfig.DRUID_AUTHORIZATION_CHECKED)))
             .andReturn(null).anyTimes();
+    EasyMock.expect(request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE))
+            .andReturn(nativeQueryRoute).anyTimes();
     EasyMock.replay(request);
     return request;
+  }
+
+  /** {@code X-Druid-Native-Query-Route: local} reaches the datasource query handler as server request state. */
+  @Test
+  public void testLocalNativeQueryRouteIsPassedToDataSourceHandler()
+  {
+    assertNativeQueryRoute(QueryResource.NATIVE_QUERY_ROUTE_LOCAL, true);
+  }
+
+  /** The native-query route header is case-sensitive and rejects non-exact values. */
+  @Test
+  public void testNonExactNativeQueryRouteIsNotLocal()
+  {
+    assertNativeQueryRoute("LOCAL", false);
+  }
+
+  /**
+   * With {@code druid.auth.authorizeSystemTablesDirectly}, a native system-table query requires SYSTEM_TABLE READ on
+   * the table whatever the value of {@code X-Druid-Native-Query-Route}: the header selects where the query runs, it
+   * doesn't bypass authorization.
+   */
+  @ParameterizedTest(name = "route = {0}")
+  @NullSource
+  @ValueSource(strings = {QueryResource.NATIVE_QUERY_ROUTE_LOCAL, "LOCAL", "remote"})
+  public void testSystemTableQueryIsDeniedWithoutSystemTableReadForAnyRoute(@Nullable final String route)
+  {
+    authConfig = AuthConfig.newBuilder().setAuthorizeSystemTablesDirectly(true).build();
+    final AtomicInteger handlerCalls = new AtomicInteger();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(
+        authorizer.authorize(
+            authenticationResult,
+            new Resource("server_properties", ResourceType.SYSTEM_TABLE),
+            Action.READ
+        )
+    ).andReturn(Access.DENIED).once();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle(countingHandler(handlerCalls, null));
+    lifecycle.initialize(serverPropertiesScan());
+
+    Assertions.assertFalse(lifecycle.authorize(mockRequest(route)).allowBasicAccess());
+    Assertions.assertThrows(DruidException.class, lifecycle::execute);
+    Assertions.assertEquals(0, handlerCalls.get());
+    EasyMock.verify(authorizer);
+  }
+
+  /**
+   * The system-table handler receives the identity that authenticated the HTTP request, so the table's own checks
+   * (such as STATE READ for {@code server_properties}) apply to the caller for every value of
+   * {@code X-Druid-Native-Query-Route}. Without {@code druid.auth.authorizeSystemTablesDirectly}, the table has no
+   * table-level check, as in the SQL {@code sys} schema, so the authorizer isn't called.
+   */
+  @ParameterizedTest(name = "route = {0}")
+  @NullSource
+  @ValueSource(strings = {QueryResource.NATIVE_QUERY_ROUTE_LOCAL, "LOCAL", "remote"})
+  public void testSystemTableHandlerReceivesRequestIdentityForAnyRoute(@Nullable final String route)
+  {
+    final AtomicInteger handlerCalls = new AtomicInteger();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle(
+        countingHandler(handlerCalls, QueryResource.NATIVE_QUERY_ROUTE_LOCAL.equals(route))
+    );
+    lifecycle.initialize(serverPropertiesScan());
+
+    Assertions.assertTrue(lifecycle.authorize(mockRequest(route)).allowAccessWithNoRestriction());
+    lifecycle.execute();
+    Assertions.assertEquals(1, handlerCalls.get());
+  }
+
+  /**
+   * In a query that reads both a table and a system table, the table still needs DATASOURCE READ, and the system
+   * table needs SYSTEM_TABLE READ only with {@code druid.auth.authorizeSystemTablesDirectly}. The system table's
+   * {@code sys.}-prefixed name is never authorized as a datasource.
+   */
+  @ParameterizedTest(name = "authorizeSystemTablesDirectly = {0}")
+  @ValueSource(booleans = {false, true})
+  public void testTableAndSystemTableAuthorization(final boolean authorizeSystemTablesDirectly)
+  {
+    authConfig = AuthConfig.newBuilder().setAuthorizeSystemTablesDirectly(authorizeSystemTablesDirectly).build();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(
+        authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ)
+    ).andReturn(Access.OK).once();
+    if (authorizeSystemTablesDirectly) {
+      EasyMock.expect(
+          authorizer.authorize(authenticationResult, new Resource("tasks", ResourceType.SYSTEM_TABLE), Action.READ)
+      ).andReturn(Access.OK).once();
+    }
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle(countingHandler(new AtomicInteger(), null));
+    lifecycle.initialize(
+        Druids.newScanQueryBuilder()
+              .dataSource(
+                  new UnionDataSource(List.of(new TableDataSource(DATASOURCE), new SystemTableDataSource("tasks")))
+              )
+              .eternityInterval()
+              .build()
+    );
+
+    Assertions.assertTrue(lifecycle.authorize(mockRequest()).allowAccessWithNoRestriction());
+    EasyMock.verify(authorizer);
+  }
+
+  private static ScanQuery serverPropertiesScan()
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource(new SystemTableDataSource("server_properties"))
+                 .eternityInterval()
+                 .build();
+  }
+
+  /**
+   * Returns a handler that counts its calls and checks it receives {@link #authenticationResult}, the identity that
+   * {@link #mockRequest(String)} attaches to the request. A null {@code expectedExecuteLocally} skips that check.
+   */
+  private DataSourceQueryHandler countingHandler(
+      final AtomicInteger handlerCalls,
+      @Nullable final Boolean expectedExecuteLocally
+  )
+  {
+    return new DataSourceQueryHandler()
+    {
+      @Override
+      public <T> QueryRunner<T> createRunner(
+          final Query<T> query,
+          final AuthenticationResult handlerAuthenticationResult,
+          final boolean executeLocally
+      )
+      {
+        handlerCalls.incrementAndGet();
+        Assertions.assertSame(authenticationResult, handlerAuthenticationResult);
+        if (expectedExecuteLocally != null) {
+          Assertions.assertEquals(expectedExecuteLocally, executeLocally);
+        }
+        return (queryPlus, responseContext) -> Sequences.empty();
+      }
+    };
+  }
+
+  private QueryLifecycle systemTableLifecycle(final DataSourceQueryHandler handler)
+  {
+    return new QueryLifecycle(
+        conglomerate,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        authConfig,
+        policyEnforcer,
+        new QueryConfigSnapshot(ImmutableMap.of(), BrokerDynamicConfig.builder().build()),
+        Map.of(SystemTableDataSource.class, handler),
+        serverConfig,
+        System.currentTimeMillis(),
+        System.nanoTime()
+    );
+  }
+
+  private void assertNativeQueryRoute(final String route, final boolean expectedExecuteLocally)
+  {
+    final ScanQuery systemTableQuery = Druids.newScanQueryBuilder()
+                                             .dataSource(new SystemTableDataSource("tasks"))
+                                             .eternityInterval()
+                                             .build();
+    final AtomicInteger handlerCalls = new AtomicInteger();
+    final DataSourceQueryHandler handler = new DataSourceQueryHandler()
+    {
+      @Override
+      public <T> QueryRunner<T> createRunner(
+          final Query<T> query,
+          final AuthenticationResult authenticationResult,
+          final boolean executeLocally
+      )
+      {
+        handlerCalls.incrementAndGet();
+        Assertions.assertEquals(expectedExecuteLocally, executeLocally);
+        return (queryPlus, responseContext) -> Sequences.empty();
+      }
+    };
+
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = new QueryLifecycle(
+        conglomerate,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        authConfig,
+        policyEnforcer,
+        new QueryConfigSnapshot(ImmutableMap.of(), BrokerDynamicConfig.builder().build()),
+        Map.of(SystemTableDataSource.class, handler),
+        serverConfig,
+        System.currentTimeMillis(),
+        System.nanoTime()
+    );
+    lifecycle.initialize(systemTableQuery);
+    Assertions.assertTrue(
+        lifecycle.authorize(mockRequest(route)).allowAccessWithNoRestriction()
+    );
+    lifecycle.execute();
+
+    Assertions.assertEquals(1, handlerCalls.get());
+  }
+
+  private void assertWrappedSystemTableUsesHandler(final DataSource dataSource)
+  {
+    final TimeseriesQuery wrappedQuery = Druids.newTimeseriesQueryBuilder()
+                                               .dataSource(dataSource)
+                                               .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                               .aggregators(new CountAggregatorFactory("count"))
+                                               .build();
+    final AtomicInteger handlerCalls = new AtomicInteger();
+    final DataSourceQueryHandler handler = new DataSourceQueryHandler()
+    {
+      @Override
+      public <T> QueryRunner<T> createRunner(
+          final Query<T> query,
+          final AuthenticationResult authenticationResult,
+          final boolean executeLocally
+      )
+      {
+        Assertions.assertFalse(executeLocally);
+        handlerCalls.incrementAndGet();
+        return (queryPlus, responseContext) -> Sequences.empty();
+      }
+    };
+
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = new QueryLifecycle(
+        conglomerate,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        authConfig,
+        policyEnforcer,
+        new QueryConfigSnapshot(ImmutableMap.of(), BrokerDynamicConfig.builder().build()),
+        Map.of(SystemTableDataSource.class, handler),
+        serverConfig,
+        System.currentTimeMillis(),
+        System.nanoTime()
+    );
+
+    lifecycle.runSimple(wrappedQuery, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
+    Assertions.assertEquals(1, handlerCalls.get());
   }
 
   private void replayAll()

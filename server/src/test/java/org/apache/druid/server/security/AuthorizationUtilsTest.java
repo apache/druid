@@ -23,6 +23,9 @@ import com.google.common.base.Function;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.SystemTableDataSource;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
@@ -42,9 +45,40 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public class AuthorizationUtilsTest
 {
+  @Test
+  public void testGetDataSourceResourcesForTables()
+  {
+    Assertions.assertEquals(
+        Set.of(new Resource("foo", ResourceType.DATASOURCE), new Resource("bar", ResourceType.DATASOURCE)),
+        AuthorizationUtils.getDataSourceResources(
+            new UnionDataSource(List.of(new TableDataSource("foo"), new TableDataSource("bar")))
+        )
+    );
+  }
+
+  /**
+   * A system table is a SYSTEM_TABLE resource named after the table. Its {@code sys.}-prefixed table name is never a
+   * datasource resource, so it can't collide with a real datasource of that name.
+   */
+  @Test
+  public void testGetDataSourceResourcesForSystemTables()
+  {
+    Assertions.assertEquals(
+        Set.of(new Resource("tasks", ResourceType.SYSTEM_TABLE)),
+        AuthorizationUtils.getDataSourceResources(new SystemTableDataSource("tasks"))
+    );
+    Assertions.assertEquals(
+        Set.of(new Resource("sys.tasks", ResourceType.DATASOURCE), new Resource("tasks", ResourceType.SYSTEM_TABLE)),
+        AuthorizationUtils.getDataSourceResources(
+            new UnionDataSource(List.of(new TableDataSource("sys.tasks"), new SystemTableDataSource("tasks")))
+        )
+    );
+  }
+
 
   @Test
   public void testFilterResourcesWithAllowAllAuthorizer()

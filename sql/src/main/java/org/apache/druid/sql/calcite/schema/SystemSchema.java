@@ -33,6 +33,7 @@ import org.apache.calcite.linq4j.DefaultEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
@@ -76,7 +77,10 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.QueryInfo;
@@ -134,6 +138,31 @@ public class SystemSchema extends AbstractTableSchema
   private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
+
+  /**
+   * Whether a system table is planned as a {@code SystemTableDataSource} instead of on the Bindable path. The native
+   * engine does so when {@code useQueryEngineForSystemTables} is set.
+   */
+  public static boolean canUseSystemTableDataSource(
+      final RelOptTable table,
+      final PlannerContext plannerContext
+  )
+  {
+    return plannerContext.useQueryEngineForSystemTables()
+           && NativeSqlEngine.NAME.equals(plannerContext.getEngine().name())
+           && table.unwrap(SystemTableDataSourceTable.class) != null;
+  }
+
+  /**
+   * Returns the datasource representation advertised by a system table resolved through {@link SystemSchemaProvider}.
+   * Eligibility must be checked with {@link #canUseSystemTableDataSource} before calling this method.
+   */
+  @Nullable
+  public static DruidTable getSystemTableDataSourceTable(final RelOptTable table)
+  {
+    final SystemTableDataSourceTable dataSourceTable = table.unwrap(SystemTableDataSourceTable.class);
+    return dataSourceTable == null ? null : dataSourceTable.asDataSourceTable();
+  }
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
