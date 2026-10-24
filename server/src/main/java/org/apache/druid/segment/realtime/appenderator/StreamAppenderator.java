@@ -753,7 +753,7 @@ public class StreamAppenderator implements Appenderator
             }
             finally {
               metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
-              metrics.incrementPersistTimeMillis(persistStopwatch.millisElapsed());
+              metrics.incrementPersistTimeNanos(persistStopwatch.nanosElapsed());
               metrics.incrementNumPersists();
               persistStopwatch.stop();
             }
@@ -944,6 +944,7 @@ public class StreamAppenderator implements Appenderator
       final DataSegment mergedSegment;
       final Stopwatch mergeStopwatch = Stopwatch.createStarted();
       final long mergeTimeMillis;
+      final long mergeTimeNanos;
       final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
       Closer closer = Closer.create();
@@ -970,8 +971,9 @@ public class StreamAppenderator implements Appenderator
         );
 
         metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
-        mergeTimeMillis = mergeStopwatch.millisElapsed();
-        metrics.setMergeTime(mergeTimeMillis);
+        mergeTimeNanos = mergeStopwatch.nanosElapsed();
+        mergeTimeMillis = TimeUnit.NANOSECONDS.toMillis(mergeTimeNanos);
+        metrics.setMergeTime(mergeTimeNanos);
 
         log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
         QueryableIndex index = indexIO.loadIndex(mergedFile);
