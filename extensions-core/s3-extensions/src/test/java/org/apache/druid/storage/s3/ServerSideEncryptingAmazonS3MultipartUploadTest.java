@@ -111,6 +111,8 @@ public class ServerSideEncryptingAmazonS3MultipartUploadTest
         endpointConfig,
         clientConfig,
         null,
+        null,
+        null,
         null
     ).build();
 
