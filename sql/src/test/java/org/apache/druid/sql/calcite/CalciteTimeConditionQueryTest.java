@@ -534,7 +534,7 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.DD_RESTRICTED_DATASOURCE_SUPPORT)
   @Test
-  public void testRestrictedTable()
+  public void testRestrictedTable_superUser()
   {
     final Map<String, Object> context = makeContext("2001-01-01/2001-01-03");
 
@@ -564,7 +564,7 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.DD_RESTRICTED_DATASOURCE_SUPPORT)
   @Test
-  public void testRestrictedTable2()
+  public void testRestrictedTable_regularUser()
   {
     final Map<String, Object> context = makeContext("2001-01-01/2001-01-03");
 
