@@ -487,7 +487,7 @@ public class CostBasedAutoScalerTest
     validStats.put("0", group);
     Assertions.assertEquals(
         1500.0,
-        CostBasedAutoScaler.extractMovingAverage(validStats),
+        CostBasedAutoScaler.extractRunningAvgProcessingRate(validStats),
         0.0001,
         "Average 5-minute processing rate should be computed across tasks"
     );
@@ -865,15 +865,13 @@ public class CostBasedAutoScalerTest
 
   private Map<String, Object> buildTaskStatsWithMovingAverage(double processedRate)
   {
-    Map<String, Object> buildSegments = new HashMap<>();
-    buildSegments.put(FIVE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, processedRate));
-
-    Map<String, Object> movingAverages = new HashMap<>();
-    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
-
-    Map<String, Object> taskStats = new HashMap<>();
-    taskStats.put("movingAverages", movingAverages);
-    return taskStats;
+    return Map.of(
+        SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY,
+        Map.of(
+            SeekableStreamIndexTaskRunner.PROCESSING_RATE_RUNNING_AVG,
+            processedRate
+        )
+    );
   }
 
   private Map<String, Object> buildTaskStatsWithMovingAverageForInterval(String intervalName, double processedRate)
