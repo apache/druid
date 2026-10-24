@@ -147,13 +147,13 @@ Native query execution for system tables is an experimental, opt-in feature. Its
 :::
 
 The native SQL engine can plan supported system tables as native datasources. To enable this behavior for a query, set
-`allowNativeFunctionsForSystemTables` to `true` in the SQL query context:
+`useQueryEngineForSystemTables` to `true` in the SQL query context:
 
 ```json
 {
   "query": "SELECT COUNT(DISTINCT server) FROM sys.server_properties",
   "context": {
-    "allowNativeFunctionsForSystemTables": true
+    "useQueryEngineForSystemTables": true
   }
 }
 ```
@@ -162,7 +162,7 @@ For clients that support setting query context parameters with SQL statements, y
 execution with `SET`:
 
 ```sql
-SET allowNativeFunctionsForSystemTables = 'true';
+SET useQueryEngineForSystemTables = 'true';
 SELECT COUNT(DISTINCT server) FROM sys.server_properties;
 ```
 
@@ -176,11 +176,11 @@ execution:
 
 After Druid retrieves the system-table rows, the native engine applies the remaining filters, expressions,
 aggregations, sorting, and result processing. A system table that doesn't advertise native query support continues to
-use the Broker's SQL interpreter, even when `allowNativeFunctionsForSystemTables` is `true`.
+use the Broker's SQL interpreter, even when `useQueryEngineForSystemTables` is `true`.
 
 The parameter defaults to `false`. During a rolling upgrade, leave it disabled until the Broker and all nodes
 that serve the native system tables have been upgraded. After the upgrade, you can enable it by query or set
-`druid.query.default.context.allowNativeFunctionsForSystemTables=true` on Brokers as the cluster-wide default. For more
+`druid.query.default.context.useQueryEngineForSystemTables=true` on Brokers as the cluster-wide default. For more
 information, see [SQL query context](sql-query-context.md).
 
 ### SEGMENTS table

@@ -293,7 +293,7 @@ public class NativeSysServerPropertiesQueryTest extends EmbeddedClusterTestBase
     return QueryContext.ofMap(
         QueryContextParameters.ENGINE,
         NativeSqlEngine.NAME,
-        QueryContextParameters.ALLOW_NATIVE_FUNCTIONS_FOR_SYSTEM_TABLES,
+        QueryContextParameters.USE_QUERY_ENGINE_FOR_SYSTEM_TABLES,
         true,
         QueryContextParameters.PLANNER_STRATEGY,
         plannerStrategy

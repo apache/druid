@@ -33,27 +33,27 @@ import java.util.Map;
 
 public class SqlQueryPlusTest
 {
-  /// SET allowNativeFunctionsForSystemTables = 'true' uses the registered boolean parameter.
+  /// SET useQueryEngineForSystemTables = 'true' uses the registered boolean parameter.
   @Test
   public void testSetAllowsNativeFunctionsForSystemTables()
   {
     final SqlQueryPlus query = SqlQueryPlus
-        .builder("SET allowNativeFunctionsForSystemTables = 'true'; SELECT COUNT(DISTINCT server) FROM sys.server_properties")
+        .builder("SET useQueryEngineForSystemTables = 'true'; SELECT COUNT(DISTINCT server) FROM sys.server_properties")
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
 
     Assertions.assertTrue(
-        QueryContext.of(query.context()).getOrDefault(QueryContextParameters.ALLOW_NATIVE_FUNCTIONS_FOR_SYSTEM_TABLES)
+        QueryContext.of(query.context()).getOrDefault(QueryContextParameters.USE_QUERY_ENGINE_FOR_SYSTEM_TABLES)
     );
   }
 
-  /// SET allowNativeFunctionsForSystemTables = 1 rejects a non-boolean value before planning.
+  /// SET useQueryEngineForSystemTables = 1 rejects a non-boolean value before planning.
   @Test
   public void testSetRejectsInvalidNativeFunctionsFlag()
   {
     final DruidException e = Assertions.assertThrows(
         DruidException.class,
-        () -> SqlQueryPlus.builder("SET allowNativeFunctionsForSystemTables = 1; SELECT 1")
+        () -> SqlQueryPlus.builder("SET useQueryEngineForSystemTables = 1; SELECT 1")
                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                           .build()
     );
@@ -61,7 +61,7 @@ public class SqlQueryPlusTest
     BaseCalciteQueryTest.assertDruidException(
         e,
         DruidExceptionMatcher.invalidSqlInput()
-                             .expectMessageContains("Query context parameter [allowNativeFunctionsForSystemTables] should be a boolean")
+                             .expectMessageContains("Query context parameter [useQueryEngineForSystemTables] should be a boolean")
     );
   }
 
