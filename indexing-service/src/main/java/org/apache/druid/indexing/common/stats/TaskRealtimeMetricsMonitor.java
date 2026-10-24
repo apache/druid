@@ -31,7 +31,6 @@ import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Emits metrics from {@link SegmentGenerationMetrics} and {@link RowIngestionMeters}.
@@ -128,9 +127,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 
     emitter.emit(builder.setMetric("ingest/rows/output", metrics.rowOutput() - previousSegmentGenerationMetrics.rowOutput()));
     emitter.emit(builder.setMetric("ingest/persists/count", metrics.numPersists() - previousSegmentGenerationMetrics.numPersists()));
-    // Subtract in nanoseconds and convert once, to avoid accumulating a rounding error from converting each total first.
-    final long persistTimeDeltaNanos = metrics.persistTimeNanos() - previousSegmentGenerationMetrics.persistTimeNanos();
-    emitter.emit(builder.setMetric("ingest/persists/time", TimeUnit.NANOSECONDS.toMillis(persistTimeDeltaNanos)));
+    emitter.emit(builder.setMetric("ingest/persists/time", metrics.persistTimeMillis() - previousSegmentGenerationMetrics.persistTimeMillis()));
     emitter.emit(builder.setMetric("ingest/persists/cpu", metrics.persistCpuTime() - previousSegmentGenerationMetrics.persistCpuTime()));
     emitter.emit(
         builder.setMetric(
@@ -140,8 +137,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     );
     emitter.emit(builder.setMetric("ingest/persists/failed", metrics.failedPersists() - previousSegmentGenerationMetrics.failedPersists()));
     emitter.emit(builder.setMetric("ingest/handoff/failed", metrics.failedHandoffs() - previousSegmentGenerationMetrics.failedHandoffs()));
-    final long mergeTimeDeltaNanos = metrics.mergeTimeNanos() - previousSegmentGenerationMetrics.mergeTimeNanos();
-    emitter.emit(builder.setMetric("ingest/merge/time", TimeUnit.NANOSECONDS.toMillis(mergeTimeDeltaNanos)));
+    emitter.emit(builder.setMetric("ingest/merge/time", metrics.mergeTimeMillis() - previousSegmentGenerationMetrics.mergeTimeMillis()));
     emitter.emit(builder.setMetric("ingest/merge/cpu", metrics.mergeCpuTime() - previousSegmentGenerationMetrics.mergeCpuTime()));
     emitter.emit(builder.setMetric("ingest/handoff/count", metrics.handOffCount() - previousSegmentGenerationMetrics.handOffCount()));
     emitter.emit(builder.setMetric("ingest/sink/count", metrics.sinkCount()));
