@@ -464,6 +464,23 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
+   * Extracts the running average processing rate (records per second) from the task stats.
+   *
+   * @param taskStats the stats map from supervisor.getStats()
+   */
+  static double extractRunningAvgProcessingRate(Map<String, Map<String, Object>> taskStats)
+  {
+    if (taskStats == null || taskStats.isEmpty()) {
+      return -1.;
+    }
+
+    return extractAutoscalerMetric(
+        taskStats,
+        SeekableStreamIndexTaskRunner.PROCESSING_RATE_RUNNING_AVG
+    );
+  }
+
+  /**
    * Extracts the average poll-idle-ratio metric from task stats.
    * This metric indicates how much time the consumer spends idle waiting for data.
    *
@@ -476,6 +493,21 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1.;
     }
 
+    // Use running average metric to smoothen out spikes
+    return extractAutoscalerMetric(
+        taskStats,
+        SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG
+    );
+  }
+
+  /**
+   * Gets the value of the given metric averaged across all tasks that have reported the metric.
+   */
+  private static double extractAutoscalerMetric(
+      Map<String, Map<String, Object>> taskStats,
+      String metricName
+  )
+  {
     double sum = 0;
     int count = 0;
     for (Map<String, Object> groupMetrics : taskStats.values()) {
@@ -483,7 +515,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         if (taskMetric instanceof Map) {
           Object autoScalerMetricsMap = ((Map<?, ?>) taskMetric).get(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY);
           if (autoScalerMetricsMap instanceof Map) {
-            Object pollIdleRatioAvg = ((Map<?, ?>) autoScalerMetricsMap).get(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY);
+            Object pollIdleRatioAvg = ((Map<?, ?>) autoScalerMetricsMap).get(metricName);
             if (pollIdleRatioAvg instanceof Number) {
               double taskPollIdleRatio = ((Number) pollIdleRatioAvg).doubleValue();
               // Do not include negative values
@@ -576,7 +608,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int partitionCount = supervisor.getPartitionCount();
 
     final Map<String, Map<String, Object>> taskStats = supervisor.getStats();
-    final double movingAvgRate = extractMovingAverage(taskStats);
+    final double movingAvgRate = extractRunningAvgProcessingRate(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
     if (!config.isUsePollIdleRatio() && aggregateLag > 0 && movingAvgRate > 0) {
