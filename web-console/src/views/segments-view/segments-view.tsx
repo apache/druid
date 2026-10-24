@@ -1127,8 +1127,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                   : {
                       capabilities,
                       datasource: findMap(filters.toArray(), filter =>
-                        filter.key === 'datasource' && filter.mode === '='
-                          ? filter.value
+                        filter.key === 'datasource' &&
+                        filter.mode === '=' &&
+                        filter.values.length === 1
+                          ? filter.values[0]
                           : undefined,
                       ),
                     },
@@ -1183,7 +1185,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                       }
                       if (datasource) {
                         filters = filters.addOrUpdate(
-                          new TableFilter('datasource', '=', datasource),
+                          new TableFilter('datasource', '=', [datasource]),
                         );
                       }
                       if (typeof realtime === 'boolean') {

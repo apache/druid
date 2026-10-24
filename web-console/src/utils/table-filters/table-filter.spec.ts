@@ -84,6 +84,32 @@ describe('TableFilter', () => {
     });
   });
 
+  describe('splitNeedle / joinNeedle', () => {
+    it('splits on |', () => {
+      expect(TableFilter.splitNeedle('a|b')).toEqual(['a', 'b']);
+      expect(TableFilter.splitNeedle('a')).toEqual(['a']);
+      expect(TableFilter.splitNeedle('')).toEqual(['']);
+    });
+
+    it('unescapes \\| and \\\\, and keeps any other \\', () => {
+      expect(TableFilter.splitNeedle('a\\|b|c')).toEqual(['a|b', 'c']);
+      expect(TableFilter.splitNeedle('a\\\\|b')).toEqual(['a\\', 'b']);
+      expect(TableFilter.splitNeedle('C:\\dir')).toEqual(['C:\\dir']);
+    });
+
+    it('round trips any values', () => {
+      const values = ['a|b', 'c\\', '\\|', '', 'C:\\dir'];
+      expect(TableFilter.splitNeedle(TableFilter.joinNeedle(values))).toEqual(values);
+    });
+
+    it('keeps a literal value that contains | as one value', () => {
+      const filter = new TableFilter('datasource', '=', ['a|b']);
+      expect(filter.value).toEqual('a\\|b');
+      expect(TableFilter.fromFilter(filter.toFilter()).values).toEqual(['a|b']);
+      expect(String(filter.toSqlExpression())).toEqual(`"datasource" = 'a|b'`);
+    });
+  });
+
   describe('equals', () => {
     it('compares two filters', () => {
       const filter1 = new TableFilter('x', '=', 'y');

@@ -28,6 +28,20 @@ describe('TableFilters', () => {
       ]);
       expect(filters.toString()).toEqual('x~y&z=w%26%25%2F');
     });
+
+    it('encodes # and ?, which end the hash route', () => {
+      expect(TableFilters.eq({ x: 'a#b?c' }).toString()).toEqual('x=a%23b%3Fc');
+    });
+  });
+
+  describe('toString and fromString', () => {
+    it('round trip values with every sort of character', () => {
+      const filters = TableFilters.eq({
+        datasource: '<>|!@#$%^&`\'".,:;\\*()[]{}Україна 한국 中国!?~',
+      });
+      const parsed = TableFilters.fromString(filters.toString());
+      expect(parsed.toArray()[0].values).toEqual(filters.toArray()[0].values);
+    });
   });
 
   describe('fromString', () => {
@@ -81,6 +95,10 @@ describe('TableFilters', () => {
       expect(filterArray[1].key).toBe('type');
       expect(filterArray[1].mode).toBe('=');
       expect(filterArray[1].value).toBe('index');
+    });
+
+    it('filters on a value that contains | (rather than on its parts)', () => {
+      expect(TableFilters.eq({ datasource: 'a|b' }).toArray()[0].values).toEqual(['a|b']);
     });
   });
 

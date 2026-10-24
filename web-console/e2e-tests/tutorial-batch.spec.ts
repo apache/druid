@@ -16,74 +16,46 @@
  * limitations under the License.
  */
 
+import type { Page } from '@playwright/test';
 import { T } from 'druid-query-toolkit';
-import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { TasksOverview } from './component/ingestion/overview';
-import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
-import { ConfigureTimestampConfig } from './component/load-data/config/configure-timestamp';
-import { PartitionConfig, SegmentGranularity } from './component/load-data/config/partition';
-import { PublishConfig } from './component/load-data/config/publish';
-import { LocalFileDataConnector } from './component/load-data/data-connector/local-file';
-import { DataLoader } from './component/load-data/data-loader';
-import { QueryOverview } from './component/query/overview';
-import { saveScreenshotIfError } from './util/debug';
-import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, UNIFIED_CONSOLE_URL } from './util/druid';
-import { createBrowser, createPage } from './util/playwright';
-import { retryIfJestAssertionError, retryOnAnyError } from './util/retry';
-import { waitTillWebConsoleReady } from './util/setup';
-
-jest.setTimeout(5 * 60 * 1000);
+import { loadData } from './component/load-data/data-loader';
+import { WorkbenchOverview } from './component/workbench/overview';
+import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
+import { expect, test } from './util/fixtures';
+import { CLUSTER_STATE_POLL, getDatasourceSegments, getTaskStatuses } from './util/sql';
 
 const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Україна 한국 中国!?~';
 
-describe('Tutorial: Loading a file', () => {
-  let browser: playwright.Browser;
-  let page: playwright.Page;
-
-  beforeAll(async () => {
-    await waitTillWebConsoleReady();
-    browser = await createBrowser();
-  });
-
-  beforeEach(async () => {
-    page = await createPage(browser);
-  });
-
-  afterAll(async () => {
-    await browser.close();
-  });
-
-  it('Loads data from local disk', async () => {
-    const testName = 'load-data-from-local-disk';
-    const datasourceName = testName + ALL_SORTS_OF_CHARS + new Date().toISOString();
-    const dataLoader = new DataLoader({
-      page: page,
-      unifiedConsoleUrl: UNIFIED_CONSOLE_URL,
-      connector: new LocalFileDataConnector(page, {
+test.describe('Tutorial: Loading a file', () => {
+  test('Loads data from local disk', async ({ page, request, newDatasourceName }) => {
+    const datasourceName = newDatasourceName('load-data-from-local-disk' + ALL_SORTS_OF_CHARS);
+    await loadData(page, {
+      connector: {
+        type: 'local',
         baseDirectory: DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
         fileFilter: 'wikiticker-2015-09-12-sampled.json.gz',
-      }),
-      connectValidator: validateConnectLocalData,
-      configureTimestampConfig: new ConfigureTimestampConfig({
-        timestampExpression: 'timestamp_parse("time") + 1',
-      }),
-      configureSchemaConfig: new ConfigureSchemaConfig({ rollup: false }),
-      partitionConfig: new PartitionConfig({
-        segmentGranularity: SegmentGranularity.DAY,
-        timeIntervals: null,
-        partitionsSpec: null,
-      }),
-      publishConfig: new PublishConfig({ datasourceName: datasourceName }),
+      },
+      validateConnect: validateConnectLocalData,
+      timestampExpression: 'timestamp_parse("time") + 1',
+      rollup: false,
+      segmentGranularity: 'day',
+      datasourceName,
     });
 
-    await saveScreenshotIfError(testName, page, async () => {
-      await dataLoader.load();
-      await validateTaskStatus(page, datasourceName);
-      await validateDatasourceStatus(page, datasourceName);
-      await validateQuery(page, datasourceName);
-    });
+    await expect
+      .poll(() => getTaskStatuses(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual(['SUCCESS']);
+    await expect
+      .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual({ numSegments: 1, numAvailableSegments: 1, numRows: 39244 });
+
+    // Now that the cluster has the data, the views should show it
+    await validateTasksView(page, datasourceName);
+    await validateDatasourcesView(page, datasourceName);
+    await validateQuery(page, datasourceName);
   });
 });
 
@@ -141,41 +113,40 @@ function validateConnectLocalData(lines: string[]) {
   );
 }
 
-async function validateTaskStatus(page: playwright.Page, datasourceName: string) {
-  const tasksOverview = new TasksOverview(page, UNIFIED_CONSOLE_URL);
+async function validateTasksView(page: Page, datasourceName: string) {
+  const tasksOverview = new TasksOverview(page);
 
-  await retryIfJestAssertionError(async () => {
-    const tasks = await tasksOverview.getTasks();
+  // Retried in case the view is a step behind the cluster state polled above
+  await expect(async () => {
+    const tasks = await tasksOverview.getTasks(datasourceName);
     const task = tasks.find(t => t.datasource === datasourceName);
     expect(task).toBeDefined();
     expect(task!.status).toMatch('SUCCESS');
-  });
+  }).toPass({ timeout: 30 * 1000 });
 }
 
-async function validateDatasourceStatus(page: playwright.Page, datasourceName: string) {
-  const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
+async function validateDatasourcesView(page: Page, datasourceName: string) {
+  const datasourcesOverview = new DatasourcesOverview(page);
 
-  await retryIfJestAssertionError(async () => {
-    const datasources = await datasourcesOverview.getDatasources();
+  // Retried in case the view is a step behind the cluster state polled above
+  await expect(async () => {
+    const datasources = await datasourcesOverview.getDatasources(datasourceName);
     const datasource = datasources.find(t => t.name === datasourceName);
     expect(datasource).toBeDefined();
     expect(datasource!.availability).toMatch('Fully available (1 segment)');
     expect(datasource!.totalRows).toBe(39244);
-  });
+  }).toPass({ timeout: 30 * 1000 });
 }
 
-async function validateQuery(page: playwright.Page, datasourceName: string) {
-  const queryOverview = new QueryOverview(page, UNIFIED_CONSOLE_URL);
+async function validateQuery(page: Page, datasourceName: string) {
+  const workbench = new WorkbenchOverview(page);
   const query = `SELECT * FROM ${T(datasourceName)} ORDER BY __time`;
   let results!: string[][];
-  await retryOnAnyError(
-    async () => {
-      results = await queryOverview.runQuery(query);
-      expect(results.length).toBeGreaterThan(0);
-    },
-    1000,
-    3,
-  );
+  // The datasource can be available before the Broker's SQL schema knows about it
+  await expect(async () => {
+    results = await workbench.runQuery(query);
+    expect(results.length).toBeGreaterThan(0);
+  }).toPass();
   expect(results[0]).toStrictEqual([
     /* __time */ '2015-09-12T00:46:58.772Z',
     /* time */ '2015-09-12T00:46:58.771Z',
