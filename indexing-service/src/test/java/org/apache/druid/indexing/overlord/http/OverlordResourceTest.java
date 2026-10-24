@@ -1312,6 +1312,22 @@ public class OverlordResourceTest
   }
 
   @Test
+  public void testHandoffWorkerTasksWhenTaskRunnerIsNotWorkerTaskRunner()
+  {
+    replayAll();
+
+    final Response response = overlordResource.handoffWorkerTasks(
+        "mm-0.svc.ns.svc.cluster.local:8091"
+    );
+
+    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), response.getStatus());
+    Assertions.assertEquals(
+        ImmutableMap.of("error", "Task Runner does not support worker listing"),
+        response.getEntity()
+    );
+  }
+
+  @Test
   public void testGetTotalWorkerCapacityNotLeader()
   {
     EasyMock.expect(overlord.isLeader()).andReturn(false);
