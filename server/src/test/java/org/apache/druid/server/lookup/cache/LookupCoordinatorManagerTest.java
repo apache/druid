@@ -41,6 +41,7 @@ import org.apache.druid.java.util.http.client.response.SequenceInputStreamRespon
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.HostAndPortWithScheme;
+import org.apache.druid.server.security.ForbiddenException;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -901,7 +902,15 @@ public class LookupCoordinatorManagerTest
           )
       ).andReturn(SetResult.ok()).once();
       EasyMock.replay(configManager);
-      Assertions.assertTrue(manager.deleteTier(LOOKUP_TIER, auditInfo));
+      Assertions.assertThrows(ForbiddenException.class, () -> manager.deleteTier(
+          LOOKUP_TIER, auditInfo, lookups -> {
+            throw new ForbiddenException();
+          }
+      ));
+      Assertions.assertTrue(manager.deleteTier(LOOKUP_TIER, auditInfo, lookups -> {
+        Assertions.assertTrue(Thread.holdsLock(manager));
+        Assertions.assertEquals(ImmutableSet.of("foo1", "foo2"), lookups.keySet());
+      }));
       EasyMock.verify(configManager);
     }
     finally {

@@ -30,6 +30,7 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.lookup.LookupsState;
+import org.apache.druid.server.http.security.LookupResourceFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.server.security.AuthConfig;
@@ -46,6 +47,7 @@ import javax.ws.rs.core.Response.Status;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -304,7 +306,8 @@ public class LookupCoordinatorResourceTest
         LookupCoordinatorManager.class);
     EasyMock.expect(lookupCoordinatorManager.deleteTier(
         EasyMock.eq(LOOKUP_TIER),
-        EasyMock.capture(auditInfoCapture)
+        EasyMock.capture(auditInfoCapture),
+        EasyMock.anyObject()
     )).andReturn(true).once();
 
     EasyMock.replay(lookupCoordinatorManager, request);
@@ -1056,6 +1059,27 @@ public class LookupCoordinatorResourceTest
   }
 
   @Test
+  public void testGetSpecificNodeStatusRejectsHostInAnotherTier() throws Exception
+  {
+    final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
+        LookupCoordinatorManager.class
+    );
+    EasyMock.expect(lookupCoordinatorManager.discoverNodesInTier(LOOKUP_TIER)).andReturn(ImmutableList.of());
+    EasyMock.replay(lookupCoordinatorManager);
+
+    final LookupCoordinatorResource resource = new LookupCoordinatorResource(lookupCoordinatorManager, MAPPER, MAPPER);
+    final HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(request.getAttribute(EasyMock.anyString())).andReturn(new Object());
+    EasyMock.replay(request);
+    final Field requestField = LookupCoordinatorResource.class.getDeclaredField("request");
+    requestField.setAccessible(true);
+    requestField.set(resource, request);
+
+    Assertions.assertEquals(404, resource.getSpecificNodeStatus(LOOKUP_TIER, LOOKUP_NODE).getStatus());
+    EasyMock.verify(lookupCoordinatorManager, request);
+  }
+
+  @Test
   public void testGetAllLookupSpecs()
   {
     final Map<String, Map<String, LookupExtractorFactoryMapContainer>> lookups = ImmutableMap.of(
@@ -1125,6 +1149,8 @@ public class LookupCoordinatorResourceTest
     if (hasJsonPayload) {
       EasyMock.expect(request.getContentType()).andReturn(MediaType.APPLICATION_JSON).once();
     }
+    EasyMock.expect(request.getAttribute(LookupResourceFilter.class.getName() + ".bulkFilter"))
+            .andReturn(null).anyTimes();
     EasyMock.expect(request.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn("some author").once();
     EasyMock.expect(request.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn("some comment").once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(AUTH_RESULT).once();
