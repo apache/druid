@@ -37,6 +37,7 @@ import javax.servlet.http.Part;
 import java.io.BufferedReader;
 import java.security.Principal;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -94,7 +95,8 @@ public class MockHttpServletRequest implements HttpServletRequest
   @Override
   public Enumeration<String> getHeaders(String name)
   {
-    throw new UnsupportedOperationException();
+    final String value = headers.get(name);
+    return Collections.enumeration(value == null ? Collections.emptyList() : Collections.singletonList(value));
   }
 
   @Override
