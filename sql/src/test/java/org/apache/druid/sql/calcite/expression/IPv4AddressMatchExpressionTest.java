@@ -71,7 +71,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
         ExpressionValidationException.class,
         () -> testExpression(
             Collections.emptyList(),
-            buildExpectedExpression(),
+            expectedIpv4MatchFunctionCall(),
             IGNORE_EXPECTED_RESULT
         )
     );
@@ -91,7 +91,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
                 testHelper.makeLiteral(subnet),
                 testHelper.makeLiteral(address)
             ),
-            buildExpectedExpression(address, subnet, address),
+            expectedIpv4MatchFunctionCall(address, subnet, address),
             IGNORE_EXPECTED_RESULT
         )
     );
@@ -110,7 +110,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
                 testHelper.makeLiteral(address),
                 testHelper.makeInputRef(variableName)
             ),
-            buildExpectedExpression(address, testHelper.makeVariable(variableName)),
+            expectedIpv4MatchFunctionCall(address, testHelper.makeVariable(variableName)),
             IGNORE_EXPECTED_RESULT
         )
     );
@@ -129,7 +129,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
                 testHelper.makeLiteral(address),
                 testHelper.makeLiteral(invalidSubnet)
             ),
-            buildExpectedExpression(address, invalidSubnet),
+            expectedIpv4MatchFunctionCall(address, invalidSubnet),
             IGNORE_EXPECTED_RESULT
         )
     );
@@ -145,7 +145,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             testHelper.getConstantNull(),
             testHelper.makeLiteral(subnet)
         ),
-        buildExpectedExpression(null, subnet),
+        expectedIpv4MatchFunctionCall(null, subnet),
         NO_MATCH
     );
   }
@@ -160,7 +160,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             testHelper.makeInputRef(variableNameWithInvalidType),
             testHelper.makeLiteral(subnet)
         ),
-        buildExpectedExpression(testHelper.makeVariable(variableNameWithInvalidType), subnet),
+        expectedIpv4MatchFunctionCall(testHelper.makeVariable(variableNameWithInvalidType), subnet),
         NO_MATCH
     );
   }
@@ -247,7 +247,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(address),
             testHelper.makeLiteral(subnet)
         ),
-        buildExpectedExpression(address, subnet),
+        expectedIpv4MatchFunctionCall(address, subnet),
         match
     );
   }
@@ -259,7 +259,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(address),
             testHelper.makeLiteral(subnet)
         ),
-        buildExpectedExpression(address, subnet),
+        expectedIpv4MatchFunctionCall(address, subnet),
         match
     );
   }
@@ -273,8 +273,8 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
     testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
-  private DruidExpression buildExpectedExpression(Object... args)
+  private DruidExpression expectedIpv4MatchFunctionCall(Object... args)
   {
-    return testHelper.buildExpectedExpression(ColumnType.LONG, target.getDruidFunctionName(), args);
+    return testHelper.expectedFunctionCall(ColumnType.LONG, target.getDruidFunctionName(), args);
   }
 }

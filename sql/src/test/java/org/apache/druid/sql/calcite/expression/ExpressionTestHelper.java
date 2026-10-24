@@ -119,6 +119,17 @@ public class ExpressionTestHelper
       null
   );
 
+  public static final PlannerContext PLANNER_CONTEXT_WITH_EXTRACTION_FNS = PlannerContext.create(
+      PLANNER_TOOLBOX,
+      "SELECT 1", // The actual query isn't important for this test
+      null, /* Don't need SQL node */
+      null, /* Don't need engine */
+      null, /* Don't need authentication result */
+      Collections.emptySet(),
+      Collections.singletonMap(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true),
+      null
+  );
+
   private final RowSignature rowSignature;
   private final Map<String, Object> bindings;
   private final Expr.ObjectBinding expressionBindings;
@@ -229,11 +240,32 @@ public class ExpressionTestHelper
 
   /**
    * @return Representation of variable that is bound in an expression. Intended use is as one of
-   * the args to {@link #buildExpectedExpression(ColumnType, String, Object...)}.
+   * the args to {@link #expectedFunctionCall(ColumnType, String, Object...)}.
    */
   Variable makeVariable(String name)
   {
     return new Variable(name);
+  }
+
+  /**
+   * @return Representation of a null literal of the given type, which may itself be null for an untyped null literal.
+   * Intended use is as one of the args to {@link #expectedFunctionCall(ColumnType, String, Object...)}, where a plain
+   * null arg is typed as STRING.
+   */
+  NullLiteral makeTypedNullLiteral(@Nullable ColumnType type)
+  {
+    return new NullLiteral(type);
+  }
+
+  private static class NullLiteral
+  {
+    @Nullable
+    private final ColumnType type;
+
+    NullLiteral(@Nullable ColumnType type)
+    {
+      this.type = type;
+    }
   }
 
   private static class Variable
@@ -248,10 +280,12 @@ public class ExpressionTestHelper
 
   /**
    * Builds the expected {@link DruidExpression} of a function call. Each of the {@code args} is converted to an
-   * argument expression: {@link #makeVariable(String)} becomes a column of the type in the row signature, while null,
-   * {@link String}, {@link Boolean}, {@link Long}, {@link Integer} and {@link Double} become literals.
+   * argument expression: {@link #makeVariable(String)} becomes a column of the type in the row signature (it is an
+   * error if the name is not in the row signature), a {@link DruidExpression} is used as is, and {@link String},
+   * {@link Boolean}, {@link Long}, {@link Integer} and {@link Double} become literals. A plain null becomes a null
+   * literal typed as STRING; use {@link #makeTypedNullLiteral(ColumnType)} for a null of any other type.
    */
-  DruidExpression buildExpectedExpression(ColumnType type, String functionName, Object... args)
+  DruidExpression expectedFunctionCall(ColumnType type, String functionName, Object... args)
   {
     return DruidExpression.ofFunctionCall(
         type,
@@ -264,9 +298,16 @@ public class ExpressionTestHelper
   {
     if (arg == null) {
       return DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.nullLiteral());
+    } else if (arg instanceof NullLiteral) {
+      return DruidExpression.ofLiteral(((NullLiteral) arg).type, DruidExpression.nullLiteral());
+    } else if (arg instanceof DruidExpression) {
+      return (DruidExpression) arg;
     } else if (arg instanceof Variable) {
       final String name = ((Variable) arg).name;
-      return DruidExpression.ofColumn(rowSignature.getColumnType(name).orElse(null), name);
+      final ColumnType columnType = rowSignature.getColumnType(name).orElseThrow(
+          () -> new IllegalArgumentException("Variable [" + name + "] is not in the row signature")
+      );
+      return DruidExpression.ofColumn(columnType, name);
     } else if (arg instanceof String) {
       return DruidExpression.ofStringLiteral((String) arg);
     } else if (arg instanceof Boolean) {
@@ -317,11 +358,34 @@ public class ExpressionTestHelper
       final Object expectedResult
   )
   {
-    DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
+    testExpression(PLANNER_CONTEXT, rexNode, expectedExpression, expectedResult);
+  }
+
+  /**
+   * Same as {@link #testExpression(RexNode, DruidExpression, Object)}, but plans with
+   * {@link #PLANNER_CONTEXT_WITH_EXTRACTION_FNS}, i.e. with sqlUseExtractionFns enabled.
+   */
+  void testExpressionWithExtractionFns(
+      final RexNode rexNode,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
+  )
+  {
+    testExpression(PLANNER_CONTEXT_WITH_EXTRACTION_FNS, rexNode, expectedExpression, expectedResult);
+  }
+
+  private void testExpression(
+      final PlannerContext plannerContext,
+      final RexNode rexNode,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
+  )
+  {
+    DruidExpression expression = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
     Assertions.assertNotNull(expression);
     Assertions.assertEquals(expectedExpression, expression, "Expression for: " + rexNode);
 
-    ExprEval<?> result = PLANNER_CONTEXT.parseExpression(expression.getExpression())
+    ExprEval<?> result = plannerContext.parseExpression(expression.getExpression())
                                         .eval(expressionBindings);
 
     Assertions.assertEquals(expectedResult, result.value(), "Result for: " + rexNode);

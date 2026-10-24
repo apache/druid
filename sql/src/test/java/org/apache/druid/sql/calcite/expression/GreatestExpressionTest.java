@@ -73,7 +73,7 @@ public class GreatestExpressionTest extends CalciteTestBase
   {
     testExpression(
         Collections.emptyList(),
-        buildExpectedExpression(ColumnType.STRING),
+        expectedGreatestFunctionCall(ColumnType.STRING),
         null
     );
   }
@@ -86,7 +86,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.getConstantNull(),
             testHelper.getConstantNull()
         ),
-        buildExpectedExpression(ColumnType.STRING, null, null),
+        expectedGreatestFunctionCall(ColumnType.STRING, null, null),
         null
     );
   }
@@ -100,7 +100,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.getConstantNull(),
             testHelper.makeInputRef(STRING_KEY)
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.STRING,
             testHelper.makeVariable(DOUBLE_KEY),
             null,
@@ -120,7 +120,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(5.2),
             testHelper.makeLiteral(767.3)
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.DOUBLE,
             34.1,
             testHelper.makeVariable(DOUBLE_KEY),
@@ -139,7 +139,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.makeInputRef(LONG_KEY),
             testHelper.makeLiteral(0)
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.LONG,
             testHelper.makeVariable(LONG_KEY),
             0
@@ -157,7 +157,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.makeInputRef(STRING_KEY),
             testHelper.makeLiteral("A")
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.STRING,
             "B",
             testHelper.makeVariable(STRING_KEY),
@@ -176,7 +176,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.makeInputRef(DOUBLE_KEY),
             testHelper.makeLiteral("A")
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.STRING,
             -1,
             testHelper.makeVariable(DOUBLE_KEY),
@@ -194,7 +194,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(-1),
             testHelper.makeInputRef(DOUBLE_KEY)
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.DOUBLE,
             -1,
             testHelper.makeVariable(DOUBLE_KEY)
@@ -211,7 +211,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(BigDecimal.valueOf(1.2)),
             testHelper.makeLiteral(BigDecimal.valueOf(3.4))
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.DOUBLE,
             1.2,
            3.4
@@ -229,7 +229,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.getConstantNull(),
             testHelper.makeLiteral(BigDecimal.valueOf(3.4))
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.DOUBLE,
             1.2,
             null,
@@ -246,7 +246,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(DateTimes.utc(1000)),
             testHelper.makeLiteral(DateTimes.utc(2000))
         ),
-        buildExpectedExpression(
+        expectedGreatestFunctionCall(
             ColumnType.LONG,
             1000,
            2000
@@ -265,7 +265,7 @@ public class GreatestExpressionTest extends CalciteTestBase
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
-        buildExpectedExpression(ColumnType.LONG, 13),
+        expectedGreatestFunctionCall(ColumnType.LONG, 13),
         13L
     );
   }
@@ -279,8 +279,8 @@ public class GreatestExpressionTest extends CalciteTestBase
     testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
-  private DruidExpression buildExpectedExpression(ColumnType type, Object... args)
+  private DruidExpression expectedGreatestFunctionCall(ColumnType type, Object... args)
   {
-    return testHelper.buildExpectedExpression(type, target.getDruidFunctionName(), args);
+    return testHelper.expectedFunctionCall(type, target.getDruidFunctionName(), args);
   }
 }

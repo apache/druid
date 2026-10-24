@@ -62,7 +62,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
         ExpressionValidationException.class,
         () -> testExpression(
             Collections.emptyList(),
-            buildExpectedExpression(),
+            expectedIpv4ParseFunctionCall(),
             IGNORE_EXPECTED_RESULT
         )
     );
@@ -79,7 +79,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
                 testHelper.getConstantNull(),
                 testHelper.getConstantNull()
             ),
-            buildExpectedExpression(null, null),
+            expectedIpv4ParseFunctionCall(null, null),
             IGNORE_EXPECTED_RESULT
         )
     );
@@ -91,7 +91,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
   {
     testExpression(
         testHelper.getConstantNull(),
-        buildExpectedExpression((String) null),
+        expectedIpv4ParseFunctionCall((String) null),
         null
     );
   }
@@ -102,7 +102,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     String variableNameWithInvalidType = VAR;
     testExpression(
         testHelper.makeInputRef(variableNameWithInvalidType),
-        buildExpectedExpression(testHelper.makeVariable(variableNameWithInvalidType)),
+        expectedIpv4ParseFunctionCall(testHelper.makeVariable(variableNameWithInvalidType)),
         null
     );
   }
@@ -113,7 +113,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     String notIpAddress = "druid.apache.org";
     testExpression(
         testHelper.makeLiteral(notIpAddress),
-        buildExpectedExpression(notIpAddress),
+        expectedIpv4ParseFunctionCall(notIpAddress),
         null
     );
   }
@@ -124,7 +124,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     String ipv6Compatible = "::192.168.0.1";
     testExpression(
         testHelper.makeLiteral(ipv6Compatible),
-        buildExpectedExpression(ipv6Compatible),
+        expectedIpv4ParseFunctionCall(ipv6Compatible),
         null
     );
   }
@@ -135,7 +135,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     String ipv6Mapped = "::ffff:192.168.0.1";
     testExpression(
         testHelper.makeLiteral(ipv6Mapped),
-        buildExpectedExpression(ipv6Mapped),
+        expectedIpv4ParseFunctionCall(ipv6Mapped),
         null
     );
   }
@@ -145,7 +145,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
   {
     testExpression(
         testHelper.makeLiteral(VALID),
-        buildExpectedExpression(VALID),
+        expectedIpv4ParseFunctionCall(VALID),
         EXPECTED
     );
   }
@@ -156,7 +156,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     String unsignedInt = "3232235521";
     testExpression(
         testHelper.makeLiteral(unsignedInt),
-        buildExpectedExpression(unsignedInt),
+        expectedIpv4ParseFunctionCall(unsignedInt),
         null
     );
   }
@@ -167,7 +167,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     long tooLow = -1L;
     testExpression(
         testHelper.makeLiteral(tooLow),
-        buildExpectedExpression(tooLow),
+        expectedIpv4ParseFunctionCall(tooLow),
         null
     );
   }
@@ -178,7 +178,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     long lowest = 0L;
     testExpression(
         testHelper.makeLiteral(lowest),
-        buildExpectedExpression(lowest),
+        expectedIpv4ParseFunctionCall(lowest),
         lowest
     );
   }
@@ -188,7 +188,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
   {
     testExpression(
         testHelper.makeLiteral(EXPECTED),
-        buildExpectedExpression(EXPECTED),
+        expectedIpv4ParseFunctionCall(EXPECTED),
         EXPECTED
     );
   }
@@ -199,7 +199,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     long highest = 0xff_ff_ff_ffL;
     testExpression(
         testHelper.makeLiteral(highest),
-        buildExpectedExpression(highest),
+        expectedIpv4ParseFunctionCall(highest),
         highest
     );
   }
@@ -210,7 +210,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     long tooHigh = 0x1_00_00_00_00L;
     testExpression(
         testHelper.makeLiteral(tooHigh),
-        buildExpectedExpression(tooHigh),
+        expectedIpv4ParseFunctionCall(tooHigh),
         null
     );
   }
@@ -233,8 +233,8 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
     testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
-  private DruidExpression buildExpectedExpression(Object... args)
+  private DruidExpression expectedIpv4ParseFunctionCall(Object... args)
   {
-    return testHelper.buildExpectedExpression(ColumnType.LONG, target.getDruidFunctionName(), args);
+    return testHelper.expectedFunctionCall(ColumnType.LONG, target.getDruidFunctionName(), args);
   }
 }
