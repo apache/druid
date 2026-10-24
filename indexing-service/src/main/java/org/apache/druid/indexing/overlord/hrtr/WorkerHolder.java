@@ -46,6 +46,7 @@ import org.joda.time.DateTime;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,6 +77,8 @@ public class WorkerHolder
 
   // Known list of tasks running/completed on this worker.
   protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef;
+
+  private final AtomicReference<ImmutableWorkerInfo> announcementsViewRef = new AtomicReference<>();
 
   private final AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(DateTimes.nowUtc());
   private final AtomicReference<DateTime> blacklistedUntil = new AtomicReference<>();
@@ -125,6 +128,7 @@ public class WorkerHolder
       knownAnnouncements.forEach(e -> announcements.put(e.getTaskId(), e));
     }
     tasksSnapshotRef = new AtomicReference<>(announcements);
+    refreshAnnouncementsView();
   }
 
   public Worker getWorker()
@@ -149,11 +153,38 @@ public class WorkerHolder
 
   public ImmutableWorkerInfo toImmutable()
   {
-    return ImmutableWorkerInfo.fromWorkerAnnouncements(
+    final ImmutableWorkerInfo announcementsView = announcementsViewRef.get();
+    return new ImmutableWorkerInfo(
         getWorker(),
+        announcementsView.getCurrCapacityUsed(),
+        announcementsView.getCurrParallelIndexCapacityUsed(),
+        announcementsView.getCurrCapacityUsedByTaskType(),
+        announcementsView.getAvailabilityGroups(),
+        announcementsView.getRunningTasks(),
+        lastCompletedTaskTime.get(),
+        blacklistedUntil.get()
+    );
+  }
+
+  protected void refreshAnnouncementsView()
+  {
+    final ImmutableWorkerInfo view = ImmutableWorkerInfo.fromWorkerAnnouncements(
+        enabledWorker,
         tasksSnapshotRef.get(),
         lastCompletedTaskTime.get(),
         blacklistedUntil.get()
+    );
+    announcementsViewRef.set(
+        new ImmutableWorkerInfo(
+            view.getWorker(),
+            view.getCurrCapacityUsed(),
+            view.getCurrParallelIndexCapacityUsed(),
+            Collections.unmodifiableMap(view.getCurrCapacityUsedByTaskType()),
+            view.getAvailabilityGroups(),
+            view.getRunningTasks(),
+            view.getLastCompletedTaskTime(),
+            view.getBlacklistedUntil()
+        )
     );
   }
 
@@ -368,6 +399,7 @@ public class WorkerHolder
         }
 
         tasksSnapshotRef.set(newSnapshot);
+        refreshAnnouncementsView();
 
         notifyListener(delta, isWorkerDisabled);
       }
@@ -418,6 +450,8 @@ public class WorkerHolder
             ).emit();
           }
         }
+
+        refreshAnnouncementsView();
 
         notifyListener(delta, isWorkerDisabled);
       }

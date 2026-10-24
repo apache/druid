@@ -2165,6 +2165,7 @@ public class HttpRemoteTaskRunnerTest
                   () -> {
                     for (TaskAnnouncement announcement : preExistingTaskAnnouncements) {
                       tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
+                      refreshAnnouncementsView();
                       listener.taskAddedOrUpdated(announcement, this);
                     }
                     ticks.incrementAndGet();
@@ -2261,6 +2262,7 @@ public class HttpRemoteTaskRunnerTest
                 }
 
                 tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
+                refreshAnnouncementsView();
                 listener.taskAddedOrUpdated(announcement, this);
               }
 
