@@ -343,6 +343,7 @@ public class QueryResourceTest
   public void testGoodQuery() throws IOException
   {
     expectPermissiveHappyPathAuth();
+    testServletRequest.headers.put(HttpHeader.TE.asString(), "trailers");
 
     HttpServletResponse servletResponse = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
     Assertions.assertEquals(200, servletResponse.getStatus());
@@ -353,6 +354,17 @@ public class QueryResourceTest
 
     Assertions.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
     Assertions.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
+  }
+
+  @Test
+  public void testGoodQueryWithoutTeTrailersOmitsTrailers() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final MockHttpServletResponse servletResponse = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
+    Assertions.assertEquals(200, servletResponse.getStatus());
+    Assertions.assertFalse(servletResponse.containsHeader(HttpHeader.TRAILER.toString()));
+    Assertions.assertNull(servletResponse.getTrailerFields());
   }
 
   @Test
@@ -547,6 +559,7 @@ public class QueryResourceTest
     );
 
     expectPermissiveHappyPathAuth();
+    testServletRequest.headers.put(HttpHeader.TE.asString(), "trailers");
 
     HttpServletResponse response = expectAsyncRequestFlow(testServletRequest, SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8), queryResource);
 
@@ -714,6 +727,7 @@ public class QueryResourceTest
     );
 
     expectPermissiveHappyPathAuth();
+    testServletRequest.headers.put(HttpHeader.TE.asString(), "trailers");
 
     HttpServletResponse response = expectAsyncRequestFlow(testServletRequest, SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8), queryResource);
 

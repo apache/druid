@@ -26,6 +26,7 @@ import org.apache.druid.server.QueryResource.QueryMetricCounter;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.apache.druid.server.QueryResultPusher.Writer;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
+import org.eclipse.jetty.http.HttpHeader;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -49,6 +50,28 @@ public class QueryResultPusherTest
       null,
       true,
       false);
+
+  @Test
+  public void testClientAcceptsTrailers()
+  {
+    Assertions.assertFalse(QueryResultPusher.clientAcceptsTrailers(requestWithTe(null)));
+    Assertions.assertFalse(QueryResultPusher.clientAcceptsTrailers(requestWithTe("")));
+    Assertions.assertFalse(QueryResultPusher.clientAcceptsTrailers(requestWithTe("gzip, deflate;q=0.5")));
+    Assertions.assertFalse(QueryResultPusher.clientAcceptsTrailers(requestWithTe("trailersx")));
+    Assertions.assertTrue(QueryResultPusher.clientAcceptsTrailers(requestWithTe("trailers")));
+    Assertions.assertTrue(QueryResultPusher.clientAcceptsTrailers(requestWithTe("Trailers")));
+    Assertions.assertTrue(QueryResultPusher.clientAcceptsTrailers(requestWithTe("gzip;q=0.5, trailers")));
+    Assertions.assertTrue(QueryResultPusher.clientAcceptsTrailers(requestWithTe(" trailers ;q=1, gzip")));
+  }
+
+  private static HttpServletRequest requestWithTe(final String te)
+  {
+    final MockHttpServletRequest request = new MockHttpServletRequest();
+    if (te != null) {
+      request.headers.put(HttpHeader.TE.asString(), te);
+    }
+    return request;
+  }
 
   @Test
   public void testResultPusherRetainsNestedExceptionBacktraces()
