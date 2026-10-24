@@ -17,6 +17,13 @@ name: "Docker Tests using Distribution Image"
 on:
   workflow_call:
 
+env:
+  # Retry Maven Central 429/5xx responses; keep in sync with MAVEN_ARGS in worker.yml.
+  MAVEN_ARGS: >-
+    -Daether.transport.http.retryHandler.count=5
+    -Daether.transport.http.retryHandler.interval=10000
+    -Daether.transport.http.retryHandler.serviceUnavailable=429,502,503,504
+
 jobs:
   run-docker-tests:
     name: Run Docker tests

@@ -21,6 +21,13 @@ concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
+env:
+  # Retry Maven Central 429/5xx responses; keep in sync with MAVEN_ARGS in worker.yml.
+  MAVEN_ARGS: >-
+    -Daether.transport.http.retryHandler.count=5
+    -Daether.transport.http.retryHandler.interval=10000
+    -Daether.transport.http.retryHandler.serviceUnavailable=429,502,503,504
+
 jobs:
   analyze:
     name: Analyze
