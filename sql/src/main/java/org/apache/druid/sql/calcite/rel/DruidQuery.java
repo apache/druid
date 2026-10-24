@@ -68,6 +68,7 @@ import org.apache.druid.query.aggregation.SimpleLongAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -100,6 +101,8 @@ import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.filtration.RangeRefKey;
+import org.apache.druid.sql.calcite.filtration.Ranges;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.OffsetLimit;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -817,15 +820,11 @@ public class DruidQuery
    * Returns a pair of DataSource and Filtration object created on the query filter. In case the data source is
    * a join datasource, the datasource may be altered and left filter of join datasource may
    * be rid of time filters.
-   *
-   * @param timeCondition intervals to AND with the filtration intervals if the datasource is table-based. Must be
-   *                      sorted and non-overlapping. Null means no additional condition.
    */
   @VisibleForTesting
   static Pair<DataSource, Filtration> getFiltration(
       DataSource dataSource,
       DimFilter filter,
-      @Nullable List<Interval> timeCondition,
       VirtualColumnRegistry virtualColumnRegistry,
       JoinableFactoryWrapper joinableFactoryWrapper
   )
@@ -838,7 +837,7 @@ public class DruidQuery
 
     // Time filters within the datasource narrow the query intervals too, which lets the broker prune segments.
     final Filtration queryFiltration =
-        Filtration.create(filter, getBaseIntervals(dataSource, timeCondition, rowSignature)).optimize(rowSignature);
+        Filtration.create(filter, getBaseIntervals(dataSource, rowSignature)).optimize(rowSignature);
 
     if (dataSource instanceof JoinDataSource join && join.getLeftFilter() != null) {
       // Strip the time filters from the left filter, since the query intervals now carry them.
@@ -859,43 +858,62 @@ public class DruidQuery
   }
 
   /**
-   * Returns the intervals that time filters within the given datasource, and the time condition on each table it
-   * reads, restrict its {@code __time} to, or eternity if there are none. Filters along a single path are intersected,
-   * and the arms of a union are combined. Relies on every layer passing {@code __time} through unchanged, as the
-   * datasources we plan do.
-   *
-   * @param timeCondition intervals to apply to each table, or null for no condition
+   * Returns the intervals that time filters within the given datasource restrict its {@code __time} to, or eternity
+   * if there are none. Filters along a single path are intersected, and the arms of a union are combined. Relies on
+   * every layer passing {@code __time} through unchanged, as the datasources we plan do.
    */
-  private static List<Interval> getBaseIntervals(
-      final DataSource dataSource,
-      @Nullable final List<Interval> timeCondition,
-      final RowSignature rowSignature
-  )
+  private static List<Interval> getBaseIntervals(final DataSource dataSource, final RowSignature rowSignature)
   {
     if (dataSource instanceof FilteredDataSource filtered) {
       // Filtration intersects the filter's time bounds with the intervals it is created with.
-      return Filtration.create(filtered.getFilter(), getBaseIntervals(filtered.getBase(), timeCondition, rowSignature))
+      return Filtration.create(filtered.getFilter(), getBaseIntervals(filtered.getBase(), rowSignature))
                        .optimize(rowSignature)
                        .getIntervals();
     } else if (dataSource instanceof JoinDataSource join) {
       // Right-hand columns are prefixed, so __time is the left-hand side's.
-      return Filtration.create(join.getLeftFilter(), getBaseIntervals(join.getLeft(), timeCondition, rowSignature))
+      return Filtration.create(join.getLeftFilter(), getBaseIntervals(join.getLeft(), rowSignature))
                        .optimize(rowSignature)
                        .getIntervals();
     } else if (dataSource instanceof UnionDataSource) {
       final List<Interval> intervals = new ArrayList<>();
       for (final DataSource arm : dataSource.getChildren()) {
-        intervals.addAll(getBaseIntervals(arm, timeCondition, rowSignature));
+        intervals.addAll(getBaseIntervals(arm, rowSignature));
       }
       return JodaUtils.condenseIntervals(intervals);
     } else if (dataSource instanceof UnnestDataSource unnest) {
-      return getBaseIntervals(unnest.getBase(), timeCondition, rowSignature);
+      return getBaseIntervals(unnest.getBase(), rowSignature);
     } else if (dataSource instanceof ProjectDataSource project) {
-      return getBaseIntervals(project.getBase(), timeCondition, rowSignature);
+      return getBaseIntervals(project.getBase(), rowSignature);
     } else {
-      // A table, since the caller only uses this for datasources where canUseIntervalFiltering is true.
-      return timeCondition != null ? timeCondition : Intervals.ONLY_ETERNITY;
+      return Intervals.ONLY_ETERNITY;
     }
+  }
+
+  /**
+   * Returns the filter ANDed with a filter on {@code __time} matching the time condition, if the datasource is
+   * table-based.
+   */
+  @Nullable
+  @VisibleForTesting
+  static DimFilter withTimeCondition(
+      final DataSource dataSource,
+      @Nullable final DimFilter filter,
+      @Nullable final List<Interval> timeCondition
+  )
+  {
+    if (timeCondition == null || !canUseIntervalFiltering(dataSource)) {
+      return filter;
+    }
+
+    final RangeRefKey timeKey = new RangeRefKey(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
+    final List<DimFilter> timeFilters = new ArrayList<>();
+    for (final Interval interval : timeCondition) {
+      timeFilters.add(Ranges.interval(timeKey, interval));
+    }
+    return DimFilters.conjunction(
+        filter,
+        timeFilters.size() == 1 ? timeFilters.getFirst() : DimFilters.or(timeFilters)
+    );
   }
 
   /**
@@ -1089,8 +1107,7 @@ public class DruidQuery
       }
       final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
           dataSource,
-          filter,
-          plannerContext.getTimeCondition(),
+          withTimeCondition(dataSource, filter, plannerContext.getTimeCondition()),
           virtualColumnRegistry,
           plannerContext.getJoinableFactoryWrapper()
       );
@@ -1214,8 +1231,7 @@ public class DruidQuery
     final VirtualColumns virtualColumns = computeVirtualColumns(false);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
-        filter,
-        plannerContext.getTimeCondition(),
+        withTimeCondition(dataSource, filter, plannerContext.getTimeCondition()),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );
@@ -1321,8 +1337,7 @@ public class DruidQuery
     final VirtualColumns virtualColumns = computeVirtualColumns(true);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
-        filter,
-        plannerContext.getTimeCondition(),
+        withTimeCondition(dataSource, filter, plannerContext.getTimeCondition()),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );
@@ -1369,8 +1384,7 @@ public class DruidQuery
     final VirtualColumns virtualColumns = computeVirtualColumns(true);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
-        filter,
-        plannerContext.getTimeCondition(),
+        withTimeCondition(dataSource, filter, plannerContext.getTimeCondition()),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );
@@ -1536,8 +1550,7 @@ public class DruidQuery
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
-        filter,
-        plannerContext.getTimeCondition(),
+        withTimeCondition(dataSource, filter, plannerContext.getTimeCondition()),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );
@@ -1661,8 +1674,7 @@ public class DruidQuery
     final VirtualColumns virtualColumns = computeVirtualColumns(true);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
-        filter,
-        plannerContext.getTimeCondition(),
+        withTimeCondition(dataSource, filter, plannerContext.getTimeCondition()),
         virtualColumnRegistry,
         plannerContext.getJoinableFactoryWrapper()
     );

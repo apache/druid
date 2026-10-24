@@ -67,7 +67,6 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         selectorFilter,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -86,7 +85,6 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         filterWithInterval,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -105,7 +103,6 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         filterWithInterval,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -125,7 +122,6 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -145,7 +141,6 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -165,7 +160,6 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -185,7 +179,6 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -210,7 +203,6 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         queryFilter,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -240,7 +232,6 @@ public class DruidQueryTest
     final Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        null,
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -260,8 +251,7 @@ public class DruidQueryTest
     DataSource dataSource = new TableDataSource("test");
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
-        selectorFilter,
-        Collections.singletonList(Intervals.utc(50, 150)),
+        DruidQuery.withTimeCondition(dataSource, selectorFilter, Collections.singletonList(Intervals.utc(50, 150))),
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -279,8 +269,7 @@ public class DruidQueryTest
     DataSource dataSource = new TableDataSource("test");
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
-        null,
-        Collections.singletonList(Intervals.utc(50, 150)),
+        DruidQuery.withTimeCondition(dataSource, null, Collections.singletonList(Intervals.utc(50, 150))),
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -298,8 +287,7 @@ public class DruidQueryTest
     DataSource dataSource = new TableDataSource("test");
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
-        filterWithInterval,
-        Collections.singletonList(Intervals.utc(150, 300)),
+        DruidQuery.withTimeCondition(dataSource, filterWithInterval, Collections.singletonList(Intervals.utc(150, 300))),
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -318,8 +306,7 @@ public class DruidQueryTest
     DataSource expectedDataSource = join(JoinType.INNER, selectorFilter);
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
-        otherFilter,
-        Collections.singletonList(Intervals.utc(50, 150)),
+        DruidQuery.withTimeCondition(dataSource, otherFilter, Collections.singletonList(Intervals.utc(50, 150))),
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -342,8 +329,7 @@ public class DruidQueryTest
     );
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
-        selectorFilter,
-        Collections.singletonList(Intervals.utc(150, 300)),
+        DruidQuery.withTimeCondition(dataSource, selectorFilter, Collections.singletonList(Intervals.utc(150, 300))),
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
@@ -378,8 +364,7 @@ public class DruidQueryTest
     );
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
-        selectorFilter,
-        Collections.singletonList(Intervals.utc(150, 300)),
+        DruidQuery.withTimeCondition(dataSource, selectorFilter, Collections.singletonList(Intervals.utc(150, 300))),
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
