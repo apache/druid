@@ -51,6 +51,7 @@ import java.util.Set;
  * Use this resource filter for API endpoints that contain {@code lookups} in their request path.
  *
  * The resource name is {@code tier/lookup}, or {@code tier} when the tier has no lookups.
+ * Percent signs and slashes in each component are escaped before joining them.
  * Coordinator-wide requests with no tier or lookup use {@code LOOKUP:LOOKUP}.
  * When lookup authorization is disabled, all requests use {@code CONFIG:CONFIG}.
  *
@@ -241,7 +242,13 @@ public class LookupResourceFilter extends AbstractResourceFilter
 
   private static String name(String tier, String lookup)
   {
-    return tier == null ? ResourceType.LOOKUP : lookup == null ? tier : tier + "/" + lookup;
+    return tier == null ? ResourceType.LOOKUP : lookup == null ? escape(tier) : escape(tier) + "/" + escape(lookup);
+  }
+
+  // Escape each component so a slash inside a name cannot match a tier boundary.
+  private static String escape(String value)
+  {
+    return value.replace("%", "%25").replace("/", "%2F");
   }
 
   /**
@@ -281,7 +288,8 @@ public class LookupResourceFilter extends AbstractResourceFilter
 
   private static boolean canReadTier(Set<String> readable, String tier)
   {
-    return readable.contains(tier) || readable.stream().anyMatch(target -> target.startsWith(tier + "/"));
+    final String name = name(tier, null);
+    return readable.contains(name) || readable.stream().anyMatch(target -> target.startsWith(name + "/"));
   }
 
   /**
@@ -319,7 +327,7 @@ public class LookupResourceFilter extends AbstractResourceFilter
         }
         final Object filtered = readable(allowed, entryTier, entry);
         // Do not reveal a node with no readable lookups unless the tier itself is readable.
-        if (filtered instanceof LookupsState && !allowed.contains(entryTier)) {
+        if (filtered instanceof LookupsState && !allowed.contains(name(entryTier, null))) {
           final LookupsState<?> state = (LookupsState<?>) filtered;
           if (state.getCurrent().isEmpty() && state.getToLoad().isEmpty() && state.getToDrop().isEmpty()) {
             return;

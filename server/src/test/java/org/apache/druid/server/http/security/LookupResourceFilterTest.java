@@ -189,6 +189,25 @@ public class LookupResourceFilterTest
   }
 
   @Test
+  public void testNamesWithSlashesDoNotOverlap()
+  {
+    assertBulkResources(null, ImmutableMap.of(
+        "a", ImmutableMap.of("x/y", 1),
+        "a/x", ImmutableMap.of("y", 2)
+    ), Action.WRITE, "LOOKUP:a/x%2Fy:WRITE", "LOOKUP:a%2Fx/y:WRITE");
+    assertBulkResources("a%", ImmutableMap.of(), Action.WRITE, "LOOKUP:a%25:WRITE");
+
+    assertEquals(
+        ImmutableMap.of("a/x", ImmutableMap.of("y", 2)),
+        LookupResourceFilter.readable(
+            ImmutableSet.of("a%2Fx/y"),
+            null,
+            ImmutableMap.of("a", ImmutableMap.of("x/y", 1), "a/x", ImmutableMap.of("y", 2))
+        )
+    );
+  }
+
+  @Test
   public void testNodeStatusDoesNotExposeHostsWithoutReadableLookups()
   {
     final HostAndPort readableHost = HostAndPort.fromString("readable:8080");
