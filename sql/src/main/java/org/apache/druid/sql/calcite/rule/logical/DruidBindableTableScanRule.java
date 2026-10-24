@@ -70,7 +70,7 @@ public class DruidBindableTableScanRule extends ConverterRule
   {
     final Bindables.BindableTableScan scan = call.rel(0);
     // QueryHandler has already selected native planning; only native-capable system tables can use this conversion.
-    return SystemSchema.getNativeSystemTable(scan.getTable()) != null;
+    return SystemSchema.getSystemTableDataSourceTable(scan.getTable()) != null;
   }
 
   @Override

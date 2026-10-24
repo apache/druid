@@ -22,17 +22,16 @@ package org.apache.druid.sql.calcite.schema;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 /**
- * Capability implemented by a traditional system table that also has a native-query representation.
- * The capability is discovered from the table resolved through {@link SystemSchemaProvider}, so native planning
- * inherits the provider's table-visibility authorization.
+ * Capability implemented by a traditional system table that can also be represented as a Druid
+ * {@link org.apache.druid.query.SystemTableDataSource}. The capability is discovered from the table resolved through
+ * {@link SystemSchemaProvider}, so datasource planning inherits the provider's table-visibility authorization.
  */
-interface NativeSystemTable
+interface SystemTableDataSourceTable
 {
   /**
-   * Returns the representation used by the SQL planner after native system-table planning has been selected.
-   * The returned table supplies the native {@code DataSource} and row signature needed to translate the Calcite
-   * relational plan into a native Druid query. It does not read the system-table rows itself; those rows are supplied
-   * by the corresponding component-side system-table data provider when the native query executes.
+   * Returns the representation used after the SQL engine selects system-table datasource planning. The returned table
+   * supplies the {@code DataSource} and row signature needed to translate the Calcite relational plan. It does not read
+   * rows itself; the selected query engine obtains them from the corresponding system-table data provider.
    */
-  DruidTable asNativeTable();
+  DruidTable asDataSourceTable();
 }

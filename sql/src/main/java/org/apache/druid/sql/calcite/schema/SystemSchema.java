@@ -139,25 +139,29 @@ public class SystemSchema extends AbstractTableSchema
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
 
-  public static boolean canUseNativeSystemTable(
+  /**
+   * Whether a system table is planned as a {@code SystemTableDataSource} instead of on the Bindable path. The native
+   * engine does so when {@code allowNativeFunctionsForSystemTables} is set.
+   */
+  public static boolean canUseSystemTableDataSource(
       final RelOptTable table,
       final PlannerContext plannerContext
   )
   {
     return plannerContext.allowNativeFunctionsForSystemTables()
            && NativeSqlEngine.NAME.equals(plannerContext.getEngine().name())
-           && table.unwrap(NativeSystemTable.class) != null;
+           && table.unwrap(SystemTableDataSourceTable.class) != null;
   }
 
   /**
-   * Returns the native representation advertised by a system table resolved through {@link SystemSchemaProvider}.
-   * Eligibility for native planning must be checked with {@link #canUseNativeSystemTable} before calling this method.
+   * Returns the datasource representation advertised by a system table resolved through {@link SystemSchemaProvider}.
+   * Eligibility must be checked with {@link #canUseSystemTableDataSource} before calling this method.
    */
   @Nullable
-  public static DruidTable getNativeSystemTable(final RelOptTable table)
+  public static DruidTable getSystemTableDataSourceTable(final RelOptTable table)
   {
-    final NativeSystemTable nativeSystemTable = table.unwrap(NativeSystemTable.class);
-    return nativeSystemTable == null ? null : nativeSystemTable.asNativeTable();
+    final SystemTableDataSourceTable dataSourceTable = table.unwrap(SystemTableDataSourceTable.class);
+    return dataSourceTable == null ? null : dataSourceTable.asDataSourceTable();
   }
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature

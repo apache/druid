@@ -284,7 +284,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           // This is the routing point that decides whether a system table uses Bindable or native planning.
           if ((table.unwrap(ScannableTable.class) != null || table.unwrap(ProjectableFilterableTable.class) != null)
               && table.unwrap(DruidTable.class) == null
-              && !SystemSchema.canUseNativeSystemTable(table, plannerContext)) {
+              && !SystemSchema.canUseSystemTableDataSource(table, plannerContext)) {
             found.add(table);
             return;
           }
@@ -627,7 +627,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           // Native system tables preserve the traditional row-level authorization model. They therefore have no
           // SQL resource action unless direct system-table authorization is enabled, and must not make this
           // datasource-resource sanity check fail.
-          authorizationTrackedDataSourceNames.removeAll(getNativeSystemTableNames(rootQueryRel.rel));
+          authorizationTrackedDataSourceNames.removeAll(getSystemTableDataSourceNames(rootQueryRel.rel));
         }
         Preconditions.checkState(
             readResourceActions.isEmpty() == authorizationTrackedDataSourceNames.isEmpty()
@@ -644,10 +644,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   }
 
   /**
-   * Returns the datasource names of the native system tables scanned by the logical plan. Reading them from the
+   * Returns the datasource names of the system-table datasources scanned by the logical plan. Reading them from the
    * logical plan avoids generating the native query just for the authorization sanity check.
    */
-  private static Set<String> getNativeSystemTableNames(final RelNode relNode)
+  private static Set<String> getSystemTableDataSourceNames(final RelNode relNode)
   {
     final Set<String> names = new HashSet<>();
     new RelVisitor()
@@ -656,9 +656,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       public void visit(RelNode node, int ordinal, RelNode parent)
       {
         if (node instanceof TableScan) {
-          final DruidTable nativeTable = SystemSchema.getNativeSystemTable(node.getTable());
-          if (nativeTable != null) {
-            names.addAll(nativeTable.getDataSource().getTableNames());
+          final DruidTable dataSourceTable = SystemSchema.getSystemTableDataSourceTable(node.getTable());
+          if (dataSourceTable != null) {
+            names.addAll(dataSourceTable.getDataSource().getTableNames());
           }
         }
         super.visit(node, ordinal, parent);

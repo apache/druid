@@ -66,7 +66,7 @@ import java.util.stream.Collectors;
  * that server would have multiple values in the column {@code node_roles} rather than duplicating all the
  * rows.
  */
-public class SystemServerPropertiesTable extends AbstractTable implements ProjectableFilterableTable, NativeSystemTable
+public class SystemServerPropertiesTable extends AbstractTable implements ProjectableFilterableTable, SystemTableDataSourceTable
 {
   private static final Logger log = new Logger(SystemServerPropertiesTable.class);
 
@@ -115,9 +115,9 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
   }
 
   @Override
-  public NativeServerPropertiesTable asNativeTable()
+  public ServerPropertiesDataSourceTable asDataSourceTable()
   {
-    return new NativeServerPropertiesTable();
+    return new ServerPropertiesDataSourceTable();
   }
 
   @Override
