@@ -6998,10 +6998,13 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  /**
+   * Unnesting {@code JSON_QUERY_ARRAY} of a constant JSON value used to fail planning with a
+   * {@link StackOverflowError}, see https://github.com/apache/druid/issues/20631
+   */
   @Test
   public void testUnnestJsonQueryArrayOfConstantJson()
   {
-    // https://github.com/apache/druid/issues/20631
     testBuilder()
         .sql(
             "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[{\"b\":1}]}') AS j) t "
@@ -7012,10 +7015,13 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  /**
+   * Same as {@link #testUnnestJsonQueryArrayOfConstantJson()}, but the constant JSON array is empty, see
+   * https://github.com/apache/druid/issues/20631
+   */
   @Test
   public void testUnnestJsonQueryArrayOfConstantJsonEmptyArray()
   {
-    // https://github.com/apache/druid/issues/20631
     testBuilder()
         .sql(
             "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[]}') AS j) t "
@@ -7026,10 +7032,13 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  /**
+   * Same as {@link #testUnnestJsonQueryArrayOfConstantJson()}, but the JSON path does not exist, so
+   * {@code JSON_QUERY_ARRAY} reduces to a null array literal, see https://github.com/apache/druid/issues/20631
+   */
   @Test
   public void testUnnestJsonQueryArrayOfConstantJsonMissingPath()
   {
-    // https://github.com/apache/druid/issues/20631
     // Array complex JSON isn't supported
     msqIncompatible();
     testBuilder()
@@ -7042,10 +7051,13 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  /**
+   * An {@code ARRAY<ARRAY<COMPLEX<json>>>} constant used to fail planning with a {@link ClassCastException}, see
+   * https://github.com/apache/druid/issues/20631
+   */
   @Test
   public void testJsonQueryArrayOfArraysOfConstantJson()
   {
-    // https://github.com/apache/druid/issues/20631
     // Array complex JSON isn't supported
     msqIncompatible();
     testBuilder()
