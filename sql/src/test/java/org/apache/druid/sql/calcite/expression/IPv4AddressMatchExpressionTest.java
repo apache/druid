@@ -270,11 +270,11 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
       final Object expectedResult
   )
   {
-    testHelper.testExpressionString(target.calciteOperator(), exprs, expectedExpression, expectedResult);
+    testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
   private DruidExpression buildExpectedExpression(Object... args)
   {
-    return testHelper.buildExpectedExpression(target.getDruidFunctionName(), args);
+    return testHelper.buildExpectedExpression(ColumnType.LONG, target.getDruidFunctionName(), args);
   }
 }
