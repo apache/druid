@@ -1183,13 +1183,33 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
      * on finding any 'range' partition dimension to be multivalued at runtime, which ends up in a mismatch between
      * the compaction config and the actual segments (lastCompactionState), leading to repeated compactions.
      * <p>
-     * Note that needProjections alone does not trigger a download: every caller that asks for projections also asks
-     * for something above, so the lists stay in step. A caller that wants only projections would have to add it here.
+     * Projections are only considered a reason to analyze if we can confirm that any existing segments contain them via
+     * {@link #anySegmentHasProjections()}.
      */
     private boolean shouldDownloadSegments()
     {
+      return needRollup
+             || needQueryGranularity
+             || needDimensionsSpec
+             || needMetricsSpec
+             || needMultiValuedDimensions
+             || (needProjections && anySegmentHasProjections());
+    }
 
-      return needRollup || needQueryGranularity || needDimensionsSpec || needMetricsSpec || needMultiValuedDimensions;
+    /**
+     * Whether any segment to be compacted stores a projection, taken from {@link DataSegment#getProjections()} so
+     * that it costs no I/O. A null list there means a segment written before Druid had projections, which therefore
+     * has none.
+     */
+    private boolean anySegmentHasProjections()
+    {
+      for (Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> segmentPair : segmentsIterable) {
+        final List<String> projectionNames = segmentPair.lhs.getProjections();
+        if (projectionNames != null && !projectionNames.isEmpty()) {
+          return true;
+        }
+      }
+      return false;
     }
 
     public void fetchAndProcessIfNeeded()

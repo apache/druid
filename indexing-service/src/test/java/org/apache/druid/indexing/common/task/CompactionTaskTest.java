@@ -924,6 +924,54 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testAnalyzerReadsSegmentsForProjectionsAlone()
+  {
+    // A config that declares a dimensionsSpec, a metricsSpec and a granularitySpec but no projections asks only for
+    // projections. Without projections counting towards reading the segments, nothing would be read, the analyzer
+    // would report none, and compaction would rewrite the segments without the projections they came with.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.of(
+            segmentWithProjections(COMPACTION_INTERVAL, "daily_summary")
+        ),
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    final List<AggregateProjectionSpec> projections = analyzer.getProjections();
+    Assertions.assertNotNull(projections, "segments were not read, so their projections would be dropped");
+    Assertions.assertEquals(
+        ImmutableList.of("daily_summary"),
+        projections.stream().map(AggregateProjectionSpec::getName).collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testAnalyzerDoesNotReadSegmentsThatHaveNoProjections()
+  {
+    // The flip side: the segments say what projections they hold without being opened, so a datasource that has none
+    // is not made to pay for a read that could only come back empty.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.<Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>>>of(
+            segmentWithProjections(COMPACTION_INTERVAL)
+        ),
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    Assertions.assertNull(analyzer.getProjections());
+  }
+
+  @Test
   public void testAnalyzerPrefersTheNewestDefinitionOfAProjection()
   {
     // Same name in both; the newer segment is visited first and its definition is the one kept, matching how a
@@ -2898,6 +2946,9 @@ public class CompactionTaskTest
                                            .interval(interval)
                                            .version("version")
                                            .size(SEGMENT_SIZE_BYTES)
+                                           // a real segment names its projections here as well, which is how
+                                           // compaction can tell whether opening it could find any
+                                           .projections(ImmutableList.copyOf(projectionNames))
                                            .build();
     return Pair.of(segment, () -> new ReferenceCountingResourceHolder<>(index, () -> {}));
   }
