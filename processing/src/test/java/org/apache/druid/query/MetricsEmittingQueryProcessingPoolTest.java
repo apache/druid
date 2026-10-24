@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.jupiter.api.Assertions;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 
 @SuppressWarnings("DoNotMock")
@@ -77,5 +79,88 @@ public class MetricsEmittingQueryProcessingPoolTest
     ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
     monitor.doMonitor(serviceEmitter);
     Mockito.verifyNoInteractions(serviceEmitter);
+  }
+
+  /**
+   * End-to-end: a real {@link ShardedPrioritizedExecutorService} is a {@link ProcessingPoolStats}, so the emitter
+   * picks it up and the emitted counters are the totals summed across all shards.
+   */
+  @Test
+  public void testShardedExecutorDelegateAggregatesAcrossShards() throws InterruptedException
+  {
+    final int numPools = 4;
+    final int numThreads = 8; // 2 threads per shard
+    final int numTasks = 400;
+    final ShardedPrioritizedExecutorService sharded = ShardedPrioritizedExecutorService.create(
+        new Lifecycle(),
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return "metrics-sharded-test";
+          }
+
+          @Override
+          public int getNumThreads()
+          {
+            return numThreads;
+          }
+
+          @Override
+          public int getNumThreadPools()
+          {
+            return numPools;
+          }
+        }
+    );
+
+    final CountDownLatch gate = new CountDownLatch(1);
+    try {
+      for (int i = 0; i < numTasks; i++) {
+        sharded.submit(
+            new PrioritizedRunnable()
+            {
+              @Override
+              public int getPriority()
+              {
+                return 0;
+              }
+
+              @Override
+              public void run()
+              {
+                try {
+                  gate.await();
+                }
+                catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  throw new RuntimeException(e);
+                }
+              }
+            }
+        );
+      }
+
+      // Wait until every worker thread across all shards is busy (proves work spread across shards).
+      final long deadlineMs = System.currentTimeMillis() + 30_000L;
+      while (sharded.getActiveTasks() < numThreads && System.currentTimeMillis() < deadlineMs) {
+        Thread.sleep(10);
+      }
+
+      final ExecutorServiceMonitor monitor = new ExecutorServiceMonitor();
+      // Registers itself with the monitor.
+      new MetricsEmittingQueryProcessingPool(sharded, timeoutService, monitor);
+      final StubServiceEmitter serviceEmitter = new StubServiceEmitter("service", "host");
+      monitor.doMonitor(serviceEmitter);
+
+      // active == numThreads and pending == the rest, both summed across the four shards.
+      serviceEmitter.verifyValue("segment/scan/active", numThreads);
+      serviceEmitter.verifyValue("segment/scan/pending", numTasks - numThreads);
+    }
+    finally {
+      gate.countDown();
+      sharded.shutdownNow();
+    }
   }
 }
