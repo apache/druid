@@ -31,10 +31,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class TaskCountStatsMonitorTest
 {
@@ -120,13 +118,9 @@ public class TaskCountStatsMonitorTest
                                       .with(Dimension.TASK_TYPE, "index_kafka")
                                       .with(Dimension.SUPERVISOR_ID, "s1")
                                       .build();
-    final Map<RowKey, Long> runningTaskCount = new LinkedHashMap<>();
-    runningTaskCount.put(streamingKey, 3L);
-    runningTaskCount.put(TASK_METRIC_KEY2, 1L);
-    runningTaskCount.put(RowKey.empty(), 1L);
-
     final TaskCountStatsProvider provider = Mockito.mock(TaskCountStatsProvider.class);
-    Mockito.when(provider.getRunningTaskCount()).thenReturn(runningTaskCount);
+    Mockito.when(provider.getRunningTaskCount())
+           .thenReturn(ImmutableMap.of(streamingKey, 3L, TASK_METRIC_KEY2, 1L, RowKey.empty(), 1L));
 
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     new TaskCountStatsMonitor(provider).doMonitor(emitter);
@@ -140,7 +134,7 @@ public class TaskCountStatsMonitorTest
         emitter.getMetricEvents("task/running/count")
                .stream()
                .map(ServiceMetricEvent::getUserDims)
-               .collect(Collectors.toList())
+               .toList()
     );
   }
 
