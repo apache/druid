@@ -464,20 +464,26 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Extracts the running average processing rate (records per second) from the task stats.
+   * Extracts the average processing rate (records per second) from the task stats.
    *
    * @param taskStats the stats map from supervisor.getStats()
    */
-  static double extractRunningAvgProcessingRate(Map<String, Map<String, Object>> taskStats)
+  static double extractAvgProcessingRate(Map<String, Map<String, Object>> taskStats)
   {
     if (taskStats == null || taskStats.isEmpty()) {
       return -1.;
     }
 
-    return extractAutoscalerMetric(
+    // First try using the running average if available
+    final double runningAverage = extractAutoscalerMetric(
         taskStats,
         SeekableStreamIndexTaskRunner.PROCESSING_RATE_RUNNING_AVG
     );
+    if (runningAverage >= 0) {
+      return runningAverage;
+    } else {
+      return extractMovingAverage(taskStats);
+    }
   }
 
   /**
@@ -493,11 +499,19 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1.;
     }
 
-    // Use running average metric to smoothen out spikes
-    return extractAutoscalerMetric(
+    // First try using running average metric to smoothen out spikes
+    final double runningAverage = extractAutoscalerMetric(
         taskStats,
         SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG
     );
+    if (runningAverage >= 0) {
+      return runningAverage;
+    } else {
+      return extractAutoscalerMetric(
+          taskStats,
+          SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY
+      );
+    }
   }
 
   /**
@@ -608,7 +622,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int partitionCount = supervisor.getPartitionCount();
 
     final Map<String, Map<String, Object>> taskStats = supervisor.getStats();
-    final double movingAvgRate = extractRunningAvgProcessingRate(taskStats);
+    final double movingAvgRate = extractAvgProcessingRate(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
     if (!config.isUsePollIdleRatio() && aggregateLag > 0 && movingAvgRate > 0) {

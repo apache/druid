@@ -487,7 +487,7 @@ public class CostBasedAutoScalerTest
     validStats.put("0", group);
     Assertions.assertEquals(
         1500.0,
-        CostBasedAutoScaler.extractRunningAvgProcessingRate(validStats),
+        CostBasedAutoScaler.extractAvgProcessingRate(validStats),
         0.0001,
         "Average 5-minute processing rate should be computed across tasks"
     );
