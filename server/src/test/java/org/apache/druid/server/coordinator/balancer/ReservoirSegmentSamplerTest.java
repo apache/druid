@@ -279,13 +279,30 @@ public class ReservoirSegmentSamplerTest
 
       // Number of segments picked from server0 are ~40% of total and
       // number of segments picked from other servers are each ~20% of total
-      double error = totalSegmentsPicked * 0.02;
-      Assertions.assertEquals(totalSegmentsPicked * 0.40, numSegmentsPickedFromServer[0], error);
+      Assertions.assertEquals(
+          totalSegmentsPicked * 0.40,
+          numSegmentsPickedFromServer[0],
+          allowedError(totalSegmentsPicked, 0.40)
+      );
 
       for (int serverId = 1; serverId < servers.size(); ++serverId) {
-        Assertions.assertEquals(totalSegmentsPicked * 0.20, numSegmentsPickedFromServer[serverId], error);
+        Assertions.assertEquals(
+            totalSegmentsPicked * 0.20,
+            numSegmentsPickedFromServer[serverId],
+            allowedError(totalSegmentsPicked, 0.20)
+        );
       }
     }
+  }
+
+  /**
+   * Returns 4 standard deviations of a binomial count with {@code numPicked} trials
+   * and probability {@code p}. A fixed percentage of {@code numPicked} is too tight
+   * for small samples and makes the test flaky.
+   */
+  private static double allowedError(int numPicked, double p)
+  {
+    return 4 * Math.sqrt(numPicked * p * (1 - p));
   }
 
   @Test
