@@ -87,6 +87,8 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -100,6 +102,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -801,6 +804,53 @@ public class TaskQueueTest extends IngestionTestBase
     Assertions.assertEquals(medPriority.getId(), submitted.get(2));
     Assertions.assertEquals(lowPriority2.getId(), submitted.get(3));
     Assertions.assertEquals(lowPriority1.getId(), submitted.get(4));
+  }
+
+  @Test
+  public void testRunningAndPendingTaskCountForTasksNotActiveInQueue()
+  {
+    final TestTask activeTask = new TestTask("active", Intervals.of("2021-01/P1M"));
+    final TestTask completedTask = new TestTask("completed", Intervals.of("2021-02/P1M"));
+
+    final TaskRunner taskRunner = EasyMock.createNiceMock(TaskRunner.class);
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(List.of(
+        new RemoteTaskRunnerWorkItem(activeTask.getId(), activeTask.getType(), null, null, activeTask.getDataSource()),
+        new RemoteTaskRunnerWorkItem(completedTask.getId(), completedTask.getType(), null, null, completedTask.getDataSource())
+    )).anyTimes();
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(List.of(
+        new RemoteTaskRunnerWorkItem("unknown", "index_kafka", null, null, "wiki"),
+        new RemoteTaskRunnerWorkItem("unknownWithoutType", null, null, null, "wiki")
+    )).anyTimes();
+    EasyMock.replay(taskRunner);
+
+    final TaskQueue queue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null, null),
+        new DefaultTaskConfig(),
+        getTaskStorage(),
+        taskRunner,
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    queue.setActive(true);
+    queue.add(activeTask);
+    queue.add(completedTask);
+    queue.shutdown(completedTask.getId(), "test shutdown");
+
+    Assertions.assertEquals(
+        Map.of(RowKey.with(Dimension.DATASOURCE, "datasource").and(Dimension.TASK_TYPE, "test"), 2L),
+        queue.getRunningTaskCount()
+    );
+    Assertions.assertEquals(
+        Map.of(
+            RowKey.with(Dimension.DATASOURCE, "wiki").and(Dimension.TASK_TYPE, "index_kafka"), 1L,
+            RowKey.empty(), 1L
+        ),
+        queue.getPendingTaskCount()
+    );
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()

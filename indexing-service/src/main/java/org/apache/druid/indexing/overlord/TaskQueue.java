@@ -941,7 +941,7 @@ public class TaskQueue
     return taskRunner.getRunningTasks()
                      .stream()
                      .collect(Collectors.toMap(
-                         e -> taskDatasources.getOrDefault(e.getTaskId(), RowKey.empty()),
+                         e -> getWorkItemMetricKey(taskDatasources, e),
                          e -> 1L,
                          Long::sum
                      ));
@@ -953,7 +953,7 @@ public class TaskQueue
     return taskRunner.getPendingTasks()
                      .stream()
                      .collect(Collectors.toMap(
-                         e -> taskDatasources.getOrDefault(e.getTaskId(), RowKey.empty()),
+                         e -> getWorkItemMetricKey(taskDatasources, e),
                          e -> 1L,
                          Long::sum
                      ));
@@ -1235,5 +1235,25 @@ public class TaskQueue
       builder.with(Dimension.SUPERVISOR_ID, supervisorId);
     }
     return builder.build();
+  }
+
+  /**
+   * Returns the metric key of the active task with the same ID, or a key built from the work item itself if the
+   * runner still reports a task that this queue has already completed or removed.
+   */
+  private static RowKey getWorkItemMetricKey(
+      final Map<String, RowKey> activeTaskMetricKeys,
+      final TaskRunnerWorkItem workItem
+  )
+  {
+    final RowKey metricKey = activeTaskMetricKeys.get(workItem.getTaskId());
+    if (metricKey != null) {
+      return metricKey;
+    } else if (workItem.getDataSource() == null || workItem.getTaskType() == null) {
+      return RowKey.empty();
+    } else {
+      return RowKey.with(Dimension.DATASOURCE, workItem.getDataSource())
+                   .and(Dimension.TASK_TYPE, workItem.getTaskType());
+    }
   }
 }
