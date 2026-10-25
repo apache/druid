@@ -3,7 +3,7 @@ updates:
   - package-ecosystem: "maven"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     open-pull-requests-limit: 20
     cooldown:
       # Protect against not-yet-discovered regressions or security issues in new releases of dependencies
@@ -12,6 +12,8 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
+    # A dependency goes into the first group it matches. Major version updates match no group
+    # except maven-resolver, so each one still gets its own PR.
     groups:
       # The individual org.apache.maven.resolver:* artifacts must move together: they are all
       # pinned to the same version in services/pom.xml and server/pom.xml, and a 1.x -> 2.x major
@@ -20,6 +22,17 @@ updates:
       maven-resolver:
         patterns:
           - "org.apache.maven.resolver:*"
+      maven-minor-patch:
+        update-types: ["minor", "patch"]
+        patterns:
+          - "*"
+      # Security updates skip the schedule and cooldown; batch them so an advisory burst opens one PR.
+      maven-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "com.github.luben:zstd-jni"
     ignore:
       # zstd-jni 1.5.7-13 and later cannot decode legacy (pre-1.0) zstd frames in .zst batch input.
       # Version updates are ignored; security updates still open PRs.
@@ -55,6 +68,11 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+    groups:
+      website-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   # Don't run dependabot on web-console
   - package-ecosystem: "npm"
@@ -67,6 +85,11 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+    groups:
+      web-console-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -78,5 +101,9 @@ updates:
       prefix: "ci"
     groups:
       github-actions:
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: security-updates
         patterns:
           - "*"
