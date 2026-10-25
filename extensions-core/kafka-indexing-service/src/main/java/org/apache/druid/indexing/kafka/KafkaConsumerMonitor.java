@@ -239,8 +239,10 @@ public class KafkaConsumerMonitor extends AbstractMonitor
 
     synchronized void addSample(final double value)
     {
-      sum += value;
-      count++;
+      if (!Double.isNaN(value) && value >= 0 && value <= 1) {
+        sum += value;
+        count++;
+      }
     }
 
     synchronized double getAvg()

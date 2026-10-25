@@ -875,6 +875,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         }
 
         status = Status.PUBLISHING;
+        markReadingStopped();
       }
 
       // We need to copy sequences here, because the success callback in publishAndRegisterHandoff removes items from
