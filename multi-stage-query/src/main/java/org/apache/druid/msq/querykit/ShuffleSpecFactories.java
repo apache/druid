@@ -23,8 +23,8 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
+import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleSpec;
-import org.apache.druid.msq.kernel.StageDefinition;
 
 /**
  * Static factory methods for common implementations of {@link ShuffleSpecFactory}.
@@ -63,7 +63,7 @@ public class ShuffleSpecFactories
 
   /**
    * Factory that produces an adjustable globally-sorted shuffle spec. The partition count is adjusted at
-   * runtime by {@link StageDefinition#withRuntimeBounds(int, int, int)}.
+   * runtime by {@link QueryDefinition#withRuntimeBounds(int, int, int)}.
    */
   public static ShuffleSpecFactory globalSortWithTargetPartitions()
   {
