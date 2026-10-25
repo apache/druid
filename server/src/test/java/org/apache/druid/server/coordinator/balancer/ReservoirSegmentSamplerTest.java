@@ -248,7 +248,7 @@ public class ReservoirSegmentSamplerTest
 
       // Number of segments picked from each server is ~25% of total
       final double expectedPickedSegments = totalSegmentsPicked * 0.25;
-      final double error = totalSegmentsPicked * 0.02;
+      final double error = allowedError(totalSegmentsPicked, 0.25);
       for (int pickedSegments : numSegmentsPickedFromServer) {
         Assertions.assertEquals(expectedPickedSegments, pickedSegments, error);
       }
