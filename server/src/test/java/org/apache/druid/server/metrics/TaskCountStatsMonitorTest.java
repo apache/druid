@@ -20,6 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
@@ -28,8 +29,12 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TaskCountStatsMonitorTest
 {
@@ -106,6 +111,37 @@ public class TaskCountStatsMonitorTest
 
     emitter.verifyValue(Stat.INFO_1.getMetricName(), 10L);
     emitter.verifyValue(Stat.DEBUG_1.getMetricName(), Map.of("tier", "hot", "dataSource", "wiki"), 20L);
+  }
+
+  @Test
+  public void testDimensionsDoNotLeakAcrossRows()
+  {
+    final RowKey streamingKey = RowKey.with(Dimension.DATASOURCE, "d1")
+                                      .with(Dimension.TASK_TYPE, "index_kafka")
+                                      .with(Dimension.SUPERVISOR_ID, "s1")
+                                      .build();
+    final Map<RowKey, Long> runningTaskCount = new LinkedHashMap<>();
+    runningTaskCount.put(streamingKey, 3L);
+    runningTaskCount.put(TASK_METRIC_KEY2, 1L);
+    runningTaskCount.put(RowKey.empty(), 1L);
+
+    final TaskCountStatsProvider provider = Mockito.mock(TaskCountStatsProvider.class);
+    Mockito.when(provider.getRunningTaskCount()).thenReturn(runningTaskCount);
+
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    new TaskCountStatsMonitor(provider).doMonitor(emitter);
+
+    Assertions.assertEquals(
+        List.of(
+            Map.of("dataSource", "d1", "taskType", "index_kafka", "supervisorId", "s1"),
+            Map.of("dataSource", "d1", "taskType", "kill"),
+            Map.of()
+        ),
+        emitter.getMetricEvents("task/running/count")
+               .stream()
+               .map(ServiceMetricEvent::getUserDims)
+               .collect(Collectors.toList())
+    );
   }
 
   private static class Stat
