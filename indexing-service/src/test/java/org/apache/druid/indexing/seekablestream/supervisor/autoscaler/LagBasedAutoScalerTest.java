@@ -22,7 +22,6 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +41,6 @@ public class LagBasedAutoScalerTest
   private SupervisorSpec mockSpec;
   private SeekableStreamSupervisor mockSupervisor;
   private SeekableStreamSupervisorIOConfig mockIoConfig;
-  private ServiceEmitter mockEmitter;
   private LagBasedAutoScalerConfig config;
 
   @BeforeEach
@@ -50,7 +48,6 @@ public class LagBasedAutoScalerTest
   {
     mockSpec = Mockito.mock(SupervisorSpec.class);
     mockSupervisor = Mockito.mock(SeekableStreamSupervisor.class);
-    mockEmitter = Mockito.mock(ServiceEmitter.class);
     mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(mockSpec.getId()).thenReturn("test-supervisor");
@@ -121,7 +118,7 @@ public class LagBasedAutoScalerTest
 
   private LagBasedAutoScaler createAutoScaler()
   {
-    return new LagBasedAutoScaler(mockSupervisor, config, mockSpec, mockEmitter);
+    return new LagBasedAutoScaler(mockSupervisor, config, mockSpec);
   }
 
   private List<Long> createLagSamples(long lag)

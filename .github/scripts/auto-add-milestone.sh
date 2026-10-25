@@ -19,11 +19,12 @@ set -e
 
 get_milestone_number() {
   local milestone_title="$1"
-  local number=$(gh api "repos/$REPOSITORY/milestones" --jq ".[] | select(.title==\"$milestone_title\") | .number")
+  local number
+  number=$(gh api "repos/$REPOSITORY/milestones?state=all&per_page=100" --paginate --jq ".[] | select(.title==\"$milestone_title\") | .number") || return 1
 
   if [ -z "$number" ]; then
-    echo "Creating milestone: $milestone_title"
-    number=$(gh api "repos/$REPOSITORY/milestones" -f title="$milestone_title" --jq '.number')
+    echo "Creating milestone: $milestone_title" >&2
+    number=$(gh api "repos/$REPOSITORY/milestones" -f title="$milestone_title" --jq '.number') || return 1
   fi
 
   echo "$number"
@@ -34,7 +35,8 @@ create_backport_issue() {
   local pr_title="$2"
   local target_milestone="$3"
 
-  local milestone_number=$(get_milestone_number "$target_milestone")
+  local milestone_number
+  milestone_number=$(get_milestone_number "$target_milestone") || return 1
   local message="Backport #$pr_number to release branch for version $target_milestone"
   local note="Add the \`approved\` label to start the automatic backport process."
   local body=$(jq -n --arg source_pr "$pr_number" --arg target_version "$target_milestone" --arg message "$message" --arg note "$note" '$ARGS.named')

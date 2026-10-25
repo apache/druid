@@ -24,6 +24,16 @@ on:
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
       - 'website/**'
+      # PR automation that the build and tests do not use
+      - '.github/dependabot.yml'
+      - '.github/labeler.yml'
+      - '.github/scripts/auto-add-milestone.sh'
+      - '.github/scripts/backport-pr.sh'
+      - '.github/workflows/backport.yml'
+      - '.github/workflows/labeler.yml'
+      - '.github/workflows/pr-checks.yml'
+      - '.github/workflows/pr-merged.yml'
+      - '.github/workflows/stale.yml'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
@@ -37,6 +47,16 @@ on:
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
       - 'website/**'
+      # PR automation that the build and tests do not use
+      - '.github/dependabot.yml'
+      - '.github/labeler.yml'
+      - '.github/scripts/auto-add-milestone.sh'
+      - '.github/scripts/backport-pr.sh'
+      - '.github/workflows/backport.yml'
+      - '.github/workflows/labeler.yml'
+      - '.github/workflows/pr-checks.yml'
+      - '.github/workflows/pr-merged.yml'
+      - '.github/workflows/stale.yml'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
