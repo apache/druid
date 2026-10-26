@@ -927,35 +927,19 @@ public class TaskQueue
     }
   }
 
-  private Map<String, RowKey> getCurrentTaskDatasources()
-  {
-    return activeTasks.values().stream()
-                      .map(TaskEntry::getTask)
-                      .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
-  }
-
   public Map<RowKey, Long> getRunningTaskCount()
   {
-    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
-    return taskRunner.getRunningTasks()
-                     .stream()
-                     .collect(Collectors.toMap(
-                         e -> getWorkItemMetricKey(taskDatasources, e),
-                         e -> 1L,
-                         Long::sum
-                     ));
+    return getTaskCountByMetricKey(taskRunner.getRunningTasks());
   }
 
   public Map<RowKey, Long> getPendingTaskCount()
   {
-    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
-    return taskRunner.getPendingTasks()
-                     .stream()
-                     .collect(Collectors.toMap(
-                         e -> getWorkItemMetricKey(taskDatasources, e),
-                         e -> 1L,
-                         Long::sum
-                     ));
+    return getTaskCountByMetricKey(taskRunner.getPendingTasks());
+  }
+
+  private Map<RowKey, Long> getTaskCountByMetricKey(final Collection<? extends TaskRunnerWorkItem> workItems)
+  {
+    return workItems.stream().collect(Collectors.toMap(this::getWorkItemMetricKey, e -> 1L, Long::sum));
   }
 
   public Map<RowKey, Long> getWaitingTaskCount()
@@ -1237,17 +1221,13 @@ public class TaskQueue
   }
 
   /**
-   * Returns the metric key of the task with the same ID in {@link #activeTasks}, or a key built from the non-null
-   * datasource and task type of the work item if the runner still reports a task that this queue has already removed.
+   * Returns the key of the task in {@link #activeTasks}, falling back to the work item's datasource and task type.
    */
-  private static RowKey getWorkItemMetricKey(
-      final Map<String, RowKey> activeTaskMetricKeys,
-      final TaskRunnerWorkItem workItem
-  )
+  private RowKey getWorkItemMetricKey(final TaskRunnerWorkItem workItem)
   {
-    final RowKey metricKey = activeTaskMetricKeys.get(workItem.getTaskId());
-    if (metricKey != null) {
-      return metricKey;
+    final TaskEntry entry = activeTasks.get(workItem.getTaskId());
+    if (entry != null) {
+      return getMetricKey(entry.getTask());
     }
 
     final RowKey.Builder builder = new RowKey.Builder();
