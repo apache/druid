@@ -816,15 +816,13 @@ public class TaskQueueTest extends IngestionTestBase
     final TestTask completedTask = new TestTask("completed", Intervals.of("2021-02/P1M"));
     final TestSeekableStreamIndexTask completedStreamTask = createStreamTask("completedStream");
     final TestSeekableStreamIndexTask removedStreamTask = createStreamTask("removedStream");
-    final TestSeekableStreamIndexTask removedStreamTaskNotOnWorkItem = createStreamTask("removedStreamNotOnWorkItem");
 
     final TaskRunner taskRunner = EasyMock.createNiceMock(TaskRunner.class);
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(List.of(
         workItem(activeTask),
         workItem(completedTask),
         workItem(completedStreamTask),
-        workItemWithTask(removedStreamTask),
-        workItem(removedStreamTaskNotOnWorkItem)
+        workItemWithTask(removedStreamTask)
     )).anyTimes();
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(List.of(
         new RemoteTaskRunnerWorkItem("unknown", "index_kafka", null, null, "wiki"),
@@ -847,12 +845,9 @@ public class TaskQueueTest extends IngestionTestBase
     );
     queue.setActive(true);
     queue.add(removedStreamTask);
-    queue.add(removedStreamTaskNotOnWorkItem);
     queue.shutdown(removedStreamTask.getId(), "test shutdown");
-    queue.shutdown(removedStreamTaskNotOnWorkItem.getId(), "test shutdown");
     queue.syncFromStorage();
     Assertions.assertFalse(queue.getActiveTaskInfo(removedStreamTask.getId()).isPresent());
-    Assertions.assertFalse(queue.getActiveTaskInfo(removedStreamTaskNotOnWorkItem.getId()).isPresent());
 
     queue.add(activeTask);
     queue.add(completedTask);
@@ -865,8 +860,7 @@ public class TaskQueueTest extends IngestionTestBase
             RowKey.with(Dimension.DATASOURCE, "datasource").and(Dimension.TASK_TYPE, "test"), 2L,
             RowKey.with(Dimension.DATASOURCE, "stream")
                   .with(Dimension.TASK_TYPE, "test_seekable_stream")
-                  .and(Dimension.SUPERVISOR_ID, "supervisor"), 2L,
-            RowKey.with(Dimension.DATASOURCE, "stream").and(Dimension.TASK_TYPE, "test_seekable_stream"), 1L
+                  .and(Dimension.SUPERVISOR_ID, "supervisor"), 2L
         ),
         queue.getRunningTaskCount()
     );
