@@ -35,7 +35,7 @@ mvn -pl extensions-contrib/tsfile-extensions -am package
 |------|---------|
 | TsFile Java library | `org.apache.tsfile:tsfile:2.5.0` |
 | TsFile format | Files written by the TsFile 2.x table model (table schemas in the file footer) |
-| Druid | 39.0.0 |
+| Druid | 40.0.0 |
 
 The extension reads the table model. Files that only contain the legacy tree model (device paths such as
 `root.sg.d1.s1` without a table schema in the footer) are not supported.
