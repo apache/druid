@@ -474,7 +474,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1.;
     }
 
-    // First try using the running average if available
+    // First try using the running average if any of the tasks has started reporting it
     final double runningAverage = extractAutoscalerMetric(
         taskStats,
         SeekableStreamIndexTaskRunner.PROCESSING_RATE_RUNNING_AVG
@@ -482,6 +482,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (runningAverage >= 0) {
       return runningAverage;
     } else {
+      // Fall back to the old moving average metric
       return extractMovingAverage(taskStats);
     }
   }
@@ -499,7 +500,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1.;
     }
 
-    // First try using running average metric to smoothen out spikes
+    // First try using running average metric if any of the task has started reporting it
     final double runningAverage = extractAutoscalerMetric(
         taskStats,
         SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG
@@ -507,6 +508,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (runningAverage >= 0) {
       return runningAverage;
     } else {
+      // Fall back to the instantaneous metric
       return extractAutoscalerMetric(
           taskStats,
           SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY
