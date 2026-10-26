@@ -1246,6 +1246,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     }
 
     WorkerHolder workerHolderRunningTask = null;
+    HttpRemoteTaskRunnerWorkItem pendingWorkItem = null;
     synchronized (statusLock) {
       log.info("Shutdown [%s] because: [%s]", taskId, reason);
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
@@ -1255,12 +1256,21 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           if (workerHolderRunningTask == null) {
             log.info("Can't shutdown! No worker running task[%s]", taskId);
           }
+        } else if (taskRunnerWorkItem.getState().isPending()) {
+          // Removing it here stops the pending task executor from picking it up before it is completed below.
+          pendingTaskIds.remove(taskId);
+          pendingWorkItem = taskRunnerWorkItem;
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
           tasks.remove(taskId);
         }
       } else {
         log.info("Received shutdown task[%s], but can't find it. Ignored.", taskId);
       }
+    }
+
+    if (pendingWorkItem != null) {
+      // taskComplete(..) must be called outside of statusLock, see comments on method.
+      taskComplete(pendingWorkItem, null, TaskStatus.failure(taskId, reason));
     }
 
     //shutdown is called outside of lock as we don't want to hold the lock while sending http request

@@ -1785,6 +1785,7 @@ public class HttpRemoteTaskRunnerTest
                                 .collect(Collectors.toSet())
                                 .contains(pendingTask.getId())
     );
+    Assertions.assertTrue(taskRunner.getPendingTasks().isEmpty());
 
     Task completedTask = NoopTask.create();
     taskRunner.run(completedTask);
@@ -1793,7 +1794,13 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.success(completedTask.getId()),
         TaskLocation.create("worker", 1, 2)
     ), workerHolder);
-    Assertions.assertEquals(completedTask.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    Assertions.assertEquals(
+        ImmutableSet.of(pendingTask.getId(), completedTask.getId()),
+        taskRunner.getCompletedTasks()
+                  .stream()
+                  .map(TaskRunnerWorkItem::getTaskId)
+                  .collect(Collectors.toSet())
+    );
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
@@ -1810,6 +1817,45 @@ public class HttpRemoteTaskRunnerTest
                                 .contains(completedTask.getId())
     );
 
+  }
+
+  @Timeout(60)
+  @Test
+  public void testShutdownPendingTaskIsNotAssignedToWorker() throws Exception
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    HttpRemoteTaskRunner taskRunner = newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        new NoopProvisioningStrategy<>()
+    );
+    taskRunner.start();
+
+    // No workers yet, so the task stays pending
+    Task killedTask = NoopTask.create();
+    Future<TaskStatus> killedTaskFuture = taskRunner.run(killedTask);
+    taskRunner.shutdown(killedTask.getId(), "Killed while pending");
+
+    Task otherTask = NoopTask.create();
+    Future<TaskStatus> otherTaskFuture = taskRunner.run(otherTask);
+
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(
+        new DiscoveryDruidNode(
+            new DruidNode("service", "host1", false, 8080, null, true, false),
+            NodeRole.MIDDLE_MANAGER,
+            ImmutableMap.of(
+                WorkerNodeService.DISCOVERY_SERVICE_KEY,
+                new WorkerNodeService("ip1", 1, "0", WorkerConfig.DEFAULT_CATEGORY)
+            )
+        )
+    ));
+
+    Assertions.assertTrue(otherTaskFuture.get().isSuccess());
+    Assertions.assertEquals(TaskState.FAILED, killedTaskFuture.get().getStatusCode());
   }
 
   @Timeout(60)
