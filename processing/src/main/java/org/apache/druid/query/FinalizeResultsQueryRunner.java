@@ -20,12 +20,12 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 
 import java.util.ArrayList;
@@ -67,7 +67,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
     final MetricManipulationFn metricManipulationFn;
 
     if (shouldFinalize) {
-      queryToRun = query.withOverriddenContext(ImmutableMap.of(QueryContexts.FINALIZE_KEY, false));
+      queryToRun = query.withOverriddenContext(QueryContextParameters.FINALIZE, false);
       metricManipulationFn = MetricManipulatorFns.finalizing();
     } else {
       queryToRun = query;

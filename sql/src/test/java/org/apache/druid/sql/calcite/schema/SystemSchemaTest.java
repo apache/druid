@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -80,6 +81,7 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -152,7 +154,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
@@ -570,17 +574,35 @@ public class SystemSchemaTest extends CalciteTestBase
         httpClient,
         () -> new SqlEngineRegistry(Collections.emptySet()),
         plannerConfig,
+        new DefaultQueryConfig(null),
+        new Properties(),
         createAuthResult(Users.SUPER),
         SystemSchemaProvider.computeAllTableNames(plannerConfig)
     );
 
     Assertions.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
+        ImmutableSet.of(
+            "segments",
+            "servers",
+            "server_segments",
+            "tasks",
+            "supervisors",
+            "server_properties",
+            "query_context_parameters"
+        ),
         schema.getTableNames()
     );
 
     Assertions.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
+        ImmutableSet.of(
+            "segments",
+            "servers",
+            "server_segments",
+            "tasks",
+            "supervisors",
+            "server_properties",
+            "query_context_parameters"
+        ),
         schema.tables().getNames(LikePattern.any())
     );
 
@@ -707,7 +729,9 @@ public class SystemSchemaTest extends CalciteTestBase
         new SegmentStatusInCluster(segment2, false, 0, null, false)
     ));
 
-    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject())).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
+            .andReturn(CloseableIterators.withEmptyBaggage(publishedSegments.iterator()))
+            .once();
 
     EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext();
@@ -828,7 +852,9 @@ public class SystemSchemaTest extends CalciteTestBase
         new SegmentStatusInCluster(segment2, false, 0, null, false)
     ));
 
-    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject())).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
+            .andReturn(CloseableIterators.withEmptyBaggage(publishedSegments.iterator()))
+            .once();
 
     EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext();
@@ -882,6 +908,42 @@ public class SystemSchemaTest extends CalciteTestBase
                     .add("segment_id", ColumnType.STRING)
                     .build()
     );
+  }
+
+  @Test
+  public void testSegmentsTableReleasesTheCoordinatorResponseWhenClosedEarly()
+  {
+    final SegmentsTable segmentsTable =
+        new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
+    final List<SegmentStatusInCluster> publishedSegments = List.of(
+        new SegmentStatusInCluster(segment1, true, 2, null, false),
+        new SegmentStatusInCluster(segment2, false, 0, null, false)
+    );
+    final AtomicBoolean closed = new AtomicBoolean(false);
+
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
+            .andReturn(CloseableIterators.wrap(publishedSegments.iterator(), () -> closed.set(true)))
+            .once();
+
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
+    final Enumerator<Object[]> rows =
+        segmentsTable.scan(createDataContext(), Collections.emptyList(), null).enumerator();
+    Assertions.assertTrue(rows.moveNext());
+    rows.close();
+
+    Assertions.assertTrue(closed.get());
+  }
+
+  @Test
+  public void testSegmentsTableDefersTheCoordinatorFetchUntilRowsAreRead()
+  {
+    final SegmentsTable segmentsTable =
+        new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
+
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
+    segmentsTable.scan(createDataContext(), Collections.emptyList(), null).enumerator().close();
+
+    EasyMock.verify(metadataView);
   }
 
   @Test

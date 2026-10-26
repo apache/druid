@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.JoinAlgorithm;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -106,7 +106,7 @@ public class BroadcastTablesTooLargeFault extends BaseMSQFault
           + "(memory reserved for broadcast tables = [%,d] bytes). "
           + "Increase available memory, or set [%s: %s] in query context to use a shuffle-based join.",
           maxBroadcastTablesSize,
-          PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+          QueryContextParameters.SQL_JOIN_ALGORITHM,
           JoinAlgorithm.SORT_MERGE.toString()
       );
     } else {
@@ -117,7 +117,7 @@ public class BroadcastTablesTooLargeFault extends BaseMSQFault
           + "This query is using broadcast JOIN even though [%s: %s] is set in query context, because the configured "
           + "join algorithm does not support the join condition.",
           maxBroadcastTablesSize,
-          PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+          QueryContextParameters.SQL_JOIN_ALGORITHM,
           configuredJoinAlgorithm.toString()
       );
     }

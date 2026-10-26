@@ -20,13 +20,17 @@
 package org.apache.druid.query.scan;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import java.util.Objects;
 
 public class ScanQueryConfig
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_SEGMENT_PARTITIONS_ORDERED_IN_MEMORY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_KEY_MAX_SEGMENT_PARTITIONS_FOR_ORDERING = "maxSegmentPartitionsOrderedInMemory";
-
   @JsonProperty
   private int maxRowsQueuedForOrdering = 100000;
 

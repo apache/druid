@@ -96,6 +96,7 @@ You could also run fixers individually:
 
 If you change the dependencies of the console in any way, please run `script/licenses` (from the web-console directory).
 It will analyze the changes and update the `../licenses` file as needed.
+It also copies license files into `../licenses/bin` and deletes the ones that are no longer referenced.
 
 Please be conscious of not introducing dependencies on packages with Apache incompatible licenses.
 

@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.DataSourcePlanner;
+import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
@@ -47,7 +48,7 @@ public class LookupDataSourcePlanner implements DataSourcePlanner<LookupDataSour
   )
   {
     return new DataSourcePlan(
-        dataSource,
+        broadcast ? dataSource : new InputNumberDataSource(0),
         Collections.singletonList(new LookupInputSpec(dataSource.getLookupName())),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
@@ -259,12 +260,19 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     }
 
     IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
+    return retVal;
+  }
 
-    if (toolbox.shouldFailSegmentPublishImmediately(retVal, task, supervisorId, startMetadata)) {
-      return SegmentPublishResult.fail(retVal.getErrorMsg());
-    } else {
-      return retVal;
-    }
+  @Override
+  public boolean canPerformAsync(Task task, TaskActionToolbox toolbox)
+  {
+    return supervisorId != null && startMetadata != null;
+  }
+
+  @Override
+  public ListenableFuture<SegmentPublishResult> performAsync(Task task, TaskActionToolbox toolbox)
+  {
+    return toolbox.publishSegmentsWhenReady(task, supervisorId, startMetadata, this::perform);
   }
 
   private void checkWithSegmentLock()

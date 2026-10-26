@@ -20,7 +20,7 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.context.QueryContextParameters;
 
 public class UnexpectedMultiValueDimensionException extends RuntimeException
 {
@@ -33,8 +33,8 @@ public class UnexpectedMultiValueDimensionException extends RuntimeException
             "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
             + " Consider setting '%s' to true in your query context.",
             dimensionName,
-            GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
-            GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+            QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING,
+            QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING
         )
     );
 

@@ -22,7 +22,7 @@ package org.apache.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Collections;
@@ -56,11 +56,11 @@ public class AuthConfig
    */
   public static final Set<String> ALLOWED_CONTEXT_KEYS = ImmutableSet.of(
       // Set in the Avatica server path
-      QueryContexts.CTX_SQL_STRINGIFY_ARRAYS,
+      QueryContextParameters.SQL_STRINGIFY_ARRAYS.getName(),
       // Set in DartSqlEngine
-      QueryContexts.CTX_DART_QUERY_ID,
+      QueryContextParameters.DART_QUERY_ID.getName(),
       // Set by the Router
-      QueryContexts.CTX_SQL_QUERY_ID
+      QueryContextParameters.SQL_QUERY_ID.getName()
   );
 
   public AuthConfig()

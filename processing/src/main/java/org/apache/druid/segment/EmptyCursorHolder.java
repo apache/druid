@@ -22,7 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
@@ -141,7 +141,7 @@ public final class EmptyCursorHolder implements CursorHolder
       @Override
       public int getMaxVectorSize()
       {
-        return QueryContexts.DEFAULT_VECTOR_SIZE;
+        return QueryContextParameters.VECTOR_SIZE.getLiteralDefault();
       }
 
       @Override

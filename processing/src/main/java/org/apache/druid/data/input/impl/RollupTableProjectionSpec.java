@@ -58,7 +58,7 @@ import java.util.Set;
  * the legacy {@code rollup=true} granularity spec without a {@code metricsSpec}.
  */
 @JsonTypeName(RollupTableProjectionSpec.TYPE_NAME)
-public final class RollupTableProjectionSpec implements BaseTableProjectionSpec
+public final class RollupTableProjectionSpec implements RollupBaseTableProjectionSpec
 {
   public static final String TYPE_NAME = "rollupTable";
 
@@ -189,6 +189,58 @@ public final class RollupTableProjectionSpec implements BaseTableProjectionSpec
       return false;
     }
     return withoutQueryGranularity().equals(((RollupTableProjectionSpec) other).withoutQueryGranularity());
+  }
+
+  /**
+   * A rollup table absorbs undeclared grouping columns through {@link #withAdditionalColumns} and undeclared metric
+   * columns through {@link #withAdditionalMetrics}, and both append after what is already declared. So {@code other}
+   * is this spec extended exactly when it declares the same virtual columns and both of its lists start with this
+   * spec's.
+   */
+  @Override
+  public boolean hasEqualCompactionState(BaseTableProjectionSpec other, boolean allowUndeclaredColumns)
+  {
+    if (!allowUndeclaredColumns) {
+      return hasEqualCompactionState(other);
+    }
+    if (!(other instanceof RollupTableProjectionSpec)) {
+      return false;
+    }
+    final RollupTableProjectionSpec mine = withoutQueryGranularity();
+    final RollupTableProjectionSpec theirs = ((RollupTableProjectionSpec) other).withoutQueryGranularity();
+    return mine.virtualColumns.equals(theirs.virtualColumns)
+           && theirs.groupingColumns.size() >= mine.groupingColumns.size()
+           && theirs.groupingColumns.subList(0, mine.groupingColumns.size()).equals(mine.groupingColumns)
+           && isAggregatorPrefix(mine.aggregators, theirs.aggregators);
+  }
+
+  /**
+   * Whether {@code recorded} begins with {@code declared}, the shape {@link #withAdditionalMetrics} produces.
+   */
+  private static boolean isAggregatorPrefix(AggregatorFactory[] declared, AggregatorFactory[] recorded)
+  {
+    if (recorded.length < declared.length) {
+      return false;
+    }
+    return Arrays.equals(declared, 0, declared.length, recorded, 0, declared.length);
+  }
+
+  /**
+   * Appends the given aggregators after the declared ones, leaving the grouping columns and the segment ordering
+   * untouched: metric columns are stored after the grouping columns and are not part of the sort order.
+   */
+  @Override
+  public RollupTableProjectionSpec withAdditionalMetrics(@Nullable AggregatorFactory[] additionalMetrics)
+  {
+    if (additionalMetrics == null || additionalMetrics.length == 0) {
+      return this;
+    }
+    final AggregatorFactory[] revised = new AggregatorFactory[aggregators.length + additionalMetrics.length];
+    System.arraycopy(aggregators, 0, revised, 0, aggregators.length);
+    System.arraycopy(additionalMetrics, 0, revised, aggregators.length, additionalMetrics.length);
+    // Duplicates of a declared aggregator or grouping column, aggregators named for the query-granularity carrier, and
+    // aggregators that do not combine their own output are rejected by the constructor's validation.
+    return new RollupTableProjectionSpec(virtualColumns, groupingColumns, revised);
   }
 
   @Override

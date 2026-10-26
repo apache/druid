@@ -43,7 +43,7 @@ import java.util.Properties;
  * add a binding to Cat.class. If the value is "dog", it will add a binding to Dog.class.
  *
  * At injection time, you will get the items that satisfy their corresponding predicates by calling
- * injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>(){}))
+ * {@code injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>(){}))}
  */
 @PublicApi
 public class ConditionalMultibind<T>

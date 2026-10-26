@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import java.util.Objects;
 
@@ -42,7 +42,7 @@ public class RowTooLargeFault extends BaseMSQFault
         "Encountered row that cannot fit in a single frame (max frame size = %,d). "
         + "Reduce your row size or increase the context parameter[%s].",
         maxFrameSize,
-        MultiStageQueryContext.CTX_MAX_FRAME_SIZE
+        QueryContextParameters.MAX_FRAME_SIZE
     );
     this.maxFrameSize = maxFrameSize;
   }

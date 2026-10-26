@@ -21,6 +21,7 @@ package org.apache.druid.sql;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -92,15 +93,15 @@ public abstract class AbstractStatement implements Closeable
     sqlToolbox.engine.initContextMap(this.queryContext);
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
-    if (this.queryContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {
+    if (this.queryContext.remove(QueryContextParameters.BY_SEGMENT.getName()) != null) {
       log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
     }
-    this.queryContext.putIfAbsent(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+    this.queryContext.putIfAbsent(QueryContextParameters.SQL_QUERY_ID.getName(), UUID.randomUUID().toString());
   }
 
   public String sqlQueryId()
   {
-    return QueryContexts.parseString(queryContext, QueryContexts.CTX_SQL_QUERY_ID);
+    return QueryContexts.parseString(queryContext, QueryContextParameters.SQL_QUERY_ID.getName());
   }
 
   /**

@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>39.0.0-SNAPSHOT</version>
+    <version>40.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -115,7 +115,7 @@
     <dependency>
       <groupId>com.rabbitmq</groupId>
       <artifactId>stream-client</artifactId>
-      <version>1.11.0</version>
+      <version>1.12.0</version>
       <exclusions>
         <exclusion>
           <groupId>org.lz4</groupId>
