@@ -678,7 +678,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   @Test
   public void test_shutdown_withNotStartedTaskState()
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+    final KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
         k8sTaskId,
         kubernetesClient,
@@ -687,7 +687,21 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         stateListener,
         LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
+
+    EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(false);
+
+    replayAll();
+
     peonLifecycle.shutdown();
+
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> peonLifecycle.run(new JobBuilder().build(), 0L, 0L, false)
+    );
+
+    verifyAll();
+
+    Assertions.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   @Test
