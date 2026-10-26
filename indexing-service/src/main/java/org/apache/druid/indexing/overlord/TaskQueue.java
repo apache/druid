@@ -939,7 +939,7 @@ public class TaskQueue
 
   private Map<RowKey, Long> getTaskCountByMetricKey(final Collection<? extends TaskRunnerWorkItem> workItems)
   {
-    return workItems.stream().collect(Collectors.toMap(this::getWorkItemMetricKey, e -> 1L, Long::sum));
+    return workItems.stream().collect(Collectors.groupingBy(this::getWorkItemMetricKey, Collectors.counting()));
   }
 
   public Map<RowKey, Long> getWaitingTaskCount()
