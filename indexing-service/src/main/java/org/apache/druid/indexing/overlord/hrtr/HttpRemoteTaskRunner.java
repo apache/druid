@@ -1256,10 +1256,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           if (workerHolderRunningTask == null) {
             log.info("Can't shutdown! No worker running task[%s]", taskId);
           }
-        } else if (taskRunnerWorkItem.getState().isPending()) {
+        } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING) {
           // Removing it here stops the pending task executor from picking it up before it is completed below.
           pendingTaskIds.remove(taskId);
           pendingWorkItem = taskRunnerWorkItem;
+        } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
+          // The thread assigning this task owns the work item. Once the worker runs the task, or the item goes back
+          // to PENDING, a later shutdown request handles it.
+          pendingTaskIds.remove(taskId);
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
           tasks.remove(taskId);
         }
