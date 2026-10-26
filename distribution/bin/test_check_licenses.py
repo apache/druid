@@ -147,6 +147,14 @@ class RefreshVersionsTest(unittest.TestCase):
         self.assertEqual([("New", "java-core", "2.1.4", "2.1.5")], updated)
         self.assertEqual([], flagged)
 
+    def test_updates_an_entry_whose_old_version_only_ships_in_another_module(self):
+        text = licenses_yaml(entry("JTS", "extensions/druid-parquet-extensions", "1.19.0", ["org.locationtech.jts: jts-core"]))
+        _, updated, _ = self.refresh(text, reports(
+            ("org.locationtech.jts:jts-core:1.19.0", "java-core"),
+            ("org.locationtech.jts:jts-core:1.20.0", "extensions/druid-parquet-extensions"),
+        ))
+        self.assertEqual([("JTS", "extensions/druid-parquet-extensions", "1.19.0", "1.20.0")], updated)
+
     def test_leaves_entries_whose_library_is_only_reported_at_another_entry_version(self):
         text = licenses_yaml(
             entry("Stale", "java-core", "1.0", ["org.foo: a"]),

@@ -112,9 +112,6 @@ def refresh_versions(text, reported_modules):
         for library in libraries:
             by_module = reported.get(library, {})
             all_versions = set().union(*by_module.values()) if by_module else set()
-            if version in all_versions:
-                current.append(library)
-                continue
             if not all_versions:
                 unreported.append("{}:{}".format(*library))
                 continue
@@ -123,6 +120,9 @@ def refresh_versions(text, reported_modules):
                 pool, taken = by_module[module], registered[library].get(module, set())
             else:
                 pool, taken = all_versions, set().union(*registered[library].values())
+            if version in pool:
+                current.append(library)
+                continue
             candidates = pool - (taken - {version})
             if len(candidates) == 1:
                 moved_to.update(candidates)
