@@ -31,6 +31,7 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
+        # zstd-jni fixes need manual review (see its ignore entry), so they must not hold up the other security updates.
         exclude-patterns:
           - "com.github.luben:zstd-jni"
     ignore:
@@ -57,9 +58,11 @@ updates:
       - dependency-name: "com.google.inject.extensions:*"
         update-types: ["version-update:semver-major"]
 
-  # Don't run dependabot on website
+  # Security updates only for website and web-console: every version update is ignored.
   - package-ecosystem: "npm"
-    directory: "/website/"
+    directories:
+      - "/website/"
+      - "/web-console/"
     schedule:
       interval: "weekly"
     commit-message:
@@ -69,24 +72,7 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
     groups:
-      website-security:
-        applies-to: security-updates
-        patterns:
-          - "*"
-
-  # Don't run dependabot on web-console
-  - package-ecosystem: "npm"
-    directory: "/web-console/"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "build"
-      include: "scope"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
-    groups:
-      web-console-security:
+      npm-security:
         applies-to: security-updates
         patterns:
           - "*"
