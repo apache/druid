@@ -832,15 +832,9 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskRunner taskRunner = EasyMock.createNiceMock(TaskRunner.class);
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(List.of(
-        new RemoteTaskRunnerWorkItem(activeTask.getId(), activeTask.getType(), null, null, activeTask.getDataSource()),
-        new RemoteTaskRunnerWorkItem(completedTask.getId(), completedTask.getType(), null, null, completedTask.getDataSource()),
-        new RemoteTaskRunnerWorkItem(
-            completedStreamTask.getId(),
-            completedStreamTask.getType(),
-            null,
-            null,
-            completedStreamTask.getDataSource()
-        )
+        workItem(activeTask),
+        workItem(completedTask),
+        workItem(completedStreamTask)
     )).anyTimes();
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(List.of(
         new RemoteTaskRunnerWorkItem("unknown", "index_kafka", null, null, "wiki"),
@@ -933,6 +927,11 @@ public class TaskQueueTest extends IngestionTestBase
         failureCount,
         taskQueue.getFailedTaskCount().values().stream().mapToLong(Long::longValue).sum()
     );
+  }
+
+  private static TaskRunnerWorkItem workItem(final Task task)
+  {
+    return new RemoteTaskRunnerWorkItem(task.getId(), task.getType(), null, null, task.getDataSource());
   }
 
   private static class TestTask extends AbstractBatchIndexTask
