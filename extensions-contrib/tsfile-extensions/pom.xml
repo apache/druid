@@ -37,25 +37,6 @@
     <tsfile.version>2.5.0</tsfile.version>
   </properties>
 
-  <!--
-    TsFile 2.5.0 requires newer versions of these codecs than the ones managed by Druid. Managing them here keeps
-    RequireUpperBoundDeps satisfied; both are backward-compatible updates of jars Druid already ships.
-  -->
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.tukaani</groupId>
-        <artifactId>xz</artifactId>
-        <version>1.10</version>
-      </dependency>
-      <dependency>
-        <groupId>at.yawk.lz4</groupId>
-        <artifactId>lz4-java</artifactId>
-        <version>1.11.4</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
