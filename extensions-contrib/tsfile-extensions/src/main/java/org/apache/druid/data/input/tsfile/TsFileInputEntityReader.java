@@ -299,7 +299,7 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
       }
     }
 
-    private Map<String, Object> readCurrentRow() throws IOException
+    private Map<String, Object> readCurrentRow()
     {
       final Map<String, Object> row = new HashMap<>();
 
