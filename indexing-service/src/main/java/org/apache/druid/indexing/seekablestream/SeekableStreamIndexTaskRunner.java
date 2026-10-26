@@ -242,11 +242,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
 
-  // Tracks cumulative time spent in Status.READING, i.e. actively reading and processing records, excluding
-  // startup, paused and publishing time. Only ever updated by the task runner thread (runThread); read by other
-  // threads via getRunningAvgProcessingRate(), hence volatile.
+  /**
+   * Tracks cumulative time spent in {@link Status#READING}, i.e. active reading
+   * and processing records.
+   */
   private final AtomicLong totalReadingMillis = new AtomicLong(0L);
+
+  /**
+   * A non-zero value implies that the task is currently in {@link Status#READING}.
+   */
   private final AtomicLong readingSinceMillis = new AtomicLong(0L);
+
   private volatile TaskToolbox toolbox;
   private volatile Thread runThread;
   private volatile Appenderator appenderator;
