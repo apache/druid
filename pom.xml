@@ -273,6 +273,7 @@
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
         <module>extensions-contrib/druid-ranger-security</module>
+        <module>extensions-contrib/tsfile-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- more test stuff -->
@@ -2356,6 +2357,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/*.tsfile</exclude>
                                 <exclude>**/*.pmd</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/*.pmdruleset.xml</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/docker/schema-registry/*</exclude>

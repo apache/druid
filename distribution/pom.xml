@@ -406,6 +406,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-thrift-extensions</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-tsfile-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>

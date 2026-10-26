@@ -1,0 +1,49 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "/path/to/druid/extensions-contrib/tsfile-extensions/examples/data",
+        "filter": "*.tsfile"
+      },
+      "inputFormat": {
+        "type": "tsfile",
+        "tables": ["sensor"],
+        "columns": ["region", "device", "temperature", "humidity", "status"]
+      }
+    },
+    "dataSchema": {
+      "dataSource": "sensor",
+      "timestampSpec": {
+        "column": "Time",
+        "format": "millis"
+      },
+      "dimensionsSpec": {
+        "dimensions": ["region", "device", "status"]
+      },
+      "metricsSpec": [
+        {
+          "type": "doubleSum",
+          "name": "temperature",
+          "fieldName": "temperature"
+        },
+        {
+          "type": "doubleSum",
+          "name": "humidity",
+          "fieldName": "humidity"
+        }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "MINUTE",
+        "rollup": false
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel"
+    }
+  }
+}
