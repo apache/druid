@@ -141,8 +141,9 @@ class RefreshVersionsTest(unittest.TestCase):
             entry("New", "java-core", "2.1.4", ["jakarta.activation: jakarta.activation-api"]),
         )
         _, updated, flagged = self.refresh(text, reports(
-            ("jakarta.activation:jakarta.activation-api:1.2.2", "java-core"),
-            ("jakarta.activation:jakarta.activation-api:2.1.5", "java-core"),
+            ("org.other:x:1.0", "java-core"),
+            ("jakarta.activation:jakarta.activation-api:1.2.2", "extensions/druid-hdfs-storage"),
+            ("jakarta.activation:jakarta.activation-api:2.1.5", AZURE),
         ))
         self.assertEqual([("New", "java-core", "2.1.4", "2.1.5")], updated)
         self.assertEqual([], flagged)
@@ -187,7 +188,7 @@ class RefreshVersionsTest(unittest.TestCase):
 
     def test_flags_a_library_with_several_new_versions(self):
         text = licenses_yaml(entry("Foo", "java-core", "1.0", ["org.foo: a"]))
-        self.assertFlagged(1, text, reports(("org.foo:a:1.1", "java-core"), ("org.foo:a:1.2", "java-core")))
+        self.assertFlagged(1, text, reports(("org.other:x:1.0", "java-core"), ("org.foo:a:1.1", AZURE), ("org.foo:a:1.2", "extensions/druid-hdfs-storage")))
 
     def test_prefers_the_version_reported_in_the_entry_module(self):
         text = licenses_yaml(entry("Kinesis", "extensions/druid-kinesis-indexing-service", "1.12.3", ["com.amazonaws: jmespath-java"]))
