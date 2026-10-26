@@ -383,6 +383,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.tsfile</groupId>
+      <artifactId>tsfile</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-hdfs-storage</artifactId>
       <version>${project.parent.version}</version>

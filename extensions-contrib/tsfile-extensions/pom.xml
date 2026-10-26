@@ -33,10 +33,6 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <properties>
-    <tsfile.version>2.5.0</tsfile.version>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -47,7 +43,6 @@
     <dependency>
       <groupId>org.apache.tsfile</groupId>
       <artifactId>tsfile</artifactId>
-      <version>${tsfile.version}</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

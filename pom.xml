@@ -85,6 +85,7 @@
         <avatica.version>1.29.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
+        <tsfile.version>2.5.0</tsfile.version>
         <bytebuddy.version>1.18.14</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
@@ -593,6 +594,11 @@
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper-jute</artifactId>
                 <version>${zookeeper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tsfile</groupId>
+                <artifactId>tsfile</artifactId>
+                <version>${tsfile.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
