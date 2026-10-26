@@ -1221,23 +1221,11 @@ public class TaskQueue
   }
 
   /**
-   * Returns the key of the task in {@link #activeTasks} or on the work item, falling back to its datasource and type.
+   * Returns the key of the task in {@link #activeTasks} or on the work item, or an empty key if neither has it.
    */
   private RowKey getWorkItemMetricKey(final TaskRunnerWorkItem workItem)
   {
     final TaskEntry entry = activeTasks.get(workItem.getTaskId());
-    final Task task = entry != null ? entry.getTask() : workItem.getTask();
-    if (task != null) {
-      return getMetricKey(task);
-    }
-
-    final RowKey.Builder builder = new RowKey.Builder();
-    if (workItem.getDataSource() != null) {
-      builder.with(Dimension.DATASOURCE, workItem.getDataSource());
-    }
-    if (workItem.getTaskType() != null) {
-      builder.with(Dimension.TASK_TYPE, workItem.getTaskType());
-    }
-    return builder.build();
+    return getMetricKey(entry != null ? entry.getTask() : workItem.getTask());
   }
 }

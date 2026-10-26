@@ -825,9 +825,7 @@ public class TaskQueueTest extends IngestionTestBase
         workItemWithTask(removedStreamTask)
     )).anyTimes();
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(List.of(
-        new RemoteTaskRunnerWorkItem("unknown", "index_kafka", null, null, "wiki"),
-        new RemoteTaskRunnerWorkItem("unknownWithoutType", null, null, null, "wiki"),
-        new RemoteTaskRunnerWorkItem("unknownWithoutDimensions", null, null, null, null)
+        new RemoteTaskRunnerWorkItem("unknown", "index_kafka", null, null, "wiki")
     )).anyTimes();
     EasyMock.replay(taskRunner);
 
@@ -864,14 +862,7 @@ public class TaskQueueTest extends IngestionTestBase
         ),
         queue.getRunningTaskCount()
     );
-    Assertions.assertEquals(
-        Map.of(
-            RowKey.with(Dimension.DATASOURCE, "wiki").and(Dimension.TASK_TYPE, "index_kafka"), 1L,
-            RowKey.of(Dimension.DATASOURCE, "wiki"), 1L,
-            RowKey.empty(), 1L
-        ),
-        queue.getPendingTaskCount()
-    );
+    Assertions.assertEquals(Map.of(RowKey.empty(), 1L), queue.getPendingTaskCount());
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
