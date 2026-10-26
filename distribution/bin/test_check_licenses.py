@@ -20,16 +20,11 @@ import os
 import unittest
 
 spec = importlib.util.spec_from_file_location(
-    "check_licenses", os.path.join(os.path.dirname(os.path.abspath(__file__)), "check-licenses.py")
-)
-check_licenses = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(check_licenses)
-
-spec = importlib.util.spec_from_file_location(
     "refresh_license_versions", os.path.join(os.path.dirname(os.path.abspath(__file__)), "refresh-license-versions.py")
 )
 refresh_license_versions = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(refresh_license_versions)
+check_licenses = refresh_license_versions.check_licenses
 
 APACHE = "Apache License version 2.0"
 AZURE = "extensions/druid-azure-extensions"
@@ -82,13 +77,17 @@ def licenses_yaml(*entries):
 def reports(*gavs_and_module):
     reported = {}
     for gav, module in gavs_and_module:
-        reported.setdefault(tuple(gav.split(":")), set()).add(module)
+        reported.setdefault(check_licenses.get_dep_key(*gav.split(":")), set()).add(module)
     return reported
 
 
 class RefreshVersionsTest(unittest.TestCase):
     def refresh(self, text, reported):
         return refresh_license_versions.refresh_versions(text, reported)
+
+    def assertFlagged(self, count, text, reported):
+        new_text, updated, flagged = self.refresh(text, reported)
+        self.assertEqual((text, [], count), (new_text, updated, len(flagged)))
 
     def test_updates_only_the_version_line_when_all_libraries_moved(self):
         notice = "notice: |\n  version: not this one\n"
@@ -97,6 +96,11 @@ class RefreshVersionsTest(unittest.TestCase):
         self.assertEqual(text.replace("version: 1.0.0\n", "version: 1.0.1\n"), new_text)
         self.assertEqual([("Foo", "java-core", "1.0.0", "1.0.1")], updated)
         self.assertEqual([], flagged)
+
+    def test_does_not_split_documents_at_indented_dashes(self):
+        text = licenses_yaml("name: Foo\nnotice: |\n  ---\nmodule: java-core\nversion: 1.0.0\nlibraries:\n  - org.foo: a\n")
+        _, updated, _ = self.refresh(text, reports(("org.foo:a:1.0.1", "java-core")))
+        self.assertEqual([("Foo", "java-core", "1.0.0", "1.0.1")], updated)
 
     def test_keeps_quotes_and_quotes_versions_yaml_would_read_as_numbers(self):
         text = licenses_yaml(
@@ -113,15 +117,11 @@ class RefreshVersionsTest(unittest.TestCase):
 
     def test_flags_libraries_that_moved_to_different_versions(self):
         text = licenses_yaml(entry("Foo", "java-core", "1.0", ["org.foo: a", "org.foo: b"]))
-        new_text, updated, flagged = self.refresh(text, reports(("org.foo:a:1.1", "java-core"), ("org.foo:b:1.2", "java-core")))
-        self.assertEqual((text, []), (new_text, updated))
-        self.assertEqual(1, len(flagged))
+        self.assertFlagged(1, text, reports(("org.foo:a:1.1", "java-core"), ("org.foo:b:1.2", "java-core")))
 
     def test_flags_entries_where_only_some_libraries_moved(self):
         text = licenses_yaml(entry("Foo", "java-core", "1.0", ["org.foo: a", "org.foo: b"]))
-        new_text, _, flagged = self.refresh(text, reports(("org.foo:a:1.1", "java-core"), ("org.foo:b:1.0", "java-core")))
-        self.assertEqual(text, new_text)
-        self.assertEqual(1, len(flagged))
+        self.assertFlagged(1, text, reports(("org.foo:a:1.1", "java-core"), ("org.foo:b:1.0", "java-core")))
 
     def test_updates_the_same_library_in_every_module(self):
         text = licenses_yaml(
@@ -179,21 +179,15 @@ class RefreshVersionsTest(unittest.TestCase):
             entry("Kafka", "extensions/druid-avro-extensions", "6.2.12-ccs", ["org.apache.kafka: kafka-clients"]),
             entry("Kafka", "extensions/druid-avro-extensions", "5.5.1-ccs", ["org.apache.kafka: kafka-clients"]),
         )
-        new_text, updated, flagged = self.refresh(text, reports(("org.apache.kafka:kafka-clients:8.3.2-ccs", "extensions/druid-avro-extensions")))
-        self.assertEqual((text, []), (new_text, updated))
-        self.assertEqual(2, len(flagged))
+        self.assertFlagged(2, text, reports(("org.apache.kafka:kafka-clients:8.3.2-ccs", "extensions/druid-avro-extensions")))
 
     def test_flags_moved_entries_with_libraries_in_no_report(self):
         text = licenses_yaml(entry("Kotlin jdk8", "java-core", "1.8.21", ["org.k: stdlib", "org.k: stdlib-jdk8"]))
-        new_text, updated, flagged = self.refresh(text, reports(("org.k:stdlib:2.4.21", "java-core")))
-        self.assertEqual((text, []), (new_text, updated))
-        self.assertEqual(1, len(flagged))
+        self.assertFlagged(1, text, reports(("org.k:stdlib:2.4.21", "java-core")))
 
     def test_flags_a_library_with_several_new_versions(self):
         text = licenses_yaml(entry("Foo", "java-core", "1.0", ["org.foo: a"]))
-        _, updated, flagged = self.refresh(text, reports(("org.foo:a:1.1", "java-core"), ("org.foo:a:1.2", "java-core")))
-        self.assertEqual([], updated)
-        self.assertEqual(1, len(flagged))
+        self.assertFlagged(1, text, reports(("org.foo:a:1.1", "java-core"), ("org.foo:a:1.2", "java-core")))
 
     def test_prefers_the_version_reported_in_the_entry_module(self):
         text = licenses_yaml(entry("Kinesis", "extensions/druid-kinesis-indexing-service", "1.12.3", ["com.amazonaws: jmespath-java"]))

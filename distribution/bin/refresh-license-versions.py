@@ -16,10 +16,12 @@
 # limitations under the License.
 
 import argparse
+import contextlib
 import importlib.util
 import os
 import re
 import sys
+import types
 
 import yaml
 
@@ -33,13 +35,12 @@ VERSION_LINE = re.compile(r"^version:[ \t]*(.*?)[ \t]*(\r?\n)?$")
 
 
 def split_documents(text):
-    # Returns the licenses.yaml lines grouped into YAML documents; each group starts after a '---' line.
-    lines = text.splitlines(keepends=True)
+    # Returns the licenses.yaml lines grouped into YAML documents; each group after the first starts with its '---' line.
     documents = [[]]
-    for line in lines:
-        documents[-1].append(line)
-        if line.strip() == "---":
+    for line in text.splitlines(keepends=True):
+        if line.rstrip() == "---":
             documents.append([])
+        documents[-1].append(line)
     return documents
 
 
@@ -47,7 +48,7 @@ def find_version_line(lines):
     for index, line in enumerate(lines):
         match = VERSION_LINE.match(line)
         if match:
-            return index, match.group(1)
+            return index, match
     return None, None
 
 
@@ -78,85 +79,87 @@ def refresh_versions(text, reported_modules):
     # Returns the new text, the updated entries as (name, module, old, new) and the entries that need a person,
     # as (name, module, reason). Only version lines change, so comments and notices stay as they are.
     reported = index_reports(reported_modules)
-    report_modules = {module for modules in reported_modules.values() for module in modules}
+    report_modules = set().union(*reported_modules.values())
     documents = split_documents(text)
 
     entries = []
-    for lines in documents:
-        body = lines[:-1] if lines and lines[-1].strip() == "---" else lines
-        entry = yaml.safe_load("".join(body))
-        line_index, raw = find_version_line(lines)
-        if not isinstance(entry, dict) or "libraries" not in entry or line_index is None or not raw:
-            continue
-        version, quote = unquote(raw)
-        libraries = [library for item in entry["libraries"] for library in item.items()]
-        entries.append((lines, line_index, entry, version, quote, libraries))
-
     # A reported version that another entry already registers belongs to that entry, not to a stale one.
     registered = {}
-    for _, _, entry, version, _, libraries in entries:
+    for lines in documents:
+        parsed = yaml.safe_load("".join(lines))
+        line_index, match = find_version_line(lines)
+        if not isinstance(parsed, dict) or "libraries" not in parsed or match is None or not match.group(1):
+            continue
+        version, quote = unquote(match.group(1))
+        libraries = [library for item in parsed["libraries"] for library in item.items()]
         for library in libraries:
-            registered.setdefault(library, {}).setdefault(entry.get("module"), set()).add(version)
+            registered.setdefault(library, {}).setdefault(parsed.get("module"), set()).add(version)
+        entries.append(types.SimpleNamespace(
+            lines=lines, line_index=line_index, newline=match.group(2) or "", name=parsed.get("name"),
+            module=parsed.get("module"), skip=parsed.get("skip_dependency_report_check"), version=version,
+            quote=quote, libraries=libraries,
+        ))
 
     proposals = []
     flagged = []
-    for lines, line_index, entry, version, quote, libraries in entries:
-        name, module = entry.get("name"), entry.get("module")
-        if entry.get("skip_dependency_report_check") or module not in report_modules:
+    for entry in entries:
+        if entry.skip or entry.module not in report_modules:
             continue
 
         current = []
         unreported = []
         moved_to = set()
         problems = []
-        for library in libraries:
-            by_module = reported.get(library, {})
-            all_versions = set().union(*by_module.values()) if by_module else set()
-            if not all_versions:
+        for library in entry.libraries:
+            by_module = reported.get(library)
+            if not by_module:
                 unreported.append("{}:{}".format(*library))
                 continue
             # Prefer the entry's own module report; only entries of that module compete for its versions.
-            if module in by_module:
-                pool, taken = by_module[module], registered[library].get(module, set())
+            if entry.module in by_module:
+                pool, taken = by_module[entry.module], registered[library][entry.module]
             else:
-                pool, taken = all_versions, set().union(*registered[library].values())
-            if version in pool:
+                pool, taken = set().union(*by_module.values()), set().union(*registered[library].values())
+            if entry.version in pool:
                 current.append(library)
                 continue
-            candidates = pool - (taken - {version})
+            candidates = pool - taken
             if len(candidates) == 1:
                 moved_to.update(candidates)
             elif candidates:
                 problems.append("{}:{} has several new versions {}".format(*library, sorted(candidates)))
             # Otherwise every reported version belongs to another entry; check-licenses lists this one as unchecked.
 
-        if not problems and len(moved_to) > 1:
-            problems.append("libraries moved to different versions {}; split the entry".format(sorted(moved_to)))
-        if not problems and moved_to and current:
-            problems.append("some libraries are still at {}; split the entry".format(version))
-        if not problems and moved_to and unreported:
-            problems.append("{} are in no report; update or remove them by hand".format(", ".join(unreported)))
+        if not problems and moved_to:
+            if len(moved_to) > 1:
+                problems.append("libraries moved to different versions {}; split the entry".format(sorted(moved_to)))
+            elif current:
+                problems.append("some libraries are still at {}; split the entry".format(entry.version))
+            elif unreported:
+                problems.append("{} are in no report; update or remove them by hand".format(", ".join(unreported)))
         if problems:
-            flagged.append((name, module, "; ".join(problems)))
+            flagged.append((entry.name, entry.module, "; ".join(problems)))
         elif moved_to:
-            proposals.append((lines, line_index, name, module, version, quote, libraries, moved_to.pop()))
+            entry.new_version = moved_to.pop()
+            proposals.append(entry)
 
     # Two stale entries of one module moving the same library to the same version would register it twice.
     claimants = {}
-    for index, (_, _, _, module, _, _, libraries, new_version) in enumerate(proposals):
-        for library in libraries:
-            claimants.setdefault((module, library, new_version), set()).add(index)
+    for entry in proposals:
+        for library in entry.libraries:
+            claimants.setdefault((entry.module, library, entry.new_version), []).append(entry)
 
     updated = []
-    for index, (lines, line_index, name, module, version, quote, libraries, new_version) in enumerate(proposals):
-        rivals = set().union(*(claimants[(module, library, new_version)] for library in libraries)) - {index}
-        if rivals:
-            rival_names = sorted({proposals[rival][2] for rival in rivals})
-            flagged.append((name, module, "entries {} move the same libraries to {}; keep one".format(rival_names, new_version)))
+    for entry in proposals:
+        rival_names = sorted({
+            rival.name for library in entry.libraries
+            for rival in claimants[(entry.module, library, entry.new_version)] if rival is not entry
+        })
+        if rival_names:
+            flagged.append((entry.name, entry.module, "entries {} move the same libraries to {}; keep one".format(rival_names, entry.new_version)))
             continue
-        newline = VERSION_LINE.match(lines[line_index]).group(2) or ""
-        lines[line_index] = "version: {}{}".format(format_version(new_version, quote), newline)
-        updated.append((name, module, version, new_version))
+        entry.lines[entry.line_index] = "version: {}{}".format(format_version(entry.new_version, entry.quote), entry.newline)
+        updated.append((entry.name, entry.module, entry.version, entry.new_version))
 
     return "".join(line for lines in documents for line in lines), updated, flagged
 
@@ -168,11 +171,11 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Print the changes without writing licenses.yaml.")
     args = parser.parse_args()
 
-    _, reported_modules = check_licenses.read_dependency_reports(
-        args.dependency_reports_root, check_licenses.build_compatible_license_names()
-    )
-    if not reported_modules:
-        raise Exception("No dependency reports are found")
+    # The report parser prints notes about multi-licensed libraries; keep stdout for the changes below.
+    with contextlib.redirect_stdout(sys.stderr):
+        _, reported_modules = check_licenses.read_dependency_reports(
+            args.dependency_reports_root, check_licenses.build_compatible_license_names()
+        )
 
     with open(args.license_yaml, encoding="utf-8", newline="") as f:
         text = f.read()

@@ -424,6 +424,8 @@ def read_dependency_reports(dependency_reports_root, compatible_license_names):
                     reported_dep_to_licenses.update(dep_to_license)
                     for key in dep_to_license:
                         reported_modules.setdefault(key, set()).add(druid_module_name)
+    if len(reported_dep_to_licenses) == 0:
+        raise Exception("No dependency reports are found")
     return reported_dep_to_licenses, reported_modules
 
 def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixes):
@@ -437,9 +439,6 @@ def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixe
     # Build reported license dictionary.
     compatible_license_names = build_compatible_license_names()
     reported_dep_to_licenses, reported_modules = read_dependency_reports(dependency_reports_root, compatible_license_names)
-
-    if len(reported_dep_to_licenses) == 0:
-        raise Exception("No dependency reports are found")
 
     print_log_to_stderr("Found {} reported licenses\n".format(len(reported_dep_to_licenses)))
 
