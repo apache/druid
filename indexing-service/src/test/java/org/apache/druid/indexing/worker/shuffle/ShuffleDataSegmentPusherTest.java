@@ -38,6 +38,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -116,7 +117,9 @@ public class ShuffleDataSegmentPusherTest
                 {
                   return localDeepStore;
                 }
-              }));
+              },
+              new DeepStorageSegmentConfig()
+          ));
     }
     intermediaryDataManager.start();
     segmentPusher = new ShuffleDataSegmentPusher("supervisorTaskId", "subTaskId", intermediaryDataManager);

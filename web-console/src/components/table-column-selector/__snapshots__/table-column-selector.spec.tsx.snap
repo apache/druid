@@ -1,17 +1,17 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`TableColumnSelector matches snapshot 1`] = `
 <span
-  class="table-column-selector bp5-popover-target"
+  class="table-column-selector bp6-popover-target"
 >
   <button
     aria-expanded="false"
     aria-haspopup="menu"
-    class="bp5-button"
+    class="bp6-button"
     type="button"
   >
     <span
-      class="bp5-button-text"
+      class="bp6-button-text"
     >
       Columns 
       <span
@@ -22,20 +22,11 @@ exports[`TableColumnSelector matches snapshot 1`] = `
     </span>
     <span
       aria-hidden="true"
-      class="bp5-icon bp5-icon-caret-down"
+      class="bp6-icon bp6-icon-caret-down"
     >
       <svg
         data-icon="caret-down"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </span>

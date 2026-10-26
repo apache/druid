@@ -54,7 +54,7 @@ public class GroupByTimeBoundaryUtils
       return false;
     }
 
-    if (query.getDimFilter() != null) {
+    if (query.getDimFilter() != null || query.getDataSource().mayFilterRows()) {
       return false;
     }
 

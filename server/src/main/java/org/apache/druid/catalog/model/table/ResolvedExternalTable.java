@@ -52,7 +52,7 @@ public class ResolvedExternalTable
    * Note: does <i>not</i> resolve the input source and input format
    * definitions: that is done as a separate step when needed.
    *
-   * @see {@link #resolve(TableDefnRegistry)}.
+   * @see #resolve(TableDefnRegistry).
    */
   public ResolvedExternalTable(final ResolvedTable table)
   {

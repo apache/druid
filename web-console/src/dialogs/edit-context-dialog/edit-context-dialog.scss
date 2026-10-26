@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+@use '../../variables' as *;
 
 .edit-context-dialog {
   &.#{$bp-ns}-dialog {

@@ -27,7 +27,7 @@ jobs:
   conventional-commits:
     if: github.repository == 'apache/druid' && github.event.pull_request.base.ref == 'master'
     name: Verify PR title conforms to Conventional Commits
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: amannn/action-semantic-pull-request@v6
         env:

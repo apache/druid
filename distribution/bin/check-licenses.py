@@ -50,18 +50,24 @@ class DependencyReportParser(HTMLParser):
 
     def parse(self, f):
         self.dep_to_license = {}
+        self.tables_started = 0
+        self.tables_finished = 0
         self.feed(f.read())
+        if self.tables_finished < self.tables_started:
+            raise Exception("Parsed only {} of {} dependency tables".format(self.tables_finished, self.tables_started))
         return self.dep_to_license
 
     def handle_starttag(self, tag, attrs):
         # print("current: {}, start tag: {}, attrs:{} ".format(self.state, tag, attrs))
+        if tag == "a" and dict(attrs).get("id") in ("Project_Dependencies_compile", "Project_Transitive_Dependencies_compile",
+                                                    "Project_Dependencies_runtime", "Project_Transitive_Dependencies_runtime"):
+            self.state = "h3_end"
+            self.include_classifier = False
+            self.tables_started += 1
+
         if self.state == "none":
             if tag == "h2":
                 self.state = "h2_start"
-            elif tag == "a":
-                for attr in attrs:
-                    if attr[0] == "id" and attr[1] == "Project_Dependencies_compile":
-                        self.state = "modern_compile_anchor"
 
         if self.state == "h2_start":
             if tag == "a":
@@ -79,10 +85,6 @@ class DependencyReportParser(HTMLParser):
                 for attr in attrs:
                     if attr[0] == "name" and attr[1] == "compile":
                         self.state = "compile_start"
-
-        if self.state == "modern_compile_heading":
-            if tag == "h2":
-                self.state = "h3_end"
 
         if self.state == "h3_end":
             if tag == "table":
@@ -117,10 +119,6 @@ class DependencyReportParser(HTMLParser):
         if self.state == "project_dependencies_start":
             if tag == "a":
                 self.state = "project_dependencies_end"
-
-        if self.state == "modern_compile_anchor":
-            if tag == "a":
-                self.state = "modern_compile_heading"
 
         if self.state == "h2_start":
             if tag == "h2":
@@ -169,6 +167,7 @@ class DependencyReportParser(HTMLParser):
         if self.state == "row_end":
             if tag == "table":
                 self.state = "none"
+                self.tables_finished += 1
 
     def handle_data(self, data):
         if self.state == "td_start":
@@ -258,6 +257,7 @@ def build_compatible_license_names():
     compatible_licenses['BSD-2-Clause'] = 'BSD-2-Clause License'
     compatible_licenses['BSD 2-Clause license'] = 'BSD-2-Clause License'
     compatible_licenses['BSD 2-Clause License'] = 'BSD-2-Clause License'
+    compatible_licenses['The BSD 2-Clause License'] = 'BSD-2-Clause License'
 
     compatible_licenses['BSD-3-Clause License'] = 'BSD-3-Clause License'
     compatible_licenses['New BSD license'] = 'BSD-3-Clause License'
@@ -300,6 +300,7 @@ def build_compatible_license_names():
     compatible_licenses['Eclipse Public License - Version 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['Eclipse Public License, Version 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['Eclipse Public License v2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['Eclipse Public License v. 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['EPL 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['EPL-2.0'] = 'Eclipse Public License 2.0'
 
@@ -326,10 +327,12 @@ def build_compatible_license_names():
     compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
     compatible_licenses['SPDX-License-Identifier: MIT'] = 'MIT License'
     compatible_licenses['MIT'] = 'MIT License'
+    compatible_licenses['MIT license'] = 'MIT License'
 
     compatible_licenses['MIT-0'] = 'MIT No Attribution'
 
     compatible_licenses['The Go license'] = 'The Go license'
+    compatible_licenses['Go License'] = 'The Go license'
     compatible_licenses['Universal Permissive License, Version 1.0'] = 'Universal Permissive License, Version 1.0'
 
     compatible_licenses['-'] = '-'
@@ -345,6 +348,7 @@ def get_version_string(version):
         return str(version)
 
 def find_druid_module_name(dirpath):
+    # Returns the licenses.yaml module tag of the report: extensions/<artifactId> or java-core.
     ext_start = dirpath.find("/ext/")
     if ext_start > 0:
         # Found an extension
@@ -353,17 +357,67 @@ def find_druid_module_name(dirpath):
         if ext_name_end < 0:
             raise Exception("Can't determine extension name from [{}]".format(dirpath))
         else:
-            return subpath[0:ext_name_end]
+            return "extensions/" + subpath[0:ext_name_end]
     else:
         # Druid core
-        return "core"
+        return "java-core"
 
-def check_licenses(license_yaml, dependency_reports_root):
+def check_license_files(license_yaml, licenses_list):
+    # Every license_file_path must exist, and every file in licenses/bin must be referenced by a license_file_path,
+    # because the binary distribution ships the whole licenses/ directory.
+    repo_root = os.path.dirname(os.path.abspath(license_yaml))
+    referenced_files = set()
+    for license in licenses_list:
+        license_file_path = license.get('license_file_path')
+        if license_file_path:
+            referenced_files.update(license_file_path if type(license_file_path) == list else [license_file_path])
+
+    missing_files = sorted(f for f in referenced_files if not os.path.isfile(os.path.join(repo_root, f)))
+    bin_files = {'licenses/bin/' + f for f in os.listdir(os.path.join(repo_root, 'licenses', 'bin')) if not f.startswith('.')}
+    unreferenced_files = sorted(bin_files - referenced_files)
+
+    if missing_files:
+        print_log_to_stderr("Error: found {} license_file_path entries pointing at missing files".format(len(missing_files)))
+        for f in missing_files:
+            print_log_to_stderr("  {}".format(f))
+    if unreferenced_files:
+        print_log_to_stderr("Error: found {} files in licenses/bin that no license_file_path references. Delete them or reference them in licenses.yaml.".format(len(unreferenced_files)))
+        for f in unreferenced_files:
+            print_log_to_stderr("  {}".format(f))
+    if missing_files or unreferenced_files:
+        sys.exit(1)
+
+def is_excluded_module(module, exclude_module_prefixes):
+    return any(module.startswith(prefix) for prefix in exclude_module_prefixes)
+
+def find_missing_licenses(reported_dep_to_licenses, reported_modules, registered_modules, skipping_licenses, exclude_module_prefixes):
+    # A dependency that ships in the release needs at least one entry outside the excluded modules.
+    missing_licenses = []
+    for key, reported_license_druid_module in reported_dep_to_licenses.items():
+        if reported_license_druid_module[0] == "-" or key in skipping_licenses:
+            continue
+        shipped_modules = sorted(m for m in reported_modules[key] if not is_excluded_module(m, exclude_module_prefixes))
+        released = any(not is_excluded_module(m, exclude_module_prefixes) for m in registered_modules.get(key, ()))
+        if key not in registered_modules:
+            modules = sorted(reported_modules[key])
+        elif shipped_modules and not released:
+            modules = shipped_modules
+        else:
+            continue
+        missing_licenses.append((", ".join(modules),) + key + (reported_license_druid_module[0],))
+    return missing_licenses
+
+def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixes):
     # Build a dictionary to facilitate comparing reported licenses and registered ones.
     # These dictionaries are the mapping of (group_id, artifact_id, version) to license_name.
 
+    with open(license_yaml, encoding='utf-8') as registry_file:
+        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
+    check_license_files(license_yaml, licenses_list)
+
     # Build reported license dictionary.
     reported_dep_to_licenses = {}
+    reported_modules = {}
     compatible_license_names = build_compatible_license_names()
     for dirpath, dirnames, filenames in os.walk(dependency_reports_root):
         for filename in filenames:
@@ -374,7 +428,10 @@ def check_licenses(license_yaml, dependency_reports_root):
                 print_log_to_stderr("Parsing {}".format(full_path))
                 with open(full_path, encoding="utf-8") as report_file:
                     parser = DependencyReportParser(druid_module_name, compatible_license_names)
-                    reported_dep_to_licenses.update(parser.parse(report_file))
+                    dep_to_license = parser.parse(report_file)
+                    reported_dep_to_licenses.update(dep_to_license)
+                    for key in dep_to_license:
+                        reported_modules.setdefault(key, set()).add(druid_module_name)
 
     if len(reported_dep_to_licenses) == 0:
         raise Exception("No dependency reports are found")
@@ -383,9 +440,42 @@ def check_licenses(license_yaml, dependency_reports_root):
 
     # Build registered license dictionary.
     registered_dep_to_licenses = {}
+    registered_modules = {}
     skipping_licenses = {}
-    with open(license_yaml, encoding='utf-8') as registry_file:
-        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
+    # Validate that every entry uses a known module tag. Core extensions use extensions/<output-dir>
+    # (matching how they appear in the binary distribution's extensions/ directory), and contrib
+    # extensions use extensions-contrib/<output-dir> so the release build can filter them out. This
+    # check enforces that any new contrib entry actually uses the contrib prefix, so it cannot
+    # silently leak into the release LICENSE/NOTICE under a stray/mistagged module name.
+    known_module_prefixes = (
+        'extensions/',
+        'extensions-contrib/',
+    )
+    known_module_exact = {
+        'java-core',
+        'web-console',
+    }
+    unknown_module_entries = []
+    for license in licenses_list:
+        module = license.get('module')
+        if module is None:
+            unknown_module_entries.append((license.get('name'), '<missing module>'))
+        elif module not in known_module_exact and not any(module.startswith(p) for p in known_module_prefixes):
+            unknown_module_entries.append((license.get('name'), module))
+    if unknown_module_entries:
+        print_log_to_stderr("Error: found {} licenses.yaml entries with unknown module tags".format(len(unknown_module_entries)))
+        for name, module in unknown_module_entries:
+            print_log_to_stderr("  name: {}, module: {}".format(name, module))
+        print_log_to_stderr(
+            "Every entry must use one of the known exact module tags [{}] or a module starting with one of [{}]. "
+            "Contrib extensions in particular must use the extensions-contrib/ prefix so the release "
+            "LICENSE/NOTICE generation can filter them out.".format(
+                ', '.join(sorted(known_module_exact)),
+                ', '.join(known_module_prefixes)
+            )
+        )
+        sys.exit(1)
+
     for license in licenses_list:
         if 'libraries' in license:
             for library in license['libraries']:
@@ -405,14 +495,15 @@ def check_licenses(license_yaml, dependency_reports_root):
                             version = get_version_string(license['version'])
                         skipping_licenses[get_dep_key(group_id, artifact_id, version)] = license
                     else:
-                        registered_dep_to_licenses[get_dep_key(group_id, artifact_id, get_version_string(license['version']))] = compatible_license_names[license['license_name']]
+                        key = get_dep_key(group_id, artifact_id, get_version_string(license['version']))
+                        registered_dep_to_licenses[key] = compatible_license_names[license['license_name']]
+                        registered_modules.setdefault(key, set()).add(license['module'])
 
     if len(registered_dep_to_licenses) == 0:
         raise Exception("No registered licenses are found")
 
     # Compare licenses in registry and those in dependency reports.
     mismatched_licenses = []
-    missing_licenses = []
     unchecked_licenses = []
     # Iterate through registered licenses and check if its license is same with the reported one.
     for key, registered_license in registered_dep_to_licenses.items():
@@ -434,9 +525,9 @@ def check_licenses(license_yaml, dependency_reports_root):
         print_log_to_stderr("")
 
     # Let's find missing licenses, which are reported but missing in the registry.
-    for key, reported_license_druid_module in reported_dep_to_licenses.items():
-        if reported_license_druid_module[0] != "-" and key not in registered_dep_to_licenses and key not in skipping_licenses:
-            missing_licenses.append((reported_license_druid_module[1], key[0], key[1], key[2], reported_license_druid_module[0]))
+    missing_licenses = find_missing_licenses(
+        reported_dep_to_licenses, reported_modules, registered_modules, skipping_licenses, exclude_module_prefixes
+    )
 
     if len(missing_licenses) > 0:
         print_log_to_stderr("Error: found {} missing licenses. These licenses are reported, but missing in the registry".format(len(missing_licenses)))
@@ -470,11 +561,18 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser(description='Check and generate license file.')
         parser.add_argument('license_yaml', metavar='<path to license.yaml>', type=str)
         parser.add_argument('dependency_reports_root', metavar='<root to maven dependency reports>', type=str)
+        parser.add_argument(
+            '--exclude-module-prefix',
+            action='append',
+            default=[],
+            help='Module prefix whose licenses.yaml entries the release LICENSE omits. Repeatable. A dependency '
+                 'that ships in the release must be registered under at least one module not matching these.'
+        )
         args = parser.parse_args()
 
         license_yaml = args.license_yaml
         dependency_reports_root = args.dependency_reports_root
-        check_licenses(license_yaml, dependency_reports_root)
+        check_licenses(license_yaml, dependency_reports_root, args.exclude_module_prefix)
 
     except KeyboardInterrupt:
         print('Interrupted, closing.')

@@ -18,10 +18,16 @@
 
 import classNames from 'classnames';
 import React from 'react';
-import type { RowRenderProps } from 'react-table';
-import ReactTable from 'react-table';
 
-import { TableCell, TableCellUnparseable } from '../../../components';
+import type { ConsoleTableCellInfo } from '../../../components';
+import {
+  ConsoleTable,
+  DEFAULT_TABLE_CLASS_NAME,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  TableCell,
+  TableCellUnparseable,
+} from '../../../components';
 import type { IngestionSpec, TimestampSpec } from '../../../druid-models';
 import {
   getTimestampDetailFromSpec,
@@ -29,11 +35,6 @@ import {
   possibleDruidFormatForValues,
   TIME_COLUMN,
 } from '../../../druid-models';
-import {
-  DEFAULT_TABLE_CLASS_NAME,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import type { SampleEntry, SampleResponse } from '../../../utils/sampler';
 import { getHeaderNamesFromSampleResponse } from '../../../utils/sampler';
@@ -79,7 +80,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
   const timestampDetail = getTimestampDetailFromSpec(spec);
 
   return (
-    <ReactTable
+    <ConsoleTable
       className={classNames('parse-time-table', DEFAULT_TABLE_CLASS_NAME)}
       data={sampleResponse.data}
       sortable={false}
@@ -128,7 +129,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: function ParseTimeTableCell(row: RowRenderProps) {
+          Cell: function ParseTimeTableCell(row: ConsoleTableCellInfo<any>) {
             if (columnName === '__error__') {
               return <TableCell value={row.original.error} />;
             }

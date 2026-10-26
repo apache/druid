@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.msq.querykit.DataSourcePlanner;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.msq.querykit.RestrictedInputNumberDataSource;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -49,6 +50,11 @@ public class DataSourcePlannerUtils
     } else {
       if (dataSource instanceof InputNumberDataSource) {
         return new InputNumberDataSource(((InputNumberDataSource) dataSource).getInputNumber() + shift);
+      } else if (dataSource instanceof RestrictedInputNumberDataSource restrictedDataSource) {
+        return new RestrictedInputNumberDataSource(
+            restrictedDataSource.getInputNumber() + shift,
+            restrictedDataSource.getPolicy()
+        );
       } else {
         return dataSource.withChildren(
             dataSource.getChildren()

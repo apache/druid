@@ -27,8 +27,6 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexNode;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.druid.error.DruidException;
@@ -36,12 +34,11 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.calcite.rel.DruidRels;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
@@ -50,6 +47,7 @@ import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 import org.apache.druid.sql.calcite.rel.logical.DruidUnion;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -222,24 +220,27 @@ public class DruidQueryGenerator
      * @throws DruidException if unwrap is not possible.
      */
     SourceDesc unwrapSourceDesc();
+
+    /**
+     * Unwraps this {@link Vertex} into an arm of a {@link UnionDataSource}, using {@link DruidRels#makeUnionArm}.
+     * Returns null if it cannot be one.
+     */
+    @Nullable
+    SourceDesc unwrapUnionArm();
   }
 
   private static class VertexTweaks
   {
     public final JoinPosition joinType;
-    public final boolean isParentUnion;
 
-    public VertexTweaks(JoinPosition joinType, boolean isParentUnion)
+    public VertexTweaks(JoinPosition joinType)
     {
       this.joinType = joinType;
-      this.isParentUnion = isParentUnion;
     }
 
     static VertexTweaks analyze(DruidNodeStack stack)
     {
-      JoinPosition joinType = JoinPosition.analyze(stack);
-      boolean isParentUnion = stack.size() > 2 && stack.parentNode() instanceof DruidUnion;
-      return new VertexTweaks(joinType, isParentUnion);
+      return new VertexTweaks(JoinPosition.analyze(stack));
     }
 
     boolean forceSubQuery(SourceDesc sourceDesc)
@@ -258,11 +259,6 @@ public class DruidQueryGenerator
     boolean finalizeSubQuery()
     {
       return joinType == JoinPosition.NONE;
-    }
-
-    boolean mayUnwrapWithRename()
-    {
-      return !isParentUnion;
     }
 
     enum JoinPosition
@@ -348,19 +344,27 @@ public class DruidQueryGenerator
        */
       private SourceDesc realGetSource()
       {
-        List<SourceDesc> sourceDescs = new ArrayList<>();
-        boolean mayUnwrap = mayUnwrapInputs();
-        for (Vertex inputVertex : inputs) {
-          final SourceDesc desc;
-          if (mayUnwrap && inputVertex.canUnwrapSourceDesc()) {
-            desc = inputVertex.unwrapSourceDesc();
-          } else {
-            DruidQuery inputQuery = inputVertex.buildQuery(false);
-            desc = new SourceDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
+        final RelNode scan = partialDruidQuery.getScan();
+        final List<SourceDesc> sourceDescs = new ArrayList<>();
+        if (scan instanceof DruidUnion) {
+          final List<SourceDesc> arms = unwrapUnionArms();
+          if (arms != null) {
+            return DruidRels.makeUnionSourceDesc(arms, scan.getRowType());
           }
-          sourceDescs.add(desc);
+
+          // Some input cannot be an arm of a UnionDataSource, so the union runs as a UnionQuery of subqueries.
+          for (Vertex inputVertex : inputs) {
+            sourceDescs.add(toSubquery(inputVertex));
+          }
+        } else {
+          for (Vertex inputVertex : inputs) {
+            if (inputVertex.canUnwrapSourceDesc()) {
+              sourceDescs.add(inputVertex.unwrapSourceDesc());
+            } else {
+              sourceDescs.add(toSubquery(inputVertex));
+            }
+          }
         }
-        RelNode scan = partialDruidQuery.getScan();
         if (scan instanceof SourceDescProducer) {
           SourceDescProducer inp = (SourceDescProducer) scan;
           return inp.getSourceDesc(plannerContext, sourceDescs);
@@ -371,18 +375,29 @@ public class DruidQueryGenerator
         throw DruidException.defensive("Unable to create SourceDesc for Operator [%s]", scan);
       }
 
-      private boolean mayUnwrapInputs()
+      /**
+       * Returns the inputs of this vertex's {@link DruidUnion} as arms of a {@link UnionDataSource}, or null if any
+       * of them cannot be one.
+       */
+      @Nullable
+      private List<SourceDesc> unwrapUnionArms()
       {
-        if (!(partialDruidQuery.getScan() instanceof DruidUnion)) {
-          return true;
-        }
-        boolean mayUnwrap = true;
-        for (Vertex vertex : inputs) {
-          if (!vertex.canUnwrapSourceDesc()) {
-            mayUnwrap = false;
+        final int fieldCount = partialDruidQuery.getScan().getRowType().getFieldCount();
+        final List<SourceDesc> arms = new ArrayList<>();
+        for (final Vertex vertex : inputs) {
+          final SourceDesc arm = vertex.unwrapUnionArm();
+          if (arm == null || arm.rowSignature.size() != fieldCount) {
+            return null;
           }
+          arms.add(arm);
         }
-        return mayUnwrap;
+        return arms;
+      }
+
+      private SourceDesc toSubquery(final Vertex vertex)
+      {
+        final DruidQuery query = vertex.buildQuery(false);
+        return new SourceDesc(new QueryDataSource(query.getQuery()), query.getOutputRowSignature());
       }
 
       /**
@@ -470,15 +485,29 @@ public class DruidQueryGenerator
         if (canUnwrapSourceDesc()) {
           DruidQuery q = buildQuery(false);
           SourceDesc origInput = getSource();
-          DataSource dataSource;
+          final DataSource dataSource;
           if (q.getFilter() == null) {
             dataSource = origInput.dataSource;
           } else {
-            dataSource = makeFilteredDataSource(origInput, q.getFilter());
+            dataSource = DruidQuery.makeFilteredDataSource(origInput.dataSource, origInput.rowSignature, q.getFilter());
           }
           return new SourceDesc(dataSource, q.getOutputRowSignature());
         }
         throw DruidException.defensive("Can't unwrap source of vertex[%s]", partialDruidQuery);
+      }
+
+      @Nullable
+      @Override
+      public SourceDesc unwrapUnionArm()
+      {
+        // DruidRels#makeUnionArm builds the filter and projection into the arm's datasource, and returns null if the
+        // arm does not read a table.
+        final Stage stage = partialDruidQuery.stage();
+        if (stage == Stage.SCAN || stage == Stage.WHERE_FILTER || stage == Stage.SELECT_PROJECT) {
+          return DruidRels.makeUnionArm(buildQuery(false), getSource().rowSignature);
+        } else {
+          return null;
+        }
       }
 
       @Override
@@ -491,71 +520,30 @@ public class DruidQueryGenerator
           return true;
         }
         if (tweaks.filteredDatasourceAllowed() && partialDruidQuery.stage() == PartialDruidQuery.Stage.WHERE_FILTER) {
-          return true;
+          return mayFilterIntoDataSource();
         }
         if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT &&
             (tweaks.filteredDatasourceAllowed() || partialDruidQuery.getWhereFilter() == null) &&
-            mayDiscardSelectProject()) {
-          return true;
+            partialDruidQuery.getSelectProject().isMapping()) {
+          return mayFilterIntoDataSource();
         }
         return false;
       }
 
-      private boolean mayDiscardSelectProject()
+      /**
+       * Whether this vertex's filter, if it has one, can be attached to a {@link FilteredDataSource}. Only for a
+       * vertex at a stage that {@link #canUnwrapSourceDesc} accepts, since it reads
+       * {@link DruidQuery#getScanVirtualColumns}.
+       */
+      private boolean mayFilterIntoDataSource()
       {
-        if (!partialDruidQuery.getSelectProject().isMapping()) {
-          return false;
-        }
-        if (!tweaks.isParentUnion) {
+        if (partialDruidQuery.getWhereFilter() == null) {
           return true;
         }
-        SourceDesc src = getSource();
-        List<String> inputFieldNames = src.rowSignature.getColumnNames();
-        List<String> outputFieldNames = partialDruidQuery.getRowType().getFieldNames();
 
-        if (!isNameConsistentMapping(partialDruidQuery.getSelectProject(), inputFieldNames, outputFieldNames)) {
-          return false;
-        }
-
-        boolean isAssociative = UnionDataSource.isCompatibleDataSource(src.dataSource);
-
-        if (!isAssociative) {
-          if (!outputFieldNames.equals(inputFieldNames.subList(0, outputFieldNames.size()))) {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      private boolean isNameConsistentMapping(
-          Project selectProject,
-          List<String> inputFieldNames,
-          List<String> outputFieldNames)
-      {
-        List<RexNode> projects = selectProject.getProjects();
-        for (int i = 0; i < projects.size(); i++) {
-          RexInputRef p = (RexInputRef) projects.get(i);
-          String inputName = inputFieldNames.get(p.getIndex());
-          String outputName = outputFieldNames.get(i);
-          if (!inputName.equals(outputName)) {
-            return false;
-          }
-        }
-        return true;
+        final DruidQuery q = buildQuery(false);
+        return !DruidQuery.filterReadsVirtualColumns(q.getFilter(), q.getScanVirtualColumns());
       }
     }
-  }
-
-  /**
-   * This method should not live here.
-   *
-   * The fact that {@link Filtration} have to be run on the filter is out-of scope here.
-   */
-  public static FilteredDataSource makeFilteredDataSource(SourceDesc sd, DimFilter filter)
-  {
-
-    Filtration filtration = Filtration.create(filter).optimizeFilterOnly(sd.rowSignature);
-    DimFilter newFilter = filtration.getDimFilter();
-    return FilteredDataSource.create(sd.dataSource, newFilter);
   }
 }

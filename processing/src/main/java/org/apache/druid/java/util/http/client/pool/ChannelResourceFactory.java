@@ -40,6 +40,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClientProxyConfig;
 import org.apache.druid.java.util.http.client.Request;
@@ -89,7 +90,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
     log.debug("Generating: %s", hostname);
     URL url;
     try {
-      url = new URL(hostname);
+      url = URIs.toURL(hostname);
     }
     catch (MalformedURLException e) {
       throw new RuntimeException(e);

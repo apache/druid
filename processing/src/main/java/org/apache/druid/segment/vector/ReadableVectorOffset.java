@@ -25,8 +25,8 @@ package org.apache.druid.segment.vector;
  * A ReadableVectorOffset should be given to classes (e.g. column selector objects) by something which keeps a
  * reference to the base VectorOffset object and increments it.
  *
- * @see VectorOffset, the movable version.
- * @see org.apache.druid.segment.data.ReadableOffset, the non-vectorized version.
+ * @see VectorOffset the movable version.
+ * @see org.apache.druid.segment.data.ReadableOffset the non-vectorized version.
  */
 public interface ReadableVectorOffset extends ReadableVectorInspector
 {

@@ -21,6 +21,6 @@ set -x
 export MAVEN_OPTS=-Xmx8g
 
 echo 'Running Maven install...'
-mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -T1C
+./mvnw -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -T1C
 
-mvn -B rewrite:dryRun -Dweb.console.skip=true
+./mvnw -B rewrite:dryRun -Dweb.console.skip=true

@@ -167,6 +167,22 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
 and `druid.tlsPort` properties on each service. Please see `Configuration` section of individual services to check the valid and default values for these ports.
 
+#### Advertised plaintext port
+
+By default, a service advertises the same plaintext port it listens on. Set `druid.advertisedPlaintextPort` when other services must reach it on a different port, for example when a sidecar proxy such as Envoy terminates mTLS on one port and forwards traffic to Jetty on `druid.plaintextPort`.
+
+- `druid.plaintextPort` remains the port that Jetty binds to and listens on.
+- `druid.advertisedPlaintextPort` is the port that the service publishes through service discovery and that other services use to reach it over plaintext. This covers internal RPC between services, Router to Broker proxying, dynamic configuration sync, lookup and security cache notifications, catalog sync, `sys.server_properties`, task locations reported by Indexers, and Consul registration.
+- If `druid.advertisedPlaintextPort` is unset or non-positive, it falls back to `druid.plaintextPort`.
+- It only applies when `druid.enablePlaintextPort` is `true`. When `druid.enableTlsPort` is `true`, services still prefer `druid.tlsPort` to reach each other.
+- The `plaintext_port` column of `sys.servers` and the `plaintextPort` field of the `/druid/coordinator/v1/cluster` API continue to report `druid.plaintextPort`.
+
+You can't use a port in `druid.host` for this purpose, because a port in `druid.host` must match `druid.plaintextPort`.
+
+Peons forked by a Middle Manager don't support `druid.advertisedPlaintextPort`. Each Peon listens on its own port from `druid.indexer.runner.startPort`, `druid.indexer.runner.endPort`, or `druid.indexer.runner.ports`, so a single advertised port can't identify an individual Peon. The Middle Manager always starts Peons with `druid.advertisedPlaintextPort` unset, so each Peon advertises its own port. This applies even if the property is inherited from the Middle Manager or set through `druid.indexer.fork.property.druid.advertisedPlaintextPort` or the task context. Setting `druid.advertisedPlaintextPort` on the Middle Manager itself only affects how other services reach the Middle Manager.
+
+Task pods launched by the [Kubernetes task runner](../development/extensions-core/k8s-jobs.md) aren't reached through service discovery. The Overlord reports each task's location from the pod IP and a fixed port, so `druid.advertisedPlaintextPort` has no effect on them. To reach task pods through a sidecar proxy, set [`druid.indexer.runner.advertisedPlaintextPort`](../development/extensions-core/k8s-jobs.md#properties) on the Overlord instead.
+
 #### Jetty server TLS configuration
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).
@@ -659,6 +675,7 @@ the `expression` aggregator/post-aggregator, and any SQL functions that lower to
 |`druid.expressions.homogenizeNullMultiValueStringArrays`|If true, multi-value string expression input values of `null`, `[]`, and `[null]` are all coerced to `[null]`. Provided for backwards compatibility with Druid 0.22 and earlier. If false (the default), this coercion only happens when single-value expressions are implicitly mapped across multi-value rows, so the single-valued expression is evaluated with an input of `null`.|false|
 |`druid.expressions.allowVectorizeFallback`|If true, the vectorized query engine handles expressions without a native vectorized implementation using a fallback processor that invokes the scalar expression evaluator in a loop. If false, such expressions cannot be vectorized and the query falls back to the non-vectorized engine.|true|
 |`druid.expressions.useVectorApi`|If true, vectorized expression vector processors and numeric vector aggregators dispatch to SIMD specializations backed by the JDK incubator Vector API (`jdk.incubator.vector`) where available. Requires `--add-modules=jdk.incubator.vector` on the JVM command line (see [strong encapsulation](../operations/java.md#strong-encapsulation)). Off by default while the Vector API remains an incubator JDK feature.|false|
+|`druid.expressions.useVectorMathApi`|When `useVectorApi` is true, controls whether math expressions whose SIMD path is backed by the JDK's VO_MATHLIB routing (Intel SVML on x86, SLEEF on Arm) dispatch to that SIMD path. SIMD and non-SIMD results for these functions can differ slightly, and the exact bits can shift once the JIT promotes the SIMD loop during a long-running query. In general applications should not rely on bit-for-bit equality of floating-point results, and should round or truncate before comparing or grouping. This flag exists as an escape hatch for legacy queries that rely on `Math.<op>` bits without rounding. Has no effect unless `useVectorApi` is also true. On by default when `useVectorApi` is enabled.|true|
 
 ### Double column storage
 
@@ -689,6 +706,7 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.clientConnectTimeout`|Connect timeout (in milliseconds) for the HTTP client used to forward management API requests between Druid services. On the Router, this covers forwarding management API calls to the Coordinator or Overlord. On the Coordinator, this covers proxying `/druid/indexer/*` requests to the Overlord (when they run as separate processes). Does not affect Router query proxying to Brokers (see `druid.router.http.clientConnectTimeout`) or direct RPC connections between services (see `connectTimeout`).|500|
 |`druid.global.http.connectTimeout`|Connect timeout for the HTTP client used for most direct RPC between Druid services. This covers, among other things, Overlord-to-task and supervisor-to-task calls in the indexing service, Coordinator lookup management, dynamic config sync between services, MSQ tasks reading from data servers, and general Coordinator/Overlord/Broker service clients. Does not affect Broker-to-Historical query dispatch (see `druid.broker.http.connectTimeout`) or request forwarding (see `clientConnectTimeout`).|`PT10S`|
 |`druid.global.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
+|`druid.global.http.poolImplementation`|How the connection pool tracks demand, never exceeding `numConnections` either way. With `adaptive`, a request discards every stale or broken connection it walks past and opens a new one only once none is left, so the pool falls back to the number of connections the traffic actually needs. With `retaining`, the pool holds on to every connection it has opened, replacing a stale or broken one by a fresh one, one for one, so it stays at its high-water mark.|`retaining`|
 
 ### Common endpoints configuration
 
@@ -717,6 +735,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service.|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8081|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative integer.|8281|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/coordinator`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -864,6 +883,7 @@ You can configure automatic compaction through the following properties:
 
 |Property|Description|Required|
 |--------|-----------|--------|
+|`type`|Where the compaction schema comes from. `inline` declares it in this configuration, using the schema properties below. `catalog` reads it from the datasource's [catalog](../development/extensions-core/catalog.md) table definition on every run, and accepts none of the schema properties; see [Catalog-based compaction](../development/extensions-core/catalog.md#catalog-based-compaction).|no (default = `inline`)|
 |`dataSource`|The datasource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.md#lock-priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk.|no (default = 100,000,000,000,000 i.e. 100TB)|
@@ -966,6 +986,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service.|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`.|8090|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/overlord`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1318,6 +1339,7 @@ These Middle Manager and Peon configurations can be defined in the `middleManage
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. Ignored for Peons forked by a Middle Manager, which always advertise their own port. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/middlemanager`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1445,6 +1467,7 @@ For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-ta
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/indexer`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1543,6 +1566,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/historical`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1664,6 +1688,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8082|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8282|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/broker`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1834,6 +1859,7 @@ client has the following configuration options.
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
 |`druid.broker.http.connectTimeout`|Connect timeout for the HTTP client the Broker uses to dispatch queries to Historical and real-time processes.|`PT10S`|
 |`druid.broker.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
+|`druid.broker.http.poolImplementation`|How the connection pool tracks demand, never exceeding `numConnections` either way. With `adaptive`, a query discards every stale or broken connection it walks past and opens a new one only once none is left, so the pool falls back to the number of connections the traffic actually needs. With `retaining`, the pool holds on to every connection it has opened, replacing a stale or broken one by a fresh one, one for one, so it stays at its high-water mark.|`retaining`|
 
 
 ##### Retry policy
@@ -2008,6 +2034,7 @@ The following table lists available monitors and the respective services where t
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
+|`org.apache.druid.server.metrics.HttpClientPoolMonitor`|Reports connection churn and usage of the HTTP client connection pools used for service to service communication, per remote end, per emission period.|Any|
 
 For example, if you only wanted monitors on all services for system and JVM information, you'd add the following to `common.runtime.properties`:
 
@@ -2330,6 +2357,7 @@ Supported query contexts:
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8888|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|9088|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/router`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|

@@ -94,11 +94,7 @@ public class OpenTelemetryEmitterTest
   public void testModuleCreatesEmitter()
   {
     final String previousTracesExporter = System.getProperty("otel.traces.exporter");
-    final String previousMetricsExporter = System.getProperty("otel.metrics.exporter");
-    final String previousLogsExporter = System.getProperty("otel.logs.exporter");
     System.setProperty("otel.traces.exporter", "none");
-    System.setProperty("otel.metrics.exporter", "none");
-    System.setProperty("otel.logs.exporter", "none");
 
     try {
       Assertions.assertNotNull(
@@ -112,15 +108,34 @@ public class OpenTelemetryEmitterTest
       } else {
         System.setProperty("otel.traces.exporter", previousTracesExporter);
       }
+    }
+  }
+
+  @Test
+  public void testDefaultExportersOnlyExportSpans()
+  {
+    try (OpenTelemetrySdk sdk = OpenTelemetryEmitterModule.buildOpenTelemetrySdk()) {
+      final String providers = sdk.toString();
+      Assertions.assertTrue(providers.contains("OtlpGrpcSpanExporter"), providers);
+      Assertions.assertFalse(providers.contains("MetricExporter"), providers);
+      Assertions.assertFalse(providers.contains("LogRecordExporter"), providers);
+    }
+  }
+
+  @Test
+  public void testSystemPropertyOverridesDefaultMetricsExporter()
+  {
+    final String previousMetricsExporter = System.getProperty("otel.metrics.exporter");
+    System.setProperty("otel.metrics.exporter", "otlp");
+    try (OpenTelemetrySdk sdk = OpenTelemetryEmitterModule.buildOpenTelemetrySdk()) {
+      final String providers = sdk.toString();
+      Assertions.assertTrue(providers.contains("OtlpGrpcMetricExporter"), providers);
+    }
+    finally {
       if (previousMetricsExporter == null) {
         System.clearProperty("otel.metrics.exporter");
       } else {
         System.setProperty("otel.metrics.exporter", previousMetricsExporter);
-      }
-      if (previousLogsExporter == null) {
-        System.clearProperty("otel.logs.exporter");
-      } else {
-        System.setProperty("otel.logs.exporter", previousLogsExporter);
       }
     }
   }

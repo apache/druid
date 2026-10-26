@@ -89,6 +89,7 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -684,7 +685,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                   {
                     return localDeepStorage;
                   }
-                }
+                },
+                new DeepStorageSegmentConfig()
             )
         )
         .dataSegmentKiller(new NoopDataSegmentKiller())
@@ -773,7 +775,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         "processedBytes", 0.0,
         "unparseable", 0.0,
         "thrownAway", 0.0,
-        "processedWithError", 0.0
+        "processedWithError", 0.0,
+        "filtered", 0.0
     );
 
     Map<String, Object> emptyAverages = ImmutableMap.of(

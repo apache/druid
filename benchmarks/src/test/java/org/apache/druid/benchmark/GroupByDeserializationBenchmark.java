@@ -21,16 +21,17 @@ package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -183,7 +184,7 @@ public class GroupByDeserializationBenchmark
                                          "post",
                                          10
                                      )))
-                                     .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true))
+                                     .setContext(QueryContext.ofMap(QueryContextParameters.RESULT_AS_ARRAY, true))
                                      .setGranularity(Granularities.DAY)
                                      .build();
 

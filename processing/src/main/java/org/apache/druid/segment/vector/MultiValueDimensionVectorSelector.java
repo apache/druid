@@ -25,8 +25,8 @@ import org.apache.druid.segment.data.IndexedInts;
 /**
  * Vectorized selector for a multi-valued string-typed column.
  *
- * @see org.apache.druid.segment.DimensionSelector, the non-vectorized version.
- * @see SingleValueDimensionVectorSelector, the singly-valued version.
+ * @see org.apache.druid.segment.DimensionSelector the non-vectorized version.
+ * @see SingleValueDimensionVectorSelector the singly-valued version.
  */
 public interface MultiValueDimensionVectorSelector extends DimensionDictionarySelector, VectorSizeInspector
 {

@@ -18,8 +18,8 @@
 
 import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { ColumnFilter } from '@tanstack/react-table';
 import { C, F, SqlExpression } from 'druid-query-toolkit';
-import type { Filter } from 'react-table';
 
 import { caseInsensitiveContains } from '../index';
 
@@ -52,7 +52,7 @@ export class TableFilter {
     return new TableFilter(key, mode, value);
   }
 
-  static fromFilter(filter: Filter): TableFilter {
+  static fromFilter(filter: ColumnFilter): TableFilter {
     const modeMatch = /^(~|=|!=|<(?!=)|<=|>(?!=)|>=)?(.*)$/.exec(String(filter.value));
     if (!modeMatch) {
       return new TableFilter(filter.id, '~', String(filter.value));
@@ -74,7 +74,7 @@ export class TableFilter {
     return this.values.join('|');
   }
 
-  public toFilter(): Filter {
+  public toFilter(): ColumnFilter {
     return {
       id: this.key,
       value: `${this.mode}${this.value}`,
@@ -197,7 +197,7 @@ export class TableFilter {
   }
 
   static parseModeAndNeedle(
-    filter: Filter,
+    filter: ColumnFilter,
     loose = false,
   ): { mode: FilterMode; needle: string; needleParts: string[] } | undefined {
     const m = /^(~|=|!=|<(?!=)|<=|>(?!=)|>=)?(.*)$/.exec(String(filter.value));

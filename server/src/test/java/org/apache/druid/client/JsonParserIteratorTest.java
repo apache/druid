@@ -22,10 +22,13 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -37,6 +40,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -47,6 +51,7 @@ import org.mockito.Mockito;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -57,6 +62,85 @@ public class JsonParserIteratorTest
   private static final String URL = "url";
   private static final String HOST = "host";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
+
+  @Test
+  public void testModernDruidExceptionJsonResponse() throws IOException
+  {
+    assertModernErrorResponse(OBJECT_MAPPER);
+  }
+
+  @Test
+  public void testModernDruidExceptionSmileResponse() throws IOException
+  {
+    assertModernErrorResponse(new ObjectMapper(new SmileFactory()));
+  }
+
+  @Test
+  public void testLegacyQueryTimeoutSmileResponse() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper(new SmileFactory());
+    final JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+        JAVA_TYPE,
+        Futures.immediateFuture(new ByteArrayInputStream(mapper.writeValueAsBytes(
+            Map.of(
+                "error", QueryException.QUERY_TIMEOUT_ERROR_CODE,
+                "errorMessage", "legacy timeout",
+                "errorClass", QueryTimeoutException.class.getName(),
+                "host", "data-server-host"
+            )
+        ))),
+        URL,
+        null,
+        HOST,
+        mapper
+    );
+
+    QueryTimeoutException actual = Assertions.assertThrows(QueryTimeoutException.class, iterator::hasNext);
+    Assertions.assertEquals("legacy timeout", actual.getMessage());
+    Assertions.assertEquals(HOST, actual.getHost());
+  }
+
+  @Test
+  public void testMalformedModernErrorResponseIsDefensive() throws IOException
+  {
+    final JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+        JAVA_TYPE,
+        Futures.immediateFuture(new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsBytes(
+            Map.of("error", "druidException", "errorMessage", "missing persona, category, and error code")
+        ))),
+        URL,
+        null,
+        HOST,
+        OBJECT_MAPPER
+    );
+
+    DruidException actual = Assertions.assertThrows(DruidException.class, iterator::hasNext);
+    Assertions.assertEquals(DruidException.Category.DEFENSIVE, actual.getCategory());
+  }
+
+  private static void assertModernErrorResponse(ObjectMapper mapper) throws IOException
+  {
+    DruidException expected = InvalidInput.exception("Projection[p] specified, but does not satisfy query");
+    expected.withContext("projection", "p");
+
+    JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+        JAVA_TYPE,
+        Futures.immediateFuture(new ByteArrayInputStream(
+            mapper.writeValueAsBytes(new ErrorResponse(expected).getAsMap())
+        )),
+        URL,
+        null,
+        HOST,
+        mapper
+    );
+
+    DruidException actual = Assertions.assertThrows(DruidException.class, iterator::hasNext);
+    Assertions.assertEquals(expected.getErrorCode(), actual.getErrorCode());
+    Assertions.assertEquals(DruidException.Persona.USER, actual.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, actual.getCategory());
+    Assertions.assertEquals(expected.getMessage(), actual.getMessage());
+    Assertions.assertEquals("p", actual.getContext().get("projection"));
+  }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")
   public static class FutureExceptionTest
@@ -142,6 +226,62 @@ public class JsonParserIteratorTest
         iterator.hasNext();
       });
       Assertions.assertTrue(exception.getMessage().contains("ioexception test"));
+    }
+
+    @Test
+    public void testStructuredErrorBodyReadFailureIsNormalizedToIteratorHost()
+    {
+      // A structured error body can span chunks: init() sees START_OBJECT and then pulls the rest of the object
+      // through readValue(), so a later-chunk failure (a QueryTimeoutException that DirectDruidClient rethrows as
+      // itself) surfaces from inside that read rather than as the deserialized value. It has to go through
+      // convertException like every other path, or it keeps the data server's host instead of this iterator's.
+      final QueryTimeoutException laterChunkFailure = new QueryTimeoutException(
+          "timed out reading the error body",
+          "data-server-01:8100"
+      );
+      final byte[] prefix = StringUtils.toUtf8("{\"error\":\"Query timeout\",");
+      final InputStream truncatedErrorBody = new InputStream()
+      {
+        private int pos;
+
+        @Override
+        public int read()
+        {
+          if (pos >= prefix.length) {
+            throw laterChunkFailure;
+          }
+          return prefix[pos++] & 0xff;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len)
+        {
+          if (pos >= prefix.length) {
+            throw laterChunkFailure;
+          }
+          final int n = Math.min(len, prefix.length - pos);
+          System.arraycopy(prefix, pos, b, off, n);
+          pos += n;
+          return n;
+        }
+      };
+
+      final QueryTimeoutException exception = Assertions.assertThrows(QueryTimeoutException.class, () -> {
+        JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+            JAVA_TYPE,
+            Futures.immediateFuture(truncatedErrorBody),
+            URL,
+            null,
+            HOST,
+            OBJECT_MAPPER
+        );
+        iterator.hasNext();
+      });
+      Assertions.assertEquals(HOST, exception.getHost());
+      Assertions.assertTrue(
+          exception.getMessage().contains("timed out reading the error body"),
+          exception.getMessage()
+      );
     }
   }
 
@@ -307,7 +447,7 @@ public class JsonParserIteratorTest
       QueryContext context = Mockito.mock(QueryContext.class);
       Mockito.when(query.getId()).thenReturn(queryId);
       Mockito.when(query.context()).thenReturn(
-          QueryContext.of(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, timeoutAt)));
+          QueryContext.of(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, timeoutAt)));
       return query;
     }
   }

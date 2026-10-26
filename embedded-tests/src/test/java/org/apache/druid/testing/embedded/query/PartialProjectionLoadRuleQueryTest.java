@@ -38,9 +38,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
@@ -57,8 +59,8 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.catalog.TestCatalogClient;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
@@ -112,7 +114,7 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedRouter router = new EmbeddedRouter();
-  private final MinIOStorageResource storageResource = new MinIOStorageResource();
+  private final S3StorageResource storageResource = new S3StorageResource();
 
   private EmbeddedMSQApis msqApis;
 
@@ -176,7 +178,7 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
         .addCommonProperty("druid.msq.dart.enabled", "true")
         // Clustered base-table + projection segments require the V10 segment format.
         .addCommonProperty("druid.indexer.task.buildV10", "true")
-        // Range reads over MinIO — required for partial loading to be functional.
+        // Range reads over S3 — required for partial loading to be functional.
         .addCommonProperty("druid.storage.zip", "false")
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT1s")
         .addServer(coordinator)
@@ -304,6 +306,38 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
         "expected non-zero on-demand load bytes for a projection-miss Dart query",
         emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES),
         Matchers.greaterThan(0L)
+    );
+  }
+
+  @Test
+  void testRuleHeldAcquireModeReadsOnlyRuleLoadedBundles()
+  {
+    // With segmentAcquireMode=PARTIAL_RULE_HELD the MSQ leaves only read the bundles the partial-load rule selected.
+    // The projection is selected, so a query it can serve returns its usual results. The cluster groups are not, so a
+    // projection miss reads no rows at all, rather than loading them on demand as in
+    // testProjectionMissLoadsBaseBundleOnDemand (or reading them if an earlier test already did). Neither query loads
+    // anything.
+    final LatchableEmitter emitter = quiesceAndFlushStorageMonitor();
+    final Map<String, Object> context =
+        QueryContext.ofMap(QueryContextParameters.SEGMENT_ACQUIRE_MODE, AcquireMode.PARTIAL_RULE_HELD);
+
+    runDartQuery(
+        "SELECT \"countryName\", SUM(\"delta\") FROM \"" + dataSource + "\" GROUP BY 1 ORDER BY 1",
+        context,
+        "CA,3\nFR,7\nUS,17"
+    );
+    runDartQuery(
+        "SELECT \"channel\", SUM(\"delta\") FROM \"" + dataSource + "\" GROUP BY 1 ORDER BY 1",
+        context,
+        ""
+    );
+
+    emitter.awaitMetricQuiescent(StorageMonitor.VSF_LOAD_BEGIN_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
+
+    Assertions.assertEquals(
+        0L,
+        emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT),
+        "expected no on-demand file loads under PARTIAL_RULE_HELD"
     );
   }
 
@@ -454,12 +488,17 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
    */
   private void runDartQuery(String sql, String expectedCsv)
   {
+    runDartQuery(sql, Map.of(), expectedCsv);
+  }
+
+  private void runDartQuery(String sql, Map<String, Object> context, String expectedCsv)
+  {
     final String sqlQueryId = UUID.randomUUID().toString();
     final String result;
     try {
       result = msqApis.submitDartSqlAsync(
           sql,
-          Map.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId),
+          QueryContext.builder().putAll(context).put(QueryContextParameters.SQL_QUERY_ID, sqlQueryId).toMap(),
           broker
       ).get();
     }

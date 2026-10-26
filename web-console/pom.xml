@@ -28,7 +28,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>39.0.0-SNAPSHOT</version>
+    <version>40.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -42,8 +42,8 @@
     <maven.build.cache.cacheCompile>false</maven.build.cache.cacheCompile>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
-    <node.version>v20.9.0</node.version>
-    <npm.version>10.9.0</npm.version>
+    <node.version>v24.21.0</node.version>
+    <npm.version>11.19.0</npm.version>
   </properties>
 
   <build>

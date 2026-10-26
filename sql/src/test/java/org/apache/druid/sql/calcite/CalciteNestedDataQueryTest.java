@@ -4319,8 +4319,6 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumPathMixed()
   {
-    // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
-    skipVectorize();
     testQuery(
         "SELECT "
         + "SUM(JSON_VALUE(nest, '$.mixed')) "
@@ -4347,8 +4345,6 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumPathMixedFilteredAggLong()
   {
-    // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
-    skipVectorize();
     // this one actually equals 2.1 because the filter is a long so double is cast and is 1 so both rows match
     testQuery(
         "SELECT "
@@ -4386,8 +4382,6 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumPathMixedFilteredAggDouble()
   {
-    // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
-    skipVectorize();
     // with double matcher, only the one row matches since the long value cast is not picked up
     testQuery(
         "SELECT "
@@ -4575,6 +4569,34 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testReturningDecimalFilterFractionalLiteral()
+  {
+    testQuery(
+        "SELECT string, JSON_VALUE(nest, '$.mixed' RETURNING DECIMAL) "
+        + "FROM druid.nested "
+        + "WHERE JSON_VALUE(nest, '$.mixed' RETURNING DECIMAL) = 1.1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new NestedFieldVirtualColumn("nest", "$.mixed", "v0", ColumnType.DOUBLE))
+                .filters(equality("v0", 1.1, ColumnType.DOUBLE))
+                .columns("string", "v0")
+                .columnTypes(ColumnType.STRING, ColumnType.DOUBLE)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"ccc", 1.1}
+        ),
+        RowSignature.builder()
+                    .add("string", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.DOUBLE)
                     .build()
     );
   }
@@ -6973,6 +6995,78 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .add("EXPR$0", ColumnType.ofArray(ColumnType.NESTED_DATA))
                         .build()
         )
+        .run();
+  }
+
+  /**
+   * Unnesting {@code JSON_QUERY_ARRAY} of a constant JSON value used to fail planning with a
+   * {@link StackOverflowError}, see https://github.com/apache/druid/issues/20631
+   */
+  @Test
+  public void testUnnestJsonQueryArrayOfConstantJson()
+  {
+    testBuilder()
+        .sql(
+            "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[{\"b\":1}]}') AS j) t "
+            + "CROSS JOIN UNNEST(JSON_QUERY_ARRAY(t.j, '$.a')) AS u(v)"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedResults(ImmutableList.of(new Object[]{"{\"b\":1}"}))
+        .run();
+  }
+
+  /**
+   * Same as {@link #testUnnestJsonQueryArrayOfConstantJson()}, but the constant JSON array is empty, see
+   * https://github.com/apache/druid/issues/20631
+   */
+  @Test
+  public void testUnnestJsonQueryArrayOfConstantJsonEmptyArray()
+  {
+    testBuilder()
+        .sql(
+            "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[]}') AS j) t "
+            + "CROSS JOIN UNNEST(JSON_QUERY_ARRAY(t.j, '$.a')) AS u(v)"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedResults(ImmutableList.of())
+        .run();
+  }
+
+  /**
+   * Same as {@link #testUnnestJsonQueryArrayOfConstantJson()}, but the JSON path does not exist, so
+   * {@code JSON_QUERY_ARRAY} reduces to a null array literal, see https://github.com/apache/druid/issues/20631
+   */
+  @Test
+  public void testUnnestJsonQueryArrayOfConstantJsonMissingPath()
+  {
+    // Array complex JSON isn't supported
+    msqIncompatible();
+    testBuilder()
+        .sql(
+            "SELECT TO_JSON_STRING(v) FROM (SELECT PARSE_JSON('{\"a\":[{\"b\":1}]}') AS j) t "
+            + "CROSS JOIN UNNEST(JSON_QUERY_ARRAY(t.j, '$.missing')) AS u(v)"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedResults(ImmutableList.of())
+        .run();
+  }
+
+  /**
+   * An {@code ARRAY<ARRAY<COMPLEX<json>>>} constant used to fail planning with a {@link ClassCastException}, see
+   * https://github.com/apache/druid/issues/20631
+   */
+  @Test
+  public void testJsonQueryArrayOfArraysOfConstantJson()
+  {
+    // Array complex JSON isn't supported
+    msqIncompatible();
+    testBuilder()
+        .sql(
+            "SELECT ARRAY[JSON_QUERY_ARRAY(j, '$.a'), JSON_QUERY_ARRAY(j, '$.c')] "
+            + "FROM (SELECT PARSE_JSON('{\"a\":[{\"b\":1}],\"c\":[{\"d\":2}]}') AS j) t"
+        )
+        .queryContext(QUERY_CONTEXT_DEFAULT)
+        .expectedResults(ImmutableList.of(new Object[]{"[[{\"b\":1}],[{\"d\":2}]]"}))
         .run();
   }
 

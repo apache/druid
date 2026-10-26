@@ -20,13 +20,13 @@ on:
 jobs:
   run-docker-tests:
     name: Run Docker tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set Docker image env var
         run: echo "DRUID_DIST_IMAGE_NAME=apache/druid:docker-tests" >> $GITHUB_ENV
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: 'zulu'
           java-version: 25
@@ -43,7 +43,7 @@ jobs:
         # depends on it. The web console assets are skipped too: no Docker test
         # uses the console, the router tolerates the missing assets, and the
         # console is fully built and packaged by packaging-check on every commit.
-        run: mvn -B -T1C clean install -pl '!benchmarks' -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests -Dweb.console.skip=true
+        run: ./mvnw -B -T1C clean install -pl '!benchmarks' -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests -Dweb.console.skip=true
       - name: Build the Docker image
         run: |
           set -o pipefail
