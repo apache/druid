@@ -205,8 +205,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     return new LagBasedAutoScaler(
         (SeekableStreamSupervisor) supervisor,
         this,
-        spec,
-        emitter
+        spec
     );
   }
 

@@ -34,6 +34,7 @@ import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -48,7 +49,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -192,7 +192,7 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
   {
     final String url = druidNode.getUriToUse().resolve("/status/properties").toString();
     try {
-      final Request request = new Request(HttpMethod.GET, new URL(url));
+      final Request request = new Request(HttpMethod.GET, URIs.toURL(url));
       final StringFullResponseHolder response;
       response = httpClient
           .go(request, new StringFullResponseHandler(StandardCharsets.UTF_8))

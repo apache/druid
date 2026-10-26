@@ -66,7 +66,8 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -550,7 +551,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             smileMapper,
             httpClient,
             inventorySyncExecutor,
-            new URL(druidServer.getScheme(), hostAndPort.getHost(), hostAndPort.getPort(), "/"),
+            new URI(druidServer.getScheme(), null, hostAndPort.getHost(), hostAndPort.getPort(), "/", null, null).toURL(),
             "/druid-internal/v1/segments",
             SEGMENT_LIST_RESP_TYPE_REF,
             config.getServerTimeout(),
@@ -558,7 +559,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             createSyncListener()
         );
       }
-      catch (MalformedURLException ex) {
+      catch (MalformedURLException | URISyntaxException ex) {
         throw new IAE(ex, "Failed to construct server URL.");
       }
     }
