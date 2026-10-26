@@ -4051,7 +4051,7 @@ name: XZ
 license_category: binary
 module: java-core
 license_name: Public Domain
-version: 1.9
+version: 1.10
 libraries:
   - org.tukaani: xz
 
