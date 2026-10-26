@@ -99,12 +99,20 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
     final InputEntity.CleanableFile materialized =
         source.fetch(temporaryDirectory, new byte[InputEntity.DEFAULT_FETCH_BUFFER_SIZE]);
     final ITsFileReader reader;
-    final List<String> tableNames;
     try {
       reader = new TsFileReaderBuilder().file(materialized.file()).build();
+    }
+    catch (IOException | RuntimeException e) {
+      materialized.close();
+      throw e;
+    }
+
+    final List<String> tableNames;
+    try {
       tableNames = resolveTableNames(reader);
     }
     catch (IOException | RuntimeException e) {
+      reader.close();
       materialized.close();
       throw e;
     }
@@ -139,6 +147,13 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
   private List<String> resolveTableNames(ITsFileReader reader) throws IOException
   {
     final List<TableSchema> allTables = reader.getAllTableSchema();
+    if (allTables.isEmpty()) {
+      throw InvalidInput.exception(
+          "TsFile[%s] contains no table schema. Only table-model TsFiles are supported; tree-model files "
+          + "are not.",
+          source.getUri()
+      );
+    }
     if (tables == null || tables.isEmpty()) {
       return allTables.stream().map(TableSchema::getTableName).collect(Collectors.toList());
     }
@@ -303,6 +318,14 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
     {
       final Map<String, Object> row = new HashMap<>();
 
+      for (int i = 0; i < currentColumns.size(); i++) {
+        final int resultSetIndex = i + 2;
+        if (!resultSet.isNull(resultSetIndex)) {
+          row.put(currentColumns.get(i), readValue(resultSet, currentTypes.get(i), resultSetIndex));
+        }
+      }
+
+      // Written after the measurements so that a column sharing the timestamp column name is shadowed by it.
       // Column index 1 of every TsFile result set is the implicit time column.
       final long timestamp = resultSet.getLong(1);
       row.put(TsFileInputFormat.TIME_COLUMN_NAME, timestamp);
@@ -310,13 +333,6 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
       final String timestampColumn = inputRowSchema.getTimestampSpec().getTimestampColumn();
       if (!TsFileInputFormat.TIME_COLUMN_NAME.equals(timestampColumn)) {
         row.put(timestampColumn, timestamp);
-      }
-
-      for (int i = 0; i < currentColumns.size(); i++) {
-        final int resultSetIndex = i + 2;
-        if (!resultSet.isNull(resultSetIndex)) {
-          row.put(currentColumns.get(i), readValue(resultSet, currentTypes.get(i), resultSetIndex));
-        }
       }
       return row;
     }

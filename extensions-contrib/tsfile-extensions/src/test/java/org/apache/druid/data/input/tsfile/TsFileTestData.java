@@ -24,7 +24,11 @@ import org.apache.tsfile.enums.TSDataType;
 import org.apache.tsfile.exception.write.WriteProcessException;
 import org.apache.tsfile.file.metadata.ColumnSchemaBuilder;
 import org.apache.tsfile.file.metadata.TableSchema;
+import org.apache.tsfile.write.TsFileWriter;
+import org.apache.tsfile.write.record.TSRecord;
 import org.apache.tsfile.write.record.Tablet;
+import org.apache.tsfile.write.record.datapoint.IntDataPoint;
+import org.apache.tsfile.write.schema.MeasurementSchema;
 import org.apache.tsfile.write.v4.ITsFileWriter;
 import org.apache.tsfile.write.v4.TsFileWriterBuilder;
 
@@ -97,6 +101,46 @@ public class TsFileTestData
         tablet.addValue(i, "humidity", HUMIDITIES[i]);
       }
     }
+
+    try (ITsFileWriter writer = new TsFileWriterBuilder().file(file).tableSchema(tableSchema).build()) {
+      writer.write(tablet);
+    }
+  }
+
+  /**
+   * Writes a legacy tree-model TsFile, which has no table schema in its footer and is not readable by the
+   * extension.
+   */
+  public static void writeTreeModelFile(File file) throws IOException, WriteProcessException
+  {
+    try (TsFileWriter writer = new TsFileWriter(file)) {
+      writer.registerTimeseries("root.sg.d1", new MeasurementSchema("s1", TSDataType.INT32));
+      writer.writeRecord(new TSRecord("root.sg.d1", TIMESTAMPS[0]).addTuple(new IntDataPoint("s1", 1)));
+      writer.flush();
+    }
+  }
+
+  /**
+   * Writes a table-model file that has a value column literally named {@code timestamp}, so that tests can check
+   * the timestamp alias wins over a same-named column.
+   */
+  public static void writeFileWithTimestampColumn(File file) throws IOException, WriteProcessException
+  {
+    final TableSchema tableSchema = new TableSchema(
+        TABLE_NAME,
+        Arrays.asList(
+            new ColumnSchemaBuilder().name("timestamp").dataType(TSDataType.INT64).build(),
+            new ColumnSchemaBuilder().name("temperature").dataType(TSDataType.FLOAT).build()
+        )
+    );
+
+    final Tablet tablet = new Tablet(
+        Arrays.asList("timestamp", "temperature"),
+        Arrays.asList(TSDataType.INT64, TSDataType.FLOAT)
+    );
+    tablet.addTimestamp(0, TIMESTAMPS[0]);
+    tablet.addValue(0, "timestamp", 999_999L);
+    tablet.addValue(0, "temperature", TEMPERATURES[0]);
 
     try (ITsFileWriter writer = new TsFileWriterBuilder().file(file).tableSchema(tableSchema).build()) {
       writer.write(tablet);

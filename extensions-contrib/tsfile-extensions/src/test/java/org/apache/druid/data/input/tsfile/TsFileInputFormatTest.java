@@ -179,6 +179,40 @@ public class TsFileInputFormatTest
   }
 
   @Test
+  public void testTreeModelFileIsRejected() throws IOException, WriteProcessException
+  {
+    final File file = new File(temporaryDirectory, "tree-model.tsfile");
+    TsFileTestData.writeTreeModelFile(file);
+
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> read(
+            file,
+            new TsFileInputFormat(null, null, null),
+            buildRowSchema(TsFileInputFormat.TIME_COLUMN_NAME, "millis")
+        )
+    );
+    assertTrue(e.getMessage().contains("no table schema"));
+  }
+
+  @Test
+  public void testTimestampAliasShadowsSameNamedColumn() throws IOException, WriteProcessException
+  {
+    final File file = new File(temporaryDirectory, "timestamp-column.tsfile");
+    TsFileTestData.writeFileWithTimestampColumn(file);
+
+    final List<InputRow> rows = read(
+        file,
+        new TsFileInputFormat(null, null, null),
+        buildRowSchema("timestamp", "millis")
+    );
+
+    assertEquals(1, rows.size());
+    // The TsFile time wins over the value of the TsFile column that happens to be named "timestamp".
+    assertEquals(1000L, rows.get(0).getTimestampFromEpoch());
+  }
+
+  @Test
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new DefaultObjectMapper();

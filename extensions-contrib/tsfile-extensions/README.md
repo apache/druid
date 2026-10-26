@@ -101,6 +101,8 @@ mvn exec:java -Dexec.classpathScope=test \
 | `testIntervalIsEndExclusive` | A row at the end boundary of `interval` is excluded |
 | `testEmptyIntervalReadsNothing` | An empty `interval` yields no rows |
 | `testReadCommittedSampleFile` | The committed `examples/data/sensor.tsfile` matches the expected rows below |
+| `testTreeModelFileIsRejected` | A tree-model file without a table schema fails with a clear error instead of reading zero rows |
+| `testTimestampAliasShadowsSameNamedColumn` | The TsFile time wins over a TsFile column named like the `timestampSpec` column |
 | `testUnknownTable` | A missing table produces an `InvalidInputException` naming the table |
 | `testUnknownColumn` | A missing column produces an `InvalidInputException` naming the column |
 | `testSerde` | The input format round-trips through Jackson with `"type": "tsfile"` |
