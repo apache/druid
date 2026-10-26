@@ -58,6 +58,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -123,7 +124,7 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specPost(
       final SupervisorSpec spec,
-      @QueryParam("skipRestartIfUnmodified") Boolean skipRestartIfUnmodified,
+      @QueryParam("skipRestartIfUnmodified") @DefaultValue("true") Boolean skipRestartIfUnmodified,
       @Context final HttpServletRequest req
   )
   {

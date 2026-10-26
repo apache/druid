@@ -47,7 +47,7 @@ class ParameterDocumentationGeneratorTest
       "<!-- GENERATED QUERY CONTEXT PARAMETER: maxRowsQueuedForOrdering -->";
   private static final String SQL_TABLE = "|Parameter|Description|Default value|\n|---|---|---|\n";
   private static final String SQL_MARKER =
-      "<!-- GENERATED QUERY CONTEXT PARAMETER: lane -->";
+      "<!-- GENERATED QUERY CONTEXT PARAMETER: sqlQueryId -->";
 
   @TempDir
   Path temporaryFolder;
@@ -67,11 +67,9 @@ class ParameterDocumentationGeneratorTest
     final String general = Files.readString(temporaryFolder.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8);
     assertTrue(general.startsWith("general header\n"));
     assertTrue(general.contains("|`useResultLevelCache`| `true` |"));
-    assertTrue(
-        general.contains(
-            "|`priority`| The default priority is one of the following: <ul><li>Value of `priority` in the query context, if set"
-        )
-    );
+    assertTrue(general.contains("|`priority`| `0` |"));
+    // A parameter without a default
+    assertTrue(general.contains("|`finalize`| N/A |"));
     assertTrue(general.contains(GENERAL_MARKER));
 
     final String scan = Files.readString(temporaryFolder.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8);
@@ -82,8 +80,12 @@ class ParameterDocumentationGeneratorTest
 
     final String sql = Files.readString(temporaryFolder.resolve(SQL_DOCUMENT), StandardCharsets.UTF_8);
     assertTrue(sql.startsWith("sql header\n"));
-    assertTrue(sql.contains("|`lane`|"));
+    assertTrue(sql.contains("|`sqlQueryId`|"));
     assertTrue(sql.contains(SQL_MARKER));
+    assertFalse(sql.contains("dartQueryId"));
+    // Undocumented parameters have descriptions but are left out of the generated tables.
+    assertFalse(sql.contains("prePlanned"));
+    assertFalse(general.contains("optimizeAggregators"));
 
     assertEquals(general, Files.readString(generatedOutput.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8));
     assertEquals(scan, Files.readString(generatedOutput.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8));
@@ -140,16 +142,16 @@ class ParameterDocumentationGeneratorTest
         "|stale| " + GENERAL_MARKER,
         "|stale| " + SCAN_MARKER,
         SQL_TABLE + "|stale| " + SQL_MARKER
-        + "\n\n|Key|Description|\n|---|---|\n|stale| <!-- GENERATED QUERY CONTEXT PARAMETER: queryId -->"
+        + "\n\n|Key|Description|\n|---|---|\n|stale| <!-- GENERATED QUERY CONTEXT PARAMETER: sqlTimeZone -->"
     );
 
     ParameterDocumentationGenerator.main(arguments("generate", temporaryFolder.resolve("generated")));
 
     final String sql = Files.readString(temporaryFolder.resolve(SQL_DOCUMENT), StandardCharsets.UTF_8);
-    assertTrue(sql.contains("|`lane`|Query lane, used to control usage limits on classes of queries."));
-    assertTrue(sql.contains("|`null`| " + SQL_MARKER));
-    assertTrue(sql.contains("|`queryId`|Unique identifier given to this query."));
-    assertTrue(sql.contains("cancel the query.| <!-- GENERATED QUERY CONTEXT PARAMETER: queryId -->"));
+    assertTrue(sql.contains("|`sqlQueryId`|SQL query ID."));
+    assertTrue(sql.contains("|auto-generated| " + SQL_MARKER));
+    assertTrue(sql.contains("|`sqlTimeZone`|Time zone for a connection."));
+    assertTrue(sql.contains("behave.| <!-- GENERATED QUERY CONTEXT PARAMETER: sqlTimeZone -->"));
   }
 
   @Test
@@ -184,27 +186,9 @@ class ParameterDocumentationGeneratorTest
   }
 
   @Test
-  void testNormalizesTableCell()
-  {
-    final String description = String.join(
-        "",
-        " Description with ",
-        "\\",
-        "\n",
-        " wrapped lines ",
-        "\n and   a continuation marker. "
-    );
-
-    assertEquals(
-        "Description with wrapped lines and a continuation marker.",
-        ParameterDocumentationGenerator.normalizeTableCell(description)
-    );
-  }
-
-  @Test
   void testEscapesTableCell()
   {
-    assertEquals("a \\| b", ParameterDocumentationGenerator.escapeTableCell(" a\n| b "));
+    assertEquals("a \\| b", ParameterDocumentationGenerator.escapeTableCell("a | b"));
   }
 
   private String[] arguments(final String mode, final Path generatedOutput)

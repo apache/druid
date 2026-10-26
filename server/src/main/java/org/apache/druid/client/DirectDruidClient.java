@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -63,6 +64,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.utils.CloseableUtils;
@@ -73,7 +75,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
-import java.net.URL;
 import java.util.Enumeration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -91,6 +92,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#QUERY_FAIL_TIME} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String QUERY_FAIL_TIME = "queryFailTime";
 
   private static final Logger log = new Logger(DirectDruidClient.class);
@@ -171,7 +176,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       final long requestStartTimeNs = System.nanoTime();
       final QueryContext queryContext = query.context();
       // Will NPE if the value is not set.
-      final long timeoutAt = queryContext.getLong(QUERY_FAIL_TIME);
+      final long timeoutAt = queryContext.get(QueryContextParameters.QUERY_FAIL_TIME);
       final long maxScatterGatherBytes = queryContext.getMaxScatterGatherBytes();
       final AtomicLong totalBytesGathered = context.getTotalBytes();
       final long maxQueuedBytes = queryContext.getMaxQueuedBytes(0);
@@ -775,7 +780,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         future = httpClient.go(
             new Request(
                 HttpMethod.POST,
-                new URL(url)
+                URIs.toURL(url)
             ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
              .setHeader(
                  HttpHeaders.Names.CONTENT_TYPE,
@@ -862,7 +867,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     Runnable cancelRunnable = () -> {
       try {
         Future<StatusResponseHolder> responseFuture = httpClient.go(
-            new Request(HttpMethod.DELETE, new URL(cancelUrl))
+            new Request(HttpMethod.DELETE, URIs.toURL(cancelUrl))
             .setContent(objectMapper.writeValueAsBytes(query))
             .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
             StatusResponseHandler.getInstance(),

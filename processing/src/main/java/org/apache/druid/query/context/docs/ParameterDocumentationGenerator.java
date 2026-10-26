@@ -21,6 +21,7 @@ package org.apache.druid.query.context.docs;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.context.DefaultValue;
 import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.constraint.ParameterConstraint;
@@ -67,9 +68,6 @@ public final class ParameterDocumentationGenerator
   );
   private static final Pattern MARKER = Pattern.compile("<!-- GENERATED QUERY CONTEXT PARAMETER: (\\S+) -->$");
   private static final Pattern TABLE_SEPARATOR = Pattern.compile("^\\|\\s*:?-{3,}.*");
-  private static final Pattern TEXT_BLOCK_LINE_CONTINUATION = Pattern.compile("\\\\[ \\t]*\\R");
-  private static final Pattern LINE_BREAK = Pattern.compile("\\R");
-  private static final Pattern HORIZONTAL_WHITESPACE = Pattern.compile("[ \\t]+");
 
   private ParameterDocumentationGenerator()
   {
@@ -247,22 +245,18 @@ public final class ParameterDocumentationGenerator
 
   private static String renderValueDescription(final QueryContextParameter<?> parameter)
   {
-    final StringBuilder description = new StringBuilder();
-    if (Integer.class.equals(parameter.getValueType())) {
-      description.append("An integer");
-    } else if (Long.class.equals(parameter.getValueType())) {
-      description.append("A long integer");
-    } else if (Boolean.class.equals(parameter.getValueType())) {
-      description.append("A Boolean");
-    } else if (String.class.equals(parameter.getValueType())) {
-      description.append("A string");
-    } else {
-      description.append(parameter.getValueType().getSimpleName());
-    }
+    final String typeDescription = switch (parameter.getType()) {
+      case INTEGER -> "An integer";
+      case LONG -> "A long integer";
+      case BOOLEAN -> "A Boolean";
+      case STRING -> "A string";
+      case ENUM -> parameter.getValueType().getSimpleName();
+      default -> parameter.getType().getDisplayName();
+    };
+    final StringBuilder description = new StringBuilder(typeDescription);
 
     for (final ParameterConstraint<?> constraint : parameter.getConstraints()) {
-      if (constraint instanceof Range.Constraint<?>) {
-        final Range.Constraint<?> range = (Range.Constraint<?>) constraint;
+      if (constraint instanceof Range.Constraint<?> range) {
         description.append(" in [")
                    .append(range.getLowerBound())
                    .append(", ")
@@ -283,10 +277,14 @@ public final class ParameterDocumentationGenerator
       final ParameterDocumentation docs
   )
   {
-    return docs.getDefaultDescription()
-               .map(ParameterDocumentationGenerator::escapeTableCell)
-               .or(() -> parameter.getDefaultValue().map(value -> "`" + value + "`"))
-               .orElse("N/A");
+    if (docs.getDefaultDescription().isPresent()) {
+      return escapeTableCell(docs.getDefaultDescription().get());
+    }
+    return switch (parameter.getDefaultValue()) {
+      case DefaultValue.Literal<?> literal -> "`" + literal.value() + "`";
+      case DefaultValue.FromProperty<?> fromProperty -> "`" + fromProperty.property() + "`";
+      case DefaultValue.None<?> _ -> "N/A";
+    };
   }
 
   /**
@@ -300,21 +298,7 @@ public final class ParameterDocumentationGenerator
 
   static String escapeTableCell(final String value)
   {
-    return StringUtils.replace(normalizeTableCell(value), "|", "\\|");
-  }
-
-  /**
-   * Markdown table cells must be rendered on one physical line. Parameter descriptions and default descriptions are
-   * commonly written as Java text blocks, so remove text-block line continuations, flatten remaining line breaks, and
-   * collapse incidental whitespace before writing the generated documentation.
-   */
-  static String normalizeTableCell(final String value)
-  {
-    return HORIZONTAL_WHITESPACE.matcher(
-                         LINE_BREAK.matcher(TEXT_BLOCK_LINE_CONTINUATION.matcher(value).replaceAll("")).replaceAll(" ")
-                     )
-                     .replaceAll(" ")
-                     .trim();
+    return StringUtils.replace(value, "|", "\\|");
   }
 
   private enum Mode

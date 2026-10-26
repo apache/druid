@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -43,6 +44,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -508,6 +510,126 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assertions.assertEquals(2, taskGroups.size());
     Assertions.assertEquals(3, taskGroups.get(0).tasks.size());
     Assertions.assertEquals(3, taskGroups.get(1).tasks.size());
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_throwsException_ifMetadataIsInvalid()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> supervisor.isTaskReadyToPublishSegments(
+            "task1",
+            new ObjectMetadata("abc")
+        )
+    );
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_returnsCompleted_ifNoConflictingTask()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
+        "task1",
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of("p1", "100"), Set.of())
+        )
+    );
+
+    Assertions.assertTrue(future.isDone());
+    Assertions.assertEquals(Boolean.TRUE, FutureUtils.getUnchecked(future, true));
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_waitsForEarlierTask()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(List.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "earlierGroupPendingCompletion", Map.of("p1", "0"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "laterGroupPendingCompletion", Map.of("p1", "10000"));
+
+    final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
+        "waitingTask",
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of("p1", "100"), Set.of())
+        )
+    );
+    Assertions.assertFalse(future.isDone());
+
+    // Mark the earlier task group as completed
+    final SeekableStreamSupervisor<?, ?, ?>.TaskGroup earlierTaskGroup =
+        supervisor.getPendingCompletionTaskGroups(0).get(0);
+    earlierTaskGroup.onCompleted();
+
+    // Verify that the task is now ready to publish even though the later task group is not complete yet
+    Assertions.assertTrue(future.isDone());
+    Assertions.assertEquals(Boolean.TRUE, FutureUtils.getUnchecked(future, true));
+
+    final SeekableStreamSupervisor<?, ?, ?>.TaskGroup laterTaskGroup =
+        supervisor.getPendingCompletionTaskGroups(1).get(0);
+    Assertions.assertFalse(laterTaskGroup.completed.get());
+  }
+
+  @Test
+  public void test_isTaskReadyToPublishSegments_returnsFalse_ifTaskIsStoppedAfterEarlierTaskTimesOut()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("earlierTask"))
+            .andReturn(Optional.of(TaskStatus.running("earlierTask"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("laterTask"))
+            .andReturn(Optional.of(TaskStatus.running("laterTask"))).anyTimes();
+
+    taskQueue.shutdown(EasyMock.eq("earlierTask"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(indexTaskClient.stopAsync("laterTask", false))
+            .andReturn(Futures.immediateFuture(true)).atLeastOnce();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "earlierTask", Map.of(SHARD_ID, "0"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "laterTask", Map.of(SHARD_ID, "100"));
+
+    final ListenableFuture<Boolean> future = supervisor.isTaskReadyToPublishSegments(
+        "laterTask",
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of(SHARD_ID, "100"), Set.of())
+        )
+    );
+    Assertions.assertFalse(future.isDone());
+
+    // Expire the earlier task group so that the supervisor kills it and stops the later task group
+    supervisor.getPendingCompletionTaskGroups(0).get(0).completionTimeout = DateTimes.nowUtc().minusMinutes(1);
+    supervisor.runInternal();
+
+    Assertions.assertTrue(future.isDone());
+    Assertions.assertEquals(Boolean.FALSE, FutureUtils.getUnchecked(future, true));
+    verifyAll();
   }
 
   @Test
@@ -4133,17 +4255,17 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     final long zeroCooldown = 0L;
     final long unusedCooldown = Duration.standardHours(1).getMillis();
-    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(zeroCooldown, unusedCooldown, 2);
+    setupSupervisorForAutoScalingTest(zeroCooldown, unusedCooldown, 2);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
     // minScaleUpDelay = 0 means any scale-up is immediately allowed.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, false);
 
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(1, events.size(), "Exactly one required-tasks emission expected");
     assertScaledToTaskCount(events.get(0), 5);
   }
@@ -4153,20 +4275,20 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     final long scaleUpCooldown = Duration.standardHours(1).getMillis();
     final long unusedCooldown = 0L;
-    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(scaleUpCooldown, unusedCooldown, 2);
+    setupSupervisorForAutoScalingTest(scaleUpCooldown, unusedCooldown, 2);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
     // First scale-up succeeds and stamps the last-scale timestamp.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, false);
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-up is within the 1h minScaleUpDelay window and must be blocked.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {}, false);
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount(), "Second scale-up must not take effect");
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(2, events.size(), "Two required-tasks emissions expected (one applied, one skipped)");
     // First emission: the successful scale carries no skip-reason dim and reports the applied count.
     assertScaledToTaskCount(events.get(0), 5);
@@ -4175,21 +4297,45 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void test_dynamicAllocation_allowsScaleUpDuringRollover_evenIfCooldownNotElapsed()
+  {
+    final long scaleUpCooldown = Duration.standardHours(1).getMillis();
+    final long unusedCooldown = Duration.standardHours(1).getMillis();
+    setupSupervisorForAutoScalingTest(scaleUpCooldown, unusedCooldown, 2);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    // First scale-up succeeds and stamps the last-scale timestamp.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, false);
+    Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+
+    // Second scale-up also succeeds since cooldown is ignored on rollover
+    supervisor.handleDynamicAllocationTasksNotice(() -> 10, () -> {}, true);
+    Assertions.assertEquals(10, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assertions.assertEquals(2, events.size(), "Exactly one required-tasks emission expected");
+    assertScaledToTaskCount(events.get(0), 5);
+    assertScaledToTaskCount(events.get(1), 10);
+  }
+
+  @Test
   public void testDynamicAllocationScaleDownAllowedWhenCooldownElapsed()
   {
     final long unusedCooldown = Duration.standardHours(1).getMillis();
     final long zeroCooldown = 0L;
-    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(unusedCooldown, zeroCooldown, 5);
+    setupSupervisorForAutoScalingTest(unusedCooldown, zeroCooldown, 5);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
     // minScaleDownDelay = 0 means any scale-down is immediately allowed.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, false);
 
     Assertions.assertEquals(2, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(1, events.size(), "Exactly one required-tasks emission expected");
     assertScaledToTaskCount(events.get(0), 2);
   }
@@ -4199,41 +4345,64 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     final long unusedCooldown = 0L;
     final long scaleDownCooldown = Duration.standardHours(1).getMillis();
-    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(unusedCooldown, scaleDownCooldown, 5);
+    setupSupervisorForAutoScalingTest(unusedCooldown, scaleDownCooldown, 5);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
     // First scale-down succeeds and stamps the last-scale timestamp.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, false);
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-down is within the 1h minScaleDownDelay window and must be blocked.
-    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, false);
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount(), "Second scale-down must not take effect");
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(2, events.size(), "Two required-tasks emissions expected (one applied, one skipped)");
     assertScaledToTaskCount(events.get(0), 3);
     assertScaleSkipped(events.get(1), 1, "Scale cooldown not elapsed yet");
   }
 
   @Test
-  public void testDynamicAllocationClampsDesiredAboveMaxToMax()
+  public void test_dynamicAllocation_allowsScaleDownDuringRollover_evenIfCooldownNotElapsed()
   {
-    // Scaler returns 20, but taskCountMax=10. Supervisor must clamp and scale to 10.
-    final StubServiceEmitter scalingEmitter =
-        setupSupervisorForAutoScalingTest(0L, 0L, 3, 1, 10);
+    final long unusedCooldown = Duration.standardHours(1).getMillis();
+    final long scaleDownCooldown = Duration.standardHours(1).getMillis();
+    setupSupervisorForAutoScalingTest(unusedCooldown, scaleDownCooldown, 5);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 20, () -> {}, scalingEmitter);
+    // First scale-down succeeds and stamps the last-scale timestamp.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, false);
+    Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount());
+
+    // Second scale down also passes since cooldown is ignored
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, true);
+    Assertions.assertEquals(1, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assertions.assertEquals(2, events.size(), "Exactly one required-tasks emission expected");
+    assertScaledToTaskCount(events.get(0), 3);
+    assertScaledToTaskCount(events.get(1), 1);
+  }
+
+  @Test
+  public void testDynamicAllocationClampsDesiredAboveMaxToMax()
+  {
+    // Scaler returns 20, but taskCountMax=10. Supervisor must clamp and scale to 10.
+    setupSupervisorForAutoScalingTest(0L, 0L, 3, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 20, () -> {}, false);
 
     // Task count is clamped to max (10), not the scaler's desired (20).
     Assertions.assertEquals(10, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(1, events.size());
     // The emitted metric value reflects the scaler's unclamped desired (the operator hint), not
     // the clamped value the supervisor actually applied.
@@ -4244,17 +4413,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testDynamicAllocationClampsDesiredBelowMinToMin()
   {
     // Scaler returns 1, but taskCountMin=3. Supervisor must clamp and scale to 3.
-    final StubServiceEmitter scalingEmitter =
-        setupSupervisorForAutoScalingTest(0L, 0L, 5, 3, 10);
+    setupSupervisorForAutoScalingTest(0L, 0L, 5, 3, 10);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, false);
 
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(1, events.size());
     assertScaledToTaskCount(events.get(0), 1);
   }
@@ -4264,17 +4432,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     // Current (10) is already at configured max (10). Scaler wants 15 (above max). Supervisor
     // clamps to 10 which equals current -> emits "Already at max task count" skip reason.
-    final StubServiceEmitter scalingEmitter =
-        setupSupervisorForAutoScalingTest(0L, 0L, 10, 1, 10);
+    setupSupervisorForAutoScalingTest(0L, 0L, 10, 1, 10);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 15, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 15, () -> {}, false);
 
     Assertions.assertEquals(10, supervisor.getIoConfig().getTaskCount(), "Task count must not change when at max");
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(1, events.size());
     assertScaleSkipped(events.get(0), 15, "Already at max task count");
   }
@@ -4284,17 +4451,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     // Current (3) is already at configured min (3). Scaler wants 1 (below min). Supervisor clamps
     // to 3 which equals current -> emits "Already at min task count" skip reason.
-    final StubServiceEmitter scalingEmitter =
-        setupSupervisorForAutoScalingTest(0L, 0L, 3, 3, 10);
+    setupSupervisorForAutoScalingTest(0L, 0L, 3, 3, 10);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, false);
 
     Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount(), "Task count must not change when at min");
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(1, events.size());
     assertScaleSkipped(events.get(0), 1, "Already at min task count");
   }
@@ -4303,17 +4469,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testDynamicAllocationEmitsNothingWhenDesiredEqualsCurrent()
   {
     // No skip metric in the steady-state no-op (avoid emitting on every tick).
-    final StubServiceEmitter scalingEmitter =
-        setupSupervisorForAutoScalingTest(0L, 0L, 5, 1, 10);
+    setupSupervisorForAutoScalingTest(0L, 0L, 5, 1, 10);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, false);
 
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertTrue(events.isEmpty(), "No metric should be emitted in the steady-state no-op case");
   }
 
@@ -4322,17 +4487,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     // Scaler contract: a non-positive return means "I could not compute a useful answer".
     // Supervisor must not scale and must emit a skip reason surfacing the scaler's failure.
-    final StubServiceEmitter scalingEmitter =
-        setupSupervisorForAutoScalingTest(0L, 0L, 5, 1, 10);
+    setupSupervisorForAutoScalingTest(0L, 0L, 5, 1, 10);
     final TestSeekableStreamSupervisor supervisor =
         new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
 
-    supervisor.handleDynamicAllocationTasksNotice(() -> -1, () -> {}, scalingEmitter);
+    supervisor.handleDynamicAllocationTasksNotice(() -> -1, () -> {}, false);
 
     Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount(), "Task count must not change on pathological return");
 
     final List<ServiceMetricEvent> events =
-        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+        emitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
     Assertions.assertEquals(1, events.size());
     assertScaleSkipped(events.get(0), -1, "Auto-scaler failed to compute a task count");
   }
@@ -4398,16 +4562,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
    * without hitting unmocked calls. Returns a dedicated emitter for the caller to pass into the
    * notice handler so dynamic-allocation events can be asserted in isolation.
    */
-  private StubServiceEmitter setupSupervisorForAutoScalingTest(
+  private void setupSupervisorForAutoScalingTest(
       long minScaleUpDelayMillis,
       long minScaleDownDelayMillis,
       int initialTaskCount
   )
   {
-    return setupSupervisorForAutoScalingTest(minScaleUpDelayMillis, minScaleDownDelayMillis, initialTaskCount, 1, 100);
+    setupSupervisorForAutoScalingTest(minScaleUpDelayMillis, minScaleDownDelayMillis, initialTaskCount, 1, 100);
   }
 
-  private StubServiceEmitter setupSupervisorForAutoScalingTest(
+  private void setupSupervisorForAutoScalingTest(
       long minScaleUpDelayMillis,
       long minScaleDownDelayMillis,
       int initialTaskCount,
@@ -4426,7 +4590,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         autoScalerConfig,
         null
     );
-    return resetSpecAndTaskMasterForScaling(ioConfig);
+    resetSpecAndTaskMasterForScaling(ioConfig);
   }
 
   /**
@@ -4506,10 +4670,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     };
   }
 
-  private StubServiceEmitter resetSpecAndTaskMasterForScaling(SeekableStreamSupervisorIOConfig ioConfig)
+  private void resetSpecAndTaskMasterForScaling(SeekableStreamSupervisorIOConfig ioConfig)
   {
-    final StubServiceEmitter scalingEmitter = new StubServiceEmitter("scaling", "localhost");
-
     EasyMock.reset(spec, taskMaster);
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
@@ -4526,6 +4688,5 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
 
     replayAll();
-    return scalingEmitter;
   }
 }

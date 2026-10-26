@@ -20,27 +20,35 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.error.ThrowableMatcher;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -56,7 +64,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -66,10 +77,10 @@ import static org.mockito.Mockito.doThrow;
 public class MSQLoadedSegmentTests extends MSQTestBase
 {
   public static final Map<String, Object> REALTIME_QUERY_CTX =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.name())
-                  .build();
+                  .put(QueryContextParameters.INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.name())
+                  .toMap();
   public static final DataSegment LOADED_SEGMENT_1 =
       DataSegment.builder()
                  .dataSource(CalciteTests.DATASOURCE1)
@@ -294,6 +305,102 @@ public class MSQLoadedSegmentTests extends MSQTestBase
   }
 
   @Test
+  public void testSelectWithLoadedSegmentsOnFooWithOrderByLimitOffset()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    stubDataServerScanResults(
+        ImmutableList.of("cnt", "dim1"),
+        ImmutableList.of(
+            ImmutableList.of(1L, "qwe"),
+            ImmutableList.of(1L, "tyu")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("select cnt, dim1 from foo order by dim1 limit 2 offset 6")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("cnt", "dim1")
+                           .columnTypes(resultSignature.getColumnTypes())
+                           .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
+                           .offset(6)
+                           .limit(2)
+                           .context(REALTIME_QUERY_CTX)
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(REALTIME_QUERY_CTX)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1L, "qwe"},
+            new Object[]{1L, "tyu"}
+        ))
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectWithLoadedSegmentsOnFooWithTimeOrderLimitOffset()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("__time", ColumnType.LONG)
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    final long time1 = DateTimes.of("2003-01-01").getMillis();
+    final long time2 = DateTimes.of("2003-01-02").getMillis();
+
+    stubDataServerScanResults(
+        ImmutableList.of("__time", "cnt", "dim1"),
+        ImmutableList.of(
+            ImmutableList.of(time1, 1L, "qwe"),
+            ImmutableList.of(time2, 1L, "tyu")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("select __time, cnt, dim1 from foo order by __time limit 2 offset 6")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("__time", "cnt", "dim1")
+                           .columnTypes(resultSignature.getColumnTypes())
+                           .orderBy(ImmutableList.of(OrderBy.ascending("__time")))
+                           .offset(6)
+                           .limit(2)
+                           .context(REALTIME_QUERY_CTX)
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(REALTIME_QUERY_CTX)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{time1, 1L, "qwe"},
+            new Object[]{time2, 1L, "tyu"}
+        ))
+        .verifyResults();
+  }
+
+  @Test
   public void testGroupByWithLoadedSegmentsOnFoo()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -464,5 +571,43 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class))
         .verifyExecutionError();
+  }
+
+  /**
+   * Stubs {@link #dataServerQueryHandler} to serve scan queries from the given rows, passing them through
+   * {@link ScanQueryQueryToolChest#mergeResults} so that offset and limit are applied the way a realtime server
+   * applies them.
+   */
+  private void stubDataServerScanResults(final List<String> columns, final List<List<Object>> rows)
+  {
+    doAnswer(
+        invocationOnMock -> {
+          final ScanQuery query = invocationOnMock.getArgument(0);
+          final Function<Sequence<ScanResultValue>, Sequence<Object[]>> mappingFunction =
+              invocationOnMock.getArgument(2);
+
+          // One row per batch, since that is what the time-ordered merge expects.
+          final QueryRunner<ScanResultValue> baseRunner = (queryPlus, responseContext) -> Sequences.simple(
+              rows.stream()
+                  .map(row -> new ScanResultValue(null, columns, ImmutableList.of(row)))
+                  .collect(Collectors.toList())
+          );
+
+          final Sequence<ScanResultValue> results =
+              new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance())
+                  .mergeResults(baseRunner)
+                  .run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+
+          return Futures.immediateFuture(
+              new DataServerQueryResult<>(
+                  ImmutableList.of(Yielders.each(mappingFunction.apply(results))),
+                  ImmutableList.of(),
+                  "foo"
+              )
+          );
+        }
+    )
+        .when(dataServerQueryHandler)
+        .fetchRowsFromDataServer(any(), any(), any(), any());
   }
 }

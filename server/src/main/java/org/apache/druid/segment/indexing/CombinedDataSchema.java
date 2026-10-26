@@ -46,10 +46,19 @@ public class CombinedDataSchema extends DataSchema
       @Nullable SegmentGranularitySpec segmentGranularitySpec,
       @Nullable TransformSpec transformSpec,
       @Nullable List<AggregateProjectionSpec> projections,
-      BaseTableProjectionSpec baseTable
+      BaseTableProjectionSpec baseTable,
+      @Nullable Set<String> multiValuedDimensions
   )
   {
-    return new CombinedDataSchema(dataSource, timestampSpec, segmentGranularitySpec, transformSpec, projections, baseTable);
+    return new CombinedDataSchema(
+        dataSource,
+        timestampSpec,
+        segmentGranularitySpec,
+        transformSpec,
+        projections,
+        baseTable,
+        multiValuedDimensions
+    );
   }
 
   private final Set<String> multiValuedDimensions;
@@ -86,11 +95,12 @@ public class CombinedDataSchema extends DataSchema
       @Nullable SegmentGranularitySpec segmentGranularitySpec,
       @Nullable TransformSpec transformSpec,
       @Nullable List<AggregateProjectionSpec> projections,
-      BaseTableProjectionSpec baseTable
+      BaseTableProjectionSpec baseTable,
+      @Nullable Set<String> multiValuedDimensions
   )
   {
     super(dataSource, timestampSpec, null, null, null, segmentGranularitySpec, transformSpec, projections, baseTable, null);
-    this.multiValuedDimensions = null;
+    this.multiValuedDimensions = multiValuedDimensions;
   }
 
   @Nullable

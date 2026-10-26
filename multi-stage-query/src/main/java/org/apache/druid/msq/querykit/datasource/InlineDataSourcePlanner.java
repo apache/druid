@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.DataSourcePlanner;
+import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
@@ -49,7 +50,7 @@ public class InlineDataSourcePlanner implements DataSourcePlanner<InlineDataSour
     DataSourcePlannerUtils.checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
 
     return new DataSourcePlan(
-        dataSource,
+        broadcast ? dataSource : new InputNumberDataSource(0),
         Collections.singletonList(new InlineInputSpec(dataSource)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null

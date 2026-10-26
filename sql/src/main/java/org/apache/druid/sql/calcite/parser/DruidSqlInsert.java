@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.planner.DruidSqlIngestOperator;
 
 import javax.annotation.Nonnull;
@@ -38,7 +39,15 @@ import javax.annotation.Nullable;
  */
 public class DruidSqlInsert extends DruidSqlIngest
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_INSERT_SEGMENT_GRANULARITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SQL_INSERT_SEGMENT_GRANULARITY = "sqlInsertSegmentGranularity";
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_INSERT_QUERY_GRANULARITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SQL_INSERT_QUERY_GRANULARITY = "sqlInsertQueryGranularity";
 
   // This allows reusing super.unparse

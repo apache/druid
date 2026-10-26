@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
@@ -43,9 +42,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -100,11 +100,11 @@ public class ProjectionSpecTranslator
    * understands: no timeseries or topN rewrite to hide the grouping columns, and no approximation choices that depend
    * on unrelated configuration. These win over anything the statement set.
    */
-  private static final Map<String, Object> CONTEXT = ImmutableMap.of(
-      PlannerContext.CTX_SQL_USE_GRANULARITY, false,
-      QueryContexts.TIME_BOUNDARY_PLANNING_KEY, false,
-      PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false
-  );
+  private static final Map<String, Object> CONTEXT = QueryContext.builder()
+      .put(QueryContextParameters.SQL_USE_GRANULARITY, false)
+      .put(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING, false)
+      .put(QueryContextParameters.USE_APPROXIMATE_TOP_N, false)
+      .toMap();
 
   private final PlannerFactory plannerFactory;
   private final Map<String, Object> queryContext;

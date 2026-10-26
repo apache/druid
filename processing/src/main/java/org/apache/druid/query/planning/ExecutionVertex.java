@@ -25,27 +25,26 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.query.filter.FilterSegmentPruner;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.join.JoinPrefixUtils;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Represents the native engine's execution vertex - the execution unit it may execute in one execution cycle.
@@ -118,7 +117,7 @@ public class ExecutionVertex
   protected final DataSource baseDataSource;
   /** The effective {@link QuerySegmentSpec} of this vertex - this might be more restrictive that what the {@link Query} has.*/
   protected final QuerySegmentSpec querySegmentSpec;
-  /** Retained for compatibility with earlier implementation. See {@link #isBaseColumn(String)} */
+  /** Used only for the heuristic in {@link #isSegmentMapFunctionExpensive()}. */
   protected final List<String> joinPrefixes;
 
   /** Retained for compatibility with earlier implementation. */
@@ -210,10 +209,15 @@ public class ExecutionVertex
    */
   public boolean isSegmentMapFunctionExpensive()
   {
-    boolean hasJoin = !joinPrefixes.isEmpty();
-    return hasJoin;
+    return !joinPrefixes.isEmpty();
   }
 
+  /**
+   * Returns a pruner for the segments this vertex reads, or null if pruning is not possible. Throws for a
+   * vertex whose base is a {@link UnionDataSource}; callers should use {@link #splitUnion()} to split them first.
+   *
+   * @see DataSource#createSegmentPruner(DimFilter, VirtualColumns)
+   */
   @Nullable
   public SegmentPruner getSegmentPruner()
   {
@@ -221,47 +225,8 @@ public class ExecutionVertex
       return null;
     }
 
-    final SegmentPruner forDataSource = topQuery.getDataSource().createSegmentPruner();
-
-    if (topQuery.getFilter() == null) {
-      return forDataSource;
-    }
-    final Set<String> baseFields = new HashSet<>();
-    for (final String field : topQuery.getFilter().getRequiredColumns()) {
-      if (isBaseColumn(field)) {
-        baseFields.add(field);
-      }
-    }
-    final FilterSegmentPruner forFilters = new FilterSegmentPruner(
-        topQuery.getFilter(),
-        baseFields,
-        topQuery.getVirtualColumns()
-    );
-
-    if (forDataSource == null) {
-      return forFilters;
-    }
-
-    return forDataSource.combine(forFilters);
-  }
-
-  /**
-   * Answers if the given column is coming from the base datasource or not.
-   *
-   * Retained for backward compatibility for now. The approach taken here relies
-   * on join prefixes - which might classify the output of a
-   * {@link VirtualColumn} to be coming from the base datasource. <br/>
-   * An alternate approach would be to analyze these during the segmentmap
-   * function creation.
-   */
-  public boolean isBaseColumn(String columnName)
-  {
-    for (String prefix : joinPrefixes) {
-      if (JoinPrefixUtils.isPrefixedBy(columnName, prefix)) {
-        return false;
-      }
-    }
-    return true;
+    final Query<?> query = getCollapsedQuery();
+    return query.getDataSource().createSegmentPruner(query.getFilter(), query.getVirtualColumns());
   }
 
   @SuppressWarnings("rawtypes")
@@ -271,26 +236,69 @@ public class ExecutionVertex
   }
 
   /**
-   * Assembles the segment mapping function which should be applied to the input segments.
+   * Assembles the segment mapping function which should be applied to the input segments. Throws if the base
+   * datasource is a {@link UnionDataSource}; use {@link #splitUnionSegmentMapFunctions} instead.
    */
   public SegmentMapFunction createSegmentMapFunction(PolicyEnforcer policyEnforcer)
   {
-    return getTopDataSource().createSegmentMapFunction(topQuery).thenMap(segment -> {
+    final Query<?> query = getCollapsedQuery();
+    return query.getDataSource().createSegmentMapFunction(query).thenMap(segment -> {
       segment.validateOrElseThrow(policyEnforcer);
       return segment;
     });
   }
 
   /**
-   * Returns the first datasource which is not collapsible by the topQuery.
+   * Returns a vertex for each arm of a {@link UnionDataSource} at the base of this vertex, each reading that arm in
+   * place of the union. Returns this vertex as-is if its base is not a union.
    */
-  private DataSource getTopDataSource()
+  public List<ExecutionVertex> splitUnion()
+  {
+    if (!(baseDataSource instanceof UnionDataSource)) {
+      return List.of(this);
+    }
+
+    final List<ExecutionVertex> retVal = new ArrayList<>();
+    for (final DataSource arm : baseDataSource.getChildren()) {
+      retVal.add(ExecutionVertex.of(buildQueryWithBaseDataSource(arm)));
+    }
+    return retVal;
+  }
+
+  /**
+   * Returns the segment mapping function of each vertex from {@link #splitUnion()}, in the same order. Everything
+   * above the union, such as joinables, is built once and shared by every arm, rather than once per arm.
+   */
+  public List<SegmentMapFunction> splitUnionSegmentMapFunctions(PolicyEnforcer policyEnforcer)
+  {
+    if (!(baseDataSource instanceof UnionDataSource)) {
+      return List.of(createSegmentMapFunction(policyEnforcer));
+    }
+    // An empty inline datasource stands in for the union, since it is a leaf whose mapping function is the identity.
+    final SegmentMapFunction aboveUnionFn =
+        ExecutionVertex.of(buildQueryWithBaseDataSource(InlineDataSource.fromIterable(List.of(), RowSignature.empty())))
+                       .createSegmentMapFunction(policyEnforcer);
+    final Query<?> query = getCollapsedQuery();
+    final List<SegmentMapFunction> retVal = new ArrayList<>();
+    for (final DataSource arm : baseDataSource.getChildren()) {
+      final SegmentMapFunction armFn = arm.createSegmentMapFunction(query);
+      retVal.add(segment -> aboveUnionFn.apply(armFn.apply(segment)));
+    }
+    return retVal;
+  }
+
+  /**
+   * Returns the innermost query in a chain of collapsible subqueries, whose datasource is the first one that is not
+   * collapsible. This is the query that reads the datasources of this vertex. For queries without collapsible
+   * subqueries, which is generally most of them, this is the same as {@link #topQuery}.
+   */
+  private Query<?> getCollapsedQuery()
   {
     Query<?> q = topQuery;
     while (q.mayCollapseQueryDataSource()) {
       q = ((QueryDataSource) q.getDataSource()).getQuery();
     }
-    return q.getDataSource();
+    return q;
   }
 
   @Override
