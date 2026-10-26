@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.DruidCI;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
@@ -30,7 +31,7 @@ import org.testcontainers.utility.DockerImageName;
  */
 public class RustFSContainer extends GenericContainer<RustFSContainer>
 {
-  public static final DockerImageName IMAGE = DockerImageName.parse("rustfs/rustfs:1.0.0");
+  public static final DockerImageName IMAGE = DockerImageName.parse(DruidCI.cacheDockerImage("rustfs/rustfs:1.0.0"));
   public static final String DEFAULT_ACCESS_KEY = "rustfsadmin";
   public static final String DEFAULT_SECRET_KEY = "rustfsadmin";
 

@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionModule;
+import org.apache.druid.testing.DruidCI;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -76,7 +77,7 @@ public class TestKafkaExtractionCluster
   private final Closer closer = Closer.create();
 
   private static final String KAFKA_IMAGE =
-      System.getProperty("druid.testing.kafka.image", "apache/kafka:4.3.0");
+      System.getProperty("druid.testing.kafka.image", DruidCI.cacheDockerImage("apache/kafka:4.3.0"));
 
   private KafkaContainer kafkaServer;
   private Injector injector;

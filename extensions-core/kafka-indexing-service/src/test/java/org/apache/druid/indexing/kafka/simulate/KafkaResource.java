@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka.simulate;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.kafka.clients.admin.Admin;
@@ -62,7 +63,7 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
    * defaults to {@code apache/kafka}. Environments that cannot run that
    * image should set the system property to {@code apache/kafka-native}.
    */
-  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.3.0");
+  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", DruidCI.cacheDockerImage("apache/kafka:4.3.0"));
   private static final int PARTITION_READINESS_MAX_TRIES = 5;
 
   private EmbeddedDruidCluster cluster;

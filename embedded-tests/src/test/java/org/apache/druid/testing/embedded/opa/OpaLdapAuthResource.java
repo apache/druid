@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.opa;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicSecurityDruidModule;
 import org.apache.druid.security.opa.OpaDruidModule;
+import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.apache.druid.testing.embedded.indexing.Resources;
@@ -33,7 +34,7 @@ import java.util.List;
 
 public class OpaLdapAuthResource implements EmbeddedResource
 {
-  private static final String LDAP_IMAGE = "osixia/openldap:1.5.0";
+  private static final String LDAP_IMAGE = DruidCI.cacheDockerImage("osixia/openldap:1.5.0");
   private static final String OPA_IMAGE = "openpolicyagent/opa:1.18.2-debug";
 
   public static final String ADMIN_PASSWORD = "priest";

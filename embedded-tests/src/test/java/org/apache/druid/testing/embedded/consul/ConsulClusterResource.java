@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.consul;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.druid.testing.utils.TLSCertificateBundle;
@@ -54,7 +55,7 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
   private static final int CONSUL_HTTP_PORT = 8500;
   private static final int CONSUL_HTTPS_PORT = 8501;
-  private static final DockerImageName CONSUL_IMAGE = DockerImageName.parse("hashicorp/consul:1.18");
+  private static final DockerImageName CONSUL_IMAGE = DockerImageName.parse(DruidCI.cacheDockerImage("hashicorp/consul:1.18"));
   private static final Duration READINESS_TIMEOUT = Duration.ofSeconds(30);
   private static final Duration READINESS_RETRY_DELAY = Duration.ofMillis(500);
 

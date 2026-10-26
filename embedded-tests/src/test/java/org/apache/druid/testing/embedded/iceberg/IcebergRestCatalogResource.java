@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.iceberg;
 
 import org.apache.druid.iceberg.common.IcebergDruidModule;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.iceberg.CatalogProperties;
@@ -46,7 +47,7 @@ import java.util.Map;
 public class IcebergRestCatalogResource extends TestcontainerResource<GenericContainer<?>>
 {
   // 1.6.0 is the latest available tag; the REST protocol is compatible with the 1.7.2 client libraries
-  private static final String ICEBERG_REST_IMAGE = "tabulario/iceberg-rest:1.6.0";
+  private static final String ICEBERG_REST_IMAGE = DruidCI.cacheDockerImage("tabulario/iceberg-rest:1.6.0");
   private static final int REST_CATALOG_PORT = 8181;
   private static final String CONTAINER_WAREHOUSE_PATH = "/tmp/iceberg-warehouse";
 

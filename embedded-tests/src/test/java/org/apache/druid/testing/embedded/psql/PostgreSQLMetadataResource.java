@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.psql;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
+import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -39,7 +40,7 @@ public class PostgreSQLMetadataResource extends TestcontainerResource<PostgreSQL
   @Override
   protected PostgreSQLContainer createContainer()
   {
-    return new PostgreSQLContainer("postgres:16-alpine")
+    return new PostgreSQLContainer(DruidCI.cacheDockerImage("postgres:16-alpine"))
         .withDatabaseName(DATABASE_NAME)
         .withUsername(USERNAME)
         .withPassword(PASSWORD);

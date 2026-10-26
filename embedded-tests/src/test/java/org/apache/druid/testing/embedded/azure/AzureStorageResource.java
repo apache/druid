@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.azure;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import org.apache.druid.storage.azure.AzureStorageDruidModule;
+import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.azure.AzuriteContainer;
@@ -33,7 +34,7 @@ import org.testcontainers.utility.DockerImageName;
  */
 public class AzureStorageResource extends TestcontainerResource<AzuriteContainer>
 {
-  private static final String IMAGE_NAME = "mcr.microsoft.com/azure-storage/azurite:3.35.0";
+  private static final String IMAGE_NAME = DruidCI.cacheDockerImage("mcr.microsoft.com/azure-storage/azurite:3.35.0");
 
   /**
    * Default account name used by the {@link AzuriteContainer}.

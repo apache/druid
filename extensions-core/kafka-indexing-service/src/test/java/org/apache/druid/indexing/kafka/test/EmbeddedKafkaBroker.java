@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka.test;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.testing.DruidCI;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
@@ -36,7 +37,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class EmbeddedKafkaBroker implements Closeable
 {
   private static final String KAFKA_IMAGE =
-      System.getProperty("druid.testing.kafka.image", "apache/kafka:4.3.0");
+      System.getProperty("druid.testing.kafka.image", DruidCI.cacheDockerImage("apache/kafka:4.3.0"));
 
   private final KafkaContainer container;
 

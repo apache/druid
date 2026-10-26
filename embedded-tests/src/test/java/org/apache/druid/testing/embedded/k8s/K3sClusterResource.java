@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestFolder;
 import org.apache.druid.testing.embedded.TestcontainerResource;
@@ -69,7 +70,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 {
   private static final Logger log = new Logger(K3sClusterResource.class);
 
-  private static final String K3S_IMAGE_NAME = "rancher/k3s:v1.35.0-k3s1";
+  private static final String K3S_IMAGE_NAME = DruidCI.cacheDockerImage("rancher/k3s:v1.35.0-k3s1");
 
   public static final String DRUID_NAMESPACE = "druid";
   private static final String NAMESPACE_MANIFEST = "manifests/druid-namespace.yaml";
