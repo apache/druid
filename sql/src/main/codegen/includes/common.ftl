@@ -109,7 +109,7 @@ SqlTypeNameSpec DruidType() :
 // Parses the PostgreSQL-style infix cast operator (e.g. x::BIGINT).
 void InfixCast(List<Object> list, ExprContext exprContext, Span s) :
 {
-  final SqlDataTypeSpec dt;
+  final SqlNode dt;
 }
 {
   <INFIX_CAST>
@@ -126,6 +126,10 @@ void InfixCast(List<Object> list, ExprContext exprContext, Span s) :
     }
   |
     dt = DataType()
+  |
+    // Accept interval types, matching CAST(x AS INTERVAL DAY).
+    LOOKAHEAD(2)
+    <INTERVAL> dt = IntervalQualifier()
   )
   {
     list.add(dt);
