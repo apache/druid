@@ -57,7 +57,6 @@ public class HistoricalCloningTest extends EmbeddedClusterTestBase
                                .useLatchableEmitter()
                                .addServer(overlord)
                                .addServer(coordinator1)
-                               .addServer(coordinator2)
                                .addServer(new EmbeddedIndexer())
                                .addServer(historical1)
                                .addServer(new EmbeddedBroker())
@@ -97,6 +96,10 @@ public class HistoricalCloningTest extends EmbeddedClusterTestBase
                       .hasDimension("description", "LOAD: NORMAL"),
         agg -> agg.hasSumAtLeast(10)
     );
+
+    // Add coordinator2 only now so that coordinator1 is the leader for the waits above
+    cluster.addServer(coordinator2);
+    coordinator2.start();
 
     // Switch coordinator leader to force syncer to reset
     coordinator1.stop();
