@@ -930,7 +930,6 @@ public class TaskQueue
   private Map<String, RowKey> getCurrentTaskDatasources()
   {
     return activeTasks.values().stream()
-                      .filter(entry -> !entry.isComplete)
                       .map(TaskEntry::getTask)
                       .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
   }
@@ -1238,8 +1237,8 @@ public class TaskQueue
   }
 
   /**
-   * Returns the metric key of the active task with the same ID, or a key built from the work item itself if the
-   * runner still reports a task that this queue has already completed or removed.
+   * Returns the metric key of the task with the same ID in {@link #activeTasks}, or a key built from the non-null
+   * datasource and task type of the work item if the runner still reports a task that this queue has already removed.
    */
   private static RowKey getWorkItemMetricKey(
       final Map<String, RowKey> activeTaskMetricKeys,
@@ -1249,11 +1248,15 @@ public class TaskQueue
     final RowKey metricKey = activeTaskMetricKeys.get(workItem.getTaskId());
     if (metricKey != null) {
       return metricKey;
-    } else if (workItem.getDataSource() == null || workItem.getTaskType() == null) {
-      return RowKey.empty();
-    } else {
-      return RowKey.with(Dimension.DATASOURCE, workItem.getDataSource())
-                   .and(Dimension.TASK_TYPE, workItem.getTaskType());
     }
+
+    final RowKey.Builder builder = new RowKey.Builder();
+    if (workItem.getDataSource() != null) {
+      builder.with(Dimension.DATASOURCE, workItem.getDataSource());
+    }
+    if (workItem.getTaskType() != null) {
+      builder.with(Dimension.TASK_TYPE, workItem.getTaskType());
+    }
+    return builder.build();
   }
 }

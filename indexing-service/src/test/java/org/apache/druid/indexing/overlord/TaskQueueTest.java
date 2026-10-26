@@ -68,6 +68,9 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerTest;
 import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateTest;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
@@ -811,15 +814,38 @@ public class TaskQueueTest extends IngestionTestBase
   {
     final TestTask activeTask = new TestTask("active", Intervals.of("2021-01/P1M"));
     final TestTask completedTask = new TestTask("completed", Intervals.of("2021-02/P1M"));
+    final TestSeekableStreamIndexTask completedStreamTask = new TestSeekableStreamIndexTask(
+        "completedStream",
+        "supervisor",
+        null,
+        DataSchema.builder()
+                  .withDataSource("stream")
+                  .withTimestamp(TimestampSpec.DEFAULT)
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
+                  .build(),
+        SeekableStreamSupervisorStateTest.createSupervisorTuningConfig().convertToTaskTuningConfig(),
+        new TestSeekableStreamIndexTaskIOConfig(),
+        null,
+        null
+    );
 
     final TaskRunner taskRunner = EasyMock.createNiceMock(TaskRunner.class);
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(List.of(
         new RemoteTaskRunnerWorkItem(activeTask.getId(), activeTask.getType(), null, null, activeTask.getDataSource()),
-        new RemoteTaskRunnerWorkItem(completedTask.getId(), completedTask.getType(), null, null, completedTask.getDataSource())
+        new RemoteTaskRunnerWorkItem(completedTask.getId(), completedTask.getType(), null, null, completedTask.getDataSource()),
+        new RemoteTaskRunnerWorkItem(
+            completedStreamTask.getId(),
+            completedStreamTask.getType(),
+            null,
+            null,
+            completedStreamTask.getDataSource()
+        )
     )).anyTimes();
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(List.of(
         new RemoteTaskRunnerWorkItem("unknown", "index_kafka", null, null, "wiki"),
-        new RemoteTaskRunnerWorkItem("unknownWithoutType", null, null, null, "wiki")
+        new RemoteTaskRunnerWorkItem("unknownWithoutType", null, null, null, "wiki"),
+        new RemoteTaskRunnerWorkItem("unknownWithoutDimensions", null, null, null, null)
     )).anyTimes();
     EasyMock.replay(taskRunner);
 
@@ -838,15 +864,23 @@ public class TaskQueueTest extends IngestionTestBase
     queue.setActive(true);
     queue.add(activeTask);
     queue.add(completedTask);
+    queue.add(completedStreamTask);
     queue.shutdown(completedTask.getId(), "test shutdown");
+    queue.shutdown(completedStreamTask.getId(), "test shutdown");
 
     Assertions.assertEquals(
-        Map.of(RowKey.with(Dimension.DATASOURCE, "datasource").and(Dimension.TASK_TYPE, "test"), 2L),
+        Map.of(
+            RowKey.with(Dimension.DATASOURCE, "datasource").and(Dimension.TASK_TYPE, "test"), 2L,
+            RowKey.with(Dimension.DATASOURCE, "stream")
+                  .with(Dimension.TASK_TYPE, "test_seekable_stream")
+                  .and(Dimension.SUPERVISOR_ID, "supervisor"), 1L
+        ),
         queue.getRunningTaskCount()
     );
     Assertions.assertEquals(
         Map.of(
             RowKey.with(Dimension.DATASOURCE, "wiki").and(Dimension.TASK_TYPE, "index_kafka"), 1L,
+            RowKey.of(Dimension.DATASOURCE, "wiki"), 1L,
             RowKey.empty(), 1L
         ),
         queue.getPendingTaskCount()
