@@ -35,6 +35,8 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -126,7 +128,7 @@ public class ExpressionTestHelper
       null, /* Don't need engine */
       null, /* Don't need authentication result */
       Collections.emptySet(),
-      Collections.singletonMap(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true),
+      QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true),
       null
   );
 
