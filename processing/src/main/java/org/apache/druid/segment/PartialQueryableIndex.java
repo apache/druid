@@ -363,16 +363,10 @@ public class PartialQueryableIndex implements QueryableIndex
       Predicate<String> servableBundles
   )
   {
-    final SortedSet<AggregateProjectionMetadata> servable =
-        new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
-    for (AggregateProjectionMetadata projection : projections) {
-      if (servableBundles.test(projection.getSchema().getName())) {
-        servable.add(projection);
-      }
-    }
     return Projections.findMatchingProjection(
         cursorBuildSpec,
-        servable,
+        projections,
+        servableBundles,
         dataInterval,
         this::checkProjectionHasColumn,
         this::getProjectionQueryableIndex
