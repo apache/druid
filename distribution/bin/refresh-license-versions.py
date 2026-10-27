@@ -108,6 +108,7 @@ def refresh_versions(text, reported_modules):
 
         current = []
         unreported = []
+        claimed = []
         moved_to = set()
         problems = []
         for library in entry.libraries:
@@ -128,7 +129,9 @@ def refresh_versions(text, reported_modules):
                 moved_to.update(candidates)
             elif candidates:
                 problems.append("{}:{} has several new versions {}".format(*library, sorted(candidates)))
-            # Otherwise every reported version belongs to another entry; check-licenses lists this one as unchecked.
+            else:
+                # Every reported version belongs to another entry; check-licenses lists this one as unchecked.
+                claimed.append("{}:{}".format(*library))
 
         if not problems and moved_to:
             if len(moved_to) > 1:
@@ -137,6 +140,8 @@ def refresh_versions(text, reported_modules):
                 problems.append("some libraries are still at {}; split the entry".format(entry.version))
             elif unreported:
                 problems.append("{} are in no report; update or remove them by hand".format(", ".join(unreported)))
+            elif claimed:
+                problems.append("{} ship only at versions other entries register; remove them by hand".format(", ".join(claimed)))
         if problems:
             flagged.append((entry.name, entry.module, "; ".join(problems)))
         elif moved_to:

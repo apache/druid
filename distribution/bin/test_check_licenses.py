@@ -186,6 +186,13 @@ class RefreshVersionsTest(unittest.TestCase):
         text = licenses_yaml(entry("Kotlin jdk8", "java-core", "1.8.21", ["org.k: stdlib", "org.k: stdlib-jdk8"]))
         self.assertFlagged(1, text, reports(("org.k:stdlib:2.4.21", "java-core")))
 
+    def test_flags_moved_entries_with_libraries_another_entry_registers(self):
+        text = licenses_yaml(
+            entry("Family", "java-core", "1.0.0", ["org.f: a", "org.f: b"]),
+            entry("B", "java-core", "1.0.1", ["org.f: b"]),
+        )
+        self.assertFlagged(1, text, reports(("org.f:a:1.0.1", "java-core"), ("org.f:b:1.0.1", "java-core")))
+
     def test_flags_a_library_with_several_new_versions(self):
         text = licenses_yaml(entry("Foo", "java-core", "1.0", ["org.foo: a"]))
         self.assertFlagged(1, text, reports(("org.other:x:1.0", "java-core"), ("org.foo:a:1.1", AZURE), ("org.foo:a:1.2", "extensions/druid-hdfs-storage")))
