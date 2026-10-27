@@ -505,9 +505,9 @@ The following example query illustrates how to use `JSON_VALUE` to extract speci
 SELECT
   product,
   department,
-  JSON_VALUE(shipTo, '$.address.country') as country,
-  JSON_VALUE(shipTo, '$.phoneNumbers[0].number') as primaryPhone,
-  JSON_VALUE(details, '$.price') as price
+  shipTo:address.country,
+  shipTo:phoneNumbers[0].number as primaryPhone,
+  details:price
 FROM nested_data_example
 ```
 
