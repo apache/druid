@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kafka;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -144,8 +143,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   private final Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier;
 
   private final Map<MetricName, AtomicLong> counters = new HashMap<>();
-  private final AtomicDouble pollIdleRatioAvg = new AtomicDouble(1.0d);
-  private final RunningAverage runningAvgPollIdleRatio = new RunningAverage();
+  private final RunningAverage pollIdleRatio = new RunningAverage();
 
   public KafkaConsumerMonitor(
       final KafkaConsumer<?, ?> consumer,
@@ -198,9 +196,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
       // Capture `poll-idle-ratio-avg` metric for autoscaler purposes.
       if (POLL_IDLE_RATIO_METRIC_NAME.equals(metricName.name())) {
         if (entry.getValue().metricValue() != null) {
-          final double newValue = ((Number) entry.getValue().metricValue()).doubleValue();
-          pollIdleRatioAvg.set(newValue);
-          runningAvgPollIdleRatio.addSample(newValue);
+          pollIdleRatio.addSample(((Number) entry.getValue().metricValue()).doubleValue());
         }
       }
     }
@@ -214,13 +210,14 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   }
 
   /**
-   * Average poll-to-idle ratio as reported by the Kafka consumer.
+   * poll-to-idle ratio as reported by the Kafka consumer averaged over a short
+   * sampling window (30s by default).
    * A value of 0 represents that the consumer is never idle, i.e. always consuming.
    * A value of 1 represents that the consumer is always idle, i.e. not receiving data.
    */
   public double getPollIdleRatioAvg()
   {
-    return pollIdleRatioAvg.get();
+    return pollIdleRatio.getLatest();
   }
 
   /**
@@ -229,11 +226,14 @@ public class KafkaConsumerMonitor extends AbstractMonitor
    */
   public double getRunningAvgPollIdleRatio()
   {
-    return runningAvgPollIdleRatio.getAvg();
+    return pollIdleRatio.getAvg();
   }
 
   private static class RunningAverage
   {
+    private static final double UNKNOWN = 1.0d;
+
+    private double latest = UNKNOWN;
     private double sum = 0.0d;
     private long count = 0L;
 
@@ -243,11 +243,17 @@ public class KafkaConsumerMonitor extends AbstractMonitor
         sum += value;
         count++;
       }
+      latest = value;
     }
 
     synchronized double getAvg()
     {
-      return count == 0 ? 1.0d : sum / count;
+      return count == 0 ? UNKNOWN : sum / count;
+    }
+
+    synchronized double getLatest()
+    {
+      return latest;
     }
   }
 }

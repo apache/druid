@@ -531,12 +531,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         if (taskMetric instanceof Map) {
           Object autoScalerMetricsMap = ((Map<?, ?>) taskMetric).get(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY);
           if (autoScalerMetricsMap instanceof Map) {
-            Object pollIdleRatioAvg = ((Map<?, ?>) autoScalerMetricsMap).get(metricName);
-            if (pollIdleRatioAvg instanceof Number) {
-              double taskPollIdleRatio = ((Number) pollIdleRatioAvg).doubleValue();
+            Object metricValue = ((Map<?, ?>) autoScalerMetricsMap).get(metricName);
+            if (metricValue instanceof Number) {
+              double metricDoubleValue = ((Number) metricValue).doubleValue();
               // Do not include negative values
-              if (taskPollIdleRatio >= 0) {
-                sum += taskPollIdleRatio;
+              if (metricDoubleValue >= 0) {
+                sum += metricDoubleValue;
                 count++;
               }
             }
