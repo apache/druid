@@ -166,6 +166,17 @@ public class WorkerHolder
     );
   }
 
+  /**
+   * Adds or updates an announcement in {@link #tasksSnapshotRef} and refreshes the capacity view so the two stay
+   * in sync. {@link #deltaSync} does not use this because it applies a batch of changes and refreshes once at the
+   * end; it is here for callers that mutate a single announcement outside the sync callbacks.
+   */
+  protected void addOrUpdateAnnouncement(TaskAnnouncement announcement)
+  {
+    tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
+    refreshAnnouncementsView();
+  }
+
   protected void refreshAnnouncementsView()
   {
     final ImmutableWorkerInfo view = ImmutableWorkerInfo.fromWorkerAnnouncements(

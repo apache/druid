@@ -2164,8 +2164,7 @@ public class HttpRemoteTaskRunnerTest
               workersSyncExec.execute(
                   () -> {
                     for (TaskAnnouncement announcement : preExistingTaskAnnouncements) {
-                      tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
-                      refreshAnnouncementsView();
+                      addOrUpdateAnnouncement(announcement);
                       listener.taskAddedOrUpdated(announcement, this);
                     }
                     ticks.incrementAndGet();
@@ -2261,8 +2260,7 @@ public class HttpRemoteTaskRunnerTest
                   throw new RuntimeException(ex);
                 }
 
-                tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
-                refreshAnnouncementsView();
+                addOrUpdateAnnouncement(announcement);
                 listener.taskAddedOrUpdated(announcement, this);
               }
 
