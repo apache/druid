@@ -36,7 +36,7 @@ public class ServerSideEncryptionTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final String KEY_ID = "arn:aws:kms:us-east-1:123456789012:key/test-key";
-  private static final String CUSTOM_KEY = "dGVzdC1rZXktdGVzdC1rZXktdGVzdC1rZXktMTIzNA==";
+  private static final String CUSTOM_KEY = "xxxxxdummy";
 
   @Test
   public void testKmsDecoratesCreateMultipartUploadWithKeyId() throws IOException
