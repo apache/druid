@@ -1498,7 +1498,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Handoff streaming tasks on a worker early
 
-Queues early handoff for every seekable-stream ingestion task running on one Middle Manager (`index_kafka`, `index_kinesis`, `index_rabbit`, and any future type that extends `SeekableStreamIndexTask`). `{host}` is the worker identity registered with the Overlord (`hostname:port`), the same value used by worker enable and disable. Compact, kill, and batch index tasks are skipped; they have no early-handoff path. To hand off a subset of task groups, use [handoff task groups for a supervisor early](supervisor-api.md#handoff-task-groups-for-a-supervisor-early).
+Queues early handoff for every streaming ingestion task running on one Middle Manager (`index_kafka`, `index_kinesis`, `index_rabbit`). `{host}` is the worker identity registered with the Overlord (`hostname:port`), the same value used by worker enable and disable. Compact, kill, and batch index tasks are skipped; they have no early-handoff path. To hand off a subset of task groups, use [handoff task groups for a supervisor early](supervisor-api.md#handoff-task-groups-for-a-supervisor-early).
 
 This is a best-effort API. It does not shut down the worker, kill tasks, or terminate supervisors. Handoff uses the same supervisor notice path as supervisor task-group handoff: pause, persist, publish, then wait for Historicals. Only task groups that have a running task on this worker are queued. Other groups of the same supervisor on other workers are left running. Replicas of a selected task group on another worker still publish, which is existing task-group handoff behavior.
 
