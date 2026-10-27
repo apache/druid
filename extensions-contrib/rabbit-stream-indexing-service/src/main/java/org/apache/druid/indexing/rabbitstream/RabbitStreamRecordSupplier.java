@@ -197,6 +197,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
       }
     }
     catch (InterruptedException exc) {
+      Thread.currentThread().interrupt();
     }
 
   }
@@ -347,6 +348,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
       }
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       // may happen if interrupted while BlockingQueue.offer() is waiting
       log.warn(
           e,
@@ -393,6 +395,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
       return polledRecords;
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       log.warn(e, "Interrupted while polling");
 
       return Collections.emptyList();

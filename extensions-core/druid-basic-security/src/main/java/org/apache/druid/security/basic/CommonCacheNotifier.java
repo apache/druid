@@ -141,6 +141,7 @@ public class CommonCacheNotifier
               LOG.debug(callerName + ":Received responses for cache update notifications.");
             }
             catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
               LOG.noStackTrace().info(e, "%s: Interrupted while handling updates for cachedUserMaps.", callerName);
             }
             catch (Throwable t) {
