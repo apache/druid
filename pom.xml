@@ -128,7 +128,7 @@
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.55.6</aws.sdk.v2.version>
         <aws.msk.iam.auth.version>2.3.9</aws.msk.iam.auth.version>
-        <caffeine.version>3.3.0</caffeine.version>
+        <caffeine.version>3.3.1</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <hibernate-validator.version>9.1.4.Final</hibernate-validator.version>
