@@ -4757,7 +4757,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.35.0
+version: 12.36.0
 libraries:
   - com.azure: azure-storage-blob
 
@@ -4768,7 +4768,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.18.4
+version: 1.18.7
 libraries:
   - com.azure: azure-identity
 
@@ -4779,7 +4779,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.31.0
+version: 12.32.0
 libraries:
   - com.azure: azure-storage-blob-batch
 
@@ -4790,7 +4790,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.34.0
+version: 12.35.0
 libraries:
   - com.azure: azure-storage-common
 
@@ -4801,7 +4801,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.20.0
+version: 12.21.0
 libraries:
   - com.azure: azure-storage-internal-avro
 
@@ -4833,7 +4833,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.16.5
+version: 1.16.8
 libraries:
   - com.azure: azure-core-http-netty
 
@@ -4844,7 +4844,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.58.1
+version: 1.60.0
 libraries:
   - com.azure: azure-core
 
@@ -4855,7 +4855,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.23.1
+version: 1.26.0
 libraries:
   - com.microsoft.azure: msal4j
 
