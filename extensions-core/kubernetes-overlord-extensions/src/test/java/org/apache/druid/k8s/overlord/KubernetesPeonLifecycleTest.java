@@ -676,7 +676,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_shutdown_withNotStartedTaskState()
+  public void test_shutdown_withNotStartedTaskState() throws ExecutionException, InterruptedException
   {
     final KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
@@ -693,6 +693,9 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     replayAll();
 
     peonLifecycle.shutdown();
+
+    Assertions.assertTrue(peonLifecycle.getTaskStartedSuccessfullyFuture().isDone());
+    Assertions.assertFalse(peonLifecycle.getTaskStartedSuccessfullyFuture().get());
 
     Assertions.assertThrows(
         IllegalStateException.class,

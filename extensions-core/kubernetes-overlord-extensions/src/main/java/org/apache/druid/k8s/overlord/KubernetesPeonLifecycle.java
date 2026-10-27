@@ -249,11 +249,13 @@ public class KubernetesPeonLifecycle
    * Task state will be set by the thread running the run(...) or join(...) commands
    *
    * If neither has been called yet, the lifecycle moves to STOPPED so that a later run(...) or join(...) fails
-   * instead of launching or waiting for the job.
+   * instead of launching or waiting for the job, and the task-started future completes with false.
    */
   protected void shutdown()
   {
-    state.compareAndSet(State.NOT_STARTED, State.STOPPED);
+    if (state.compareAndSet(State.NOT_STARTED, State.STOPPED)) {
+      taskStartedSuccessfullyFuture.set(false);
+    }
     kubernetesClient.deletePeonJob(taskId);
   }
 
