@@ -44,8 +44,6 @@ import java.util.Map;
 public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynamicConfig>
     implements QueryConfigProvider
 {
-  private static final String DEFAULT_QUERY_CONTEXT_PROPERTY = "druid.query.default.context";
-
   private final CoordinatorClient coordinatorClient;
   private final DefaultQueryConfig defaultQueryConfig;
 
@@ -83,7 +81,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
       );
     }
     catch (BadQueryContextException e) {
-      throw new IAE(e, "Invalid default query context [%s]: %s", DEFAULT_QUERY_CONTEXT_PROPERTY, e.getMessage());
+      throw new IAE(e, "Invalid default query context [druid.query.default.context]: %s", e.getMessage());
     }
   }
 
