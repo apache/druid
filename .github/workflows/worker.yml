@@ -74,7 +74,9 @@ jobs:
           cache: 'maven'
 
       - name: 📸 .m2 snapshot
-        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-before.txt
+        run: |
+          ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-before.txt
+          touch "$RUNNER_TEMP/m2-marker"
 
       - name: 📦 fetch artifacts
         if: ${{ inputs.artifacts_to_download != '' }}
@@ -112,7 +114,7 @@ jobs:
 
       - name: 📊 .m2 diff ← build
         if: ${{ always() }}
-        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-build.txt target/ci-debug/m2-before.txt
+        run: ./.github/scripts/dir_manifest -a "$RUNNER_TEMP/m2-marker" ~/.m2/repository target/ci-debug/m2-build.txt target/ci-debug/m2-before.txt
 
       - name: 🗑️ .m2 purge org/apache/druid
         if: ${{ always() }}

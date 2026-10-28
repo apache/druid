@@ -17,10 +17,17 @@
 
 # Writes a "<path>\t<size>" manifest of every file under <dir> to <out>; a missing <dir> yields an empty manifest.
 # Given <prev>, an earlier manifest, also reports files added and removed since; a file whose size changed counts as both.
+# With -a <marker>, also writes <out> with suffix -dormant.txt: files not accessed (atime) since <marker> was modified.
 #
-# Usage: dir_manifest <dir> <out> [<prev>]
+# Usage: dir_manifest [-a <marker>] <dir> <out> [<prev>]
 
 set -eu
+
+MARKER=
+if [ "${1:-}" = "-a" ]; then
+  MARKER=$2
+  shift 2
+fi
 
 DIR=$1
 OUT=$2
@@ -28,12 +35,14 @@ PREV=${3:-}
 
 export LC_ALL=C
 
+list() {
+  if [ -d "$DIR" ]; then
+    find "$DIR" -type f "$@" -printf '%P\t%s\n' | sort
+  fi
+}
+
 mkdir -p "$(dirname "$OUT")"
-if [ -d "$DIR" ]; then
-  find "$DIR" -type f -printf '%P\t%s\n' | sort > "$OUT"
-else
-  : > "$OUT"
-fi
+list > "$OUT"
 
 summarize() {
   awk -F'\t' -v label="$1" '{ n++; s += $2 } END { printf "%s %8d files  Σ %10.1f MB\n", label, n, s / 1048576 }'
@@ -46,4 +55,10 @@ if [ -n "$PREV" ]; then
   comm -23 "$PREV" "$OUT" | summarize "➖ removed"
 else
   summarize "📁 total  " < "$OUT"
+fi
+
+if [ -n "$MARKER" ]; then
+  DORMANT=${OUT%.txt}-dormant.txt
+  comm -23 "$OUT" <(list -anewer "$MARKER") > "$DORMANT"
+  summarize "💤 dormant" < "$DORMANT"
 fi
