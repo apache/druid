@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -213,6 +214,59 @@ public class TsFileInputFormatTest
   }
 
   @Test
+  public void testProjectionFromColumnsFilter() throws IOException
+  {
+    final InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec(TsFileInputFormat.TIME_COLUMN_NAME, "millis", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("region", "device"))),
+        ColumnsFilter.inclusionBased(new HashSet<>(Arrays.asList("region", "temperature")))
+    );
+    final List<InputRow> rows = read(new TsFileInputFormat(null, null, null), rowSchema);
+
+    assertEquals(3, rows.size());
+    final InputRow first = rows.get(0);
+    assertEquals(Collections.singletonList("beijing"), first.getDimension("region"));
+    assertEquals(21.5f, (Float) first.getRaw("temperature"), 0.0001f);
+    assertNull(first.getRaw("device"));
+    assertNull(first.getRaw("status"));
+  }
+
+  @Test
+  public void testProjectionFromFixedDimensions() throws IOException
+  {
+    // MSQ EXTERN passes ColumnsFilter.all() and puts the external table's column signature in the dimensions.
+    final InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec(TsFileInputFormat.TIME_COLUMN_NAME, "millis", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("region", "temperature"))),
+        ColumnsFilter.all()
+    );
+    final List<InputRow> rows = read(new TsFileInputFormat(null, null, null), rowSchema);
+
+    assertEquals(3, rows.size());
+    assertEquals(Collections.singletonList("beijing"), rows.get(0).getDimension("region"));
+    assertEquals(21.5f, (Float) rows.get(0).getRaw("temperature"), 0.0001f);
+    assertNull(rows.get(0).getRaw("device"));
+    assertNull(rows.get(0).getRaw("humidity"));
+    assertNull(rows.get(0).getRaw("status"));
+  }
+
+  @Test
+  public void testTagOnlyProjectionFallsBackToAllColumns() throws IOException
+  {
+    // TsFile's table reader returns no rows at all when only tag columns are selected.
+    final InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec(TsFileInputFormat.TIME_COLUMN_NAME, "millis", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("region"))),
+        ColumnsFilter.all()
+    );
+    final List<InputRow> rows = read(new TsFileInputFormat(null, null, null), rowSchema);
+
+    assertEquals(3, rows.size());
+    assertEquals(Collections.singletonList("beijing"), rows.get(0).getDimension("region"));
+    assertEquals(21.5f, (Float) rows.get(0).getRaw("temperature"), 0.0001f);
+  }
+
+  @Test
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
@@ -274,11 +328,17 @@ public class TsFileInputFormatTest
     return new Interval(DateTimes.utc(startMillis), DateTimes.utc(endMillis));
   }
 
+  /**
+   * Schema used by most tests: no column projection is applied, so the TsFile columns are read in full.
+   */
   private static InputRowSchema buildRowSchema(String timestampColumn, String timestampFormat)
   {
     return new InputRowSchema(
         new TimestampSpec(timestampColumn, timestampFormat, null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("region", "device"))),
+        DimensionsSpec.builder()
+                      .setDimensions(DimensionsSpec.getDefaultSchemas(Arrays.asList("region", "device")))
+                      .useSchemaDiscovery(true)
+                      .build(),
         ColumnsFilter.all()
     );
   }

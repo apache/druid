@@ -7724,3 +7724,20 @@ module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
+
+---
+
+name: Apache TsFile
+license_category: binary
+version: 2.5.0
+module: extensions-contrib/druid-tsfile-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.tsfile: tsfile
+  - org.apache.tsfile: common
+notice: |
+  TsFile: Java: TsFile
+  Copyright 2024 The Apache Software Foundation
+
+  This product includes software developed at
+  The Apache Software Foundation (http://www.apache.org/).

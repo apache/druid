@@ -97,6 +97,9 @@ mvn exec:java -Dexec.classpathScope=test \
 | `testReadAllColumns` | All tag and field columns, timestamps, and a missing (null) value are read correctly |
 | `testReadWithDefaultTimestampColumn` | The TsFile timestamp is also available under a non-default `timestampSpec` column |
 | `testReadSelectedTableAndColumns` | `tables` and `columns` restrict the read |
+| `testProjectionFromColumnsFilter` | The ingestion schema's column filter restricts the physical columns read |
+| `testProjectionFromFixedDimensions` | A fixed dimension list (the EXTERN signature) restricts the physical columns read |
+| `testTagOnlyProjectionFallsBackToAllColumns` | A tag-only projection still returns rows (TsFile needs one measurement column) |
 | `testIntervalPushdown` | An `interval` restricts the read to rows inside it |
 | `testIntervalIsEndExclusive` | A row at the end boundary of `interval` is excluded |
 | `testEmptyIntervalReadsNothing` | An empty `interval` yields no rows |

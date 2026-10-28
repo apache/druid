@@ -19,15 +19,18 @@
 
 package org.apache.druid.data.input.tsfile;
 
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.IntermediateRowParsingReader;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.tsfile.enums.ColumnCategory;
 import org.apache.tsfile.enums.TSDataType;
 import org.apache.tsfile.exception.read.ReadProcessException;
 import org.apache.tsfile.exception.write.NoMeasurementException;
@@ -48,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -178,14 +182,50 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
       return columns;
     }
 
-    final List<String> selected = new ArrayList<>();
-    for (IMeasurementSchema columnSchema : tableSchema.getColumnSchemas()) {
-      final String columnName = columnSchema.getMeasurementName();
-      if (!TsFileInputFormat.TIME_COLUMN_NAME.equalsIgnoreCase(columnName)) {
-        selected.add(columnName);
+    final List<IMeasurementSchema> columnSchemas = tableSchema.getColumnSchemas();
+    final List<ColumnCategory> columnCategories = tableSchema.getColumnTypes();
+    final List<String> physicalColumns = new ArrayList<>();
+    final Set<String> tagColumns = new HashSet<>();
+    for (int i = 0; i < columnSchemas.size(); i++) {
+      final String columnName = columnSchemas.get(i).getMeasurementName();
+      if (TsFileInputFormat.TIME_COLUMN_NAME.equalsIgnoreCase(columnName)) {
+        continue;
+      }
+      physicalColumns.add(columnName);
+      if (columnCategories.get(i) == ColumnCategory.TAG) {
+        tagColumns.add(columnName);
       }
     }
-    return selected;
+
+    final ColumnsFilter columnsFilter = inputRowSchema.getColumnsFilter();
+    List<String> selected = columnsFilter == null
+                            ? physicalColumns
+                            : physicalColumns.stream().filter(columnsFilter::apply).collect(Collectors.toList());
+
+    // EXTERN passes ColumnsFilter.all(), so the projection has to come from the schema instead: its fixed
+    // dimensions are the external table's column signature.
+    if (selected.size() == physicalColumns.size()) {
+      final DimensionsSpec dimensionsSpec = inputRowSchema.getDimensionsSpec();
+      if (dimensionsSpec.hasFixedDimensions()) {
+        final Set<String> wanted = new HashSet<>(dimensionsSpec.getDimensionNames());
+        if (inputRowSchema.getMetricNames() != null) {
+          wanted.addAll(inputRowSchema.getMetricNames());
+        }
+        final List<String> projected = physicalColumns.stream().filter(wanted::contains).collect(Collectors.toList());
+        if (!projected.isEmpty()) {
+          selected = projected;
+        }
+      }
+    }
+
+    // The TsFile table reader only produces blocks while it has a measurement column to read, so a projection
+    // made up of tag columns alone would yield no rows at all. Keep every column in that case.
+    if (!selected.isEmpty() && tagColumns.containsAll(selected)) {
+      selected = physicalColumns;
+    }
+
+    // Reading nothing is never right; fall back to every column when no schema information matched.
+    return selected.isEmpty() ? physicalColumns : selected;
   }
 
   /**

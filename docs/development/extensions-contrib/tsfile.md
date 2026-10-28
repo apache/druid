@@ -38,7 +38,7 @@ temporary directory, so a non-local input source needs enough local disk for one
 |-------|------|-------------|----------|
 | type | String | Must be `tsfile` | yes |
 | tables | Array of String | Tables to read. When omitted or empty, all tables in the file are read. | no |
-| columns | Array of String | Columns to read. When omitted or empty, all columns of each selected table are read. | no |
+| columns | Array of String | Columns to read. When omitted or empty, the columns implied by the ingestion schema are read: the dimensions and metrics of the ingestion spec, or the external table's column signature for SQL ingestion. All columns are read when the schema does not pin them down. | no |
 | interval | String | Time range to read, in Druid interval format (`start/end`). The range is end-exclusive. When omitted, each file is read in full. | no |
 
 ### Time range pruning
