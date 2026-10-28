@@ -25,7 +25,6 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.RandomAccess;
 
 /**
  * {@link Comparator} based {@link SortedDimensionDictionary}
@@ -41,28 +40,25 @@ public class ComparatorSortedDimensionDictionary<T>
   private final int[] indexToId;
 
   /**
-   * @param idToValue  unsorted dictionary values, which must be unique. Lists that are not {@link RandomAccess} are
-   *                   copied first, since the sort looks up values by id many times.
+   * @param idToValue  unsorted dictionary values, which must be unique. The sort looks up values by id many
+   *                   times, so this should be a {@link java.util.RandomAccess} list such as {@link ArrayList}.
    * @param comparator ordering of the values, which must handle null
    * @param length     number of ids, from the start of {@code idToValue}, to include
    */
   public ComparatorSortedDimensionDictionary(List<T> idToValue, Comparator<T> comparator, int length)
   {
-    final List<T> values = idToValue instanceof RandomAccess
-                           ? idToValue
-                           : new ArrayList<>(idToValue.subList(0, length));
     final int[] sortedIds = new int[length];
     for (int id = 0; id < length; id++) {
       sortedIds[id] = id;
     }
-    IntArrays.quickSort(sortedIds, (id1, id2) -> comparator.compare(values.get(id1), values.get(id2)));
+    IntArrays.quickSort(sortedIds, (id1, id2) -> comparator.compare(idToValue.get(id1), idToValue.get(id2)));
 
     this.sortedVals = new ArrayList<>(length);
     this.idToIndex = new int[length];
     this.indexToId = sortedIds;
     for (int index = 0; index < length; index++) {
       final int id = sortedIds[index];
-      sortedVals.add(values.get(id));
+      sortedVals.add(idToValue.get(id));
       idToIndex[id] = index;
     }
   }

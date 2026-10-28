@@ -19,12 +19,12 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,6 +48,24 @@ public class ComparatorSortedDimensionDictionaryTest
     Assertions.assertEquals(3, dictionary.getUnsortedIdFromSortedId(1));
     Assertions.assertEquals(0, dictionary.getUnsortedIdFromSortedId(2));
     Assertions.assertEquals(2, dictionary.getUnsortedIdFromSortedId(3));
+  }
+
+  @Test
+  public void testStringsSortInJavaStringOrder()
+  {
+    // U+FFFD sorts after U+1F600 in Java String order but before it in UTF-8 byte order. STRING_STRATEGY uses Java
+    // String order, consistent with GenericIndexed.UTF8_STRATEGY, which compares UTF-8 bytes using Java String order.
+    final String replacementChar = "\uFFFD";
+    final String emoji = "\uD83D\uDE00";
+    Assertions.assertTrue(Arrays.compareUnsigned(StringUtils.toUtf8(replacementChar), StringUtils.toUtf8(emoji)) < 0);
+
+    final List<String> idToValue = Arrays.asList(replacementChar, null, emoji, "a");
+    assertDictionary(
+        idToValue,
+        4,
+        new ComparatorSortedDimensionDictionary<>(idToValue, GenericIndexed.STRING_STRATEGY, 4),
+        Arrays.asList(null, "a", emoji, replacementChar)
+    );
   }
 
   @Test
@@ -103,14 +121,6 @@ public class ComparatorSortedDimensionDictionaryTest
   }
 
   @Test
-  public void testEmpty()
-  {
-    final ComparatorSortedDimensionDictionary<String> dictionary =
-        new ComparatorSortedDimensionDictionary<>(new ArrayList<>(), GenericIndexed.STRING_STRATEGY, 0);
-    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> dictionary.getValueFromSortedId(0));
-  }
-
-  @Test
   public void testOnlyNull()
   {
     final List<String> idToValue = Collections.singletonList(null);
@@ -134,18 +144,30 @@ public class ComparatorSortedDimensionDictionaryTest
   }
 
   @Test
-  public void testNonRandomAccessList()
+  public void testSortFromDimensionDictionary()
   {
-    final List<String> values = Arrays.asList("c", null, "a", "b", "z");
-    final ComparatorSortedDimensionDictionary<String> fromArrayList =
-        new ComparatorSortedDimensionDictionary<>(new ArrayList<>(values), GenericIndexed.STRING_STRATEGY, 4);
-    final ComparatorSortedDimensionDictionary<String> fromSequentialList =
-        new ComparatorSortedDimensionDictionary<>(sequentialList(values), GenericIndexed.STRING_STRATEGY, 4);
-
-    assertDictionary(values, 4, fromSequentialList, Arrays.asList(null, "a", "b", "c"));
-    for (int i = 0; i < 4; i++) {
-      Assertions.assertEquals(fromArrayList.getUnsortedIdFromSortedId(i), fromSequentialList.getUnsortedIdFromSortedId(i));
+    final ComparatorDimensionDictionary<String> dictionary =
+        new ComparatorDimensionDictionary<>(GenericIndexed.STRING_STRATEGY)
+        {
+          @Override
+          public long estimateSizeOfValue(String value)
+          {
+            return value.length();
+          }
+        };
+    for (final String value : Arrays.asList("c", null, "a", "b", "a", null, "c")) {
+      dictionary.add(value);
     }
+
+    final ComparatorSortedDimensionDictionary<String> sorted = dictionary.sort();
+    final List<String> expected = Arrays.asList(null, "a", "b", "c");
+    for (int index = 0; index < expected.size(); index++) {
+      final String value = expected.get(index);
+      Assertions.assertEquals(value, sorted.getValueFromSortedId(index));
+      Assertions.assertEquals(dictionary.getId(value), sorted.getUnsortedIdFromSortedId(index));
+      Assertions.assertEquals(index, sorted.getSortedIdFromUnsortedId(dictionary.getId(value)));
+    }
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> sorted.getValueFromSortedId(expected.size()));
   }
 
   @Test
@@ -185,26 +207,5 @@ public class ComparatorSortedDimensionDictionaryTest
       Assertions.assertEquals(expectedSortedValues.get(index), idToValue.get(id));
       Assertions.assertEquals(index, dictionary.getSortedIdFromUnsortedId(id));
     }
-  }
-
-  /**
-   * A list that does not implement {@link java.util.RandomAccess}, to exercise the copy path.
-   */
-  private static <T> List<T> sequentialList(List<T> values)
-  {
-    return new AbstractList<>()
-    {
-      @Override
-      public T get(int index)
-      {
-        return values.get(index);
-      }
-
-      @Override
-      public int size()
-      {
-        return values.size();
-      }
-    };
   }
 }

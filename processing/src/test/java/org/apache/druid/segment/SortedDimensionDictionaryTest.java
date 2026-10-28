@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -125,16 +124,21 @@ public class SortedDimensionDictionaryTest
   }
 
   @Test
-  public void testNonRandomAccessList()
+  public void testSortFromDimensionDictionary()
   {
-    final List<String> values = Arrays.asList("c", null, "a", "b", "z");
-    final SortedDimensionDictionary<String> fromArrayList = new SortedDimensionDictionary<>(new ArrayList<>(values), 4);
-    final SortedDimensionDictionary<String> fromSequentialList =
-        new SortedDimensionDictionary<>(sequentialList(values), 4);
+    final StringDimensionDictionary dictionary = new StringDimensionDictionary();
+    for (final String value : Arrays.asList("c", null, "a", "b", "a", null, "c")) {
+      dictionary.add(value);
+    }
 
-    assertDictionary(values, 4, fromSequentialList, Arrays.asList(null, "a", "b", "c"));
-    for (int i = 0; i < 4; i++) {
-      Assertions.assertEquals(fromArrayList.getUnsortedIdFromSortedId(i), fromSequentialList.getUnsortedIdFromSortedId(i));
+    final SortedDimensionDictionary<String> sorted = dictionary.sort();
+    final List<String> expected = Arrays.asList(null, "a", "b", "c");
+    Assertions.assertEquals(expected.size(), sorted.size());
+    for (int index = 0; index < expected.size(); index++) {
+      final String value = expected.get(index);
+      Assertions.assertEquals(value, sorted.getValueFromSortedId(index));
+      Assertions.assertEquals(dictionary.getId(value), sorted.getUnsortedIdFromSortedId(index));
+      Assertions.assertEquals(index, sorted.getSortedIdFromUnsortedId(dictionary.getId(value)));
     }
   }
 
@@ -176,26 +180,5 @@ public class SortedDimensionDictionaryTest
       Assertions.assertEquals(expectedSortedValues.get(index), idToValue.get(id));
       Assertions.assertEquals(index, dictionary.getSortedIdFromUnsortedId(id));
     }
-  }
-
-  /**
-   * A list that does not implement {@link java.util.RandomAccess}, to exercise the copy path.
-   */
-  private static <T> List<T> sequentialList(List<T> values)
-  {
-    return new AbstractList<>()
-    {
-      @Override
-      public T get(int index)
-      {
-        return values.get(index);
-      }
-
-      @Override
-      public int size()
-      {
-        return values.size();
-      }
-    };
   }
 }
