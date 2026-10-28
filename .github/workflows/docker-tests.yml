@@ -33,10 +33,7 @@ jobs:
           cache: 'maven'
       - name: Build the Druid distribution for the Docker image
         # Build only what the Docker image needs: the binary distribution tarball.
-        # Release-only work (javadoc and source jars, source-release assembly,
-        # license dependency reports) and the static checks are validated by the
-        # Static Checks CI workflow (packaging-check and static-checks-maven), so
-        # they are skipped here. Same flags as the builder stage in
+        # Release-only work and static checks are skipped. Same flags as the builder stage in
         # distribution/docker/Dockerfile. This also installs every reactor module
         # into the local Maven repository, which run_docker-tests relies on.
         # benchmarks is excluded: nothing in the distribution or the Docker tests
