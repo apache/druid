@@ -72,6 +72,9 @@ jobs:
           java-version: ${{ inputs.jdk }}
           cache: 'maven'
 
+      - name: Snapshot local Maven repository
+        run: ./.github/scripts/dir_manifest ~/.m2/repository "$RUNNER_TEMP/m2-before.txt"
+
       - name: Download required artifacts
         if: ${{ inputs.artifacts_to_download != '' }}
         uses: actions/download-artifact@v8
@@ -94,6 +97,13 @@ jobs:
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
         timeout-minutes: 60
+
+      - name: Report local Maven repository changes
+        if: ${{ always() }}
+        run: |
+          mkdir -p target/ci-debug
+          cp "$RUNNER_TEMP/m2-before.txt" target/ci-debug/
+          ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
 
       - name: Publish Test Report
         if: ${{ hashFiles('**/TEST-*.xml') != '' }}
