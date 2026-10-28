@@ -89,11 +89,6 @@ jobs:
           echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
           ./.github/scripts/collect_jvm_diagnostics &
 
-      - name: Pre-pull Testcontainers images for unit tests
-        if: ${{ contains(inputs.script, 'run_unit-tests') }}
-        run: ./.github/scripts/pull_docker_images
-        timeout-minutes: 10
-
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
         timeout-minutes: 60
