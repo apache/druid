@@ -19,7 +19,7 @@ set -e
 set -x
 
 echo 'Running Maven install...'
-./mvnw -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
+./mvnw -B install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
 
 ./mvnw -B checkstyle:checkstyle --fail-at-end
 

@@ -27,7 +27,7 @@ set -x
 # meaningful in CI. RAT is not run here: apache-rat-plugin is not safe to run in
 # a parallel (-T) build, so the single-threaded RAT pass in static-checks-maven.sh
 # covers it instead.
-./mvnw -B clean install -Papache-release --fail-at-end \
+./mvnw -B install -Papache-release --fail-at-end \
   -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false -T1C \
   -Dgpg.skip -Ddependency-check.skip
 ./mvnw -B install -Papache-release -Pdist -Pbundle-contrib-exts --fail-at-end \

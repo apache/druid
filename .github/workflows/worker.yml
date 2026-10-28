@@ -73,7 +73,7 @@ jobs:
           cache: 'maven'
 
       - name: Snapshot local Maven repository
-        run: ./.github/scripts/dir_manifest ~/.m2/repository "$RUNNER_TEMP/m2-before.txt"
+        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-before.txt
 
       - name: Download required artifacts
         if: ${{ inputs.artifacts_to_download != '' }}
@@ -126,10 +126,7 @@ jobs:
 
       - name: Report local Maven repository changes
         if: ${{ always() }}
-        run: |
-          mkdir -p target/ci-debug
-          cp "$RUNNER_TEMP/m2-before.txt" target/ci-debug/
-          ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
+        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
 
       - name: Remove Druid artifacts from local Maven repository
         if: ${{ always() }}
@@ -137,7 +134,4 @@ jobs:
 
       - name: Report local Maven repository changes
         if: ${{ always() }}
-        run: |
-          mkdir -p target/ci-debug
-          cp "$RUNNER_TEMP/m2-before.txt" target/ci-debug/
-          ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
+        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
