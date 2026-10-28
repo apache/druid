@@ -39,17 +39,30 @@ public class SortedDimensionDictionary<T extends Comparable<T>>
 
   public SortedDimensionDictionary(List<T> idToValue, int length)
   {
-    Object2IntSortedMap<T> sortedMap = new Object2IntRBTreeMap<>(Comparators.naturalNullsFirst());
+    final Object2IntSortedMap<T> sortedMap = new Object2IntRBTreeMap<>(Comparators.naturalNullsFirst());
+    int nullId = -1;
     for (int id = 0; id < length; id++) {
-      T value = idToValue.get(id);
-      sortedMap.put(value, id);
+      final T value = idToValue.get(id);
+      if (value == null) {
+        nullId = id;
+      } else {
+        sortedMap.put(value, id);
+      }
     }
     this.sortedVals = Lists.newArrayList(sortedMap.keySet());
+    if (nullId >= 0) {
+      this.sortedVals.add(0, null);
+    }
     this.idToIndex = new int[length];
     this.indexToId = new int[length];
     int index = 0;
+    if (nullId >= 0) {
+      idToIndex[nullId] = index;
+      indexToId[index] = nullId;
+      index++;
+    }
     for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext(); ) {
-      int id = iterator.nextInt();
+      final int id = iterator.nextInt();
       idToIndex[id] = index;
       indexToId[index] = id;
       index++;
