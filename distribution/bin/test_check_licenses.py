@@ -58,6 +58,27 @@ class FindMissingLicensesTest(unittest.TestCase):
         self.assertEqual([], find_missing([AZURE], [], skipping={GAV: {}}))
 
 
+class FindUnsupportedLicensesTest(unittest.TestCase):
+    @staticmethod
+    def unsupported(module):
+        return (module,) + GAV + ("Some New License",)
+
+    def test_reported_by_released_module(self):
+        self.assertEqual([self.unsupported(AZURE)], check_licenses.find_unsupported_licenses([self.unsupported(AZURE)], EXCLUDED))
+
+    def test_reported_only_by_excluded_modules_is_ignored(self):
+        self.assertEqual(
+            [],
+            check_licenses.find_unsupported_licenses([self.unsupported(TESTCONTAINERS), self.unsupported(RANGER)], EXCLUDED)
+        )
+
+    def test_reported_by_released_and_excluded_modules(self):
+        self.assertEqual(
+            [self.unsupported(AZURE)],
+            check_licenses.find_unsupported_licenses([self.unsupported(TESTCONTAINERS), self.unsupported(AZURE)], EXCLUDED)
+        )
+
+
 class FindDruidModuleNameTest(unittest.TestCase):
     def test_maps_report_dirs_to_module_tags(self):
         self.assertEqual("java-core", check_licenses.find_druid_module_name("target/license-reports/core/reports"))

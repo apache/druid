@@ -415,6 +415,10 @@ def find_missing_licenses(reported_dep_to_licenses, reported_modules, registered
         missing_licenses.append((", ".join(modules),) + key + (reported_license_druid_module[0],))
     return missing_licenses
 
+def find_unsupported_licenses(unsupported_licenses, exclude_module_prefixes):
+    # An unknown license only fails the check when it is reported by a module that ships in the release.
+    return [u for u in unsupported_licenses if not is_excluded_module(u[0], exclude_module_prefixes)]
+
 def read_dependency_reports(dependency_reports_root, compatible_license_names):
     # Returns (group_id, artifact_id, version) -> (license, druid_module), (group_id, artifact_id, version) -> modules,
     # and the dependencies whose reported licenses are all unknown, as (druid_module, group_id, artifact_id, version, licenses).
@@ -453,6 +457,7 @@ def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixe
         dependency_reports_root, compatible_license_names
     )
 
+    unsupported_licenses = find_unsupported_licenses(unsupported_licenses, exclude_module_prefixes)
     if unsupported_licenses:
         print_log_to_stderr("Error: found {} dependencies whose reported licenses are unknown".format(len(unsupported_licenses)))
         for unsupported_license in unsupported_licenses:
