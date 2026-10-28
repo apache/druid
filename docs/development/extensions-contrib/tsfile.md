@@ -132,6 +132,32 @@ value columns `temperature`, `humidity`, and `status`. The following spec ingest
 }
 ```
 
+## Example: SQL-based ingestion
+
+The same file can be loaded with an MSQ `INSERT ... SELECT` statement. `EXTERN` takes the input source spec, the
+input format spec, and the external table's column signature:
+
+```sql
+INSERT INTO sensor
+SELECT
+  MILLIS_TO_TIMESTAMP("Time") AS __time,
+  region,
+  device,
+  temperature
+FROM TABLE(
+  EXTERN(
+    '{"type":"local","baseDir":"/data/tsfile","filter":"*.tsfile"}',
+    '{"type":"tsfile","tables":["sensor"]}',
+    '[{"name":"Time","type":"long"},{"name":"region","type":"string"},'
+    '{"name":"device","type":"string"},{"name":"temperature","type":"double"}]'
+  )
+)
+PARTITIONED BY DAY
+```
+
+TsFile's implicit `Time` column is declared as `long` in the signature and converted to `__time` with
+`MILLIS_TO_TIMESTAMP`. Columns that are not listed in the signature are not read.
+
 ## Limitations
 
 - The input format is not splittable. With a splittable input source such as `local`, `s3`, or `gcs`, Druid still
