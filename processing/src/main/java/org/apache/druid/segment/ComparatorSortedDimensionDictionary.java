@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2IntSortedMap;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -43,17 +44,35 @@ public class ComparatorSortedDimensionDictionary<T>
 
   public ComparatorSortedDimensionDictionary(List<T> idToValue, Comparator<T> comparator, int length)
   {
-    Object2IntSortedMap<T> sortedMap = new Object2IntRBTreeMap<>(comparator);
+    final Object2IntSortedMap<T> sortedMap = new Object2IntRBTreeMap<>(comparator);
+    int nullId = -1;
     for (int id = 0; id < length; id++) {
-      T value = idToValue.get(id);
-      sortedMap.put(value, id);
+      final T value = idToValue.get(id);
+      if (value == null) {
+        nullId = id;
+      } else {
+        sortedMap.put(value, id);
+      }
     }
     this.sortedVals = Lists.newArrayList(sortedMap.keySet());
+    int nullIndex = 0;
+    if (nullId >= 0) {
+      while (nullIndex < sortedVals.size() && comparator.compare(sortedVals.get(nullIndex), null) < 0) {
+        nullIndex++;
+      }
+      this.sortedVals.add(nullIndex, null);
+    }
     this.idToIndex = new int[length];
     this.indexToId = new int[length];
-    int index = 0;
+    final List<Integer> sortedIds = new ArrayList<>(sortedMap.size() + (nullId >= 0 ? 1 : 0));
     for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext(); ) {
-      int id = iterator.nextInt();
+      sortedIds.add(iterator.nextInt());
+    }
+    if (nullId >= 0) {
+      sortedIds.add(nullIndex, nullId);
+    }
+    int index = 0;
+    for (final int id : sortedIds) {
       idToIndex[id] = index;
       indexToId[index] = id;
       index++;
