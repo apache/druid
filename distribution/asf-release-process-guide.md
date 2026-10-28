@@ -27,6 +27,7 @@
 - [ ] [Announce intention to release](#announce-intention-to-release)
 - [ ] [Security vulnerabilities](#security-vulnerabilities)
 - [ ] [Create a release branch](#create-a-release-branch)
+  - [ ] [Refresh licenses.yaml versions before branching](#refresh-licensesyaml-versions-before-branching)
   - [ ] [Preparing the release branch](#preparing-the-release-branch)
   - [ ] [Preparing the master branch for the next version after branching](#preparing-the-master-branch-for-the-next-version-after-branching)
   - [ ] [Backport PRs tagged with release milestone](#backport-prs-tagged-with-release-milestone)
@@ -131,6 +132,8 @@ First up in performing an official release of Apache Druid is to announce in the
 The release manager should also keep an eye-out for `Cron Job ITS` failures: https://github.com/apache/druid/actions/workflows/cron-job-its.yml. If there are security vulnerabilities, we need to fix them before creating an RC.
 
 ## Create a release branch
+
+Before branching, [refresh the versions in `licenses.yaml`](#refresh-licensesyaml-versions-before-branching) and merge the result.
 
 Next up is creating the release branch off of master (or the previous release branch for a bug fix release). Be sure to do this from the apache git repo, _not your fork_. Name the branch for the release version that is being created, omitting the `druid` prefix that will appear on the release candidate and release tags:
 
@@ -250,7 +253,7 @@ Once all issues and PRs that are still tagged with the release milestone have be
 
 ## LICENSE and NOTICE handling
 
-The license check has been handle by CI. This section is for informational purposes only in most cases. However, if this is the first release of the year, you should ensure that copyright `YEAR` in the `NOTICE` file has been updated. 
+The license check is handled by CI, but CI only warns when a version in `licenses.yaml` is stale. Apart from [refreshing those versions before branching](#refresh-licensesyaml-versions-before-branching), this section is for informational purposes only in most cases. However, if this is the first release of the year, you should ensure that copyright `YEAR` in the `NOTICE` file has been updated. 
 
 The following links are helpful for understanding Apache's third-party licensing policies:
 
@@ -277,6 +280,31 @@ At the core of these tools is a dependency registry file, `licenses.yaml`, that 
 `licenses.yaml` contains both `LICENSE` and (relevant) `NOTICE` file content which is used at distribution packaging time to build a `LICENSE.BINARY` and `NOTICE.BINARY` for the binary package.
 
 If the dependency requires it, copy any licenses to the `licenses/src` or `licenses/bin` folder. Every file in `licenses/bin` must be referenced by a `license_file_path` in `licenses.yaml`; delete the file when you remove the last entry that uses it.
+
+### Refresh licenses.yaml versions before branching
+
+PR CI only warns when a version in `licenses.yaml` no longer matches the dependency version the build uses, so dependency updates can merge with stale versions. The release build (`-Papache-release`) still fails on them, so refresh the versions before you [create the release branch](#create-a-release-branch).
+
+The scripts below need Python 3 with PyYAML, as the release build does. The dependency reports are generated module by module, and each module resolves the other Druid modules from your local Maven repository, so first install the commit you are about to branch from:
+
+```bash
+mvn clean install -Pskip-static-checks,skip-tests -Dweb.console.skip=true -T1C
+```
+
+Then generate the dependency reports and refresh the versions:
+
+```bash
+distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
+distribution/bin/refresh-license-versions.py licenses.yaml target/license-reports
+```
+
+`generate-license-dependency-reports.py` keeps going when a module fails, and `refresh-license-versions.py` skips the entries of a module without a report, so check the report output for `Encountered error`. `refresh-license-versions.py` lists the entries it cannot update on its own and exits non-zero; edit those by hand, as described in [Updating licenses](../dev/license.md#updating-licenses). Then run the same check as the release build:
+
+```bash
+distribution/bin/check-licenses.py licenses.yaml target/license-reports --exclude-module-prefix=extensions-contrib/ --exclude-module-prefix=extensions/druid-testcontainers
+```
+
+Open a PR with the `licenses.yaml` changes against the branch you are branching off (master, or the previous release branch for a bug fix release), and merge it before you create the release branch.
 
 ### LICENSE.BINARY and NOTICE.BINARY generator tools
 
