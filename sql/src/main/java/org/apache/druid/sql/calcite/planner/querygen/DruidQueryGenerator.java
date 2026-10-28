@@ -75,7 +75,10 @@ public class DruidQueryGenerator
    */
   public static class DruidNodeStack
   {
-    static class Entry
+    /**
+     * Node on the stack, along with its operand index within its parent.
+     */
+    public static class Entry
     {
       public final DruidLogicalNode node;
       public final int operandIndex;
