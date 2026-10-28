@@ -40,7 +40,13 @@ This topic guides you through setting up automatic compaction for your Druid clu
 ## Auto-compaction syntax
 
 You can configure automatic compaction dynamically without restarting Druid.
-The automatic compaction system uses the following syntax:
+
+A configuration's `type` selects where the schema it compacts toward comes from. The default, `inline`, declares the
+schema in the configuration itself; `catalog` reads it from the datasource's catalog table definition.
+
+### Define the schema inline
+
+An `inline` schema declaration for the automatic compaction uses the following syntax:
 
 ```json
 {
@@ -58,7 +64,7 @@ The automatic compaction system uses the following syntax:
 }
 ```
 
-Most fields in the auto-compaction configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
+Most fields in the configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
 The following properties only apply to auto-compaction:
 * `skipOffsetFromLatest`
 * `skipIntervals`
@@ -68,7 +74,7 @@ The following properties only apply to auto-compaction:
 Since the automatic compaction system provides a management layer on top of manual compaction tasks,
 the auto-compaction configuration does not include task-specific properties found in a typical Druid ingestion spec.
 The following properties are automatically set by the auto-compaction system:
-* `type`: Set to `compact`.
+* `type`: Set to `compact`. This is the generated task's type, not the configuration's own `type` described above.
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `auto`.
 * `context`: Set according to the user-provided `taskContext`.
 
@@ -81,6 +87,28 @@ maximize performance and minimize disk usage of the `compact` tasks launched by 
 - `metricsSpec`
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
+
+### Take the schema from the catalog
+
+An [inline](#define-the-schema-inline) configuration declares its own schema, which has to be kept in step with the
+datasource by hand. If the datasource has a [catalog](../development/extensions-core/catalog.md) table definition,
+compaction can read the schema from it instead, by setting `"type": "catalog"`:
+
+```json
+{
+  "type": "catalog",
+  "dataSource": "events",
+  "engine": "msq"
+}
+```
+
+Such a configuration carries no schema of its own. It accepts only `dataSource`, `engine`, `skipOffsetFromLatest`,
+`skipIntervals`, `taskPriority`, `taskContext`, and `inputSegmentSizeBytes`; everything else (segment granularity,
+partitioning, projections, and the stored column layout) is read from the table definition on every compaction run.
+Editing the definition therefore changes how the datasource is compacted from then on, which means it can also rewrite
+data that is already stored. See
+[Catalog-based compaction](../development/extensions-core/catalog.md#catalog-based-compaction) for exactly which table
+properties take effect and which are ignored.
 
 ## Auto-compaction using compaction supervisors
 

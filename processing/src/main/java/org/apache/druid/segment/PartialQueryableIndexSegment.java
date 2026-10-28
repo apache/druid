@@ -26,6 +26,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.function.Predicate;
 
 /**
  * {@link Segment} wrapper around a {@link PartialQueryableIndex}. Mirrors {@link QueryableIndexSegment} but wires up
@@ -53,6 +54,23 @@ public class PartialQueryableIndexSegment implements ReferenceCountedSegmentProv
       PartialBundleAcquirer bundleAcquirer
   )
   {
+    this(index, segmentId, onClose, bundleAcquirer, null);
+  }
+
+  /**
+   * @param servableBundles when non-null, the cursor factory only serves the bundles this accepts, as if they were the
+   *                        whole segment (see {@link PartialQueryableIndexCursorFactory}). Other {@link #as} views,
+   *                        such as {@link QueryableIndex}, {@link Metadata}, and {@link RowCountInspector}, still
+   *                        describe the whole segment.
+   */
+  public PartialQueryableIndexSegment(
+      PartialQueryableIndex index,
+      SegmentId segmentId,
+      Closeable onClose,
+      PartialBundleAcquirer bundleAcquirer,
+      @Nullable Predicate<String> servableBundles
+  )
+  {
     this.index = index;
     this.timeBoundaryInspector = V10TimeBoundaryInspector.forBaseProjection(
         index.getBaseProjectionMetadata(),
@@ -61,7 +79,8 @@ public class PartialQueryableIndexSegment implements ReferenceCountedSegmentProv
     this.cursorFactory = new PartialQueryableIndexCursorFactory(
         index,
         timeBoundaryInspector,
-        bundleAcquirer
+        bundleAcquirer,
+        servableBundles
     );
     this.segmentId = segmentId;
     this.onClose = onClose;

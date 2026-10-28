@@ -250,6 +250,65 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
   }
 
   @Test
+  void testServableBundlesDropsUnservedGroups() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "servable_acme")) {
+      final PartialSegmentFileMapperV10 mapper = opened.mapper();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          opened.index(),
+          QueryableIndexTimeBoundaryInspector.create(opened.index()),
+          noOpAcquirer(directExec()),
+          ACME_BUNDLE::equals
+      );
+
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+           CursorHolder holder = asyncHolder.release()) {
+        // the unserved globex group is left out entirely, rather than nil-ed
+        Assertions.assertEquals(
+            List.of(List.of("acme", "us-east-1"), List.of("acme", "us-west-2")),
+            scanTenantRegion(holder)
+        );
+        final Set<String> downloaded = mapper.getDownloadedFiles();
+        Assertions.assertTrue(
+            downloaded.stream().noneMatch(f -> f.startsWith(GLOBEX_BUNDLE + "/")),
+            "unserved globex group must not be downloaded; got: " + downloaded
+        );
+      }
+
+      // sync path drops the unserved group too, even once it is resident
+      mapper.fetchFiles(mapper.getSegmentFileMetadata().getFiles().keySet());
+      try (CursorHolder holder = factory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        Assertions.assertEquals(
+            List.of(List.of("acme", "us-east-1"), List.of("acme", "us-west-2")),
+            scanTenantRegion(holder)
+        );
+      }
+    }
+  }
+
+  @Test
+  void testNoServableGroupsDownloadsNothing() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "servable_none")) {
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          opened.index(),
+          QueryableIndexTimeBoundaryInspector.create(opened.index()),
+          noOpAcquirer(directExec()),
+          bundle -> false
+      );
+      rangeReader.resetCount();
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertTrue(scanTenantRegion(holder).isEmpty());
+      }
+      Assertions.assertEquals(0, rangeReader.getReadCount());
+      Assertions.assertTrue(opened.mapper().getDownloadedFiles().isEmpty());
+    }
+  }
+
+  @Test
   void testSyncMakeCursorHolderAfterFullDownload() throws IOException
   {
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);

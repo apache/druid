@@ -1495,7 +1495,7 @@ Returns the following:
 
 Converts a value into the specified data type.
 
-* **Syntax:** `CAST(value AS TYPE)`
+* **Syntax:** `CAST(value AS TYPE)` or `value::TYPE`
 * **Function type:** Scalar, other
 
 <details>

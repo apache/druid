@@ -1317,7 +1317,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 2 OFFSET 6)",
         RuntimeException.class,
-        "java.util.concurrent.ExecutionException: org.apache.druid.error.DruidException: Subquery expression returned more than one row"
+            "Subquery expression returned more than one row"
     );
   }
 

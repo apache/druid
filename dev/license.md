@@ -118,6 +118,10 @@ notice: |
   The licenses for these third party components are included in LICENSE.txt
 ```
 
+If the library is under a [Category B](https://www.apache.org/legal/resolved.html#category-b) (weak copyleft) license
+such as CDDL, EPL, MPL or the SIL Open Font License, also add a `homepage` field with the URL of the project's homepage.
+`generate-binary-license.py` lists these libraries in the README of the binary package and fails if the homepage is missing.
+
 ### Updating licenses
 
 When you update the version of existing dependencies, you need to update the version not only in the `pom.xml` file but

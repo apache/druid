@@ -707,6 +707,7 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.connectTimeout`|Connect timeout for the HTTP client used for most direct RPC between Druid services. This covers, among other things, Overlord-to-task and supervisor-to-task calls in the indexing service, Coordinator lookup management, dynamic config sync between services, MSQ tasks reading from data servers, and general Coordinator/Overlord/Broker service clients. Does not affect Broker-to-Historical query dispatch (see `druid.broker.http.connectTimeout`) or request forwarding (see `clientConnectTimeout`).|`PT10S`|
 |`druid.global.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
 |`druid.global.http.poolImplementation`|How the connection pool tracks demand, never exceeding `numConnections` either way. With `adaptive`, a request discards every stale or broken connection it walks past and opens a new one only once none is left, so the pool falls back to the number of connections the traffic actually needs. With `retaining`, the pool holds on to every connection it has opened, replacing a stale or broken one by a fresh one, one for one, so it stays at its high-water mark.|`retaining`|
+|`druid.client.coordinator.maxAttempts`|Maximum number of attempts, including the first one, that a service makes for a request to the Coordinator before giving up on a retryable error. Must be at least 1.|`15`|
 
 ### Common endpoints configuration
 
@@ -883,6 +884,7 @@ You can configure automatic compaction through the following properties:
 
 |Property|Description|Required|
 |--------|-----------|--------|
+|`type`|Where the compaction schema comes from. `inline` declares it in this configuration, using the schema properties below. `catalog` reads it from the datasource's [catalog](../development/extensions-core/catalog.md) table definition on every run, and accepts none of the schema properties; see [Catalog-based compaction](../development/extensions-core/catalog.md#catalog-based-compaction).|no (default = `inline`)|
 |`dataSource`|The datasource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.md#lock-priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk.|no (default = 100,000,000,000,000 i.e. 100TB)|

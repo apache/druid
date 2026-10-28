@@ -35,6 +35,7 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.ExecutionVertexTest;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.join.JoinType;
@@ -335,6 +336,73 @@ public class QueriesTest
         () -> Queries.withSpecificSegments(query, descriptors)
     );
     Assertions.assertEquals("Base dataSource[LookupDataSource{lookupName='lookyloo'}] is not a table!", e.getMessage());
+  }
+
+  @Test
+  public void testNarrowToQueryCoveringQuery()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 0);
+    Assertions.assertSame(descriptor, Queries.narrowToQuery(descriptor, makeTimeseriesQuery("1999/2001", "2005/2006")));
+  }
+
+  @Test
+  public void testNarrowToQueryPartialOverlap()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 1);
+    Assertions.assertEquals(
+        new SegmentDescriptor(Intervals.of("2000-03/2001"), "0", 1),
+        Queries.narrowToQuery(descriptor, makeTimeseriesQuery("1998/1999", "2000-03/2002"))
+    );
+  }
+
+  @Test
+  public void testNarrowToQueryNoOverlap()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 0);
+    Assertions.assertNull(Queries.narrowToQuery(descriptor, makeTimeseriesQuery("1999/2000", "2001/2002")));
+  }
+
+  @Test
+  public void testNarrowToQuerySplitIsAnError()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 0);
+    final TimeseriesQuery query = makeTimeseriesQuery("1999/2000-03", "2000-06/2002");
+
+    DruidException e = assertThrows(DruidException.class, () -> Queries.narrowToQuery(descriptor, query));
+    Assertions.assertEquals(
+        "Query intervals[[1999-01-01T00:00:00.000Z/2000-03-01T00:00:00.000Z, "
+        + "2000-06-01T00:00:00.000Z/2002-01-01T00:00:00.000Z]] split segment interval"
+        + "[2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z]",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void testNarrowToQuerySubQueryStack()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 0);
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(new QueryDataSource(makeTimeseriesQuery("2000-03/2002")))
+              .intervals("1999/2000-02")
+              .granularity(Granularities.ALL)
+              .build();
+
+    Assertions.assertEquals(
+        new SegmentDescriptor(Intervals.of("2000-03/2001"), "0", 0),
+        Queries.narrowToQuery(descriptor, query)
+    );
+  }
+
+  private static TimeseriesQuery makeTimeseriesQuery(final String... intervals)
+  {
+    return Druids.newTimeseriesQueryBuilder()
+                 .dataSource("foo")
+                 .intervals(
+                     new MultipleIntervalSegmentSpec(Arrays.stream(intervals).map(Intervals::of).toList())
+                 )
+                 .granularity(Granularities.ALL)
+                 .build();
   }
 
   @Test

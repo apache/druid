@@ -79,6 +79,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 {
@@ -110,6 +111,28 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         FrameTestUtil.readRowsFromCursorFactory(cursorFactory, cursorFactory.getRowSignature(), false),
         Sequences.simple(runScanOverSegment(queryableIndex, query))
     );
+  }
+
+  @Test
+  public void test_runWithSegments_sharedLimitReachedMidFrame() throws Exception
+  {
+    final QueryableIndex queryableIndex = TestIndex.getMMappedTestIndex();
+
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+              .columns("__time", "market")
+              .limit(13)
+              .build();
+
+    // Other processors have already written 10 rows, so this one must stop after 3, even though a frame can hold more.
+    final AtomicLong sharedRunningCountForLimit = new AtomicLong(10);
+    final List<List<Object>> rows =
+        runScanOverSegment(queryableIndex, query, sharedRunningCountForLimit, Integer.MAX_VALUE);
+
+    Assertions.assertEquals(3, rows.size());
+    Assertions.assertEquals(13, sharedRunningCountForLimit.get());
   }
 
   @Test
@@ -388,12 +411,22 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
   private List<List<Object>> runScanOverSegment(final QueryableIndex queryableIndex, final ScanQuery query)
       throws Exception
   {
+    // Limit output frames to 1 row to ensure we test edge cases
+    return runScanOverSegment(queryableIndex, query, null, 1);
+  }
+
+  private List<List<Object>> runScanOverSegment(
+      final QueryableIndex queryableIndex,
+      final ScanQuery query,
+      @Nullable final AtomicLong sharedRunningCountForLimit,
+      final int maxRowsPerFrame
+  ) throws Exception
+  {
     final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
     final RowSignature signature = cursorFactory.getRowSignature();
 
     final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
 
-    // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
         FrameWriters.makeFrameWriterFactory(
             FrameType.latestRowBased(),
@@ -402,14 +435,14 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
             Collections.emptyList(),
             false
         ),
-        1
+        maxRowsPerFrame
     );
 
     final ReferenceCountedSegmentProvider segmentReferenceProvider =
         new ReferenceCountedSegmentProvider(new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test")));
     final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
         query,
-        null,
+        sharedRunningCountForLimit,
         new DefaultObjectMapper(),
         ReadableInput.segment(
             new SegmentReferenceHolder(

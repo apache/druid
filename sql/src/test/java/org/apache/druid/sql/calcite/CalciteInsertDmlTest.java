@@ -138,6 +138,29 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertInfixCastColumnName()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT __time, dim1::BIGINT FROM foo PARTITIONED BY ALL TIME")
+        .expectTarget(
+            "dst",
+            RowSignature.builder().add("__time", ColumnType.LONG).add("dim1", ColumnType.LONG).build()
+        )
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                .columns("__time", "v0")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG)
+                .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
   public void testInsertFromViewC()
   {
     final RowSignature expectedSignature =

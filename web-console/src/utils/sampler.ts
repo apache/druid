@@ -304,10 +304,12 @@ export async function sampleForConnect(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
-        dimensionsSpec: {
-          useSchemaDiscovery: true,
-          dimensions: addFileUri ? ['__file_uri'] : undefined,
-        },
+        dimensionsSpec: reingestMode
+          ? {}
+          : {
+              useSchemaDiscovery: true,
+              dimensions: addFileUri ? ['__file_uri'] : undefined,
+            },
         granularitySpec: {
           rollup: false,
         },

@@ -237,6 +237,14 @@ public class SqlBaseBenchmark
     return context;
   }
 
+  /**
+   * Additional lookups, by name, to make available to queries via LOOKUP
+   */
+  protected Map<String, LookupExtractor> getLookups()
+  {
+    return Collections.emptyMap();
+  }
+
   protected IndexSpec getIndexSpec()
   {
     return IndexSpec.builder()
@@ -331,7 +339,7 @@ public class SqlBaseBenchmark
     final Pair<PlannerFactory, SqlEngine> sqlSystem = createSqlSystem(
         segments,
         realtimeSegments,
-        Collections.emptyMap(),
+        getLookups(),
         storageType,
         closer
     );

@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
@@ -30,6 +31,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -82,6 +84,28 @@ public class IndexerControllerContext implements ControllerContext
   public static final SegmentSource DEFAULT_SEGMENT_SOURCE = SegmentSource.NONE;
 
   private static final Logger log = new Logger(IndexerControllerContext.class);
+
+  /**
+   * Worker context keys that worker tasks require in their task context.
+   */
+  private static final Set<String> WORKER_TASK_CONTEXT_KEYS = ImmutableSet.of(
+      QueryContextParameters.DURABLE_SHUFFLE_STORAGE.getName(),
+      QueryContextParameters.MAX_PARSE_EXCEPTIONS.getName(),
+      QueryContextParameters.IS_REINDEX.getName(),
+      QueryContextParameters.MAX_CONCURRENT_STAGES.getName(),
+      QueryContextParameters.ROW_BASED_FRAME_TYPE.getName(),
+      QueryContextParameters.REMOVE_NULL_BYTES.getName(),
+      QueryContextParameters.INCLUDE_ALL_COUNTERS.getName(),
+      QueryContextParameters.MAX_FRAME_SIZE.getName(),
+      QueryContextParameters.SELECT_DESTINATION.getName(),
+      QueryContextParameters.LIVE_REPORT_COUNTERS.getName(),
+      QueryContextParameters.MAX_THREADS.getName(),
+      MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS,
+      Tasks.STORE_EMPTY_COLUMNS_KEY,
+      QueryContextParameters.QUERY_ID.getName(),
+      QueryContextParameters.SQL_QUERY_ID.getName(),
+      QueryContextParameters.DEBUG.getName()
+  );
 
   private final MSQControllerTask task;
   private final TaskLockType taskLockType;
@@ -381,15 +405,20 @@ public class IndexerControllerContext implements ControllerContext
       final Map<String, Object> controllerTaskContext
   )
   {
-    // Put worker context into the task context. That way, workers can get these context keys either from
-    // WorkOrder#getContext or Task#getContext.
-    final Map<String, Object> taskContext = new HashMap<>(
-        makeWorkerContextMap(
-            querySpec,
-            queryKernelConfig.isDurableStorage(),
-            queryKernelConfig.getMaxConcurrentStages()
-        )
+    final Map<String, Object> workerContextMap = makeWorkerContextMap(
+        querySpec,
+        queryKernelConfig.isDurableStorage(),
+        queryKernelConfig.getMaxConcurrentStages()
     );
+
+    // Forward only the worker context keys that the task requires.
+    final Map<String, Object> taskContext = new HashMap<>();
+    for (String key : WORKER_TASK_CONTEXT_KEYS) {
+      final Object value = workerContextMap.get(key);
+      if (value != null) {
+        taskContext.put(key, value);
+      }
+    }
 
     // Put the lookup loading info in the task context to facilitate selective loading of lookups.
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE) != null) {

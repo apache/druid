@@ -73,7 +73,7 @@ public class LeastExpressionTest extends CalciteTestBase
   {
     testExpression(
         Collections.emptyList(),
-        buildExpectedExpression(),
+        expectedLeastFunctionCall(ColumnType.STRING),
         null
     );
   }
@@ -86,7 +86,7 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.getConstantNull(),
             testHelper.getConstantNull()
         ),
-        buildExpectedExpression(null, null),
+        expectedLeastFunctionCall(ColumnType.STRING, null, null),
         null
     );
   }
@@ -100,7 +100,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.getConstantNull(),
             testHelper.makeInputRef(STRING_KEY)
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.STRING,
             testHelper.makeVariable(DOUBLE_KEY),
             null,
             testHelper.makeVariable(STRING_KEY)
@@ -119,7 +120,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(5.2),
             testHelper.makeLiteral(767.3)
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.DOUBLE,
             34.1,
             testHelper.makeVariable(DOUBLE_KEY),
             5.2,
@@ -137,7 +139,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.makeInputRef(LONG_KEY),
             testHelper.makeLiteral(0)
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.LONG,
             testHelper.makeVariable(LONG_KEY),
             0
         ),
@@ -154,7 +157,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.makeInputRef(STRING_KEY),
             testHelper.makeLiteral("A")
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.STRING,
             "B",
             testHelper.makeVariable(STRING_KEY),
             "A"
@@ -172,7 +176,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.makeInputRef(DOUBLE_KEY),
             testHelper.makeLiteral("A")
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.STRING,
             -1,
             testHelper.makeVariable(DOUBLE_KEY),
             "A"
@@ -189,7 +194,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(-1),
             testHelper.makeInputRef(DOUBLE_KEY)
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.DOUBLE,
             -1,
             testHelper.makeVariable(DOUBLE_KEY)
         ),
@@ -205,7 +211,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(BigDecimal.valueOf(1.2)),
             testHelper.makeLiteral(BigDecimal.valueOf(3.4))
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.DOUBLE,
             1.2,
             3.4
         ),
@@ -222,7 +229,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(BigDecimal.valueOf(3.4)),
             testHelper.getConstantNull()
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.DOUBLE,
             1.2,
             3.4,
             null
@@ -239,7 +247,8 @@ public class LeastExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(DateTimes.utc(1000)),
             testHelper.makeLiteral(DateTimes.utc(2000))
         ),
-        buildExpectedExpression(
+        expectedLeastFunctionCall(
+            ColumnType.LONG,
             1000,
             2000
         ),
@@ -257,7 +266,7 @@ public class LeastExpressionTest extends CalciteTestBase
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
-        buildExpectedExpression(13),
+        expectedLeastFunctionCall(ColumnType.LONG, 13),
         13L
     );
   }
@@ -268,11 +277,11 @@ public class LeastExpressionTest extends CalciteTestBase
       final Object expectedResult
   )
   {
-    testHelper.testExpressionString(target.calciteOperator(), exprs, expectedExpression, expectedResult);
+    testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
-  private DruidExpression buildExpectedExpression(Object... args)
+  private DruidExpression expectedLeastFunctionCall(ColumnType type, Object... args)
   {
-    return testHelper.buildExpectedExpression(target.getDruidFunctionName(), args);
+    return testHelper.expectedFunctionCall(type, target.getDruidFunctionName(), args);
   }
 }

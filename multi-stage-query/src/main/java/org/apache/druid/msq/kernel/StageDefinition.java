@@ -176,28 +176,32 @@ public class StageDefinition
   }
 
   /**
+   * Returns {@link #getMaxWorkerCount()} capped by runtime bounds. Leaf stages are capped by {@code maxWorkerCount};
+   * nonleaf stages are further capped by {@code maxNonLeafWorkerCount}.
+   */
+  public int computeAdjustedMaxWorkerCount(final int maxWorkerCount, final int maxNonLeafWorkerCount)
+  {
+    if (InputSpecs.hasLeafInputs(inputSpecs, getBroadcastInputNumbers())) {
+      return Math.min(this.maxWorkerCount, maxWorkerCount);
+    } else {
+      return Math.min(this.maxWorkerCount, Math.min(maxWorkerCount, maxNonLeafWorkerCount));
+    }
+  }
+
+  /**
    * Returns a new {@link StageDefinition} with runtime bounds applied. See {@link QueryDefinition#withRuntimeBounds}
    * for details on the logic.
+   *
+   * @param adjustedMaxWorkerCount  figure from {@link #computeAdjustedMaxWorkerCount}
+   * @param adjustedPartitionCount  partition count for the shuffle spec, applied only if
+   *                                {@link ShuffleSpec#isAdjustable()}
    */
-  public StageDefinition withRuntimeBounds(
-      final int maxWorkerCount,
-      final int maxNonLeafWorkerCount,
-      final int targetPartitionsPerWorker
-  )
+  public StageDefinition withRuntimeBounds(final int adjustedMaxWorkerCount, final int adjustedPartitionCount)
   {
-    final int adjustedMaxWorkerCount;
     final ShuffleSpec adjustedShuffleSpec;
 
-    if (InputSpecs.hasLeafInputs(inputSpecs, getBroadcastInputNumbers())) {
-      // Leaf stage.
-      adjustedMaxWorkerCount = Math.min(this.maxWorkerCount, maxWorkerCount);
-    } else {
-      // Nonleaf stage.
-      adjustedMaxWorkerCount = Math.min(this.maxWorkerCount, Math.min(maxWorkerCount, maxNonLeafWorkerCount));
-    }
-
     if (shuffleSpec != null && shuffleSpec.isAdjustable()) {
-      adjustedShuffleSpec = shuffleSpec.withPartitionCount(adjustedMaxWorkerCount * targetPartitionsPerWorker);
+      adjustedShuffleSpec = shuffleSpec.withPartitionCount(adjustedPartitionCount);
     } else {
       adjustedShuffleSpec = shuffleSpec;
     }

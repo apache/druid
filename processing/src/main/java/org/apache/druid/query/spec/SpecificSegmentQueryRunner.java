@@ -31,6 +31,7 @@ import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.SegmentMissingException;
@@ -58,10 +59,16 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> input, final ResponseContext responseContext)
   {
+    final SegmentDescriptor descriptor = Queries.narrowToQuery(specificSpec.getDescriptor(), input.getQuery());
+    if (descriptor == null) {
+      // Nothing to read, since the query does not overlap this segment.
+      return Sequences.empty();
+    }
+
     final QueryPlus<T> queryPlus = input.withQuery(
         Queries.withSpecificSegments(
             input.getQuery(),
-            Collections.singletonList(specificSpec.getDescriptor())
+            Collections.singletonList(descriptor)
         )
     );
 
