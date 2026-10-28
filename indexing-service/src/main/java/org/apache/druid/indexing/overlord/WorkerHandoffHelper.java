@@ -165,9 +165,6 @@ public final class WorkerHandoffHelper
         Collections.emptyList()
     );
     for (String taskId : taskIds) {
-      if (taskId == null || taskId.isEmpty()) {
-        continue;
-      }
       skipped.add(new SkippedTask(taskId, reason));
     }
   }
