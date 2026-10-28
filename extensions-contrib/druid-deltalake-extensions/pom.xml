@@ -115,7 +115,8 @@
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil</artifactId>
+      <artifactId>fastutil-core</artifactId>
+      <version>8.5.4</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
