@@ -58,25 +58,28 @@ class FindMissingLicensesTest(unittest.TestCase):
         self.assertEqual([], find_missing([AZURE], [], skipping={GAV: {}}))
 
 
-class FindUnsupportedLicensesTest(unittest.TestCase):
-    @staticmethod
-    def unsupported(module):
-        return (module,) + GAV + ("Some New License",)
+def find_unknown(license, reporting_modules, skipping=None):
+    return check_licenses.find_unknown_licenses(
+        {GAV: (license, reporting_modules[0])}, {GAV: set(reporting_modules)}, {GAV: ["Some New License"]}, skipping or {}, EXCLUDED
+    )
 
+
+class FindUnknownLicensesTest(unittest.TestCase):
     def test_reported_by_released_module(self):
-        self.assertEqual([self.unsupported(AZURE)], check_licenses.find_unsupported_licenses([self.unsupported(AZURE)], EXCLUDED))
+        self.assertEqual([(AZURE,) + GAV + ("Some New License",)], find_unknown(None, [AZURE]))
 
     def test_reported_only_by_excluded_modules_is_ignored(self):
-        self.assertEqual(
-            [],
-            check_licenses.find_unsupported_licenses([self.unsupported(TESTCONTAINERS), self.unsupported(RANGER)], EXCLUDED)
-        )
+        self.assertEqual([], find_unknown(None, [TESTCONTAINERS, RANGER]))
 
     def test_reported_by_released_and_excluded_modules(self):
-        self.assertEqual(
-            [self.unsupported(AZURE)],
-            check_licenses.find_unsupported_licenses([self.unsupported(TESTCONTAINERS), self.unsupported(AZURE)], EXCLUDED)
-        )
+        self.assertEqual([(AZURE,) + GAV + ("Some New License",)], find_unknown(None, [TESTCONTAINERS, AZURE]))
+
+    def test_known_and_unspecified_licenses_are_ignored(self):
+        self.assertEqual([], find_unknown(APACHE, [AZURE]))
+        self.assertEqual([], find_unknown("-", [AZURE]))
+
+    def test_skipped_dependency_is_ignored(self):
+        self.assertEqual([], find_unknown(None, [AZURE], skipping={GAV: {}}))
 
 
 class FindDruidModuleNameTest(unittest.TestCase):
@@ -236,7 +239,7 @@ class RefreshVersionsTest(unittest.TestCase):
 
 
 def parse_report(*licenses):
-    row = "".join("<a>{}</a>".format(license) for license in licenses)
+    row = ", ".join("<a>{}</a>".format(license) for license in licenses)
     report = (
         '<a id="Project_Dependencies_compile"></a><table>'
         "<tr><th>GroupId</th><th>ArtifactId</th><th>Version</th><th>Type</th><th>Licenses</th></tr>"
@@ -245,23 +248,47 @@ def parse_report(*licenses):
     )
     parser = check_licenses.DependencyReportParser("java-core", check_licenses.build_compatible_license_names())
     dep_to_license = parser.parse(io.StringIO(report))
-    return dep_to_license, parser.unsupported_licenses
+    return dep_to_license, parser.dep_to_license_names
 
 
 class DependencyReportParserTest(unittest.TestCase):
     XZ = check_licenses.get_dep_key("org.tukaani", "xz", "1.10")
 
-    def test_known_license_is_normalized(self):
-        self.assertEqual(({self.XZ: ("Zero-Clause BSD", "java-core")}, []), parse_report("0BSD"))
+    def license_of(self, *licenses):
+        return parse_report(*licenses)[0][self.XZ][0]
 
-    def test_unknown_license_is_reported_as_unsupported(self):
-        self.assertEqual(
-            ({self.XZ: (None, "java-core")}, [("java-core", "org.tukaani", "xz", "1.10", "Some New License")]),
-            parse_report("Some New License")
-        )
+    def test_known_license_is_normalized(self):
+        self.assertEqual(({self.XZ: ("Zero-Clause BSD", "java-core")}, {self.XZ: ["0BSD"]}), parse_report("0BSD"))
+
+    def test_unknown_license_is_unset_and_its_name_is_kept(self):
+        self.assertEqual(({self.XZ: (None, "java-core")}, {self.XZ: ["Some New License"]}), parse_report("Some New License"))
 
     def test_unknown_license_is_fine_when_another_license_is_known(self):
-        self.assertEqual(({self.XZ: (APACHE, "java-core")}, []), parse_report("Some New License", "Apache-2.0"))
+        self.assertEqual(APACHE, self.license_of("Some New License", "Apache-2.0"))
+
+    def test_gpl_only_license_is_unset(self):
+        self.assertIsNone(self.license_of("GNU Lesser General Public License, Version 2.1"))
+
+    def test_gpl_license_does_not_override_a_compatible_one(self):
+        self.assertEqual("Eclipse Public License 1.0", self.license_of("LGPL-2.1", "Eclipse Public License - v 1.0", "LGPL-2.1"))
+
+    def test_known_license_mentioning_gpl_is_normalized(self):
+        self.assertEqual("CDDL 1.1", self.license_of("CDDL + GPLv2 with classpath exception"))
+
+    def test_separators_are_not_license_names(self):
+        self.assertEqual({self.XZ: ["Some New License", "LGPL-2.1"]}, parse_report("Some New License", "LGPL-2.1")[1])
+
+    def test_unspecified_license_is_kept(self):
+        self.assertEqual("-", self.license_of("-", "Apache-2.0"))
+
+    def test_first_compatible_license_is_kept(self):
+        self.assertEqual("MIT No Attribution", self.license_of("MIT-0", "Apache-2.0"))
+
+
+class CompatibleLicenseNamesTest(unittest.TestCase):
+    def test_every_normalized_name_is_a_name(self):
+        compatible_license_names = check_licenses.build_compatible_license_names()
+        self.assertEqual([], sorted(set(compatible_license_names.values()) - set(compatible_license_names)))
 
 
 class LoadLicensesYamlTest(unittest.TestCase):
