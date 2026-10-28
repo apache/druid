@@ -93,13 +93,6 @@ jobs:
         run: ${{ inputs.script }}
         timeout-minutes: 60
 
-      - name: Report local Maven repository changes
-        if: ${{ always() }}
-        run: |
-          mkdir -p target/ci-debug
-          cp "$RUNNER_TEMP/m2-before.txt" target/ci-debug/
-          ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
-
       - name: Publish Test Report
         if: ${{ hashFiles('**/TEST-*.xml') != '' }}
         uses: mikepenz/action-junit-report@v6
@@ -131,6 +124,20 @@ jobs:
             **/target/ci-debug/**
             distribution/target/apache-druid-*/log/**
 
+      - name: Report local Maven repository changes
+        if: ${{ always() }}
+        run: |
+          mkdir -p target/ci-debug
+          cp "$RUNNER_TEMP/m2-before.txt" target/ci-debug/
+          ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
+
       - name: Remove Druid artifacts from local Maven repository
         if: ${{ always() }}
         run: rm -rf ~/.m2/repository/org/apache/druid
+
+      - name: Report local Maven repository changes
+        if: ${{ always() }}
+        run: |
+          mkdir -p target/ci-debug
+          cp "$RUNNER_TEMP/m2-before.txt" target/ci-debug/
+          ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
