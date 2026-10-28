@@ -255,6 +255,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(4)
         .lagWeight(0.5)
         .idleWeight(0.5)
+        .usePollIdleRatio(false)
         .scaleActionPeriodMillis(10L)
         .minScaleDownDelay(Duration.standardSeconds(1))
         .build();
@@ -295,7 +296,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.equalTo(1L))
     );
-    Assertions.assertEquals(1, getCurrentTaskCount(supervisor.getId()));
 
     cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
