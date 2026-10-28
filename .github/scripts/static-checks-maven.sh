@@ -23,6 +23,8 @@ echo 'Running Maven install...'
 
 ./mvnw -B checkstyle:checkstyle --fail-at-end
 
+./mvnw -B apache-rat:check -Prat --fail-at-end -Drat.consoleOutput=true
+
 ./.github/scripts/analyze_dependencies_script.sh
 
 ./mvnw -B animal-sniffer:check --fail-at-end
