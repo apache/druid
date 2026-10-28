@@ -19,9 +19,7 @@
 
 package org.apache.druid.collections.fastutil;
 
-import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntArrays;
 
 public class DruidIntList extends IntArrayList
 {
@@ -32,14 +30,14 @@ public class DruidIntList extends IntArrayList
 
   public void addArray(int[] vals)
   {
-    growDruid(size + vals.length);
+    grow(size + vals.length);
     System.arraycopy(vals, 0, a, size, vals.length);
     size += vals.length;
   }
 
   public void fill(int val, int count)
   {
-    growDruid(size + count);
+    grow(size + count);
     java.util.Arrays.fill(a, size, size + count, val);
     size += count;
   }
@@ -47,7 +45,7 @@ public class DruidIntList extends IntArrayList
   public void fillWithRepeat(int[] vals, int repeat)
   {
     int count = vals.length * repeat;
-    growDruid(size + count);
+    grow(size + count);
     for (int i = 0; i < count; i += vals.length) {
       System.arraycopy(vals, 0, a, size + i, vals.length);
     }
@@ -61,7 +59,7 @@ public class DruidIntList extends IntArrayList
       return;
     }
     int count = vals.length * runLength * repeat;
-    growDruid(size + count);
+    grow(size + count);
     for (int i = 0; i < repeat; ++i) {
       for (int val : vals) {
         // there's a += hidden in there, don't be tricked!
@@ -74,26 +72,5 @@ public class DruidIntList extends IntArrayList
   {
     a = new int[targetSize];
     size = 0;
-  }
-
-  /**
-   * Method gratuitously "borrowed" from IntArrayList, would've been nice if that method wasn't private, but ah well.
-   *
-   * @param capacity the capacity to grow to
-   * @see IntArrayList#grow(int)
-   */
-  @SuppressWarnings("ArrayEquality")
-  private void growDruid(int capacity)
-  {
-    if (capacity <= a.length) {
-      return;
-    }
-    if (a != IntArrays.DEFAULT_EMPTY_ARRAY) {
-      capacity = (int) Math.max(Math.min((long) a.length + (a.length >> 1), Arrays.MAX_ARRAY_SIZE), capacity);
-    } else if (capacity < DEFAULT_INITIAL_CAPACITY) {
-      capacity = DEFAULT_INITIAL_CAPACITY;
-    }
-    a = IntArrays.forceCapacity(a, capacity, size);
-    assert size <= a.length;
   }
 }
