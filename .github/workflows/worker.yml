@@ -109,6 +109,18 @@ jobs:
           truncate_stack_traces: false
           job_summary: false
 
+      - name: Report local Maven repository changes
+        if: ${{ always() }}
+        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
+
+      - name: Remove Druid artifacts from local Maven repository
+        if: ${{ always() }}
+        run: rm -rf ~/.m2/repository/org/apache/druid
+
+      - name: Report local Maven repository changes
+        if: ${{ always() }}
+        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         if: ${{ failure() || inputs.artifact_prefix != '' }}
@@ -123,15 +135,3 @@ jobs:
             **/target/jacoco*.exec
             **/target/ci-debug/**
             distribution/target/apache-druid-*/log/**
-
-      - name: Report local Maven repository changes
-        if: ${{ always() }}
-        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
-
-      - name: Remove Druid artifacts from local Maven repository
-        if: ${{ always() }}
-        run: rm -rf ~/.m2/repository/org/apache/druid
-
-      - name: Report local Maven repository changes
-        if: ${{ always() }}
-        run: ./.github/scripts/dir_manifest ~/.m2/repository target/ci-debug/m2-after.txt target/ci-debug/m2-before.txt
