@@ -27,6 +27,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.guice.HiveConf;
 import org.apache.druid.iceberg.input.GlueIcebergCatalog;
 import org.apache.druid.iceberg.input.HiveIcebergCatalog;
+import org.apache.druid.iceberg.input.IcebergFileTaskInputSource;
 import org.apache.druid.iceberg.input.IcebergInputSource;
 import org.apache.druid.iceberg.input.LocalCatalog;
 import org.apache.druid.iceberg.input.RestIcebergCatalog;
@@ -49,7 +50,8 @@ public class IcebergDruidModule implements DruidModule
                 new NamedType(LocalCatalog.class, LocalCatalog.TYPE_KEY),
                 new NamedType(RestIcebergCatalog.class, RestIcebergCatalog.TYPE_KEY),
                 new NamedType(IcebergInputSource.class, IcebergInputSource.TYPE_KEY),
-                new NamedType(GlueIcebergCatalog.class, GlueIcebergCatalog.TYPE_KEY)
+                new NamedType(GlueIcebergCatalog.class, GlueIcebergCatalog.TYPE_KEY),
+                new NamedType(IcebergFileTaskInputSource.class, IcebergFileTaskInputSource.TYPE_KEY)
             )
     );
   }
