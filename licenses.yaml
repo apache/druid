@@ -3497,7 +3497,7 @@ notices:
 ---
 
 name: Apache Kafka
-version: 4.4.0
+version: 4.3.1
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3685,7 +3685,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.5.7-17
+version: 1.5.7-11
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -4702,7 +4702,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/druid-kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 4.4.0
+version: 4.3.1
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
