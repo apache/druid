@@ -17,7 +17,7 @@
 
 import argparse
 import sys
-import yaml
+import licenses_yaml
 
 from collections import defaultdict
 
@@ -68,7 +68,7 @@ def generate_notice(source_notice, dependences_yaml, exclude_module_prefixes):
     # Print Apache license first.
     print_outfile(source_notice)
     with open(dependences_yaml, encoding='utf-8') as registry_file:
-        dependencies = list(yaml.load_all(registry_file, Loader=yaml.Loader))
+        dependencies = licenses_yaml.load_all(registry_file)
 
     # Filter out entries whose module matches any of the excluded prefixes. Used by the release build
     # to skip contrib extension entries (module: extensions-contrib/*) since contrib extensions are not

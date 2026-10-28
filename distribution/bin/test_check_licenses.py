@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import importlib.util
+import io
 import os
 import unittest
 
@@ -102,14 +103,14 @@ class RefreshVersionsTest(unittest.TestCase):
         _, updated, _ = self.refresh(text, reports(("org.foo:a:1.0.1", "java-core")))
         self.assertEqual([("Foo", "java-core", "1.0.0", "1.0.1")], updated)
 
-    def test_keeps_quotes_and_quotes_versions_yaml_would_read_as_numbers(self):
+    def test_keeps_quotes_and_does_not_quote_versions_that_look_like_numbers(self):
         text = licenses_yaml(
             entry("Quoted", "java-core", "'2.21'", ["org.q: a"]),
             entry("Plain", "java-core", "1.0.0", ["org.p: a"]),
         )
-        new_text, _, _ = self.refresh(text, reports(("org.q:a:2.22", "java-core"), ("org.p:a:2", "java-core")))
+        new_text, _, _ = self.refresh(text, reports(("org.q:a:2.22", "java-core"), ("org.p:a:2.10", "java-core")))
         self.assertIn("version: '2.22'\n", new_text)
-        self.assertIn('version: "2"\n', new_text)
+        self.assertIn("version: 2.10\n", new_text)
 
     def test_leaves_current_entries_alone(self):
         text = licenses_yaml(entry("Foo", "java-core", "1.0", ["org.foo: a"]))
@@ -211,6 +212,44 @@ class RefreshVersionsTest(unittest.TestCase):
             entry("Contrib", "extensions-contrib/druid-ranger-security", "1.0", ["org.c: a"]),
         )
         self.assertEqual((text, [], []), self.refresh(text, reports(("org.s:a:1.1", "java-core"), ("org.c:a:1.1", "java-core"))))
+
+
+def parse_report(*licenses):
+    row = "".join("<a>{}</a>".format(license) for license in licenses)
+    report = (
+        '<a id="Project_Dependencies_compile"></a><table>'
+        "<tr><th>GroupId</th><th>ArtifactId</th><th>Version</th><th>Type</th><th>Licenses</th></tr>"
+        "<tr><td>org.tukaani</td><td>xz</td><td>1.10</td><td>jar</td><td>{}</td></tr>"
+        "</table>".format(row)
+    )
+    parser = check_licenses.DependencyReportParser("java-core", check_licenses.build_compatible_license_names())
+    dep_to_license = parser.parse(io.StringIO(report))
+    return dep_to_license, parser.unsupported_licenses
+
+
+class DependencyReportParserTest(unittest.TestCase):
+    XZ = check_licenses.get_dep_key("org.tukaani", "xz", "1.10")
+
+    def test_known_license_is_normalized(self):
+        self.assertEqual(({self.XZ: ("Zero-Clause BSD", "java-core")}, []), parse_report("0BSD"))
+
+    def test_unknown_license_is_reported_as_unsupported(self):
+        self.assertEqual(
+            ({self.XZ: (None, "java-core")}, [("java-core", "org.tukaani", "xz", "1.10", "Some New License")]),
+            parse_report("Some New License")
+        )
+
+    def test_unknown_license_is_fine_when_another_license_is_known(self):
+        self.assertEqual(({self.XZ: (APACHE, "java-core")}, []), parse_report("Some New License", "Apache-2.0"))
+
+
+class LoadLicensesYamlTest(unittest.TestCase):
+    def test_versions_that_look_like_numbers_are_loaded_as_strings(self):
+        docs = check_licenses.licenses_yaml.load_all("version: 1.10\n---\nversion: 2\n---\nversion: 1.5.7-11\n")
+        self.assertEqual(["1.10", "2", "1.5.7-11"], [doc["version"] for doc in docs])
+
+    def test_booleans_are_still_loaded_as_booleans(self):
+        self.assertEqual([{"skip_dependency_report_check": True}], check_licenses.licenses_yaml.load_all("skip_dependency_report_check: true\n"))
 
 
 if __name__ == "__main__":
