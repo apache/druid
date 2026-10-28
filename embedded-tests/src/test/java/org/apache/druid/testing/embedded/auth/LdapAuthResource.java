@@ -21,7 +21,6 @@ package org.apache.druid.testing.embedded.auth;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicSecurityDruidModule;
-import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.druid.testing.embedded.indexing.Resources;
@@ -37,7 +36,7 @@ import java.util.List;
  */
 public class LdapAuthResource extends TestcontainerResource<GenericContainer<?>>
 {
-  private static final String IMAGE_NAME = DruidCI.cacheDockerImage("osixia/openldap:1.5.0");
+  private static final String IMAGE_NAME = "osixia/openldap:1.5.0";
 
   public static final String ADMIN_PASSWORD = "priest";
   public static final String SYSTEM_PASSWORD = "warlock";

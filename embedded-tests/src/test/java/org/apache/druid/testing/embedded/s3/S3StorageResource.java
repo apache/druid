@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
-import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.containers.GenericContainer;
@@ -49,7 +48,7 @@ import java.net.URI;
  */
 public class S3StorageResource extends TestcontainerResource<GenericContainer<?>>
 {
-  private static final DockerImageName IMAGE = DockerImageName.parse(DruidCI.cacheDockerImage("rustfs/rustfs:1.0.0"));
+  private static final DockerImageName IMAGE = DockerImageName.parse("rustfs/rustfs:1.0.0");
   private static final int S3_PORT = 9000;
   private static final String DEFAULT_BUCKET = "druid-deep-storage";
   private static final String DEFAULT_BASE_KEY = "druid/segments";

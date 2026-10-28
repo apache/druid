@@ -33,9 +33,60 @@ concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
+env:
+  NVD_DATA: ~/.nvd-data
+
 jobs:
+  nvd_update:
+    if: github.repository == 'apache/druid' && github.event_name != 'pull_request'
+    name: NVD update
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v7
+
+      - name: setup java
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: 'zulu'
+          cache: maven
+          cache-read-only: true
+
+      - name: NVD cache key
+        id: nvd
+        run: ./.github/scripts/nvd_cache_key
+
+      - name: restore NVD data
+        id: restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.NVD_DATA }}
+          key: ${{ steps.nvd.outputs.key }}
+          restore-keys: ${{ steps.nvd.outputs.prefix }}
+
+      - name: NVD update
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: ./mvnw -B -N dependency-check:update-only -DnvdApiKey=$NVD_API_KEY -DdataDirectory=$HOME/.nvd-data
+
+      - name: save NVD data
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.NVD_DATA }}
+          key: ${{ steps.nvd.outputs.key }}
+
+      - name: upload NVD data
+        uses: actions/upload-artifact@v7
+        with:
+          name: nvd-data
+          path: ${{ env.NVD_DATA }}
+          retention-days: 1
+
   security_vulnerabilities:
-    if: github.repository == 'apache/druid'
+    needs: nvd_update
+    if: ${{ github.repository == 'apache/druid' && !cancelled() && needs.nvd_update.result != 'failure' }}
     name: security vulnerabilities
     runs-on: ubuntu-24.04
     steps:
@@ -48,17 +99,38 @@ jobs:
           java-version: '25'
           distribution: 'zulu'
           cache: maven
+          cache-read-only: true
 
       - name: maven build # needed to rebuild in case of maven snapshot resolution fails
         run: ./mvnw clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
+
+      - name: download NVD data
+        if: ${{ needs.nvd_update.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: nvd-data
+          path: ${{ env.NVD_DATA }}
+
+      - name: NVD cache key
+        if: ${{ needs.nvd_update.result != 'success' }}
+        id: nvd
+        run: ./.github/scripts/nvd_cache_key
+
+      - name: restore NVD data
+        if: ${{ needs.nvd_update.result != 'success' }}
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.NVD_DATA }}
+          key: ${{ steps.nvd.outputs.key }}
+          restore-keys: ${{ steps.nvd.outputs.prefix }}
+          fail-on-cache-miss: true
 
       - name: security vulnerabilities check
         env:
           OSS_INDEX_USERNAME: ${{ secrets.OSS_INDEX_USERNAME }}
           OSS_INDEX_PASSWORD: ${{ secrets.OSS_INDEX_PASSWORD }}
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          ./mvnw -B dependency-check:purge dependency-check:check -DnvdApiKey=$NVD_API_KEY -DossIndexUsername=$OSS_INDEX_USERNAME -DossIndexPassword=$OSS_INDEX_PASSWORD || { echo "
+          ./mvnw -B dependency-check:check -DautoUpdate=false -DdataDirectory=$HOME/.nvd-data -DossIndexUsername=$OSS_INDEX_USERNAME -DossIndexPassword=$OSS_INDEX_PASSWORD || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
           './mvnw dependency-check:check'

@@ -28,7 +28,7 @@ jobs:
         pattern: [ "C*", "S*", "K*,U*,Z*,Y*,X*", "N*,Q*", "I*,L*,J*", "M*,A*,V*,W*", "E*,G*,F*", "R*,B*,P*", "H*,D*,T*,O*" ]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/pull_docker_images && .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
       artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"

@@ -15,17 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Pulls every Docker image declared via DruidCI.cacheDockerImage("<image>") in Java sources.
+# Deletes every file listed in <manifest> (dir_manifest format) from <dir>.
+#
+# Usage: prune_manifest <dir> <manifest>
 
 set -eu
 
-CALL='DruidCI\.cacheDockerImage\('
+DIR=$1
+MANIFEST=$2
 
-if git grep -nE "$CALL" -- '*.java' | grep -vE "$CALL\"[^\"]+\"\)"; then
-  echo "::error ::DruidCI.cacheDockerImage must be called with a string literal"
-  exit 1
-fi
-
-for image in $(git grep -hoE "$CALL\"[^\"]+\"" -- '*.java' | grep -oE '"[^"]+"' | tr -d '"' | sort -u); do
-  docker pull --quiet "$image" || echo "::warning ::docker pull $image failed"
-done
+cut -f1 "$MANIFEST" | sed "s#^#$DIR/#" | xargs -r -d '\n' rm -f

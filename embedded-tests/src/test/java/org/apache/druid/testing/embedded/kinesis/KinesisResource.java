@@ -23,7 +23,6 @@ import com.google.common.collect.Iterables;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.indexing.kinesis.KinesisIndexingServiceModule;
-import org.apache.druid.testing.DruidCI;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.utils.ITRetryUtil;
@@ -62,7 +61,7 @@ import java.util.stream.Collectors;
  */
 public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 {
-  private static final String IMAGE = DruidCI.cacheDockerImage("localstack/localstack:4.13.1");
+  private static final String IMAGE = "localstack/localstack:4.13.1";
   // Kinesis PutRecords accepts at most 500 records in a single request.
   private static final int PUT_RECORDS_BATCH_SIZE = 500;
 
