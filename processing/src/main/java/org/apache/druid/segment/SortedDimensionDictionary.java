@@ -19,13 +19,13 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Lists;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
-import it.unimi.dsi.fastutil.objects.Object2IntSortedMap;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.guava.Comparators;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.RandomAccess;
 
 /**
  * Creates a sorted dictionary given some existing dictionary, storing a mapping of both sorted id to unsorted id
@@ -37,35 +37,30 @@ public class SortedDimensionDictionary<T extends Comparable<T>>
   private final int[] idToIndex;
   private final int[] indexToId;
 
+  /**
+   * @param idToValue unsorted dictionary values, which must be unique. Lists that are not {@link RandomAccess} are
+   *                  copied first, since the sort looks up values by id many times.
+   * @param length    number of ids, from the start of {@code idToValue}, to include
+   */
   public SortedDimensionDictionary(List<T> idToValue, int length)
   {
-    final Object2IntSortedMap<T> sortedMap = new Object2IntRBTreeMap<>(Comparators.naturalNullsFirst());
-    int nullId = -1;
+    final Comparator<T> comparator = Comparators.naturalNullsFirst();
+    final List<T> values = idToValue instanceof RandomAccess
+                           ? idToValue
+                           : new ArrayList<>(idToValue.subList(0, length));
+    final int[] sortedIds = new int[length];
     for (int id = 0; id < length; id++) {
-      final T value = idToValue.get(id);
-      if (value == null) {
-        nullId = id;
-      } else {
-        sortedMap.put(value, id);
-      }
+      sortedIds[id] = id;
     }
-    this.sortedVals = Lists.newArrayList(sortedMap.keySet());
-    if (nullId >= 0) {
-      this.sortedVals.add(0, null);
-    }
+    IntArrays.quickSort(sortedIds, (id1, id2) -> comparator.compare(values.get(id1), values.get(id2)));
+
+    this.sortedVals = new ArrayList<>(length);
     this.idToIndex = new int[length];
-    this.indexToId = new int[length];
-    int index = 0;
-    if (nullId >= 0) {
-      idToIndex[nullId] = index;
-      indexToId[index] = nullId;
-      index++;
-    }
-    for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext(); ) {
-      final int id = iterator.nextInt();
+    this.indexToId = sortedIds;
+    for (int index = 0; index < length; index++) {
+      final int id = sortedIds[index];
+      sortedVals.add(values.get(id));
       idToIndex[id] = index;
-      indexToId[index] = id;
-      index++;
     }
   }
 
