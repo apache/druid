@@ -18,6 +18,8 @@
   ~ under the License.
   -->
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <!-- Temporary suppressions (waiting on an upgrade, an upstream release or an advisory) set until="YYYY-MM-DDZ"
+       so they lapse and get re-assessed. -->
   <!-- False positives -->
 
   <suppress>
@@ -163,7 +165,7 @@
     <cve>CVE-2025-5115</cve> <!-- netty issue in shaded hadoop -->
   </suppress>
 
-  <suppress>
+  <suppress until="2027-04-30Z">
     <!-- from extensions using hadoop-client-runtime 3.5.0, these dependencies are shaded in the jar -->
     <notes><![CDATA[
      file name: hadoop-client-runtime-3.5.0.jar
@@ -824,8 +826,7 @@
          CVE-2026-91777: quadratic forward-reference resolution with @JsonIdentityInfo.
          Neither Hadoop's client classes nor Parquet's classes reference these annotations.
          These CVEs affect jackson-databind shaded inside hadoop/parquet jars,
-         not Druid's own jackson-databind (2.22.x).
-         CVE-2026-68497: Not yet published in NVD, suppressed as appearing only inside shaded jars -->
+         not Druid's own jackson-databind (2.22.x). -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
                  parquet-jackson-1.18.1.jar (shaded jackson-databind 2.22.2)
@@ -833,7 +834,6 @@
     <filePath regex="true">.*/(hadoop-client-runtime|parquet-jackson)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-databind/pom\.xml$</filePath>
     <cve>CVE-2026-54512</cve>
     <cve>CVE-2026-54513</cve>
-    <cve>CVE-2026-68497</cve>
     <cve>CVE-2026-83557</cve>
     <cve>CVE-2026-91776</cve>
     <cve>CVE-2026-91777</cve>
@@ -851,14 +851,22 @@
     <cve>CVE-2026-89407</cve>
     <cve>CVE-2026-68498</cve>
     <cve>CVE-2026-89425</cve>
+  </suppress>
+
+  <suppress until="2027-04-30Z">
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-core 2.18.6)
+    ]]></notes>
+    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-core/pom\.xml$</filePath>
     <cve>CVE-2026-68494</cve> <!-- DoS in the async JSON parser of jackson-core 2.18.6 shaded in hadoop-client-runtime 3.5.0. Druid and Hadoop do not use the async parser. Remove when Hadoop uses jackson-core 2.18.8+ -->
   </suppress>
 
-  <suppress>
+  <suppress until="2027-04-30Z">
     <!-- CVE-2026-54515, CVE-2026-59888, CVE-2026-59889, GHSA-mhm7-754m-9p8w: @JsonIgnoreProperties,
          @JsonIgnore (records), and @JsonView bypasses during deserialization.
          CVE-2026-19032, CVE-2026-54514, CVE-2026-77310: Path, InetSocketAddress, and InetAddress
          deserialization resolving attacker-controlled input.
+         CVE-2026-68497: unbounded number parsing when binding a string to Duration or XMLGregorianCalendar.
          Each requires binding untrusted JSON into types that use these annotations or field types.
          Hadoop's client classes in hadoop-client-api reference none of these annotations and read
          JSON from cluster services (NameNode, KMS) as untyped maps. Druid's own jackson-databind
@@ -873,11 +881,12 @@
     <cve>CVE-2026-54515</cve>
     <cve>CVE-2026-59888</cve>
     <cve>CVE-2026-59889</cve>
+    <cve>CVE-2026-68497</cve>
     <cve>CVE-2026-77310</cve>
     <vulnerabilityName>GHSA-mhm7-754m-9p8w</vulnerabilityName>
   </suppress>
 
-  <suppress>
+  <suppress until="2027-04-30Z">
     <!-- CVE-2026-45205: StackOverflowError when loading YAML configuration with cycles.
          commons-configuration2 is shaded inside hadoop-client-runtime-3.5.0.jar for Hadoop metrics2,
          which loads properties files only. snakeyaml is not shaded into the jar, so YAMLConfiguration
@@ -989,16 +998,5 @@
     <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-(core|oidc)@5\.7\.10$</packageUrl>
     <cve>CVE-2026-82463</cve>
     <cve>CVE-2026-82461</cve>
-  </suppress>
-
-  <suppress>
-    <!-- TODO: CVE-2026-93879 has no public details yet (not in NVD, GitHub Security Advisories,
-         or VulnCheck as of 2026-10-14). Suppressed temporarily to unblock the build;
-         revisit and re-assess once the advisory is published. -->
-    <notes><![CDATA[
-      file name: hibernate-validator-9.1.4.Final.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.hibernate\.validator/hibernate-validator@.*$</packageUrl>
-    <cve>CVE-2026-93879</cve>
   </suppress>
 </suppressions>
