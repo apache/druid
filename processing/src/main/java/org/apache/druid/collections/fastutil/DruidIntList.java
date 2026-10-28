@@ -32,14 +32,14 @@ public class DruidIntList extends IntArrayList
 
   public void addArray(int[] vals)
   {
-    grow(size + vals.length);
+    growDruid(size + vals.length);
     System.arraycopy(vals, 0, a, size, vals.length);
     size += vals.length;
   }
 
   public void fill(int val, int count)
   {
-    grow(size + count);
+    growDruid(size + count);
     java.util.Arrays.fill(a, size, size + count, val);
     size += count;
   }
@@ -47,7 +47,7 @@ public class DruidIntList extends IntArrayList
   public void fillWithRepeat(int[] vals, int repeat)
   {
     int count = vals.length * repeat;
-    grow(size + count);
+    growDruid(size + count);
     for (int i = 0; i < count; i += vals.length) {
       System.arraycopy(vals, 0, a, size + i, vals.length);
     }
@@ -61,7 +61,7 @@ public class DruidIntList extends IntArrayList
       return;
     }
     int count = vals.length * runLength * repeat;
-    grow(size + count);
+    growDruid(size + count);
     for (int i = 0; i < repeat; ++i) {
       for (int val : vals) {
         // there's a += hidden in there, don't be tricked!
@@ -83,7 +83,7 @@ public class DruidIntList extends IntArrayList
    * @see IntArrayList#grow(int)
    */
   @SuppressWarnings("ArrayEquality")
-  private void grow(int capacity)
+  private void growDruid(int capacity)
   {
     if (capacity <= a.length) {
       return;
