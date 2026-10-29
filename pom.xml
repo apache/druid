@@ -1877,14 +1877,8 @@
                                     <excludes>
                                        <!-- upgrading these later -->
                                        <exclude>org.apache.zookeeper:zookeeper</exclude>
-                                       <exclude>com.google.guava:guava</exclude>
                                        <exclude>com.google.inject.extensions:guice-assistedinject</exclude>
-                                       <exclude>com.fasterxml.jackson.module:jackson-module-guice</exclude>
                                        <exclude>com.google.inject:guice</exclude>
-                                       <exclude>com.google.http-client:google-http-client-jackson2</exclude>
-                                       <exclude>com.google.http-client:google-http-client</exclude>
-                                       <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
-                                       <exclude>io.confluent:kafka-schema-registry-client</exclude>
                                        <exclude>org.apache.kafka:kafka-clients</exclude>
                                     </excludes>
                                     <excludedScopes>
