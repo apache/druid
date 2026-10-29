@@ -21,10 +21,7 @@ package org.apache.druid.indexing.worker.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.guice.annotations.Json;
@@ -37,6 +34,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.http.AsyncRequest;
+import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.servlet.http.HttpServletRequest;
@@ -122,34 +120,20 @@ public class TaskManagementResource
         )
     );
 
-    final AsyncRequest asyncRequest = new AsyncRequest(req, context.inputMapper, req.getHeader("Accept"));
-    // HTTP 204 NO_CONTENT is sent to the client on timeout.
-    asyncRequest.completeWithStatusOnTimeout(future, HttpServletResponse.SC_NO_CONTENT);
-
-    Futures.addCallback(
-        future,
-        new FutureCallback<ChangeRequestsSnapshot>()
-        {
-          @Override
-          public void onSuccess(ChangeRequestsSnapshot result)
-          {
-            asyncRequest.complete(HttpServletResponse.SC_OK, result, WorkerHolder.WORKER_SYNC_RESP_TYPE_REF);
-          }
-
-          @Override
-          public void onFailure(Throwable th)
-          {
-            if (th instanceof IllegalArgumentException) {
-              asyncRequest.completeWithError(HttpServletResponse.SC_BAD_REQUEST, th.getMessage());
-            } else {
-              asyncRequest.completeWithError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage());
-            }
-          }
-        },
-        MoreExecutors.directExecutor()
-    );
-
-    asyncRequest.setTimeout(timeout);
+    AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
+                .future(future)
+                .timeoutMillis(timeout)
+                .onTimeout(HttpServletResponse.SC_NO_CONTENT)
+                .onSuccess((ChangeRequestsSnapshot result) -> AsyncResponse.of(
+                    HttpServletResponse.SC_OK,
+                    result,
+                    context.inputMapper,
+                    WorkerHolder.WORKER_SYNC_RESP_TYPE_REF
+                ))
+                .onFailure(th -> th instanceof IllegalArgumentException
+                                  ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
+                                  : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))
+                .start();
     return null;
   }
 
@@ -175,7 +159,7 @@ public class TaskManagementResource
 
   private void sendErrorResponse(HttpServletRequest req, int code, String error)
   {
-    new AsyncRequest(req, jsonMapper).completeWithError(code, error);
+    AsyncRequest.create(req, jsonMapper).completeNow(AsyncResponse.error(code, error));
   }
 
   private ResponseContext createContext(String requestType)

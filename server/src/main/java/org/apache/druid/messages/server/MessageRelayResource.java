@@ -22,15 +22,13 @@ package org.apache.druid.messages.server;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.messages.MessageBatch;
 import org.apache.druid.messages.client.MessageListener;
 import org.apache.druid.messages.client.MessageRelayClient;
 import org.apache.druid.server.http.AsyncRequest;
+import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -97,40 +95,30 @@ public class MessageRelayResource<MessageType>
   )
   {
     if (epoch == null || watermark == null || clientHost == null || clientHost.isEmpty()) {
-      new AsyncRequest(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-          .completeWithError(HttpServletResponse.SC_BAD_REQUEST, null);
+      AsyncRequest.create(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+                  .completeNow(AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, null));
       return null;
     }
 
     final ListenableFuture<MessageBatch<MessageType>> batchFuture = outbox.getMessages(clientHost, epoch, watermark);
-    final AsyncRequest asyncRequest = new AsyncRequest(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE);
-    asyncRequest.setTimeout(GET_MESSAGES_TIMEOUT);
-    asyncRequest.completeWithStatusOnTimeout(batchFuture, HttpServletResponse.SC_NO_CONTENT);
 
     // Save these items, since "req" becomes inaccessible in future exception handlers.
     final String remoteAddr = req.getRemoteAddr();
     final String requestURI = req.getRequestURI();
 
-    Futures.addCallback(
-        batchFuture,
-        new FutureCallback<>()
-        {
-          @Override
-          public void onSuccess(MessageBatch<MessageType> result)
-          {
-            log.debug("Sending message batch: %s", result);
-            asyncRequest.complete(HttpServletResponse.SC_OK, result, batchType);
-          }
-
-          @Override
-          public void onFailure(Throwable e)
-          {
-            asyncRequest.completeWithError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null);
-            log.noStackTrace().warn(e, "Request failed from[%s] to[%s]", remoteAddr, requestURI);
-          }
-        },
-        Execs.directExecutor()
-    );
+    AsyncRequest.create(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+                .future(batchFuture)
+                .timeoutMillis(GET_MESSAGES_TIMEOUT)
+                .onTimeout(HttpServletResponse.SC_NO_CONTENT)
+                .onSuccess((MessageBatch<MessageType> result) -> {
+                  log.debug("Sending message batch: %s", result);
+                  return AsyncResponse.of(HttpServletResponse.SC_OK, result, batchType);
+                })
+                .onFailure(e -> {
+                  log.noStackTrace().warn(e, "Request failed from[%s] to[%s]", remoteAddr, requestURI);
+                  return AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null);
+                })
+                .start();
 
     return null;
   }

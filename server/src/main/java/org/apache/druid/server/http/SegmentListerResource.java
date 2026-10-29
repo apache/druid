@@ -21,10 +21,7 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.HttpServerInventoryView;
@@ -39,6 +36,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.loading.HttpLoadQueuePeon;
+import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.annotation.Nullable;
@@ -138,34 +136,20 @@ public class SegmentListerResource
         )
     );
 
-    final AsyncRequest asyncRequest = new AsyncRequest(req, context.inputMapper, req.getHeader("Accept"));
-    // HTTP 204 NO_CONTENT is sent to the client on timeout.
-    asyncRequest.completeWithStatusOnTimeout(future, HttpServletResponse.SC_NO_CONTENT);
-
-    Futures.addCallback(
-        future,
-        new FutureCallback<>()
-        {
-          @Override
-          public void onSuccess(ChangeRequestsSnapshot<DataSegmentChangeRequest> result)
-          {
-            asyncRequest.complete(HttpServletResponse.SC_OK, result, HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF);
-          }
-
-          @Override
-          public void onFailure(Throwable th)
-          {
-            if (th instanceof IllegalArgumentException) {
-              asyncRequest.completeWithError(HttpServletResponse.SC_BAD_REQUEST, th.getMessage());
-            } else {
-              asyncRequest.completeWithError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage());
-            }
-          }
-        },
-        MoreExecutors.directExecutor()
-    );
-
-    asyncRequest.setTimeout(timeout);
+    AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
+                .future(future)
+                .timeoutMillis(timeout)
+                .onTimeout(HttpServletResponse.SC_NO_CONTENT)
+                .onSuccess((ChangeRequestsSnapshot<DataSegmentChangeRequest> result) -> AsyncResponse.of(
+                    HttpServletResponse.SC_OK,
+                    result,
+                    context.inputMapper,
+                    HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF
+                ))
+                .onFailure(th -> th instanceof IllegalArgumentException
+                                  ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
+                                  : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))
+                .start();
     return null;
   }
 
@@ -209,34 +193,20 @@ public class SegmentListerResource
     final ListenableFuture<List<DataSegmentChangeResponse>> future =
         loadDropRequestHandler.processBatch(changeRequestList, loadingMode == null ? SegmentLoadingMode.NORMAL : loadingMode);
 
-    final AsyncRequest asyncRequest = new AsyncRequest(req, context.inputMapper, req.getHeader("Accept"));
-    // HTTP 204 NO_CONTENT is sent to the client on timeout.
-    asyncRequest.completeWithStatusOnTimeout(future, HttpServletResponse.SC_NO_CONTENT);
-
-    Futures.addCallback(
-        future,
-        new FutureCallback<>()
-        {
-          @Override
-          public void onSuccess(List<DataSegmentChangeResponse> result)
-          {
-            asyncRequest.complete(HttpServletResponse.SC_OK, result, HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF);
-          }
-
-          @Override
-          public void onFailure(Throwable th)
-          {
-            if (th instanceof IllegalArgumentException) {
-              asyncRequest.completeWithError(HttpServletResponse.SC_BAD_REQUEST, th.getMessage());
-            } else {
-              asyncRequest.completeWithError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage());
-            }
-          }
-        },
-        MoreExecutors.directExecutor()
-    );
-
-    asyncRequest.setTimeout(timeout);
+    AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
+                .future(future)
+                .timeoutMillis(timeout)
+                .onTimeout(HttpServletResponse.SC_NO_CONTENT)
+                .onSuccess((List<DataSegmentChangeResponse> result) -> AsyncResponse.of(
+                    HttpServletResponse.SC_OK,
+                    result,
+                    context.inputMapper,
+                    HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF
+                ))
+                .onFailure(th -> th instanceof IllegalArgumentException
+                                  ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
+                                  : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))
+                .start();
   }
 
   @GET
@@ -259,7 +229,7 @@ public class SegmentListerResource
 
   private void sendErrorResponse(HttpServletRequest req, int code, String error)
   {
-    new AsyncRequest(req, jsonMapper).completeWithError(code, error);
+    AsyncRequest.create(req, jsonMapper).completeNow(AsyncResponse.error(code, error));
   }
 
   private ResponseContext createContext(String requestType)

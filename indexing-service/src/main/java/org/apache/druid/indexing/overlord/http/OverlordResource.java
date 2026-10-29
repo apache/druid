@@ -27,10 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -67,6 +64,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.server.http.AsyncRequest;
+import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -521,49 +519,36 @@ public class OverlordResource
       @Context HttpServletRequest request
   )
   {
-    final AsyncRequest asyncRequest = new AsyncRequest(request, jsonMapper);
     final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
     if (!taskActionClient.isPresent()) {
       // Encourage client to try again soon, when we'll likely have a redirect set up
-      asyncRequest.complete(Status.SERVICE_UNAVAILABLE.getStatusCode(), null);
+      AsyncRequest.create(request, jsonMapper).completeNow(AsyncResponse.status(Status.SERVICE_UNAVAILABLE.getStatusCode()));
       return;
     }
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
-    asyncRequest.completeWithStatusOnTimeout(future, HttpResponseStatus.GATEWAY_TIMEOUT.code());
-
-    // Use a default timeout of 15 minutes
-    asyncRequest.setTimeout(15 * 60_000);
-
-    Futures.addCallback(
-        future,
-        new FutureCallback<Object>()
-        {
-          @Override
-          public void onSuccess(Object result)
-          {
-            // Use null-safe map since some task actions may return null result
-            final Map<String, Object> payload = new HashMap<>();
-            payload.put("result", result);
-
-            asyncRequest.complete(Status.OK.getStatusCode(), payload);
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            log.warn(t, "Failed to perform task action");
-            if (t instanceof DruidException druidException) {
-              asyncRequest.complete(druidException.getStatusCode(), druidException.toErrorResponse());
-            } else {
-              final Map<String, String> payload = new HashMap<>();
-              payload.put("error", t.getMessage());
-              asyncRequest.complete(Status.INTERNAL_SERVER_ERROR.getStatusCode(), payload);
-            }
-          }
-        },
-        MoreExecutors.directExecutor()
-    );
+    AsyncRequest.create(request, jsonMapper)
+                .future(future)
+                // Use a default timeout of 15 minutes
+                .timeoutMillis(15 * 60_000)
+                .onTimeout(HttpResponseStatus.GATEWAY_TIMEOUT.code())
+                .onSuccess(result -> {
+                  // Use null-safe map since some task actions may return null result
+                  final Map<String, Object> payload = new HashMap<>();
+                  payload.put("result", result);
+                  return AsyncResponse.of(Status.OK.getStatusCode(), payload);
+                })
+                .onFailure(t -> {
+                  log.warn(t, "Failed to perform task action");
+                  if (t instanceof DruidException druidException) {
+                    return AsyncResponse.of(druidException.getStatusCode(), druidException.toErrorResponse());
+                  } else {
+                    final Map<String, String> payload = new HashMap<>();
+                    payload.put("error", t.getMessage());
+                    return AsyncResponse.of(Status.INTERNAL_SERVER_ERROR.getStatusCode(), payload);
+                  }
+                })
+                .start();
   }
 
   @GET
