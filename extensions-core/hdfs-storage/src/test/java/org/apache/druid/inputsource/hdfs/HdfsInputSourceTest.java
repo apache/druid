@@ -141,6 +141,20 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     }
 
     @Test
+    public void testConstructorRejectsSchemeWithoutCreatingFileSystem()
+    {
+      // "nofs" has no FileSystem implementation; creating one would fail with a different error.
+      Throwable exception = assertThrows(IllegalArgumentException.class, () ->
+          HdfsInputSource.builder()
+              .paths("nofs://somehost/foo/bar")
+              .configuration(CONFIGURATION)
+              .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+              .build()
+      );
+      assertTrue(exception.getMessage().contains("Only [hdfs] protocols are allowed"));
+    }
+
+    @Test
     public void testConstructorWithDefaultHdfs()
     {
       final Configuration conf = new Configuration();

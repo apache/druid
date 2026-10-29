@@ -112,6 +112,21 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   }
 
   @Test
+  public void testClientNotCreatedOnDeserialization() throws Exception
+  {
+    // The truststore does not exist; creating the client would fail, so deserialization must not create it.
+    String json = "{\"urls\":[\"https://localhost\"],\"type\": \"schema_registry\", \"config\":"
+                  + "{\"schema.registry.ssl.truststore.location\":\"/nonexistent/truststore.jks\","
+                  + "\"schema.registry.ssl.truststore.password\":\"x\"}}";
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
+
+    Assertions.assertDoesNotThrow(() -> mapper.readerFor(AvroBytesDecoder.class).readValue(json));
+  }
+
+  @Test
   public void testParse() throws Exception
   {
     // Given
