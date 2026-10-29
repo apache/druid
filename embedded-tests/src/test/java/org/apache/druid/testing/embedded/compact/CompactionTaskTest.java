@@ -21,12 +21,15 @@ package org.apache.druid.testing.embedded.compact;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -35,6 +38,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
@@ -48,6 +52,7 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,6 +108,54 @@ public class CompactionTaskTest extends CompactionTestBase
           .ofTypeCompact()
           .context("storeCompactionState", true)
           .ioConfig(new CompactionIntervalSpec(Intervals.of("2013-08-31/2013-09-02"), null), true);
+
+  private static final String PROJECTION_NAME = "by_country";
+
+  /**
+   * Ingests with a projection, and with a small enough schema that a compaction spec can declare all of it except
+   * the projection. Used by {@link #testCompactionKeepsProjectionsOmittedFromAFullySpecifiedSpec}.
+   */
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_PROJECTION = () ->
+      TaskBuilder
+          .ofTypeIndex()
+          .jsonInputFormat()
+          .localInputSourceWithFiles(
+              Resources.DataFile.tinyWiki1Json(),
+              Resources.DataFile.tinyWiki2Json(),
+              Resources.DataFile.tinyWiki3Json()
+          )
+          .timestampColumn("timestamp")
+          .dimensions("page", "country")
+          .metricAggregates(new CountAggregatorFactory("ingested_events"))
+          .dataSchema(
+              builder -> builder.withProjections(
+                  List.of(
+                      AggregateProjectionSpec.builder(PROJECTION_NAME)
+                                             .groupingColumns(new StringDimensionSchema("country"))
+                                             .aggregators(new CountAggregatorFactory("cnt"))
+                                             .build()
+                  )
+              )
+          )
+          .dynamicPartitionWithMaxRows(3)
+          .granularitySpec("DAY", "SECOND", true)
+          .appendToExisting(false);
+
+  /**
+   * Declares every part of the schema that {@link #INDEX_TASK_WITH_PROJECTION} ingested except its projections, so
+   * that projections are the only thing compaction has to take from the segments themselves. The metric is the
+   * combining form of the count the segments already store.
+   */
+  private static final Supplier<TaskBuilder.Compact> FULLY_SPECIFIED_COMPACTION_TASK = () ->
+      TaskBuilder
+          .ofTypeCompact()
+          .context("storeCompactionState", true)
+          .ioConfig(new CompactionIntervalSpec(Intervals.of("2013-08-31/2013-09-02"), null), false)
+          .dimensions("page", "country")
+          .metricsSpec(new LongSumAggregatorFactory("ingested_events", "ingested_events"))
+          .granularitySpec(
+              new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.SECOND, true)
+          );
 
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_TIMESTAMP =
       () -> MoreResources.Task.INDEX_TASK_WITH_AGGREGATORS.get().dimensions(
@@ -317,6 +370,29 @@ public class CompactionTaskTest extends CompactionTestBase
   }
 
   @Test
+  public void testCompactionKeepsProjectionsOmittedFromAFullySpecifiedSpec() throws Exception
+  {
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      runTask(INDEX_TASK_WITH_PROJECTION.get());
+      verifySegmentsCount(4);
+      for (DataSegment segment : getUsedSegments()) {
+        Assertions.assertEquals(List.of(PROJECTION_NAME), segment.getProjections(), segment.getId().toString());
+      }
+
+      // This spec declares dimensions, metrics, rollup and query granularity, so the only thing it asks compaction
+      // to work out is which projections the segments hold. Unless that is read, the rewritten segments come back
+      // without the projection they were built with and nothing reports a problem.
+      runTask(FULLY_SPECIFIED_COMPACTION_TASK.get().dataSource(fullDatasourceName));
+
+      final List<DataSegment> compacted = getUsedSegments();
+      Assertions.assertFalse(compacted.isEmpty());
+      for (DataSegment segment : compacted) {
+        Assertions.assertEquals(List.of(PROJECTION_NAME), segment.getProjections(), segment.getId().toString());
+      }
+    }
+  }
+
+  @Test
   public void testCompactionWithTimestampDimension() throws Exception
   {
     loadDataAndCompact(INDEX_TASK_WITH_TIMESTAMP.get(), COMPACTION_TASK.get(), null);
@@ -428,5 +504,15 @@ public class CompactionTaskTest extends CompactionTestBase
     }
 
     Assertions.assertEquals(expectedResults, trimmedResult);
+  }
+
+  private List<DataSegment> getUsedSegments()
+  {
+    return overlord.bindings()
+                   .segmentsMetadataStorage()
+                   .retrieveAllUsedSegments(fullDatasourceName, Segments.ONLY_VISIBLE)
+                   .stream()
+                   .filter(segment -> !segment.isTombstone())
+                   .collect(Collectors.toList());
   }
 }
