@@ -25,6 +25,7 @@ github:
         excludes: []
       bypass_teams:
         - druid-committers
+      # deletion and force-push stay blocked by "Default Branch Protection", which committers cannot bypass
       restrict_deletion: false
       restrict_force_push: false
       required_pull_request_reviews:
