@@ -26,6 +26,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.context.QueryContextConfig;
@@ -109,6 +110,7 @@ public class BrokerQueryResource extends QueryResource
         QueryContextParameters.CLONE_QUERY_MODE.parseOrDefault(cloneQueryModeString);
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
+      validateQueryContext(query.getContext());
       ExecutionVertex ev = ExecutionVertex.of(query);
       return ioReaderWriter.getResponseWriter().ok(
           ServerViewUtil.getTargetLocations(
@@ -119,6 +121,9 @@ public class BrokerQueryResource extends QueryResource
               cloneQueryMode
           )
       );
+    }
+    catch (BadQueryContextException e) {
+      return ioReaderWriter.getResponseWriter().buildNonOkResponse(e.getFailType().getExpectedStatus(), e);
     }
     catch (Exception e) {
       return ioReaderWriter.getResponseWriter().gotError(e);
