@@ -506,6 +506,25 @@ public class DruidExpression
   }
 
   /**
+   * Returns a copy of this expression as {@link NodeType#SPECIALIZED} backed by a plain
+   * {@link ExpressionVirtualColumn}. When used as an argument of another {@link NodeType#SPECIALIZED} expression, the
+   * {@link org.apache.druid.sql.calcite.rel.VirtualColumnRegistry} will lift this expression into its own virtual
+   * column and replace the argument with a direct column reference to it, which allows the parent virtual column to
+   * reference it.
+   */
+  public DruidExpression asSpecialized()
+  {
+    return new DruidExpression(
+        NodeType.SPECIALIZED,
+        druidType,
+        simpleExtraction,
+        expressionGenerator,
+        arguments,
+        DEFAULT_VIRTUAL_COLUMN_BUILDER
+    );
+  }
+
+  /**
    * Visit all sub {@link DruidExpression} (the {@link #arguments} of this expression), allowing the
    * {@link DruidExpressionShuttle} to potentially rewrite these arguments with new {@link DruidExpression}, finally
    * building a new version of this {@link DruidExpression} with updated {@link #arguments}.

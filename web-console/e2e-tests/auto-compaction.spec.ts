@@ -16,144 +16,71 @@
  * limitations under the License.
  */
 
-import path from 'path';
-import type * as playwright from 'playwright-chromium';
+import type { APIRequestContext, Page } from '@playwright/test';
 
-import { CompactionConfig } from './component/datasources/compaction';
-import type { Datasource } from './component/datasources/datasource';
+import type { CompactionConfig } from './component/datasources/overview';
 import { DatasourcesOverview } from './component/datasources/overview';
-import { HashedPartitionsSpec } from './component/load-data/config/partition';
-import { saveScreenshotIfError } from './util/debug';
-import {
-  DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
-  runIndexTask,
-  UNIFIED_CONSOLE_URL,
-} from './util/druid';
-import { createBrowser, createPage } from './util/playwright';
-import { retryIfJestAssertionError } from './util/retry';
-import { waitTillWebConsoleReady } from './util/setup';
-
-jest.setTimeout(5 * 60 * 1000);
+import { readTutorialIngestionSpec, runTask } from './util/druid';
+import { expect, test } from './util/fixtures';
+import { CLUSTER_STATE_POLL, getDatasourceSegments } from './util/sql';
 
 // The workflow in these tests is based on the compaction tutorial:
 // https://druid.apache.org/docs/latest/tutorials/tutorial-compaction.html
-describe('Auto-compaction', () => {
-  let browser: playwright.Browser;
-  let page: playwright.Page;
+test.describe('Auto-compaction', () => {
+  test('Compacts segments from dynamic to hash partitions', async ({
+    page,
+    request,
+    newDatasourceName,
+  }) => {
+    const datasourceName = newDatasourceName('autocompaction-dynamic-to-hash');
+    await loadInitialData(request, datasourceName);
 
-  beforeAll(async () => {
-    await waitTillWebConsoleReady();
-    browser = await createBrowser();
-  });
+    const numRows = 1412;
+    await expect
+      .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual({ numSegments: 3, numAvailableSegments: 3, numRows });
 
-  beforeEach(async () => {
-    page = await createPage(browser);
-  });
+    const compactionConfig: CompactionConfig = {
+      skipOffsetFromLatest: 'PT0S',
+      partitionsSpec: { type: 'hashed', numShards: null },
+    };
+    await configureCompaction(page, datasourceName, compactionConfig);
 
-  afterAll(async () => {
-    await browser.close();
-  });
-
-  it('Compacts segments from dynamic to hash partitions', async () => {
-    const testName = 'autocompaction-dynamic-to-hash';
-    const datasourceName = testName + new Date().toISOString();
-    loadInitialData(datasourceName);
-
-    await saveScreenshotIfError(testName, page, async () => {
-      const uncompactedNumSegment = 3;
-      const numRow = 1412;
-      await validateDatasourceStatus(page, datasourceName, uncompactedNumSegment, numRow);
-
-      const compactionConfig = new CompactionConfig({
-        skipOffsetFromLatest: 'PT0S',
-        partitionsSpec: new HashedPartitionsSpec({
-          numShards: null,
-        }),
-      });
-      await configureCompaction(page, datasourceName, compactionConfig);
-
-      // Depending on the number of configured tasks slots, autocompaction may
-      // need several iterations if several time chunks need compaction
-      let currNumSegment = uncompactedNumSegment;
-      await retryIfJestAssertionError(async () => {
-        await triggerCompaction(page);
-        currNumSegment = await waitForCompaction(page, datasourceName, currNumSegment);
-
-        const compactedNumSegment = 2;
-        expect(currNumSegment).toBe(compactedNumSegment);
-      });
-    });
+    // Depending on the number of configured tasks slots, autocompaction may
+    // need several iterations if several time chunks need compaction
+    const datasourcesOverview = new DatasourcesOverview(page);
+    await expect(async () => {
+      await datasourcesOverview.triggerCompaction();
+      await expect
+        .poll(() => getDatasourceSegments(request, datasourceName), {
+          ...CLUSTER_STATE_POLL,
+          timeout: 60 * 1000,
+        })
+        .toEqual({ numSegments: 2, numAvailableSegments: 2, numRows });
+    }).toPass({ timeout: 4 * 60 * 1000 });
   });
 });
 
-function loadInitialData(datasourceName: string) {
-  const ingestionSpec = path.join(
-    DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
-    'compaction-init-index.json',
-  );
-  const setDatasourceName = `s/compaction-tutorial/${datasourceName}/`;
-  const setIntervals = 's|2015-09-12/2015-09-13|2015-09-12/2015-09-12T02:00|'; // shorten to reduce test duration
-  const sedCommands = [setDatasourceName, setIntervals];
-  runIndexTask(ingestionSpec, sedCommands);
-}
-
-async function validateDatasourceStatus(
-  page: playwright.Page,
-  datasourceName: string,
-  expectedNumSegment: number,
-  expectedNumRow: number,
-) {
-  await retryIfJestAssertionError(async () => {
-    const datasource = await getDatasource(page, datasourceName);
-    expect(datasource.availability).toMatch(`Fully available (${expectedNumSegment} segments)`);
-    expect(datasource.totalRows).toBe(expectedNumRow);
-  });
-}
-
-async function getDatasource(page: playwright.Page, datasourceName: string): Promise<Datasource> {
-  const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
-  const datasources = await datasourcesOverview.getDatasources();
-  const datasource = datasources.find(t => t.name === datasourceName);
-  expect(datasource).toBeDefined();
-  return datasource!;
+async function loadInitialData(request: APIRequestContext, datasourceName: string) {
+  const ingestionSpec = readTutorialIngestionSpec('compaction-init-index.json');
+  const { dataSchema } = ingestionSpec.spec;
+  dataSchema.dataSource = datasourceName;
+  dataSchema.granularitySpec!.intervals = ['2015-09-12/2015-09-12T02:00']; // 2 hours rather than the day, to be faster
+  await runTask(request, ingestionSpec);
 }
 
 async function configureCompaction(
-  page: playwright.Page,
+  page: Page,
   datasourceName: string,
   compactionConfig: CompactionConfig,
 ) {
-  const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
+  const datasourcesOverview = new DatasourcesOverview(page);
   await datasourcesOverview.setCompactionConfiguration(datasourceName, compactionConfig);
 
   // Saving the compaction config is not instantaneous
-  await retryIfJestAssertionError(async () => {
+  await expect(async () => {
     const savedCompactionConfig =
       await datasourcesOverview.getCompactionConfiguration(datasourceName);
     expect(savedCompactionConfig).toEqual(compactionConfig);
-  });
-}
-
-async function triggerCompaction(page: playwright.Page) {
-  const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
-  await datasourcesOverview.triggerCompaction();
-}
-
-async function waitForCompaction(
-  page: playwright.Page,
-  datasourceName: string,
-  prevNumSegment: number,
-): Promise<number> {
-  await retryIfJestAssertionError(async () => {
-    const currNumSegment = await getNumSegment(page, datasourceName);
-    expect(currNumSegment).toBeLessThan(prevNumSegment);
-  });
-
-  return getNumSegment(page, datasourceName);
-}
-
-async function getNumSegment(page: playwright.Page, datasourceName: string): Promise<number> {
-  const datasource = await getDatasource(page, datasourceName);
-  const currNumSegmentString = /(\d+)/.exec(datasource.availability)![0];
-  return Number(currNumSegmentString);
+  }).toPass();
 }

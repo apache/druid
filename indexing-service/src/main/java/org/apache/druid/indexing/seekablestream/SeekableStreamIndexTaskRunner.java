@@ -135,6 +135,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -152,6 +153,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 {
   public static final String AUTOSCALER_METRICS_KEY = "autoscalerMetrics";
   public static final String POLL_IDLE_RATIO_KEY = "pollIdleRatio";
+  public static final String POLL_IDLE_RATIO_RUNNING_AVG = "pollIdleRatioRunningAvg";
+  public static final String PROCESSING_RATE_RUNNING_AVG = "processingRateRunningAvg";
 
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
@@ -238,6 +241,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
+
+  /**
+   * Tracks cumulative time spent in {@link Status#READING}, i.e. active reading
+   * and processing records.
+   */
+  private final AtomicLong totalReadingMillis = new AtomicLong(0L);
+
+  /**
+   * A non-zero value implies that the task is currently in {@link Status#READING}.
+   */
+  private final AtomicLong readingSinceMillis = new AtomicLong(0L);
+
   private volatile TaskToolbox toolbox;
   private volatile Thread runThread;
   private volatile Appenderator appenderator;
@@ -635,6 +650,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // Could eventually support leader/follower mode (for keeping replicas more in sync)
       boolean stillReading = !assignment.isEmpty();
       status = Status.READING;
+      markReadingStarted();
       try {
         while (stillReading) {
           if (possiblyPause()) {
@@ -655,6 +671,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           final SequenceMetadata<PartitionIdType, SequenceOffsetType> latestSequence = getLastSequenceMetadataOrNull();
           if (stopRequested.get() || latestSequence == null || latestSequence.isCheckpointed()) {
             status = Status.PUBLISHING;
+            markReadingStopped();
           }
 
           if (stopRequested.get()) {
@@ -864,6 +881,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         }
 
         status = Status.PUBLISHING;
+        markReadingStopped();
       }
 
       // We need to copy sequences here, because the success callback in publishAndRegisterHandoff removes items from
@@ -1527,6 +1545,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     try {
       if (pauseRequested) {
         status = Status.PAUSED;
+        markReadingStopped();
         hasPaused.signalAll();
 
         long pauseTime = System.currentTimeMillis();
@@ -1536,6 +1555,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         }
 
         status = Status.READING;
+        markReadingStarted();
         shouldResume.signalAll();
         log.info("Received resume command, resuming ingestion.");
         task.emitMetric(toolbox.getEmitter(), "ingest/pause/time", System.currentTimeMillis() - pauseTime);
@@ -1552,6 +1572,28 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private boolean isPaused()
   {
     return status == Status.PAUSED;
+  }
+
+  /**
+   * Marks the start of a period of actively reading and processing records. Must be paired with a subsequent
+   * call to {@link #markReadingStopped()} to accumulate {@link #totalReadingMillis}.
+   */
+  private void markReadingStarted()
+  {
+    readingSinceMillis.compareAndSet(0L, System.currentTimeMillis());
+  }
+
+  /**
+   * Marks the end of a period of actively reading and processing records, begun by the most recent call to
+   * {@link #markReadingStarted()}, and folds the elapsed duration into {@link #totalReadingMillis}. A no-op if
+   * reading was not in progress.
+   */
+  private void markReadingStopped()
+  {
+    final long readingSinceMillis = this.readingSinceMillis.getAndSet(0L);
+    if (readingSinceMillis > 0) {
+      totalReadingMillis.addAndGet(System.currentTimeMillis() - readingSinceMillis);
+    }
   }
 
   private void requestPause()
@@ -1859,9 +1901,40 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
     if (this.recordSupplier != null) {
-      returnMap.put(AUTOSCALER_METRICS_KEY, Map.of(POLL_IDLE_RATIO_KEY, this.recordSupplier.getPollIdleRatioMetric()));
+      final Map<String, Object> autoscalerMetrics = new HashMap<>();
+      autoscalerMetrics.put(PROCESSING_RATE_RUNNING_AVG, getRunningAvgProcessingRate());
+
+      // Only publish the poll-idle-ratio metrics once the recordSupplier has a known value for them;
+      // otherwise an unknown value could pollute the aggregate average computed across all tasks.
+      final double pollIdleRatio = recordSupplier.getPollIdleRatioMetric();
+      if (pollIdleRatio >= 0) {
+        autoscalerMetrics.put(POLL_IDLE_RATIO_KEY, pollIdleRatio);
+      }
+      final double runningAvgPollIdleRatio = recordSupplier.getRunningAvgPollIdleRatio();
+      if (runningAvgPollIdleRatio >= 0) {
+        autoscalerMetrics.put(POLL_IDLE_RATIO_RUNNING_AVG, runningAvgPollIdleRatio);
+      }
+
+      returnMap.put(AUTOSCALER_METRICS_KEY, autoscalerMetrics);
     }
     return returnMap;
+  }
+
+  /**
+   * Average number of records processed per second, over the cumulative time spent actively reading and
+   * processing records (i.e. {@link Status#READING}), excluding startup, paused and publishing time.
+   */
+  private double getRunningAvgProcessingRate()
+  {
+    long readingMillis = totalReadingMillis.get();
+    final long readingSince = readingSinceMillis.get();
+    if (readingSince > 0) {
+      readingMillis += System.currentTimeMillis() - readingSince;
+    }
+
+    return readingMillis <= 0
+           ? 0.0d
+           : rowIngestionMeters.getTotals().getProcessed() * 1000.0d / readingMillis;
   }
 
   public Map<String, Object> doGetLiveReports()

@@ -276,7 +276,7 @@ At the core of these tools is a dependency registry file, `licenses.yaml`, that 
 
 `licenses.yaml` contains both `LICENSE` and (relevant) `NOTICE` file content which is used at distribution packaging time to build a `LICENSE.BINARY` and `NOTICE.BINARY` for the binary package.
 
-If the dependency requires it, copy any licenses to the `licenses/src` or `licenses/bin` folder.
+If the dependency requires it, copy any licenses to the `licenses/src` or `licenses/bin` folder. Every file in `licenses/bin` must be referenced by a `license_file_path` in `licenses.yaml`; delete the file when you remove the last entry that uses it.
 
 ### LICENSE.BINARY and NOTICE.BINARY generator tools
 
@@ -293,7 +293,8 @@ These additional tools were largely used to bootstrap the initial `LICENSE`, `LI
 | tool | description |
 | --- | --- |
 | [generate-license-dependency-reports](bin/generate-license-dependency-reports.py) | Point this to the Druid source root, and give it the location of a temp scratch directory, and it will output Maven dependency reports for Druid. |
-| [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by travis and `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`. |
+| [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by travis and `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`, and that every `license_file_path` exists and every file in `licenses/bin` is referenced. |
+| [refresh-license-versions](bin/refresh-license-versions.py) | Updates the `version` of each `licenses.yaml` entry whose libraries moved to a new version in the output of `generate-license-dependency-reports.py`, and lists the entries that need a manual edit, such as an entry whose libraries moved to different versions. Use `--dry-run` to only print the changes. |
 | [jar-notice-lister](bin/jar-notice-lister.py) | Point this to an extracted Druid binary distribution, and give it a temp scratch directory, and it will output NOTICE information for all the Druid JAR files. |
 
 

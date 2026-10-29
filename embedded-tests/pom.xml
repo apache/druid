@@ -136,13 +136,11 @@
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-storage</artifactId>
-      <version>2.75.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-core</artifactId>
-      <version>2.77.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -750,7 +748,7 @@
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5</artifactId>
-      <version>5.6.4</version>
+      <version>5.6.5</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -809,12 +807,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>bundle</artifactId>
-      <version>${aws.sdk.v2.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-column</artifactId>
       <version>${parquet.version}</version>
@@ -823,7 +815,6 @@
     <dependency>
       <groupId>com.google.auth</groupId>
       <artifactId>google-auth-library-credentials</artifactId>
-      <version>1.54.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -896,12 +887,12 @@
           <skip>true</skip>
         </configuration>
       </plugin>
-      <!-- Do not run Docker tests except with the docker-tests profile -->
+      <!-- Do not run Docker tests or web console tests except with the docker-tests or web-console-tests profile -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <excludedGroups>docker-test,perf</excludedGroups>
+          <excludedGroups>docker-test,web-console,perf</excludedGroups>
           <!-- Enable Netty 4 PARANOID leak detection in the embedded tests because this is where
                real cross-node HTTP traffic exercises the migrated HttpClient code paths (chunked
                responses, long-poll syncs, TLS, ByteBuf-bearing handlers). The Stage 1 CI workers
@@ -962,6 +953,60 @@
                 -Ddruid.test.stupidPool.poison=true
                 -Dio.netty.leakDetection.level=PARANOID
                 -Dio.netty.customResourceLeakDetector=org.apache.druid.testing.embedded.junit5.FailFastLeakDetector
+              </argLine>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!-- Runs the web console end-to-end tests (Playwright specs of web-console/e2e-tests) on embedded clusters.
+           Needs the web-console module built with the console (not skipped), and npm ci run in web-console. -->
+      <id>web-console-tests</id>
+      <properties>
+        <!-- Override with -Dmaven.test.redirectTestOutputToFile=false to see the output, such as with -Dweb.console.keepAlive=true -->
+        <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <skipTests>true</skipTests>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <groups>web-console</groups>
+              <includes>
+                <include>*WebConsoleTest*</include>
+              </includes>
+              <systemPropertyVariables>
+                <web.console.dir>${project.basedir}/../web-console</web.console.dir>
+              </systemPropertyVariables>
+              <argLine>
+                -XX:+UseCompactObjectHeaders
+                ${jdk.strong.encapsulation.argLine}
+                -Xmx3g
+                -XX:MaxDirectMemorySize=2500m
+                -XX:+ExitOnOutOfMemoryError
+                -XX:+HeapDumpOnOutOfMemoryError
+                -Duser.language=en
+                -Dfile.encoding=UTF-8
+                -Duser.timezone=UTC
+                -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                -Daws.region=us-east-1
               </argLine>
             </configuration>
             <executions>

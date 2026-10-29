@@ -30,11 +30,14 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
@@ -42,6 +45,7 @@ import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -53,6 +57,7 @@ import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
@@ -67,6 +72,10 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.nested.NestedPathArrayElement;
+import org.apache.druid.segment.nested.NestedPathField;
+import org.apache.druid.segment.nested.NestedPathFinder;
+import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
@@ -824,7 +833,51 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
 
-    return super.performUnconditionalRewrites(node, underFrom);
+    if (node instanceof SqlSelect) {
+      aliasSelectItems((SqlSelect) node);
+    }
+
+    final SqlNode toRewrite;
+    if (node != null && node.getKind() == SqlKind.COLON) {
+      // Rewrite "x:path" to JSON_VALUE.
+      toRewrite = rewriteColonToJsonValue((SqlCall) node);
+    } else if (node instanceof SqlCall call && SqlLibraryOperators.INFIX_CAST.equals(call.getOperator())) {
+      // Rewrite "x::TYPE" to standard CAST.
+      toRewrite = SqlStdOperatorTable.CAST.createCall(call.getParserPosition(), call.getOperandList());
+    } else {
+      toRewrite = node;
+    }
+
+    return super.performUnconditionalRewrites(toRewrite, underFrom);
+  }
+
+  /**
+   * Wraps select items in "AS" when {@link #deriveSelectItemAlias} has a better name for them. This must run
+   * before other rewrites, since it looks at the syntax the user wrote.
+   */
+  private static void aliasSelectItems(final SqlSelect select)
+  {
+    final SqlNodeList selectList = select.getSelectList();
+    final List<String> aliases = new ArrayList<>(selectList.size());
+    final List<String> names = new ArrayList<>(selectList.size());
+    for (int i = 0; i < selectList.size(); i++) {
+      final SqlNode item = selectList.get(i);
+      if (item instanceof SqlIdentifier && ((SqlIdentifier) item).isStar()) {
+        // Keep all defaults, since we can't tell which names the star expands to.
+        return;
+      }
+      final String alias = deriveSelectItemAlias(item);
+      aliases.add(alias);
+      // Use the ordinal, so unnamed items reserve the "EXPR$i" names that Calcite will generate for them.
+      names.add(alias != null ? alias : SqlValidatorUtil.alias(item, i));
+    }
+    for (int i = 0; i < selectList.size(); i++) {
+      final String alias = aliases.get(i);
+      // Skip duplicate names, since we can't have two output columns with the same name and different types.
+      if (alias != null && Collections.frequency(names, alias) == 1) {
+        selectList.set(i, SqlValidatorUtil.addAlias(selectList.get(i), alias));
+      }
+    }
   }
 
   /**
@@ -884,6 +937,83 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     );
   }
 
+  /**
+   * Returns a preferred name for a select item. We use this so "x::TYPE" can be automatically named "x", and so
+   * "x:a.b" can be named "b".
+   */
+  @Nullable
+  private static String deriveSelectItemAlias(final SqlNode item)
+  {
+    if (item.getKind() == SqlKind.COLON) {
+      final NestedPathPart lastPart = Util.last(getColonPathParts((SqlCall) item));
+      if (lastPart instanceof NestedPathField && !lastPart.getPartIdentifier().isEmpty()) {
+        return lastPart.getPartIdentifier();
+      }
+    } else if (item.getKind() == SqlKind.CAST) {
+      final SqlCall cast = (SqlCall) item;
+
+      // This rule is only for infix cast (x::TYPE), not regular CAST.
+      if (SqlLibraryOperators.INFIX_CAST.equals(cast.getOperator())) {
+        final SqlNode operand = cast.operand(0);
+        if (operand instanceof SqlIdentifier identifier && !identifier.isStar()) {
+          return Util.last(identifier.names);
+        } else {
+          return deriveSelectItemAlias(operand);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Rewrites "x:a.b[0]" to "JSON_VALUE(x, '$.a.b[0]')". The parser only produces {@link SqlKind#COLON} when
+   * {@link DruidConformance#isColonFieldAccessAllowed()}.
+   *
+   * @param call call to {@link SqlKind#COLON}, whose second operand is a {@link SqlNodeList} of path segments
+   */
+  private static SqlCall rewriteColonToJsonValue(final SqlCall call)
+  {
+    return SqlStdOperatorTable.JSON_VALUE.createCall(
+        call.getParserPosition(),
+        call.operand(0),
+        SqlLiteral.createCharString(
+            NestedPathFinder.toNormalizedJsonPath(getColonPathParts(call)),
+            call.operand(1).getParserPosition()
+        )
+    );
+  }
+
+  /**
+   * Returns the path of a {@link SqlKind#COLON} call, whose second operand is a {@link SqlNodeList} of identifiers,
+   * string literals, and integer literals.
+   */
+  private static List<NestedPathPart> getColonPathParts(final SqlCall call)
+  {
+    final List<NestedPathPart> pathParts = new ArrayList<>();
+    for (final SqlNode segment : (SqlNodeList) call.operand(1)) {
+      if (segment instanceof SqlIdentifier) {
+        pathParts.add(new NestedPathField(((SqlIdentifier) segment).getSimple()));
+      } else if (segment instanceof SqlNumericLiteral) {
+        pathParts.add(new NestedPathArrayElement(((SqlNumericLiteral) segment).intValue(true)));
+      } else {
+        // The parser accepts any string literal in brackets, including binary strings like X'61'.
+        final SqlLiteral literal = SqlLiteral.unchain(segment);
+        if (!(literal instanceof SqlCharStringLiteral)) {
+          throw buildCalciteContextException(
+              StringUtils.format(
+                  "Invalid path element [%s] after ':'. Use a character string like ['x'] or an integer like [0].",
+                  segment
+              ),
+              segment
+          );
+        }
+        pathParts.add(new NestedPathField(literal.getValueAs(String.class)));
+      }
+    }
+    return pathParts;
+  }
+
   private SqlNode getSqlNodeFor(SqlInsert insert, int idx)
   {
     SqlNode src = insert.getSource();
@@ -903,7 +1033,4 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
            && call.getFunctionQuantifier() != null
            && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT;
   }
-
-
-
 }

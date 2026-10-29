@@ -174,7 +174,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public void start()
   {
     autoscalerExecutor.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(this::computeTaskCountForScaleAction, () -> {}, emitter),
+        supervisor.buildDynamicAllocationTask(this::computeTaskCountForScaleAction, () -> {}),
         config.getScaleActionPeriodMillis(),
         config.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
@@ -464,6 +464,30 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
+   * Extracts the average processing rate (records per second) from the task stats.
+   *
+   * @param taskStats the stats map from supervisor.getStats()
+   */
+  static double extractAvgProcessingRate(Map<String, Map<String, Object>> taskStats)
+  {
+    if (taskStats == null || taskStats.isEmpty()) {
+      return -1.;
+    }
+
+    // First try using the running average if any of the tasks has started reporting it
+    final double runningAverage = extractAutoscalerMetric(
+        taskStats,
+        SeekableStreamIndexTaskRunner.PROCESSING_RATE_RUNNING_AVG
+    );
+    if (runningAverage >= 0) {
+      return runningAverage;
+    } else {
+      // Fall back to the old moving average metric
+      return extractMovingAverage(taskStats);
+    }
+  }
+
+  /**
    * Extracts the average poll-idle-ratio metric from task stats.
    * This metric indicates how much time the consumer spends idle waiting for data.
    *
@@ -476,6 +500,30 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1.;
     }
 
+    // First try using running average metric if any of the task has started reporting it
+    final double runningAverage = extractAutoscalerMetric(
+        taskStats,
+        SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG
+    );
+    if (runningAverage >= 0) {
+      return runningAverage;
+    } else {
+      // Fall back to the instantaneous metric
+      return extractAutoscalerMetric(
+          taskStats,
+          SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY
+      );
+    }
+  }
+
+  /**
+   * Gets the value of the given metric averaged across all tasks that have reported the metric.
+   */
+  private static double extractAutoscalerMetric(
+      Map<String, Map<String, Object>> taskStats,
+      String metricName
+  )
+  {
     double sum = 0;
     int count = 0;
     for (Map<String, Object> groupMetrics : taskStats.values()) {
@@ -483,12 +531,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         if (taskMetric instanceof Map) {
           Object autoScalerMetricsMap = ((Map<?, ?>) taskMetric).get(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY);
           if (autoScalerMetricsMap instanceof Map) {
-            Object pollIdleRatioAvg = ((Map<?, ?>) autoScalerMetricsMap).get(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY);
-            if (pollIdleRatioAvg instanceof Number) {
-              double taskPollIdleRatio = ((Number) pollIdleRatioAvg).doubleValue();
+            Object metricValue = ((Map<?, ?>) autoScalerMetricsMap).get(metricName);
+            if (metricValue instanceof Number) {
+              double metricDoubleValue = ((Number) metricValue).doubleValue();
               // Do not include negative values
-              if (taskPollIdleRatio >= 0) {
-                sum += taskPollIdleRatio;
+              if (metricDoubleValue >= 0) {
+                sum += metricDoubleValue;
                 count++;
               }
             }
@@ -576,7 +624,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int partitionCount = supervisor.getPartitionCount();
 
     final Map<String, Map<String, Object>> taskStats = supervisor.getStats();
-    final double movingAvgRate = extractMovingAverage(taskStats);
+    final double movingAvgRate = extractAvgProcessingRate(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
     if (!config.isUsePollIdleRatio() && aggregateLag > 0 && movingAvgRate > 0) {

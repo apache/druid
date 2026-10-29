@@ -3,24 +3,33 @@ updates:
   - package-ecosystem: "maven"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     open-pull-requests-limit: 20
     cooldown:
       # Protect against not-yet-discovered regressions or security issues in new releases of dependencies
       # https://github.blog/changelog/2025-07-01-dependabot-supports-configuration-of-a-minimum-package-age/
       default-days: 14
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    # Major version updates match no group, so each one still gets its own PR.
     groups:
-      # The individual org.apache.maven.resolver:* artifacts must move together: they are all
-      # pinned to the same version in services/pom.xml and server/pom.xml, and a 1.x -> 2.x major
-      # bump also requires coordinated source/bootstrap changes in PullDependencies (see the
-      # 2.0.23 upgrade PR). A single-artifact bump breaks the build with a mixed 1.x/2.x graph.
-      maven-resolver:
+      maven-minor-patch:
+        update-types: ["minor", "patch"]
         patterns:
-          - "org.apache.maven.resolver:*"
+          - "*"
+        # These build tools often need code or rule changes even in minor releases, so each update gets its own PR
+        # that can be reviewed, fixed or closed without holding up the group.
+        exclude-patterns:
+          - "com.github.spotbugs:spotbugs-maven-plugin"
+          - "com.puppycrawl.tools:checkstyle"
+          - "org.codehaus.mojo:javacc-maven-plugin"
+      # Security updates skip the schedule and cooldown; batch them so an advisory burst opens one PR.
+      maven-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
     ignore:
-      # zstd-jni 1.5.7-13 and later cannot decode legacy (pre-1.0) zstd frames in .zst batch input.
-      # Version updates are ignored; security updates still open PRs.
-      - dependency-name: "com.github.luben:zstd-jni"
       # skip AWS SDK v2 patch releases, which ship almost daily; minor bumps still come through
       - dependency-name: "software.amazon.awssdk:*"
         update-types: ["version-update:semver-patch"]
@@ -41,23 +50,24 @@ updates:
       - dependency-name: "com.google.inject.extensions:*"
         update-types: ["version-update:semver-major"]
 
-  # Don't run dependabot on website
+  # Security updates only for website and web-console: every version update is ignored.
   - package-ecosystem: "npm"
-    directory: "/website/"
+    directories:
+      - "/website/"
+      - "/web-console/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
-
-  # Don't run dependabot on web-console
-  - package-ecosystem: "npm"
-    directory: "/web-console/"
-    schedule:
-      interval: "weekly"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -69,5 +79,9 @@ updates:
       prefix: "ci"
     groups:
       github-actions:
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: security-updates
         patterns:
           - "*"

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
@@ -50,7 +51,7 @@ public class BuildInfo
       if (classUrl != null && "jar".equals(classUrl.getProtocol())) {
         String classPath = classUrl.toString();
         String manifestPath = classPath.substring(0, classPath.lastIndexOf('!') + 1) + "/META-INF/MANIFEST.MF";
-        try (InputStream is = new URL(manifestPath).openStream()) {
+        try (InputStream is = URIs.toURL(manifestPath).openStream()) {
           return readRevisionFromManifest(is);
         }
       }
