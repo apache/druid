@@ -62,3 +62,22 @@ jobs:
       script: .github/scripts/run_unit-tests ${{ matrix.args }} -Dmaven.test.failure.ignore=true
       key: ${{ matrix.name }}
       artifact_prefix: "unit-test-reports-jdk25"
+
+  static-checks-maven:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/static-checks-maven.sh
+      key: "static-checks-maven"
+
+  strict-compilation:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/strict-compilation.sh
+      key: "strict-compilation"
+
+  openrewrite:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/openrewrite.sh
+      key: "openrewrite"
+      artifact_prefix: "openrewrite-patch"

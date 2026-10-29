@@ -35,10 +35,6 @@
 
     <repositories>
         <repository>
-            <id>confluent</id>
-            <url>https://packages.confluent.io/maven/</url>
-        </repository>
-        <repository>
             <id>datasets</id>
             <url>https://raw.githubusercontent.com/kgyrtkirk/datasets/repo/</url>
         </repository>

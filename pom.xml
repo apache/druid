@@ -279,9 +279,9 @@
 
     <repositories>
         <repository>
-            <id>maven.org</id>
+            <id>central</id>
             <name>Maven Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2/</url>
+            <url>https://repo.maven.apache.org/maven2</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
@@ -298,9 +298,9 @@
 
     <pluginRepositories>
         <pluginRepository>
-            <id>maven.org</id>
+            <id>central</id>
             <name>Maven Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2/</url>
+            <url>https://repo.maven.apache.org/maven2</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
