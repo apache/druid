@@ -748,20 +748,24 @@ public class QueryDriver
   @SuppressWarnings("unchecked")
   private Class<GeneratedMessage> getProtobufClass(final QueryRequest request)
   {
+    final Class<?> clazz;
     try {
-      return (Class<GeneratedMessage>) Class.forName(request.getProtobufMessageName());
+      // Class name is client-supplied: load without initializing so no static initializer of an arbitrary class runs.
+      clazz = Class.forName(request.getProtobufMessageName(), false, QueryDriver.class.getClassLoader());
     }
-    catch (ClassNotFoundException e) {
+    catch (ClassNotFoundException | LinkageError e) {
       throw new RequestError(
           "The Protobuf class [%s] is not known. Is your protobuf jar on the class path?",
           request.getProtobufMessageName()
       );
     }
-    catch (ClassCastException e) {
+    // The unchecked cast below never fails at runtime, so the type must be checked explicitly.
+    if (!GeneratedMessage.class.isAssignableFrom(clazz)) {
       throw new RequestError(
           "The class [%s] is not a Protobuf",
           request.getProtobufMessageName()
       );
     }
+    return (Class<GeneratedMessage>) clazz;
   }
 }

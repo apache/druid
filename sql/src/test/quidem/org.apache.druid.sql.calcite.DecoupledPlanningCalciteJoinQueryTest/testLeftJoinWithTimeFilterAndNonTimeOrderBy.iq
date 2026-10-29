@@ -1,0 +1,150 @@
+# testLeftJoinWithTimeFilterAndNonTimeOrderBy case-crc:b7c5b25b
+# quidem testcase reason: JOIN_FILTER_LOCATIONS
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT f1.dim1, f2.v
+FROM foo f1 LEFT JOIN (SELECT k, v FROM lookup.lookyloo GROUP BY k, v) f2 ON f1.dim2 = f2.k
+WHERE f1.__time >= TIMESTAMP '2001-01-01 00:00:00'
+ORDER BY f2.v, f1.dim1;
++------+------+
+| dim1 | v    |
++------+------+
+| abc  |      |
+| 1    | xa   |
+| def  | xabc |
++------+------+
+(3 rows)
+
+!ok
+LogicalProject(dim1=[$0], v=[$3])
+  LogicalSort(sort0=[$3], sort1=[$0], dir0=[ASC], dir1=[ASC])
+    LogicalJoin(condition=[=($1, $2)], joinType=[left])
+      LogicalProject(dim1=[$1], dim2=[$2])
+        LogicalFilter(condition=[>=($0, 2001-01-01 00:00:00)])
+          LogicalTableScan(table=[[druid, foo]])
+      LogicalAggregate(group=[{0, 1}])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+
+!logicalPlan
+DruidProject(dim1=[$0], v=[$3], druid=[logical])
+  DruidSort(sort0=[$3], sort1=[$0], dir0=[ASC], dir1=[ASC], druid=[logical])
+    DruidJoin(condition=[=($1, $2)], joinType=[left])
+      DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
+        DruidFilter(condition=[>=($0, 2001-01-01 00:00:00)])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidAggregate(group=[{0, 1}], druid=[logical])
+        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "windowOperator",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "2001-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim1", "dim2" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "k",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        }, {
+          "type" : "default",
+          "dimension" : "v",
+          "outputName" : "d1",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "LegacySegmentSpec",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "outputSignature" : [ {
+    "name" : "dim1",
+    "type" : "STRING"
+  }, {
+    "name" : "j0.d1",
+    "type" : "STRING"
+  } ],
+  "operatorDefinition" : [ {
+    "type" : "naiveSort",
+    "columns" : [ {
+      "column" : "j0.d1",
+      "direction" : "ASC"
+    }, {
+      "column" : "dim1",
+      "direction" : "ASC"
+    } ]
+  }, {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : null,
+    "offsetLimit" : null,
+    "projectedColumns" : [ "dim1", "j0.d1" ],
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "leafOperators" : [ {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : null,
+    "offsetLimit" : {
+      "offset" : 0,
+      "limit" : 9223372036854775807
+    },
+    "projectedColumns" : [ "dim1", "j0.d1" ],
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+!nativePlan

@@ -19,17 +19,10 @@ set -e
 set -x
 
 ./.github/scripts/setup_generate_license.sh
-# This job is the single place in CI that validates everything a release build
-# produces: javadoc and source jars, the binary and source distribution
-# assemblies, and the license dependency reports. The apache-release profile is
-# enabled here so that the Docker test job only needs to build the binary
-# tarball. GPG signing and the OWASP dependency check are skipped as they are not
-# meaningful in CI. RAT is not run here: apache-rat-plugin is not safe to run in
-# a parallel (-T) build, so the single-threaded RAT pass in static-checks-maven.sh
-# covers it instead.
-./mvnw -B clean install -Papache-release --fail-at-end \
-  -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false -T1C \
-  -Dgpg.skip -Ddependency-check.skip
-./mvnw -B install -Papache-release -Pdist -Pbundle-contrib-exts --fail-at-end \
-  -pl 'distribution' -P skip-tests -Dweb.console.skip=false -T1C \
-  -Dgpg.skip -Ddependency-check.skip
+CODE_CHECKS_SKIP="-Dcheckstyle.skip -Dpmd.skip -Dforbiddenapis.skip -Danimal.sniffer.skip"
+./mvnw -B install -Papache-release -Prat --fail-at-end \
+  -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false \
+  -Dgpg.skip -Ddependency-check.skip $CODE_CHECKS_SKIP
+./mvnw -B install -Papache-release -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
+  -pl 'distribution' -P skip-tests -Dweb.console.skip=false \
+  -Dgpg.skip -Ddependency-check.skip $CODE_CHECKS_SKIP

@@ -294,6 +294,7 @@ These additional tools were largely used to bootstrap the initial `LICENSE`, `LI
 | --- | --- |
 | [generate-license-dependency-reports](bin/generate-license-dependency-reports.py) | Point this to the Druid source root, and give it the location of a temp scratch directory, and it will output Maven dependency reports for Druid. |
 | [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by travis and `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`, and that every `license_file_path` exists and every file in `licenses/bin` is referenced. |
+| [refresh-license-versions](bin/refresh-license-versions.py) | Updates the `version` of each `licenses.yaml` entry whose libraries moved to a new version in the output of `generate-license-dependency-reports.py`, and lists the entries that need a manual edit, such as an entry whose libraries moved to different versions. Use `--dry-run` to only print the changes. |
 | [jar-notice-lister](bin/jar-notice-lister.py) | Point this to an extracted Druid binary distribution, and give it a temp scratch directory, and it will output NOTICE information for all the Druid JAR files. |
 
 

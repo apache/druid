@@ -407,18 +407,10 @@ def find_missing_licenses(reported_dep_to_licenses, reported_modules, registered
         missing_licenses.append((", ".join(modules),) + key + (reported_license_druid_module[0],))
     return missing_licenses
 
-def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixes):
-    # Build a dictionary to facilitate comparing reported licenses and registered ones.
-    # These dictionaries are the mapping of (group_id, artifact_id, version) to license_name.
-
-    with open(license_yaml, encoding='utf-8') as registry_file:
-        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
-    check_license_files(license_yaml, licenses_list)
-
-    # Build reported license dictionary.
+def read_dependency_reports(dependency_reports_root, compatible_license_names):
+    # Returns (group_id, artifact_id, version) -> (license, druid_module) and (group_id, artifact_id, version) -> modules.
     reported_dep_to_licenses = {}
     reported_modules = {}
-    compatible_license_names = build_compatible_license_names()
     for dirpath, dirnames, filenames in os.walk(dependency_reports_root):
         for filename in filenames:
             if filename == "dependencies.html":
@@ -432,9 +424,21 @@ def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixe
                     reported_dep_to_licenses.update(dep_to_license)
                     for key in dep_to_license:
                         reported_modules.setdefault(key, set()).add(druid_module_name)
-
     if len(reported_dep_to_licenses) == 0:
         raise Exception("No dependency reports are found")
+    return reported_dep_to_licenses, reported_modules
+
+def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixes):
+    # Build a dictionary to facilitate comparing reported licenses and registered ones.
+    # These dictionaries are the mapping of (group_id, artifact_id, version) to license_name.
+
+    with open(license_yaml, encoding='utf-8') as registry_file:
+        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
+    check_license_files(license_yaml, licenses_list)
+
+    # Build reported license dictionary.
+    compatible_license_names = build_compatible_license_names()
+    reported_dep_to_licenses, reported_modules = read_dependency_reports(dependency_reports_root, compatible_license_names)
 
     print_log_to_stderr("Found {} reported licenses\n".format(len(reported_dep_to_licenses)))
 
