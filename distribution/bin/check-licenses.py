@@ -413,6 +413,28 @@ def find_missing_licenses(reported_dep_to_licenses, reported_modules, registered
         missing_licenses.append((", ".join(modules),) + key + (reported_license_druid_module[0],))
     return missing_licenses
 
+def split_stale_versions(missing_licenses, reported_modules, registered_dep_to_licenses, registered_modules, exclude_module_prefixes):
+    # A missing dependency only has a stale version when its groupId and artifactId are registered under other versions,
+    # all with the reported license, and one of those versions is no longer reported. If it ships in the release, only
+    # registrations outside the excluded modules count.
+    # Returns the stale ones, each with its registered versions appended, and the rest.
+    stale_licenses = []
+    remaining_licenses = []
+    for missing_license in missing_licenses:
+        key, reported_license = missing_license[1:4], missing_license[4]
+        others = [k for k in registered_dep_to_licenses if k[:2] == key[:2]]
+        if any(not is_excluded_module(m, exclude_module_prefixes) for m in reported_modules[key]):
+            others = [k for k in others if any(not is_excluded_module(m, exclude_module_prefixes) for m in registered_modules[k])]
+        if (
+            others
+            and all(registered_dep_to_licenses[k] == reported_license for k in others)
+            and any(k not in reported_modules for k in others)
+        ):
+            stale_licenses.append(missing_license + (", ".join(sorted(k[2] for k in others)),))
+        else:
+            remaining_licenses.append(missing_license)
+    return stale_licenses, remaining_licenses
+
 def find_unknown_licenses(reported_dep_to_licenses, reported_modules, reported_license_names, skipping_licenses, exclude_module_prefixes):
     # A dependency that ships in the release must report at least one license in compatible_license_names.
     unknown_licenses = []
@@ -449,7 +471,7 @@ def read_dependency_reports(dependency_reports_root, compatible_license_names):
         raise Exception("No dependency reports are found")
     return reported_dep_to_licenses, reported_modules, reported_license_names
 
-def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixes):
+def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixes, stale_versions):
     # Build a dictionary to facilitate comparing reported licenses and registered ones.
     # These dictionaries are the mapping of (group_id, artifact_id, version) to license_name.
 
@@ -568,6 +590,23 @@ def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixe
         reported_dep_to_licenses, reported_modules, registered_modules, skipping_licenses, exclude_module_prefixes
     )
 
+    stale_licenses = []
+    if stale_versions == "warn":
+        stale_licenses, missing_licenses = split_stale_versions(
+            missing_licenses, reported_modules, registered_dep_to_licenses, registered_modules, exclude_module_prefixes
+        )
+
+    if len(stale_licenses) > 0:
+        print_log_to_stderr("Warn: found {} dependencies whose previous versions are registered with the same license. Release builds fail on these.".format(len(stale_licenses)))
+        for stale_license in stale_licenses:
+            print_log_to_stderr("druid_module: {}, groupId: {}, artifactId: {}, version: {}, license: {}, registered_versions: {}".format(*stale_license))
+        print_log_to_stderr(
+            "To update licenses.yaml, run distribution/bin/generate-license-dependency-reports.py . target "
+            "--clean-maven-artifact-transfer --parallel 2 and then distribution/bin/refresh-license-versions.py "
+            "licenses.yaml target/license-reports, which lists the entries it cannot update."
+        )
+        print_log_to_stderr("")
+
     if len(missing_licenses) > 0:
         print_log_to_stderr("Error: found {} missing licenses. These licenses are reported, but missing in the registry".format(len(missing_licenses)))
         for missing_license in missing_licenses:
@@ -623,11 +662,18 @@ if __name__ == "__main__":
             help='Module prefix whose licenses.yaml entries the release LICENSE omits. Repeatable. A dependency '
                  'that ships in the release must be registered under at least one module not matching these.'
         )
+        parser.add_argument(
+            '--stale-versions',
+            choices=['fail', 'warn'],
+            default='fail',
+            help='Whether a dependency whose previous version is registered with the same license fails the check '
+                 '(default) or only prints a warning.'
+        )
         args = parser.parse_args()
 
         license_yaml = args.license_yaml
         dependency_reports_root = args.dependency_reports_root
-        check_licenses(license_yaml, dependency_reports_root, args.exclude_module_prefix)
+        check_licenses(license_yaml, dependency_reports_root, args.exclude_module_prefix, args.stale_versions)
 
     except KeyboardInterrupt:
         print('Interrupted, closing.')
