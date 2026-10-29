@@ -54,6 +54,13 @@ env:
   GITHUB_EVENT_REF: ${{ github.event_name }}-${{ github.event.number || github.ref_name }}
   GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   GITHUB_WORKFLOW_REF: ${{ github.workflow_ref }}
+  # Maven Central intermittently answers 429/502/503/504. Have Maven Resolver retry those responses with
+  # linear backoff (10s, 20s, ... up to ~150s per artifact) instead of failing the build and caching the failure.
+  # Picked up by both ./mvnw and mvn (3.9+). Keep in sync with docker-tests.yml, codeql.yml and cron-job-its.yml.
+  MAVEN_ARGS: >-
+    -Daether.transport.http.retryHandler.count=5
+    -Daether.transport.http.retryHandler.interval=10000
+    -Daether.transport.http.retryHandler.serviceUnavailable=429,502,503,504
 
 jobs:
   execute:
@@ -72,11 +79,33 @@ jobs:
           java-version: ${{ inputs.jdk }}
           cache: 'maven'
 
+      - name: Determine Apache parent POM version
+        id: apache-parent
+        run: |
+          set -eu
+          version=$(sed -n '/<parent>/,/<\/parent>/s:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -1)
+          if [ -z "$version" ]; then
+            echo "::error ::Could not read the parent POM version from pom.xml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The setup-java Maven cache is keyed on every pom.xml, so it misses whenever a pom changes and the
+      # parent POM must then come from Central. Keep the parent POM in its own small cache so it is always local.
+      - name: Cache Apache parent POM
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository/org/apache/apache/${{ steps.apache-parent.outputs.version }}
+          key: maven-apache-parent-${{ steps.apache-parent.outputs.version }}
+
       # Keep parent-POM resolution separate and before the worker script so transient
       # Maven Central failures are retried before job-specific build or test work starts.
+      # Maven Resolver already retries 429/5xx (see MAVEN_ARGS); this loop also covers "not found"
+      # answers and dropped connections, which the resolver does not retry.
       - name: Resolve Apache parent POM
         run: |
           set -eu
+          delay=10
           for attempt in 1 2 3; do
             if ./mvnw -B -U -N validate -Pskip-static-checks -Dweb.console.skip=true; then
               exit 0
@@ -84,8 +113,9 @@ jobs:
             if [ "$attempt" -eq 3 ]; then
               exit 1
             fi
-            echo "::warning ::Maven parent resolution failed (attempt $attempt); retrying in 10s"
-            sleep 10
+            echo "::warning ::Maven parent resolution failed (attempt $attempt); retrying in ${delay}s"
+            sleep "$delay"
+            delay=$((delay * 2))
           done
 
       - name: Download required artifacts
