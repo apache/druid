@@ -78,7 +78,7 @@ public class AggregationsTest extends CalciteTestBase
   {
     Assertions.assertNotNull(toDruidExpression(rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.VARCHAR))));
     Assertions.assertNotNull(toDruidExpression(rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.DOUBLE))));
-    Assertions.assertNotNull(toDruidExpression(rexBuilder.constantNull()));
+    Assertions.assertNotNull(toDruidExpression(rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.NULL))));
   }
 
   @Test
