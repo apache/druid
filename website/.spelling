@@ -108,6 +108,7 @@ ECS
 EKS
 EMR
 EMRFS
+Entra
 ETL
 emits
 Elasticsearch
@@ -187,6 +188,7 @@ KIP-392
 KMS
 Kerberized
 Kerberos
+Keycloak
 KeyStores
 Kinesis
 Kubernetes
