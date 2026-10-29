@@ -4012,8 +4012,10 @@ libraries:
 name: XZ
 license_category: binary
 module: java-core
-license_name: Public Domain
+license_name: Zero-Clause BSD
+copyright: The XZ for Java authors and contributors
 version: 1.12
+license_file_path: licenses/bin/xz.0BSD
 libraries:
   - org.tukaani: xz
 
