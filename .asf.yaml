@@ -4,8 +4,27 @@ github:
   description: 'Apache Druid: a high performance real-time analytics database.'
   homepage: https://druid.apache.org/
 
-  protected_branches:
-    master:
+  rulesets:
+    - name: "Default Branch Protection"
+      type: branch
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+        excludes: []
+      bypass_teams:
+        - root
+      restrict_deletion: true
+      restrict_force_push: true
+    - name: "Require review"
+      type: branch
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+        excludes: []
+      bypass_teams:
+        - druid-committers
+      restrict_deletion: false
+      restrict_force_push: false
       required_pull_request_reviews:
         required_approving_review_count: 1
 
