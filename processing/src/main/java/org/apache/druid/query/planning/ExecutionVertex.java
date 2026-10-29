@@ -22,6 +22,7 @@ package org.apache.druid.query.planning;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
@@ -38,13 +39,19 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Represents the native engine's execution vertex - the execution unit it may execute in one execution cycle.
@@ -268,6 +275,7 @@ public class ExecutionVertex
   /**
    * Returns the segment mapping function of each vertex from {@link #splitUnion()}, in the same order. Everything
    * above the union, such as joinables, is built once and shared by every arm, rather than once per arm.
+   * Each returned function must be closed; the shared resources are released when the last function is closed.
    */
   public List<SegmentMapFunction> splitUnionSegmentMapFunctions(PolicyEnforcer policyEnforcer)
   {
@@ -278,13 +286,43 @@ public class ExecutionVertex
     final SegmentMapFunction aboveUnionFn =
         ExecutionVertex.of(buildQueryWithBaseDataSource(InlineDataSource.fromIterable(List.of(), RowSignature.empty())))
                        .createSegmentMapFunction(policyEnforcer);
-    final Query<?> query = getCollapsedQuery();
-    final List<SegmentMapFunction> retVal = new ArrayList<>();
-    for (final DataSource arm : baseDataSource.getChildren()) {
-      final SegmentMapFunction armFn = arm.createSegmentMapFunction(query);
-      retVal.add(segment -> aboveUnionFn.apply(armFn.apply(segment)));
+    final Closer closer = Closer.create();
+    closer.register(aboveUnionFn);
+    try {
+      final Query<?> query = getCollapsedQuery();
+      final List<DataSource> arms = baseDataSource.getChildren();
+      final AtomicInteger remainingArms = new AtomicInteger(arms.size());
+      final List<SegmentMapFunction> retVal = new ArrayList<>();
+      for (final DataSource arm : arms) {
+        final SegmentMapFunction armFn = closer.register(arm.createSegmentMapFunction(query));
+        retVal.add(new SegmentMapFunction()
+        {
+          private final AtomicBoolean closed = new AtomicBoolean();
+
+          @Override
+          public Optional<Segment> apply(final Optional<Segment> segment)
+          {
+            return aboveUnionFn.apply(armFn.apply(segment));
+          }
+
+          @Override
+          public void close() throws IOException
+          {
+            if (closed.compareAndSet(false, true)) {
+              CloseableUtils.closeAll(armFn, () -> {
+                if (remainingArms.decrementAndGet() == 0) {
+                  aboveUnionFn.close();
+                }
+              });
+            }
+          }
+        });
+      }
+      return retVal;
     }
-    return retVal;
+    catch (final Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, closer);
+    }
   }
 
   /**

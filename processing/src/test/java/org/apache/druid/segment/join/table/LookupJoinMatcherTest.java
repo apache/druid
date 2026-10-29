@@ -21,6 +21,7 @@ package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -32,6 +33,7 @@ import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinMatcher;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.io.IOException;
 import java.util.Map;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,6 +65,7 @@ public class LookupJoinMatcherTest
   @Mock
   private DimensionSelector dimensionSelector;
 
+  private final Closer closer = Closer.create();
   private LookupJoinMatcher target;
 
   @BeforeEach
@@ -71,13 +75,19 @@ public class LookupJoinMatcherTest
     Mockito.doReturn(lookupMap).when(extractor).asMap();
   }
 
+  @AfterEach
+  public void tearDown() throws IOException
+  {
+    closer.close();
+  }
+
   @Test
   public void testCreateConditionAlwaysFalseShouldReturnSuccessfullyAndNotThrowException()
   {
     JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression("0", PREFIX, ExprMacroTable.nil());
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, false);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, false, closer);
     Assertions.assertNotNull(target);
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true, closer);
     Assertions.assertNotNull(target);
   }
 
@@ -86,9 +96,9 @@ public class LookupJoinMatcherTest
   {
     JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression("1", PREFIX, ExprMacroTable.nil());
     Mockito.doReturn(true).when(extractor).supportsAsMap();
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, false);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, false, closer);
     Assertions.assertNotNull(target);
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true, closer);
     Assertions.assertNotNull(target);
   }
 
@@ -96,7 +106,7 @@ public class LookupJoinMatcherTest
   public void testMatchConditionAlwaysTrue()
   {
     JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression("1", PREFIX, ExprMacroTable.nil());
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true, closer);
     // Test match first
     target.matchCondition();
     Assertions.assertTrue(target.hasMatch());
@@ -122,7 +132,7 @@ public class LookupJoinMatcherTest
   public void testMatchConditionAlwaysFalse()
   {
     JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression("0", PREFIX, ExprMacroTable.nil());
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true, closer);
     // Test match first
     target.matchCondition();
     Assertions.assertFalse(target.hasMatch());
@@ -145,7 +155,7 @@ public class LookupJoinMatcherTest
         PREFIX,
         ExprMacroTable.nil()
     );
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true, closer);
     // Test match
     target.matchCondition();
     Assertions.assertTrue(target.hasMatch());
@@ -167,7 +177,7 @@ public class LookupJoinMatcherTest
         PREFIX,
         ExprMacroTable.nil()
     );
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true, closer);
     // Test match should throw exception
     Assertions.assertThrows(QueryUnsupportedException.class, () -> target.matchCondition());
   }
@@ -184,7 +194,7 @@ public class LookupJoinMatcherTest
         PREFIX,
         ExprMacroTable.nil()
     );
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true, closer);
     target.matchCondition();
     Assertions.assertFalse(target.hasMatch());
   }

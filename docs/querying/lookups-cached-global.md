@@ -159,6 +159,8 @@ setting namespaces (Broker, Peon, Historical)
 |`druid.lookup.namespace.cache.type`|Specifies the type of caching to be used by the namespaces. May be one of [`offHeap`, `onHeap`]. `offHeap` uses a temporary file for off-heap storage of the namespace (memory mapped files). `onHeap` stores all cache on the heap in standard java map types.|`onHeap`|
 |`druid.lookup.namespace.numExtractionThreads`|The number of threads in the thread pool dedicated for lookup extraction and updates. This number may need to be scaled up, if you have a lot of lookups and they take long time to extract, to avoid timeouts.|2|
 |`druid.lookup.namespace.numBufferedEntries`|If using off-heap caching, the number of records to be stored on an on-heap buffer.|100,000|
+|`druid.lookup.namespace.maxRetiredCacheEntries`|The maximum number of retired lookup cache versions to keep while they are still retained by in-flight query work. Further cache refreshes are skipped until the retired cache versions are released or time out.|1|
+|`druid.lookup.namespace.retiredCacheEntryTimeoutMillis`|The amount of time after retirement before a retained cache version may be disposed even if its retained references have not been closed yet. This prevents abandoned retained references from blocking future cache refreshes indefinitely.|900,000|
 
 The cache is populated in different ways depending on the settings below. In general, most namespaces employ
 a `pollPeriod` at the end of which time they poll the remote resource of interest for updates.

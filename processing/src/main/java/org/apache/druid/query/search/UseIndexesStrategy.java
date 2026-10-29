@@ -281,7 +281,7 @@ public class UseIndexesStrategy extends SearchStrategy
 
           final ColumnIndexSupplier indexSupplier = indexSelector.getIndexSupplier(dimension.getDimension());
 
-          ExtractionFn extractionFn = dimension.getExtractionFn();
+          ExtractionFn extractionFn = dimension.getExtractionFn(closer);
           if (extractionFn == null) {
             extractionFn = IdentityExtractionFn.getInstance();
           }

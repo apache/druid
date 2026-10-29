@@ -197,7 +197,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       ColumnIndexSelector indexSelector
   )
   {
-    if (delegate.getExtractionFn() != null) {
+    if (delegate.getExtractionFnForMetadata() != null) {
       return NoIndexesColumnIndexSupplier.getInstance();
     }
     return new ColumnIndexSupplier()
