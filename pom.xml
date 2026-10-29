@@ -85,7 +85,7 @@
         <avatica.version>1.29.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
-        <bytebuddy.version>1.18.14</bytebuddy.version>
+        <bytebuddy.version>1.18.15</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -128,10 +128,10 @@
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.55.6</aws.sdk.v2.version>
         <aws.msk.iam.auth.version>2.3.9</aws.msk.iam.auth.version>
-        <caffeine.version>3.3.0</caffeine.version>
+        <caffeine.version>3.3.1</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
-        <hibernate-validator.version>9.1.4.Final</hibernate-validator.version>
+        <hibernate-validator.version>9.1.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.14</httpclient.version>
         <okhttp.version>5.5.0</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
@@ -726,7 +726,7 @@
             <dependency>
                 <groupId>org.tukaani</groupId>
                 <artifactId>xz</artifactId>
-                <version>1.9</version>
+                <version>1.12</version>
             </dependency>
             <dependency>
                 <groupId>com.github.luben</groupId>

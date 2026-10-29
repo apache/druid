@@ -458,7 +458,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.3.0
+version: 3.3.1
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -2588,7 +2588,7 @@ name: Hibernate Validator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.1.4.Final
+version: 9.1.5.Final
 libraries:
   - org.hibernate.validator: hibernate-validator
 
@@ -4013,7 +4013,7 @@ name: XZ
 license_category: binary
 module: java-core
 license_name: Public Domain
-version: 1.9
+version: 1.12
 libraries:
   - org.tukaani: xz
 
