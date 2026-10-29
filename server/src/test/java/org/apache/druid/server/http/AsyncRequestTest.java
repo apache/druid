@@ -61,10 +61,9 @@ public class AsyncRequestTest
   }
 
   @Test
-  public void test_completeNow_writesStatusAndBody_whenResponseHasResult()
+  public void test_completed_writesStatusAndBody_whenResponseHasResult()
   {
-    AsyncRequest.create(request, JSON_MAPPER)
-                .completeNow(AsyncResponse.of(200, Map.of("hello", "world")));
+    AsyncRequest.completed(request, JSON_MAPPER, AsyncResponse.of(200, Map.of("hello", "world")));
 
     Assertions.assertEquals(200, response.getStatus());
     Assertions.assertEquals(Map.of("hello", "world"), readJson(new TypeReference<Map<String, String>>() {}));
@@ -72,10 +71,9 @@ public class AsyncRequestTest
   }
 
   @Test
-  public void test_completeNow_writesStatusWithoutBody_whenResponseHasNoResult()
+  public void test_completed_writesStatusWithoutBody_whenResponseHasNoResult()
   {
-    AsyncRequest.create(request, JSON_MAPPER)
-                .completeNow(AsyncResponse.status(204));
+    AsyncRequest.completed(request, JSON_MAPPER, AsyncResponse.status(204));
 
     Assertions.assertEquals(204, response.getStatus());
     Assertions.assertEquals(0, response.baos.size());
@@ -83,10 +81,9 @@ public class AsyncRequestTest
   }
 
   @Test
-  public void test_completeNow_sendsErrorWithMessage_whenResponseIsError()
+  public void test_completed_sendsErrorWithMessage_whenResponseIsError()
   {
-    AsyncRequest.create(request, JSON_MAPPER)
-                .completeNow(AsyncResponse.error(400, "bad request"));
+    AsyncRequest.completed(request, JSON_MAPPER, AsyncResponse.error(400, "bad request"));
 
     Assertions.assertEquals(400, response.getStatus());
     Assertions.assertEquals("bad request", response.getErrorMessage());
@@ -94,10 +91,9 @@ public class AsyncRequestTest
   }
 
   @Test
-  public void test_completeNow_sendsErrorWithoutMessage_whenErrorMessageIsNull()
+  public void test_completed_sendsErrorWithoutMessage_whenErrorMessageIsNull()
   {
-    AsyncRequest.create(request, JSON_MAPPER)
-                .completeNow(AsyncResponse.error(500, null));
+    AsyncRequest.completed(request, JSON_MAPPER, AsyncResponse.error(500, null));
 
     Assertions.assertEquals(500, response.getStatus());
     Assertions.assertNull(response.getErrorMessage());
@@ -107,8 +103,7 @@ public class AsyncRequestTest
   @Test
   public void test_start_invokesOnSuccess_whenFutureSucceeds()
   {
-    AsyncRequest.create(request, JSON_MAPPER)
-                .waitOn(Futures.immediateFuture("the-result"), 10L)
+    AsyncRequest.create(request, JSON_MAPPER, Futures.immediateFuture("the-result"), 10L)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                 .start();
@@ -123,8 +118,7 @@ public class AsyncRequestTest
   {
     final RuntimeException cause = new RuntimeException("boom");
 
-    AsyncRequest.create(request, JSON_MAPPER)
-                .waitOn(Futures.immediateFailedFuture(cause), 10L)
+    AsyncRequest.create(request, JSON_MAPPER, Futures.immediateFailedFuture(cause), 10L)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                 .start();
@@ -135,22 +129,20 @@ public class AsyncRequestTest
   }
 
   @Test
-  public void test_waitOn_throwsException_whenTimeoutMillisIsZero()
+  public void test_create_throwsException_whenTimeoutMillisIsZero()
   {
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER)
-                           .waitOn(Futures.immediateVoidFuture(), 0L)
+        () -> AsyncRequest.create(request, JSON_MAPPER, Futures.immediateVoidFuture(), 0L)
     );
   }
 
   @Test
-  public void test_waitOn_throwsException_whenTimeoutMillisIsNegative()
+  public void test_create_throwsException_whenTimeoutMillisIsNegative()
   {
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER)
-                           .waitOn(Futures.immediateVoidFuture(), -1L)
+        () -> AsyncRequest.create(request, JSON_MAPPER, Futures.immediateVoidFuture(), -1L)
     );
   }
 
@@ -159,8 +151,7 @@ public class AsyncRequestTest
   {
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER)
-                           .waitOn(Futures.immediateVoidFuture(), 10L)
+        () -> AsyncRequest.create(request, JSON_MAPPER, Futures.immediateVoidFuture(), 10L)
                            .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                            .start()
     );
@@ -171,8 +162,7 @@ public class AsyncRequestTest
   {
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER)
-                           .waitOn(Futures.immediateVoidFuture(), 10L)
+        () -> AsyncRequest.create(request, JSON_MAPPER, Futures.immediateVoidFuture(), 10L)
                            .onSuccess(result -> AsyncResponse.status(200))
                            .start()
     );
@@ -183,8 +173,7 @@ public class AsyncRequestTest
   {
     final SettableFuture<String> future = SettableFuture.create();
 
-    AsyncRequest.create(request, JSON_MAPPER)
-                .waitOn(future, 10L)
+    AsyncRequest.create(request, JSON_MAPPER, future, 10L)
                 .onTimeout(204)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
@@ -205,8 +194,7 @@ public class AsyncRequestTest
   {
     final SettableFuture<String> future = SettableFuture.create();
 
-    AsyncRequest.create(request, JSON_MAPPER)
-                .waitOn(future, 10L)
+    AsyncRequest.create(request, JSON_MAPPER, future, 10L)
                 .onTimeout(204)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
@@ -231,8 +219,12 @@ public class AsyncRequestTest
         List.of(new SegmentChangeRequestNoop())
     );
 
-    AsyncRequest.create(request, JSON_MAPPER)
-                .waitOn(Futures.<ChangeRequestsSnapshot<DataSegmentChangeRequest>>immediateFuture(snapshot), 10L)
+    AsyncRequest.create(
+                    request,
+                    JSON_MAPPER,
+                    Futures.<ChangeRequestsSnapshot<DataSegmentChangeRequest>>immediateFuture(snapshot),
+                    10L
+                )
                 .onSuccess(
                     result -> AsyncResponse.of(200, result, new TypeReference<>() {})
                 )

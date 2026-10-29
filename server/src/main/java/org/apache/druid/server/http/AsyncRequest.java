@@ -42,7 +42,9 @@ import java.util.function.Function;
 /**
  * Wraps the {@link AsyncContext} of a {@link HttpServletRequest} and ensures that the
  * response is completed at most once, guarding against writing to a timed-out or already-completed request.
- * Use {@link #create(HttpServletRequest, ObjectMapper)} to obtain a {@link Builder}.
+ * Use {@link #completed(HttpServletRequest, ObjectMapper, AsyncResponse)} to complete a request immediately, or
+ * {@link #create(HttpServletRequest, ObjectMapper, ListenableFuture, long)} to obtain a {@link Builder} that
+ * responds based on the outcome of the future.
  */
 public class AsyncRequest
 {
@@ -54,19 +56,48 @@ public class AsyncRequest
   private final String contentType;
 
   /**
-   * Creates a {@link Builder} that writes any response entity as JSON using the given {@link ObjectMapper}.
+   * Starts async processing of the request and immediately completes it with the given response, writing any
+   * response entity as JSON using the given {@link ObjectMapper}.
    */
-  public static Builder create(HttpServletRequest request, ObjectMapper jsonMapper)
+  public static <T> AsyncRequest completed(HttpServletRequest request, ObjectMapper jsonMapper, AsyncResponse<T> response)
   {
-    return new Builder(request, jsonMapper, MediaType.APPLICATION_JSON);
+    return completed(request, jsonMapper, MediaType.APPLICATION_JSON, response);
   }
 
   /**
-   * Creates a {@link Builder} that writes any response entity using the given {@link ObjectMapper} and content type.
+   * Starts async processing of the request and immediately completes it with the given response, writing any
+   * response entity using the given {@link ObjectMapper} and content type.
    */
-  public static Builder create(HttpServletRequest request, ObjectMapper objectMapper, String contentType)
+  public static <T> AsyncRequest completed(HttpServletRequest request, ObjectMapper objectMapper, String contentType, AsyncResponse<T> response)
   {
-    return new Builder(request, objectMapper, contentType);
+    final AsyncRequest asyncRequest = new AsyncRequest(request, objectMapper, contentType);
+    asyncRequest.complete(response);
+    return asyncRequest;
+  }
+
+  /**
+   * Creates a {@link Builder} that waits on the given future and writes any response entity as JSON using the
+   * given {@link ObjectMapper}.
+   */
+  public static <T> Builder<T> create(HttpServletRequest request, ObjectMapper jsonMapper, ListenableFuture<T> future, long timeoutMillis)
+  {
+    return create(request, jsonMapper, MediaType.APPLICATION_JSON, future, timeoutMillis);
+  }
+
+  /**
+   * Creates a {@link Builder} that waits on the given future and writes any response entity using the given
+   * {@link ObjectMapper} and content type.
+   */
+  public static <T> Builder<T> create(
+      HttpServletRequest request,
+      ObjectMapper objectMapper,
+      String contentType,
+      ListenableFuture<T> future,
+      long timeoutMillis
+  )
+  {
+    Preconditions.checkArgument(timeoutMillis > 0, "timeoutMillis[%s] must be greater than zero", timeoutMillis);
+    return new Builder<>(request, objectMapper, contentType, future, timeoutMillis);
   }
 
   private AsyncRequest(HttpServletRequest request, ObjectMapper objectMapper, String contentType)
@@ -79,7 +110,7 @@ public class AsyncRequest
   /**
    * Completes the request as described by the given {@link AsyncResponse}, if it hasn't already been completed.
    */
-  private void complete(AsyncResponse<?> response)
+  private <T> void complete(AsyncResponse<T> response)
   {
     if (!completed.compareAndSet(false, true)) {
       log.warn("Request has already been completed");
@@ -180,48 +211,10 @@ public class AsyncRequest
   }
 
   /**
-   * Starting point for building an {@link AsyncRequest}. Either {@link #completeNow} it immediately, or
-   * {@link #waitOn} a {@link ListenableFuture} to obtain a {@link FutureBuilder} for responding to its outcome.
-   */
-  public static final class Builder
-  {
-    private final HttpServletRequest request;
-    private final ObjectMapper objectMapper;
-    private final String contentType;
-
-    private Builder(HttpServletRequest request, ObjectMapper objectMapper, String contentType)
-    {
-      this.request = request;
-      this.objectMapper = objectMapper;
-      this.contentType = contentType;
-    }
-
-    /**
-     * The future to wait on, cancelling it and completing the request with the status code given to
-     * {@link FutureBuilder#onTimeout} if it does not finish within the given timeout, in milliseconds.
-     */
-    public <T> FutureBuilder<T> waitOn(ListenableFuture<T> future, long timeoutMillis)
-    {
-      Preconditions.checkArgument(timeoutMillis > 0, "timeoutMillis[%s] must be greater than zero", timeoutMillis);
-      return new FutureBuilder<>(request, objectMapper, contentType, future, timeoutMillis);
-    }
-
-    /**
-     * Starts async processing of the request and immediately completes it with the given response.
-     */
-    public AsyncRequest completeNow(AsyncResponse<?> response)
-    {
-      final AsyncRequest asyncRequest = new AsyncRequest(request, objectMapper, contentType);
-      asyncRequest.complete(response);
-      return asyncRequest;
-    }
-  }
-
-  /**
    * Builds and starts an {@link AsyncRequest} that responds based on the outcome of a {@link ListenableFuture}
-   * of type {@code T}, obtained from {@link Builder#waitOn}.
+   * of type {@code T}, obtained from {@link #create(HttpServletRequest, ObjectMapper, ListenableFuture, long)}.
    */
-  public static final class FutureBuilder<T>
+  public static final class Builder<T>
   {
     private final HttpServletRequest request;
     private final ObjectMapper objectMapper;
@@ -233,7 +226,7 @@ public class AsyncRequest
     private Function<T, AsyncResponse<?>> onSuccess;
     private Function<Throwable, AsyncResponse<?>> onFailure;
 
-    private FutureBuilder(
+    private Builder(
         HttpServletRequest request,
         ObjectMapper objectMapper,
         String contentType,
@@ -251,7 +244,7 @@ public class AsyncRequest
     /**
      * Status code to respond with, with no body, if the future times out before completing.
      */
-    public FutureBuilder<T> onTimeout(int statusCode)
+    public Builder<T> onTimeout(int statusCode)
     {
       this.onTimeoutStatusCode = statusCode;
       return this;
@@ -260,7 +253,7 @@ public class AsyncRequest
     /**
      * Function invoked with the result of the future on success, to determine how to respond. Required.
      */
-    public FutureBuilder<T> onSuccess(Function<T, AsyncResponse<?>> onSuccess)
+    public Builder<T> onSuccess(Function<T, AsyncResponse<?>> onSuccess)
     {
       this.onSuccess = onSuccess;
       return this;
@@ -269,7 +262,7 @@ public class AsyncRequest
     /**
      * Function invoked with the failure cause of the future, to determine how to respond. Required.
      */
-    public FutureBuilder<T> onFailure(Function<Throwable, AsyncResponse<?>> onFailure)
+    public Builder<T> onFailure(Function<Throwable, AsyncResponse<?>> onFailure)
     {
       this.onFailure = onFailure;
       return this;

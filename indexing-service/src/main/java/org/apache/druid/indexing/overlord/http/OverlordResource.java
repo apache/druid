@@ -522,14 +522,13 @@ public class OverlordResource
     final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
     if (!taskActionClient.isPresent()) {
       // Encourage client to try again soon, when we'll likely have a redirect set up
-      AsyncRequest.create(request, jsonMapper).completeNow(AsyncResponse.status(Status.SERVICE_UNAVAILABLE.getStatusCode()));
+      AsyncRequest.completed(request, jsonMapper, AsyncResponse.status(Status.SERVICE_UNAVAILABLE.getStatusCode()));
       return;
     }
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
-    AsyncRequest.create(request, jsonMapper)
-                // Use a default timeout of 15 minutes
-                .waitOn(future, 15 * 60_000)
+    // Use a default timeout of 15 minutes
+    AsyncRequest.create(request, jsonMapper, future, 15 * 60_000)
                 .onTimeout(HttpResponseStatus.GATEWAY_TIMEOUT.code())
                 .onSuccess(
                     result -> {

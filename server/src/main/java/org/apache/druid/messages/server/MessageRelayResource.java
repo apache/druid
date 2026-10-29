@@ -95,8 +95,12 @@ public class MessageRelayResource<MessageType>
   )
   {
     if (epoch == null || watermark == null || clientHost == null || clientHost.isEmpty()) {
-      AsyncRequest.create(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-                  .completeNow(AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, null));
+      AsyncRequest.completed(
+          req,
+          smileMapper,
+          SmileMediaTypes.APPLICATION_JACKSON_SMILE,
+          AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, null)
+      );
       return null;
     }
 
@@ -106,8 +110,7 @@ public class MessageRelayResource<MessageType>
     final String remoteAddr = req.getRemoteAddr();
     final String requestURI = req.getRequestURI();
 
-    AsyncRequest.create(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-                .waitOn(batchFuture, GET_MESSAGES_TIMEOUT)
+    AsyncRequest.create(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE, batchFuture, GET_MESSAGES_TIMEOUT)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess(
                     result -> {

@@ -136,8 +136,7 @@ public class SegmentListerResource
         )
     );
 
-    AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
-                .waitOn(future, timeout)
+    AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"), future, timeout)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess(
                     result -> AsyncResponse.of(
@@ -193,8 +192,7 @@ public class SegmentListerResource
     final ListenableFuture<List<DataSegmentChangeResponse>> future =
         loadDropRequestHandler.processBatch(changeRequestList, loadingMode == null ? SegmentLoadingMode.NORMAL : loadingMode);
 
-    AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
-                .waitOn(future, timeout)
+    AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"), future, timeout)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess(
                     result -> AsyncResponse.of(
@@ -229,7 +227,7 @@ public class SegmentListerResource
 
   private void sendErrorResponse(HttpServletRequest req, int code, String error)
   {
-    AsyncRequest.create(req, jsonMapper).completeNow(AsyncResponse.error(code, error));
+    AsyncRequest.completed(req, jsonMapper, AsyncResponse.error(code, error));
   }
 
   private ResponseContext createContext(String requestType)
