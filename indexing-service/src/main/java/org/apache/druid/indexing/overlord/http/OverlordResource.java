@@ -528,7 +528,8 @@ public class OverlordResource
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
     // Use a default timeout of 15 minutes
-    AsyncRequest.create(request, jsonMapper, future, 15 * 60_000)
+    AsyncRequest.create(request, future, 15 * 60_000)
+                .contentType(jsonMapper, MediaType.APPLICATION_JSON)
                 .onTimeout(HttpResponseStatus.GATEWAY_TIMEOUT.code())
                 .onSuccess(
                     result -> {

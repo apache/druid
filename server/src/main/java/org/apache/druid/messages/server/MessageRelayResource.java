@@ -110,7 +110,8 @@ public class MessageRelayResource<MessageType>
     final String remoteAddr = req.getRemoteAddr();
     final String requestURI = req.getRequestURI();
 
-    AsyncRequest.create(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE, batchFuture, GET_MESSAGES_TIMEOUT)
+    AsyncRequest.create(req, batchFuture, GET_MESSAGES_TIMEOUT)
+                .contentType(smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess(
                     result -> {

@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
+import javax.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.Map;
 
@@ -103,7 +104,8 @@ public class AsyncRequestTest
   @Test
   public void test_start_invokesOnSuccess_whenFutureSucceeds()
   {
-    AsyncRequest.create(request, JSON_MAPPER, Futures.immediateFuture("the-result"), 10L)
+    AsyncRequest.create(request, Futures.immediateFuture("the-result"), 10L)
+                .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                 .start();
@@ -118,7 +120,8 @@ public class AsyncRequestTest
   {
     final RuntimeException cause = new RuntimeException("boom");
 
-    AsyncRequest.create(request, JSON_MAPPER, Futures.immediateFailedFuture(cause), 10L)
+    AsyncRequest.create(request, Futures.immediateFailedFuture(cause), 10L)
+                .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                 .start();
@@ -133,7 +136,7 @@ public class AsyncRequestTest
   {
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER, Futures.immediateVoidFuture(), 0L)
+        () -> AsyncRequest.create(request, Futures.immediateVoidFuture(), 0L)
     );
   }
 
@@ -142,7 +145,19 @@ public class AsyncRequestTest
   {
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER, Futures.immediateVoidFuture(), -1L)
+        () -> AsyncRequest.create(request, Futures.immediateVoidFuture(), -1L)
+    );
+  }
+
+  @Test
+  public void test_start_throwsException_whenContentTypeIsMissing()
+  {
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> AsyncRequest.create(request, Futures.immediateVoidFuture(), 10L)
+                           .onSuccess(result -> AsyncResponse.status(200))
+                           .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
+                           .start()
     );
   }
 
@@ -151,7 +166,8 @@ public class AsyncRequestTest
   {
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER, Futures.immediateVoidFuture(), 10L)
+        () -> AsyncRequest.create(request, Futures.immediateVoidFuture(), 10L)
+                           .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
                            .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                            .start()
     );
@@ -162,7 +178,8 @@ public class AsyncRequestTest
   {
     Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER, Futures.immediateVoidFuture(), 10L)
+        () -> AsyncRequest.create(request, Futures.immediateVoidFuture(), 10L)
+                           .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
                            .onSuccess(result -> AsyncResponse.status(200))
                            .start()
     );
@@ -173,7 +190,8 @@ public class AsyncRequestTest
   {
     final SettableFuture<String> future = SettableFuture.create();
 
-    AsyncRequest.create(request, JSON_MAPPER, future, 10L)
+    AsyncRequest.create(request, future, 10L)
+                .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
                 .onTimeout(204)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
@@ -194,7 +212,8 @@ public class AsyncRequestTest
   {
     final SettableFuture<String> future = SettableFuture.create();
 
-    AsyncRequest.create(request, JSON_MAPPER, future, 10L)
+    AsyncRequest.create(request, future, 10L)
+                .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
                 .onTimeout(204)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
@@ -221,10 +240,10 @@ public class AsyncRequestTest
 
     AsyncRequest.create(
                     request,
-                    JSON_MAPPER,
                     Futures.<ChangeRequestsSnapshot<DataSegmentChangeRequest>>immediateFuture(snapshot),
                     10L
                 )
+                .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
                 .onSuccess(
                     result -> AsyncResponse.of(200, result, new TypeReference<>() {})
                 )

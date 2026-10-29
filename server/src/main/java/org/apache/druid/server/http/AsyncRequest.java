@@ -43,8 +43,8 @@ import java.util.function.Function;
  * Wraps the {@link AsyncContext} of a {@link HttpServletRequest} and ensures that the
  * response is completed at most once, guarding against writing to a timed-out or already-completed request.
  * Use {@link #completed(HttpServletRequest, ObjectMapper, AsyncResponse)} to complete a request immediately, or
- * {@link #create(HttpServletRequest, ObjectMapper, ListenableFuture, long)} to obtain a {@link Builder} that
- * responds based on the outcome of the future.
+ * {@link #create(HttpServletRequest, ListenableFuture, long)} to obtain a {@link Builder} that responds based on
+ * the outcome of the future; call {@link Builder#contentType} to specify how to write the response entity.
  */
 public class AsyncRequest
 {
@@ -76,28 +76,13 @@ public class AsyncRequest
   }
 
   /**
-   * Creates a {@link Builder} that waits on the given future and writes any response entity as JSON using the
-   * given {@link ObjectMapper}.
+   * Creates a {@link Builder} that waits on the given future. Call {@link Builder#contentType} to specify the
+   * {@link ObjectMapper} and content type to use for writing the response entity.
    */
-  public static <T> Builder<T> create(HttpServletRequest request, ObjectMapper jsonMapper, ListenableFuture<T> future, long timeoutMillis)
-  {
-    return create(request, jsonMapper, MediaType.APPLICATION_JSON, future, timeoutMillis);
-  }
-
-  /**
-   * Creates a {@link Builder} that waits on the given future and writes any response entity using the given
-   * {@link ObjectMapper} and content type.
-   */
-  public static <T> Builder<T> create(
-      HttpServletRequest request,
-      ObjectMapper objectMapper,
-      String contentType,
-      ListenableFuture<T> future,
-      long timeoutMillis
-  )
+  public static <T> Builder<T> create(HttpServletRequest request, ListenableFuture<T> future, long timeoutMillis)
   {
     Preconditions.checkArgument(timeoutMillis > 0, "timeoutMillis[%s] must be greater than zero", timeoutMillis);
-    return new Builder<>(request, objectMapper, contentType, future, timeoutMillis);
+    return new Builder<>(request, future, timeoutMillis);
   }
 
   private AsyncRequest(HttpServletRequest request, ObjectMapper objectMapper, String contentType)
@@ -212,33 +197,35 @@ public class AsyncRequest
 
   /**
    * Builds and starts an {@link AsyncRequest} that responds based on the outcome of a {@link ListenableFuture}
-   * of type {@code T}, obtained from {@link #create(HttpServletRequest, ObjectMapper, ListenableFuture, long)}.
+   * of type {@code T}, obtained from {@link #create(HttpServletRequest, ListenableFuture, long)}.
    */
   public static final class Builder<T>
   {
     private final HttpServletRequest request;
-    private final ObjectMapper objectMapper;
-    private final String contentType;
     private final ListenableFuture<T> future;
     private final long timeoutMillis;
 
+    private ObjectMapper objectMapper;
+    private String contentType;
     private int onTimeoutStatusCode = HttpServletResponse.SC_NO_CONTENT;
     private Function<T, AsyncResponse<?>> onSuccess;
     private Function<Throwable, AsyncResponse<?>> onFailure;
 
-    private Builder(
-        HttpServletRequest request,
-        ObjectMapper objectMapper,
-        String contentType,
-        ListenableFuture<T> future,
-        long timeoutMillis
-    )
+    private Builder(HttpServletRequest request, ListenableFuture<T> future, long timeoutMillis)
     {
       this.request = request;
-      this.objectMapper = objectMapper;
-      this.contentType = contentType;
       this.future = future;
       this.timeoutMillis = timeoutMillis;
+    }
+
+    /**
+     * The {@link ObjectMapper} and content type to use for writing the response entity. Required.
+     */
+    public Builder<T> contentType(ObjectMapper objectMapper, String contentType)
+    {
+      this.objectMapper = objectMapper;
+      this.contentType = contentType;
+      return this;
     }
 
     /**
@@ -274,6 +261,8 @@ public class AsyncRequest
      */
     public AsyncRequest start()
     {
+      Preconditions.checkArgument(objectMapper != null, "contentType must be specified");
+      Preconditions.checkArgument(contentType != null, "contentType must be specified");
       Preconditions.checkArgument(onSuccess != null, "onSuccess must be specified");
       Preconditions.checkArgument(onFailure != null, "onFailure must be specified");
 

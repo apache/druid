@@ -120,7 +120,8 @@ public class TaskManagementResource
         )
     );
 
-    AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"), future, timeout)
+    AsyncRequest.create(req, future, timeout)
+                .contentType(context.inputMapper, context.contentType)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess(
                     result -> AsyncResponse.of(
@@ -164,16 +165,20 @@ public class TaskManagementResource
   private ResponseContext createContext(String requestType)
   {
     boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType);
-    return new ResponseContext(isSmile ? smileMapper : jsonMapper);
+    return isSmile
+           ? new ResponseContext(smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+           : new ResponseContext(jsonMapper, MediaType.APPLICATION_JSON);
   }
 
   private static class ResponseContext
   {
     private final ObjectMapper inputMapper;
+    private final String contentType;
 
-    ResponseContext(ObjectMapper inputMapper)
+    ResponseContext(ObjectMapper inputMapper, String contentType)
     {
       this.inputMapper = inputMapper;
+      this.contentType = contentType;
     }
   }
 }
