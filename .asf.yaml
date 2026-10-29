@@ -10,6 +10,8 @@ github:
       branches:
         includes:
           - "~DEFAULT_BRANCH"
+          # release branches, such as 39.0.0
+          - "[0-9]*"
         excludes: []
       bypass_teams:
         - root
