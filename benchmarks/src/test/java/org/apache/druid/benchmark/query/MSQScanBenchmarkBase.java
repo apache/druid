@@ -84,7 +84,7 @@ import java.util.concurrent.TimeUnit;
  * encapsulation" section of docs/operations/java.md:
  * <pre>
  * mvn package -pl benchmarks -am -DskipTests
- * java -jar benchmarks/target/benchmarks.jar 'DartScanBenchmark.timeDescLimit' \
+ * java -jar benchmarks/target/benchmarks.jar 'DartScanBenchmark.orderByTimeDescWithLimit' \
  *   -p numTimeChunks=30 -p limit=10000 -p layout=CLUSTERED -prof gc \
  *   -jvmArgsAppend "--add-opens=java.base/java.nio=ALL-UNNAMED ..."
  * </pre>
@@ -287,19 +287,19 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
   }
 
   @Benchmark
-  public void timeDescLimit(final WorkCounters counters, final Blackhole blackhole)
+  public void orderByTimeDescWithLimit(final WorkCounters counters, final Blackhole blackhole)
   {
     runQuery("SELECT * FROM " + DATASOURCE + " ORDER BY __time DESC LIMIT " + limit, counters, blackhole);
   }
 
   @Benchmark
-  public void timeAscLimit(final WorkCounters counters, final Blackhole blackhole)
+  public void orderByTimeAscWithLimit(final WorkCounters counters, final Blackhole blackhole)
   {
     runQuery("SELECT * FROM " + DATASOURCE + " ORDER BY __time ASC LIMIT " + limit, counters, blackhole);
   }
 
   @Benchmark
-  public void timeDescThenDimLimit(final WorkCounters counters, final Blackhole blackhole)
+  public void orderByTimeDescThenDimWithLimit(final WorkCounters counters, final Blackhole blackhole)
   {
     runQuery(
         "SELECT * FROM " + DATASOURCE + " ORDER BY __time DESC, dimSecondary LIMIT " + limit,
@@ -312,7 +312,7 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
    * Newest rows for one value of the primary clustering column.
    */
   @Benchmark
-  public void clusterFilteredTimeDescLimit(final WorkCounters counters, final Blackhole blackhole)
+  public void whereClusterKeyOrderByTimeDescWithLimit(final WorkCounters counters, final Blackhole blackhole)
   {
     runQuery(
         "SELECT * FROM " + DATASOURCE + " WHERE clusterKey1 = '1' ORDER BY __time DESC LIMIT " + limit,
@@ -322,13 +322,13 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
   }
 
   @Benchmark
-  public void unorderedLimit(final WorkCounters counters, final Blackhole blackhole)
+  public void unorderedWithLimit(final WorkCounters counters, final Blackhole blackhole)
   {
     runQuery("SELECT * FROM " + DATASOURCE + " LIMIT " + limit, counters, blackhole);
   }
 
   @Benchmark
-  public void dimOrderLimit(final WorkCounters counters, final Blackhole blackhole)
+  public void orderByDimWithLimit(final WorkCounters counters, final Blackhole blackhole)
   {
     runQuery("SELECT * FROM " + DATASOURCE + " ORDER BY dimSecondary LIMIT " + limit, counters, blackhole);
   }
@@ -337,7 +337,7 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
    * Ordered by time without a limit; does not use {@link #limit}. The filter keeps a small fraction of rows.
    */
   @Benchmark
-  public void timeDescFilteredNoLimit(final WorkCounters counters, final Blackhole blackhole)
+  public void whereDimOrderByTimeDescNoLimit(final WorkCounters counters, final Blackhole blackhole)
   {
     runQuery(
         "SELECT * FROM " + DATASOURCE + " WHERE dimSecondary = '7' ORDER BY __time DESC",
