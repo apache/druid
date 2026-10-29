@@ -121,8 +121,7 @@ public class TaskManagementResource
     );
 
     AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
-                .future(future)
-                .timeoutMillis(timeout)
+                .waitOn(future, timeout)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess((ChangeRequestsSnapshot result) -> AsyncResponse.of(
                     HttpServletResponse.SC_OK,

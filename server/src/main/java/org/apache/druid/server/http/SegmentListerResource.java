@@ -137,8 +137,7 @@ public class SegmentListerResource
     );
 
     AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
-                .future(future)
-                .timeoutMillis(timeout)
+                .waitOn(future, timeout)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess((ChangeRequestsSnapshot<DataSegmentChangeRequest> result) -> AsyncResponse.of(
                     HttpServletResponse.SC_OK,
@@ -194,8 +193,7 @@ public class SegmentListerResource
         loadDropRequestHandler.processBatch(changeRequestList, loadingMode == null ? SegmentLoadingMode.NORMAL : loadingMode);
 
     AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
-                .future(future)
-                .timeoutMillis(timeout)
+                .waitOn(future, timeout)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess((List<DataSegmentChangeResponse> result) -> AsyncResponse.of(
                     HttpServletResponse.SC_OK,

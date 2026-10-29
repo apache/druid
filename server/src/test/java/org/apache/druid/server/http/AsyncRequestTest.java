@@ -110,7 +110,7 @@ public class AsyncRequestTest
     Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> AsyncRequest.create(request, JSON_MAPPER)
-                           .future(Futures.immediateVoidFuture())
+                           .waitOn(Futures.immediateVoidFuture(), 10L)
                            .completeNow(AsyncResponse.status(200))
     );
   }
@@ -119,7 +119,7 @@ public class AsyncRequestTest
   public void test_start_invokesOnSuccess_whenFutureSucceeds()
   {
     AsyncRequest.create(request, JSON_MAPPER)
-                .future(Futures.immediateFuture("the-result"))
+                .waitOn(Futures.immediateFuture("the-result"), 10L)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                 .start();
@@ -135,7 +135,7 @@ public class AsyncRequestTest
     final RuntimeException cause = new RuntimeException("boom");
 
     AsyncRequest.create(request, JSON_MAPPER)
-                .future(Futures.immediateFailedFuture(cause))
+                .waitOn(Futures.immediateFailedFuture(cause), 10L)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                 .start();
@@ -151,7 +151,7 @@ public class AsyncRequestTest
     Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> AsyncRequest.create(request, JSON_MAPPER)
-                           .future(Futures.immediateVoidFuture())
+                           .waitOn(Futures.immediateVoidFuture(), 10L)
                            .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                            .start()
     );
@@ -163,7 +163,7 @@ public class AsyncRequestTest
     Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> AsyncRequest.create(request, JSON_MAPPER)
-                           .future(Futures.immediateVoidFuture())
+                           .waitOn(Futures.immediateVoidFuture(), 10L)
                            .onSuccess(result -> AsyncResponse.status(200))
                            .start()
     );
@@ -175,8 +175,7 @@ public class AsyncRequestTest
     final SettableFuture<String> future = SettableFuture.create();
 
     AsyncRequest.create(request, JSON_MAPPER)
-                .future(future)
-                .timeoutMillis(10L)
+                .waitOn(future, 10L)
                 .onTimeout(204)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
@@ -198,8 +197,7 @@ public class AsyncRequestTest
     final SettableFuture<String> future = SettableFuture.create();
 
     AsyncRequest.create(request, JSON_MAPPER)
-                .future(future)
-                .timeoutMillis(10L)
+                .waitOn(future, 10L)
                 .onTimeout(204)
                 .onSuccess(result -> AsyncResponse.of(200, result))
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
@@ -217,18 +215,6 @@ public class AsyncRequestTest
   }
 
   @Test
-  public void test_start_doesNotRegisterTimeoutListener_whenTimeoutMillisIsNotSet()
-  {
-    AsyncRequest.create(request, JSON_MAPPER)
-                .future(Futures.immediateFuture("result"))
-                .onSuccess(result -> AsyncResponse.of(200, result))
-                .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
-                .start();
-
-    Assertions.assertNull(asyncContext.capturedListener);
-  }
-
-  @Test
   public void test_onSuccess_preservesPolymorphicTypeInfo_whenResultTypeIsGenericAndErased()
   {
     final ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = ChangeRequestsSnapshot.success(
@@ -237,7 +223,7 @@ public class AsyncRequestTest
     );
 
     AsyncRequest.create(request, JSON_MAPPER)
-                .future(Futures.<ChangeRequestsSnapshot<DataSegmentChangeRequest>>immediateFuture(snapshot))
+                .waitOn(Futures.<ChangeRequestsSnapshot<DataSegmentChangeRequest>>immediateFuture(snapshot), 10L)
                 .onSuccess((ChangeRequestsSnapshot<DataSegmentChangeRequest> result) -> AsyncResponse.of(
                     200,
                     result,

@@ -528,9 +528,8 @@ public class OverlordResource
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
     AsyncRequest.create(request, jsonMapper)
-                .future(future)
                 // Use a default timeout of 15 minutes
-                .timeoutMillis(15 * 60_000)
+                .waitOn(future, 15 * 60_000)
                 .onTimeout(HttpResponseStatus.GATEWAY_TIMEOUT.code())
                 .onSuccess(result -> {
                   // Use null-safe map since some task actions may return null result

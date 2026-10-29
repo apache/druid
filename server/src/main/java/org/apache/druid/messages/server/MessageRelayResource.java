@@ -107,8 +107,7 @@ public class MessageRelayResource<MessageType>
     final String requestURI = req.getRequestURI();
 
     AsyncRequest.create(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-                .future(batchFuture)
-                .timeoutMillis(GET_MESSAGES_TIMEOUT)
+                .waitOn(batchFuture, GET_MESSAGES_TIMEOUT)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
                 .onSuccess((MessageBatch<MessageType> result) -> {
                   log.debug("Sending message batch: %s", result);

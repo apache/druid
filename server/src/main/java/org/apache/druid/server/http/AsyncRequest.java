@@ -180,7 +180,7 @@ public class AsyncRequest
 
   /**
    * Builds and starts an {@link AsyncRequest}, fluently specifying how it should respond on success, failure
-   * and timeout of an optional {@link ListenableFuture}.
+   * and timeout of an optional {@link ListenableFuture} to {@link #waitOn}.
    */
   public static final class Builder
   {
@@ -205,21 +205,14 @@ public class AsyncRequest
     }
 
     /**
-     * The future to wait on; if given, {@link #onSuccess} and {@link #onFailure} must also be specified.
+     * The future to wait on, cancelling it and completing the request with {@link #onTimeout}'s status code if
+     * it does not finish within the given timeout, in milliseconds. If given, {@link #onSuccess} and
+     * {@link #onFailure} must also be specified.
      */
     @SuppressWarnings("unchecked")
-    public <T> Builder future(ListenableFuture<T> future)
+    public <T> Builder waitOn(ListenableFuture<T> future, long timeoutMillis)
     {
       this.future = (ListenableFuture<Object>) future;
-      return this;
-    }
-
-    /**
-     * Timeout, in milliseconds, after which {@link #future} is cancelled and the request is completed with
-     * {@link #onTimeout}'s status code.
-     */
-    public Builder timeoutMillis(long timeoutMillis)
-    {
       this.timeoutMillis = timeoutMillis;
       return this;
     }
