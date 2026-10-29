@@ -139,11 +139,8 @@ public class SegmentListerResource
     );
 
     final AsyncRequest asyncRequest = new AsyncRequest(req, context.inputMapper, req.getHeader("Accept"));
-    asyncRequest.addTimeoutListener(ar -> {
-      // HTTP 204 NO_CONTENT is sent to the client.
-      future.cancel(true);
-      ar.completeWithStatus(HttpServletResponse.SC_NO_CONTENT);
-    });
+    // HTTP 204 NO_CONTENT is sent to the client on timeout.
+    asyncRequest.completeWithStatusOnTimeout(future, HttpServletResponse.SC_NO_CONTENT);
 
     Futures.addCallback(
         future,
@@ -213,11 +210,8 @@ public class SegmentListerResource
         loadDropRequestHandler.processBatch(changeRequestList, loadingMode == null ? SegmentLoadingMode.NORMAL : loadingMode);
 
     final AsyncRequest asyncRequest = new AsyncRequest(req, context.inputMapper, req.getHeader("Accept"));
-    asyncRequest.addTimeoutListener(ar -> {
-      // HTTP 204 NO_CONTENT is sent to the client.
-      future.cancel(true);
-      ar.completeWithStatus(HttpServletResponse.SC_NO_CONTENT);
-    });
+    // HTTP 204 NO_CONTENT is sent to the client on timeout.
+    asyncRequest.completeWithStatusOnTimeout(future, HttpServletResponse.SC_NO_CONTENT);
 
     Futures.addCallback(
         future,

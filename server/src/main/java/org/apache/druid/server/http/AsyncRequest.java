@@ -30,8 +30,8 @@ import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 /**
  * Wraps the {@link AsyncContext} of a {@link HttpServletRequest} and ensures that the
@@ -72,14 +72,6 @@ public class AsyncRequest
   public void setTimeout(long timeoutMillis)
   {
     context.setTimeout(timeoutMillis);
-  }
-
-  /**
-   * Registers a listener that is invoked if this request times out before being completed.
-   */
-  public void addTimeoutListener(Consumer<AsyncRequest> onTimeout)
-  {
-    context.addListener(ServletResourceUtils.createAsyncTimeoutListener(event -> onTimeout.accept(this)));
   }
 
   /**
@@ -167,5 +159,20 @@ public class AsyncRequest
     catch (Exception e) {
       log.noStackTrace().warn(e, "Request timed out or is closed already");
     }
+  }
+
+  /**
+   * Completes this request with the given status code and cancels the given future if it times out before
+   * being completed otherwise. The request is completed before the future is cancelled, since cancellation
+   * may synchronously invoke callbacks on the future that attempt to complete this same request.
+   */
+  public void completeWithStatusOnTimeout(Future<?> future, int statusCode)
+  {
+    context.addListener(
+        ServletResourceUtils.createAsyncTimeoutListener(event -> {
+          completeWithStatus(statusCode);
+          future.cancel(true);
+        })
+    );
   }
 }

@@ -105,10 +105,7 @@ public class MessageRelayResource<MessageType>
     final ListenableFuture<MessageBatch<MessageType>> batchFuture = outbox.getMessages(clientHost, epoch, watermark);
     final AsyncRequest asyncRequest = new AsyncRequest(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE);
     asyncRequest.setTimeout(GET_MESSAGES_TIMEOUT);
-    asyncRequest.addTimeoutListener(ar -> {
-      ar.completeWithStatus(HttpServletResponse.SC_NO_CONTENT);
-      batchFuture.cancel(true);
-    });
+    asyncRequest.completeWithStatusOnTimeout(batchFuture, HttpServletResponse.SC_NO_CONTENT);
 
     // Save these items, since "req" becomes inaccessible in future exception handlers.
     final String remoteAddr = req.getRemoteAddr();

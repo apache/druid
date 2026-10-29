@@ -530,10 +530,7 @@ public class OverlordResource
     }
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
-    asyncRequest.addTimeoutListener(req -> {
-      req.complete(HttpResponseStatus.GATEWAY_TIMEOUT.code(), null);
-      future.cancel(true);
-    });
+    asyncRequest.completeWithStatusOnTimeout(future, HttpResponseStatus.GATEWAY_TIMEOUT.code());
 
     // Use a default timeout of 15 minutes
     asyncRequest.setTimeout(15 * 60_000);
