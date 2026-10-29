@@ -251,9 +251,10 @@ public class TsFileInputFormatTest
   }
 
   @Test
-  public void testTagOnlyProjectionFallsBackToAllColumns() throws IOException
+  public void testTagOnlyProjectionUsesRowCarrier() throws IOException
   {
-    // TsFile's table reader returns no rows at all when only tag columns are selected.
+    // TsFile's table reader returns no rows at all when only tag columns are selected, so the reader adds one
+    // measurement column as a row carrier without exposing it in the row.
     final InputRowSchema rowSchema = new InputRowSchema(
         new TimestampSpec(TsFileInputFormat.TIME_COLUMN_NAME, "millis", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("region"))),
@@ -263,7 +264,28 @@ public class TsFileInputFormatTest
 
     assertEquals(3, rows.size());
     assertEquals(Collections.singletonList("beijing"), rows.get(0).getDimension("region"));
+    assertNull(rows.get(0).getRaw("temperature"));
+    assertNull(rows.get(0).getRaw("device"));
+  }
+
+  @Test
+  public void testColumnsFilterWinsOverFixedDimensions() throws IOException
+  {
+    // A batch ingestion filter that happens to select every physical column must not be narrowed down to the
+    // dimensions: its extra entries are transform inputs or aggregator inputs.
+    final InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec(TsFileInputFormat.TIME_COLUMN_NAME, "millis", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("region"))),
+        ColumnsFilter.inclusionBased(
+            new HashSet<>(Arrays.asList("region", "device", "temperature", "humidity", "status"))
+        )
+    );
+    final List<InputRow> rows = read(new TsFileInputFormat(null, null, null), rowSchema);
+
+    assertEquals(3, rows.size());
     assertEquals(21.5f, (Float) rows.get(0).getRaw("temperature"), 0.0001f);
+    assertEquals(0.5d, (Double) rows.get(0).getRaw("humidity"), 0.0001d);
+    assertEquals(Boolean.TRUE, rows.get(0).getRaw("status"));
   }
 
   @Test

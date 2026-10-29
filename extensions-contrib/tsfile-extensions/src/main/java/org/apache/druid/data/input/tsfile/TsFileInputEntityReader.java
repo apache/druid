@@ -176,16 +176,34 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
     return tables;
   }
 
-  private List<String> selectColumns(TableSchema tableSchema)
+  /**
+   * Columns to read for one table. {@code queryColumns} are passed to the TsFile reader; only
+   * {@code outputColumns} end up in the row. The two differ when a column is read purely to make the reader
+   * produce rows.
+   */
+  private static class TableProjection
+  {
+    private final List<String> queryColumns;
+    private final Set<String> outputColumns;
+
+    TableProjection(List<String> queryColumns, Set<String> outputColumns)
+    {
+      this.queryColumns = queryColumns;
+      this.outputColumns = outputColumns;
+    }
+  }
+
+  private TableProjection selectColumns(TableSchema tableSchema)
   {
     if (columns != null && !columns.isEmpty()) {
-      return columns;
+      return new TableProjection(columns, new HashSet<>(columns));
     }
 
     final List<IMeasurementSchema> columnSchemas = tableSchema.getColumnSchemas();
     final List<ColumnCategory> columnCategories = tableSchema.getColumnTypes();
     final List<String> physicalColumns = new ArrayList<>();
     final Set<String> tagColumns = new HashSet<>();
+    final Set<String> supportedColumns = new HashSet<>();
     for (int i = 0; i < columnSchemas.size(); i++) {
       final String columnName = columnSchemas.get(i).getMeasurementName();
       if (TsFileInputFormat.TIME_COLUMN_NAME.equalsIgnoreCase(columnName)) {
@@ -195,37 +213,66 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
       if (columnCategories.get(i) == ColumnCategory.TAG) {
         tagColumns.add(columnName);
       }
+      if (isSupportedType(columnSchemas.get(i).getType())) {
+        supportedColumns.add(columnName);
+      }
     }
 
+    // The ingestion schema's filter is authoritative whenever it carries information: it already lists the
+    // timestamp column, the dimensions, the transforms' inputs and the aggregators' inputs. MSQ EXTERN always
+    // passes ColumnsFilter.all(), which carries none of that; there the projection comes from the fixed
+    // dimensions, i.e. the external table's column signature.
     final ColumnsFilter columnsFilter = inputRowSchema.getColumnsFilter();
-    List<String> selected = columnsFilter == null
-                            ? physicalColumns
-                            : physicalColumns.stream().filter(columnsFilter::apply).collect(Collectors.toList());
-
-    // EXTERN passes ColumnsFilter.all(), so the projection has to come from the schema instead: its fixed
-    // dimensions are the external table's column signature.
-    if (selected.size() == physicalColumns.size()) {
+    List<String> selected = null;
+    if (columnsFilter != null && !columnsFilter.equals(ColumnsFilter.all())) {
+      selected = physicalColumns.stream().filter(columnsFilter::apply).collect(Collectors.toList());
+    } else {
       final DimensionsSpec dimensionsSpec = inputRowSchema.getDimensionsSpec();
-      if (dimensionsSpec.hasFixedDimensions()) {
+      if (dimensionsSpec != null && dimensionsSpec.hasFixedDimensions()) {
         final Set<String> wanted = new HashSet<>(dimensionsSpec.getDimensionNames());
-        if (inputRowSchema.getMetricNames() != null) {
-          wanted.addAll(inputRowSchema.getMetricNames());
-        }
         final List<String> projected = physicalColumns.stream().filter(wanted::contains).collect(Collectors.toList());
         if (!projected.isEmpty()) {
           selected = projected;
         }
       }
     }
-
-    // The TsFile table reader only produces blocks while it has a measurement column to read, so a projection
-    // made up of tag columns alone would yield no rows at all. Keep every column in that case.
-    if (!selected.isEmpty() && tagColumns.containsAll(selected)) {
-      selected = physicalColumns;
+    if (selected == null) {
+      // Nothing in the schema narrows the columns down: read everything that can be converted to a row value.
+      selected = physicalColumns.stream().filter(supportedColumns::contains).collect(Collectors.toList());
     }
 
-    // Reading nothing is never right; fall back to every column when no schema information matched.
-    return selected.isEmpty() ? physicalColumns : selected;
+    // The TsFile table reader only produces blocks while it has a measurement column to read, so a projection of
+    // tag columns alone would yield no rows at all. Read one supported measurement column as a row carrier in
+    // that case, without exposing it in the row.
+    final List<String> queryColumns = new ArrayList<>(selected);
+    if (selected.stream().noneMatch(column -> !tagColumns.contains(column))) {
+      physicalColumns.stream()
+                     .filter(column -> !tagColumns.contains(column))
+                     .filter(supportedColumns::contains)
+                     .findFirst()
+                     .ifPresent(queryColumns::add);
+    }
+
+    return new TableProjection(queryColumns, new HashSet<>(selected));
+  }
+
+  private static boolean isSupportedType(TSDataType dataType)
+  {
+    switch (dataType) {
+      case INT32:
+      case INT64:
+      case FLOAT:
+      case DOUBLE:
+      case BOOLEAN:
+      case TEXT:
+      case STRING:
+      case DATE:
+      case TIMESTAMP:
+      case BLOB:
+        return true;
+      default:
+        return false;
+    }
   }
 
   /**
@@ -240,6 +287,7 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
     private ResultSet resultSet = null;
     private List<String> currentColumns = null;
     private List<TSDataType> currentTypes = null;
+    private Set<String> currentOutputColumns = null;
     @Nullable
     private Map<String, Object> bufferedRow = null;
 
@@ -319,7 +367,8 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
       catch (IOException e) {
         throw new UncheckedIOException(e);
       }
-      final List<String> selectedColumns = selectColumns(tableSchema);
+      final TableProjection projection = selectColumns(tableSchema);
+      final List<String> selectedColumns = projection.queryColumns;
       final List<TSDataType> types = new ArrayList<>(selectedColumns.size());
       for (String column : selectedColumns) {
         final int columnIndex = tableSchema.findColumnIndex(column);
@@ -344,6 +393,7 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
       }
       currentColumns = selectedColumns;
       currentTypes = types;
+      currentOutputColumns = projection.outputColumns;
     }
 
     private void closeCurrentResultSet()
@@ -359,9 +409,10 @@ public class TsFileInputEntityReader extends IntermediateRowParsingReader<Map<St
       final Map<String, Object> row = new HashMap<>();
 
       for (int i = 0; i < currentColumns.size(); i++) {
+        final String column = currentColumns.get(i);
         final int resultSetIndex = i + 2;
-        if (!resultSet.isNull(resultSetIndex)) {
-          row.put(currentColumns.get(i), readValue(resultSet, currentTypes.get(i), resultSetIndex));
+        if (currentOutputColumns.contains(column) && !resultSet.isNull(resultSetIndex)) {
+          row.put(column, readValue(resultSet, currentTypes.get(i), resultSetIndex));
         }
       }
 
