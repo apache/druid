@@ -173,6 +173,10 @@ public class ${parser.class} extends SqlAbstractParserImpl
     private int identifierMaxLength;
     private SqlConformance conformance;
     private int rowValueStarCount;
+    // BEGIN: Druid-specific code
+    // Whether to disallow a trailing colon path, since it would be ambiguous with the ':' in JSON_OBJECT('k': v).
+    private boolean colonPathDisallowed;
+    // END: Druid-specific code
 
     private void pushRowValueStar() {
         rowValueStarCount++;
@@ -3952,8 +3956,9 @@ void AddOptionalColonPath(List<Object> list) :
 }
 {
     [
+        // Druid: added "!colonPathDisallowed".
         LOOKAHEAD(2, <COLON> ( SimpleIdentifier() | <LBRACKET> ),
-            { this.conformance.isColonFieldAccessAllowed() })
+            { this.conformance.isColonFieldAccessAllowed() && !colonPathDisallowed })
         <COLON> {
             colonPos = getPos();
             segments = new ArrayList<SqlNode>();
@@ -7255,12 +7260,17 @@ List<SqlNode> JsonNameAndValue() :
     final List<SqlNode> list = new ArrayList<SqlNode>();
     final SqlNode e;
     boolean kvMode = false;
+    final boolean prevColonPathDisallowed = colonPathDisallowed;
 }
 {
     [
         LOOKAHEAD(2, <KEY> JsonName())
         <KEY> { kvMode = true; }
     ]
+    // BEGIN: Druid-specific code
+    // Disallow colon paths in the name, unless using KEY ... VALUE syntax, so 'k': v and 'k', v keep working
+    // when isColonFieldAccessAllowed. Upstream Calcite rejects those forms instead.
+    { colonPathDisallowed = !kvMode; }
     e = JsonName() {
         list.add(e);
     }
@@ -7268,19 +7278,25 @@ List<SqlNode> JsonNameAndValue() :
         <VALUE>
     |
         <COMMA> {
-            if (kvMode || this.conformance.isColonFieldAccessAllowed()) {
+            if (kvMode) {
                 throw SqlUtil.newContextException(getPos(), RESOURCE.illegalComma());
             }
         }
     |
         <COLON> {
-            if (kvMode || this.conformance.isColonFieldAccessAllowed()) {
+            if (kvMode) {
                 throw SqlUtil.newContextException(getPos(), RESOURCE.illegalColon());
             }
         }
     )
+    // Allow colon paths in the value, even when this pair is inside an outer name, since the value is always
+    // followed by ',' or ')'.
+    { colonPathDisallowed = false; }
+    // END: Druid-specific code
     AddExpression(list, ExprContext.ACCEPT_NON_QUERY)
     {
+        // Druid: restore colonPathDisallowed.
+        colonPathDisallowed = prevColonPathDisallowed;
         return list;
     }
 }

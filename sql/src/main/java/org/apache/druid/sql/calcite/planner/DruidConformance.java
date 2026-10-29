@@ -46,6 +46,13 @@ public class DruidConformance extends SqlAbstractConformance
   }
 
   @Override
+  public boolean isColonFieldAccessAllowed()
+  {
+    // For x:a.b as shorthand for JSON_VALUE(x, '$.a.b').
+    return true;
+  }
+
+  @Override
   public boolean isSortByOrdinal()
   {
     // For ORDER BY 1
