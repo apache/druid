@@ -16,50 +16,42 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Page } from '@playwright/test';
 
-import { extractTable } from '../../util/table';
-
-import { IngestionTask } from './task';
+import { openView } from '../../util/playwright';
+import { showStep } from '../../util/steps';
+import { extractTableRecords } from '../../util/table';
 
 /**
- * Ingestion overview task table column identifiers.
+ * A row of the Tasks view.
  */
-enum TaskColumn {
-  TASK_ID = 0,
-  GROUP_ID,
-  TYPE,
-  DATASOURCE,
-  STATUS,
-  CREATED_TIME,
-  DURATION,
-  LOCATION,
+export interface IngestionTask {
+  readonly datasource: string;
+  readonly status: string;
 }
 
 /**
  * Represents task tab.
  */
 export class TasksOverview {
-  private readonly page: playwright.Page;
-  private readonly baseUrl: string;
+  private readonly page: Page;
 
-  constructor(page: playwright.Page, unifiedConsoleUrl: string) {
+  constructor(page: Page) {
     this.page = page;
-    this.baseUrl = unifiedConsoleUrl + '#tasks';
   }
 
-  async getTasks(): Promise<IngestionTask[]> {
-    await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle' });
+  /**
+   * The tasks of the datasource `datasourceName`, as the view shows them.
+   */
+  async getTasks(datasourceName: string): Promise<IngestionTask[]> {
+    await openView(this.page, 'tasks', { datasource: datasourceName });
 
-    const data = await extractTable(this.page, 'div.ct-tr-group', 'div.ct-td');
+    const records = await extractTableRecords(this.page.locator('.tasks-view .console-table'));
+    await showStep(this.page, `Tasks view, filtered on ${datasourceName}`);
 
-    return data.map(
-      row =>
-        new IngestionTask({
-          datasource: row[TaskColumn.DATASOURCE],
-          status: row[TaskColumn.STATUS],
-        }),
-    );
+    return records.map(record => ({
+      datasource: record['Datasource'],
+      status: record['Status'],
+    }));
   }
 }

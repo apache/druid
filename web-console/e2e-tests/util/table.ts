@@ -16,41 +16,45 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Locator } from '@playwright/test';
 
 /**
- * Extracts an HTML table into a text representation.
- * @param page Playwright page from which to extract HTML table
- * @param tableSelector Playwright selector for table
- * @param rowSelector Playwright selector for table row
+ * Reads the data rows (not the rows that pad the table) of a ConsoleTable as text, one array of cells per row.
+ * @param table locator of the table (its `.console-table` element, or one containing it)
  */
-export async function extractTable(
-  page: playwright.Page,
-  tableSelector: string,
-  rowSelector: string,
-): Promise<string[][]> {
-  await page.waitForSelector(tableSelector);
+export async function extractTable(table: Locator): Promise<string[][]> {
+  return (await readTable(table)).rows;
+}
 
-  return page.evaluate(
-    ([tableSelector, rowSelector]) => {
-      const BLANK_VALUE = '\xa0';
-      const data = [];
-      const rows = document.querySelectorAll(tableSelector);
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const columns = row.querySelectorAll(rowSelector);
-        const values = Array.from(columns).map(c => {
-          const realTexts = Array.from(c.querySelectorAll('.real-text'));
-          return realTexts.length
-            ? (realTexts[0] as HTMLElement).innerText
-            : (c as HTMLElement).innerText;
-        });
-        if (!values.every(value => value === BLANK_VALUE)) {
-          data.push(values);
-        }
-      }
-      return data;
-    },
-    [tableSelector, rowSelector],
-  );
+/**
+ * Reads the data rows of a view's ConsoleTable as text, each row keyed by its column headers, once the view has
+ * loaded its data. Headers on two lines are read with a space for the line break (like "Datasource name").
+ * @param table locator of the table (its `.console-table` element, or one containing it)
+ */
+export async function extractTableRecords(table: Locator): Promise<Record<string, string>[]> {
+  // A view loads its data after it opens, and shows its no data text (like "No tasks", or the error) only after that
+  await table
+    .locator('.ct-tbody .ct-tr:not(.-padRow)')
+    .or(table.locator('.ct-no-data').filter({ hasText: /\S/ }))
+    .first()
+    .waitFor();
+
+  const { headers, rows } = await readTable(table);
+  return rows.map(row => Object.fromEntries(headers.map((header, i) => [header, row[i]])));
+}
+
+async function readTable(table: Locator): Promise<{ headers: string[]; rows: string[][] }> {
+  return await table.evaluate(tableElement => {
+    const cellText = (cell: Element) =>
+      ((cell.querySelector('.real-text') ?? cell) as HTMLElement).innerText;
+
+    return {
+      headers: Array.from(tableElement.querySelectorAll('.ct-thead.-header .ct-th'), header =>
+        (header as HTMLElement).innerText.replace(/\s+/g, ' ').trim(),
+      ),
+      rows: Array.from(tableElement.querySelectorAll('.ct-tbody .ct-tr:not(.-padRow)'), row =>
+        Array.from(row.querySelectorAll('.ct-td'), cellText),
+      ),
+    };
+  });
 }
