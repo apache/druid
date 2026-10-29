@@ -186,6 +186,23 @@ class RefreshVersionsTest(unittest.TestCase):
         text = licenses_yaml(entry("Kotlin jdk8", "java-core", "1.8.21", ["org.k: stdlib", "org.k: stdlib-jdk8"]))
         self.assertFlagged(1, text, reports(("org.k:stdlib:2.4.21", "java-core")))
 
+    def test_flags_current_entries_with_libraries_in_no_report(self):
+        text = licenses_yaml(entry("fastutil", "java-core", "8.5.19", ["it.unimi.dsi: fastutil", "it.unimi.dsi: fastutil-core"]))
+        _, updated, flagged = self.refresh(text, reports(("it.unimi.dsi:fastutil:8.5.19", "java-core")))
+        self.assertEqual([], updated)
+        self.assertEqual([("fastutil", "java-core", "it.unimi.dsi:fastutil-core are in no report; remove them by hand")], flagged)
+
+    def test_leaves_entries_with_no_reported_library_to_check_licenses(self):
+        text = licenses_yaml(entry("Gone", "java-core", "1.0", ["org.gone: a", "org.gone: b"]))
+        self.assertEqual((text, [], []), self.refresh(text, reports(("org.other:x:1.0", "java-core"))))
+
+    def test_leaves_stale_entries_to_check_licenses(self):
+        text = licenses_yaml(
+            entry("Kerby", "java-core", "1.0.1", ["org.kerby: kerb-core", "org.kerby: kerb-admin"]),
+            entry("Kerby", "java-core", "2.0.3", ["org.kerby: kerb-core"]),
+        )
+        self.assertEqual((text, [], []), self.refresh(text, reports(("org.kerby:kerb-core:2.0.3", "java-core"))))
+
     def test_flags_moved_entries_with_libraries_another_entry_registers(self):
         text = licenses_yaml(
             entry("Family", "java-core", "1.0.0", ["org.f: a", "org.f: b"]),

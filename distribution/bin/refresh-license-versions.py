@@ -142,6 +142,9 @@ def refresh_versions(text, reported_modules):
                 problems.append("{} are in no report; update or remove them by hand".format(", ".join(unreported)))
             elif claimed:
                 problems.append("{} ship only at versions other entries register; remove them by hand".format(", ".join(claimed)))
+        elif current and unreported:
+            # Other libraries ship at the entry's version, so these left the release.
+            problems.append("{} are in no report; remove them by hand".format(", ".join(unreported)))
         if problems:
             flagged.append((entry.name, entry.module, "; ".join(problems)))
         elif moved_to:
