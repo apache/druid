@@ -35,6 +35,7 @@ import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import java.lang.reflect.Type;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
@@ -78,7 +79,7 @@ public class AsyncRequest
   /**
    * Completes the request as described by the given {@link AsyncResponse}, if it hasn't already been completed.
    */
-  private void complete(AsyncResponse response)
+  private void complete(AsyncResponse<?> response)
   {
     if (!completed.compareAndSet(false, true)) {
       log.warn("Request has already been completed");
@@ -99,7 +100,7 @@ public class AsyncRequest
           servletResponse.setContentType(contentType);
           final ObjectWriter writer = response.resultType == null
                                        ? objectMapper.writer()
-                                       : objectMapper.writerFor(response.resultType);
+                                       : objectMapper.writerFor(objectMapper.getTypeFactory().constructType(response.resultType));
           writer.writeValue(servletResponse.getOutputStream(), response.result);
         }
       }
@@ -111,22 +112,22 @@ public class AsyncRequest
   }
 
   /**
-   * Describes how an {@link AsyncRequest} should be completed: a status code, with either a result (serialized
-   * using the {@link AsyncRequest}'s {@link ObjectMapper}) or an error message (sent using
+   * Describes how an {@link AsyncRequest} should be completed: a status code, with either a result of type
+   * {@code T} (serialized using the {@link AsyncRequest}'s {@link ObjectMapper}) or an error message (sent using
    * {@link HttpServletResponse#sendError}).
    */
-  public static final class AsyncResponse
+  public static final class AsyncResponse<T>
   {
     private final int statusCode;
     private final boolean isError;
     @Nullable
-    private final Object result;
+    private final T result;
     @Nullable
-    private final JavaType resultType;
+    private final Type resultType;
     @Nullable
     private final String errorMessage;
 
-    private AsyncResponse(int statusCode, boolean isError, @Nullable Object result, @Nullable JavaType resultType, @Nullable String errorMessage)
+    private AsyncResponse(int statusCode, boolean isError, @Nullable T result, @Nullable Type resultType, @Nullable String errorMessage)
     {
       this.statusCode = statusCode;
       this.isError = isError;
@@ -138,43 +139,43 @@ public class AsyncRequest
     /**
      * Responds with the given status code and no body.
      */
-    public static AsyncResponse status(int statusCode)
+    public static AsyncResponse<Void> status(int statusCode)
     {
-      return new AsyncResponse(statusCode, false, null, null, null);
+      return new AsyncResponse<>(statusCode, false, null, null, null);
     }
 
     /**
      * Responds with the given status code, writing the given result, if non-null.
      */
-    public static AsyncResponse of(int statusCode, @Nullable Object result)
+    public static <T> AsyncResponse<T> of(int statusCode, @Nullable T result)
     {
-      return new AsyncResponse(statusCode, false, result, null, null);
+      return new AsyncResponse<>(statusCode, false, result, null, null);
     }
 
     /**
      * Responds with the given status code, writing the given result using the given {@link TypeReference} so
      * that generic type information erased at runtime is preserved.
      */
-    public static AsyncResponse of(int statusCode, @Nullable Object result, ObjectMapper objectMapper, TypeReference<?> resultType)
+    public static <T> AsyncResponse<T> of(int statusCode, @Nullable T result, TypeReference<T> resultType)
     {
-      return of(statusCode, result, objectMapper.getTypeFactory().constructType(resultType));
+      return new AsyncResponse<>(statusCode, false, result, resultType.getType(), null);
     }
 
     /**
      * Responds with the given status code, writing the given result using the given {@link JavaType} so that
      * generic type information erased at runtime is preserved.
      */
-    public static AsyncResponse of(int statusCode, @Nullable Object result, @Nullable JavaType resultType)
+    public static <T> AsyncResponse<T> of(int statusCode, @Nullable T result, @Nullable JavaType resultType)
     {
-      return new AsyncResponse(statusCode, false, result, resultType, null);
+      return new AsyncResponse<>(statusCode, false, result, resultType, null);
     }
 
     /**
      * Responds with the given error status code and message, using {@link HttpServletResponse#sendError}.
      */
-    public static AsyncResponse error(int statusCode, @Nullable String message)
+    public static AsyncResponse<Void> error(int statusCode, @Nullable String message)
     {
-      return new AsyncResponse(statusCode, true, null, null, message);
+      return new AsyncResponse<>(statusCode, true, null, null, message);
     }
   }
 
@@ -208,7 +209,7 @@ public class AsyncRequest
     /**
      * Starts async processing of the request and immediately completes it with the given response.
      */
-    public AsyncRequest completeNow(AsyncResponse response)
+    public AsyncRequest completeNow(AsyncResponse<?> response)
     {
       final AsyncRequest asyncRequest = new AsyncRequest(request, objectMapper, contentType);
       asyncRequest.complete(response);
@@ -229,8 +230,8 @@ public class AsyncRequest
     private final long timeoutMillis;
 
     private int onTimeoutStatusCode = HttpServletResponse.SC_NO_CONTENT;
-    private Function<T, AsyncResponse> onSuccess;
-    private Function<Throwable, AsyncResponse> onFailure;
+    private Function<T, AsyncResponse<?>> onSuccess;
+    private Function<Throwable, AsyncResponse<?>> onFailure;
 
     private FutureBuilder(
         HttpServletRequest request,
@@ -259,7 +260,7 @@ public class AsyncRequest
     /**
      * Function invoked with the result of the future on success, to determine how to respond. Required.
      */
-    public FutureBuilder<T> onSuccess(Function<T, AsyncResponse> onSuccess)
+    public FutureBuilder<T> onSuccess(Function<T, AsyncResponse<?>> onSuccess)
     {
       this.onSuccess = onSuccess;
       return this;
@@ -268,7 +269,7 @@ public class AsyncRequest
     /**
      * Function invoked with the failure cause of the future, to determine how to respond. Required.
      */
-    public FutureBuilder<T> onFailure(Function<Throwable, AsyncResponse> onFailure)
+    public FutureBuilder<T> onFailure(Function<Throwable, AsyncResponse<?>> onFailure)
     {
       this.onFailure = onFailure;
       return this;

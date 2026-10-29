@@ -127,7 +127,6 @@ public class TaskManagementResource
                     result -> AsyncResponse.of(
                         HttpServletResponse.SC_OK,
                         result,
-                        context.inputMapper,
                         WorkerHolder.WORKER_SYNC_RESP_TYPE_REF
                     )
                 )

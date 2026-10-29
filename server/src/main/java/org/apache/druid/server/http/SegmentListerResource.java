@@ -143,7 +143,6 @@ public class SegmentListerResource
                     result -> AsyncResponse.of(
                         HttpServletResponse.SC_OK,
                         result,
-                        context.inputMapper,
                         HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF
                     )
                 )
@@ -201,7 +200,6 @@ public class SegmentListerResource
                     result -> AsyncResponse.of(
                         HttpServletResponse.SC_OK,
                         result,
-                        context.inputMapper,
                         HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF
                     )
                 )

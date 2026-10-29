@@ -234,12 +234,7 @@ public class AsyncRequestTest
     AsyncRequest.create(request, JSON_MAPPER)
                 .waitOn(Futures.<ChangeRequestsSnapshot<DataSegmentChangeRequest>>immediateFuture(snapshot), 10L)
                 .onSuccess(
-                    result -> AsyncResponse.of(
-                        200,
-                        result,
-                        JSON_MAPPER,
-                        new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>() {}
-                    )
+                    result -> AsyncResponse.of(200, result, new TypeReference<>() {})
                 )
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                 .start();
