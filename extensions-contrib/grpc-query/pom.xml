@@ -47,7 +47,7 @@
 
   <properties>
     <!-- Shared by the grpc-bom import and the protoc-gen-grpc-java code generator, so they move together. -->
-    <grpc.version>1.84.2</grpc.version>
+    <grpc.version>1.85.0</grpc.version>
   </properties>
 
   <dependencyManagement>
