@@ -66,6 +66,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.server.http.AsyncRequest;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -85,9 +86,7 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -109,7 +108,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -523,7 +521,7 @@ public class OverlordResource
       @Context HttpServletRequest request
   )
   {
-    final AsyncRequest asyncRequest = new AsyncRequest(request);
+    final AsyncRequest asyncRequest = new AsyncRequest(request, jsonMapper);
     final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
     if (!taskActionClient.isPresent()) {
       // Encourage client to try again soon, when we'll likely have a redirect set up
@@ -532,15 +530,13 @@ public class OverlordResource
     }
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
-    asyncRequest.context.addListener(
-        ServletResourceUtils.createAsyncTimeoutListener(_ -> {
-          asyncRequest.complete(HttpResponseStatus.GATEWAY_TIMEOUT.code(), null);
-          future.cancel(true);
-        })
-    );
+    asyncRequest.addTimeoutListener(req -> {
+      req.complete(HttpResponseStatus.GATEWAY_TIMEOUT.code(), null);
+      future.cancel(true);
+    });
 
     // Use a default timeout of 15 minutes
-    asyncRequest.context.setTimeout(15 * 60_000);
+    asyncRequest.setTimeout(15 * 60_000);
 
     Futures.addCallback(
         future,
@@ -919,37 +915,5 @@ public class OverlordResource
             authorizerMapper
         )
     );
-  }
-
-  private class AsyncRequest
-  {
-    final AtomicBoolean completed = new AtomicBoolean(false);
-    final AsyncContext context;
-
-    AsyncRequest(HttpServletRequest request)
-    {
-      this.context = request.startAsync();
-    }
-
-    void complete(int statusCode, @Nullable Object result)
-    {
-      if (!completed.compareAndSet(false, true)) {
-        log.warn("Request has already been completed");
-        return;
-      }
-
-      try {
-        final HttpServletResponse response = (HttpServletResponse) context.getResponse();
-        response.setStatus(statusCode);
-        if (result != null) {
-          response.setContentType(MediaType.APPLICATION_JSON);
-          jsonMapper.writeValue(response.getOutputStream(), result);
-        }
-        context.complete();
-      }
-      catch (Exception e) {
-        log.noStackTrace().warn(e, "Request timed out or is closed already");
-      }
-    }
   }
 }
