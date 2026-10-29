@@ -45,6 +45,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -114,6 +115,25 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
     SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", capacity, null, null, null, null);
     // When
     assertEquals(capacity, schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity());
+  }
+
+  @Test
+  public void testClientNotCreatedOnConstruction()
+  {
+    // The truststore does not exist; creating the client would fail, so construction must not create it.
+    final Map<String, Object> config = ImmutableMap.of(
+        "schema.registry.ssl.truststore.location", "/nonexistent/truststore.jks",
+        "schema.registry.ssl.truststore.password", "x"
+    );
+    final var decoder = assertDoesNotThrow(() -> new SchemaRegistryBasedProtobufBytesDecoder(
+        null,
+        null,
+        Collections.singletonList("https://localhost"),
+        config,
+        null,
+        new DefaultObjectMapper()
+    ));
+    assertEquals(config, decoder.getConfig());
   }
 
   private ProtoTestEventWrapper.ProtoTestEvent getTestEvent()
