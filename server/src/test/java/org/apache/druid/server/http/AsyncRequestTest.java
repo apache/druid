@@ -146,6 +146,26 @@ public class AsyncRequestTest
   }
 
   @Test
+  public void test_waitOn_throwsException_whenTimeoutMillisIsZero()
+  {
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> AsyncRequest.create(request, JSON_MAPPER)
+                           .waitOn(Futures.immediateVoidFuture(), 0L)
+    );
+  }
+
+  @Test
+  public void test_waitOn_throwsException_whenTimeoutMillisIsNegative()
+  {
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> AsyncRequest.create(request, JSON_MAPPER)
+                           .waitOn(Futures.immediateVoidFuture(), -1L)
+    );
+  }
+
+  @Test
   public void test_start_throwsException_whenOnSuccessIsMissing()
   {
     Assertions.assertThrows(

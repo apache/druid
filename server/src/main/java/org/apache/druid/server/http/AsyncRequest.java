@@ -209,6 +209,7 @@ public class AsyncRequest
     @SuppressWarnings("unchecked")
     public <T> Builder waitOn(ListenableFuture<T> future, long timeoutMillis)
     {
+      Preconditions.checkArgument(timeoutMillis > 0, "timeoutMillis[%s] must be greater than zero", timeoutMillis);
       this.future = (ListenableFuture<Object>) future;
       this.timeoutMillis = timeoutMillis;
       return this;
