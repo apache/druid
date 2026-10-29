@@ -303,13 +303,25 @@ libraries:
   - software.amazon.awssdk: aws-cbor-protocol
   - software.amazon.awssdk: aws-json-protocol
   - software.amazon.awssdk: third-party-jackson-dataformat-cbor
-  - software.amazon.eventstream: eventstream
 notice: |
   AWS SDK for Java 2.0
   Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
   This product includes software developed by
   Amazon Technologies, Inc (http://www.amazon.com/).
+
+---
+
+name: Amazon Event Stream
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.1
+libraries:
+  - software.amazon.eventstream: eventstream
+notice: |
+  AWS SDK for Java 2.0
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 ---
 
@@ -1203,7 +1215,7 @@ name: org.apache.commons commons-collections4
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 4.4
+version: 4.6.0
 libraries:
   - org.apache.commons: commons-collections4
 
@@ -1269,11 +1281,11 @@ libraries:
 
 ---
 
-name: io.swagger swagger-annotations
+name: Gson
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.8.6
+version: 2.14.0
 libraries:
   - com.google.code.gson: gson
 
@@ -1509,7 +1521,6 @@ libraries:
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
   - io.netty: netty-codec-http2
-  - io.netty: netty-codec-classes-quic
   - io.netty: netty-resolver-dns-classes-macos
   - io.netty: netty-transport-classes-kqueue
   - io.netty: netty-resolver-dns-native-macos
@@ -2835,7 +2846,7 @@ libraries:
 ---
 
 name: Kafka clients
-version: 6.2.12-ccs
+version: 8.3.2-ccs
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2955,16 +2966,6 @@ module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 libraries:
   - software.amazon.kinesis: amazon-kinesis-client
-
----
-
-name: Kafka Client
-version: 5.5.1-ccs
-license_category: binary
-module: extensions/druid-avro-extensions
-license_name: Apache License version 2.0
-libraries:
-  - org.apache.kafka: kafka-clients
 
 ---
 
@@ -3128,52 +3129,13 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.11.5
+version: 1.12.2
 libraries:
   - org.apache.avro: avro
-  - org.apache.avro: avro-mapred
-  - org.apache.avro: avro-ipc
-  - org.apache.avro: avro-ipc-jetty
 notices:
   - avro: |
       Apache Avro
       Copyright 2010-2019 The Apache Software Foundation
-  - avro-ipc: |
-      Apache Avro IPC
-      Copyright 2010-2019 The Apache Software Foundation
-  - avro-ipc-jetty: |
-      Apache Avro IPC Jetty
-      Copyright 2009-2019 The Apache Software Foundation
-  - avro-mapred: |
-      Apache Avro
-      Copyright 2010-2019 The Apache Software Foundation
-
-      Based upon the representations of upstream licensors, it is understood that
-      portions of the mapreduce API included in the Java implementation are licensed
-      from various contributors under one or more contributor license agreements to
-      Odiago, Inc. and were then contributed by Odiago to Apache Avro, which has now
-      made them available under the Apache 2.0 license. The original file header text
-      is:
-
-      | Licensed to Odiago, Inc. under one or more contributor license
-      | agreements.  See the NOTICE file distributed with this work for
-      | additional information regarding copyright ownership.  Odiago, Inc.
-      | licenses this file to you under the Apache License, Version 2.0
-      | (the "License"); you may not use this file except in compliance
-      | with the License.  You may obtain a copy of the License at
-      |
-      |     http://www.apache.org/licenses/LICENSE-2.0
-      |
-      | Unless required by applicable law or agreed to in writing, software
-      | distributed under the License is distributed on an "AS IS" BASIS,
-      | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-      | implied.  See the License for the specific language governing
-      | permissions and limitations under the License.
-
-      The Odiago NOTICE at the time of the contribution:
-
-      | This product includes software developed by Odiago, Inc.
-      | (http://www.wibidata.com).
 
 ---
 
@@ -3221,7 +3183,7 @@ name: Gson
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 2.3.1
+version: 2.14.0
 libraries:
   - com.google.code.gson: gson
 
@@ -3286,7 +3248,7 @@ name: Hadoop Client API
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Apache License version 2.0
-version: 3.3.6
+version: 3.5.0
 libraries:
   - org.apache.hadoop: hadoop-client-api
 
@@ -3606,7 +3568,7 @@ name: Gson
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.8.9
+version: 2.14.0
 libraries:
   - com.google.code.gson: gson
 
@@ -3720,7 +3682,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.36.0
+version: 4.36.2
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3

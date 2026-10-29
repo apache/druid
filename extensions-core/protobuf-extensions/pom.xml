@@ -38,13 +38,6 @@
     <okio.version>3.18.2</okio.version>
   </properties>
 
-  <repositories>
-    <repository>
-      <id>confluent</id>
-      <url>https://packages.confluent.io/maven/</url>
-    </repository>
-  </repositories>
-
   <dependencyManagement>
     <dependencies>
       <!-- This is an indirect dependency of kafka-protobuf-provider
