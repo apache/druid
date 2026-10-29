@@ -105,17 +105,6 @@ public class AsyncRequestTest
   }
 
   @Test
-  public void test_completeNow_throwsException_whenFutureIsAlsoSpecified()
-  {
-    Assertions.assertThrows(
-        IllegalArgumentException.class,
-        () -> AsyncRequest.create(request, JSON_MAPPER)
-                           .waitOn(Futures.immediateVoidFuture(), 10L)
-                           .completeNow(AsyncResponse.status(200))
-    );
-  }
-
-  @Test
   public void test_start_invokesOnSuccess_whenFutureSucceeds()
   {
     AsyncRequest.create(request, JSON_MAPPER)
@@ -244,12 +233,14 @@ public class AsyncRequestTest
 
     AsyncRequest.create(request, JSON_MAPPER)
                 .waitOn(Futures.<ChangeRequestsSnapshot<DataSegmentChangeRequest>>immediateFuture(snapshot), 10L)
-                .onSuccess((ChangeRequestsSnapshot<DataSegmentChangeRequest> result) -> AsyncResponse.of(
-                    200,
-                    result,
-                    JSON_MAPPER,
-                    new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>() {}
-                ))
+                .onSuccess(
+                    result -> AsyncResponse.of(
+                        200,
+                        result,
+                        JSON_MAPPER,
+                        new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>() {}
+                    )
+                )
                 .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
                 .start();
 

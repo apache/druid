@@ -179,20 +179,14 @@ public class AsyncRequest
   }
 
   /**
-   * Builds and starts an {@link AsyncRequest}, fluently specifying how it should respond on success, failure
-   * and timeout of an optional {@link ListenableFuture} to {@link #waitOn}.
+   * Starting point for building an {@link AsyncRequest}. Either {@link #completeNow} it immediately, or
+   * {@link #waitOn} a {@link ListenableFuture} to obtain a {@link FutureBuilder} for responding to its outcome.
    */
   public static final class Builder
   {
     private final HttpServletRequest request;
     private final ObjectMapper objectMapper;
     private final String contentType;
-
-    private ListenableFuture<?> future;
-    private long timeoutMillis = -1;
-    private int onTimeoutStatusCode = HttpServletResponse.SC_NO_CONTENT;
-    private Function<Object, AsyncResponse> onSuccess;
-    private Function<Throwable, AsyncResponse> onFailure;
 
     private Builder(HttpServletRequest request, ObjectMapper objectMapper, String contentType)
     {
@@ -202,41 +196,79 @@ public class AsyncRequest
     }
 
     /**
-     * The future to wait on, cancelling it and completing the request with {@link #onTimeout}'s status code if
-     * it does not finish within the given timeout, in milliseconds. If given, {@link #onSuccess} and
-     * {@link #onFailure} must also be specified.
+     * The future to wait on, cancelling it and completing the request with the status code given to
+     * {@link FutureBuilder#onTimeout} if it does not finish within the given timeout, in milliseconds.
      */
-    @SuppressWarnings("unchecked")
-    public <T> Builder waitOn(ListenableFuture<T> future, long timeoutMillis)
+    public <T> FutureBuilder<T> waitOn(ListenableFuture<T> future, long timeoutMillis)
     {
       Preconditions.checkArgument(timeoutMillis > 0, "timeoutMillis[%s] must be greater than zero", timeoutMillis);
-      this.future = (ListenableFuture<Object>) future;
-      this.timeoutMillis = timeoutMillis;
-      return this;
+      return new FutureBuilder<>(request, objectMapper, contentType, future, timeoutMillis);
     }
 
     /**
-     * Status code to respond with, with no body, if {@link #future} times out before completing.
+     * Starts async processing of the request and immediately completes it with the given response.
      */
-    public Builder onTimeout(int statusCode)
+    public AsyncRequest completeNow(AsyncResponse response)
+    {
+      final AsyncRequest asyncRequest = new AsyncRequest(request, objectMapper, contentType);
+      asyncRequest.complete(response);
+      return asyncRequest;
+    }
+  }
+
+  /**
+   * Builds and starts an {@link AsyncRequest} that responds based on the outcome of a {@link ListenableFuture}
+   * of type {@code T}, obtained from {@link Builder#waitOn}.
+   */
+  public static final class FutureBuilder<T>
+  {
+    private final HttpServletRequest request;
+    private final ObjectMapper objectMapper;
+    private final String contentType;
+    private final ListenableFuture<T> future;
+    private final long timeoutMillis;
+
+    private int onTimeoutStatusCode = HttpServletResponse.SC_NO_CONTENT;
+    private Function<T, AsyncResponse> onSuccess;
+    private Function<Throwable, AsyncResponse> onFailure;
+
+    private FutureBuilder(
+        HttpServletRequest request,
+        ObjectMapper objectMapper,
+        String contentType,
+        ListenableFuture<T> future,
+        long timeoutMillis
+    )
+    {
+      this.request = request;
+      this.objectMapper = objectMapper;
+      this.contentType = contentType;
+      this.future = future;
+      this.timeoutMillis = timeoutMillis;
+    }
+
+    /**
+     * Status code to respond with, with no body, if the future times out before completing.
+     */
+    public FutureBuilder<T> onTimeout(int statusCode)
     {
       this.onTimeoutStatusCode = statusCode;
       return this;
     }
 
     /**
-     * Function invoked with the result of {@link #future} on success, to determine how to respond.
+     * Function invoked with the result of the future on success, to determine how to respond. Required.
      */
-    public <T> Builder onSuccess(Function<T, AsyncResponse> onSuccess)
+    public FutureBuilder<T> onSuccess(Function<T, AsyncResponse> onSuccess)
     {
-      this.onSuccess = (Function<Object, AsyncResponse>) onSuccess;
+      this.onSuccess = onSuccess;
       return this;
     }
 
     /**
-     * Function invoked with the failure cause of {@link #future}, to determine how to respond.
+     * Function invoked with the failure cause of the future, to determine how to respond. Required.
      */
-    public Builder onFailure(Function<Throwable, AsyncResponse> onFailure)
+    public FutureBuilder<T> onFailure(Function<Throwable, AsyncResponse> onFailure)
     {
       this.onFailure = onFailure;
       return this;
@@ -244,58 +276,42 @@ public class AsyncRequest
 
     /**
      * Starts async processing of the request using {@link HttpServletRequest#startAsync()}, wiring up the
-     * configured future, timeout and success/failure handling, if any.
+     * configured future, timeout and success/failure handling.
      */
     public AsyncRequest start()
     {
+      Preconditions.checkArgument(onSuccess != null, "onSuccess must be specified");
+      Preconditions.checkArgument(onFailure != null, "onFailure must be specified");
+
       final AsyncRequest asyncRequest = new AsyncRequest(request, objectMapper, contentType);
 
-      if (future != null) {
-        Preconditions.checkArgument(onSuccess != null, "onSuccess must be specified when a future is given");
-        Preconditions.checkArgument(onFailure != null, "onFailure must be specified when a future is given");
+      asyncRequest.context.setTimeout(timeoutMillis);
+      asyncRequest.context.addListener(
+          ServletResourceUtils.createAsyncTimeoutListener(event -> {
+            asyncRequest.complete(AsyncResponse.status(onTimeoutStatusCode));
+            future.cancel(true);
+          })
+      );
 
-        if (timeoutMillis >= 0) {
-          asyncRequest.context.setTimeout(timeoutMillis);
-          asyncRequest.context.addListener(
-              ServletResourceUtils.createAsyncTimeoutListener(event -> {
-                asyncRequest.complete(AsyncResponse.status(onTimeoutStatusCode));
-                future.cancel(true);
-              })
-          );
-        }
-
-        Futures.addCallback(
-            future,
-            new FutureCallback<Object>()
+      Futures.addCallback(
+          future,
+          new FutureCallback<T>()
+          {
+            @Override
+            public void onSuccess(T result)
             {
-              @Override
-              public void onSuccess(Object result)
-              {
-                asyncRequest.complete(onSuccess.apply(result));
-              }
+              asyncRequest.complete(onSuccess.apply(result));
+            }
 
-              @Override
-              public void onFailure(Throwable t)
-              {
-                asyncRequest.complete(onFailure.apply(t));
-              }
-            },
-            MoreExecutors.directExecutor()
-        );
-      }
+            @Override
+            public void onFailure(Throwable t)
+            {
+              asyncRequest.complete(onFailure.apply(t));
+            }
+          },
+          MoreExecutors.directExecutor()
+      );
 
-      return asyncRequest;
-    }
-
-    /**
-     * Starts async processing of the request and immediately completes it with the given response, without
-     * waiting on a future. Mutually exclusive with {@link #future}.
-     */
-    public AsyncRequest completeNow(AsyncResponse response)
-    {
-      Preconditions.checkArgument(future == null, "completeNow() cannot be used together with future()");
-      final AsyncRequest asyncRequest = new AsyncRequest(request, objectMapper, contentType);
-      asyncRequest.complete(response);
       return asyncRequest;
     }
   }

@@ -531,12 +531,14 @@ public class OverlordResource
                 // Use a default timeout of 15 minutes
                 .waitOn(future, 15 * 60_000)
                 .onTimeout(HttpResponseStatus.GATEWAY_TIMEOUT.code())
-                .onSuccess(result -> {
-                  // Use null-safe map since some task actions may return null result
-                  final Map<String, Object> payload = new HashMap<>();
-                  payload.put("result", result);
-                  return AsyncResponse.of(Status.OK.getStatusCode(), payload);
-                })
+                .onSuccess(
+                    result -> {
+                      // Use null-safe map since some task actions may return null result
+                      final Map<String, Object> payload = new HashMap<>();
+                      payload.put("result", result);
+                      return AsyncResponse.of(Status.OK.getStatusCode(), payload);
+                    }
+                )
                 .onFailure(t -> {
                   log.warn(t, "Failed to perform task action");
                   if (t instanceof DruidException druidException) {

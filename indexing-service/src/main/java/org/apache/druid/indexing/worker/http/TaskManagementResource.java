@@ -123,12 +123,14 @@ public class TaskManagementResource
     AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
                 .waitOn(future, timeout)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
-                .onSuccess((ChangeRequestsSnapshot result) -> AsyncResponse.of(
-                    HttpServletResponse.SC_OK,
-                    result,
-                    context.inputMapper,
-                    WorkerHolder.WORKER_SYNC_RESP_TYPE_REF
-                ))
+                .onSuccess(
+                    result -> AsyncResponse.of(
+                        HttpServletResponse.SC_OK,
+                        result,
+                        context.inputMapper,
+                        WorkerHolder.WORKER_SYNC_RESP_TYPE_REF
+                    )
+                )
                 .onFailure(th -> th instanceof IllegalArgumentException
                                   ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
                                   : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))

@@ -139,12 +139,14 @@ public class SegmentListerResource
     AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
                 .waitOn(future, timeout)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
-                .onSuccess((ChangeRequestsSnapshot<DataSegmentChangeRequest> result) -> AsyncResponse.of(
-                    HttpServletResponse.SC_OK,
-                    result,
-                    context.inputMapper,
-                    HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF
-                ))
+                .onSuccess(
+                    result -> AsyncResponse.of(
+                        HttpServletResponse.SC_OK,
+                        result,
+                        context.inputMapper,
+                        HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF
+                    )
+                )
                 .onFailure(th -> th instanceof IllegalArgumentException
                                   ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
                                   : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))
@@ -195,12 +197,14 @@ public class SegmentListerResource
     AsyncRequest.create(req, context.inputMapper, req.getHeader("Accept"))
                 .waitOn(future, timeout)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
-                .onSuccess((List<DataSegmentChangeResponse> result) -> AsyncResponse.of(
-                    HttpServletResponse.SC_OK,
-                    result,
-                    context.inputMapper,
-                    HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF
-                ))
+                .onSuccess(
+                    result -> AsyncResponse.of(
+                        HttpServletResponse.SC_OK,
+                        result,
+                        context.inputMapper,
+                        HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF
+                    )
+                )
                 .onFailure(th -> th instanceof IllegalArgumentException
                                   ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
                                   : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))

@@ -109,10 +109,12 @@ public class MessageRelayResource<MessageType>
     AsyncRequest.create(req, smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
                 .waitOn(batchFuture, GET_MESSAGES_TIMEOUT)
                 .onTimeout(HttpServletResponse.SC_NO_CONTENT)
-                .onSuccess((MessageBatch<MessageType> result) -> {
-                  log.debug("Sending message batch: %s", result);
-                  return AsyncResponse.of(HttpServletResponse.SC_OK, result, batchType);
-                })
+                .onSuccess(
+                    result -> {
+                      log.debug("Sending message batch: %s", result);
+                      return AsyncResponse.of(HttpServletResponse.SC_OK, result, batchType);
+                    }
+                )
                 .onFailure(e -> {
                   log.noStackTrace().warn(e, "Request failed from[%s] to[%s]", remoteAddr, requestURI);
                   return AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null);
