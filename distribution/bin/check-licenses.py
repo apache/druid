@@ -216,7 +216,7 @@ class DependencyReportParser(HTMLParser):
             raise Exception("Unknown attr_index [{}]".format(self.attr_index))
 
     def set_license(self, data):
-        # Licenses are separated by ", ", which arrives as its own text between linked license names.
+        # Skip separator text between license names, in case a report puts ", " between the links.
         if data.strip(", ") == "":
             return
         self.license_names.append(data)
