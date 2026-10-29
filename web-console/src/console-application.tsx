@@ -105,7 +105,7 @@ export class ConsoleApplication extends React.PureComponent<
 > {
   private readonly capabilitiesQueryManager: QueryManager<
     null,
-    [Capabilities, AvailableFunctions | undefined, QueryContextParameterMetadata[] | undefined]
+    [Capabilities, AvailableFunctions | undefined]
   >;
 
   static shownServiceNotification() {
@@ -146,13 +146,14 @@ export class ConsoleApplication extends React.PureComponent<
 
         if (!capabilities) {
           ConsoleApplication.shownServiceNotification();
-          return [Capabilities.FULL, undefined, undefined];
+          return [Capabilities.FULL, undefined];
         }
 
+        // Only needed for SET completions, so the console does not wait for them
+        void this.loadQueryContextParameters(capabilities);
         return Promise.all([
           Capabilities.detectCapacity(capabilities),
           Capabilities.detectAvailableSqlFunctions(capabilities),
-          Capabilities.detectQueryContextParameters(capabilities),
         ]);
       },
       onStateChange: ({ data, loading, error }) => {
@@ -161,15 +162,18 @@ export class ConsoleApplication extends React.PureComponent<
         }
         const capabilities = data?.[0] || Capabilities.FULL;
         const availableSqlFunctions = data?.[1];
-        const queryContextParameters = data?.[2];
         this.setState({
           capabilities,
           availableSqlFunctions,
-          queryContextParameters,
           capabilitiesLoading: loading,
         });
       },
     });
+  }
+
+  private async loadQueryContextParameters(capabilities: Capabilities): Promise<void> {
+    const queryContextParameters = await Capabilities.detectQueryContextParameters(capabilities);
+    this.setState({ queryContextParameters });
   }
 
   componentDidMount(): void {

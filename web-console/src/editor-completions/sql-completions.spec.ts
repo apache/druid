@@ -269,28 +269,16 @@ describe('sql-completions', () => {
         },
       ];
 
-      // Only the context parameters, no keywords, tables or columns
-      expect(completionsAt('SET |', { queryContextParameters, columnMetadata })).toEqual([
-        {
-          label: 'sqlTimeZone',
-          boost: 50,
-          detail: 'context',
-          doc: {
-            name: 'sqlTimeZone',
-            descriptionMarkdown:
-              'Type: `String`\n\nDefault: UTC\n\nTime zone for a connection. See [time zones](https://druid.apache.org/docs/latest/querying/sql#time-zones).',
-          },
-        },
-        {
-          label: 'useCache',
-          boost: 40,
-          detail: 'context',
-          doc: {
-            name: 'useCache',
-            descriptionMarkdown:
-              'Type: `Boolean`\n\nDefault: `false` (Broker dynamic config; built-in: `true`)\n\nWhether to use the cache.\nApplies to native queries.\n\n*Deprecated*: Use `useResultLevelCache` instead.',
-          },
-        },
+      // Only the context parameters, no keywords, tables or columns. Their docs are tested with getQueryContextCompletions.
+      expect(
+        completionsAt('SET |', { queryContextParameters, columnMetadata }).map(c => [
+          c.label,
+          c.boost,
+          c.detail,
+        ]),
+      ).toEqual([
+        ['sqlTimeZone', 50, 'context'],
+        ['useCache', 40, 'context'],
       ]);
     });
 

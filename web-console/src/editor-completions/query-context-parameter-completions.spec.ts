@@ -19,7 +19,6 @@
 import type { QueryContextParameterMetadata } from '../druid-models';
 
 import {
-  defaultValueProperty,
   getQueryContextCompletions,
   queryContextDescriptionToDocMarkdown,
   resolveDocsLink,
@@ -27,194 +26,105 @@ import {
 
 describe('query-context-parameter-completions', () => {
   describe('getQueryContextCompletions', () => {
-    it('builds the completions of a list of parameters once', () => {
-      const queryContextParameters: QueryContextParameterMetadata[] = [
+    const parameter: QueryContextParameterMetadata = {
+      name: 'p',
+      type: 'Long',
+      description: 'D.',
+      default_value: null,
+      default_description: null,
+      effective_value: null,
+      effective_source: null,
+      deprecation: null,
+      query_languages: ['JSON', 'SQL'],
+    };
+    const property = '${druid.x}';
+
+    // Only the combinations that sys.query_context_parameters returns
+    it.each<[string, Partial<QueryContextParameterMetadata>, string]>([
+      [
+        'built-in',
+        { default_value: '1', effective_value: '1', effective_source: 'BUILT_IN' },
+        'Default: `1`',
+      ],
+      [
+        'built-in without CONFIG read access',
+        { default_value: '1', effective_source: 'UNAUTHORIZED' },
+        'Default: `1` (built-in; the Broker may override it)',
+      ],
+      [
+        'default query context',
+        { default_value: '1', effective_value: '2', effective_source: 'DEFAULT_CONTEXT_PROPERTY' },
+        'Default: `2` (default query context; built-in: `1`)',
+      ],
+      [
+        'Broker dynamic config',
+        { default_value: '1', effective_value: '2', effective_source: 'BROKER_DYNAMIC_CONFIG' },
+        'Default: `2` (Broker dynamic config; built-in: `1`)',
+      ],
+      [
+        'runtime property',
+        { default_value: property, effective_value: '5', effective_source: 'RUNTIME_PROPERTY' },
+        'Default: `5` (runtime property `druid.x`)',
+      ],
+      [
+        'runtime property overridden by the default query context',
         {
-          name: 'useCache',
-          type: 'Boolean',
-          description: 'Whether to use the cache.',
-          default_value: 'true',
-          default_description: null,
-          effective_value: null,
-          effective_source: null,
-          deprecation: null,
-          query_languages: ['JSON', 'SQL'],
+          default_value: property,
+          effective_value: '6',
+          effective_source: 'DEFAULT_CONTEXT_PROPERTY',
         },
-      ];
-
-      const completions = getQueryContextCompletions(false, queryContextParameters);
-      expect(getQueryContextCompletions(false, queryContextParameters)).toBe(completions);
-      // A reloaded list gets its own completions
-      expect(getQueryContextCompletions(false, [...queryContextParameters])).not.toBe(completions);
-    });
-
-    it('notes that the Broker may override the built-in default without CONFIG read access', () => {
-      const queryContextParameters: QueryContextParameterMetadata[] = [
-        {
-          name: 'useCache',
-          type: 'Boolean',
-          description: 'Whether to use the cache.',
-          default_value: 'true',
-          default_description: null,
-          effective_value: null,
-          effective_source: 'UNAUTHORIZED',
-          deprecation: null,
-          query_languages: ['JSON', 'SQL'],
-        },
-      ];
-
-      expect(getQueryContextCompletions(false, queryContextParameters)[0].doc).toEqual({
-        name: 'useCache',
-        descriptionMarkdown:
-          'Type: `Boolean`\n\nDefault: `true` (built-in; the Broker may override it)\n\nWhether to use the cache.',
+        'Default: `6` (default query context; runtime property `druid.x`)',
+      ],
+      [
+        'runtime property that is not set',
+        { default_value: property },
+        'Default: value of runtime property `druid.x`',
+      ],
+      [
+        'runtime property without CONFIG read access',
+        { default_value: property, effective_source: 'UNAUTHORIZED' },
+        'Default: value of runtime property `druid.x` (the Broker may override it)',
+      ],
+      ['described', { default_description: 'auto' }, 'Default: auto'],
+      [
+        'described without CONFIG read access',
+        { default_description: 'auto', effective_source: 'UNAUTHORIZED' },
+        'Default: auto (the Broker may override it)',
+      ],
+    ])('shows a default that is %s', (_, overrides, expected) => {
+      expect(getQueryContextCompletions(false, [{ ...parameter, ...overrides }])[0].doc).toEqual({
+        name: 'p',
+        descriptionMarkdown: `Type: \`Long\`\n\n${expected}\n\nD.`,
       });
     });
 
-    it('notes a default query context override and adds no note to a built-in default', () => {
-      const parameter: QueryContextParameterMetadata = {
-        name: 'useCache',
-        type: 'Boolean',
-        description: 'Whether to use the cache.',
-        default_value: 'true',
-        default_description: null,
-        effective_value: 'false',
-        effective_source: 'DEFAULT_CONTEXT_PROPERTY',
-        deprecation: null,
-        query_languages: ['JSON', 'SQL'],
-      };
-
-      expect(getQueryContextCompletions(false, [parameter])[0].doc).toEqual({
-        name: 'useCache',
-        descriptionMarkdown:
-          'Type: `Boolean`\n\nDefault: `false` (default query context; built-in: `true`)\n\nWhether to use the cache.',
-      });
-      expect(
-        getQueryContextCompletions(false, [
-          { ...parameter, effective_value: 'true', effective_source: 'BUILT_IN' },
-        ])[0].doc,
-      ).toEqual({
-        name: 'useCache',
-        descriptionMarkdown: 'Type: `Boolean`\n\nDefault: `true`\n\nWhether to use the cache.',
-      });
-    });
-
-    it('notes that the Broker may override a described default without CONFIG read access', () => {
-      const parameter: QueryContextParameterMetadata = {
-        name: 'sqlQueryId',
-        type: 'String',
-        description: 'SQL query ID.',
-        default_value: null,
-        default_description: 'auto-generated',
-        effective_value: null,
-        effective_source: 'UNAUTHORIZED',
-        deprecation: null,
-        query_languages: ['JSON', 'SQL'],
-      };
-
-      expect(getQueryContextCompletions(false, [parameter])[0].doc).toEqual({
-        name: 'sqlQueryId',
-        descriptionMarkdown:
-          'Type: `String`\n\nDefault: auto-generated (the Broker may override it)\n\nSQL query ID.',
-      });
-      expect(
-        getQueryContextCompletions(false, [{ ...parameter, effective_source: null }])[0].doc,
-      ).toEqual({
-        name: 'sqlQueryId',
-        descriptionMarkdown: 'Type: `String`\n\nDefault: auto-generated\n\nSQL query ID.',
-      });
-    });
-
-    it('describes a default that is the value of a runtime property', () => {
-      const parameter: QueryContextParameterMetadata = {
-        name: 'timeout',
-        type: 'Long',
-        description: 'Query timeout in milliseconds.',
-        default_value: '${druid.server.http.defaultQueryTimeout}',
-        default_description: null,
-        effective_value: '60000',
-        effective_source: 'RUNTIME_PROPERTY',
-        deprecation: null,
-        query_languages: ['JSON', 'SQL'],
-      };
-      const doc = (overrides: Partial<QueryContextParameterMetadata>) =>
-        getQueryContextCompletions(false, [{ ...parameter, ...overrides }])[0].doc;
-
-      expect(doc({})).toEqual({
-        name: 'timeout',
-        descriptionMarkdown:
-          'Type: `Long`\n\nDefault: `60000` (runtime property `druid.server.http.defaultQueryTimeout`)\n\nQuery timeout in milliseconds.',
-      });
-      expect(
-        doc({ effective_value: '30000', effective_source: 'DEFAULT_CONTEXT_PROPERTY' }),
-      ).toEqual({
-        name: 'timeout',
-        descriptionMarkdown:
-          'Type: `Long`\n\nDefault: `30000` (default query context; runtime property `druid.server.http.defaultQueryTimeout`)\n\nQuery timeout in milliseconds.',
-      });
-      expect(doc({ effective_value: null, effective_source: 'UNAUTHORIZED' })).toEqual({
-        name: 'timeout',
-        descriptionMarkdown:
-          'Type: `Long`\n\nDefault: value of runtime property `druid.server.http.defaultQueryTimeout` (the Broker may override it)\n\nQuery timeout in milliseconds.',
-      });
-      expect(doc({ effective_value: null, effective_source: null })).toEqual({
-        name: 'timeout',
-        descriptionMarkdown:
-          'Type: `Long`\n\nDefault: value of runtime property `druid.server.http.defaultQueryTimeout`\n\nQuery timeout in milliseconds.',
-      });
+    it('sorts a deprecated parameter after the others and notes the deprecation', () => {
+      const [completion] = getQueryContextCompletions(false, [
+        { ...parameter, deprecation: 'Use `q` instead.' },
+      ]);
+      expect(completion.boost).toEqual(40);
+      expect(completion.doc?.descriptionMarkdown).toEqual(
+        'Type: `Long`\n\nD.\n\n*Deprecated*: Use `q` instead.',
+      );
     });
 
     it('does not suggest parameters that SQL can not provide', () => {
-      const parameter: QueryContextParameterMetadata = {
-        name: 'useCache',
-        type: 'Boolean',
-        description: 'Whether to use the cache.',
-        default_value: 'true',
-        default_description: null,
-        effective_value: null,
-        effective_source: null,
-        deprecation: null,
-        query_languages: ['JSON', 'SQL'],
-      };
-
       expect(
         getQueryContextCompletions(false, [
-          parameter,
+          { ...parameter, name: 'useCache' },
           { ...parameter, name: 'bySegment', query_languages: ['JSON'] },
         ]).map(c => c.label),
       ).toEqual(['useCache']);
     });
 
     it('quotes a parameter name that needs it unless a quote is being typed', () => {
-      const queryContextParameters: QueryContextParameterMetadata[] = [
-        {
-          name: 'my-key',
-          type: 'String',
-          description: 'A key that is not a plain identifier.',
-          default_value: null,
-          default_description: null,
-          effective_value: null,
-          effective_source: null,
-          deprecation: null,
-          query_languages: ['JSON', 'SQL'],
-        },
-      ];
-
+      const queryContextParameters = [{ ...parameter, name: 'my-key' }];
       expect(getQueryContextCompletions(false, queryContextParameters).map(c => c.label)).toEqual([
         '"my-key"',
       ]);
       expect(getQueryContextCompletions(true, queryContextParameters).map(c => c.label)).toEqual([
         'my-key',
       ]);
-    });
-  });
-
-  describe('defaultValueProperty', () => {
-    it('reads the runtime property of a default_value', () => {
-      expect(defaultValueProperty('${druid.query.scan.maxRowsQueuedForOrdering}')).toEqual(
-        'druid.query.scan.maxRowsQueuedForOrdering',
-      );
-      expect(defaultValueProperty('true')).toBeUndefined();
-      expect(defaultValueProperty(null)).toBeUndefined();
     });
   });
 
@@ -276,6 +186,12 @@ describe('query-context-parameter-completions', () => {
 
     it('drops tags that removing another tag leaves behind', () => {
       expect(queryContextDescriptionToDocMarkdown('a <<b>i>tag</i> b')).toEqual('a tag b');
+    });
+
+    it('decodes hex entities and leaves entities that are not code points as they are', () => {
+      expect(queryContextDescriptionToDocMarkdown('a &#x7C; b &#99999999; c &#0;')).toEqual(
+        'a | b &#99999999; c &#0;',
+      );
     });
 
     it('decodes entities once', () => {

@@ -22,9 +22,9 @@ import { indentNodeProp, LanguageSupport, LRLanguage } from '@codemirror/languag
 import { keymap } from '@codemirror/view';
 import { styleTags, tags } from '@lezer/highlight';
 
-import { makeCompletionSource, tokenBefore } from '../components/code-editor/completion-source';
+import { makeCompletionSource } from '../components/code-editor/completion-source';
 import type { SqlCompletionOptions } from '../editor-completions/sql-completions';
-import { getSqlCompletions } from '../editor-completions/sql-completions';
+import { getSqlCompletions, wordEndingBefore } from '../editor-completions/sql-completions';
 import type { AvailableFunctions } from '../helpers';
 
 import { parser } from './dsql.parser';
@@ -93,9 +93,7 @@ export function getDsqlLanguage(availableSqlFunctions?: AvailableFunctions): LRL
 function isAfterSetKeyword({ state, pos }: CompletionContext): boolean {
   let setEnd = pos;
   while (setEnd > 0 && /\s/.test(state.sliceDoc(setEnd - 1, setEnd))) setEnd--;
-  if (setEnd === pos) return false;
-  const { name, from, to } = tokenBefore(state, setEnd);
-  return name === 'Keyword' && to === setEnd && state.sliceDoc(from, to).toUpperCase() === 'SET';
+  return setEnd < pos && wordEndingBefore(state, setEnd) === 'SET';
 }
 
 export type DsqlOptions = SqlCompletionOptions;

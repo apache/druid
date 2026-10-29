@@ -45,14 +45,14 @@ export function getQueryContextCompletions(
     completions = buildParameterCompletions(queryContextParameters);
     PARAMETER_COMPLETIONS.set(queryContextParameters, completions);
   }
-  return quote ? completions.quoted : completions.unquoted;
+  return quote ? completions.afterQuote : completions.bare;
 }
 
 interface ParameterCompletions {
   /** For typing after a double quote: the names as they are */
-  quoted: EditorCompletion[];
-  /** Otherwise: the names quoted where needed */
-  unquoted: EditorCompletion[];
+  afterQuote: EditorCompletion[];
+  /** Otherwise: the names, quoted where needed */
+  bare: EditorCompletion[];
 }
 
 /**
@@ -68,7 +68,7 @@ function buildParameterCompletions(
   queryContextParameters: readonly QueryContextParameterMetadata[],
 ): ParameterCompletions {
   // Parameters that SQL can't provide, such as bySegment, which SQL queries ignore, are not suggested after SET
-  const quoted = queryContextParameters
+  const afterQuote = queryContextParameters
     .filter(parameter => !parameter.query_languages || parameter.query_languages.includes('SQL'))
     .map(parameter => ({
       label: parameter.name,
@@ -81,8 +81,8 @@ function buildParameterCompletions(
       },
     }));
   return {
-    quoted,
-    unquoted: quoted.map(completion => ({
+    afterQuote,
+    bare: afterQuote.map(completion => ({
       ...completion,
       label: contextKeyLabel(completion.label),
     })),
@@ -99,16 +99,21 @@ const HTML_ENTITIES: Record<string, string> = {
 };
 
 function decodeHtmlEntities(text: string): string {
-  return text.replace(/&(#\d+|[a-z]+);/gi, (entity, code: string) => {
-    if (code.startsWith('#')) return String.fromCodePoint(Number(code.slice(1)));
+  return text.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (entity, code: string) => {
+    if (code.startsWith('#')) {
+      const codePoint = /^#x/i.test(code) ? parseInt(code.slice(2), 16) : Number(code.slice(1));
+      // An entity that is not a valid code point is left as it is
+      return codePoint > 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity;
+    }
     return HTML_ENTITIES[code.toLowerCase()] ?? entity;
   });
 }
 
 /**
  * The docs URL of a link in a parameter description. The descriptions come from the Druid docs, where links are
- * relative to the page they appear on. Every page that shows them is one directory below docs/, so a relative link
- * is resolved from querying/. A link to an anchor of the same page can not be resolved and gives undefined.
+ * relative to the page they appear on. Every page that shows them is in docs/querying/, so a relative link is resolved
+ * from querying/ (ParameterDocumentationGeneratorTest checks that they resolve). A link to an anchor of the same page
+ * can not be resolved and gives undefined.
  */
 export function resolveDocsLink(target: string): string | undefined {
   if (target.startsWith('https://')) return target;
@@ -132,18 +137,13 @@ export function resolveDocsLink(target: string): string | undefined {
 }
 
 /**
- * Converts text outside of code spans: links point to the docs site (or become their text when they can not be
- * resolved), <br /> becomes a line break, list items become "- "
- * lines, **strong** becomes *emphasis*, other HTML tags are dropped and HTML entities are decoded
+ * Converts text outside of code spans and links: <br /> becomes a line break, list items become "- " lines, **strong**
+ * becomes *emphasis*, other HTML tags are dropped and HTML entities are decoded
  */
 function convertHtmlText(text: string): string {
   return decodeHtmlEntities(
     stripHtmlTags(
       text
-        .replace(/\[([^[\]]*)\]\(([^()]*)\)/g, (_, text: string, target: string) => {
-          const href = resolveDocsLink(target);
-          return href ? `[${text}](${href})` : text;
-        })
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<li>/gi, '\n- ')
         .replace(/<\/(ul|ol)>/gi, '\n'),
@@ -234,7 +234,7 @@ const EFFECTIVE_SOURCE_LABELS: Record<string, string> = {
 /**
  * The runtime property of a default_value like `${druid.server.http.defaultQueryTimeout}`, if it is one
  */
-export function defaultValueProperty(defaultValue: string | null): string | undefined {
+function defaultValueProperty(defaultValue: string | null): string | undefined {
   return defaultValue?.startsWith('${') && defaultValue.endsWith('}')
     ? defaultValue.slice(2, -1)
     : undefined;

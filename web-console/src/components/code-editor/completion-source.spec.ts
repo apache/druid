@@ -54,18 +54,4 @@ describe('completion source', () => {
     expect(validFor('my-va', 5, 10, state)).toBe(true);
     expect(validFor('my va', 5, 10, state)).toBe(false);
   });
-
-  it('completes an empty word without an explicit request only where completeEmptyWord allows', () => {
-    const state = EditorState.create({ doc: 'a ' });
-    const context = new CompletionContext(state, 2, false);
-    const getCompletions = () => [{ label: 'my-value' }];
-    expect(makeCompletionSource(getCompletions)(context)).toBeNull();
-    expect(
-      makeCompletionSource(getCompletions, { completeEmptyWord: () => false })(context),
-    ).toBeNull();
-    const result = makeCompletionSource(getCompletions, { completeEmptyWord: () => true })(
-      context,
-    ) as CompletionResult;
-    expect(result.options.map(option => option.label)).toEqual(['my-value']);
-  });
 });

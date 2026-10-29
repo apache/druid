@@ -30,6 +30,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -183,6 +189,37 @@ class ParameterDocumentationGeneratorTest
   {
     final ISE exception = assertThrows(ISE.class, () -> ParameterDocumentationGenerator.main(new String[0]));
     assertTrue(exception.getMessage().contains("Expected arguments"));
+  }
+
+  /**
+   * The web console shows parameter descriptions in SQL completions and resolves their relative links from
+   * docs/querying/ (resolveDocsLink in query-context-parameter-completions.ts), so every relative link must resolve
+   * from there.
+   */
+  @Test
+  void testRelativeLinksResolveFromQueryingDocs()
+  {
+    final Pattern link = Pattern.compile("\\]\\(([^()#:\\s]+)(?:#[^()]*)?\\)");
+    // Tests run in the processing module directory
+    final Path queryingDocs = Path.of("..", "docs", "querying");
+    final List<String> unresolved = new ArrayList<>();
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      final ParameterDocumentation docs = parameter.getDocumentation();
+      final Stream<String> texts = Stream.of(
+          docs.getDescription(),
+          docs.getDefaultDescription().orElse(null),
+          parameter.getDeprecationMessage()
+      );
+      texts.filter(Objects::nonNull).forEach(text -> {
+        final Matcher matcher = link.matcher(text);
+        while (matcher.find()) {
+          if (!Files.exists(queryingDocs.resolve(matcher.group(1)))) {
+            unresolved.add(parameter.getName() + ": " + matcher.group(1));
+          }
+        }
+      });
+    }
+    assertEquals(List.of(), unresolved);
   }
 
   @Test
