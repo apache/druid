@@ -293,10 +293,7 @@ public class IndexedTableJoinCursorBenchmark
         interval,
         false
     );
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource(dataSource)
-                                               .interval(schema.getDataInterval())
-                                               .version("1")
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of(dataSource, schema.getDataInterval(), "1", 0))
                                                .shardSpec(new LinearShardSpec(0))
                                                .size(0)
                                                .build();

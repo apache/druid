@@ -56,6 +56,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -142,10 +143,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       return walker.add(
-          DataSegment.builder()
-                     .dataSource(CalciteTests.DATASOURCE1)
-                     .interval(index.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE1, index.getDataInterval(), "1", 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(0)
                      .build(),

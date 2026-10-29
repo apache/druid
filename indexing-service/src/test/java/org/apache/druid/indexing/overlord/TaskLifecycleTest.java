@@ -139,6 +139,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
@@ -779,9 +780,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
           {
             final Interval interval = Intervals.of(input);
             try {
-              return DataSegment.builder()
-                                .dataSource("test_kill_task")
-                                .interval(interval)
+              return DataSegment.builder(SegmentId.of("test_kill_task", interval, "2011-04-6T16:52:46.119-05:00", 0))
                                 .loadSpec(
                                     ImmutableMap.of(
                                         "type",
@@ -797,7 +796,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                                         + "/0/index.zip"
                                     )
                                 )
-                                .version("2011-04-6T16:52:46.119-05:00")
                                 .dimensions(ImmutableList.of())
                                 .metrics(ImmutableList.of())
                                 .shardSpec(NoneShardSpec.instance())
@@ -877,9 +875,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
           {
             final Interval interval = Intervals.of(input);
             try {
-              return DataSegment.builder()
-                  .dataSource("test_kill_task")
-                  .interval(interval)
+              return DataSegment.builder(SegmentId.of("test_kill_task", interval, "2011-04-6T16:52:46.119-05:00", 0))
                   .loadSpec(
                       ImmutableMap.of(
                           "type",
@@ -895,7 +891,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                           + "/0/index.zip"
                       )
                   )
-                  .version("2011-04-6T16:52:46.119-05:00")
                   .dimensions(ImmutableList.of())
                   .metrics(ImmutableList.of())
                   .shardSpec(NoneShardSpec.instance())

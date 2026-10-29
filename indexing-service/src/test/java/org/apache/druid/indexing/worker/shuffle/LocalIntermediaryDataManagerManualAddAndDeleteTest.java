@@ -34,6 +34,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -254,17 +255,11 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
 
   private DataSegment newSegment(Interval interval, int bucketId)
   {
-    return new DataSegment(
-        "dataSource",
-        interval,
-        "version",
-        null,
-        null,
-        null,
-        new TestShardSpec(bucketId),
-        9,
-        10
-    );
+    return DataSegment.builder(SegmentId.of("dataSource", interval, "version", 0))
+                      .shardSpec(new TestShardSpec(bucketId))
+                      .binaryVersion(9)
+                      .size(10)
+                      .build();
   }
 
   private static class TestShardSpec implements BucketNumberedShardSpec<BuildingShardSpec<ShardSpec>>

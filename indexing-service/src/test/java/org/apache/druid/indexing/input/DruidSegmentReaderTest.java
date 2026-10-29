@@ -64,6 +64,7 @@ import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactor
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -949,12 +950,9 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
             segmentDirectory.delete();
           }
         },
-        DataSegment.builder()
-                   .dataSource("ds")
+        DataSegment.builder(SegmentId.of("ds", interval, "1", 0))
                    .dimensions(dimensions)
                    .metrics(metrics)
-                   .interval(interval)
-                   .version("1")
                    .size(0)
                    .build(),
         interval
@@ -965,10 +963,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
   {
     return new DruidSegmentInputEntity(
         new NoopSegmentCacheManager(),
-        DataSegment.builder()
-                   .dataSource("ds")
-                   .interval(Intervals.of("2000/P1D"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("ds", Intervals.of("2000/P1D"), "1", 0))
                    .shardSpec(new TombstoneShardSpec())
                    .loadSpec(ImmutableMap.of("type", "tombstone"))
                    .size(1)

@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
@@ -60,11 +61,8 @@ public class SegmentMetadataEventTest
   @Test
   public void testCreate()
   {
-    final DataSegment segment = DataSegment.builder()
-                                           .dataSource("wiki")
-                                           .interval(Intervals.of("2023/2024"))
+    final DataSegment segment = DataSegment.builder(SegmentId.of("wiki", Intervals.of("2023/2024"), "v1", 1))
                                            .shardSpec(new NumberedShardSpec(1, 1))
-                                           .version("v1")
                                            .size(100)
                                            .build();
     final DateTime eventTime = DateTimes.nowUtc();

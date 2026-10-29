@@ -36,6 +36,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -52,58 +53,46 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
   private static final String DATASOURCE = "test-ds";
   private static final long BYTES_PER_SEGMENT = 1000;
 
-  private static final DataSegment SEGMENT1 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2000/2001"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new DimensionRangeShardSpec(
-          ImmutableList.of("dim"),
-          VirtualColumns.EMPTY,
-          null,
-          new StringTuple(new String[]{"foo"}),
-          0,
-          2
-      ),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT1 = DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2000/2001"), "1", 0))
+                                                         .loadSpec(Collections.emptyMap())
+                                                         .dimensions(Collections.emptyList())
+                                                         .metrics(Collections.emptyList())
+                                                         .shardSpec(new DimensionRangeShardSpec(
+                                                                 ImmutableList.of("dim"),
+                                                                 VirtualColumns.EMPTY,
+                                                                 null,
+                                                                 new StringTuple(new String[]{"foo"}),
+                                                                 0,
+                                                                 2
+                                                             ))
+                                                         .binaryVersion(null)
+                                                         .size(BYTES_PER_SEGMENT)
+                                                         .build();
 
-  private static final DataSegment SEGMENT2 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2000/2001"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new DimensionRangeShardSpec(
-          ImmutableList.of("dim"),
-          VirtualColumns.EMPTY,
-          new StringTuple(new String[]{"foo"}),
-          null,
-          1,
-          2
-      ),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT2 = DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2000/2001"), "1", 0))
+                                                         .loadSpec(Collections.emptyMap())
+                                                         .dimensions(Collections.emptyList())
+                                                         .metrics(Collections.emptyList())
+                                                         .shardSpec(new DimensionRangeShardSpec(
+                                                                 ImmutableList.of("dim"),
+                                                                 VirtualColumns.EMPTY,
+                                                                 new StringTuple(new String[]{"foo"}),
+                                                                 null,
+                                                                 1,
+                                                                 2
+                                                             ))
+                                                         .binaryVersion(null)
+                                                         .size(BYTES_PER_SEGMENT)
+                                                         .build();
 
-  private static final DataSegment SEGMENT3 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2001/2002"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      TombstoneShardSpec.INSTANCE,
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT3 = DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2001/2002"), "1", 0))
+                                                         .loadSpec(Collections.emptyMap())
+                                                         .dimensions(Collections.emptyList())
+                                                         .metrics(Collections.emptyList())
+                                                         .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                         .binaryVersion(null)
+                                                         .size(BYTES_PER_SEGMENT)
+                                                         .build();
   private SegmentTimeline timeline;
   private IndexerTableInputSpecSlicer slicer;
   private TaskActionClient taskActionClient;

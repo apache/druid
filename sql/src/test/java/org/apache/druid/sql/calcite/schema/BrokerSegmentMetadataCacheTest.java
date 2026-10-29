@@ -958,10 +958,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     // we will add a segment to another datasource and
     // check if columns in this segment is reflected in the datasource schema
     DataSegment newSegment =
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(Intervals.of("2002/P1Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("foo", Intervals.of("2002/P1Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
@@ -1399,10 +1396,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     );
 
     DataSegment segment = newSegment("test", 0);
-    DataSegment tombstone = DataSegment.builder()
-                                       .dataSource("test")
-                                       .interval(Intervals.of("2012-01-01/2012-01-02"))
-                                       .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+    DataSegment tombstone = DataSegment.builder(SegmentId.of("test", Intervals.of("2012-01-01/2012-01-02"), DateTimes.of("2012-01-01T11:22:33.444Z").toString(), 0))
                                        .shardSpec(new TombstoneShardSpec())
                                        .loadSpec(Collections.singletonMap(
                                            "type",

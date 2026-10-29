@@ -367,10 +367,7 @@ public class TimeseriesBenchmark
 
   private DataSegment makeDataSegment(final int segmentNumber)
   {
-    return DataSegment.builder()
-                      .dataSource("blah")
-                      .interval(schemaInfo.getDataInterval())
-                      .version("1")
+    return DataSegment.builder(SegmentId.of("blah", schemaInfo.getDataInterval(), "1", segmentNumber))
                       .shardSpec(new LinearShardSpec(segmentNumber))
                       .size(0)
                       .build();

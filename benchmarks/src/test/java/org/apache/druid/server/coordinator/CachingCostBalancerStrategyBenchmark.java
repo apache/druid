@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.SegmentsCostCache;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -108,17 +109,13 @@ public class CachingCostBalancerStrategyBenchmark
 
   private DataSegment createSegment(int shift)
   {
-    return new DataSegment(
-        "dataSource",
-        new Interval(referenceTime.plusHours(shift), referenceTime.plusHours(shift).plusHours(1)),
-        "version",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        null,
-        0,
-        100
-    );
+    return DataSegment.builder(SegmentId.of("dataSource", new Interval(referenceTime.plusHours(shift), referenceTime.plusHours(shift).plusHours(1)), "version", 0))
+                      .loadSpec(Collections.emptyMap())
+                      .dimensions(Collections.emptyList())
+                      .metrics(Collections.emptyList())
+                      .binaryVersion(0)
+                      .size(100)
+                      .build();
   }
 
 }

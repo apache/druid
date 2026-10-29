@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -107,10 +108,7 @@ public class TombstoneHelperTest
 
     // Assume used segments exist:
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(interval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", interval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -141,10 +139,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -180,10 +175,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.MONTH;
 
     List<DataSegment> existingUsedSegments = usedIntervals.stream().map(
-        usedInterval -> DataSegment.builder()
-                                   .dataSource("test")
-                                   .interval(usedInterval)
-                                   .version("oldVersion")
+        usedInterval -> DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                                    .size(100)
                                    .build()
     ).collect(Collectors.toList());
@@ -216,10 +208,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -246,10 +235,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -276,10 +262,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -316,10 +299,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -357,10 +337,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -402,10 +379,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -440,10 +414,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -483,10 +454,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -523,10 +491,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -564,10 +529,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.YEAR;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -602,10 +564,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -637,10 +596,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());
@@ -677,17 +633,11 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment1 =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval1)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval1, "oldVersion", 0))
                    .size(100)
                    .build();
     DataSegment existingUsedSegment2 =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval2)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval2, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment1.isTombstone());
@@ -721,17 +671,11 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment1 =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval1)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval1, "oldVersion", 0))
                    .size(100)
                    .build();
     DataSegment existingUsedSegment2 =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval2)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval2, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment1.isTombstone());
@@ -765,10 +709,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
     Assertions.assertFalse(existingUsedSegment.isTombstone());

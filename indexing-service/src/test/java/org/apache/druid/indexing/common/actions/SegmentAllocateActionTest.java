@@ -43,6 +43,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearPartialShardSpec;
@@ -496,10 +497,7 @@ public class SegmentAllocateActionTest
 
     // Commit a segment for version V1
     final DataSegment segmentV1
-        = DataSegment.builder()
-                     .dataSource(DATA_SOURCE)
-                     .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                     .version(PARTY_TIME.plusDays(1).toString())
+        = DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.plusDays(1).toString(), 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(100)
                      .build();
@@ -520,10 +518,7 @@ public class SegmentAllocateActionTest
 
     // Commit a segment for version V2 to overshadow V1
     final DataSegment segmentV2
-        = DataSegment.builder()
-                     .dataSource(DATA_SOURCE)
-                     .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                     .version(PARTY_TIME.plusDays(2).toString())
+        = DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.plusDays(2).toString(), 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(100)
                      .build();
@@ -717,17 +712,11 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 0))
                        .shardSpec(new LinearShardSpec(0))
                        .size(0)
                        .build(),
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 1))
                        .shardSpec(new LinearShardSpec(1))
                        .size(0)
                        .build()
@@ -783,17 +772,11 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 0))
                        .shardSpec(new NumberedShardSpec(0, 2))
                        .size(0)
                        .build(),
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 1))
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
@@ -847,17 +830,11 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 0))
                        .shardSpec(new NumberedShardSpec(0, 2))
                        .size(0)
                        .build(),
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 1))
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
@@ -887,17 +864,11 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 0))
                        .shardSpec(new NumberedShardSpec(0, 2))
                        .size(0)
                        .build(),
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 1))
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
@@ -927,17 +898,11 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 0))
                        .shardSpec(new NumberedShardSpec(0, 2))
                        .size(0)
                        .build(),
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 1))
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
@@ -973,19 +938,13 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 0))
                        .shardSpec(
                            new HashBasedNumberedShardSpec(0, 2, 0, 2, ImmutableList.of("dim1"), null, objectMapper)
                        )
                        .size(0)
                        .build(),
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 0))
                        .shardSpec(
                            new HashBasedNumberedShardSpec(1, 2, 1, 2, ImmutableList.of("dim1"), null, objectMapper)
                        )
@@ -1277,10 +1236,7 @@ public class SegmentAllocateActionTest
 
   private DataSegment getSegmentForIdentifier(SegmentIdWithShardSpec identifier)
   {
-    return DataSegment.builder()
-                      .dataSource(identifier.getDataSource())
-                      .interval(identifier.getInterval())
-                      .version(identifier.getVersion())
+    return DataSegment.builder(SegmentId.of(identifier.getDataSource(), identifier.getInterval(), identifier.getVersion(), 0))
                       .shardSpec(identifier.getShardSpec())
                       .size(100)
                       .build();
