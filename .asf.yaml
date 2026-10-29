@@ -8,17 +8,6 @@ github:
     master:
       required_pull_request_reviews:
         required_approving_review_count: 1
-    # Branches missing from this list lose their protection; these were already protected.
-    "0.6.x": {}
-    "0.7.x": {}
-    "0.7.1.x": {}
-    "0.7.2.x": {}
-    "0.8.0": {}
-    "0.8.1": {}
-    "0.8.2": {}
-    "0.8.3": {}
-    "0.9.0": {}
-    "0.9.1": {}
 
   # Attempt to make the auto-generated github emails more easily readable in email clients.
   # Configuration adapted from https://github.com/apache/plc4x/blob/develop/.asf.yaml.
