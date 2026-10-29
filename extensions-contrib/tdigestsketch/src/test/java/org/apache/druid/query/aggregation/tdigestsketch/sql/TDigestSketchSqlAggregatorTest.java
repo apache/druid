@@ -586,6 +586,96 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testQuantileAndSketchOnStringColumn()
+  {
+    // string columns are implicitly cast to numbers, like testQuantileOnCastedString
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "  TDIGEST_QUANTILE(dim1, 0.5),\n"
+        + "  TDIGEST_GENERATE_SKETCH(dim1, 200)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "CAST(\"dim1\", 'DOUBLE')",
+                          ColumnType.FLOAT,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .aggregators(
+                      new TDigestSketchAggregatorFactory("a0:agg", "v0", 100, TDigestConfig.builder().build()),
+                      new TDigestSketchAggregatorFactory("a1", "v0", 200, TDigestConfig.builder().build())
+                  )
+                  .postAggregators(
+                      new TDigestSketchToQuantilePostAggregator(
+                          "a0",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          0.5
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ResultMatchMode.EQUALS_EPS,
+        ImmutableList.of(
+            new Object[]{
+                2.0,
+                "\"AAAAAT/wAAAAAAAAQCQzMzMzMzNAaQAAAAAAAAAAAAM/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQCQzMzMzMzM=\""
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileAndSketchWithNonNumericStringLiteral()
+  {
+    // verify invalid queries return 400 (user error)
+    testQueryThrows(
+        "SELECT TDIGEST_QUANTILE('m1', 0.5) FROM foo",
+        invalidSqlContains(
+            "Function [TDIGEST_QUANTILE] argument [column] must be numeric, got string literal ['m1']."
+            + " If you meant to refer to a column, use double quotes."
+        )
+    );
+    testQueryThrows(
+        "SELECT TDIGEST_GENERATE_SKETCH('m1') FROM foo",
+        invalidSqlContains(
+            "Function [TDIGEST_GENERATE_SKETCH] argument [column] must be numeric, got string literal ['m1']."
+            + " If you meant to refer to a column, use double quotes."
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileWithNonNumericInputTypes()
+  {
+    // verify invalid queries return 400 (user error)
+    testQueryThrows(
+        "SELECT TDIGEST_QUANTILE(m1 > 1, 0.5) FROM foo",
+        invalidSqlContains("Cannot apply 'TDIGEST_QUANTILE'")
+    );
+    testQueryThrows(
+        "SELECT TDIGEST_QUANTILE(ARRAY[1.0, 2.0], 0.5) FROM foo",
+        invalidSqlContains("Cannot apply 'TDIGEST_QUANTILE'")
+    );
+    testQueryThrows(
+        "SELECT TDIGEST_QUANTILE(PARSE_JSON('1'), 0.5) FROM foo",
+        invalidSqlContains("Cannot apply 'TDIGEST_QUANTILE'")
+    );
+    testQueryThrows(
+        "SELECT TDIGEST_QUANTILE(NULL, 0.5) FROM foo",
+        invalidSqlContains("Illegal use of 'NULL'")
+    );
+  }
+
   private static PostAggregator makeFieldAccessPostAgg(String name)
   {
     return new FieldAccessPostAggregator(name, name);

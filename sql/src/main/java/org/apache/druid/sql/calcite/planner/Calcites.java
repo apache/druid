@@ -41,8 +41,10 @@ import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
 import org.apache.druid.query.ordering.StringComparator;
@@ -525,6 +527,32 @@ public class Calcites
   public static String makePrefixedName(final String prefix, final String suffix)
   {
     return StringUtils.format("%s:%s", prefix, suffix);
+  }
+
+  /**
+   * Returns whether a string literal can be used where a number is expected. The parsing follows
+   * {@link ExprEval#computeNumber(String)}, which is how strings are implicitly converted to numbers at runtime.
+   */
+  public static boolean isNumericString(final String value)
+  {
+    return ExprEval.computeNumber(value) != null;
+  }
+
+  /**
+   * Creates the error for a string literal that is used where a number is expected, but cannot be parsed as one
+   * (see {@link #isNumericString(String)}). Such a literal is often a column name written in single quotes instead of
+   * double quotes.
+   *
+   * @param target where the literal is used, such as "Function [APPROX_QUANTILE] argument [column]"
+   * @param value  value of the literal
+   */
+  public static DruidException nonNumericStringLiteralError(final String target, final String value)
+  {
+    return InvalidSqlInput.exception(
+        "%s must be numeric, got string literal ['%s']. If you meant to refer to a column, use double quotes.",
+        target,
+        value
+    );
   }
 
   public static Class<?> sqlTypeNameJdbcToJavaClass(SqlTypeName typeName)

@@ -154,7 +154,9 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           DefaultOperandTypeChecker
               .builder()
               .operandNames("column", "compression")
-              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC)
+              .operandComplexTypes(0, TDigestSketchAggregatorFactory.TYPE)
+              .coercibleOperands(0)
               .requiredOperandCount(1)
               .literalOperands(1)
               .build(),

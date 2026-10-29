@@ -211,7 +211,9 @@ public class QuantileSqlAggregator implements SqlAggregator
           DefaultOperandTypeChecker
               .builder()
               .operandNames("column", "probability", "resolution")
-              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
+              .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
+              .operandComplexTypes(0, ApproximateHistogramAggregatorFactory.TYPE)
+              .coercibleOperands(0)
               .requiredOperandCount(2)
               .literalOperands(1, 2)
               .build(),

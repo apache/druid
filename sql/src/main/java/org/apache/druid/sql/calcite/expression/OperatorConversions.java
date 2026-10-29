@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite.expression;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.ObjectArrays;
+import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.rel.type.RelDataType;
@@ -52,6 +54,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -61,7 +64,9 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -348,6 +353,8 @@ public class OperatorConversions
     private List<SqlTypeFamily> operandTypes;
     private Integer requiredOperandCount;
     private int[] literalOperands;
+    private final Map<Integer, ColumnType[]> operandComplexTypes = new HashMap<>();
+    private int[] coercibleOperands;
     private SqlOperandTypeInference operandTypeInference;
 
     private OperatorBuilder(final String name)
@@ -540,6 +547,32 @@ public class OperatorConversions
       return this;
     }
 
+    /**
+     * Equivalent to calling {@link DefaultOperandTypeChecker.Builder#operandComplexTypes(int, ColumnType...)}; leads to
+     * using a {@link DefaultOperandTypeChecker} as our operand type checker.
+     *
+     * Not compatible with {@link #operandTypeChecker(SqlOperandTypeChecker)}.
+     */
+    public OperatorBuilder<T> operandComplexTypes(final int operand, final ColumnType... complexTypes)
+    {
+      this.operandComplexTypes.merge(operand, complexTypes, (a, b) -> ObjectArrays.concat(a, b, ColumnType.class));
+      return this;
+    }
+
+    /**
+     * Equivalent to calling {@link DefaultOperandTypeChecker.Builder#coercibleOperands(int...)}; leads to using a
+     * {@link DefaultOperandTypeChecker} as our operand type checker.
+     *
+     * Not compatible with {@link #operandTypeChecker(SqlOperandTypeChecker)}.
+     */
+    public OperatorBuilder<T> coercibleOperands(final int... coercibleOperands)
+    {
+      this.coercibleOperands = this.coercibleOperands == null
+                               ? coercibleOperands
+                               : Ints.concat(this.coercibleOperands, coercibleOperands);
+      return this;
+    }
+
     public OperatorBuilder<T> operandTypeInference(SqlOperandTypeInference operandTypeInference)
     {
       this.operandTypeInference = operandTypeInference;
@@ -569,22 +602,28 @@ public class OperatorConversions
           throw DruidException.defensive(
               "'operandTypes' must be non null if 'operandTypeChecker' is not passed to the operator conversion.");
         }
-        return DefaultOperandTypeChecker
+        final DefaultOperandTypeChecker.Builder builder = DefaultOperandTypeChecker
             .builder()
             .operandNames(operandNames)
             .operandTypes(operandTypes)
             .requiredOperandCount(requiredOperandCount == null ? operandTypes.size() : requiredOperandCount)
-            .literalOperands(literalOperands)
-            .build();
+            .literalOperands(literalOperands);
+        operandComplexTypes.forEach(builder::operandComplexTypes);
+        if (coercibleOperands != null) {
+          builder.coercibleOperands(coercibleOperands);
+        }
+        return builder.build();
       } else if (operandNames.isEmpty()
                  && operandTypes == null
                  && requiredOperandCount == null
-                 && literalOperands == null) {
+                 && literalOperands == null
+                 && operandComplexTypes.isEmpty()
+                 && coercibleOperands == null) {
         return operandTypeChecker;
       } else {
         throw new ISE(
-            "Cannot have both 'operandTypeChecker' and "
-            + "'operandNames' / 'operandTypes' / 'requiredOperands' / 'literalOperands'"
+            "Cannot have both 'operandTypeChecker' and 'operandNames' / 'operandTypes' / 'requiredOperands'"
+            + " / 'literalOperands' / 'operandComplexTypes' / 'coercibleOperands'"
         );
       }
     }

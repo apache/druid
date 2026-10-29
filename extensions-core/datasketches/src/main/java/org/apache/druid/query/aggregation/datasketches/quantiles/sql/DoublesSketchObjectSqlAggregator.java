@@ -51,7 +51,9 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
   private static final SqlAggFunction FUNCTION_INSTANCE =
       OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "k")
-                         .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
+                         .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
+                         .operandComplexTypes(0, DoublesSketchModule.TYPE)
+                         .coercibleOperands(0)
                          .returnTypeInference(
                              Calcites.complexReturnTypeWithNullability(DoublesSketchModule.TYPE, false)
                          )

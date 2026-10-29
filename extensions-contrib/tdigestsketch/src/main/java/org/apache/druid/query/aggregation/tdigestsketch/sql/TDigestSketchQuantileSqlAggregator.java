@@ -181,7 +181,9 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
           DefaultOperandTypeChecker
               .builder()
               .operandNames("column", "quantile", "compression")
-              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC)
+              .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC)
+              .operandComplexTypes(0, TDigestSketchAggregatorFactory.TYPE)
+              .coercibleOperands(0)
               .literalOperands(1, 2)
               .requiredOperandCount(2)
               .build(),

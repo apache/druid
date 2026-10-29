@@ -36,8 +36,13 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.sql.validate.implicit.TypeCoercion;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.sql.calcite.planner.DruidTypeCoercion;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -45,11 +50,16 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
 public class OperatorConversionsTest
 {
+  private static final SqlTypeFactoryImpl TYPE_FACTORY = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
+  private static final ColumnType ALLOWED_COMPLEX_TYPE = ColumnType.ofComplex("allowedComplex");
+  private static final ColumnType OTHER_COMPLEX_TYPE = ColumnType.ofComplex("otherComplex");
+
   @Nested
   public class DefaultOperandTypeCheckerTest
   {
@@ -409,6 +419,202 @@ public class OperatorConversionsTest
       );
     }
 
+    @Test
+    public void testAllowedComplexTypeOperand()
+    {
+      SqlFunction function = numericOperandsFunction("testAllowedComplexTypeOperand");
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      Assertions.assertTrue(
+          typeChecker.checkOperandTypes(
+              mockCallBinding(
+                  function,
+                  ImmutableList.of(
+                      new OperandSpec(RowSignatures.makeComplexType(TYPE_FACTORY, ALLOWED_COMPLEX_TYPE, false)),
+                      new OperandSpec(SqlTypeName.DOUBLE, false)
+                  )
+              ),
+              true
+          )
+      );
+    }
+
+    @Test
+    public void testOtherComplexTypeOperand()
+    {
+      SqlFunction function = numericOperandsFunction("testOtherComplexTypeOperand");
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      assertThrowsWithMessage(
+          () -> typeChecker.checkOperandTypes(
+              mockCallBinding(
+                  function,
+                  ImmutableList.of(
+                      new OperandSpec(RowSignatures.makeComplexType(TYPE_FACTORY, OTHER_COMPLEX_TYPE, true)),
+                      new OperandSpec(SqlTypeName.DOUBLE, false)
+                  )
+              ),
+              true
+          ),
+          "Cannot apply 'testOtherComplexTypeOperand' to arguments of type"
+      );
+    }
+
+    @Test
+    public void testOperandWithoutOptions()
+    {
+      // Only the first operand allows complex types and string coercion, so the second one is checked as usual
+      SqlFunction function = numericOperandsFunction("testOperandWithoutOptions");
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      final List<OperandSpec> invalidSecondOperands = ImmutableList.of(
+          new OperandSpec(RowSignatures.makeComplexType(TYPE_FACTORY, ALLOWED_COMPLEX_TYPE, true)),
+          new OperandSpec(SqlTypeName.VARCHAR, false),
+          new OperandSpec(SqlLiteral.createCharString("abc", SqlParserPos.ZERO))
+      );
+      for (OperandSpec secondOperand : invalidSecondOperands) {
+        final TypeCoercion typeCoercion = Mockito.mock(DruidTypeCoercion.class);
+        assertThrowsWithMessage(
+            () -> typeChecker.checkOperandTypes(
+                mockCallBinding(
+                    function,
+                    ImmutableList.of(new OperandSpec(SqlTypeName.DOUBLE, false), secondOperand),
+                    typeCoercion
+                ),
+                true
+            ),
+            "Cannot apply 'testOperandWithoutOptions' to arguments of type"
+        );
+        Mockito.verifyNoInteractions(typeCoercion);
+      }
+    }
+
+    @Test
+    public void testNonNumericStringLiteralOnCoercibleOperand()
+    {
+      SqlFunction function = numericOperandsFunction("testNonNumericStringLiteralOnCoercibleOperand");
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      final TypeCoercion typeCoercion = Mockito.mock(DruidTypeCoercion.class);
+      final List<OperandSpec> operands = ImmutableList.of(
+          new OperandSpec(SqlLiteral.createCharString("m1", SqlParserPos.ZERO)),
+          new OperandSpec(SqlTypeName.DOUBLE, false)
+      );
+
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> typeChecker.checkOperandTypes(mockCallBinding(function, operands, typeCoercion), true)
+      );
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertEquals(
+          "Function [testNonNumericStringLiteralOnCoercibleOperand] argument [x] must be numeric, got string literal"
+          + " ['m1']. If you meant to refer to a column, use double quotes.",
+          e.getMessage()
+      );
+
+      Assertions.assertFalse(typeChecker.checkOperandTypes(mockCallBinding(function, operands, typeCoercion), false));
+      Mockito.verifyNoInteractions(typeCoercion);
+    }
+
+    @Test
+    public void testNumericStringLiteralOnCoercibleOperand()
+    {
+      assertCoercedToDouble(
+          "testNumericStringLiteralOnCoercibleOperand",
+          new OperandSpec(SqlLiteral.createCharString("1.5", SqlParserPos.ZERO))
+      );
+    }
+
+    @Test
+    public void testStringOperandOnCoercibleOperand()
+    {
+      assertCoercedToDouble("testStringOperandOnCoercibleOperand", new OperandSpec(SqlTypeName.VARCHAR, false, true));
+    }
+
+    @Test
+    public void testBooleanOperandOnCoercibleOperand()
+    {
+      SqlFunction function = numericOperandsFunction("testBooleanOperandOnCoercibleOperand");
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      final TypeCoercion typeCoercion = Mockito.mock(DruidTypeCoercion.class);
+      assertThrowsWithMessage(
+          () -> typeChecker.checkOperandTypes(
+              mockCallBinding(
+                  function,
+                  ImmutableList.of(new OperandSpec(SqlTypeName.BOOLEAN, false), new OperandSpec(SqlTypeName.DOUBLE, false)),
+                  typeCoercion
+              ),
+              true
+          ),
+          "Cannot apply 'testBooleanOperandOnCoercibleOperand' to arguments of type"
+      );
+      Mockito.verifyNoInteractions(typeCoercion);
+    }
+
+    @Test
+    public void testTimestampOperandOnCoercibleOperand()
+    {
+      SqlFunction function = numericOperandsFunction("testTimestampOperandOnCoercibleOperand");
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      final TypeCoercion typeCoercion = Mockito.mock(DruidTypeCoercion.class);
+      Assertions.assertTrue(
+          typeChecker.checkOperandTypes(
+              mockCallBinding(
+                  function,
+                  ImmutableList.of(
+                      new OperandSpec(TYPE_FACTORY.createSqlType(SqlTypeName.TIMESTAMP)),
+                      new OperandSpec(SqlTypeName.DOUBLE, false)
+                  ),
+                  typeCoercion
+              ),
+              true
+          )
+      );
+      Mockito.verifyNoInteractions(typeCoercion);
+    }
+
+    private void assertCoercedToDouble(String functionName, OperandSpec firstOperand)
+    {
+      SqlFunction function = numericOperandsFunction(functionName);
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      final DruidTypeCoercion typeCoercion = Mockito.mock(DruidTypeCoercion.class);
+      Mockito.when(
+          typeCoercion.coerceOperand(
+              ArgumentMatchers.any(),
+              ArgumentMatchers.any(),
+              ArgumentMatchers.anyInt(),
+              ArgumentMatchers.any()
+          )
+      ).thenReturn(true);
+      final SqlCallBinding callBinding = mockCallBinding(
+          function,
+          ImmutableList.of(firstOperand, new OperandSpec(SqlTypeName.DOUBLE, false)),
+          typeCoercion
+      );
+
+      Assertions.assertTrue(typeChecker.checkOperandTypes(callBinding, true));
+      Mockito.verify(typeCoercion).coerceOperand(
+          ArgumentMatchers.eq(callBinding.getScope()),
+          ArgumentMatchers.same(callBinding.getCall()),
+          ArgumentMatchers.eq(0),
+          ArgumentMatchers.argThat(type -> type.getSqlTypeName() == SqlTypeName.DOUBLE)
+      );
+      Mockito.verifyNoMoreInteractions(typeCoercion);
+    }
+
+    /**
+     * Function with two numeric operands, where only the first one allows {@link #ALLOWED_COMPLEX_TYPE} and coercion
+     * of strings.
+     */
+    private SqlFunction numericOperandsFunction(String name)
+    {
+      return OperatorConversions
+          .operatorBuilder(name)
+          .operandNames("x", "y")
+          .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC)
+          .operandComplexTypes(0, ALLOWED_COMPLEX_TYPE)
+          .coercibleOperands(0)
+          .returnTypeNonNull(SqlTypeName.DOUBLE)
+          .build();
+    }
+
     private static void assertThrowsWithMessage(Runnable runnable, String expectedMessage)
     {
       final CalciteContextException e = Assertions.assertThrows(CalciteContextException.class, runnable::run);
@@ -455,20 +661,38 @@ public class OperatorConversionsTest
         List<OperandSpec> actualOperands
     )
     {
+      return mockCallBinding(function, actualOperands, null);
+    }
+
+    private static SqlCallBinding mockCallBinding(
+        SqlFunction function,
+        List<OperandSpec> actualOperands,
+        @Nullable TypeCoercion typeCoercion
+    )
+    {
       SqlValidator validator = Mockito.mock(SqlValidator.class);
-      Mockito.when(validator.getTypeFactory()).thenReturn(new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE));
+      Mockito.when(validator.getTypeFactory()).thenReturn(TYPE_FACTORY);
+      Mockito.when(validator.config()).thenReturn(SqlValidator.Config.DEFAULT);
+      Mockito.when(validator.getTypeCoercion()).thenReturn(typeCoercion);
       List<SqlNode> operands = new ArrayList<>(actualOperands.size());
       for (OperandSpec operand : actualOperands) {
+        if (operand.node != null || operand.relDataType != null) {
+          final SqlNode node = operand.node != null ? operand.node : nonLiteralNode();
+          final RelDataType relDataType = operand.relDataType != null
+                                          ? operand.relDataType
+                                          : ((SqlLiteral) node).createSqlType(TYPE_FACTORY);
+          Mockito.when(validator.deriveType(ArgumentMatchers.any(), ArgumentMatchers.same(node)))
+                 .thenReturn(relDataType);
+          operands.add(node);
+          continue;
+        }
+
         final SqlNode node;
         if (operand.isLiteral) {
           node = Mockito.mock(SqlLiteral.class);
           Mockito.when(node.getKind()).thenReturn(SqlKind.LITERAL);
         } else {
-          node = Mockito.mock(SqlNode.class);
-          // Setting this as SqlUtil.isLiteral makes a call on
-          // node.getKind() and without this change would
-          // return a NPE
-          Mockito.when(node.getKind()).thenReturn(SqlKind.OTHER_FUNCTION);
+          node = nonLiteralNode();
         }
         RelDataType relDataType = Mockito.mock(RelDataType.class);
 
@@ -502,11 +726,33 @@ public class OperatorConversionsTest
       return callBinding;
     }
 
+    private static SqlNode nonLiteralNode()
+    {
+      final SqlNode node = Mockito.mock(SqlNode.class);
+      // Setting this as SqlUtil.isLiteral makes a call on
+      // node.getKind() and without this change would
+      // return a NPE
+      Mockito.when(node.getKind()).thenReturn(SqlKind.OTHER_FUNCTION);
+      return node;
+    }
+
     private static class OperandSpec
     {
       private final SqlTypeName type;
       private final boolean isLiteral;
       private final boolean isNullable;
+
+      /**
+       * Actual node of the operand, used instead of a mock if not null.
+       */
+      @Nullable
+      private final SqlNode node;
+
+      /**
+       * Actual derived type of the operand, used instead of a mock if not null.
+       */
+      @Nullable
+      private final RelDataType relDataType;
 
       private OperandSpec(SqlTypeName type, boolean isLiteral)
       {
@@ -518,6 +764,26 @@ public class OperatorConversionsTest
         this.type = type;
         this.isLiteral = isLiteral;
         this.isNullable = isNullable;
+        this.node = null;
+        this.relDataType = null;
+      }
+
+      private OperandSpec(SqlLiteral node)
+      {
+        this.type = null;
+        this.isLiteral = true;
+        this.isNullable = false;
+        this.node = node;
+        this.relDataType = null;
+      }
+
+      private OperandSpec(RelDataType relDataType)
+      {
+        this.type = relDataType.getSqlTypeName();
+        this.isLiteral = false;
+        this.isNullable = relDataType.isNullable();
+        this.node = null;
+        this.relDataType = relDataType;
       }
     }
   }
