@@ -1084,6 +1084,23 @@ public class QueryResourceTest
   }
 
   @Test
+  public void testUnknownContextParameterRejectedByCandidates() throws IOException
+  {
+    final Response response = createBrokerQueryResource(new QueryContextConfig(true)).getQueryTargets(
+        new ByteArrayInputStream(timeseriesQueryWithContext(Map.of("useCahce", false))),
+        null /*pretty*/,
+        -1,
+        null,
+        testServletRequest
+    );
+
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.BAD_QUERY_CONTEXT_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals("Unknown query context parameter [useCahce]. Did you mean [useCache]?", e.getMessage());
+  }
+
+  @Test
   public void testInvalidContextValueRejectedByBroker() throws IOException
   {
     // Values are validated whether or not unknown parameters are rejected
