@@ -193,8 +193,8 @@ class ParameterDocumentationGeneratorTest
 
   /**
    * The web console shows parameter descriptions in SQL completions and resolves their relative links from
-   * docs/querying/ (resolveDocsLink in query-context-parameter-completions.ts), so every relative link must resolve
-   * from there.
+   * docs/querying/ (resolveDocsLink in query-context-parameter-completions.ts), whichever page they are generated
+   * into, so every relative link must resolve from there.
    */
   @Test
   void testRelativeLinksResolveFromQueryingDocs()

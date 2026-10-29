@@ -221,17 +221,6 @@ function tokenEndingBefore(state: EditorState, pos: number): SyntaxNode | undefi
   return;
 }
 
-/**
- * The word (like a keyword) that ends before pos, uppercased, skipping whitespace and comments. Undefined when the token
- * before pos is not a word.
- */
-export function wordEndingBefore(state: EditorState, pos: number): string | undefined {
-  const token = tokenEndingBefore(state, pos);
-  return token && WORD_NODES.has(token.name)
-    ? state.sliceDoc(token.from, token.to).toUpperCase()
-    : undefined;
-}
-
 export interface SqlCompletionOptions {
   columnMetadata?: readonly ColumnMetadata[];
   /** The query context parameters to suggest after SET, from sys.query_context_parameters */

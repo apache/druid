@@ -111,9 +111,9 @@ function decodeHtmlEntities(text: string): string {
 
 /**
  * The docs URL of a link in a parameter description. The descriptions come from the Druid docs, where links are
- * relative to the page they appear on. Every page that shows them is in docs/querying/, so a relative link is resolved
- * from querying/ (ParameterDocumentationGeneratorTest checks that they resolve). A link to an anchor of the same page
- * can not be resolved and gives undefined.
+ * relative to the page they appear on, but they are written so that relative links resolve from querying/
+ * (ParameterDocumentationGeneratorTest checks that they do). A link to an anchor of the same page can not be resolved
+ * and gives undefined.
  */
 export function resolveDocsLink(target: string): string | undefined {
   if (target.startsWith('https://')) return target;

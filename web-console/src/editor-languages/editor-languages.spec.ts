@@ -244,6 +244,9 @@ dataSource: wikipedia`;
       expect(complete(dsql(), "SELECT * FROM t WHERE x = 'foo set |")).toBeUndefined();
       expect(complete(dsql(), '-- set |')).toBeUndefined();
       expect(complete(dsql(), 'SELECT * FROM t LIMIT 1 OFFSET |')).toBeUndefined();
+      // Not after SET itself: in an unclosed quoted identifier or string
+      expect(complete(dsql(), 'SET "a |')).toBeUndefined();
+      expect(complete(dsql(), "SET 'a |")).toBeUndefined();
     });
 
     it('is off in read only editors', () => {
