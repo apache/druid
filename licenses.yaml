@@ -458,7 +458,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.3.0
+version: 3.3.1
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -2588,7 +2588,7 @@ name: Hibernate Validator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.1.4.Final
+version: 9.1.5.Final
 libraries:
   - org.hibernate.validator: hibernate-validator
 
@@ -3459,7 +3459,7 @@ notices:
 ---
 
 name: Apache Kafka
-version: 4.3.1
+version: 4.4.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3647,7 +3647,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.5.7-11
+version: 1.5.7-17
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -4013,7 +4013,7 @@ name: XZ
 license_category: binary
 module: java-core
 license_name: Public Domain
-version: 1.9
+version: 1.12
 libraries:
   - org.tukaani: xz
 
@@ -4664,7 +4664,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/druid-kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 4.3.1
+version: 4.4.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:

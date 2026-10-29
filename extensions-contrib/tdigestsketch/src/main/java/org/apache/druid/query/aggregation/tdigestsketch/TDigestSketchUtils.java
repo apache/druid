@@ -62,15 +62,19 @@ public class TDigestSketchUtils
    * This method computes an estimate of the max intermediate size of a {@link MergingDigest}.
    * Since there is no utility available in the T-Digest library to compute this size,
    * the below code is inspired by looking at
-   * {@link MergingDigest#MergingDigest(double, int, int)}
-   * This method is current as of 3.2 version and many need to change in future.
+   * {@link MergingDigest#MergingDigest(double, int, int)} with default buffer and centroid sizes.
+   * This method is current as of t-digest 3.3. TDigestSketchAggregatorFactoryTest checks this estimate
+   * against the arrays the library allocates, so it fails if a future version changes the sizing.
    */
   static int getMaxIntermdiateTDigestSize(int compression)
   {
+    // MergingDigest raises compression to at least 10 and adds extra centroid room for small compressions
+    final int effectiveCompression = Math.max(compression, 10);
+    final int sizeFudge = effectiveCompression < 30 ? 30 : 10;
+    final int centroidArraySize = 2 * effectiveCompression + sizeFudge;
+    final int tempBufferSize = 5 * centroidArraySize;
     int intermediateSize = 0;
-    int centroidArraySize = (int) (2 * Math.ceil(compression)) + 10;
     intermediateSize += 2 * centroidArraySize * Double.BYTES;
-    int tempBufferSize = (int) (5 * Math.ceil(compression));
     intermediateSize += 2 * tempBufferSize * Double.BYTES;
     intermediateSize += tempBufferSize * Integer.BYTES;
     // Adding an extra buffer of 1K for overhead
