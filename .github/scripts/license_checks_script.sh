@@ -25,4 +25,4 @@ set -e
 mkdir -p target
 distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
 # Same exclusions as the release LICENSE generation in distribution/pom.xml
-distribution/bin/check-licenses.py licenses.yaml target/license-reports --exclude-module-prefix=extensions-contrib/ --exclude-module-prefix=extensions/druid-testcontainers --stale-versions=warn
+distribution/bin/check-licenses.py licenses.yaml target/license-reports --exclude-module-prefix=extensions-contrib/ --exclude-module-prefix=extensions/druid-testcontainers

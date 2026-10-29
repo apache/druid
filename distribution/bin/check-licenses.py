@@ -590,14 +590,14 @@ def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixe
         reported_dep_to_licenses, reported_modules, registered_modules, skipping_licenses, exclude_module_prefixes
     )
 
-    stale_licenses = []
-    if stale_versions == "warn":
-        stale_licenses, missing_licenses = split_stale_versions(
-            missing_licenses, reported_modules, registered_dep_to_licenses, registered_modules, exclude_module_prefixes
-        )
+    stale_licenses, missing_licenses = split_stale_versions(
+        missing_licenses, reported_modules, registered_dep_to_licenses, registered_modules, exclude_module_prefixes
+    )
 
     if len(stale_licenses) > 0:
-        print_log_to_stderr("Warn: found {} dependencies whose previous versions are registered with the same license. Release builds fail on these.".format(len(stale_licenses)))
+        print_log_to_stderr("{}: found {} dependencies whose previous versions are registered with the same license. Release builds fail on these.".format(
+            "Warn" if stale_versions == "warn" else "Error", len(stale_licenses)
+        ))
         for stale_license in stale_licenses:
             print_log_to_stderr("druid_module: {}, groupId: {}, artifactId: {}, version: {}, license: {}, registered_versions: {}".format(*stale_license))
         print_log_to_stderr(
@@ -643,10 +643,14 @@ def check_licenses(license_yaml, dependency_reports_root, exclude_module_prefixe
             print_log_to_stderr("groupId: {}, artifactId: {}, version: {}, reported_license: {}".format(unchecked_license[0], unchecked_license[1], unchecked_license[2], unchecked_license[3]))
     print_log_to_stderr("")
 
-    if len(mismatched_licenses) > 0 or len(missing_licenses) > 0 or len(unknown_licenses) > 0:
+    if (
+        len(mismatched_licenses) > 0 or len(missing_licenses) > 0 or len(unknown_licenses) > 0
+        or (len(stale_licenses) > 0 and stale_versions == "fail")
+    ):
         print_log_to_stderr("Mismatched licenses: {}".format(mismatched_licenses))
         print_log_to_stderr("Missing licenses: {}".format(missing_licenses))
         print_log_to_stderr("Unknown licenses: {}".format(unknown_licenses))
+        print_log_to_stderr("Stale versions: {}".format(stale_licenses))
         sys.exit(1)
 
 

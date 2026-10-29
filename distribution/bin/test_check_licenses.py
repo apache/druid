@@ -392,7 +392,10 @@ class CheckLicensesTest(unittest.TestCase):
         self.assertIn("Error: found 1 missing licenses", output)
 
     def test_stale_version_fails_in_fail_mode(self):
-        self.assertMissing(entry("XZ", "java-core", "1.9", ["org.tukaani: xz"]), "fail")
+        output, code = self.check(entry("XZ", "java-core", "1.9", ["org.tukaani: xz"]), "fail")
+        self.assertEqual(1, code)
+        self.assertIn("Error: found 1 dependencies whose previous versions are registered", output)
+        self.assertIn("refresh-license-versions.py licenses.yaml target/license-reports", output)
 
     def test_stale_version_only_warns_in_warn_mode(self):
         output, code = self.check(entry("XZ", "java-core", "1.9", ["org.tukaani: xz"]), "warn")
