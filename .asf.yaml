@@ -6,23 +6,14 @@ github:
 
   rulesets:
     - name: "Default Branch Protection"
-      type: branch
       branches:
         includes:
           - "~DEFAULT_BRANCH"
           # release branches, such as 39.0.0
-          - "[0-9]*"
-        excludes: []
+          - "[0-9]*.[0-9]*.*"
       bypass_teams:
         - root
-      restrict_deletion: true
-      restrict_force_push: true
     - name: "Require review"
-      type: branch
-      branches:
-        includes:
-          - "~DEFAULT_BRANCH"
-        excludes: []
       bypass_teams:
         - druid-committers
       required_pull_request_reviews:
