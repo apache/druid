@@ -280,6 +280,67 @@ public class SeekableStreamIndexTaskRunnerTest
   }
 
   @Test
+  public void testDoGetRowStatsOmitsPollIdleRatioUntilKnown()
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner();
+    Mockito.when(task.getId()).thenReturn("task1");
+    Mockito.when(task.getSupervisorId()).thenReturn("supervisorId");
+
+    // The recordSupplier reports no known poll-idle-ratio sample yet (negative sentinel).
+    final RecordSupplier<?, ?, ?> recordSupplier = Mockito.mock(RecordSupplier.class);
+    Mockito.when(recordSupplier.getPollIdleRatioMetric()).thenReturn(-1.0);
+    Mockito.when(recordSupplier.getRunningAvgPollIdleRatio()).thenReturn(-1.0);
+    Mockito.when(task.newTaskRecordSupplier(any()))
+           .thenReturn(recordSupplier);
+
+    final StreamAppenderator appenderator = Mockito.mock(StreamAppenderator.class);
+    Mockito.when(task.newAppenderator(any(), any(), any(), any()))
+           .thenReturn(appenderator);
+
+    final List<DataSegment> segment = CreateDataSegments
+        .ofDatasource(DATA_SOURCE)
+        .withNumPartitions(1)
+        .withNumRows(10)
+        .eachOfSizeInMb(500);
+    final SegmentsAndCommitMetadata commitMetadata =
+        new SegmentsAndCommitMetadata(segment, "offset-100").withWasPublished(true);
+
+    final StreamAppenderatorDriver driver = Mockito.mock(StreamAppenderatorDriver.class);
+    Mockito.when(task.newDriver(any(), any(), any()))
+           .thenReturn(driver);
+    Mockito.when(driver.publish(any(), any(), any(), any()))
+           .thenReturn(Futures.immediateFuture(commitMetadata));
+    Mockito.when(driver.registerHandoff(any()))
+           .thenReturn(Futures.immediateFuture(commitMetadata));
+
+    runner.run(createTaskToolbox());
+
+    Map<String, Object> autoscalerMetrics =
+        (Map<String, Object>) runner.doGetRowStats().get(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY);
+    Assertions.assertFalse(
+        autoscalerMetrics.containsKey(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY),
+        "pollIdleRatio must not be published until the recordSupplier reports a known value"
+    );
+    Assertions.assertFalse(
+        autoscalerMetrics.containsKey(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG),
+        "pollIdleRatioRunningAvg must not be published until the recordSupplier reports a known value"
+    );
+    Assertions.assertTrue(
+        autoscalerMetrics.containsKey(SeekableStreamIndexTaskRunner.PROCESSING_RATE_RUNNING_AVG),
+        "processingRateRunningAvg should always be published"
+    );
+
+    // Once the recordSupplier reports known values, they must be published.
+    Mockito.when(recordSupplier.getPollIdleRatioMetric()).thenReturn(0.25);
+    Mockito.when(recordSupplier.getRunningAvgPollIdleRatio()).thenReturn(0.4);
+
+    autoscalerMetrics =
+        (Map<String, Object>) runner.doGetRowStats().get(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY);
+    Assertions.assertEquals(0.25, autoscalerMetrics.get(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY));
+    Assertions.assertEquals(0.4, autoscalerMetrics.get(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG));
+  }
+
+  @Test
   public void testWithinMinMaxTime()
   {
     final DateTime now = DateTimes.nowUtc();
