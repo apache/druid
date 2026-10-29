@@ -85,7 +85,7 @@
         <avatica.version>1.29.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
-        <bytebuddy.version>1.18.14</bytebuddy.version>
+        <bytebuddy.version>1.18.15</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -99,7 +99,7 @@
         <errorprone.annotations.version>2.50.0</errorprone.annotations.version>
         <errorprone.version>2.50.0</errorprone.version>
         <fabric8.version>8.0.0</fabric8.version>
-        <fastutil.version>8.5.4</fastutil.version>
+        <fastutil.version>8.5.19</fastutil.version>
         <guava.version>33.7.2-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
@@ -126,12 +126,12 @@
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
-        <aws.sdk.v2.version>2.55.6</aws.sdk.v2.version>
+        <aws.sdk.v2.version>2.56.0</aws.sdk.v2.version>
         <aws.msk.iam.auth.version>2.3.9</aws.msk.iam.auth.version>
-        <caffeine.version>3.3.0</caffeine.version>
+        <caffeine.version>3.3.1</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
-        <hibernate-validator.version>9.1.4.Final</hibernate-validator.version>
+        <hibernate-validator.version>9.1.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.14</httpclient.version>
         <okhttp.version>5.5.0</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
@@ -452,7 +452,7 @@
             <dependency>
                 <groupId>org.jooq</groupId>
                 <artifactId>joou-java-6</artifactId>
-                <version>0.9.5</version>
+                <version>0.9.6</version>
             </dependency>
 
             <!-- transitive dependency of kafka-clients and kubernetes client
@@ -536,7 +536,7 @@
             <dependency>
                 <groupId>com.github.fppt</groupId>
                 <artifactId>jedis-mock</artifactId>
-                <version>1.1.19</version>
+                <version>1.1.20</version>
             </dependency>
             <dependency>
               <groupId>io.kubernetes</groupId>
@@ -726,7 +726,7 @@
             <dependency>
                 <groupId>org.tukaani</groupId>
                 <artifactId>xz</artifactId>
-                <version>1.9</version>
+                <version>1.12</version>
             </dependency>
             <dependency>
                 <groupId>com.github.luben</groupId>
@@ -1715,7 +1715,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.10.4.1</version>
+                <version>4.10.5.0</version>
                 <configuration>
                     <excludeFilterFile>codestyle/spotbugs-exclude.xml</excludeFilterFile>
                     <maxHeap>768</maxHeap>
@@ -2126,7 +2126,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>javacc-maven-plugin</artifactId>
-                    <version>2.4</version>
+                    <version>2.6</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
