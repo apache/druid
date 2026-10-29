@@ -789,6 +789,13 @@ public class MSQCompactionRunner implements CompactionRunner
     context.putIfAbsent(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING.getName(), false);
     // Always override ARRAY_INGEST_MODE since it can otherwise lead to mixed ARRAY and MVD types for a column.
     QueryContextParameters.ARRAY_INGEST_MODE.set(context, "array");
+    if (compactionTask.getTuningConfig() != null
+        && compactionTask.getTuningConfig().getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
+      // Ingestion may fall back to dynamic partitioning when the data turns out to hold multi-valued fields, since it
+      // stores the rows either way. Compaction cannot: the segments it wrote would disagree with the partitionsSpec
+      // its config asks for, so the interval would never read as compacted and would be submitted again every run.
+      QueryContextParameters.FAIL_ON_MULTI_VALUED_RANGE_PARTITION.set(context, true);
+    }
     return context;
   }
 

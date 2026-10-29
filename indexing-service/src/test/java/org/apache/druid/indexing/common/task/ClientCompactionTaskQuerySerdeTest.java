@@ -73,6 +73,8 @@ import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -183,6 +185,7 @@ public class ClientCompactionTaskQuerySerdeTest
         null,
         baseTable,
         null,
+        null,
         ImmutableMap.of(),
         new ClientCompactionRunnerInfo(CompactionEngine.MSQ)
     );
@@ -192,6 +195,47 @@ public class ClientCompactionTaskQuerySerdeTest
 
     Assertions.assertEquals(baseTable, actual.getBaseTable());
     Assertions.assertEquals(query, actual);
+    // A query that says nothing about sealing declares a complete schema, which is what every pre-existing payload
+    // means.
+    Assertions.assertTrue(actual.isSealed());
+  }
+
+  @Test
+  public void testClientCompactionTaskQuerySealedSerde() throws IOException
+  {
+    // 'sealed' has to survive the round trip onto the task's own field, and a payload that omits it (every
+    // pre-existing one) has to mean a complete declaration.
+    Assertions.assertFalse(roundTripSealed(false));
+    Assertions.assertTrue(roundTripSealed(true));
+    Assertions.assertTrue(roundTripSealed(null));
+  }
+
+  private boolean roundTripSealed(@Nullable Boolean sealed) throws IOException
+  {
+    final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
+        "id",
+        "datasource",
+        new ClientCompactionIOConfig(
+            new ClientCompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"),
+            true
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        sealed,
+        ImmutableMap.of(),
+        new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
+    );
+
+    final byte[] json = MAPPER.writeValueAsBytes(query);
+    final boolean fromQuery = ((ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class)).isSealed();
+    final boolean fromTask = ((CompactionTask) MAPPER.readValue(json, Task.class)).isSealed();
+    Assertions.assertEquals(fromQuery, fromTask, "query and task must agree on 'sealed'");
+    return fromTask;
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
@@ -368,6 +412,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         METRICS_SPEC,
         transformSpec,
+        null,
         null,
         null,
         context,

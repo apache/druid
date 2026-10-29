@@ -20,6 +20,8 @@
 package org.apache.druid.storage.s3;
 
 import org.apache.druid.common.aws.AWSClientConfig;
+import org.apache.druid.common.aws.AWSEndpointConfig;
+import org.apache.druid.data.input.s3.S3InputSourceConfig;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.retries.api.RetryStrategy;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -35,6 +38,12 @@ import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
+import software.amazon.awssdk.services.sts.auth.StsCredentialsProvider;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
+import software.amazon.awssdk.services.sts.model.Credentials;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
@@ -43,6 +52,9 @@ import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -50,6 +62,27 @@ import java.util.concurrent.CompletableFuture;
 
 public class ServerSideEncryptingAmazonS3Test
 {
+  private static final String INTERMEDIATE_ROLE_ARN = "arn:aws:iam::123456789012:role/intermediate";
+  private static final String TARGET_ROLE_ARN = "arn:aws:iam::123456789012:role/target";
+
+  private static final AWSEndpointConfig REGION_CONFIG = new AWSEndpointConfig()
+  {
+    @Override
+    public String getSigningRegion()
+    {
+      return "us-east-1";
+    }
+  };
+
+  private static final AWSEndpointConfig INTERMEDIATE_REGION_CONFIG = new AWSEndpointConfig()
+  {
+    @Override
+    public String getSigningRegion()
+    {
+      return "eu-south-1";
+    }
+  };
+
   @TempDir
   public File temporaryFolder;
 
@@ -282,11 +315,135 @@ public class ServerSideEncryptingAmazonS3Test
         null,
         clientConfig,
         null,
+        null,
+        null,
         null
     );
 
     Assertions.assertEquals(2, issued.size(), "one strategy per client, sync and async");
     Assertions.assertNotSame(issued.get(0), issued.get(1));
+  }
+
+  @Test
+  public void testSpecCredentialsAssumeTheRoleTheSpecNamesDirectly() throws Exception
+  {
+    final ServerSideEncryptingAmazonS3 s3 = ServerSideEncryptingAmazonS3.builder(
+        AnonymousCredentialsProvider.create(),
+        new S3StorageConfig(new NoopServerSideEncryption(), new S3TransferConfig()),
+        null,
+        REGION_CONFIG,
+        new AWSClientConfig(),
+        new S3InputSourceConfig(() -> "specAccessKey", () -> "specSecretKey", TARGET_ROLE_ARN, null, null),
+        null,
+        new S3IntermediateRoleConfig(INTERMEDIATE_ROLE_ARN),
+        null
+    ).build();
+
+    final StsAssumeRoleCredentialsProvider target = assumeRoleProvider(
+        s3.getS3Client().serviceClientConfiguration().credentialsProvider(),
+        "the S3 client should assume a role"
+    );
+    final Field stsClientField = StsCredentialsProvider.class.getDeclaredField("stsClient");
+    stsClientField.setAccessible(true);
+    final StsClient targetStsClient = (StsClient) stsClientField.get(target);
+
+    try {
+      Assertions.assertEquals(TARGET_ROLE_ARN, roleArnRequestedBy(target));
+      Assertions.assertFalse(
+          targetStsClient.serviceClientConfiguration().credentialsProvider() instanceof StsAssumeRoleCredentialsProvider,
+          "the spec's own credentials assume the spec's role without the intermediate role"
+      );
+      Assertions.assertEquals(
+          "specAccessKey",
+          targetStsClient.serviceClientConfiguration().credentialsProvider().resolveIdentity().join().accessKeyId()
+      );
+    }
+    finally {
+      target.close();
+    }
+  }
+
+  @Test
+  public void testIntermediateRoleIsAssumedBeforeTheRoleTheSpecNames() throws Exception
+  {
+    final ServerSideEncryptingAmazonS3 s3 = ServerSideEncryptingAmazonS3.builder(
+        AnonymousCredentialsProvider.create(),
+        new S3StorageConfig(new NoopServerSideEncryption(), new S3TransferConfig()),
+        null,
+        REGION_CONFIG,
+        new AWSClientConfig(),
+        new S3InputSourceConfig(null, null, TARGET_ROLE_ARN, null, null),
+        null,
+        new S3IntermediateRoleConfig(INTERMEDIATE_ROLE_ARN),
+        INTERMEDIATE_REGION_CONFIG
+    ).build();
+
+    final StsAssumeRoleCredentialsProvider target = assumeRoleProvider(
+        s3.getS3Client().serviceClientConfiguration().credentialsProvider(),
+        "the S3 client should assume a role"
+    );
+    // The STS client the target provider calls out with carries the credentials of the previous link in the chain.
+    final Field stsClientField = StsCredentialsProvider.class.getDeclaredField("stsClient");
+    stsClientField.setAccessible(true);
+    final StsClient targetStsClient = (StsClient) stsClientField.get(target);
+
+    final StsAssumeRoleCredentialsProvider intermediate = assumeRoleProvider(
+        targetStsClient.serviceClientConfiguration().credentialsProvider(),
+        "the STS client should itself assume the intermediate role"
+    );
+
+    try {
+      Assertions.assertEquals(
+          TARGET_ROLE_ARN,
+          roleArnRequestedBy(target),
+          "the S3 client assumes the role the spec named"
+      );
+      Assertions.assertEquals(
+          INTERMEDIATE_ROLE_ARN,
+          roleArnRequestedBy(intermediate),
+          "and it does so with credentials from assuming the intermediate role first"
+      );
+      Assertions.assertEquals(Region.US_EAST_1, targetStsClient.serviceClientConfiguration().region());
+      Assertions.assertEquals(
+          Region.EU_SOUTH_1,
+          ((StsClient) stsClientField.get(intermediate)).serviceClientConfiguration().region()
+      );
+    }
+    finally {
+      target.close();
+      intermediate.close();
+    }
+  }
+
+  private static StsAssumeRoleCredentialsProvider assumeRoleProvider(Object provider, String message)
+  {
+    return Assertions.assertInstanceOf(StsAssumeRoleCredentialsProvider.class, provider, message);
+  }
+
+  private static String roleArnRequestedBy(StsAssumeRoleCredentialsProvider provider) throws Exception
+  {
+    final Capture<AssumeRoleRequest> requested = EasyMock.newCapture();
+    final StsClient stsClient = EasyMock.createMock(StsClient.class);
+    final AssumeRoleResponse response = AssumeRoleResponse.builder()
+        .credentials(
+            Credentials.builder()
+                       .accessKeyId("accessKey")
+                       .secretAccessKey("secretKey")
+                       .sessionToken("sessionToken")
+                       .expiration(Instant.now().plus(Duration.ofHours(1)))
+                       .build()
+        )
+        .build();
+    EasyMock.expect(stsClient.assumeRole(EasyMock.capture(requested))).andReturn(response);
+    EasyMock.replay(stsClient);
+
+    final Method getUpdatedCredentials =
+        StsAssumeRoleCredentialsProvider.class.getDeclaredMethod("getUpdatedCredentials", StsClient.class);
+    getUpdatedCredentials.setAccessible(true);
+    getUpdatedCredentials.invoke(provider, stsClient);
+
+    EasyMock.verify(stsClient);
+    return requested.getValue().roleArn();
   }
 
   @Test

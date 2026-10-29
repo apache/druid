@@ -22,9 +22,13 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -47,6 +51,7 @@ import org.mockito.Mockito;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -57,6 +62,85 @@ public class JsonParserIteratorTest
   private static final String URL = "url";
   private static final String HOST = "host";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
+
+  @Test
+  public void testModernDruidExceptionJsonResponse() throws IOException
+  {
+    assertModernErrorResponse(OBJECT_MAPPER);
+  }
+
+  @Test
+  public void testModernDruidExceptionSmileResponse() throws IOException
+  {
+    assertModernErrorResponse(new ObjectMapper(new SmileFactory()));
+  }
+
+  @Test
+  public void testLegacyQueryTimeoutSmileResponse() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper(new SmileFactory());
+    final JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+        JAVA_TYPE,
+        Futures.immediateFuture(new ByteArrayInputStream(mapper.writeValueAsBytes(
+            Map.of(
+                "error", QueryException.QUERY_TIMEOUT_ERROR_CODE,
+                "errorMessage", "legacy timeout",
+                "errorClass", QueryTimeoutException.class.getName(),
+                "host", "data-server-host"
+            )
+        ))),
+        URL,
+        null,
+        HOST,
+        mapper
+    );
+
+    QueryTimeoutException actual = Assertions.assertThrows(QueryTimeoutException.class, iterator::hasNext);
+    Assertions.assertEquals("legacy timeout", actual.getMessage());
+    Assertions.assertEquals(HOST, actual.getHost());
+  }
+
+  @Test
+  public void testMalformedModernErrorResponseIsDefensive() throws IOException
+  {
+    final JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+        JAVA_TYPE,
+        Futures.immediateFuture(new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsBytes(
+            Map.of("error", "druidException", "errorMessage", "missing persona, category, and error code")
+        ))),
+        URL,
+        null,
+        HOST,
+        OBJECT_MAPPER
+    );
+
+    DruidException actual = Assertions.assertThrows(DruidException.class, iterator::hasNext);
+    Assertions.assertEquals(DruidException.Category.DEFENSIVE, actual.getCategory());
+  }
+
+  private static void assertModernErrorResponse(ObjectMapper mapper) throws IOException
+  {
+    DruidException expected = InvalidInput.exception("Projection[p] specified, but does not satisfy query");
+    expected.withContext("projection", "p");
+
+    JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+        JAVA_TYPE,
+        Futures.immediateFuture(new ByteArrayInputStream(
+            mapper.writeValueAsBytes(new ErrorResponse(expected).getAsMap())
+        )),
+        URL,
+        null,
+        HOST,
+        mapper
+    );
+
+    DruidException actual = Assertions.assertThrows(DruidException.class, iterator::hasNext);
+    Assertions.assertEquals(expected.getErrorCode(), actual.getErrorCode());
+    Assertions.assertEquals(DruidException.Persona.USER, actual.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, actual.getCategory());
+    Assertions.assertEquals(expected.getMessage(), actual.getMessage());
+    Assertions.assertEquals("p", actual.getContext().get("projection"));
+  }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")
   public static class FutureExceptionTest

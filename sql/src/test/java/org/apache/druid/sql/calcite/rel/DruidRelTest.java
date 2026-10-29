@@ -132,6 +132,8 @@ public class DruidRelTest
     when(mockPlannerContext.getPlannerConfig()).thenReturn(PlannerConfig.builder().build());
     when(mockPlannerContext.getJsonMapper()).thenReturn(JsonMapper.builder().build());
     when(mockPlannerContext.getAuthorizationResult()).thenReturn(AUTHORIZATION_RESULT);
+    // Mockito would otherwise return an empty list, which means "match nothing" rather than "no time condition".
+    when(mockPlannerContext.getTimeCondition()).thenReturn(null);
 
     LogicalTableScan logicalTableScan = new LogicalTableScan(
         mockRelOptCluster,

@@ -118,7 +118,19 @@ notice: |
   The licenses for these third party components are included in LICENSE.txt
 ```
 
+If the library is under a [Category B](https://www.apache.org/legal/resolved.html#category-b) (weak copyleft) license
+such as CDDL, EPL, MPL or the SIL Open Font License, also add a `homepage` field with the URL of the project's homepage.
+`generate-binary-license.py` lists these libraries in the README of the binary package and fails if the homepage is missing.
+
 ### Updating licenses
 
 When you update the version of existing dependencies, you need to update the version not only in the `pom.xml` file but
 also in the `licenses.yaml` file.
+
+`distribution/bin/refresh-license-versions.py` makes that edit from the Maven dependency reports, and lists the entries
+it cannot update on its own, such as an entry whose libraries moved to different versions:
+
+```
+distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
+distribution/bin/refresh-license-versions.py licenses.yaml target/license-reports
+```

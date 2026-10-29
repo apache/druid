@@ -714,6 +714,18 @@ The following parameters apply to SQL queries only. For how to set them, see [SQ
 |**Engine**|Native, MSQ, Dart|
 |**Since**|0.22.0|
 
+### `sqlTimeCondition`
+
+| | |
+|---|---|
+|**Description**|Time condition to apply to all tables that the query reads, except global tables on the right side of a JOIN. Comma-separated string of ISO8601 intervals, such as `"2000-01-01/2000-02-01,2001-01-01/2001-02-01"`. An empty string is an error.<br /><br />Druid ANDs this condition with any other condition you provide on the `__time` column. Intervals without an explicit offset are in UTC; `sqlTimeZone` doesn't affect them.<br /><br />You can't use this parameter with `INSERT`, `REPLACE`, or [catalog DDL](../development/extensions-core/catalog.md#sql-ddl) statements.|
+|**Type**|String|
+|**Default**|none|
+|**Query**|SQL|
+|**Engine**|Native, MSQ, Dart|
+|**Statement**|SELECT|
+|**Since**|40.0.0|
+
 ### `sqlTimeZone`
 
 | | |

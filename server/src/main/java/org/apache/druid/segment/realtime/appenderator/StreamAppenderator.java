@@ -753,7 +753,7 @@ public class StreamAppenderator implements Appenderator
             }
             finally {
               metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
-              metrics.incrementPersistTimeMillis(persistStopwatch.millisElapsed());
+              metrics.incrementPersistTimeNanos(persistStopwatch.nanosElapsed());
               metrics.incrementNumPersists();
               persistStopwatch.stop();
             }
@@ -943,7 +943,7 @@ public class StreamAppenderator implements Appenderator
       final File mergedFile;
       final DataSegment mergedSegment;
       final Stopwatch mergeStopwatch = Stopwatch.createStarted();
-      final long mergeTimeMillis;
+      final long mergeTimeNanos;
       final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
       Closer closer = Closer.create();
@@ -970,10 +970,10 @@ public class StreamAppenderator implements Appenderator
         );
 
         metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
-        mergeTimeMillis = mergeStopwatch.millisElapsed();
-        metrics.setMergeTime(mergeTimeMillis);
+        mergeTimeNanos = mergeStopwatch.nanosElapsed();
+        metrics.setMergeTime(mergeTimeNanos);
 
-        log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
+        log.debug("Segment[%s] built in %,dms.", identifier, TimeUnit.NANOSECONDS.toMillis(mergeTimeNanos));
         QueryableIndex index = indexIO.loadIndex(mergedFile);
         closer.register(index);
         // Clustered segments have no top-level columns (getAvailableDimensions() is empty); their logical
@@ -1014,7 +1014,7 @@ public class StreamAppenderator implements Appenderator
           segment.getSize(),
           segment.getTotalRows(),
           indexes.size(),
-          mergeTimeMillis,
+          TimeUnit.NANOSECONDS.toMillis(mergeTimeNanos),
           pushTimeMillis,
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );

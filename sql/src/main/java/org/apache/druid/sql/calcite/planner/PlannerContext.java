@@ -31,9 +31,13 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.util.CancelFlag;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
@@ -72,6 +76,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -245,6 +250,8 @@ public class PlannerContext
   private boolean pullUpLookup;
   private boolean reverseLookup;
   private boolean useGranularity;
+  @Nullable
+  private List<Interval> timeCondition;
   private DateTime localNow;
 
   // bindings for dynamic parameters to bind during planning
@@ -535,6 +542,16 @@ public class PlannerContext
     return useGranularity;
   }
 
+  /**
+   * Returns intervals that should be applied (via AND) to table reads. The returned list is sorted and
+   * non-overlapping.
+   */
+  @Nullable
+  public List<Interval> getTimeCondition()
+  {
+    return timeCondition;
+  }
+
   public List<TypedValue> getParameters()
   {
     return parameters;
@@ -812,6 +829,8 @@ public class PlannerContext
 
     useGranularity = context.getOrDefault(QueryContextParameters.SQL_USE_GRANULARITY);
 
+    timeCondition = parseTimeCondition(context.get(QueryContextParameters.SQL_TIME_CONDITION));
+
     sqlQueryId = context.get(QueryContextParameters.SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
@@ -824,5 +843,35 @@ public class PlannerContext
     } else {
       plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(queryContext);
     }
+  }
+
+  /**
+   * Parses the value of {@link QueryContextParameters#SQL_TIME_CONDITION}, a comma-separated string of ISO8601
+   * intervals. Returns null if the value is null. Throws an error if the string is empty or if there are empty items
+   * after splitting on commas. The returned intervals are condensed and sorted.
+   */
+  @Nullable
+  static List<Interval> parseTimeCondition(@Nullable final String value)
+  {
+    if (value == null) {
+      return null;
+    }
+
+    final List<Interval> intervals = new ArrayList<>();
+    for (final String intervalString : value.split(",", -1)) {
+      try {
+        intervals.add(Intervals.of(intervalString.trim()));
+      }
+      catch (DruidException e) {
+        throw InvalidInput.exception(
+            e,
+            "Query context parameter [%s] must be a comma-separated string of ISO8601 intervals, but got [%s]",
+            QueryContextParameters.SQL_TIME_CONDITION,
+            value
+        );
+      }
+    }
+
+    return JodaUtils.condenseIntervals(intervals);
   }
 }
