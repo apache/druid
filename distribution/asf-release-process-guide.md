@@ -133,28 +133,37 @@ The release manager should also keep an eye-out for `Cron Job ITS` failures: htt
 
 ## Refresh licenses.yaml versions
 
-CI only warns when a version in `licenses.yaml` no longer matches the dependency version the build uses, but the [release build](#build-artifacts) fails on it. Refresh the versions before you create the release branch, and again on the release branch before you tag if a backport changed a dependency version.
+Check the `licenses.yaml` versions before you create the release branch, and again on the release branch before you tag. CI only warns when a version in `licenses.yaml` no longer matches the dependency the build uses, but the [release build](#build-artifacts) fails on it. The license scripts need Python 3 with PyYAML.
 
-From the repository root, install the branch you are refreshing first, because the dependency reports resolve the other Druid modules from your local Maven repository:
+From the repository root, install the branch, because the dependency reports resolve Druid modules from your local Maven repository:
 
 ```bash
 mvn clean install -Pskip-static-checks,skip-tests -Dweb.console.skip=true -T1C
 ```
 
-Then generate the dependency reports and refresh the versions. The license scripts need Python 3 with PyYAML:
+Generate the dependency reports:
 
 ```bash
 mvn -Papache-release -pl distribution exec:exec@generate-licenses-report
-distribution/bin/refresh-license-versions.py licenses.yaml distribution/target/license-reports
 ```
 
-Search the report output for `Encountered error`: the report script keeps going when a module fails, and `refresh-license-versions.py` skips the entries of a module without a report. Edit the entries marked `needs a manual edit` by hand; each line says what to change, and [dev/license.md](../dev/license.md) describes the entry format. Then run the release build's check:
+Search the output for `Encountered error`. The report script keeps going when a module fails, and neither the check nor the refresh covers a module without a report.
+
+Run the release build's check. If it passes, skip the rest of this section:
 
 ```bash
 mvn -Papache-release -pl distribution exec:exec@check-licenses
 ```
 
-Open a PR with the `licenses.yaml` changes against the branch you refreshed, and merge it before you branch or tag. On a release branch, this direct PR is an exception to [Release branch hygiene](#release-branch-hygiene).
+If it fails, refresh the versions:
+
+```bash
+distribution/bin/refresh-license-versions.py licenses.yaml distribution/target/license-reports
+```
+
+Edit the entries marked `needs a manual edit`. Most of these lines say what to change, and [dev/license.md](../dev/license.md#when-you-add-a-new-library-dependency-into-druid) describes the entry format. Run the check again until it passes.
+
+Open a PR with the `licenses.yaml` changes against the same branch, and merge it before you branch or tag. On a release branch, this direct PR is an exception to [Release branch hygiene](#release-branch-hygiene).
 
 ## Create a release branch
 
@@ -359,7 +368,7 @@ In this case, the commit must be backported to the release branch. The [find-mis
 find such commits that have not been backported. Note that this script relies on the milestone tagged in the PR, so PRs
 must be tagged properly to make this script working. See the above [Release notes](#release-notes) section for more details about the script.
 
-If a backported commit changed a dependency version, [refresh the `licenses.yaml` versions](#refresh-licensesyaml-versions) on the release branch before you tag.
+Before you tag, [check the `licenses.yaml` versions](#refresh-licensesyaml-versions) on the release branch, starting with the install.
 
 ### Set version and make a tag
 
