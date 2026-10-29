@@ -308,12 +308,12 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
   }
 
   /**
-   * Whether this stage's processors need no more base inputs, because they have already produced all the output the
-   * stage needs. Once this returns true, the {@link ReadableInputQueue} stops loading and handing out inputs.
+   * Pruner that the {@link ReadableInputQueue} for this stage's base inputs uses to skip inputs that cannot contribute
+   * to the stage's output.
    */
-  protected boolean canSkipRemainingInputs()
+  protected InputPruner getInputPruner()
   {
-    return false;
+    return InputPruner.NEVER;
   }
 
   /**
@@ -359,7 +359,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
         filteredSlices,
         context.segmentLoadAheadCount(),
         context.workOrder().getWorkerContext().getSegmentAcquireMode(getDefaultAcquireMode()),
-        this::canSkipRemainingInputs
+        getInputPruner()
     );
   }
 
