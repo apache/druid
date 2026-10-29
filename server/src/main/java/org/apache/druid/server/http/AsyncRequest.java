@@ -188,13 +188,10 @@ public class AsyncRequest
     private final ObjectMapper objectMapper;
     private final String contentType;
 
-    @Nullable
     private ListenableFuture<?> future;
     private long timeoutMillis = -1;
     private int onTimeoutStatusCode = HttpServletResponse.SC_NO_CONTENT;
-    @Nullable
     private Function<Object, AsyncResponse> onSuccess;
-    @Nullable
     private Function<Throwable, AsyncResponse> onFailure;
 
     private Builder(HttpServletRequest request, ObjectMapper objectMapper, String contentType)
