@@ -1,4 +1,4 @@
-# note: documentation can be found here https://cwiki.apache.org/confluence/display/INFRA/Git+-+.asf.yaml+features
+# note: documentation can be found here https://github.com/apache/infrastructure-asfyaml/blob/main/README.md
 
 github:
   description: 'Apache Druid: a high performance real-time analytics database.'
