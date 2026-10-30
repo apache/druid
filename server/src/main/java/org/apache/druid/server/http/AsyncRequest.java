@@ -38,6 +38,7 @@ import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Type;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Wraps the {@link AsyncContext} of a {@link HttpServletRequest} and ensures that the
@@ -71,7 +72,7 @@ public class AsyncRequest
   public static <T> AsyncRequest completed(HttpServletRequest request, ObjectMapper objectMapper, String contentType, AsyncResponse<T> response)
   {
     final AsyncRequest asyncRequest = new AsyncRequest(request, objectMapper, contentType);
-    asyncRequest.complete(response);
+    asyncRequest.complete(() -> response);
     return asyncRequest;
   }
 
@@ -93,9 +94,10 @@ public class AsyncRequest
   }
 
   /**
-   * Completes the request as described by the given {@link AsyncResponse}, if it hasn't already been completed.
+   * Completes the request as described by the {@link AsyncResponse} obtained from the given supplier, if it
+   * hasn't already been completed. The supplier is invoked only if the request is not already complete.
    */
-  private <T> void complete(AsyncResponse<T> response)
+  private <T> void complete(Supplier<AsyncResponse<T>> responseSupplier)
   {
     if (!completed.compareAndSet(false, true)) {
       // Request has already been completed
@@ -103,6 +105,7 @@ public class AsyncRequest
     }
 
     try {
+      final AsyncResponse<T> response = responseSupplier.get();
       final HttpServletResponse servletResponse = (HttpServletResponse) context.getResponse();
       if (response.isError) {
         if (response.errorMessage == null) {
@@ -271,7 +274,7 @@ public class AsyncRequest
       asyncRequest.context.setTimeout(timeoutMillis);
       asyncRequest.context.addListener(
           ServletResourceUtils.createAsyncTimeoutListener(event -> {
-            asyncRequest.complete(AsyncResponse.status(onTimeoutStatusCode));
+            asyncRequest.complete(() -> AsyncResponse.status(onTimeoutStatusCode));
             future.cancel(true);
           })
       );
@@ -283,13 +286,13 @@ public class AsyncRequest
             @Override
             public void onSuccess(T result)
             {
-              asyncRequest.complete(onSuccess.apply(result));
+              asyncRequest.complete(() -> onSuccess.apply(result));
             }
 
             @Override
             public void onFailure(Throwable t)
             {
-              asyncRequest.complete(onFailure.apply(t));
+              asyncRequest.complete(() -> onFailure.apply(t));
             }
           },
           MoreExecutors.directExecutor()
