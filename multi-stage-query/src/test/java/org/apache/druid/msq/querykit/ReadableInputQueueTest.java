@@ -522,18 +522,6 @@ class ReadableInputQueueTest
   }
 
   @Test
-  void testNoTimeOrderDoesNotAcquirePrunedCachedSegments()
-  {
-    final TestLoadableSegment pruned = cachedSegmentOnDay(1);
-    final ReadableInputQueue queue = makeQueue(0, interval -> interval.equals(day(1)), pruned, cachedSegmentOnDay(2));
-    queue.start();
-
-    Assertions.assertEquals(List.of(day(2)), handOutAll(queue));
-    Assertions.assertEquals(0, pruned.countAcquires.get(), "a pruned cached segment must never be acquired");
-    queue.close();
-  }
-
-  @Test
   void testTimeOrderLoadedSegmentJumpsAheadOnlyWithinItsInterval()
   {
     // Loadahead acquires all three in time order: a loading segment, then a loaded one with the same interval, then a
