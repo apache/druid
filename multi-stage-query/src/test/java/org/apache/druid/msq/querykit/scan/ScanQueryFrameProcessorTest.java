@@ -136,7 +136,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 
     // Other processors have already written 10 rows, so this one must stop after 3, even though a frame can hold more.
     final ScanLimitTracker limitTracker = ScanLimitTracker.create(query);
-    limitTracker.forCursor(null, List.of()).onFrameFlushed();
+    flushRowsFromOtherProcessor(limitTracker, 10);
     final List<List<Object>> rows = runScanOverSegment(queryableIndex, query, limitTracker, Integer.MAX_VALUE);
 
     Assertions.assertEquals(3, rows.size());
@@ -336,6 +336,66 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
                    .assertThat(e);
   }
 
+  @Test
+  public void test_runWithInputChannel_sharedLimitReachedMidFrame_flushesBeforeAwaitingInput() throws Exception
+  {
+    final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
+    final FrameSequenceBuilder frameSequenceBuilder =
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                            .maxRowsPerFrame(5)
+                            .frameType(FrameType.latestRowBased())
+                            .allocator(ArenaMemoryAllocator.createOnHeap(100_000));
+    final RowSignature signature = frameSequenceBuilder.signature();
+
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+              .columns(signature.getColumnNames())
+              .limit(13)
+              .build();
+
+    // Other processors have already written 10 rows, so this one must stop after 3 of the first frame's 5.
+    final ScanLimitTracker limitTracker = ScanLimitTracker.create(query);
+    flushRowsFromOtherProcessor(limitTracker, 10);
+
+    // Provide one input frame and leave the channel open, so the processor next awaits more input.
+    final BlockingQueueFrameChannel inputChannel = new BlockingQueueFrameChannel(1);
+    final WritableFrameChannel writableInputChannel = inputChannel.writable();
+    writableInputChannel.write(frameSequenceBuilder.frames().toList().getFirst());
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+    final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            signature,
+            Collections.emptyList(),
+            false
+        ),
+        Integer.MAX_VALUE
+    );
+
+    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
+        query,
+        limitTracker,
+        new DefaultObjectMapper(),
+        ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), 0, 0),
+        SegmentMapFunction.IDENTITY,
+        ResourceHolder.fromCloseable(outputChannel.writable()),
+        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
+    );
+    final ListenableFuture<Object> retVal = exec.runFully(processor, null);
+
+    // The stopped rows must be flushed without waiting for more input.
+    outputChannel.readable().readabilityFuture().get(30, TimeUnit.SECONDS);
+    Assertions.assertEquals(3, outputChannel.readable().readFrame().numRows());
+
+    writableInputChannel.close();
+    Assertions.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
+    Assertions.assertTrue(limitTracker.isSatisfied());
+  }
+
   /**
    * Verifies that {@link ScanQueryFrameProcessor#runWithSegment} yields via {@link
    * org.apache.druid.frame.processor.ReturnOrAwait#awaitAllFutures} when {@link CursorFactory#makeCursorHolderAsync}
@@ -486,6 +546,19 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     );
 
     Assertions.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
+  }
+
+  /**
+   * Counts {@code numRows} rows toward {@code limitTracker}'s limit, as if another processor had written and flushed
+   * them.
+   */
+  private static void flushRowsFromOtherProcessor(final ScanLimitTracker limitTracker, final int numRows)
+  {
+    final RowGate otherProcessorGate = limitTracker.forCursor(null, List.of());
+    for (int i = 0; i < numRows; i++) {
+      otherProcessorGate.onRowWritten();
+    }
+    otherProcessorGate.onFrameFlushed();
   }
 
   /**

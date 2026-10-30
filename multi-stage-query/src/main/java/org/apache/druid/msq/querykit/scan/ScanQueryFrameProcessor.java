@@ -502,6 +502,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       final RowGate.Decision rowGateDecision = rowGate.check();
       if (rowGateDecision == RowGate.Decision.STOP) {
         cursorStopped = true;
+        flushFrameWriter();
         break;
       } else if (rowGateDecision == RowGate.Decision.SKIP) {
         cursor.advance();
