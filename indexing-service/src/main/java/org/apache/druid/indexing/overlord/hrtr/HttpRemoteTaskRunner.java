@@ -1188,16 +1188,24 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         try {
           // this will send HTTP request to worker for assigning task
           if (!runTaskOnWorker(taskItem, immutableWorker.getWorker().getHost())) {
-            if (taskItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
-              if (taskItem.isShutdownRequested()) {
-                taskComplete(
-                    taskItem,
-                    null,
-                    TaskStatus.failure(taskId, taskItem.getShutdownReason())
-                );
-              } else {
-                taskItem.revertStateFromPendingWorkerAssignToPending();
+            boolean shutdownRequested = false;
+            String shutdownReason = null;
+            synchronized (statusLock) {
+              if (taskItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
+                if (taskItem.isShutdownRequested()) {
+                  shutdownRequested = true;
+                  shutdownReason = taskItem.getShutdownReason();
+                } else {
+                  taskItem.revertStateFromPendingWorkerAssignToPending();
+                }
               }
+            }
+            if (shutdownRequested) {
+              taskComplete(
+                  taskItem,
+                  null,
+                  TaskStatus.failure(taskId, shutdownReason)
+              );
             }
           }
         }
