@@ -60,7 +60,8 @@ Configure where to store segments using the following properties:
 | `druid.azure.maxTries` | Number of tries before canceling an Azure operation. | 3 |
 | `druid.azure.protocol` | The protocol to use to connect to the Azure Storage account. Either `http` or `https`. | `https` |
 | `druid.azure.storageAccountEndpointSuffix` | The Storage account endpoint to use. Override the default value to connect to [Azure Government](https://learn.microsoft.com/en-us/azure/azure-government/documentation-government-get-started-connect-to-storage#getting-started-with-storage-api) or storage accounts with [Azure DNS zone endpoints](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-overview#azure-dns-zone-endpoints-preview).<br/><br/>Do _not_ include the storage account name prefix in this config value.<br/><br/>Examples: `ABCD1234.blob.storage.azure.net`, `blob.core.usgovcloudapi.net`. | `blob.core.windows.net` |
-| `druid.storage.zip` | Whether segments are written as directories of blobs (`false`) or as a single `index.zip` blob (`true`). Writing segments unzipped requires permission to delete blobs under the segment path, so that a push replaces the segment already there. | `true` |
+| `druid.storage.compressionFormat` | The compression format applied to segments in Azure Blob Storage deep storage. Supported values are `zip` and `none` (uncompressed directory of blobs). Writing segments unzipped requires permission to delete blobs under the segment path, so that a push replaces the segment already there. | `zip` |
+| `druid.storage.zip` | Deprecated. Use `druid.storage.compressionFormat` instead. Whether segments are written as directories of blobs (`false`) or as a single `index.zip` blob (`true`). Writing segments unzipped requires permission to delete blobs under the segment path, so that a push replaces the segment already there. | `true` |
 
 #### Configure authentication
 

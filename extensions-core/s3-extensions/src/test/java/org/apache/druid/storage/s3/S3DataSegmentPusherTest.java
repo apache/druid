@@ -34,6 +34,7 @@ import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -450,5 +451,56 @@ public class S3DataSegmentPusherTest
 
     EasyMock.verify(s3Client);
     return segment;
+  }
+
+  @Test
+  public void testUnsupportedCompressionFormatThrows()
+  {
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> new S3DataSegmentPusher(
+            s3Client,
+            config,
+            new DeepStorageSegmentConfig(null, CompressionUtils.Format.LZ4)
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("S3 deep storage does not support compressionFormat"));
+  }
+
+  @Test
+  public void testExplicitCompressionFormatZip() throws IOException
+  {
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+
+    final S3DataSegmentPusher pusher = new S3DataSegmentPusher(
+        s3Client,
+        config,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
+    );
+    Assertions.assertNotNull(pusher);
+  }
+
+  @Test
+  public void testExplicitCompressionFormatNone() throws IOException
+  {
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+
+    final S3DataSegmentPusher pusher = new S3DataSegmentPusher(
+        s3Client,
+        config,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+    Assertions.assertNotNull(pusher);
   }
 }

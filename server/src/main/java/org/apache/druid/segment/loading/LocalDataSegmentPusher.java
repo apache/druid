@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -45,18 +46,25 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   public static final String INDEX_ZIP_FILENAME = "index.zip";
 
   /**
-   * Local deep storage writes segments as a directory of files unless {@code druid.storage.zip} says otherwise.
+   * Local deep storage writes segments as a directory of files by default.
    */
-  private static final boolean DEFAULT_ZIP = false;
+  private static final CompressionUtils.Format DEFAULT_FORMAT = CompressionUtils.Format.NONE;
 
   private final LocalDataSegmentPusherConfig config;
-  private final boolean zip;
+  private final CompressionUtils.Format compressionFormat;
 
   @Inject
   public LocalDataSegmentPusher(LocalDataSegmentPusherConfig config, DeepStorageSegmentConfig deepStorageConfig)
   {
     this.config = config;
-    this.zip = deepStorageConfig.isZip(DEFAULT_ZIP);
+    final CompressionUtils.Format format = deepStorageConfig.getEffectiveCompressionFormat(DEFAULT_FORMAT);
+    if (format != CompressionUtils.Format.ZIP && format != CompressionUtils.Format.NONE) {
+      throw new IAE(
+          "Local deep storage does not support compressionFormat [%s]. Supported formats: zip, none.",
+          format
+      );
+    }
+    this.compressionFormat = format;
   }
 
   @Override
@@ -87,7 +95,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       return segment.withLoadSpec(makeLoadSpec(outDir.toURI()))
                     .withSize(size)
                     .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
-    } else if (zip) {
+    } else if (compressionFormat == CompressionUtils.Format.ZIP) {
       return pushZip(dataSegmentFile, outDir, segment);
     } else {
       return pushNoZip(dataSegmentFile, outDir, segment);

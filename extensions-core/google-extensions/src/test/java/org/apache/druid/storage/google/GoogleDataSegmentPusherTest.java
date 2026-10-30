@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
@@ -32,6 +33,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.jupiter.api.Assertions;
@@ -303,6 +305,56 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
     Assertions.assertEquals("/path", pusher.buildPath("/path"));
     config.setPrefix(null);
     Assertions.assertEquals("/path", pusher.buildPath("/path"));
+  }
+
+  @Test
+  public void testUnsupportedCompressionFormatThrows()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> new GoogleDataSegmentPusher(
+            storage,
+            googleAccountConfig,
+            INPUT_DATA_CONFIG,
+            new DeepStorageSegmentConfig(null, CompressionUtils.Format.LZ4)
+        )
+    );
+  }
+
+  @Test
+  public void testExplicitCompressionFormatZip()
+  {
+    final GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(
+        storage,
+        googleAccountConfig,
+        INPUT_DATA_CONFIG,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
+    );
+    Assertions.assertNotNull(pusher);
+  }
+
+  @Test
+  public void testExplicitCompressionFormatNone()
+  {
+    final GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(
+        storage,
+        googleAccountConfig,
+        INPUT_DATA_CONFIG,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+    Assertions.assertNotNull(pusher);
+  }
+
+  @Test
+  public void testDefaultCompressionFormatIsZip()
+  {
+    final GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(
+        storage,
+        googleAccountConfig,
+        INPUT_DATA_CONFIG,
+        new DeepStorageSegmentConfig()
+    );
+    Assertions.assertNotNull(pusher);
   }
 
   private static DataSegment newSegmentToPush(long size)

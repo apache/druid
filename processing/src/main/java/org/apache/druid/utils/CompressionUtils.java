@@ -95,6 +95,7 @@ public class CompressionUtils
         return lz4DecompressDirectory(in, outDir);
       }
     },
+    NONE("", ""),
     SNAPPY(".sz", "sz"),
     XZ(".xz", "xz"),
     ZIP(".zip", "zip") {
