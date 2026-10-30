@@ -1832,6 +1832,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           Objects.equal(getWorker().getHost(), candidateWorker.getHost());
     }
 
+    @Override
     public Task getTask()
     {
       return task;

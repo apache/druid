@@ -891,6 +891,7 @@ public class ForkingTaskRunner
       this.task = task;
     }
 
+    @Override
     public Task getTask()
     {
       return task;

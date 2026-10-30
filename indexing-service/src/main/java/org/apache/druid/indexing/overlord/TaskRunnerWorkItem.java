@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
@@ -95,6 +96,15 @@ public abstract class TaskRunnerWorkItem
   @Nullable
   public abstract String getTaskType();
   public abstract String getDataSource();
+
+  /**
+   * Returns the task of this work item, or null if this runner does not keep it.
+   */
+  @Nullable
+  public Task getTask()
+  {
+    return null;
+  }
 
   @Override
   public String toString()
