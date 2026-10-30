@@ -27,7 +27,7 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.ManageLifecycleAnnouncements;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Stopwatch;
@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-@ManageLifecycle
+@ManageLifecycleAnnouncements
 public class DartWorkerRunner
 {
   private static final Logger log = new Logger(DartWorkerRunner.class);
@@ -272,6 +272,9 @@ public class DartWorkerRunner
     brokers.registerListener(new BrokerListener());
   }
 
+  /**
+   * Waits up to {@link ServerConfig#getGracefulShutdownTimeout()} for running workers to exit, then cancels the rest.
+   */
   @LifecycleStop
   public void stop()
   {
