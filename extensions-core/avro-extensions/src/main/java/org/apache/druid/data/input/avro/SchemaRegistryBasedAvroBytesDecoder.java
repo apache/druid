@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
@@ -47,7 +49,7 @@ import java.util.Objects;
 
 public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
 {
-  private final SchemaRegistryClient registry;
+  private final Supplier<SchemaRegistryClient> registry;
   private final String url;
   private final int capacity;
   private final List<String> urls;
@@ -72,11 +74,14 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.config = config;
     this.headers = headers;
     this.jsonMapper = jsonMapper;
-    if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
-    } else {
-      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
-    }
+    // Client is created lazily: its constructor reads keystores and other resources named in the config.
+    this.registry = Suppliers.memoize(() -> {
+      if (url != null && !url.isEmpty()) {
+        return new CachedSchemaRegistryClient(this.url, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
+      } else {
+        return new CachedSchemaRegistryClient(this.urls, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
+      }
+    });
   }
 
   @JsonProperty
@@ -118,7 +123,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.urls = null;
     this.config = null;
     this.headers = null;
-    this.registry = registry;
+    this.registry = () -> registry;
     this.jsonMapper = new ObjectMapper();
   }
 
@@ -136,7 +141,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     Schema schema;
 
     try {
-      ParsedSchema parsedSchema = registry.getSchemaById(id);
+      ParsedSchema parsedSchema = registry.get().getSchemaById(id);
       schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
     }
     catch (IOException ex1) {

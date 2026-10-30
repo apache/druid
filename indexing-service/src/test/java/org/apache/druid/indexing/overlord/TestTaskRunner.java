@@ -111,7 +111,7 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
     listeners.add(listenerPair);
     log.info("Registered listener [%s]", listener.getListenerId());
     for (TestTaskRunnerWorkItem item : runningItems) {
-      TaskRunnerUtils.notifyLocationChanged(ImmutableList.of(listenerPair), item.getTaskId(), item.getLocation());
+      TaskRunnerUtils.notifyLocationChanged(ImmutableList.of(listenerPair), item.getTask(), item.getLocation());
     }
   }
 
@@ -173,15 +173,15 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
               System.currentTimeMillis() - start
           );
 
-          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
+          TaskRunnerUtils.notifyStatusChanged(listeners, task, taskStatus);
         }
         catch (Exception e) {
           String errMsg = "Graceful shutdown of task aborted with exception, see task logs for more information";
-          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId(), errMsg));
+          TaskRunnerUtils.notifyStatusChanged(listeners, task, TaskStatus.failure(task.getId(), errMsg));
           throw new RE(e, "Graceful shutdown of task[%s] aborted with exception", task.getId());
         }
       } else {
-        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(
+        TaskRunnerUtils.notifyStatusChanged(listeners, task, TaskStatus.failure(
             task.getId(),
             "Task failure while shutting down gracefully"
         ));
@@ -405,10 +405,10 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
         log.info("Running task: %s", task.getId());
         TaskRunnerUtils.notifyLocationChanged(
             listeners,
-            task.getId(),
+            task,
             taskLocation
         );
-        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
+        TaskRunnerUtils.notifyStatusChanged(listeners, task, TaskStatus.running(task.getId()));
         status = task.run(toolbox);
       }
       catch (InterruptedException e) {
@@ -432,7 +432,7 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
       }
 
       status = status.withDuration(System.currentTimeMillis() - startTime);
-      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+      TaskRunnerUtils.notifyStatusChanged(listeners, task, status);
       return status;
     }
   }

@@ -382,8 +382,8 @@ function convertQueryGranularity(
     typeof queryGranularity === 'string'
       ? queryGranularity
       : typeof queryGranularity?.type === 'string'
-      ? queryGranularity.type
-      : undefined;
+        ? queryGranularity.type
+        : undefined;
 
   if (effectiveQueryGranularity) {
     const queryGranularitySql = QUERY_GRANULARITY_MAP[effectiveQueryGranularity.toLowerCase()];

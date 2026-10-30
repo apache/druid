@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../../blueprint-overrides/common/colors';
+@use '../../../blueprint-overrides/common/colors' as *;
 
 .ingest-success-pane {
   padding: 20px 22px;

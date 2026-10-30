@@ -25,7 +25,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
@@ -162,7 +162,7 @@ public class Filters
     if (filter == null) {
       return null;
     }
-    boolean useCNF = query.context().getBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
+    final boolean useCNF = query.context().getOrDefault(QueryContextParameters.USE_FILTER_CNF);
     try {
       return useCNF ? Filters.toCnf(filter) : filter;
     }

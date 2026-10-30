@@ -29,13 +29,13 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>39.0.0-SNAPSHOT</version>
+    <version>40.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <delta-kernel.version>4.4.0</delta-kernel.version>
+    <delta-kernel.version>4.4.1</delta-kernel.version>
   </properties>
 
   <dependencies>
@@ -115,8 +115,7 @@
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil-core</artifactId>
-      <version>8.5.4</version>
+      <artifactId>fastutil</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>

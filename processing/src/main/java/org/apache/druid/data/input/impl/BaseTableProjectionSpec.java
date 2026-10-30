@@ -21,16 +21,22 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.Sets;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Spec describing the shape of the 'base' table schema for a {@link org.apache.druid.segment.indexing.DataSchema}. This
@@ -47,6 +53,8 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
+    @JsonSubTypes.Type(name = TableProjectionSpec.TYPE_NAME, value = TableProjectionSpec.class),
+    @JsonSubTypes.Type(name = RollupTableProjectionSpec.TYPE_NAME, value = RollupTableProjectionSpec.class),
     @JsonSubTypes.Type(
         name = ClusteredValueGroupsBaseTableProjectionSpec.TYPE_NAME,
         value = ClusteredValueGroupsBaseTableProjectionSpec.class
@@ -72,11 +80,16 @@ public interface BaseTableProjectionSpec
   {
     final VirtualColumn granularityVirtualColumn =
         getVirtualColumns().getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    if (granularityVirtualColumn == null) {
-      return Granularities.NONE;
-    }
-    final Granularity granularity = Granularities.fromVirtualColumn(granularityVirtualColumn);
+    final Granularity granularity = Granularities.fromTimeVirtualColumn(granularityVirtualColumn);
     return granularity == null ? Granularities.NONE : granularity;
+  }
+
+  /**
+   * Returns true if rows with identical grouping values are aggregated into one at ingest time.
+   */
+  default boolean isRollup()
+  {
+    return false;
   }
 
   /**
@@ -103,5 +116,144 @@ public interface BaseTableProjectionSpec
   default boolean hasEqualCompactionState(BaseTableProjectionSpec other)
   {
     return equals(other);
+  }
+
+  /**
+   * Variant of {@link #hasEqualCompactionState(BaseTableProjectionSpec)} for a base table that is not the complete
+   * declaration of its table. When {@code allowUndeclaredColumns} is set, {@code other} is also equivalent if it is
+   * this spec extended by {@link #withAdditionalColumns}: those extra columns come from the segments rather than from
+   * the config, so comparing them strictly would make every segment look permanently out of date and recompact it on
+   * every run.
+   * <p>
+   * The default ignores the relaxation and compares strictly; an implementation that can absorb undeclared columns
+   * overrides this to express what "extended by" means for its own state.
+   */
+  default boolean hasEqualCompactionState(BaseTableProjectionSpec other, boolean allowUndeclaredColumns)
+  {
+    return hasEqualCompactionState(other);
+  }
+
+  /**
+   * Validates that {@code queryGranularity} can be used by a base-table spec: only period granularities in the UTC
+   * time zone without an origin are currently allowed.
+   */
+  static void validateQueryGranularity(Granularity queryGranularity, String typeName)
+  {
+    if (!Granularities.isStandardUtcPeriod(queryGranularity)) {
+      throw InvalidInput.exception(
+          "Query granularity[%s] is not supported for [%s] base tables; only period granularities in the UTC time"
+          + " zone without an origin are supported",
+          queryGranularity,
+          typeName
+      );
+    }
+  }
+
+  /**
+   * Validates a {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} supplied directly to a spec (catalog JSON, or
+   * a translated DDL body): it must decode to a granularity {@link #validateQueryGranularity} accepts, so a
+   * spec cannot be constructed claiming a granularity that reads back as something else.
+   */
+  static void validateGranularity(VirtualColumn granularityColumn, String typeName)
+  {
+    if (!Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME).equals(granularityColumn.requiredColumns())) {
+      throw InvalidInput.exception(
+          "virtual column [%s] must be computed from [%s] alone, but reads %s",
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+          ColumnHolder.TIME_COLUMN_NAME,
+          granularityColumn.requiredColumns()
+      );
+    }
+    final Granularity granularity = Granularities.fromTimeVirtualColumn(granularityColumn);
+    if (granularity == null || Granularities.NONE.equals(granularity) || Granularities.ALL.equals(granularity)) {
+      throw InvalidInput.exception(
+          "virtual column [%s] does not encode a query granularity",
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+      );
+    }
+    validateQueryGranularity(granularity, typeName);
+  }
+
+  /**
+   * Validates a declared column list: non-empty, unique names, an explicit {@link ColumnHolder#TIME_COLUMN_NAME} entry
+   * to define the time position, and no entry named for the query-granularity carrier (which is a virtual column, not
+   * a stored column).
+   */
+  static void validateDeclaredColumns(
+      @Nullable List<DimensionSchema> columns,
+      String columnsProperty,
+      String typeName
+  )
+  {
+    if (columns == null || columns.isEmpty()) {
+      throw InvalidInput.exception("'%s' must be non-empty for [%s] base table", columnsProperty, typeName);
+    }
+    final Set<String> seen = Sets.newHashSetWithExpectedSize(columns.size());
+    for (DimensionSchema d : columns) {
+      if (!seen.add(d.getName())) {
+        throw InvalidInput.exception("'%s' contains duplicate name [%s]", columnsProperty, d.getName());
+      }
+    }
+    boolean foundTime = false;
+    for (DimensionSchema column : columns) {
+      final String name = column.getName();
+      // The query-granularity virtual column is a granularity carrier in virtualColumns (it floors the stored __time
+      // column); it is not itself a stored column, so it must not be declared as one.
+      if (Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(name)) {
+        throw InvalidInput.exception(
+            "[%s] is the query-granularity virtual column, not a stored column; declare it in 'virtualColumns' and use"
+            + " [%s] as the time column in '%s'",
+            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME,
+            columnsProperty
+        );
+      }
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(name)) {
+        foundTime = true;
+      }
+    }
+    if (!foundTime) {
+      throw InvalidInput.exception(
+          "[%s] base table must include [%s] in '%s' to define the time position",
+          typeName,
+          ColumnHolder.TIME_COLUMN_NAME,
+          columnsProperty
+      );
+    }
+  }
+
+  /**
+   * Validates that {@code virtualColumns} holds nothing but the {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}
+   * carrier, for the layouts whose write path does not evaluate spec virtual columns (any other virtual column would
+   * be dead metadata whose column never gets materialized; computed columns belong in a {@code transformSpec}). The
+   * carrier itself is validated by {@link #validateGranularity}.
+   */
+  static void validateGranularityOnlyVirtualColumns(VirtualColumns virtualColumns, String typeName)
+  {
+    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
+      if (!Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(virtualColumn.getOutputName())) {
+        throw InvalidInput.exception(
+            "virtual column [%s] is not supported: a [%s] base table stores only declared columns and does not"
+            + " materialize virtual columns; use a transformSpec to compute columns at ingest, or the [%s] virtual"
+            + " column to carry query granularity",
+            virtualColumn.getOutputName(),
+            typeName,
+            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+        );
+      }
+      validateGranularity(virtualColumn, typeName);
+    }
+  }
+
+  /**
+   * Convert a list of {@link DimensionSchema} into ascending {@link OrderBy}, preserving declared order.
+   */
+  static List<OrderBy> declaredOrderAscending(List<DimensionSchema> columns)
+  {
+    final List<OrderBy> ordering = new ArrayList<>(columns.size());
+    for (DimensionSchema d : columns) {
+      ordering.add(OrderBy.ascending(d.getName()));
+    }
+    return Collections.unmodifiableList(ordering);
   }
 }

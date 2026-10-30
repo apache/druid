@@ -59,5 +59,11 @@ public class ConsulServiceIdsTest
 
     String kvKey = ConsulServiceIds.nodeKvKey(config, serviceId);
     Assertions.assertEquals("druid/nodes/druid-peon-host-8080", kvKey);
+
+    DruidNode advertisedNode = new DruidNode("service", "host", false, 8080, null, null, true, false, null, 9080);
+    Assertions.assertEquals(
+        "druid-peon-host-9080",
+        ConsulServiceIds.serviceId(config, new DiscoveryDruidNode(advertisedNode, role, null))
+    );
   }
 }

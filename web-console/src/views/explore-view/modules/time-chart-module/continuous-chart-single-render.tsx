@@ -321,27 +321,27 @@ export const ContinuousChartSingleRender = function ContinuousChartSingleRender(
       {yAxisPosition === 'left' && (
         <g
           className="axis-y"
-          ref={(node: any) =>
+          ref={(node: any) => {
             select(node).call(
               axisLeft(measureScale)
                 .ticks(3)
                 .tickSizeOuter(0)
                 .tickFormat(e => formatNumber(e.valueOf())),
-            )
-          }
+            );
+          }}
         />
       )}
       {yAxisPosition === 'right' && (
         <g
           className="axis-y"
           transform={`translate(${innerStage.width},0)`}
-          ref={(node: any) =>
+          ref={(node: any) => {
             select(node).call(
               axisRight(measureScale)
                 .ticks(3)
                 .tickFormat(e => formatNumber(e.valueOf())),
-            )
-          }
+            );
+          }}
         />
       )}
     </g>

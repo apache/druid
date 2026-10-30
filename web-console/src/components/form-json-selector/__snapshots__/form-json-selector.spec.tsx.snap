@@ -1,43 +1,71 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`FormJsonSelector matches snapshot form json 1`] = `
-<Blueprint5.FormGroup
-  className="form-json-selector"
+<div
+  class="bp6-form-group form-json-selector"
 >
-  <Blueprint5.ButtonGroup
-    fill={true}
+  <div
+    class="bp6-form-content"
   >
-    <Blueprint5.Button
-      active={false}
-      onClick={[Function]}
-      text="Form"
-    />
-    <Blueprint5.Button
-      active={true}
-      onClick={[Function]}
-      text="JSON"
-    />
-  </Blueprint5.ButtonGroup>
-</Blueprint5.FormGroup>
+    <div
+      class="bp6-button-group bp6-fill"
+    >
+      <button
+        class="bp6-button"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          Form
+        </span>
+      </button>
+      <button
+        class="bp6-button bp6-active"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          JSON
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
 `;
 
 exports[`FormJsonSelector matches snapshot form tab 1`] = `
-<Blueprint5.FormGroup
-  className="form-json-selector"
+<div
+  class="bp6-form-group form-json-selector"
 >
-  <Blueprint5.ButtonGroup
-    fill={true}
+  <div
+    class="bp6-form-content"
   >
-    <Blueprint5.Button
-      active={true}
-      onClick={[Function]}
-      text="Form"
-    />
-    <Blueprint5.Button
-      active={false}
-      onClick={[Function]}
-      text="JSON"
-    />
-  </Blueprint5.ButtonGroup>
-</Blueprint5.FormGroup>
+    <div
+      class="bp6-button-group bp6-fill"
+    >
+      <button
+        class="bp6-button bp6-active"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          Form
+        </span>
+      </button>
+      <button
+        class="bp6-button"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          JSON
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
 `;

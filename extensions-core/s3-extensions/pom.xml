@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>39.0.0-SNAPSHOT</version>
+    <version>40.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -114,10 +114,12 @@
       <artifactId>s3-transfer-manager</artifactId>
       <version>${aws.sdk.v2.version}</version>
     </dependency>
+    <!-- Keep CRT classes on the shared classpath, next to the crt-core that s3 brings there. -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>aws-crt-client</artifactId>
       <version>${aws.sdk.v2.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
@@ -138,6 +140,11 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>auth</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>identity-spi</artifactId>
       <version>${aws.sdk.v2.version}</version>
     </dependency>
     <dependency>
@@ -172,7 +179,7 @@
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil-core</artifactId>
+      <artifactId>fastutil</artifactId>
       <scope>provided</scope>
     </dependency>
     <!-- Tests -->

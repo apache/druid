@@ -19,13 +19,20 @@
 
 package org.apache.druid.storage.s3;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
@@ -156,16 +163,41 @@ public class S3DataSegmentPusherTest
     config.setBucket("bucket");
     config.setBaseKey("key");
 
-    // version.bin = [0, 0, 0, 0x0A] → IndexIO.V10_VERSION
+    // A real V10 segment rather than a hand-made file, so the layout under test is whatever IndexMergerV10 actually
+    // writes: one druid.segment whose leading byte is the version getVersionFromDir reads.
+    final File segmentDir = IndexBuilder.create()
+                                        .useV10()
+                                        .tmpDir(new File(tempFolder, "v10"))
+                                        .rows(ImmutableList.of(
+                                            new MapBasedInputRow(
+                                                DateTimes.of("2015-01-01"),
+                                                ImmutableList.of("dim"),
+                                                ImmutableMap.of("dim", "a")
+                                            )
+                                        ))
+                                        .buildMMappedIndexFile();
+
+    final File[] segmentFiles = segmentDir.listFiles();
+    Assertions.assertNotNull(segmentFiles);
+    long segmentSize = 0;
+    for (final File file : segmentFiles) {
+      segmentSize += file.length();
+    }
+
     DataSegment segment = validate(
         false,
         "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/",
         s3Client,
         config,
         false,
-        new byte[]{0x0, 0x0, 0x0, 0x0A}
+        segmentDir,
+        segmentSize
     );
-    Assertions.assertEquals(10, (int) segment.getBinaryVersion());
+
+    // a V10 segment is a single file, and that is what makes it range-readable
+    Assertions.assertEquals(1, segmentFiles.length);
+    Assertions.assertEquals(IndexIO.V10_FILE_NAME, segmentFiles[0].getName());
+    Assertions.assertEquals(IndexIO.V10_VERSION, (int) segment.getBinaryVersion());
     Assertions.assertEquals(Boolean.TRUE, segment.getLoadSpec().get("rangeable"));
   }
 
@@ -378,27 +410,35 @@ public class S3DataSegmentPusherTest
       byte[] versionBytes
   ) throws IOException
   {
-    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(zip));
-
     // Create a mock segment on disk
     File tmp = new File(tempFolder, "version.bin");
-
     Files.write(versionBytes, tmp);
-    final long size = versionBytes.length;
 
-    DataSegment segmentToPush = new DataSegment(
-            "foo",
-            Intervals.of("2015/2016"),
-            "0",
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            size
-    );
+    return validate(useUniquePath, matcher, s3Client, config, zip, tempFolder, versionBytes.length);
+  }
 
-    DataSegment segment = pusher.push(tempFolder, segmentToPush, useUniquePath);
+  private DataSegment validate(
+      boolean useUniquePath,
+      String matcher,
+      ServerSideEncryptingAmazonS3 s3Client,
+      S3DataSegmentPusherConfig config,
+      boolean zip,
+      File segmentDir,
+      long size
+  ) throws IOException
+  {
+    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(zip));
+
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
+
+    DataSegment segment = pusher.push(segmentDir, segmentToPush, useUniquePath);
 
     Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assertions.assertEquals("bucket", segment.getLoadSpec().get("bucket"));

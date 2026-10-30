@@ -31,8 +31,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -41,10 +43,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
-import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -64,19 +63,19 @@ import static org.apache.druid.segment.column.ColumnType.ofComplex;
 
 public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 {
-  private static final Map<String, Object> REPLACE_ALL_TIME_CHUNKS = ImmutableMap.of(
-      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+  private static final Map<String, Object> REPLACE_ALL_TIME_CHUNKS = QueryContext.ofMap(
+      QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
       "{\"type\":\"all\"}",
-      DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+      QueryContextParameters.SQL_REPLACE_TIME_CHUNKS,
       DruidSqlParserUtils.ALL
   );
 
   protected Map<String, Object> addReplaceTimeChunkToQueryContext(Map<String, Object> context, String replaceTimeChunks)
   {
-    return ImmutableMap.<String, Object>builder()
+    return QueryContext.builder()
                        .putAll(context)
-                       .put(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS, replaceTimeChunks)
-                       .build();
+                       .put(QueryContextParameters.SQL_REPLACE_TIME_CHUNKS, replaceTimeChunks)
+                       .toMap();
   }
 
   @Test
@@ -127,7 +126,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceFromTableWithTimeZoneInQueryContext()
   {
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(PlannerContext.CTX_SQL_TIME_ZONE, "+05:30");
+    QueryContextParameters.SQL_TIME_ZONE.set(context, "+05:30");
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 05:30:00' AND __time < TIMESTAMP '2000-01-02 05:30:00' "
@@ -628,8 +627,9 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     partitionedByToGranularity.forEach((partitionedByArgument, expectedGranularity) -> {
       Map<String, Object> queryContext = null;
       try {
-        queryContext = ImmutableMap.of(
-            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, queryJsonMapper.writeValueAsString(expectedGranularity)
+        queryContext = QueryContext.ofMap(
+            QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
+            queryJsonMapper.writeValueAsString(expectedGranularity)
         );
       }
       catch (JsonProcessingException e) {
@@ -1102,13 +1102,28 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceWithSqlOuterLimit()
   {
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+    context.put(QueryContextParameters.SQL_OUTER_LIMIT.getName(), 100);
 
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Context parameter [sqlOuterLimit] cannot be provided on operator [REPLACE]"
+        ))
+        .verify();
+  }
+
+  @Test
+  public void testReplaceWithSqlTimeCondition()
+  {
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(QueryContextParameters.SQL_TIME_CONDITION.getName(), "2000/2001");
+
+    testIngestionQuery()
+        .context(context)
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Context parameter [sqlTimeCondition] cannot be provided on operator [REPLACE]"
         ))
         .verify();
   }

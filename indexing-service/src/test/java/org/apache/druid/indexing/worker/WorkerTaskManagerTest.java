@@ -47,6 +47,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.HttpResponseException;
@@ -307,6 +308,13 @@ public class WorkerTaskManagerTest
     Assertions.assertEquals(task3.getId(), update4.getTaskAnnouncement().getTaskStatus().getId());
     Assertions.assertTrue(update4.getTaskAnnouncement().getTaskStatus().isSuccess());
     Assertions.assertNotNull(update4.getTaskAnnouncement().getTaskLocation().getHost());
+  }
+
+  @Test
+  public void testAssignTaskWithMaxLengthTaskId() throws Exception
+  {
+    workerTaskManager.start();
+    Assertions.assertDoesNotThrow(() -> workerTaskManager.assignTask(createNoopTask(StringUtils.repeat("x", 255))));
   }
 
   @Test

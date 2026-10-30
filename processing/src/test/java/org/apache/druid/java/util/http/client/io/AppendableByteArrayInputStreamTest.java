@@ -212,6 +212,55 @@ public class AppendableByteArrayInputStreamTest
   }
 
   @Test
+  public void testAvailableSaturatesInsteadOfOverflowing() throws Exception
+  {
+    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+
+    // The same array is queued repeatedly: the stream retains references, so this accounts for 2 GiB of queued
+    // bytes while allocating only one chunk.
+    final byte[] oneMebibyte = new byte[1024 * 1024];
+    for (int i = 0; i < 2048; i++) {
+      in.add(oneMebibyte);
+    }
+
+    Assertions.assertEquals(Integer.MAX_VALUE, in.available());
+
+    in.read(new byte[oneMebibyte.length]);
+
+    Assertions.assertEquals((2048L - 1) * oneMebibyte.length, (long) in.available());
+  }
+
+  @Test
+  public void testExceptionCaughtReleasesQueuedBytes() throws IOException
+  {
+    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    in.add(new byte[10]);
+    in.add(new byte[8192]);
+    Assertions.assertEquals(5, in.read(new byte[5]));
+
+    in.exceptionCaught(new IOException("connection reset"));
+
+    Assertions.assertEquals(0, in.available());
+    Assertions.assertEquals(5, in.read(new byte[5]), "the chunk being read is still handed out");
+    Assertions.assertEquals(0, in.available());
+    Assertions.assertThrows(IOException.class, () -> in.read(new byte[8192]));
+  }
+
+  @Test
+  public void testCloseDiscardsQueuedAndLaterChunks()
+  {
+    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    in.add(new byte[8192]);
+    in.add(new byte[8192]);
+
+    in.close();
+    in.add(new byte[8192]);
+
+    Assertions.assertEquals(0, in.available());
+    Assertions.assertThrows(IOException.class, in::read);
+  }
+
+  @Test
   public void testExceptionUnblocks() throws InterruptedException
   {
     final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();

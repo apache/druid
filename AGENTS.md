@@ -69,16 +69,16 @@ When adding or migrating tests, reuse these existing test-scope helpers:
 
 ## Running Tests
 
-Use these flags for faster tests: `-Pskip-static-checks -Dweb.console.skip=true -T1C`
+Use these flags for faster tests: `-Pskip-static-checks -Dweb.console.skip=true`
 
 **Single test method:**
 ```
-mvn test -pl sql -am -Dtest="org.apache.druid.sql.calcite.CalciteQueryTest#testFoo" -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true -T1C
+mvn test -pl sql -am -Dtest="org.apache.druid.sql.calcite.CalciteQueryTest#testFoo" -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true
 ```
 
 **All tests in a package:**
 ```
-mvn test -pl sql -am -Dtest="org.apache.druid.sql.**" -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true -T1C
+mvn test -pl sql -am -Dtest="org.apache.druid.sql.**" -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true
 ```
 
 **Quidem (.iq) tests:**
@@ -86,13 +86,13 @@ mvn test -pl sql -am -Dtest="org.apache.druid.sql.**" -Dsurefire.failIfNoSpecifi
 To run `sql/src/test/quidem/org.apache.druid.quidem.SqlQuidemTest/numMerge.iq`:
 
 ```
-mvn test -pl sql -am -Dtest="org.apache.druid.sql.calcite.SqlQuidemTest" -Dquidem.filter=numMerge -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true -T1C
+mvn test -pl sql -am -Dtest="org.apache.druid.quidem.SqlQuidemTest" -Dquidem.filter=numMerge -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true
 ```
 
 To run `quidem-ut/src/test/quidem/org.apache.druid.quidem.QTest/qaWin/basics_group_by.all.iq`:
 
 ```
-mvn test -pl quidem-ut -am -Dtest="org.apache.druid.quidem.QTest" -Dquidem.filter=qaWin/basics_group_by.all -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true -T1C
+mvn test -pl quidem-ut -am -Dtest="org.apache.druid.quidem.QTest" -Dquidem.filter=qaWin/basics_group_by.all -Dsurefire.failIfNoSpecifiedTests=false -Pskip-static-checks -Dweb.console.skip=true
 ```
 
 Always use `-Dquidem.filter` to avoid running the full suite. To run multiple tests, use commas like

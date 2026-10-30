@@ -26,6 +26,8 @@ Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it ha
 
 Apache&circledR; Druid extension to enable using the Kubernetes&circledR; API Server for node discovery and leader election. This extension allows you to deploy a Druid cluster on Kubernetes without Zookeeper and run multiple Druid clusters within the same Kubernetes cluster. For more information, see the `clusterIdentifier` configuration below.
 
+This extension also provides the `k8sNodeLabel` [dynamic config provider](../../operations/dynamic-config-provider.md#kubernetes-node-label-dynamic-config-provider), which resolves configuration values from the labels of the Kubernetes node a Druid process runs on. You can load the extension for that provider alone. The discovery and leader election bindings above are only instantiated when `druid.discovery.type` is set to `k8s`.
+
 
 ## Configuration
 

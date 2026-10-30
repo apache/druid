@@ -182,7 +182,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
-            new Object[]{1.0, 3.5, 6.0}
+            new Object[]{1.0, 4.0, 6.0}
         )
     );
   }
@@ -287,9 +287,9 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            1.1,
-            2.9,
-            5.3,
+            1.0,
+            3.0,
+            5.0,
             6.0
         }
     );
@@ -331,7 +331,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
-            3.5,
+            4.0,
             6.0
         }
     );
@@ -387,7 +387,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
-            3.5,
+            4.0,
             6.0
         }
     );
@@ -451,7 +451,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
-            new Object[]{1.0, 3.5, 6.0}
+            new Object[]{1.0, 4.0, 6.0}
         )
     );
   }

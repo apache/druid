@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch;
 
+import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -30,6 +31,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 public class TDigestSketchAggregatorFactoryTest
 {
@@ -85,5 +90,38 @@ public class TDigestSketchAggregatorFactoryTest
     TDigestConfig config = TDigestConfig.builder().maxCompression(150).build();
     TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("tdigest", "col", 100, config);
     Assertions.assertEquals(100, factory.getCompression());
+  }
+
+  /**
+   * Guards {@link TDigestSketchUtils#getMaxIntermdiateTDigestSize} against changes in the t-digest library.
+   * The estimate is used for on-heap memory accounting during ingestion, so if it is smaller than what a
+   * {@link MergingDigest} really allocates, ingestion persists later than maxBytesInMemory intends.
+   */
+  @Test
+  public void testMaxIntermediateSizeCoversDigestBuffers() throws IllegalAccessException
+  {
+    // Raise the cap so the factory doesn't reduce the larger compressions below
+    final TDigestConfig config = TDigestConfig.builder().maxCompression(1000).build();
+    // 5 is raised to the library minimum of 10; 29 and 30 sit on either side of the extra centroid room below 30
+    for (int compression : new int[]{5, 10, 29, 30, 100, 200, 1000}) {
+      final MergingDigest digest = new MergingDigest(compression);
+      // Sum the sizes of the digest's instance arrays (centroids and temp buffers), which dominate its footprint
+      long arrayBytes = 0;
+      for (Field field : MergingDigest.class.getDeclaredFields()) {
+        if (field.getType().isArray() && !Modifier.isStatic(field.getModifiers())) {
+          field.setAccessible(true);
+          final Object array = field.get(digest);
+          if (array != null) {
+            final int elementBytes = field.getType().getComponentType() == double.class ? Double.BYTES : Integer.BYTES;
+            arrayBytes += (long) Array.getLength(array) * elementBytes;
+          }
+        }
+      }
+      final TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("sketch", "col", compression, config);
+      Assertions.assertTrue(
+          factory.getMaxIntermediateSize() >= arrayBytes,
+          "compression " + compression + ": estimate " + factory.getMaxIntermediateSize() + " < allocated " + arrayBytes
+      );
+    }
   }
 }

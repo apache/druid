@@ -19,23 +19,12 @@
 
 package org.apache.druid.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import jakarta.validation.constraints.NotNull;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.coordinator.CoordinatorClientImpl;
-import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.rpc.ServiceClientFactory;
-import org.apache.druid.rpc.ServiceLocator;
-import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
 
@@ -64,27 +53,6 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   private volatile QueryConfigSnapshot querySnapshot;
 
   @Inject
-  public BrokerViewOfBrokerConfig(
-      @Json final ObjectMapper jsonMapper,
-      @EscalatedGlobal final ServiceClientFactory clientFactory,
-      @Coordinator final ServiceLocator serviceLocator,
-      final DefaultQueryConfig defaultQueryConfig
-  )
-  {
-    this.defaultQueryConfig = defaultQueryConfig;
-    this.querySnapshot = new QueryConfigSnapshot(QueryContext.of(defaultQueryConfig.getContext()).asMap(), null);
-    this.coordinatorClient =
-        new CoordinatorClientImpl(
-            clientFactory.makeClient(
-                NodeRole.COORDINATOR.getJsonName(),
-                serviceLocator,
-                StandardRetryPolicy.builder().maxAttempts(15).build()
-            ),
-            jsonMapper
-        );
-  }
-
-  @VisibleForTesting
   public BrokerViewOfBrokerConfig(
       final CoordinatorClient coordinatorClient,
       final DefaultQueryConfig defaultQueryConfig
@@ -116,10 +84,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   {
     super.setDynamicConfig(updatedConfig);
     querySnapshot = new QueryConfigSnapshot(
-        QueryContext.of(QueryContexts.override(
-            defaultQueryConfig.getContext(),
-            updatedConfig.getQueryContext().asMap()
-        )).asMap(),
+        QueryContext.of(defaultQueryConfig.getContext()).override(updatedConfig.getQueryContext()).asMap(),
         updatedConfig
     );
   }
@@ -132,6 +97,21 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   public Map<String, Object> getContext()
   {
     return querySnapshot.getResolvedDefaultQueryContext();
+  }
+
+  /**
+   * Returns the resolved context and the {@link BrokerDynamicConfig#getQueryContext()} of one snapshot. The overrides
+   * are empty before the first config sync.
+   */
+  @Override
+  public ContextWithOverrides getContextWithOverrides()
+  {
+    final QueryConfigSnapshot snapshot = querySnapshot;
+    final BrokerDynamicConfig dynamicConfig = snapshot.getDynamicConfig();
+    return new ContextWithOverrides(
+        snapshot.getResolvedDefaultQueryContext(),
+        dynamicConfig == null ? Map.of() : dynamicConfig.getQueryContext().asMap()
+    );
   }
 
   /**

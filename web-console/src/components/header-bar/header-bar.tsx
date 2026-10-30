@@ -27,8 +27,7 @@ import {
   Navbar,
   NavbarDivider,
   NavbarGroup,
-  Popover,
-  Position,
+  PopoverNext,
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -265,14 +264,14 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
 
   return (
     <Navbar className="header-bar">
-      <NavbarGroup align={Alignment.LEFT}>
+      <NavbarGroup align={Alignment.START}>
         <a href="#">
           <DruidLogo />
         </a>
         <NavbarDivider />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'workbench'}
           icon={getConsoleViewIcon('workbench')}
           text="Query"
@@ -280,27 +279,29 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           disabled={!capabilities.hasQuerying()}
         />
         {showSplitDataLoaderMenu ? (
-          <Popover
+          <PopoverNext
             content={loadDataViewsMenu}
             disabled={!capabilities.hasEverything()}
-            position={Position.BOTTOM_LEFT}
+            placement="bottom-start"
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               className="header-entry"
               icon={getConsoleViewIcon('data-loader')}
               text="Load data"
-              minimal
+              variant="minimal"
               active={loadDataViewsMenuActive}
               disabled={!capabilities.hasEverything()}
             />
-          </Popover>
+          </PopoverNext>
         ) : (
           <AnchorButton
             className="header-entry"
             icon={getConsoleViewIcon('data-loader')}
             text="Load data"
             href="#data-loader"
-            minimal
+            variant="minimal"
             active={loadDataViewsMenuActive}
             disabled={!capabilities.hasEverything()}
           />
@@ -308,7 +309,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <NavbarDivider />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'datasources'}
           icon={getConsoleViewIcon('datasources')}
           text="Datasources"
@@ -317,7 +318,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'supervisors'}
           icon={getConsoleViewIcon('supervisors')}
           text="Supervisors"
@@ -326,7 +327,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'tasks'}
           icon={getConsoleViewIcon('tasks')}
           text="Tasks"
@@ -335,7 +336,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'segments'}
           icon={getConsoleViewIcon('segments')}
           text="Segments"
@@ -344,24 +345,29 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'services'}
           icon={getConsoleViewIcon('services')}
           text="Services"
           href="#services"
           disabled={!capabilities.hasSqlOrCoordinatorAccess()}
         />
-        <Popover content={moreViewsMenu} position={Position.BOTTOM_LEFT}>
+        <PopoverNext
+          content={moreViewsMenu}
+          placement="bottom-start"
+          lazy
+          shouldReturnFocusOnClose={false}
+        >
           <Button
             className="header-entry"
-            minimal
+            variant="minimal"
             icon={IconNames.MORE}
             active={moreViewsMenuActive}
             data-tooltip="More views"
           />
-        </Popover>
+        </PopoverNext>
       </NavbarGroup>
-      <NavbarGroup align={Alignment.RIGHT}>
+      <NavbarGroup align={Alignment.END}>
         <RestrictedMode
           capabilities={capabilities}
           onUnrestrict={onUnrestrict}
@@ -370,7 +376,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           }
         />
         {capabilitiesOverride && (
-          <Popover
+          <PopoverNext
             content={
               <PopoverText>
                 <p>
@@ -394,22 +400,44 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
                 </p>
               </PopoverText>
             }
-            position={Position.BOTTOM_RIGHT}
+            placement="bottom-end"
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               icon={IconNames.HIGH_PRIORITY}
               text="Manual capability detection"
               intent={Intent.DANGER}
-              minimal
+              variant="minimal"
             />
-          </Popover>
+          </PopoverNext>
         )}
-        <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
-          <Button className="header-entry" minimal icon={IconNames.COG} data-tooltip="Settings" />
-        </Popover>
-        <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
-          <Button className="header-entry" minimal icon={IconNames.HELP} data-tooltip="Help" />
-        </Popover>
+        <PopoverNext
+          content={configMenu}
+          placement="bottom-end"
+          lazy
+          shouldReturnFocusOnClose={false}
+        >
+          <Button
+            className="header-entry"
+            variant="minimal"
+            icon={IconNames.COG}
+            data-tooltip="Settings"
+          />
+        </PopoverNext>
+        <PopoverNext
+          content={helpMenu}
+          placement="bottom-end"
+          lazy
+          shouldReturnFocusOnClose={false}
+        >
+          <Button
+            className="header-entry"
+            variant="minimal"
+            icon={IconNames.HELP}
+            data-tooltip="Help"
+          />
+        </PopoverNext>
       </NavbarGroup>
       {aboutDialogOpen && <AboutDialog onClose={() => setAboutDialogOpen(false)} />}
       {doctorDialogOpen && <DoctorDialog onClose={() => setDoctorDialogOpen(false)} />}

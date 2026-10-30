@@ -28,9 +28,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -183,8 +183,8 @@ public class IndexedTableJoinCursorBenchmark
                     enableFilterPushdown,
                     enableFilterRewrite,
                     enableFilterRewriteValueFilters,
-                    QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
-                    QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+                    QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getLiteralDefault(),
+                    QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getLiteralDefault()
                 ),
                 clauses,
                 VirtualColumns.EMPTY,

@@ -21,7 +21,10 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -34,6 +37,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -87,6 +91,107 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
         () -> spec.withQueryGranularity(Granularities.ALL)
     );
     Assertions.assertTrue(e.getMessage().contains("ALL"));
+  }
+
+  @Test
+  void testWithQueryGranularityDurationIsRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> tenantSpec().withQueryGranularity(new DurationGranularity(3_600_000, null))
+    );
+    Assertions.assertTrue(e.getMessage().contains("only period granularities in the UTC time zone"), e.getMessage());
+  }
+
+  @Test
+  void testWithQueryGranularityNonUtcPeriodIsRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> tenantSpec().withQueryGranularity(
+            new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzFromString("America/Los_Angeles"))
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("only period granularities in the UTC time zone"), e.getMessage());
+  }
+
+  @Test
+  void testWithQueryGranularityOriginPeriodIsRejected()
+  {
+    // An origin shifts the bucket boundaries, which the projection machinery does not treat as a standard time
+    // grouping (AggregateProjectionSpec requires a null origin to recognize a time column), so it is rejected here
+    // for the same reason as a non-UTC time zone.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> tenantSpec().withQueryGranularity(
+            new PeriodGranularity(new Period("P1D"), DateTimes.of("2020-01-02T03:00:00Z"), null)
+        )
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("only period granularities in the UTC time zone without an origin"),
+        e.getMessage()
+    );
+  }
+
+  @Test
+  void testNonUtcGranularityCarrierRejectedAtConstruction()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                Granularities.toVirtualColumn(
+                    new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzFromString("America/Los_Angeles")),
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                )
+            ))
+            .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("only period granularities in the UTC time zone"), e.getMessage());
+  }
+
+  @Test
+  void testUndecodableGranularityCarrierRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                new ExpressionVirtualColumn(
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+                    "__time",
+                    ColumnType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            ))
+            .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("does not encode a query granularity"), e.getMessage());
+  }
+
+  @Test
+  void testGranularityCarrierReadingOtherColumnRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                new ExpressionVirtualColumn(
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+                    "timestamp_floor(\"tenant\", 'P1D')",
+                    ColumnType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            ))
+            .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("must be computed from [__time] alone"), e.getMessage());
   }
 
   @Test
@@ -330,6 +435,59 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
         spec.getOrdering()
     );
     Assertions.assertEquals(spec.getColumns(), spec.getDimensionsSpec().getDimensions());
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsAppendedColumns()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec declared = tenantSpec();
+    final ClusteredValueGroupsBaseTableProjectionSpec recorded =
+        declared.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("city")));
+
+    // What a non-sealed compaction records is a superset of what the config declares; comparing it strictly would
+    // recompact the datasource on every run.
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded));
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded, false));
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+    // Equality is the zero-appended-columns case.
+    Assertions.assertTrue(declared.hasEqualCompactionState(declared, true));
+    // The relaxation is one-directional: dropping a column the config declares is still a change.
+    Assertions.assertFalse(recorded.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsStillComparesEverythingElse()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec declared = tenantSpec();
+
+    // Query granularity is compared by its own check, so it is excluded from both sides here too.
+    Assertions.assertTrue(
+        declared.hasEqualCompactionState(declared.withQueryGranularity(Granularities.HOUR), true)
+    );
+    // A changed declared column is a change even though the column count only grew.
+    final ClusteredValueGroupsBaseTableProjectionSpec reordered =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new LongDimensionSchema("__time"),
+                new StringDimensionSchema("region"),
+                new StringDimensionSchema("city")
+            )
+            .clusteringColumns("tenant")
+            .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(reordered, true));
+    // A changed clustering column is a change.
+    final ClusteredValueGroupsBaseTableProjectionSpec reclustered =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new LongDimensionSchema("__time"),
+                new StringDimensionSchema("city")
+            )
+            .clusteringColumns("tenant", "region")
+            .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(reclustered, true));
   }
 
   @Test

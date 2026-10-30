@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -52,6 +54,8 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.virtual.ExprEvalSelectorCache;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -62,6 +66,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -670,18 +675,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   /**
-   * Caches references to selector objects for each column instead of creating a new object each time in order to save
-   * heap space.
+   * Caches references to selector objects instead of creating them for each row key in order to save heap space and
+   * avoid repeated expression planning and selector construction.
    */
-  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
+  static class CachingColumnSelectorFactory implements ColumnSelectorFactory, ExprEvalSelectorCache
   {
     private final HashMap<String, ColumnValueSelector<?>> columnSelectorMap;
+    private final IdentityHashMap<Expr, ColumnValueSelector<ExprEval>> expressionSelectorMap;
     private final ColumnSelectorFactory delegate;
 
     public CachingColumnSelectorFactory(ColumnSelectorFactory delegate)
     {
       this.delegate = delegate;
       this.columnSelectorMap = new HashMap<>();
+      this.expressionSelectorMap = new IdentityHashMap<>();
     }
 
     @Override
@@ -704,6 +711,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
       existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
       return existing != null ? existing : columnValueSelector;
+    }
+
+    @Override
+    public ColumnValueSelector<ExprEval> getOrCreateExprEvalSelector(final Expr expression)
+    {
+      ColumnValueSelector<ExprEval> selector = expressionSelectorMap.get(expression);
+      if (selector == null) {
+        // Do not use computeIfAbsent: building the expression selector can re-enter makeColumnValueSelector on this
+        // factory through expression bindings.
+        selector = ExpressionSelectors.makeExprEvalSelectorUncached(this, expression);
+        expressionSelectorMap.put(expression, selector);
+      }
+      return selector;
     }
 
     @Nullable

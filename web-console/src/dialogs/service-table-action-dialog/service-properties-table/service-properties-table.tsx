@@ -18,11 +18,14 @@
 
 import { L } from 'druid-query-toolkit';
 import React from 'react';
-import ReactTable from 'react-table';
 
-import { Loader } from '../../../components';
+import {
+  ConsoleTable,
+  Loader,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../components';
 import { useQueryManager } from '../../../hooks';
-import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import { queryDruidSql } from '../../../utils';
 
 import './service-properties-table.scss';
@@ -69,7 +72,7 @@ export const ServicePropertiesTable = React.memo(function ServicePropertiesTable
             <strong>{firstRow.service_name}</strong>.
           </p>
         )}
-        <ReactTable
+        <ConsoleTable
           data={properties}
           defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
           pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}

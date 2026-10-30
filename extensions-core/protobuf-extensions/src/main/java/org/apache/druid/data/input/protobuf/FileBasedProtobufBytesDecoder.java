@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.DescriptorProtos;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
@@ -44,9 +45,8 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
     super(protoMessageType);
 
     Preconditions.checkNotNull(descriptorFilePath);
+    // Descriptor is loaded lazily on first use, not during deserialization.
     this.descriptorFilePath = descriptorFilePath;
-
-    initializeDescriptor();
   }
 
   @JsonProperty("descriptor")
@@ -65,7 +65,7 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
       if (fin == null) {
         URL url;
         try {
-          url = new URL(descriptorFilePath);
+          url = URIs.toURL(descriptorFilePath);
         }
         catch (MalformedURLException e) {
           throw new ParseException(

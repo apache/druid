@@ -24,11 +24,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -47,6 +52,7 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -56,17 +62,12 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   private static final String CONTAINER_NAME = "container";
   private static final String PREFIX = "prefix";
   private static final String BLOB_PATH = " Россия 한국 中国!?/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final DataSegment DATA_SEGMENT = new DataSegment(
-      " Россия 한국 中国!?",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),
-      null,
-      null,
-      new LinearShardSpec(0),
-      0,
-      1
-  );
+  private static final DataSegment DATA_SEGMENT = DataSegment.builder(SegmentId.of(" Россия 한국 中国!?", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                                                             .loadSpec(ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH))
+                                                             .shardSpec(new LinearShardSpec(0))
+                                                             .binaryVersion(0)
+                                                             .size(1)
+                                                             .build();
   private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true);
   private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false);
   private static final byte[] DATA = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -76,17 +77,14 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   private static final String NON_UNIQUE_WITH_PREFIX_MATCHER = PREFIX + "/" + "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/index\\.zip";
   private static final int MAX_TRIES = 3;
 
-  private static final DataSegment SEGMENT_TO_PUSH = new DataSegment(
-      "foo",
-      Intervals.of("2015/2016"),
-      "0",
-      new HashMap<>(),
-      new ArrayList<>(),
-      new ArrayList<>(),
-      new LinearShardSpec(0),
-      0,
-      DATA.length
-  );
+  private static final DataSegment SEGMENT_TO_PUSH = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                                                .loadSpec(new HashMap<>())
+                                                                .dimensions(new ArrayList<>())
+                                                                .metrics(new ArrayList<>())
+                                                                .shardSpec(new LinearShardSpec(0))
+                                                                .binaryVersion(0)
+                                                                .size(DATA.length)
+                                                                .build();
 
   private AzureStorage azureStorage;
   private AzureAccountConfig azureAccountConfig;
@@ -292,28 +290,54 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     AzureDataSegmentPusher pusher =
         new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, NO_ZIP_CONFIG);
 
-    // version.bin = [0, 0, 0, 0x0A] → IndexIO.V10_VERSION, a single range-readable druid.segment
-    Files.write(new byte[]{0x0, 0x0, 0x0, 0x0A}, tempPath.resolve("version.bin").toFile());
+    // A real V10 segment rather than a hand-made file, so the layout under test is whatever IndexMergerV10 actually
+    // writes: one druid.segment whose leading byte is the version getVersionFromDir reads.
+    final File segmentDir = buildV10Segment(tempPath);
+    final File[] segmentFiles = segmentDir.listFiles();
+    assertNotNull(segmentFiles);
 
     final String expectedDir = PREFIX + "/" + pusher.getStorageDir(SEGMENT_TO_PUSH, false);
-    azureStorage.uploadBlockBlob(
-        EasyMock.anyObject(File.class),
-        EasyMock.eq(CONTAINER_NAME),
-        EasyMock.eq(expectedDir + "/version.bin"),
-        EasyMock.eq(MAX_TRIES)
-    );
-    EasyMock.expectLastCall();
+    final ImmutableList.Builder<String> listing = ImmutableList.builder();
+    for (final File file : segmentFiles) {
+      azureStorage.uploadBlockBlob(
+          EasyMock.anyObject(File.class),
+          EasyMock.eq(CONTAINER_NAME),
+          EasyMock.eq(expectedDir + "/" + file.getName()),
+          EasyMock.eq(MAX_TRIES)
+      );
+      EasyMock.expectLastCall();
+      listing.add(expectedDir + "/" + file.getName());
+    }
+    // everything under the path was written by this push, so there is nothing to clean up
     EasyMock.expect(azureStorage.listBlobs(CONTAINER_NAME, expectedDir + "/", null, MAX_TRIES))
-            .andReturn(ImmutableList.of(expectedDir + "/version.bin"));
+            .andReturn(listing.build());
 
     replayAll();
 
-    DataSegment segment = pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false);
+    DataSegment segment = pusher.push(segmentDir, SEGMENT_TO_PUSH, false);
 
-    assertEquals(10, (int) segment.getBinaryVersion());
+    // a V10 segment is a single file, and that is what makes it range-readable
+    assertEquals(1, segmentFiles.length);
+    assertEquals(IndexIO.V10_FILE_NAME, segmentFiles[0].getName());
+    assertEquals(IndexIO.V10_VERSION, (int) segment.getBinaryVersion());
     assertEquals(Boolean.TRUE, segment.getLoadSpec().get("rangeable"));
 
     verifyAll();
+  }
+
+  private static File buildV10Segment(Path tempPath)
+  {
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tempPath.resolve("v10").toFile())
+                       .rows(ImmutableList.of(
+                           new MapBasedInputRow(
+                               DateTimes.of("2015-01-01"),
+                               ImmutableList.of("dim"),
+                               ImmutableMap.of("dim", "a")
+                           )
+                       ))
+                       .buildMMappedIndexFile();
   }
 
   @Test

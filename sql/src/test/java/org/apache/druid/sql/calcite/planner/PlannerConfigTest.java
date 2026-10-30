@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.planner;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -60,9 +61,7 @@ public class PlannerConfigTest
   public void testMaxPlanningTimeMsQueryContextOverride()
   {
     PlannerConfig base = PlannerConfig.builder().maxPlanningTimeMs(10_000).build();
-    PlannerConfig overridden = base.withOverrides(
-        ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 2500)
-    );
+    PlannerConfig overridden = base.withOverrides(QueryContextParameters.MAX_PLANNING_TIME_MS, 2500L);
     Assertions.assertEquals(2500, overridden.getMaxPlanningTimeMs());
     // The base config is untouched.
     Assertions.assertEquals(10_000, base.getMaxPlanningTimeMs());
@@ -82,7 +81,7 @@ public class PlannerConfigTest
     // Non-default maxPlanningTimeMs must round-trip through getNonDefaultAsQueryContext()'s config<->context check.
     PlannerConfig config = PlannerConfig.builder().maxPlanningTimeMs(5000).build();
     Map<String, Object> asContext = config.getNonDefaultAsQueryContext();
-    Assertions.assertEquals(5000L, ((Number) asContext.get(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS)).longValue());
+    Assertions.assertEquals(5000L, ((Number) asContext.get(QueryContextParameters.MAX_PLANNING_TIME_MS.getName())).longValue());
     Assertions.assertEquals(config, PlannerConfig.builder().withOverrides(asContext).build());
   }
 

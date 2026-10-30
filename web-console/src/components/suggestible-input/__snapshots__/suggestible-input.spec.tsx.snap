@@ -5,42 +5,32 @@ exports[`SuggestibleInput matches snapshot 1`] = `
   class="formatted-input suggestible-input"
 >
   <div
-    class="bp5-input-group"
+    class="bp6-input-group"
   >
     <input
-      class="bp5-input"
+      class="bp6-input"
       style="padding-right: 0px;"
       type="text"
-      value=""
     />
     <span
-      class="bp5-input-action"
+      class="bp6-input-action"
     >
       <span
-        class="bp5-popover-target"
+        class="bp6-popover-target"
       >
         <button
           aria-expanded="false"
           aria-haspopup="menu"
-          class="bp5-button bp5-minimal"
+          class="bp6-button bp6-minimal"
           type="button"
         >
           <span
             aria-hidden="true"
-            class="bp5-icon bp5-icon-caret-down"
+            class="bp6-icon bp6-icon-caret-down"
           >
             <svg
               data-icon="caret-down"
-              height="16"
-              role="img"
-              viewBox="0 0 16 16"
-              width="16"
-            >
-              <path
-                d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-                fill-rule="evenodd"
-              />
-            </svg>
+            />
           </span>
         </button>
       </span>
@@ -54,42 +44,33 @@ exports[`SuggestibleInput matches snapshot with escaped value 1`] = `
   class="formatted-input suggestible-input"
 >
   <div
-    class="bp5-input-group"
+    class="bp6-input-group"
   >
     <input
-      class="bp5-input"
+      class="bp6-input"
       style="padding-right: 0px;"
       type="text"
       value="Here are some chars \\t\\r\\n lol"
     />
     <span
-      class="bp5-input-action"
+      class="bp6-input-action"
     >
       <span
-        class="bp5-popover-target"
+        class="bp6-popover-target"
       >
         <button
           aria-expanded="false"
           aria-haspopup="menu"
-          class="bp5-button bp5-minimal"
+          class="bp6-button bp6-minimal"
           type="button"
         >
           <span
             aria-hidden="true"
-            class="bp5-icon bp5-icon-caret-down"
+            class="bp6-icon bp6-icon-caret-down"
           >
             <svg
               data-icon="caret-down"
-              height="16"
-              role="img"
-              viewBox="0 0 16 16"
-              width="16"
-            >
-              <path
-                d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-                fill-rule="evenodd"
-              />
-            </svg>
+            />
           </span>
         </button>
       </span>

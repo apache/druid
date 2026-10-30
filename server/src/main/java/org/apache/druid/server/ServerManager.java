@@ -21,9 +21,8 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
@@ -64,6 +63,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
@@ -85,10 +85,10 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -255,8 +255,7 @@ public class ServerManager implements QuerySegmentWalker
         segmentReferences.add(
             new SegmentReference(
                 segment.getDescriptor(),
-                Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment())),
-                null
+                Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment()))
             )
         );
       }
@@ -300,9 +299,10 @@ public class ServerManager implements QuerySegmentWalker
     // closing the segment reference handles everything and it is the callers responsibility
     final Closer safetyNet = Closer.create();
 
-    // build list of acquire reference actions, this does not initiate the actions until we collect the futures. this
-    // does place a hold on any weakly held references if the cache includes segments that reside on virtual storage
-    // fabric
+    // Acquire an action per segment; this kicks off any on-demand loads immediately, and places a hold on any weakly
+    // held references if the cache includes segments that reside on virtual storage fabric. Closing an action before
+    // its result has been released cancels an in-flight load, so registering them all with the safetyNet covers the
+    // failure paths below.
     final List<AcquireSegmentAction> actions = new ArrayList<>();
     try {
       for (DataSegmentAndDescriptor segment : segmentsToMap) {
@@ -328,33 +328,6 @@ public class ServerManager implements QuerySegmentWalker
 
     Throwable failure = null;
 
-    // getting the future kicks off any background action, so materialize them all to a list to get things started
-    final List<ListenableFuture<AcquireSegmentResult>> futures = new ArrayList<>(actions.size());
-    for (AcquireSegmentAction acquireSegmentAction : actions) {
-      // if we haven't failed yet, keep collecting futures
-      if (failure == null) {
-        try {
-          futures.add(acquireSegmentAction.getSegmentFuture());
-        }
-        catch (Throwable t) {
-          failure = t;
-        }
-      } else {
-        futures.add(Futures.immediateFuture(AcquireSegmentResult.empty()));
-      }
-    }
-
-    if (failure != null) {
-      throw CloseableUtils.closeInCatch(
-          failure instanceof DruidException
-          ? (DruidException) failure
-          : DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(failure, "Failed to acquire segment references to process query"),
-          safetyNet
-      );
-    }
-
     final ArrayList<SegmentReference> segmentReferences = new ArrayList<>(actions.size());
     long totalSegmentsLoadTime = 0;
     long totalSegmentsLoadWaitTime = 0;
@@ -367,39 +340,33 @@ public class ServerManager implements QuerySegmentWalker
       try {
         final DataSegmentAndDescriptor segmentAndDescriptor = segmentsToMap.get(i);
         final AcquireSegmentAction action = actions.get(i);
-        final ListenableFuture<AcquireSegmentResult> future = futures.get(i);
-        final AcquireSegmentResult result = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-        if (result == null) {
-          segmentReferences.add(
-              new SegmentReference(segmentAndDescriptor.getDescriptor(), Optional.empty(), action)
-          );
-        } else {
-          totalSegmentsLoadTime += result.getLoadTimeNanos();
-          totalSegmentsLoadWaitTime += result.getWaitTimeNanos();
-          maxSegmentLoadTime = Math.max(maxSegmentLoadTime, result.getLoadTimeNanos());
-          maxSegmentWaitTime = Math.max(maxSegmentWaitTime, result.getWaitTimeNanos());
-          bytesLoaded += result.getLoadSizeBytes();
-          final Optional<Segment> segment = result.getReferenceProvider().acquireReference();
-          try {
-            final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
-            segmentReferences.add(
-                new SegmentReference(
-                    segmentAndDescriptor.getDescriptor(),
-                    mappedSegment,
-                    action
-                )
-            );
-          }
-          catch (Throwable t) {
-            // if applying the mapFn failed, attach the base segment to the closer and rethrow
-            segment.ifPresent(safetyNet::register);
-            throw t;
-          }
+        action.await(timeoutAt - System.currentTimeMillis());
+        // Take ownership of the result. After release, the safetyNet-registered action close is a no-op; the
+        // delivered segment (registered below, or folded into the returned SegmentReference) does all cleanup.
+        final AcquireSegmentResult result = action.release();
+        totalSegmentsLoadTime += result.getLoadTimeNanos();
+        totalSegmentsLoadWaitTime += result.getWaitTimeNanos();
+        maxSegmentLoadTime = Math.max(maxSegmentLoadTime, result.getLoadTimeNanos());
+        maxSegmentWaitTime = Math.max(maxSegmentWaitTime, result.getWaitTimeNanos());
+        bytesLoaded += result.getLoadSizeBytes();
+        final Optional<Segment> segment = result.getSegment();
+        try {
+          final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
+          segmentReferences.add(new SegmentReference(segmentAndDescriptor.getDescriptor(), mappedSegment));
+        }
+        catch (Throwable t) {
+          // if applying the mapFn failed, attach the base segment to the closer and rethrow
+          segment.ifPresent(safetyNet::register);
+          throw t;
         }
       }
       catch (Throwable t) {
         if (t instanceof InterruptedException) {
           interrupted = true;
+          // Restore the interrupt status immediately (await() cleared it): subsequent await() calls in this loop then
+          // fail fast instead of blocking with the flag lost, and downstream cancellation checks keep working even if
+          // the classification below picks a different branch for the first-recorded failure.
+          Thread.currentThread().interrupt();
         }
         if (t instanceof TimeoutException) {
           timedOut = true;
@@ -416,16 +383,13 @@ public class ServerManager implements QuerySegmentWalker
     }
     if (failure != null) {
       final DruidException toThrow;
-      if (failure instanceof DruidException) {
-        toThrow = (DruidException) failure;
-      } else if (failure instanceof ExecutionException ee && ee.getCause() instanceof DruidException druidException) {
-        toThrow = druidException;
+      if (failure instanceof DruidException de) {
+        toThrow = de;
       } else if (timedOut) {
         toThrow = DruidException.forPersona(DruidException.Persona.USER)
                                 .ofCategory(DruidException.Category.TIMEOUT)
                                 .build(failure, "Failed to acquire segment references to process query");
       } else if (interrupted) {
-        Thread.currentThread().interrupt();
         toThrow = DruidException.forPersona(DruidException.Persona.OPERATOR)
                                 .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                                 .build(failure, "Interrupted waiting for segments");
@@ -450,32 +414,51 @@ public class ServerManager implements QuerySegmentWalker
     );
   }
 
-  protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
-      final Query<T> query,
+  /**
+   * Returns one runner per spec, in the order of {@code specs}. The ordering is important because
+   * {@link QueryRunnerFactory} implementations may rely on it. For example,
+   * {@link ScanQueryRunnerFactory#mergeRunners} matches runners to segment descriptors positionally.
+   *
+   * <p>The order of {@code segmentReferences} need not match the order of {@code specs}.
+   */
+  private <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
+      final List<SegmentDescriptor> specs,
+      final List<SegmentReference> segmentReferences,
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final List<SegmentReference> segmentReferences,
       final AtomicLong cpuTimeAccumulator,
       final Optional<byte[]> cacheKeyPrefix
   )
   {
+    final Map<SegmentDescriptor, SegmentReference> referencesByDescriptor = new HashMap<>();
+    for (final SegmentReference reference : segmentReferences) {
+      referencesByDescriptor.put(reference.getSegmentDescriptor(), reference);
+    }
+
     return FunctionalIterable
-        .create(segmentReferences)
+        .create(specs)
         .transform(
-            ref ->
-                ref.getSegmentReference()
-                   .map(segment ->
-                            buildQueryRunnerForSegment(
-                                ref.getSegmentDescriptor(),
-                                segment,
-                                factory,
-                                toolChest,
-                                cpuTimeAccumulator,
-                                cacheKeyPrefix
-                            )
-                   ).orElseThrow(
-                       () -> DruidException.defensive("Unexpected missing segment[%s]", ref.getSegmentDescriptor())
-                   )
+            spec -> {
+              final SegmentReference ref = referencesByDescriptor.get(spec);
+              if (ref == null) {
+                // Return nothing: ResourceManagingQueryRunner already reported this spec as missing.
+                return new NoopQueryRunner<>();
+              }
+
+              return ref.getSegmentReference()
+                        .map(segment ->
+                                 buildQueryRunnerForSegment(
+                                     ref.getSegmentDescriptor(),
+                                     segment,
+                                     factory,
+                                     toolChest,
+                                     cpuTimeAccumulator,
+                                     cacheKeyPrefix
+                                 )
+                        ).orElseThrow(
+                            () -> DruidException.defensive("Unexpected missing segment[%s]", ref.getSegmentDescriptor())
+                        );
+            }
         );
   }
 
@@ -598,7 +581,7 @@ public class ServerManager implements QuerySegmentWalker
     private final QueryRunnerFactory<T, Query<T>> factory;
     private final QueryToolChest<T, Query<T>> toolChest;
     private final ExecutionVertex ev;
-    private final Iterable<SegmentDescriptor> specs;
+    private final List<SegmentDescriptor> specs;
 
     public ResourceManagingQueryRunner(
         VersionedIntervalTimeline<String, DataSegment> timeline,
@@ -612,7 +595,8 @@ public class ServerManager implements QuerySegmentWalker
       this.factory = factory;
       this.toolChest = toolChest;
       this.ev = ev;
-      this.specs = specs;
+      // Copy, since run() iterates specs twice and both passes must see the same descriptors.
+      this.specs = ImmutableList.copyOf(specs);
     }
 
     @Override
@@ -647,10 +631,10 @@ public class ServerManager implements QuerySegmentWalker
         queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentReferences.size()).emit(emitter);
 
         final FunctionalIterable<QueryRunner<T>> queryRunners = getQueryRunnersForSegments(
-            query,
+            specs,
+            segmentReferences,
             factory,
             toolChest,
-            segmentReferences,
             cpuTimeAccumulator,
             cacheKeyPrefix
         );
