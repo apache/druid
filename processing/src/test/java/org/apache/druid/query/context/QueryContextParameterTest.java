@@ -276,8 +276,8 @@ class QueryContextParameterTest
   void testBooleanParameterRejectsNonBooleans()
   {
     assertEquals(
-        "Query context parameter [useResultLevelCache] should be a boolean, but got [1]",
-        assertThrows(BadQueryContextException.class, () -> QueryContextParameters.USE_RESULT_LEVEL_CACHE.parse(1))
+        "Query context parameter [useResultLevelCache] should be a boolean, but got [2]",
+        assertThrows(BadQueryContextException.class, () -> QueryContextParameters.USE_RESULT_LEVEL_CACHE.parse(2))
             .getMessage()
     );
   }

@@ -31,6 +31,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,8 @@ public class DriverTest extends BaseCalciteQueryTest
         plannerFixture.statementFactory(),
         new DefaultQueryConfig(Map.of()),
         sqlTestFramework.queryLifecycleFactory(),
-        TestServer.NOOP_SCHEDULER
+        TestServer.NOOP_SCHEDULER,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
   }
 
@@ -99,6 +101,50 @@ public class DriverTest extends BaseCalciteQueryTest
     );
     String results = response.getData().toStringUtf8();
     assertEquals(expectedResults, Arrays.asList(results.split("\n")));
+  }
+
+  @Test
+  public void testUnknownContextParameter_sql()
+  {
+    final QueryRequest request = QueryRequest.newBuilder()
+                                             .setQuery("SELECT __time, dim2 FROM foo")
+                                             .putContext("useCahce", "false")
+                                             .setResultFormat(QueryResultFormat.CSV)
+                                             .setQueryType(QueryOuterClass.QueryType.SQL)
+                                             .build();
+    final QueryResponse response = driver.submitQuery(request, CalciteTests.REGULAR_USER_AUTH_RESULT);
+
+    assertEquals(QueryStatus.REQUEST_ERROR, response.getStatus());
+    assertTrue(
+        response.getErrorMessage().contains("Unknown query context parameter [useCahce]. Did you mean [useCache]?"),
+        response.getErrorMessage()
+    );
+  }
+
+  @Test
+  public void testUnknownContextParameter_native()
+  {
+    final String query = "{\n"
+                         + "  \"queryType\": \"timeseries\",\n"
+                         + "  \"dataSource\": \"foo\",\n"
+                         + "  \"intervals\": [\"2000-01-01/2002-01-01\"],\n"
+                         + "  \"granularity\": \"all\",\n"
+                         + "  \"aggregations\": [{\"type\": \"count\", \"name\": \"cnt\"}],\n"
+                         + "  \"context\": {\"queryId\": \"invalidContext\", \"useCahce\": false}\n"
+                         + "}";
+    final QueryRequest request = QueryRequest.newBuilder()
+                                             .setQuery(query)
+                                             .setResultFormat(QueryResultFormat.CSV)
+                                             .setQueryType(QueryOuterClass.QueryType.NATIVE)
+                                             .build();
+    final QueryResponse response = driver.submitQuery(request, CalciteTests.REGULAR_USER_AUTH_RESULT);
+
+    assertEquals(QueryStatus.REQUEST_ERROR, response.getStatus());
+    assertEquals("invalidContext", response.getQueryId());
+    assertEquals(
+        "Unknown query context parameter [useCahce]. Did you mean [useCache]?",
+        response.getErrorMessage()
+    );
   }
 
   @Test

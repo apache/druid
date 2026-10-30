@@ -40,6 +40,7 @@ import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.QueryInfoAndReport;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
+import org.apache.druid.msq.dart.guice.DartModules;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
@@ -50,6 +51,8 @@ import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -104,9 +107,24 @@ public class DartSqlEngine implements SqlEngine
       ServerConfig serverConfig,
       @Dart QueryConfigProvider queryConfigProvider,
       SqlToolbox toolbox,
-      DartSqlClients sqlClients
+      DartSqlClients sqlClients,
+      QueryContextConfig queryContextConfig
   )
   {
+    try {
+      QueryContextParameterValidator.validate(
+          queryConfigProvider.getContext(),
+          queryContextConfig.isRejectUnknownParameters()
+      );
+    }
+    catch (BadQueryContextException e) {
+      throw new IAE(
+          e,
+          "Invalid default query context [%s]: %s",
+          DartModules.DART_PROPERTY_BASE + ".query.context",
+          e.getMessage()
+      );
+    }
     this.controllerContextFactory = controllerContextFactory;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;

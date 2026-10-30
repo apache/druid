@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -58,6 +59,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.BadJsonQueryException;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -74,6 +76,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
@@ -315,7 +318,8 @@ public class QueryResourceTest
   }
 
   /**
-   * Every {@link QueryResource} under test is built here, so a change to its constructor touches one call site.
+   * Every {@link QueryResource} under test, other than those of {@link #createBrokerQueryResource}, is built here, so a
+   * change to its constructor touches one call site.
    *
    * @param responseMapper mapper backing the response writer, i.e. the smile mapper unless the test needs json
    */
@@ -337,6 +341,31 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(jsonMapper, responseMapper),
         serverConfig
     );
+  }
+
+  private BrokerQueryResource createBrokerQueryResource(final QueryContextConfig queryContextConfig)
+  {
+    return new BrokerQueryResource(
+        createQueryLifecycleFactory(),
+        jsonMapper,
+        queryScheduler,
+        null,
+        new QueryResourceQueryResultPusherFactory(jsonMapper, ResponseContextConfig.newConfig(true), DRUID_NODE),
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper),
+        new ServerConfig(),
+        null,
+        queryContextConfig
+    );
+  }
+
+  /**
+   * Returns {@link #SIMPLE_TIMESERIES_QUERY} with the given context, as a client sends it.
+   */
+  private byte[] timeseriesQueryWithContext(final Map<String, Object> context) throws JsonProcessingException
+  {
+    final ObjectNode query = (ObjectNode) jsonMapper.readTree(SIMPLE_TIMESERIES_QUERY);
+    query.set("context", jsonMapper.valueToTree(context));
+    return jsonMapper.writeValueAsBytes(query);
   }
 
   @Test
@@ -1035,6 +1064,85 @@ public class QueryResourceTest
     QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
     Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
     Assertions.assertEquals(BadJsonQueryException.ERROR_CLASS, e.getErrorClass());
+  }
+
+  @Test
+  public void testUnknownContextParameterRejectedByBroker() throws IOException
+  {
+    final Response response = createBrokerQueryResource(new QueryContextConfig(true)).doPost(
+        new ByteArrayInputStream(timeseriesQueryWithContext(Map.of("useCahce", false))),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.BAD_QUERY_CONTEXT_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(BadQueryContextException.ERROR_CLASS, e.getErrorClass());
+    Assertions.assertEquals("Unknown query context parameter [useCahce]. Did you mean [useCache]?", e.getMessage());
+  }
+
+  @Test
+  public void testUnknownContextParameterRejectedByCandidates() throws IOException
+  {
+    final Response response = createBrokerQueryResource(new QueryContextConfig(true)).getQueryTargets(
+        new ByteArrayInputStream(timeseriesQueryWithContext(Map.of("useCahce", false))),
+        null /*pretty*/,
+        -1,
+        null,
+        testServletRequest
+    );
+
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.BAD_QUERY_CONTEXT_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals("Unknown query context parameter [useCahce]. Did you mean [useCache]?", e.getMessage());
+  }
+
+  @Test
+  public void testInvalidContextValueRejectedByBroker() throws IOException
+  {
+    // Values are validated whether or not unknown parameters are rejected
+    final Response response = createBrokerQueryResource(new QueryContextConfig(false)).doPost(
+        new ByteArrayInputStream(timeseriesQueryWithContext(Map.of("maxRowsQueuedForOrdering", 0))),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.BAD_QUERY_CONTEXT_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(
+        "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void testUnknownContextParameterAcceptedByBrokerWhenNotRejected() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        timeseriesQueryWithContext(Map.of("myTraceId", "abc-123")),
+        createBrokerQueryResource(new QueryContextConfig(false))
+    );
+    Assertions.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @Test
+  public void testUnknownContextParameterAcceptedByDataServer() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        timeseriesQueryWithContext(Map.of("myTraceId", "abc-123"))
+    );
+    Assertions.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
   @Test

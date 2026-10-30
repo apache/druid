@@ -35,6 +35,7 @@ import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -84,19 +85,22 @@ public class SqlTaskResource
   private final QueryConfigProvider queryConfigProvider;
   private final ObjectMapper jsonMapper;
   private final ServerConfig serverConfig;
+  private final QueryContextConfig queryContextConfig;
 
   @Inject
   public SqlTaskResource(
       final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
       final QueryConfigProvider queryConfigProvider,
       final ObjectMapper jsonMapper,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.sqlStatementFactory = sqlStatementFactory;
     this.queryConfigProvider = queryConfigProvider;
     this.jsonMapper = jsonMapper;
     this.serverConfig = serverConfig;
+    this.queryContextConfig = queryContextConfig;
   }
 
   /**
@@ -131,7 +135,12 @@ public class SqlTaskResource
     final SqlQueryPlus sqlQueryPlus;
     final HttpStatement stmt;
     try {
-      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, queryConfigProvider.getContext());
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(
+          sqlQuery,
+          req,
+          queryConfigProvider.getContext(),
+          queryContextConfig
+      );
       stmt = sqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {

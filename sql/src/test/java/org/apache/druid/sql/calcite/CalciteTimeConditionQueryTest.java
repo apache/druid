@@ -25,7 +25,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.LookupDataSource;
@@ -147,7 +146,7 @@ public class CalciteTimeConditionQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT COUNT(*) FROM foo",
         makeContext(List.of("2000/2001")),
-        BadQueryContextException.class,
+        DruidException.class,
         e -> Assertions.assertEquals(
             "Query context parameter [sqlTimeCondition] should be a string, but got [[2000/2001]]",
             e.getMessage()

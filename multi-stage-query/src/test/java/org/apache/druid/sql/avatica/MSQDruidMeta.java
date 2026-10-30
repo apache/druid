@@ -36,6 +36,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -64,11 +65,12 @@ public class MSQDruidMeta extends DruidMeta
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final AuthenticatorMapper authMapper,
+      final QueryContextConfig queryContextConfig,
       final MSQTestOverlordServiceClient overlordClient,
       final ObjectMapper objectMapper,
       final DruidHookDispatcher hookDispatcher)
   {
-    super(sqlStatementFactory, defaultQueryConfig, config, errorHandler, authMapper);
+    super(sqlStatementFactory, defaultQueryConfig, config, errorHandler, authMapper, queryContextConfig);
     this.overlordClient = overlordClient;
     this.objectMapper = objectMapper;
     this.hookDispatcher = hookDispatcher;

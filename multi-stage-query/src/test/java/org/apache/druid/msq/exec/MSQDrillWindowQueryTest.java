@@ -32,7 +32,6 @@ import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
-import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -42,10 +41,6 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
 {
   private final QueryContextBuilder queryContextBuilder = QueryContext.builder()
       .put(QueryContextParameters.DEBUG, true)
-      .putRaw(
-          PlannerCaptureHook.NEED_CAPTURE_HOOK,
-          true
-      )
       .put(QueryContextParameters.MAX_NUM_TASKS, 5);
 
   public static class DrillWindowQueryMSQComponentSupplier extends AbstractMSQComponentSupplierDelegate

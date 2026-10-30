@@ -31,6 +31,7 @@ import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -72,7 +73,8 @@ public class TestServer extends BaseCalciteQueryTest
         null,
         DefaultQueryConfig.NIL,
         authMapper,
-        NOOP_SCHEDULER
+        NOOP_SCHEDULER,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
     serverInit.start();
     Runtime.getRuntime().addShutdownHook(new Thread()
