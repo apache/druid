@@ -71,7 +71,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import java.io.File;
-import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -173,8 +172,7 @@ public class DartWorkerModule implements DruidModule
           permissionMapper,
           authorizerMapper,
           serverConfig,
-          baseTempDir,
-          Clock.systemUTC()
+          baseTempDir
       );
     }
 

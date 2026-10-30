@@ -53,7 +53,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -93,7 +92,6 @@ public class DartWorkerRunner
   private final AuthorizerMapper authorizerMapper;
   private final ServerConfig serverConfig;
   private final File baseTempDir;
-  private final Clock clock;
 
   /**
    * Used to fence off new workers from starting after {@link #stop()} has been called.
@@ -108,8 +106,7 @@ public class DartWorkerRunner
       final ResourcePermissionMapper permissionMapper,
       final AuthorizerMapper authorizerMapper,
       final ServerConfig serverConfig,
-      final File baseTempDir,
-      final Clock clock
+      final File baseTempDir
   )
   {
     this.workerFactory = workerFactory;
@@ -119,14 +116,14 @@ public class DartWorkerRunner
     this.authorizerMapper = authorizerMapper;
     this.serverConfig = serverConfig;
     this.baseTempDir = baseTempDir;
-    this.clock = clock;
   }
 
   /**
    * Start a worker, creating a holder for it. If a worker with this query ID is already started, does nothing.
    * Returns the worker.
    *
-   * @throws DruidException if the controllerId does not correspond to a currently-active controller
+   * @throws DruidException if the controllerId does not correspond to a currently-active controller, or if this
+   *                        runner has been stopped and the worker is not already started
    */
   public Worker startWorker(
       final String queryId,
@@ -138,12 +135,6 @@ public class DartWorkerRunner
     final boolean newHolder;
 
     synchronized (this) {
-      if (stopped) {
-        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build("Cannot start query[%s] because this instance has been stopped", queryId);
-      }
-
       if (!activeControllerHosts.contains(controllerHost)) {
         throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.RUNTIME_FAILURE)
@@ -158,11 +149,15 @@ public class DartWorkerRunner
       if (existingHolder != null) {
         holder = existingHolder;
         newHolder = false;
+      } else if (stopped) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build("Cannot start query[%s] because this instance has been stopped", queryId);
       } else {
         final WorkerContext workerContext = workerFactory.build(queryId, controllerHost, baseTempDir, context);
         final Worker worker = new WorkerImpl(null, workerContext);
         final WorkerResource resource = new WorkerResource(worker, permissionMapper, authorizerMapper);
-        holder = new WorkerHolder(worker, workerContext, controllerHost, resource, DateTimes.utc(clock.millis()));
+        holder = new WorkerHolder(worker, workerContext, controllerHost, resource, DateTimes.nowUtc());
         workerMap.put(queryId, holder);
         this.notifyAll();
         newHolder = true;
@@ -284,8 +279,9 @@ public class DartWorkerRunner
         return;
       }
       stopped = true;
+
+      // Leave workers in workerMap, so they remain reachable by their controllers while we wait.
       runningWorkers = new ArrayList<>(workerMap.values());
-      workerMap.clear();
     }
 
     if (runningWorkers.isEmpty()) {
@@ -293,23 +289,23 @@ public class DartWorkerRunner
     }
 
     // Wait for workers to exit outside the lock.
-    final DateTime waitStart = DateTimes.utc(clock.millis());
-    final DateTime deadline = waitStart.plus(serverConfig.getGracefulShutdownTimeout());
+    final long timeoutMillis = serverConfig.getGracefulShutdownTimeout().toStandardDuration().getMillis();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     log.info(
-        "Waiting until[%s] for queries[%s] to stop.",
-        deadline,
+        "Waiting up to [%,d] ms for queries[%s] to stop.",
+        timeoutMillis,
         runningWorkers.stream().map(holder -> holder.workerContext.queryId()).collect(Collectors.joining(", "))
     );
 
     for (final WorkerHolder holder : runningWorkers) {
       try {
-        final long timeout = deadline.getMillis() - clock.millis();
-        if (timeout <= 0 || !holder.runRef.awaitStop(timeout, TimeUnit.MILLISECONDS)) {
+        final long remainingMillis = timeoutMillis - stopwatch.millisElapsed();
+        if (remainingMillis <= 0 || !holder.runRef.awaitStop(remainingMillis, TimeUnit.MILLISECONDS)) {
           log.warn(
               "Canceling work for query[%s] due to timeout during stop (waited [%,d] ms)",
               holder.workerContext.queryId(),
-              clock.millis() - waitStart.getMillis()
+              stopwatch.millisElapsed()
           );
 
           holder.runRef.cancel();
