@@ -95,7 +95,6 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Size',
     'Num rows',
     'Avg. row size',
-    'Binary version',
     'Replicas',
     'Replication factor',
     'Is available',
@@ -117,7 +116,6 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Size',
     'Num rows',
     'Avg. row size',
-    'Binary version',
     'Replicas',
     'Replication factor',
     'Is available',
@@ -137,7 +135,6 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Shard spec',
     'Partition',
     'Size',
-    'Binary version',
     'Replication factor',
     'Is realtime',
     'Is overshadowed',
@@ -220,7 +217,6 @@ interface SegmentQueryResultRow {
   size: NumberLike;
   num_rows: NumberLike;
   avg_row_size: NumberLike;
-  binary_version: number | null;
   num_replicas: number;
   replication_factor: number;
   is_available: number;
@@ -274,7 +270,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       visibleColumns.shown('Num rows') && `"num_rows"`,
       visibleColumns.shown('Avg. row size') &&
         `CASE WHEN "num_rows" <> 0 THEN ("size" / "num_rows") ELSE 0 END AS "avg_row_size"`,
-      visibleColumns.shown('Binary version') && `"binary_version"`,
       visibleColumns.shown('Replicas') && `"num_replicas"`,
       visibleColumns.shown('Replication factor') && `"replication_factor"`,
       visibleColumns.shown('Is available') && `"is_available"`,
@@ -297,7 +292,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       segmentsState: QueryState.INIT,
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
-        ['Binary version', 'Is published', 'Is overshadowed'],
+        ['Is published', 'Is overshadowed'],
       ),
       groupByInterval: false,
       page: 0,
@@ -448,9 +443,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               size: segment.size,
               num_rows: -1,
               avg_row_size: -1,
-              // Null when unknown: realtime segments (placeholder 0), tombstones, or a missing field
-              binary_version:
-                segment.realtime || !segment.binaryVersion ? null : segment.binaryVersion,
               num_replicas: -1,
               replication_factor: segment.replicationFactor,
               is_available: -1,
@@ -938,15 +930,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 />
               );
             },
-          },
-          {
-            Header: 'Binary version',
-            show: visibleColumns.shown('Binary version'),
-            accessor: 'binary_version',
-            width: 80,
-            filterable: false,
-            className: 'padded',
-            Cell: ({ value }) => (typeof value === 'number' ? value : '-'),
           },
           {
             Header: twoLines('Replicas', <i>(actual)</i>),

@@ -130,7 +130,7 @@ exports[`SegmentsView matches snapshot 1`] = `
           <span
             class="counter"
           >
-            (17/20)
+            (17/19)
           </span>
         </span>
         <span
@@ -245,13 +245,6 @@ exports[`SegmentsView matches snapshot 1`] = `
           <i>
             (bytes)
           </i>
-        </stub-column>
-        <stub-column
-          hidden=""
-          id="binary_version"
-          width="80"
-        >
-          Binary version
         </stub-column>
         <stub-column
           id="num_replicas"
