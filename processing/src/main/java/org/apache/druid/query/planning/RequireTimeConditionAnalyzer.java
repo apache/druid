@@ -46,9 +46,15 @@ import javax.annotation.Nullable;
  * {@code BaseQuery#getQuerySegmentWalker}, and {@code BrokerQueryResource}) —
  * so this validation is resolved outside {@code ExecutionVertex}.
  *
- * <p>Right-hand inputs of joins are intentionally not descended: a
- * {@code __time} filter there does not bound the base table (see
- * {@code CalciteQueryTest#testRequireTimeConditionSemiJoinNegative}).
+ * <p>Right-hand inputs of joins are descended but treated specially: the
+ * outer query's bound does not propagate across a right-leg boundary at
+ * runtime (the outer interval only applies to its primary/left input), so a
+ * right-leg physical leaf whose own innermost query ancestor is unbounded is
+ * rejected with {@link Position#JOIN_RIGHT}. A right-leg
+ * {@link org.apache.druid.query.GlobalTableDataSource}, which is materialized
+ * via {@code JoinableFactory} as an {@code IndexedTable} rather than scanned
+ * as segments, is exempt. See
+ * {@code CalciteQueryTest#testRequireTimeConditionSemiJoinNegative}.
  *
  * <p>On rejection the analyzer records the first offending physical leaf's
  * datasource name and its structural position so callers can build a specific
