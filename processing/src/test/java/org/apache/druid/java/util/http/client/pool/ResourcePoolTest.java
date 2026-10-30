@@ -53,6 +53,7 @@ public class ResourcePoolTest
 {
   private static final long NEVER_EXPIRES = TimeUnit.MINUTES.toMillis(5);
   private static final long EXPIRES_QUICKLY = 100;
+  private static final long EVICTS_QUICKLY = 10;
 
   @RegisterExtension
   public final LoggerCaptureExtension logger = new LoggerCaptureExtension(ResourcePool.class);
@@ -510,6 +511,77 @@ public class ResourcePoolTest
     Assertions.assertEquals(3, factory.opened().size(), "the expired resource is replaced one for one");
   }
 
+  /**
+   * A key that stops being used - e.g. a destination that has gone away - has its idle resources closed once the pool
+   * is next used for any other key.
+   */
+  @ParameterizedTest
+  @EnumSource(ResourcePool.Implementation.class)
+  public void testAbandonedKeyIsEvictedAndClosed(ResourcePool.Implementation implementation) throws Exception
+  {
+    final ResourcePool<String, String> pool = createPool(implementation, 2, EVICTS_QUICKLY, true);
+    try {
+      pool.take("billy").returnResource();
+
+      awaitAbandonment();
+      pool.take("other").returnResource();
+
+      Assertions.assertEquals(
+          Set.of("billy#0", "billy#1"),
+          Set.copyOf(factory.closed()),
+          "every resource of the abandoned key is closed, not just the one that was taken"
+      );
+    }
+    finally {
+      pool.close();
+    }
+  }
+
+  /**
+   * A key with a resource still on loan is never evicted, no matter how long the borrow takes, and remains usable
+   * once the resource is returned.
+   */
+  @ParameterizedTest
+  @EnumSource(ResourcePool.Implementation.class)
+  public void testKeyWithResourceOnLoanIsNeverEvicted(ResourcePool.Implementation implementation) throws Exception
+  {
+    final ResourcePool<String, String> pool = createPool(implementation, 1, EVICTS_QUICKLY, false);
+    try {
+      final ResourceContainer<String> billy = pool.take("billy");
+      Assertions.assertEquals("billy#0", billy.get());
+
+      awaitAbandonment();
+      pool.take("other").returnResource();
+      Assertions.assertEquals(List.of(), factory.closed(), "the resource on loan is never closed out from under it");
+
+      billy.returnResource();
+      Assertions.assertEquals(
+          "billy#0",
+          pool.take("billy").get(),
+          "the key is still there, and the very resource just returned is still usable"
+      );
+    }
+    finally {
+      pool.close();
+    }
+  }
+
+  /**
+   * A key that has been abandoned but not yet swept is still closed by {@link ResourcePool#close()}.
+   */
+  @ParameterizedTest
+  @EnumSource(ResourcePool.Implementation.class)
+  public void testCloseClosesAbandonedKeyThatWasNotSwept(ResourcePool.Implementation implementation) throws Exception
+  {
+    final ResourcePool<String, String> pool = createPool(implementation, 2, EVICTS_QUICKLY, true);
+    pool.take("billy").returnResource();
+
+    awaitAbandonment();
+    pool.close();
+
+    Assertions.assertEquals(Set.of("billy#0", "billy#1"), Set.copyOf(factory.closed()));
+  }
+
   private ResourcePool<String, String> createPool(
       ResourcePool.Implementation implementation,
       int maxPerKey,
@@ -530,6 +602,14 @@ public class ResourcePoolTest
   private static void awaitExpiry() throws InterruptedException
   {
     Thread.sleep(EXPIRES_QUICKLY * 3);
+  }
+
+  /**
+   * Waits long enough for an {@link #EVICTS_QUICKLY} key with no resources on loan to count as abandoned.
+   */
+  private static void awaitAbandonment() throws InterruptedException
+  {
+    Thread.sleep(EVICTS_QUICKLY * 30);
   }
 
   /**
