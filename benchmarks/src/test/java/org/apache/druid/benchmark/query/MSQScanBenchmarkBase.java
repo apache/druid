@@ -78,14 +78,14 @@ import java.util.concurrent.TimeUnit;
  * {@code -prof gc} to also report bytes allocated per query.
  * <p>
  * Segments default to V9, sorted by {@code __time} first. Choose other layouts with the {@code layout} parameter, for
- * example {@code -p layout=TIME_ORDERED,UNCLUSTERED,CLUSTERED}; see {@link Layout}.
+ * example {@code -p layout=V9_TIME_ORDERED,V10_CLUSTERED,V10_UNCLUSTERED_CLUSTERING_ORDER}; see {@link Layout}.
  * <p>
  * To run, build the benchmarks jar and select benchmarks and parameters, passing the JVM flags listed in the "Strong
  * encapsulation" section of docs/operations/java.md:
  * <pre>
  * mvn package -pl benchmarks -am -DskipTests
  * java -jar benchmarks/target/benchmarks.jar 'DartScanBenchmark.orderByTimeDescWithLimit' \
- *   -p numTimeChunks=30 -p limit=10000 -p layout=CLUSTERED -prof gc \
+ *   -p numTimeChunks=30 -p limit=10000 -p layout=V10_CLUSTERED -prof gc \
  *   -jvmArgsAppend "--add-opens=java.base/java.nio=ALL-UNNAMED ..."
  * </pre>
  * Set the {@code DRUID_BENCHMARK_CACHE_DIR} environment variable to reuse generated segments across runs.
@@ -102,26 +102,31 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
   private static final DateTime FIRST_DAY = DateTimes.of("2026-01-01");
 
   /**
-   * How segments store their rows. Matches the layouts of {@link SqlClusteredSegmentsBenchmark}.
+   * How segments store their rows.
    */
   public enum Layout
   {
     /**
      * V9 segment sorted by {@code __time} first.
      */
-    TIME_ORDERED,
+    V9_TIME_ORDERED,
 
     /**
-     * V10 segment sorted by clusterKey1, clusterKey2, then {@code __time}, without value groups. Rows are in the same
-     * order as {@link #CLUSTERED}, but the segment is not sorted by {@code __time} first.
+     * V10 segment sorted by {@code __time} first.
      */
-    UNCLUSTERED,
+    V10_TIME_ORDERED,
 
     /**
      * V10 clustered base table: a value group per combination of clusterKey1 and clusterKey2, each sorted by
      * {@code __time}.
      */
-    CLUSTERED
+    V10_CLUSTERED,
+
+    /**
+     * V10 segment sorted by clusterKey1, clusterKey2, then {@code __time}, without value groups. Rows are in the same
+     * order as {@link #V10_CLUSTERED}, but the segment is not sorted by {@code __time} first.
+     */
+    V10_UNCLUSTERED_CLUSTERING_ORDER
   }
 
   /**
@@ -151,7 +156,7 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
   @Param({"2"})
   private int maxNumTasks;
 
-  @Param({"TIME_ORDERED"})
+  @Param({"V9_TIME_ORDERED"})
   private Layout layout;
 
   /**
@@ -251,8 +256,19 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
                                                    .size(0)
                                                    .build();
         final QueryableIndex index = switch (layout) {
-          case TIME_ORDERED -> segmentGenerator.generate(dataSegment, daySchema, Granularities.NONE, rowsPerSegment);
-          case UNCLUSTERED -> segmentGenerator.generateV10(
+          case V9_TIME_ORDERED -> segmentGenerator.generate(dataSegment, daySchema, Granularities.NONE, rowsPerSegment);
+          case V10_TIME_ORDERED -> segmentGenerator.generateV10(
+              dataSegment,
+              daySchema,
+              daySchema.getDimensionsSpec(),
+              TransformSpec.NONE,
+              IndexSpec.getDefault(),
+              Granularities.NONE,
+              null,
+              rowsPerSegment,
+              CalciteTests.getJsonMapper()
+          );
+          case V10_UNCLUSTERED_CLUSTERING_ORDER -> segmentGenerator.generateV10(
               dataSegment,
               daySchema,
               clusterSpec.getDimensionsSpec(),
@@ -263,7 +279,7 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
               rowsPerSegment,
               CalciteTests.getJsonMapper()
           );
-          case CLUSTERED -> segmentGenerator.generateV10(
+          case V10_CLUSTERED -> segmentGenerator.generateV10(
               dataSegment,
               daySchema,
               clusterSpec.getDimensionsSpec(),
