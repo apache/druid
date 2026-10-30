@@ -28,6 +28,8 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.test.CalciteMSQTestsHelper;
+import org.apache.druid.msq.test.MSQTestWorkerContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IndexSpec;
@@ -89,6 +91,9 @@ import java.util.concurrent.TimeUnit;
  *   -jvmArgsAppend "--add-opens=java.base/java.nio=ALL-UNNAMED ..."
  * </pre>
  * Set the {@code DRUID_BENCHMARK_CACHE_DIR} environment variable to reuse generated segments across runs.
+ * <p>
+ * {@link #threadsPerWorker} is applied through system properties read when the query framework is created, so each
+ * trial must run in its own fork; do not run with {@code -f 0}.
  */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
@@ -155,6 +160,14 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
 
   @Param({"2"})
   private int maxNumTasks;
+
+  /**
+   * Number of processors each worker runs at once, as a worker with that many processing threads would. Also sets the
+   * default segment load-ahead, which is twice this. The in-JVM workers share one processing pool, sized so that each
+   * worker can run this many processors.
+   */
+  @Param({"1", "8"})
+  private int threadsPerWorker;
 
   @Param({"V9_TIME_ORDERED"})
   private Layout layout;
@@ -232,6 +245,12 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
       engineClass = engineClass.getSuperclass();
     }
     annotations = Arrays.asList(engineClass.getAnnotations());
+
+    System.setProperty(MSQTestWorkerContext.THREAD_COUNT_PROPERTY, String.valueOf(threadsPerWorker));
+    System.setProperty(
+        CalciteMSQTestsHelper.MSQTestModule.POOL_THREADS_PROPERTY,
+        String.valueOf(threadsPerWorker * maxNumTasks)
+    );
 
     final String clusteredDatasource = SqlBenchmarkDatasets.clusteringDatasource("CLUSTERED", clusteringCardinality, 2);
     final SqlBenchmarkDatasets.BenchmarkSchema clustered = SqlBenchmarkDatasets.getSchema(clusteredDatasource);
@@ -332,6 +351,21 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
   {
     runQuery(
         "SELECT * FROM " + DATASOURCE + " WHERE clusterKey1 = '1' ORDER BY __time DESC LIMIT " + limit,
+        counters,
+        blackhole
+    );
+  }
+
+  /**
+   * Newest rows for one value of the primary clustering column and one value of a secondary column. Matches about 1 in
+   * 4,500 rows, so with a limit above the number of matching rows the scan cannot prune anything.
+   */
+  @Benchmark
+  public void whereClusterKeyAndDimOrderByTimeDescWithLimit(final WorkCounters counters, final Blackhole blackhole)
+  {
+    runQuery(
+        "SELECT * FROM " + DATASOURCE + " WHERE clusterKey1 = '1' AND dimSecondary = '7' ORDER BY __time DESC LIMIT "
+        + limit,
         counters,
         blackhole
     );
