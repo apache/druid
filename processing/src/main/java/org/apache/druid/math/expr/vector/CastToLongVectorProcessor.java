@@ -24,16 +24,31 @@ import org.apache.druid.math.expr.ExpressionType;
 
 public final class CastToLongVectorProcessor extends CastToTypeVectorProcessor<long[]>
 {
+  // Processor-owned scratch space reused for each double-to-long conversion. Results are valid until the next
+  // evaluation of this processor, consistent with the lifetime of output arrays from other vector processors.
+  private final long[] output;
+
   public CastToLongVectorProcessor(ExprVectorProcessor<?> delegate)
   {
     super(delegate);
+    this.output = new long[delegate.maxVectorSize()];
   }
 
   @Override
   public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
   {
-    ExprEvalVector<?> result = delegate.evalVector(bindings);
-    return new ExprEvalLongVector(result.getLongVector(), result.getNullVector());
+    final ExprEvalVector<?> result = delegate.evalVector(bindings);
+    final long[] values;
+    if (delegate.getOutputType().equals(ExpressionType.DOUBLE)) {
+      final double[] input = result.getDoubleVector();
+      for (int i = 0; i < bindings.getCurrentVectorSize(); i++) {
+        output[i] = (long) input[i];
+      }
+      values = output;
+    } else {
+      values = result.getLongVector();
+    }
+    return new ExprEvalLongVector(values, result.getNullVector());
   }
 
   @Override
