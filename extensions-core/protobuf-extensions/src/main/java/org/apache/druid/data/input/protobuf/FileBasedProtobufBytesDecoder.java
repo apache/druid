@@ -44,9 +44,8 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
     super(protoMessageType);
 
     Preconditions.checkNotNull(descriptorFilePath);
+    // Descriptor is loaded lazily on first use, not during deserialization.
     this.descriptorFilePath = descriptorFilePath;
-
-    initializeDescriptor();
   }
 
   @JsonProperty("descriptor")

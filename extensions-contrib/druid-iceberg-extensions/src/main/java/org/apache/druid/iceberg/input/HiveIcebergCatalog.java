@@ -80,10 +80,10 @@ public class HiveIcebergCatalog extends IcebergCatalog
     this.catalogUri = Preconditions.checkNotNull(catalogUri, "catalogUri cannot be null");
     this.catalogProperties = DynamicConfigProviderUtils.extraConfigAndSetStringMap(catalogProperties, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, mapper);
     this.caseSensitive = caseSensitive == null ? true : caseSensitive;
-    this.configuration = configuration;
+    // Copy the injected configuration: it is shared by all catalogs, so per-spec properties must not leak into it.
+    this.configuration = new Configuration(configuration);
     this.catalogProperties
         .forEach(this.configuration::set);
-    this.hiveCatalog = retrieveCatalog();
   }
 
   @Override
