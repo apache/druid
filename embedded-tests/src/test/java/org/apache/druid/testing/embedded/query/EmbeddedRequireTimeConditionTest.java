@@ -20,26 +20,29 @@
 package org.apache.druid.testing.embedded.query;
 
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.HttpResponseException;
-import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.http.ResultFormat;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
+
 /**
- * End-to-end coverage for the {@code druid.sql.planner.requireTimeCondition} broker property.
- * Runs an in-process cluster with the guard enabled, ingests a datasource, and submits SQL
+ * End-to-end coverage for the {@code requireTimeCondition} planner guard. The guard is enabled
+ * via the SQL query context key {@link PlannerConfig#CTX_REQUIRE_TIME_CONDITION} (which takes
+ * precedence over the broker-level default), the test ingests a datasource and submits SQL
  * through the Broker's HTTP endpoint — the same path a client would take.
  */
 public class EmbeddedRequireTimeConditionTest extends QueryTestBase
 {
-  private String dataSourceName;
+  private static final Map<String, Object> REQUIRE_TIME_CONDITION_CONTEXT =
+      Map.of(PlannerConfig.CTX_REQUIRE_TIME_CONDITION, true);
 
-  @Override
-  protected EmbeddedDruidCluster createCluster()
-  {
-    broker.addProperty("druid.sql.planner.requireTimeCondition", "true");
-    return super.createCluster();
-  }
+  private String dataSourceName;
 
   @Override
   protected void beforeAll()
@@ -50,13 +53,12 @@ public class EmbeddedRequireTimeConditionTest extends QueryTestBase
   @Test
   public void testQueryWithTimeConditionSucceeds()
   {
-    Assertions.assertEquals(
-        "10",
-        cluster.runSql(
-            "SELECT COUNT(*) FROM %s WHERE __time >= '2025-06-01' AND __time < '2025-06-11'",
-            dataSourceName
-        )
+    final String result = cluster.callApi().onAnyBroker(
+        b -> b.submitSqlQuery(buildQuery(
+            "SELECT COUNT(*) FROM %s WHERE __time >= '2025-06-01' AND __time < '2025-06-11'"
+        ))
     );
+    Assertions.assertEquals("10", result.trim());
   }
 
   @Test
@@ -64,10 +66,25 @@ public class EmbeddedRequireTimeConditionTest extends QueryTestBase
   {
     final Throwable thrown = Assertions.assertThrows(
         Exception.class,
-        () -> cluster.runSql("SELECT COUNT(*) FROM %s", dataSourceName)
+        () -> cluster.callApi().onAnyBroker(
+            b -> b.submitSqlQuery(buildQuery("SELECT COUNT(*) FROM %s"))
+        )
     );
     ExceptionMatcher.of(HttpResponseException.class)
                     .expectMessageContains("has no filter on the __time column")
                     .assertThat(thrown);
+  }
+
+  private ClientSqlQuery buildQuery(String sqlFormat)
+  {
+    return new ClientSqlQuery(
+        StringUtils.format(sqlFormat, dataSourceName),
+        ResultFormat.CSV.name(),
+        false,
+        false,
+        false,
+        REQUIRE_TIME_CONDITION_CONTEXT,
+        List.of()
+    );
   }
 }
