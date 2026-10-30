@@ -77,6 +77,17 @@ This section contains detailed release notes separated by areas.
 
 ### Querying
 
+#### Stricter `requireTimeCondition` guard
+
+The `druid.sql.planner.requireTimeCondition` guard is now enforced on every physical leaf in the query tree, not just the outermost scan. Previously, a query could pass the guard with only an outer `__time` filter even when an inner subquery or a right-hand join input scanned the entire datasource. The guard now rejects:
+
+- A right-hand join input or semi-join subquery with no `__time` filter, even when the left-hand side is bounded.
+- A nested subquery whose innermost query ancestor has no `__time` filter, even when an outer wrapper is bounded.
+
+`GlobalTableDataSource` on the right side of a join is exempt, since it is materialized via `JoinableFactory` as an `IndexedTable` rather than scanned as segments.
+
+[#20441](https://github.com/apache/druid/pull/20441)
+
 #### Other querying improvements
 
 ### Cluster management
@@ -96,6 +107,17 @@ This section contains detailed release notes separated by areas.
 ## Upgrade notes and incompatible changes
 
 ### Upgrade notes
+
+#### Stricter `requireTimeCondition` enforcement
+
+If `druid.sql.planner.requireTimeCondition=true` is set (or `requireTimeCondition=true` is passed in a query context), the guard now rejects some queries that previously succeeded:
+
+- Queries with a right-hand join input or semi-join subquery that has no `__time` filter, even when the left-hand side is bounded.
+- Queries with a nested subquery whose innermost query ancestor has no `__time` filter, even when an outer wrapper is bounded.
+
+Previously, only the outermost scan's segment spec was checked, so these queries would pass validation but still scan the entire datasource at the inner leg. If you rely on `requireTimeCondition` and have queries matching these shapes, add a `__time` filter to the inner subquery or right-hand join input, or wrap it in an inner query whose own interval is bounded.
+
+[#20441](https://github.com/apache/druid/pull/20441)
 
 ### Incompatible changes
 

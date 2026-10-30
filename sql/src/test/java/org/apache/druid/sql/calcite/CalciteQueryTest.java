@@ -139,7 +139,11 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -148,6 +152,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -13515,12 +13520,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionPositive()
+  /**
+   * Pairs of planner configs for the {@code testRequireTimeCondition*} parameterised tests.
+   * Each test runs twice: once with {@code requireTimeCondition=true} (the guard enabled)
+   * and once with the default planner config (guard disabled). Positive tests must produce
+   * identical native plans and rows under both configs; negative tests must throw under the
+   * guard and plan successfully without it.
+   */
+  public static Stream<Arguments> requireTimeConditionConfigs()
+  {
+    return Stream.of(
+        Arguments.of(Named.of("require-on", PLANNER_CONFIG_REQUIRE_TIME_CONDITION)),
+        Arguments.of(Named.of("require-off", PLANNER_CONFIG_DEFAULT))
+    );
+  }
+
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionPositive(PlannerConfig plannerConfig)
   {
     // simple timeseries
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
         + "  cnt FROM druid.foo\n"
@@ -13545,12 +13566,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionPositive2()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionPositive2(PlannerConfig plannerConfig)
   {
     // nested GROUP BY only requires time condition for inner most query
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT\n"
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
@@ -13589,6 +13611,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
+  // Not parametrised under require-on/require-off: DecoupledPlanningCalciteQueryTest
+  // pins a frozen native plan via a quidem .iq recording keyed on the test's display
+  // name. @ParameterizedTest would make the harness look for per-config .iq files
+  // (e.g. testRequireTimeConditionPositive3@require-on.iq) that don't exist, and the
+  // plan is config-independent anyway (the guard runs post-plan construction).
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
   @Test
   public void testRequireTimeConditionPositive3()
@@ -13661,11 +13688,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionLogicalValuePositive()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionLogicalValuePositive(PlannerConfig plannerConfig)
   {
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT 2 + 2 AS a",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -13737,6 +13765,252 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
               + "  WHERE dim1 <> '' AND __time >= '2000-01-01'\n"
               + ")",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  // Coverage for issue #17407: explicit INNER JOIN of two bounded subqueries. Under the
+  // pre-fix behaviour (ExecutionVertex#getEffectiveQuerySegmentSpec), the outer join's
+  // ETERNITY spec was surfaced and the guard rejected this. The analyzer descends both
+  // legs and confirms every physical leaf is bounded.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionExplicitJoinBothSidesFilteredPositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "SELECT COUNT(*) FROM\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') a\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') b\n"
+              + "  ON a.dim1 = b.dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a join where both legs are bounded: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+      // testQuery may fail comparing actual output to the empty expected lists; that is not
+      // what this test asserts. The only failure mode we care about is CannotBuildQueryException.
+    }
+  }
+
+  @Test
+  public void testRequireTimeConditionExplicitJoinRightSideMissingFilterNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') a\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo) b\n"
+              + "  ON a.dim1 = b.dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  @Test
+  public void testRequireTimeConditionExplicitJoinLeftSideMissingFilterNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM\n"
+              + "  (SELECT dim1 FROM druid.foo) a\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') b\n"
+              + "  ON a.dim1 = b.dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  // A lookup on the right side is global: the walker short-circuits at isGlobal(), so we
+  // only need the left (bounded) leg to satisfy the guard. Regression guard against a fix
+  // that would over-eagerly demand a __time filter on globals.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionLookupRightSidePositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "SELECT COUNT(*) FROM druid.foo\n"
+              + "  INNER JOIN lookup.lookyloo l ON foo.dim1 = l.k\n"
+              + "  WHERE foo.__time >= '2000-01-01'",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a bounded join against a global lookup: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  @Test
+  public void testRequireTimeConditionThreeWayJoinDeepLegMissingFilterNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') a\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') b\n"
+              + "  ON a.dim1 = b.dim1\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo) c\n"
+              + "  ON b.dim1 = c.dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  // Regression guard for v33+ where ExecutionVertex#getEffectiveQuerySegmentSpec prunes
+  // at Query#mayCollapseQueryDataSource() (default false). LIMIT prevents the outer scan
+  // from collapsing the inner query, so the pre-fix walker sees only the outer ETERNITY
+  // spec and rejects. The analyzer descends the QueryDataSource unconditionally.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionNonCollapsibleSubqueryPositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "SELECT COUNT(*) FROM (\n"
+              + "  SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01' LIMIT 10\n"
+              + ")",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a non-collapsible subquery with a bounded inner scan: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  // Nested rollup: an outer GROUP BY over a subquery whose inner GROUP BY owns the
+  // __time bound. The inner query is the innermost owner of the physical scan, so its
+  // bound reaches the leaf and the guard is satisfied. Guards against regressions that
+  // mistake the outer query's segment spec for the physical scan's bound.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionNestedRollupPositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "SELECT __time, SUM(cnt) AS cnt, dim1\n"
+              + "FROM (\n"
+              + "  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1\n"
+              + "  FROM druid.foo\n"
+              + "  WHERE __time >= '2000-01-01' AND __time < '2001-01-01'\n"
+              + "  GROUP BY TIME_FLOOR(__time, 'PT1H'), dim1\n"
+              + ")\n"
+              + "GROUP BY __time, dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a nested-rollup with a bounded inner GROUP BY: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  // A CTE is inlined by Calcite into an equivalent nested subquery. When the CTE
+  // definition owns the __time bound, the resulting plan is a bounded inner query
+  // under an outer aggregate, which the guard must accept.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionCtePositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "WITH recent AS (\n"
+              + "  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1\n"
+              + "  FROM druid.foo\n"
+              + "  WHERE __time >= '2000-01-01' AND __time < '2001-01-01'\n"
+              + "  GROUP BY TIME_FLOOR(__time, 'PT1H'), dim1\n"
+              + ")\n"
+              + "SELECT __time, SUM(cnt) AS cnt, dim1 FROM recent GROUP BY __time, dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a CTE with a bounded inner __time filter: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  // A CTE with no __time filter anywhere inlines to an unbounded scan under the outer;
+  // the guard must reject with the specific "__time column" message.
+  @Test
+  public void testRequireTimeConditionCteNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "WITH recent AS (\n"
+              + "  SELECT dim1, cnt FROM druid.foo\n"
+              + ")\n"
+              + "SELECT dim1, SUM(cnt) FROM recent GROUP BY dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  // The guard keys on query intervals, not filters. A __time predicate on a subquery
+  // result stays a residual filter and never becomes a QuerySegmentSpec, so it must not
+  // satisfy the guard. Preserved deliberately per RCA.
+  @Test
+  public void testRequireTimeConditionOuterFilterOverUnboundedSubqueryNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM (\n"
+              + "  SELECT __time, dim1 FROM druid.foo LIMIT 10\n"
+              + ") WHERE __time >= '2000-01-01'",
           CalciteTests.REGULAR_USER_AUTH_RESULT,
           ImmutableList.of(),
           ImmutableList.of()
