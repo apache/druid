@@ -631,6 +631,63 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
+  public void testTimeAmongTheDimensionsIsGroupedUnderTheVirtualTimeColumn() throws JsonProcessingException
+  {
+    // A schema that is not sorted by time carries __time among its dimensions. Naming an output __time is a
+    // restriction of group-by rather than of scan, so this only arises for a layout that compacts by grouping, and
+    // without a query granularity there is no granularity virtual column to do the renaming.
+    final List<DimensionSchema> dimensions =
+        ImmutableList.of(STRING_DIMENSION, new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME));
+
+    final CompactionTask task = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap(),
+        null,
+        null
+    );
+
+    final CombinedDataSchema dataSchema = new CombinedDataSchema(
+        DATA_SOURCE,
+        new TimestampSpec(TIMESTAMP_COLUMN, null, null),
+        DimensionsSpec.builder().setDimensions(dimensions).setForceSegmentSortByTime(false).build(),
+        AGGREGATORS.toArray(new AggregatorFactory[0]),
+        new UniformGranularitySpec(
+            SEGMENT_GRANULARITY.getDefaultGranularity(),
+            // no query granularity, so nothing else renames __time
+            null,
+            Collections.singletonList(COMPACTION_INTERVAL)
+        ),
+        null,
+        null,
+        null
+    );
+
+    final GroupByQuery groupByQuery = (GroupByQuery) Iterables.getOnlyElement(
+        MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
+            task,
+            Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
+        )
+    ).getQuerySpec().getQuery();
+
+    Assertions.assertTrue(
+        groupByQuery.getDimensions()
+                    .stream()
+                    .anyMatch(
+                        dim -> ColumnHolder.TIME_COLUMN_NAME.equals(dim.getDimension())
+                               && MSQCompactionRunner.TIME_VIRTUAL_COLUMN.equals(dim.getOutputName())
+                    ),
+        groupByQuery.getDimensions()::toString
+    );
+    Assertions.assertTrue(
+        groupByQuery.getDimensions()
+                    .stream()
+                    .noneMatch(dim -> ColumnHolder.TIME_COLUMN_NAME.equals(dim.getOutputName())),
+        groupByQuery.getDimensions()::toString
+    );
+  }
+
+  @Test
   public void testCompactionConfigWithProjectionsProducesCorrectSpec() throws JsonProcessingException
   {
     DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);
