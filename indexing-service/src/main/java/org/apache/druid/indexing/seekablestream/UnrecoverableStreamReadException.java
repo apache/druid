@@ -19,31 +19,19 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-
-import org.apache.druid.indexer.TaskState;
-
-public class TaskStatusException extends Exception
+/**
+ * Thrown by {@link SeekableStreamIndexTaskRunner#getRecords} when the task cannot make any further progress reading
+ * the stream, for example because the offsets it must read next have been removed from the stream.
+ *
+ * Unlike other exceptions thrown from the read loop, the runner stops reading, publishes the data read so far and
+ * then fails the task with the message of this exception. Failing the task makes the supervisor re-read the start
+ * offsets from the metadata store, so the problem shows up in the supervisor status instead of the task retrying
+ * silently until its duration elapses.
+ */
+public class UnrecoverableStreamReadException extends Exception
 {
-  private final TaskState taskState;
-
-  private TaskStatusException(TaskState state, String errorMessage)
+  public UnrecoverableStreamReadException(String message)
   {
-    super(errorMessage);
-    this.taskState = state;
-  }
-
-  public TaskState getTaskState()
-  {
-    return taskState;
-  }
-
-  public static TaskStatusException fail(String errorMessage)
-  {
-    return new TaskStatusException(TaskState.FAILED, errorMessage);
-  }
-
-  public static TaskStatusException success()
-  {
-    return new TaskStatusException(TaskState.SUCCESS, "");
+    super(message);
   }
 }

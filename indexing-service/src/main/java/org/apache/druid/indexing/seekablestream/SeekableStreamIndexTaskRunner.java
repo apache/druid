@@ -479,6 +479,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     Throwable caughtException = null;
 
+    // Set when getRecords() reports that no further progress can be made. The data read so far is still published,
+    // but the task fails with the message of this exception.
+    UnrecoverableStreamReadException unrecoverableReadException = null;
+
     //milliseconds waited for created segments to be handed off
     long handoffWaitMs = 0L;
 
@@ -695,8 +699,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             // note: getRecords() also updates assignment
             stillReading = !assignment.isEmpty();
           }
-          catch (TaskStatusException e) {
-            caughtExceptionOuter = e;
+          catch (UnrecoverableStreamReadException e) {
+            log.error(
+                "Cannot continue reading the stream: %s Stopping reading. Data read up to offsets[%s] will be "
+                + "persisted and published, then the task will exit with FAILED status.",
+                e.getMessage(),
+                currOffsets
+            );
+            unrecoverableReadException = e;
             records = Collections.emptyList();
             stillReading = false;
           }
@@ -1020,15 +1030,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
 
     ingestionState = IngestionState.COMPLETED;
-
-    if (caughtExceptionOuter instanceof TaskStatusException) {
-      String errorMsg = caughtExceptionOuter.getMessage();
+    if (unrecoverableReadException != null) {
+      final String errorMsg = unrecoverableReadException.getMessage();
       toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg, handoffWaitMs));
-      return new TaskStatus(task.getId(), ((TaskStatusException) caughtExceptionOuter).getTaskState(), -1, errorMsg, null);
-    } else {
-      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
-      return TaskStatus.success(task.getId());
+      return TaskStatus.failure(task.getId(), errorMsg);
     }
+    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
+    return TaskStatus.success(task.getId());
   }
 
   private TaskLockType getTaskLockType()
@@ -2386,8 +2394,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * @param recordSupplier
    * @param toolbox
    * @return list of records polled, can be empty but cannot be null
-   * @throws TaskStatusException all ingested message will be persisted and published.
-   * while for other thrown exceptions, ingested message will be discarded.
+   * @throws UnrecoverableStreamReadException if no further progress can be made reading the stream. The records read
+   *                                          so far are published and then the task fails.
+   * @throws Exception                        for other errors, in which case the task fails without publishing
    */
   @NotNull
   protected abstract List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> getRecords(
