@@ -27,11 +27,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * {@link Comparator} based {@link SortedDimensionDictionary}
- *
- * There are a number of unused methods, because nested columns don't merge bitmap indexes during
- * the merge phase, rather they are created when serializing the column, but leaving for now for
- * compatibility with the other implementation
+ * Creates a sorted dictionary given some existing dictionary and a {@link Comparator}, storing a mapping of both
+ * sorted id to unsorted id and unsorted id to sorted id. {@link SortedDimensionDictionary} uses natural ordering.
  */
 public class ComparatorSortedDimensionDictionary<T>
 {
@@ -63,7 +60,16 @@ public class ComparatorSortedDimensionDictionary<T>
     }
   }
 
-  @SuppressWarnings("unused")
+  /**
+   * Number of ids in this sorted view, captured at {@link DimensionDictionary#sort()} time. Both the sorted-id and
+   * unsorted-id spaces cover {@code [0, size())}. Useful when iterating a snapshot taken concurrently with a still-
+   * growing source dictionary, where re-reading the source size would be inconsistent with this view.
+   */
+  public int size()
+  {
+    return sortedVals.size();
+  }
+
   public int getUnsortedIdFromSortedId(int index)
   {
     return indexToId[index];
