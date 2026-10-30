@@ -1496,6 +1496,88 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 </details>
 
+### Handoff streaming tasks on a worker early
+
+Queues early handoff for every streaming ingestion task running on one Middle Manager (`index_kafka`, `index_kinesis`, `index_rabbit`). `{host}` is the worker identity registered with the Overlord (`hostname:port`), the same value used by worker enable and disable. Compact, kill, and batch index tasks are skipped; they have no early-handoff path. To hand off a subset of task groups, use [handoff task groups for a supervisor early](supervisor-api.md#handoff-task-groups-for-a-supervisor-early).
+
+This is a best-effort API. It does not shut down the worker, kill tasks, or terminate supervisors. Handoff uses the same supervisor notice path as supervisor task-group handoff: pause, persist, publish, then wait for Historicals. Only task groups that have a running task on this worker are queued. Other groups of the same supervisor on other workers are left running. Replicas of a selected task group on another worker still publish, which is existing task-group handoff behavior.
+
+#### URL
+
+`POST` `/druid/indexer/v1/worker/{host}/handoff`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="80" label="202 ACCEPTED">
+
+<br/>
+
+*202 means notices were accepted, not that handoff finished. `taskGroups` is the set that was queued (empty if none). `skipped` lists seekable-stream task ids that were not queued. Reasons are `missing_taskGroupId`, `missing_supervisorId`, `supervisor_not_found`, and `handoff_unsupported`. Compact, kill, and batch tasks are omitted from `skipped`.*
+
+</TabItem>
+<TabItem value="82" label="404 NOT FOUND">
+
+<br/>
+
+*No worker is registered with that host.*
+
+</TabItem>
+<TabItem value="83" label="503 SERVICE UNAVAILABLE">
+
+<br/>
+
+*This Overlord is not the leader.*
+
+</TabItem>
+</Tabs>
+
+#### Sample request
+
+The following example hands off streaming tasks on worker `mm-0.druid.default.svc.cluster.local:8091`.
+
+<Tabs>
+
+<TabItem value="84" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/worker/mm-0.druid.default.svc.cluster.local:8091/handoff"
+```
+
+</TabItem>
+<TabItem value="85" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/worker/mm-0.druid.default.svc.cluster.local:8091/handoff HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>202 Accepted</summary>
+
+  ```json
+  {
+    "host": "mm-0.druid.default.svc.cluster.local:8091",
+    "taskGroups": {
+      "wikipedia": [0, 2]
+    },
+    "skipped": [
+      { "id": "index_kafka_legacy_abc", "reason": "missing_taskGroupId" },
+      { "id": "index_kafka_manual_xyz", "reason": "missing_supervisorId" }
+    ]
+  }
+  ```
+
+</details>
+
 ## Task management
 
 ### Retrieve status objects for tasks
