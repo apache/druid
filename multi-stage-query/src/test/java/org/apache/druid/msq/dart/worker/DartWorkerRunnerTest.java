@@ -21,6 +21,7 @@ package org.apache.druid.msq.dart.worker;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.inject.Injector;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -32,13 +33,19 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
+import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.testing.TemporaryFolderExtension;
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
+import org.joda.time.Period;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +62,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -75,10 +84,19 @@ public class DartWorkerRunnerTest
 
   private ListeningExecutorService workerExec;
   private DartWorkerRunner workerRunner;
+
+  /**
+   * Graceful shutdown timeout returned by the {@link ServerConfig} given to {@link #workerRunner}. Defaults to
+   * {@link Period#ZERO} so most tests cancel workers immediately on {@link DartWorkerRunner#stop()}.
+   */
+  private Period gracefulShutdownTimeout;
   private AutoCloseable mockCloser;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
+  @RegisterExtension
+  public final LoggerCaptureExtension logCapture = new LoggerCaptureExtension(DartWorkerRunner.class);
 
   @Mock
   private DartWorkerContextFactory workerFactory;
@@ -95,6 +113,18 @@ public class DartWorkerRunnerTest
   @Mock
   private AuthorizerMapper authorizerMapper;
 
+  @Mock
+  private ControllerClient controllerClient;
+
+  @Mock
+  private WorkerClient workerClient;
+
+  @Mock
+  private Injector injector;
+
+  @Mock
+  private QueryProcessingPool queryProcessingPool;
+
   @Captor
   private ArgumentCaptor<DruidNodeDiscovery.Listener> discoveryListener;
 
@@ -102,12 +132,21 @@ public class DartWorkerRunnerTest
   public void setUp()
   {
     mockCloser = MockitoAnnotations.openMocks(this);
+    gracefulShutdownTimeout = Period.ZERO;
     workerRunner = new DartWorkerRunner(
         workerFactory,
         workerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(MAX_WORKERS, "worker-exec-%s")),
         discoveryProvider,
         new DartResourcePermissionMapper(),
         authorizerMapper,
+        new ServerConfig()
+        {
+          @Override
+          public Period getGracefulShutdownTimeout()
+          {
+            return gracefulShutdownTimeout;
+          }
+        },
         temporaryFolder.getRoot()
     );
 
@@ -126,10 +165,17 @@ public class DartWorkerRunnerTest
 
     // Set up workerContext.workerId() to return WORKER_ID.
     Mockito.when(workerContext.workerId()).thenReturn(WORKER_ID.toString());
+    Mockito.when(workerContext.queryId()).thenReturn(QUERY_ID);
 
     // Set up workerContext.selfNode() to return a mock DruidNode
     DruidNode selfNode = new DruidNode("worker", "localhost", false, 8282, -1, true, false);
     Mockito.when(workerContext.selfNode()).thenReturn(selfNode);
+
+    // Provide what WorkerImpl needs to enter its main loop, so workers run until finished or canceled.
+    Mockito.when(workerContext.makeControllerClient()).thenReturn(controllerClient);
+    Mockito.when(workerContext.makeWorkerClient()).thenReturn(workerClient);
+    Mockito.when(workerContext.injector()).thenReturn(injector);
+    Mockito.when(injector.getInstance(QueryProcessingPool.class)).thenReturn(queryProcessingPool);
 
     // Start workerRunner, capture listener in "discoveryListener".
     workerRunner.start();
@@ -187,7 +233,9 @@ public class DartWorkerRunnerTest
     );
 
     ThrowableMatcher.of(DruidException.class)
-                   .expectMessageContains("Received startWorker request for unknown controller")
+                   .expectMessageContains(
+                       "Received startWorker request for query[abc] with controller[" + CONTROLLER_SERVER_HOST + "]"
+                   )
                    .assertThat(e);
   }
 
@@ -279,5 +327,88 @@ public class DartWorkerRunnerTest
     // Worker should go away.
     workerRunner.awaitQuerySet(Set::isEmpty);
     Assertions.assertEquals(0, workerRunner.getWorkersResponse().getWorkers().size());
+  }
+
+  @Test
+  @Timeout(value = 1, unit = TimeUnit.MINUTES)
+  public void test_startWorker_afterStop()
+  {
+    discoveryListener.getValue().nodesAdded(Collections.singletonList(CONTROLLER_DISCOVERY_NODE));
+    workerRunner.stop();
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty())
+    );
+
+    ThrowableMatcher.of(DruidException.class)
+                   .expectMessageContains("Cannot start query[abc] because this instance has been stopped")
+                   .assertThat(e);
+  }
+
+  @Test
+  @Timeout(value = 1, unit = TimeUnit.MINUTES)
+  public void test_stop_cancelsWorkerAfterTimeoutElapses() throws InterruptedException
+  {
+    gracefulShutdownTimeout = Period.millis(100);
+    discoveryListener.getValue().nodesAdded(Collections.singletonList(CONTROLLER_DISCOVERY_NODE));
+    workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
+    Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
+
+    // The worker never finishes on its own, so stop() cancels it once the timeout elapses.
+    workerRunner.stop();
+    Assertions.assertTrue(hasLogMessageContaining("Canceling work for query[abc] due to timeout during stop"));
+
+    workerRunner.awaitQuerySet(Set::isEmpty);
+    Assertions.assertEquals(0, workerRunner.getWorkersResponse().getWorkers().size());
+  }
+
+  @Test
+  @Timeout(value = 1, unit = TimeUnit.MINUTES)
+  public void test_stop_workerFinishesBeforeTimeout() throws Exception
+  {
+    gracefulShutdownTimeout = Period.minutes(5);
+    discoveryListener.getValue().nodesAdded(Collections.singletonList(CONTROLLER_DISCOVERY_NODE));
+    final Worker worker = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
+
+    final ExecutorService stopExec = Execs.singleThreaded("stop-runner-%s");
+    try {
+      // Call stop() in the background, and wait for it to start waiting on the worker.
+      logCapture.clearLogEvents();
+      final Future<?> stopFuture = stopExec.submit(workerRunner::stop);
+      logCapture.awaitLogEvents();
+      Assertions.assertTrue(hasLogMessageContaining("Waiting up to"));
+
+      // Running worker remains reachable, and accepts later work orders, while stop() is waiting.
+      Assertions.assertNotNull(workerRunner.getWorkerResource(QUERY_ID));
+      Assertions.assertSame(
+          worker,
+          workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty())
+      );
+      Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
+
+      // New queries are rejected.
+      Assertions.assertThrows(
+          DruidException.class,
+          () -> workerRunner.startWorker("xyz", CONTROLLER_SERVER_HOST, QueryContext.empty())
+      );
+      Assertions.assertFalse(stopFuture.isDone());
+
+      // Finish the worker, which allows stop() to return without canceling it.
+      worker.postFinish();
+      stopFuture.get();
+      workerRunner.awaitQuerySet(Set::isEmpty);
+      Assertions.assertFalse(hasLogMessageContaining("Canceling work"));
+    }
+    finally {
+      stopExec.shutdownNow();
+    }
+  }
+
+  private boolean hasLogMessageContaining(final String s)
+  {
+    return logCapture.getLogEvents()
+                     .stream()
+                     .anyMatch(event -> event.getMessage().getFormattedMessage().contains(s));
   }
 }
