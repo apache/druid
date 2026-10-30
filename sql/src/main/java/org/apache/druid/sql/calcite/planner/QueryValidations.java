@@ -55,8 +55,7 @@ public class QueryValidations
       final RelNode relNode
   ) throws ValidationException
   {
-    if (plannerContext.getJoinAlgorithm() == JoinAlgorithm.BROADCAST
-        && !plannerContext.featureAvailable(EngineFeature.ALLOW_BROADCAST_RIGHTY_JOIN)) {
+    if (!plannerContext.featureAvailable(EngineFeature.ALLOW_BROADCAST_RIGHTY_JOIN)) {
       class FindRightyJoin extends RelShuttleImpl
       {
         private Join found = null;
@@ -64,7 +63,9 @@ public class QueryValidations
         @Override
         public RelNode visit(LogicalJoin join)
         {
-          if (join.getJoinType().generatesNullsOnLeft()) {
+          if (join.getJoinType().generatesNullsOnLeft()
+              && (plannerContext.getJoinAlgorithm() == JoinAlgorithm.BROADCAST
+                  || QueryUtils.getJoinAlgorithm(join, plannerContext) == JoinAlgorithm.BROADCAST)) {
             found = join;
           }
 
@@ -75,17 +76,28 @@ public class QueryValidations
       final FindRightyJoin shuttle = new FindRightyJoin();
       relNode.accept(shuttle);
       if (shuttle.found != null) {
-        throw new ValidationException(
-            StringUtils.format(
-                "%s JOIN is not supported by engine[%s] with %s[%s]. Try %s[%s].",
-                shuttle.found.getJoinType(),
-                plannerContext.getEngine().name(),
-                QueryContextParameters.SQL_JOIN_ALGORITHM,
-                plannerContext.getJoinAlgorithm(),
-                QueryContextParameters.SQL_JOIN_ALGORITHM,
-                JoinAlgorithm.SORT_MERGE.toString()
-            )
-        );
+        if (plannerContext.getJoinAlgorithm() == JoinAlgorithm.BROADCAST) {
+          throw new ValidationException(
+              StringUtils.format(
+                  "%s JOIN is not supported by engine[%s] with %s[%s]. Try %s[%s].",
+                  shuttle.found.getJoinType(),
+                  plannerContext.getEngine().name(),
+                  QueryContextParameters.SQL_JOIN_ALGORITHM,
+                  plannerContext.getJoinAlgorithm(),
+                  QueryContextParameters.SQL_JOIN_ALGORITHM,
+                  JoinAlgorithm.SORT_MERGE.toString()
+              )
+          );
+        } else {
+          throw new ValidationException(
+              StringUtils.format(
+                  "%s JOIN is not supported by engine[%s] with join hint[%s]. Remove the hint.",
+                  shuttle.found.getJoinType(),
+                  plannerContext.getEngine().name(),
+                  DruidHint.DruidJoinHint.BroadcastJoinHint.BROADCAST_JOIN
+              )
+          );
+        }
       }
     }
   }
