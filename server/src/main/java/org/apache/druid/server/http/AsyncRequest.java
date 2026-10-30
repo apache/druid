@@ -98,7 +98,7 @@ public class AsyncRequest
   private <T> void complete(AsyncResponse<T> response)
   {
     if (!completed.compareAndSet(false, true)) {
-      log.warn("Request has already been completed");
+      // Request has already been completed
       return;
     }
 
