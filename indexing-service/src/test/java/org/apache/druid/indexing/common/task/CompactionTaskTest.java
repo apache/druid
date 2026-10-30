@@ -163,6 +163,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -921,6 +922,81 @@ public class CompactionTaskTest
         ImmutableSet.of("newer_only", "older_only"),
         analyzer.getProjections().stream().map(AggregateProjectionSpec::getName).collect(Collectors.toSet())
     );
+  }
+
+  @Test
+  public void testSegmentProviderRetrievesTheProjectionsAlongWithTheSegments() throws IOException
+  {
+    // Retrieval strips every detail the caller did not ask for, so a task that reads projections off a segment has to
+    // request them. Without that they come back null and compaction cannot tell a datasource that holds projections
+    // from one that holds none, which is the whole basis for deciding whether to read the segments.
+    final List<DataSegment> storedWithProjections =
+        SEGMENTS.stream()
+                .map(segment -> segment.withProjections(ImmutableList.of("daily_summary")))
+                .collect(Collectors.toList());
+
+    final List<DataSegment> retrieved =
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null))
+            .findSegments(new TestTaskActionClient(storedWithProjections));
+
+    Assertions.assertFalse(retrieved.isEmpty());
+    for (DataSegment segment : retrieved) {
+      Assertions.assertEquals(
+          ImmutableList.of("daily_summary"),
+          segment.getProjections(),
+          segment.getId().toString()
+      );
+      // and the load spec is still there, since the segments have to be fetchable too
+      Assertions.assertNotNull(segment.getLoadSpec(), segment.getId().toString());
+    }
+  }
+
+  @Test
+  public void testAnalyzerReadsSegmentsForProjectionsAlone()
+  {
+    // A config that declares a dimensionsSpec, a metricsSpec and a granularitySpec but no projections asks only for
+    // projections. Without projections counting towards reading the segments, nothing would be read, the analyzer
+    // would report none, and compaction would rewrite the segments without the projections they came with.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.of(
+            segmentWithProjections(COMPACTION_INTERVAL, "daily_summary")
+        ),
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    final List<AggregateProjectionSpec> projections = analyzer.getProjections();
+    Assertions.assertNotNull(projections, "segments were not read, so their projections would be dropped");
+    Assertions.assertEquals(
+        ImmutableList.of("daily_summary"),
+        projections.stream().map(AggregateProjectionSpec::getName).collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testAnalyzerDoesNotReadSegmentsThatHaveNoProjections()
+  {
+    // The flip side: the segments say what projections they hold without being opened, so a datasource that has none
+    // is not made to pay for a read that could only come back empty.
+    final CompactionTask.ExistingSegmentAnalyzer analyzer = new CompactionTask.ExistingSegmentAnalyzer(
+        ImmutableList.<Pair<DataSegment, java.util.function.Supplier<ResourceHolder<QueryableIndex>>>>of(
+            segmentWithProjections(COMPACTION_INTERVAL)
+        ),
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+    );
+    analyzer.fetchAndProcessIfNeeded();
+
+    Assertions.assertNull(analyzer.getProjections());
   }
 
   @Test
@@ -2898,6 +2974,9 @@ public class CompactionTaskTest
                                            .interval(interval)
                                            .version("version")
                                            .size(SEGMENT_SIZE_BYTES)
+                                           // a real segment names its projections here as well, which is how
+                                           // compaction can tell whether opening it could find any
+                                           .projections(ImmutableList.copyOf(projectionNames))
                                            .build();
     return Pair.of(segment, () -> new ReferenceCountingResourceHolder<>(index, () -> {}));
   }
@@ -2990,7 +3069,12 @@ public class CompactionTaskTest
     public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
       if (taskAction instanceof RetrieveUsedSegmentsAction) {
-        return (RetType) segments;
+        // Strip what the caller did not ask for, as the real action does. Returning whole segments regardless would
+        // let a task read a field it never requested and have it be there in tests and null in production.
+        final Set<SegmentDetail> details = ((RetrieveUsedSegmentsAction) taskAction).getDetails();
+        return (RetType) segments.stream()
+                                 .map(segment -> segment.retainOnlyDetails(details))
+                                 .collect(Collectors.toList());
       }
       if (taskAction instanceof MarkSegmentToUpgradeAction) {
         return (RetType) Integer.valueOf(0);
