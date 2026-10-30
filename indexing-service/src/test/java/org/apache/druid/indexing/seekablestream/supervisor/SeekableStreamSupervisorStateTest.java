@@ -633,6 +633,290 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void testPendingCompletionTimeout_afterScaling_killsReadingTaskGroupsOverlappingPartitions()
+  {
+    // taskCount is now 3, so the actively reading task groups are {0, 3}, {1} and {2}
+    final SeekableStreamSupervisorIOConfig ioConfig = setupSpecForPendingCompletionTest(4);
+
+    // Tasks of the pending completion task groups that were created when taskCount was 2: {0, 2} and {1, 3}
+    expectRunningTask("failedTask");
+    expectRunningTask("publishingTask");
+    taskQueue.shutdown(EasyMock.eq("failedTask"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+
+    // Task groups 0 and 2 read the partitions of the failed task group and must be killed. Task group 1 does not.
+    expectRunningTask("readingTask0");
+    expectRunningTask("readingTask1");
+    expectRunningTask("readingTask2");
+    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    expectCurrentTask("readingTask1", 1, Map.of("1", "150"), ioConfig);
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "failedTask", Map.of("0", "100", "2", "200"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "publishingTask", Map.of("1", "100", "3", "300"));
+    addActivelyReadingTaskGroup(supervisor, 0, Map.of("0", "150", "3", "350"), Set.of("readingTask0"));
+    addActivelyReadingTaskGroup(supervisor, 1, Map.of("1", "150"), Set.of("readingTask1"));
+    addActivelyReadingTaskGroup(supervisor, 2, Map.of("2", "250"), Set.of("readingTask2"));
+    supervisor.getPartitionOffsets().putAll(Map.of("0", "150", "1", "150", "2", "250", "3", "350"));
+
+    supervisor.getPendingCompletionTaskGroups(0).get(0).completionTimeout = DateTimes.nowUtc().minusMinutes(1);
+    supervisor.runInternal();
+    verifyAll();
+
+    // Only the partitions of the failed task group are re-read from the stream
+    Assertions.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get("0"));
+    Assertions.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get("2"));
+    Assertions.assertEquals("150", supervisor.getPartitionOffsets().get("1"));
+    Assertions.assertEquals("350", supervisor.getPartitionOffsets().get("3"));
+
+    Assertions.assertEquals(Set.of("readingTask1"), supervisor.getActiveTaskGroup(1).taskIds());
+    Assertions.assertEquals(Map.of("0", "10", "3", "350"), supervisor.getActiveTaskGroup(0).startingSequences);
+    Assertions.assertEquals(Map.of("2", "10"), supervisor.getActiveTaskGroup(2).startingSequences);
+
+    Assertions.assertTrue(supervisor.getPendingCompletionTaskGroups(0).isEmpty());
+    Assertions.assertEquals(1, supervisor.getPendingCompletionTaskGroups(1).size());
+  }
+
+  @Test
+  public void testPendingCompletionTimeout_stopsOnlyLaterTaskGroupsOverlappingPartitions()
+  {
+    final SeekableStreamSupervisorIOConfig ioConfig = setupSpecForPendingCompletionTest(4);
+
+    expectRunningTask("failedTask");
+    expectRunningTask("disjointTask");
+    expectRunningTask("overlappingTask");
+    taskQueue.shutdown(EasyMock.eq("failedTask"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(indexTaskClient.stopAsync("overlappingTask", false))
+            .andReturn(Futures.immediateFuture(true)).once();
+
+    // Task group 2 reads the partition of the failed task group, and task group 0 reads partition 3 from the end
+    // offsets of the stopped task group
+    expectRunningTask("readingTask0");
+    expectRunningTask("readingTask1");
+    expectRunningTask("readingTask2");
+    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    expectCurrentTask("readingTask1", 1, Map.of("1", "150"), ioConfig);
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    // After a scale action, the later task groups in the same list may handle a different partition set
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "failedTask", Map.of("2", "200"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "disjointTask", Map.of("1", "100"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "overlappingTask", Map.of("2", "250", "3", "350"));
+    addActivelyReadingTaskGroup(supervisor, 0, Map.of("0", "150", "3", "400"), Set.of("readingTask0"));
+    addActivelyReadingTaskGroup(supervisor, 1, Map.of("1", "150"), Set.of("readingTask1"));
+    addActivelyReadingTaskGroup(supervisor, 2, Map.of("2", "300"), Set.of("readingTask2"));
+    supervisor.getPartitionOffsets().putAll(Map.of("0", "150", "1", "150", "2", "300", "3", "400"));
+
+    supervisor.getPendingCompletionTaskGroups(0).get(0).completionTimeout = DateTimes.nowUtc().minusMinutes(1);
+    supervisor.runInternal();
+    verifyAll();
+
+    // The partitions of the failed and the stopped task groups are re-read from the stream
+    Assertions.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get("2"));
+    Assertions.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get("3"));
+    Assertions.assertEquals("150", supervisor.getPartitionOffsets().get("0"));
+    Assertions.assertEquals("150", supervisor.getPartitionOffsets().get("1"));
+
+    Assertions.assertEquals(Set.of("readingTask1"), supervisor.getActiveTaskGroup(1).taskIds());
+    Assertions.assertEquals(Map.of("0", "150", "3", "10"), supervisor.getActiveTaskGroup(0).startingSequences);
+    Assertions.assertEquals(Map.of("2", "10"), supervisor.getActiveTaskGroup(2).startingSequences);
+
+    // The task group that does not overlap the failed task group keeps publishing
+    Assertions.assertEquals(1, supervisor.getPendingCompletionTaskGroups(0).size());
+    Assertions.assertEquals(Set.of("disjointTask"), supervisor.getPendingCompletionTaskGroups(0).get(0).taskIds());
+  }
+
+  @Test
+  public void testPendingCompletionTimeout_killsTaskGroupAssignedUnreadPartition_notTaskGroupWithSameId()
+  {
+    // The task groups are {0, 3}, {1, 4} and {2, 5}
+    final SeekableStreamSupervisorIOConfig ioConfig = setupSpecForPendingCompletionTest(6);
+
+    expectRunningTask("failedTask");
+    taskQueue.shutdown(EasyMock.eq("failedTask"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+
+    // Task group 2 is assigned the partition of the failed task group and must be killed. Task group 0 keeps running
+    // even though it has the same groupId as the failed task group, since it does not read that partition.
+    expectRunningTask("readingTask0");
+    expectRunningTask("readingTask1");
+    expectRunningTask("readingTask2");
+    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    expectCurrentTask("readingTask0", 0, Map.of("0", "150", "3", "350"), ioConfig);
+    expectCurrentTask("readingTask1", 1, Map.of("1", "150", "4", "450"), ioConfig);
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    // The failed task group was created when partition 2 was assigned to task group 0, e.g. before Kinesis shards
+    // were reassigned
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "failedTask", Map.of("2", "200"));
+    addActivelyReadingTaskGroup(supervisor, 0, Map.of("0", "150", "3", "350"), Set.of("readingTask0"));
+    addActivelyReadingTaskGroup(supervisor, 1, Map.of("1", "150", "4", "450"), Set.of("readingTask1"));
+    // Task group 2 is not reading partition 2, as for a closed Kinesis shard whose end offset was never published
+    addActivelyReadingTaskGroup(supervisor, 2, Map.of("5", "550"), Set.of("readingTask2"));
+    supervisor.getPartitionOffsets().putAll(Map.of("0", "150", "1", "150", "3", "350", "4", "450", "5", "550"));
+
+    supervisor.getPendingCompletionTaskGroups(0).get(0).completionTimeout = DateTimes.nowUtc().minusMinutes(1);
+    supervisor.runInternal();
+    verifyAll();
+
+    Assertions.assertEquals(Set.of("readingTask0"), supervisor.getActiveTaskGroup(0).taskIds());
+    Assertions.assertEquals(Set.of("readingTask1"), supervisor.getActiveTaskGroup(1).taskIds());
+    // Task group 2 is recreated to re-read partition 2
+    Assertions.assertEquals(Map.of("2", "10", "5", "550"), supervisor.getActiveTaskGroup(2).startingSequences);
+    Assertions.assertTrue(supervisor.getPendingCompletionTaskGroups(0).isEmpty());
+  }
+
+  @Test
+  public void testPendingCompletionTimeout_afterPublishing_keepsReadingTaskGroupsStartedFromCommittedOffsets()
+  {
+    final SeekableStreamSupervisorIOConfig ioConfig = setupSpecForPendingCompletionTest(4);
+
+    // The failed task group published its end offsets, but did not complete within the completion timeout, e.g.
+    // because handoff took too long
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<>(STREAM, Map.of("0", "150", "1", "150", "2", "250", "3", "350"))
+        )
+    ).anyTimes();
+
+    expectRunningTask("failedTask");
+    taskQueue.shutdown(EasyMock.eq("failedTask"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+
+    // None of the actively reading task groups are killed, since they started from the committed offsets
+    expectRunningTask("readingTask0");
+    expectRunningTask("readingTask1");
+    expectRunningTask("readingTask2");
+    expectCurrentTask("readingTask0", 0, Map.of("0", "150", "3", "350"), ioConfig);
+    expectCurrentTask("readingTask1", 1, Map.of("1", "150"), ioConfig);
+    expectCurrentTask("readingTask2", 2, Map.of("2", "250"), ioConfig);
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "failedTask", Map.of("0", "100", "2", "200"));
+    addActivelyReadingTaskGroup(supervisor, 0, Map.of("0", "150", "3", "350"), Set.of("readingTask0"));
+    addActivelyReadingTaskGroup(supervisor, 1, Map.of("1", "150"), Set.of("readingTask1"));
+    addActivelyReadingTaskGroup(supervisor, 2, Map.of("2", "250"), Set.of("readingTask2"));
+    supervisor.getPartitionOffsets().putAll(Map.of("0", "150", "1", "150", "2", "250", "3", "350"));
+
+    supervisor.getPendingCompletionTaskGroups(0).get(0).completionTimeout = DateTimes.nowUtc().minusMinutes(1);
+    supervisor.runInternal();
+    verifyAll();
+
+    Assertions.assertEquals(Set.of("readingTask0"), supervisor.getActiveTaskGroup(0).taskIds());
+    Assertions.assertEquals(Set.of("readingTask1"), supervisor.getActiveTaskGroup(1).taskIds());
+    Assertions.assertEquals(Set.of("readingTask2"), supervisor.getActiveTaskGroup(2).taskIds());
+    Assertions.assertTrue(supervisor.getPendingCompletionTaskGroups(0).isEmpty());
+  }
+
+  /**
+   * Sets up a supervisor with taskCount 3 reading partitions 0 to {@code numPartitions - 1}, so that the task groups
+   * are {0, 3, ...}, {1, 4, ...} and {2, 5, ...}.
+   */
+  private SeekableStreamSupervisorIOConfig setupSpecForPendingCompletionTest(int numPartitions)
+  {
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(3, null);
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    final ImmutableSet.Builder<String> partitionIds = ImmutableSet.builder();
+    final ImmutableSet.Builder<StreamPartition<String>> assignment = ImmutableSet.builder();
+    for (int partition = 0; partition < numPartitions; partition++) {
+      partitionIds.add(String.valueOf(partition));
+      assignment.add(StreamPartition.of(STREAM, String.valueOf(partition)));
+    }
+
+    EasyMock.reset(recordSupplier);
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(partitionIds.build()).anyTimes();
+    EasyMock.expect(recordSupplier.getAssignment()).andReturn(assignment.build()).anyTimes();
+    EasyMock.expect(recordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("10").anyTimes();
+
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    return ioConfig;
+  }
+
+  private void addActivelyReadingTaskGroup(
+      TestSeekableStreamSupervisor supervisor,
+      int groupId,
+      Map<String, String> startingSequences,
+      Set<String> taskIds
+  )
+  {
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        groupId,
+        ImmutableMap.copyOf(startingSequences),
+        null,
+        null,
+        taskIds,
+        Set.of(),
+        null
+    );
+  }
+
+  private void expectRunningTask(String taskId)
+  {
+    EasyMock.expect(taskStorage.getStatus(taskId)).andReturn(Optional.of(TaskStatus.running(taskId))).anyTimes();
+  }
+
+  /**
+   * Makes {@link SeekableStreamSupervisor#isTaskCurrent} return true for an actively reading task.
+   */
+  private void expectCurrentTask(
+      String taskId,
+      int groupId,
+      Map<String, String> startPartitions,
+      SeekableStreamSupervisorIOConfig ioConfig
+  )
+  {
+    final SeekableStreamIndexTaskIOConfig taskIoConfig = createTaskIoConfigExt(
+        groupId,
+        startPartitions,
+        startPartitions,
+        "test",
+        null,
+        null,
+        Set.of(),
+        ioConfig
+    );
+    final TestSeekableStreamIndexTask task =
+        createTestTask(taskId, String.valueOf(groupId), null, taskIoConfig, recordSupplier);
+    EasyMock.expect(taskStorage.getTask(taskId)).andReturn(Optional.of(task)).anyTimes();
+  }
+
+  @Test
   public void testConnectingToStreamFail()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
