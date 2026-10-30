@@ -26,11 +26,11 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,10 +39,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(Parameterized.class)
 public class NamespaceExtractionCacheManagersTest
 {
-  @Parameterized.Parameters
   public static Collection<Object[]> data()
   {
     return Arrays.asList(new Object[][]{
@@ -51,27 +49,30 @@ public class NamespaceExtractionCacheManagersTest
     });
   }
 
-  private final Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager;
+  private Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager;
   private Lifecycle lifecycle;
   private NamespaceExtractionCacheManager manager;
 
-  public NamespaceExtractionCacheManagersTest(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager)
+  public void initNamespaceExtractionCacheManagersTest(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager)
   {
 
     this.createCacheManager = createCacheManager;
+    manager = createCacheManager.apply(lifecycle);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     lifecycle = new Lifecycle();
     lifecycle.start();
-    manager = createCacheManager.apply(lifecycle);
   }
 
-  @Test(timeout = 60_000L)
-  public void testRacyCreation() throws Exception
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRacyCreation(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initNamespaceExtractionCacheManagersTest(createCacheManager);
     final int concurrentThreads = 10;
     final ListeningExecutorService service = MoreExecutors.listeningDecorator(Execs.multiThreaded(
         concurrentThreads,
@@ -104,23 +105,26 @@ public class NamespaceExtractionCacheManagersTest
       service.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
     }
 
-    Assert.assertEquals(0, manager.cacheCount());
+    Assertions.assertEquals(0, manager.cacheCount());
   }
 
   /**
    * Tests that even if CacheHandler.close() wasn't called, the cache is cleaned up when it becomes unreachable.
    */
-  @Test(timeout = 60_000L)
-  public void testCacheCloseForgotten() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testCacheCloseForgotten(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws InterruptedException
   {
-    Assert.assertEquals(0, manager.cacheCount());
+    initNamespaceExtractionCacheManagersTest(createCacheManager);
+    Assertions.assertEquals(0, manager.cacheCount());
     createDanglingCache();
-    Assert.assertEquals(1, manager.cacheCount());
+    Assertions.assertEquals(1, manager.cacheCount());
     while (manager.cacheCount() > 0) {
       System.gc();
       Thread.sleep(1000);
     }
-    Assert.assertEquals(0, manager.cacheCount());
+    Assertions.assertEquals(0, manager.cacheCount());
   }
 
   private void createDanglingCache()

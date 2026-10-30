@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class DeepStoragePartitionLocationTest
 {
@@ -33,7 +33,7 @@ public class DeepStoragePartitionLocationTest
 
   private DeepStoragePartitionLocation target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     target = new DeepStoragePartitionLocation(
@@ -53,7 +53,7 @@ public class DeepStoragePartitionLocationTest
   @Test
   public void hasPartitionIdThatMatchesShardSpec()
   {
-    Assert.assertEquals(ParallelIndexTestingFactory.PARTITION_ID, target.getBucketId());
+    Assertions.assertEquals(ParallelIndexTestingFactory.PARTITION_ID, target.getBucketId());
   }
 
   @Test

@@ -20,9 +20,8 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import net.spy.memcached.DefaultConnectionFactory;
-
-import javax.validation.constraints.NotNull;
 
 public class MemcachedCacheConfig
 {

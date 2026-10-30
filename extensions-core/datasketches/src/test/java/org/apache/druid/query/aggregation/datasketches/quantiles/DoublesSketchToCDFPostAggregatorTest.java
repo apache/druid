@@ -33,18 +33,16 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class DoublesSketchToCDFPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws JsonProcessingException
@@ -61,8 +59,8 @@ public class DoublesSketchToCDFPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -74,7 +72,7 @@ public class DoublesSketchToCDFPostAggregatorTest
         new double[]{0.25, 0.75}
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "DoublesSketchToCDFPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, splitPoints=[0.25, 0.75]}",
         postAgg.toString()
     );
@@ -83,14 +81,15 @@ public class DoublesSketchToCDFPostAggregatorTest
   @Test
   public void testComparator()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing histograms is not supported");
-    final PostAggregator postAgg = new DoublesSketchToCDFPostAggregator(
-        "post",
-        new FieldAccessPostAggregator("field1", "sketch"),
-        new double[]{0.25, 0.75}
-    );
-    postAgg.getComparator();
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      final PostAggregator postAgg = new DoublesSketchToCDFPostAggregator(
+          "post",
+          new FieldAccessPostAggregator("field1", "sketch"),
+          new double[]{0.25, 0.75}
+      );
+      postAgg.getComparator();
+    });
+    assertTrue(exception.getMessage().contains("Comparing histograms is not supported"));
   }
 
   @Test
@@ -118,10 +117,10 @@ public class DoublesSketchToCDFPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(2, histogram.length);
-    Assert.assertTrue(Double.isNaN(histogram[0]));
-    Assert.assertTrue(Double.isNaN(histogram[1]));
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(2, histogram.length);
+    Assertions.assertTrue(Double.isNaN(histogram[0]));
+    Assertions.assertTrue(Double.isNaN(histogram[1]));
   }
 
   @Test
@@ -147,10 +146,10 @@ public class DoublesSketchToCDFPostAggregatorTest
     );
 
     final double[] cdf = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(cdf);
-    Assert.assertEquals(2, cdf.length);
-    Assert.assertEquals(0.5, cdf[0], 0);
-    Assert.assertEquals(1.0, cdf[1], 0);
+    Assertions.assertNotNull(cdf);
+    Assertions.assertEquals(2, cdf.length);
+    Assertions.assertEquals(0.5, cdf[0], 0);
+    Assertions.assertEquals(1.0, cdf[1], 0);
   }
 
   @Test
@@ -173,7 +172,7 @@ public class DoublesSketchToCDFPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("sketch", null)

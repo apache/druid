@@ -19,27 +19,26 @@
 
 package org.apache.druid.java.util.common.io;
 
-import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 
 public class NativeIOTest
 {
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testChunkedCopy() throws Exception
   {
-    File f = Files.createTempFile(tempDir, "junit", null).toFile();
+    File f = temporaryFolder.newFile();
     byte[] bytes = new byte[]{(byte) 0x8, (byte) 0x9};
 
     ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
@@ -52,7 +51,7 @@ public class NativeIOTest
   @Test
   public void testException() throws Exception
   {
-    File dir = FileUtils.createTempDirInLocation(tempDir, "folder");
+    File dir = temporaryFolder.newFolder("folder");
     Assertions.assertThrows(IOException.class, () -> NativeIO.chunkedCopy(null, dir));
   }
 
@@ -62,7 +61,7 @@ public class NativeIOTest
     boolean possible = NativeIO.isFadvisePossible();
 
     NativeIO.setFadvisePossible(false);
-    File f = Files.createTempFile(tempDir, "junit", null).toFile();
+    File f = temporaryFolder.newFile();
     byte[] bytes = new byte[]{(byte) 0x8, (byte) 0x9};
 
     ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
@@ -80,7 +79,7 @@ public class NativeIOTest
     boolean possible = NativeIO.isSyncFileRangePossible();
 
     NativeIO.setSyncFileRangePossible(false);
-    File f = Files.createTempFile(tempDir, "junit", null).toFile();
+    File f = temporaryFolder.newFile();
     byte[] bytes = new byte[]{(byte) 0x8, (byte) 0x9};
 
     ByteArrayInputStream bis = new ByteArrayInputStream(bytes);

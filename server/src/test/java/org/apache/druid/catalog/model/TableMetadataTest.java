@@ -21,35 +21,31 @@ package org.apache.druid.catalog.model;
 
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.TableMetadata.TableState;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.IAE;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThrows;
 
-@Category(CatalogTest.class)
+@Tag("CatalogTest")
 public class TableMetadataTest
 {
   @Test
   public void testId()
   {
     TableId id1 = new TableId("schema", "table");
-    assertEquals("schema", id1.schema());
-    assertEquals("table", id1.name());
-    assertEquals("\"schema\".\"table\"", id1.sqlName());
-    assertEquals(id1.sqlName(), id1.toString());
+    Assertions.assertEquals("schema", id1.schema());
+    Assertions.assertEquals("table", id1.name());
+    Assertions.assertEquals("\"schema\".\"table\"", id1.sqlName());
+    Assertions.assertEquals(id1.sqlName(), id1.toString());
 
     TableId id2 = TableId.datasource("ds");
-    assertEquals(TableId.DRUID_SCHEMA, id2.schema());
-    assertEquals("ds", id2.name());
+    Assertions.assertEquals(TableId.DRUID_SCHEMA, id2.schema());
+    Assertions.assertEquals("ds", id2.name());
   }
 
   @Test
@@ -76,12 +72,12 @@ public class TableMetadataTest
           spec
       );
       table.validate();
-      assertEquals(TableId.DRUID_SCHEMA, table.id().schema());
-      assertEquals("foo", table.id().name());
-      assertEquals(10, table.creationTime());
-      assertEquals(20, table.updateTime());
-      assertEquals(TableState.ACTIVE, table.state());
-      assertNotNull(table.spec());
+      Assertions.assertEquals(TableId.DRUID_SCHEMA, table.id().schema());
+      Assertions.assertEquals("foo", table.id().name());
+      Assertions.assertEquals(10, table.creationTime());
+      Assertions.assertEquals(20, table.updateTime());
+      Assertions.assertEquals(TableState.ACTIVE, table.state());
+      Assertions.assertNotNull(table.spec());
     }
 
     {
@@ -90,7 +86,7 @@ public class TableMetadataTest
           TableId.of(null, "foo"),
           spec
       );
-      assertThrows(IAE.class, () -> table.validate());
+      Assertions.assertThrows(IAE.class, () -> table.validate());
     }
 
     {
@@ -99,7 +95,7 @@ public class TableMetadataTest
           TableId.of(TableId.DRUID_SCHEMA, null),
           spec
       );
-      assertThrows(IAE.class, () -> table.validate());
+      Assertions.assertThrows(IAE.class, () -> table.validate());
     }
   }
   @Test
@@ -113,24 +109,24 @@ public class TableMetadataTest
         TableId.datasource("ds"),
         spec
     );
-    assertEquals(TableId.datasource("ds"), table.id());
-    assertEquals(TableState.ACTIVE, table.state());
-    assertEquals(0, table.updateTime());
-    assertSame(spec, table.spec());
+    Assertions.assertEquals(TableId.datasource("ds"), table.id());
+    Assertions.assertEquals(TableState.ACTIVE, table.state());
+    Assertions.assertEquals(0, table.updateTime());
+    Assertions.assertSame(spec, table.spec());
 
     TableMetadata table2 = TableMetadata.newTable(
         TableId.datasource("ds"),
         spec
     );
-    assertEquals(table, table2);
+    Assertions.assertEquals(table, table2);
 
     TableMetadata table3 = table2.fromInsert(10);
-    assertEquals(10, table3.creationTime());
-    assertEquals(10, table3.updateTime());
+    Assertions.assertEquals(10, table3.creationTime());
+    Assertions.assertEquals(10, table3.updateTime());
 
     table3 = table3.asUpdate(20);
-    assertEquals(10, table3.creationTime());
-    assertEquals(20, table3.updateTime());
+    Assertions.assertEquals(10, table3.creationTime());
+    Assertions.assertEquals(20, table3.updateTime());
   }
 
   @Test

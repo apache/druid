@@ -34,22 +34,22 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Closeable;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Classic {@link BoundFilter} test. Consider adding tests to {@link RangeFilterTests} in addition to, or instead of
  * here.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class BoundFilterTest extends BaseFilterTest
 {
   private static final List<InputRow> ROWS = ImmutableList.<InputRow>builder()
@@ -57,6 +57,12 @@ public class BoundFilterTest extends BaseFilterTest
       .add(makeDefaultSchemaRow("6", "-1000", ImmutableList.of("a"), null, null, 6.6, null, 10L))
       .add(makeDefaultSchemaRow("7", "-10.012", ImmutableList.of("d"), null, "e", null, 3.0f, null))
       .build();
+
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
 
   public BoundFilterTest(
       String testName,
@@ -69,10 +75,7 @@ public class BoundFilterTest extends BaseFilterTest
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(BoundFilterTest.class.getName());
@@ -787,15 +790,17 @@ public class BoundFilterTest extends BaseFilterTest
     BoundFilter filter2 = new BoundFilter(
         new BoundDimFilter("dim1", "", "", false, false, true, null, StringComparators.ALPHANUMERIC)
     );
-    Assert.assertTrue(filter.supportsRequiredColumnRewrite());
-    Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+    Assertions.assertTrue(filter.supportsRequiredColumnRewrite());
+    Assertions.assertTrue(filter2.supportsRequiredColumnRewrite());
 
     Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
-    Assert.assertEquals(filter2, rewrittenFilter);
+    Assertions.assertEquals(filter2, rewrittenFilter);
 
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
-    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
+    IAE ex = Assertions.assertThrows(
+        IAE.class,
+        () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"))
+    );
+    Assertions.assertTrue(ex.getMessage().contains("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0"));
   }
 
   @Test

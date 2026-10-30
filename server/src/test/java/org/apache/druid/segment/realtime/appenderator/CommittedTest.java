@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -78,7 +78,7 @@ public class CommittedTest
         ),
         ImmutableMap.of("metadata", "foo")
     );
-    Assert.assertEquals(committed, committed2);
+    Assertions.assertEquals(committed, committed2);
   }
 
   @Test
@@ -87,23 +87,23 @@ public class CommittedTest
     final Committed committed = fixedInstance();
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(committed);
     final Committed committed2 = OBJECT_MAPPER.readValue(bytes, Committed.class);
-    Assert.assertEquals("Round trip: overall", committed, committed2);
-    Assert.assertEquals("Round trip: metadata", committed.getMetadata(), committed2.getMetadata());
-    Assert.assertEquals("Round trip: identifiers", committed.getHydrants().keySet(), committed2.getHydrants().keySet());
+    Assertions.assertEquals(committed, committed2, "Round trip: overall");
+    Assertions.assertEquals(committed.getMetadata(), committed2.getMetadata(), "Round trip: metadata");
+    Assertions.assertEquals(committed.getHydrants().keySet(), committed2.getHydrants().keySet(), "Round trip: identifiers");
   }
 
   @Test
   public void testGetCommittedHydrant()
   {
-    Assert.assertEquals(3, fixedInstance().getCommittedHydrants(IDENTIFIER1));
-    Assert.assertEquals(2, fixedInstance().getCommittedHydrants(IDENTIFIER2));
-    Assert.assertEquals(0, fixedInstance().getCommittedHydrants(IDENTIFIER3));
+    Assertions.assertEquals(3, fixedInstance().getCommittedHydrants(IDENTIFIER1));
+    Assertions.assertEquals(2, fixedInstance().getCommittedHydrants(IDENTIFIER2));
+    Assertions.assertEquals(0, fixedInstance().getCommittedHydrants(IDENTIFIER3));
   }
 
   @Test
   public void testWithout()
   {
-    Assert.assertEquals(0, fixedInstance().without(IDENTIFIER1).getCommittedHydrants(IDENTIFIER1));
-    Assert.assertEquals(2, fixedInstance().without(IDENTIFIER1).getCommittedHydrants(IDENTIFIER2));
+    Assertions.assertEquals(0, fixedInstance().without(IDENTIFIER1).getCommittedHydrants(IDENTIFIER1));
+    Assertions.assertEquals(2, fixedInstance().without(IDENTIFIER1).getCommittedHydrants(IDENTIFIER2));
   }
 }

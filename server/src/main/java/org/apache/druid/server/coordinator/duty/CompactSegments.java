@@ -36,6 +36,7 @@ import org.apache.druid.client.indexing.ClientMinorCompactionInputSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -401,6 +402,8 @@ public class CompactSegments implements CoordinatorCustomDuty
         dimensionsSpec,
         config.getMetricsSpec(),
         config.getTransformSpec(),
+        config.getBaseTable(),
+        config.isSealed(),
         config.getProjections(),
         dropExisting,
         autoCompactionContext,
@@ -457,6 +460,8 @@ public class CompactSegments implements CoordinatorCustomDuty
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nullable CompactionTransformSpec transformSpec,
+      @Nullable BaseTableProjectionSpec baseTable,
+      boolean sealed,
       @Nullable List<AggregateProjectionSpec> projectionSpecs,
       @Nullable Boolean dropExisting,
       Map<String, Object> context,
@@ -509,7 +514,9 @@ public class CompactSegments implements CoordinatorCustomDuty
         dimensionsSpec,
         metricsSpec,
         transformSpec,
+        baseTable,
         projectionSpecs,
+        sealed,
         context,
         compactionRunner
     );

@@ -43,8 +43,8 @@ import org.apache.druid.storage.s3.output.S3StorageConnectorModule;
 import org.apache.druid.storage.s3.output.S3StorageConnectorProvider;
 import org.apache.druid.storage.s3.output.S3UploadManager;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Properties;
@@ -66,11 +66,11 @@ public class S3StorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
     StorageConnectorProvider s3StorageConnectorProvider = getStorageConnectorProvider(properties);
 
-    Assert.assertTrue(s3StorageConnectorProvider instanceof S3StorageConnectorProvider);
-    Assert.assertTrue(s3StorageConnectorProvider.createStorageConnector(tempDir) instanceof S3StorageConnector);
-    Assert.assertEquals("bucket", ((S3StorageConnectorProvider) s3StorageConnectorProvider).getBucket());
-    Assert.assertEquals("prefix", ((S3StorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
-    Assert.assertEquals(new File("/tmp"), ((S3StorageConnectorProvider) s3StorageConnectorProvider).getTempDir());
+    Assertions.assertTrue(s3StorageConnectorProvider instanceof S3StorageConnectorProvider);
+    Assertions.assertTrue(s3StorageConnectorProvider.createStorageConnector(tempDir) instanceof S3StorageConnector);
+    Assertions.assertEquals("bucket", ((S3StorageConnectorProvider) s3StorageConnectorProvider).getBucket());
+    Assertions.assertEquals("prefix", ((S3StorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
+    Assertions.assertEquals(new File("/tmp"), ((S3StorageConnectorProvider) s3StorageConnectorProvider).getTempDir());
 
   }
 
@@ -82,10 +82,10 @@ public class S3StorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".type", "s3");
     properties.setProperty(CUSTOM_NAMESPACE + ".bucket", "bucket");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
-    Assert.assertThrows(
-        "Missing required creator property 'prefix'",
+    Assertions.assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'prefix'"
     );
   }
 
@@ -98,10 +98,10 @@ public class S3StorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".type", "s3");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
-    Assert.assertThrows(
-        "Missing required creator property 'bucket'",
+    Assertions.assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'bucket'"
     );
   }
 
@@ -114,10 +114,10 @@ public class S3StorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".bucket", "bucket");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
 
-    Assert.assertThrows(
-        "tempDir is null in s3 config",
+    Assertions.assertThrows(
         NullPointerException.class,
-        () -> getStorageConnectorProvider(properties).createStorageConnector(null)
+        () -> getStorageConnectorProvider(properties).createStorageConnector(null),
+        "tempDir is null in s3 config"
     );
   }
 

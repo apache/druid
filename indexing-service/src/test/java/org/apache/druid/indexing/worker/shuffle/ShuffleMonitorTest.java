@@ -22,8 +22,8 @@ package org.apache.druid.indexing.worker.shuffle;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Map;
@@ -43,8 +43,8 @@ public class ShuffleMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     final ShuffleMonitor monitor = new ShuffleMonitor();
     monitor.setShuffleMetrics(shuffleMetrics);
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(2, emitter.getNumEmittedEvents());
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertEquals(2, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         ShuffleMonitor.SHUFFLE_BYTES_KEY,
         Map.of(ShuffleMonitor.SUPERVISOR_TASK_ID_DIMENSION, "supervisor"),

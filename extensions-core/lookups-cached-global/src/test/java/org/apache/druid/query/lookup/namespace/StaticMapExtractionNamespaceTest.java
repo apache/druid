@@ -22,9 +22,9 @@ package org.apache.druid.query.lookup.namespace;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -34,7 +34,7 @@ public class StaticMapExtractionNamespaceTest
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static String MAP_STRING;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpStatic() throws Exception
   {
     MAP_STRING = MAPPER.writeValueAsString(MAP);
@@ -45,14 +45,14 @@ public class StaticMapExtractionNamespaceTest
   {
     final String str = "{\"type\":\"staticMap\", \"map\":" + MAP_STRING + "}";
     final StaticMapExtractionNamespace extractionNamespace = MAPPER.readValue(str, StaticMapExtractionNamespace.class);
-    Assert.assertEquals(MAP, extractionNamespace.getMap());
-    Assert.assertEquals(0L, extractionNamespace.getPollMs());
-    Assert.assertEquals(extractionNamespace, MAPPER.readValue(str, StaticMapExtractionNamespace.class));
-    Assert.assertNotEquals(
+    Assertions.assertEquals(MAP, extractionNamespace.getMap());
+    Assertions.assertEquals(0L, extractionNamespace.getPollMs());
+    Assertions.assertEquals(extractionNamespace, MAPPER.readValue(str, StaticMapExtractionNamespace.class));
+    Assertions.assertNotEquals(
         extractionNamespace,
         new StaticMapExtractionNamespace(ImmutableMap.of("foo", "not_bar"))
     );
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         extractionNamespace,
         new StaticMapExtractionNamespace(ImmutableMap.of("not_foo", "bar"))
     );

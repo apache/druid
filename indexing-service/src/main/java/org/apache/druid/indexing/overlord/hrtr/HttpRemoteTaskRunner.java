@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -85,7 +86,6 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -413,7 +413,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     } else {
       // Notify interested parties
       taskRunnerWorkItem.setResult(taskStatus);
-      TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
+      TaskRunnerUtils.notifyStatusChanged(listeners, taskRunnerWorkItem.task, taskStatus);
 
       // Update success/failure counters, Blacklist node if there are too many failures.
       if (workerHolder != null) {
@@ -1004,7 +1004,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         if (entry.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
           TaskRunnerUtils.notifyLocationChanged(
               ImmutableList.of(listenerPair),
-              entry.getKey(),
+              entry.getValue().getTask(),
               entry.getValue().getLocation()
           );
         }
@@ -1246,6 +1246,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     }
 
     WorkerHolder workerHolderRunningTask = null;
+    HttpRemoteTaskRunnerWorkItem pendingWorkItem = null;
     synchronized (statusLock) {
       log.info("Shutdown [%s] because: [%s]", taskId, reason);
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
@@ -1255,12 +1256,25 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           if (workerHolderRunningTask == null) {
             log.info("Can't shutdown! No worker running task[%s]", taskId);
           }
+        } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING) {
+          // Removing it here stops the pending task executor from picking it up before it is completed below.
+          pendingTaskIds.remove(taskId);
+          pendingWorkItem = taskRunnerWorkItem;
+        } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
+          // The thread assigning this task owns the work item. Once the worker runs the task, or the item goes back
+          // to PENDING, a later shutdown request handles it.
+          pendingTaskIds.remove(taskId);
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
           tasks.remove(taskId);
         }
       } else {
         log.info("Received shutdown task[%s], but can't find it. Ignored.", taskId);
       }
+    }
+
+    if (pendingWorkItem != null) {
+      // taskComplete(..) must be called outside of statusLock, see comments on method.
+      taskComplete(pendingWorkItem, null, TaskStatus.failure(taskId, reason));
     }
 
     //shutdown is called outside of lock as we don't want to hold the lock while sending http request
@@ -1385,7 +1399,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     ).collect(Collectors.toList());
   }
 
+  /**
+   * @deprecated Use {@link #getBlacklistedWorkerInfos()} instead.
+   */
+  @Deprecated
+  @SuppressWarnings("PMD.ConfusingMethodName")
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
+  {
+    return getBlacklistedWorkerInfos();
+  }
+
+  public Collection<ImmutableWorkerInfo> getBlacklistedWorkerInfos()
   {
     return ImmutableList.copyOf(Collections2.transform(blackListedWorkers.values(), WorkerHolder::toImmutable));
   }
@@ -1432,11 +1456,21 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         if (knownStatusInStorage.isPresent()) {
           switch (knownStatusInStorage.get().getStatusCode()) {
             case RUNNING:
+              final Optional<Task> task = taskStorage.getTask(taskId);
+              if (!task.isPresent()) {
+                log.makeAlert(
+                    "Could not fetch payload of task[%s] with status[%s]."
+                    + " Ignoring notification[%s] from worker[%s].",
+                    taskId, knownStatusInStorage.get(), announcement, worker.getHost()
+                ).emit();
+                break;
+              }
+
               taskItem = new HttpRemoteTaskRunnerWorkItem(
                   taskId,
                   worker,
                   TaskLocation.unknown(),
-                  null,
+                  task.get(),
                   announcement.getTaskType(),
                   HttpRemoteTaskRunnerWorkItem.State.RUNNING
               );
@@ -1506,7 +1540,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
                         announcement.getTaskLocation()
                     );
                     taskItem.setLocation(announcement.getTaskLocation());
-                    TaskRunnerUtils.notifyLocationChanged(listeners, taskId, announcement.getTaskLocation());
+                    TaskRunnerUtils.notifyLocationChanged(listeners, taskItem.getTask(), announcement.getTaskLocation());
                   }
                 } else {
                   log.warn(
@@ -1555,7 +1589,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
                         announcement.getTaskLocation()
                     );
                     taskItem.setLocation(announcement.getTaskLocation());
-                    TaskRunnerUtils.notifyLocationChanged(listeners, taskId, announcement.getTaskLocation());
+                    TaskRunnerUtils.notifyLocationChanged(listeners, taskItem.getTask(), announcement.getTaskLocation());
                   }
 
                   isTaskCompleted = true;
@@ -1683,7 +1717,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     Map<String, Long> totalBlacklistedPeons = new HashMap<>();
-    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+    for (ImmutableWorkerInfo worker : getBlacklistedWorkerInfos()) {
       String workerCategory = worker.getWorker().getCategory();
       int workerBlacklistedPeons = worker.getWorker().getCapacity();
       totalBlacklistedPeons.compute(
@@ -1780,17 +1814,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         String taskId,
         Worker worker,
         TaskLocation location,
-        @Nullable Task task,
+        Task task,
         String taskType,
         State state
     )
     {
-      super(taskId, task == null ? null : task.getType(), worker, location, task == null ? null : task.getDataSource());
+      super(taskId, task.getType(), worker, location, task.getDataSource());
       this.state = Preconditions.checkNotNull(state);
-      Preconditions.checkArgument(task == null || taskType == null || taskType.equals(task.getType()));
-
-      // It is possible to have it null when the TaskRunner is just started and discovered this taskId from a worker,
-      // notifications don't contain whole Task instance but just metadata about the task.
+      Preconditions.checkArgument(taskType == null || taskType.equals(task.getType()));
       this.task = task;
     }
 

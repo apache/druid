@@ -26,6 +26,7 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -38,16 +39,14 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.Period;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -56,7 +55,6 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -93,8 +91,8 @@ public class DartWorkerRunnerTest
   private Period gracefulShutdownTimeout;
   private AutoCloseable mockCloser;
 
-  @TempDir
-  public Path temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Mock
   private DartWorkerContextFactory workerFactory;
@@ -134,7 +132,7 @@ public class DartWorkerRunnerTest
             return gracefulShutdownTimeout;
           }
         },
-        temporaryFolder.toFile(),
+        temporaryFolder.getRoot(),
         clock
     );
 
@@ -146,7 +144,7 @@ public class DartWorkerRunnerTest
         workerFactory.build(
             QUERY_ID,
             CONTROLLER_SERVER_HOST,
-            temporaryFolder.toFile(),
+            temporaryFolder.getRoot(),
             QueryContext.empty()
         )
     ).thenReturn(workerContext);
@@ -194,15 +192,15 @@ public class DartWorkerRunnerTest
     workerRunner.stop();
 
     // Create an empty directory "x".
-    FileUtils.mkdirp(new File(temporaryFolder.toFile(), "x"));
+    FileUtils.mkdirp(new File(temporaryFolder.getRoot(), "x"));
     Assertions.assertArrayEquals(
-        new File[]{new File(temporaryFolder.toFile(), "x")},
-        temporaryFolder.toFile().listFiles()
+        new File[]{new File(temporaryFolder.getRoot(), "x")},
+        temporaryFolder.getRoot().listFiles()
     );
 
     // Run "createAndCleanTempDirectory", which will delete it.
     workerRunner.createAndCleanTempDirectory();
-    Assertions.assertArrayEquals(new File[]{}, temporaryFolder.toFile().listFiles());
+    Assertions.assertArrayEquals(new File[]{}, temporaryFolder.getRoot().listFiles());
   }
 
   @Test
@@ -213,11 +211,11 @@ public class DartWorkerRunnerTest
         () -> workerRunner.startWorker("abc", CONTROLLER_SERVER_HOST, QueryContext.empty())
     );
 
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-            "Received startWorker request for query[abc] with controller[" + CONTROLLER_SERVER_HOST + "]"))
-    );
+    ThrowableMatcher.of(DruidException.class)
+                   .expectMessageContains(
+                       "Received startWorker request for query[abc] with controller[" + CONTROLLER_SERVER_HOST + "]"
+                   )
+                   .assertThat(e);
   }
 
   @Test

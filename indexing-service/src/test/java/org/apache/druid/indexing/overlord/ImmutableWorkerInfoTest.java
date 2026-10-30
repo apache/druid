@@ -30,8 +30,8 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -57,7 +57,7 @@ public class ImmutableWorkerInfoTest
         mapper.writeValueAsString(workerInfo),
         ImmutableWorkerInfo.class
     );
-    Assert.assertEquals(workerInfo, serde);
+    Assertions.assertEquals(workerInfo, serde);
   }
 
   @Test
@@ -244,10 +244,10 @@ public class ImmutableWorkerInfoTest
     when(parallelIndexTask.getTaskResource()).thenReturn(taskResource0);
 
     // Since task satisifies parallel and total slot constraints, can run
-    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, 0.5));
+    Assertions.assertTrue(workerInfo.canRunTask(parallelIndexTask, 0.5));
 
     // Since task fails the parallel slot constraint, it cannot run (3 > 1)
-    Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, 0.1));
+    Assertions.assertFalse(workerInfo.canRunTask(parallelIndexTask, 0.1));
 
 
     // Some other indexing task
@@ -259,7 +259,7 @@ public class ImmutableWorkerInfoTest
 
     // Not a parallel index task ->  satisfies parallel index constraint
     // But does not satisfy the total slot constraint and cannot run (11 > 10)
-    Assert.assertFalse(workerInfo.canRunTask(anyOtherTask, 0.5));
+    Assertions.assertFalse(workerInfo.canRunTask(anyOtherTask, 0.5));
 
 
     // Task has an availability conflict ("grp1")
@@ -271,17 +271,17 @@ public class ImmutableWorkerInfoTest
     when(grp1Task.getTaskResource()).thenReturn(taskResource2);
 
     // Satisifies parallel index and total index slot constraints but cannot run due availability
-    Assert.assertFalse(workerInfo.canRunTask(grp1Task, 0.3));
+    Assertions.assertFalse(workerInfo.canRunTask(grp1Task, 0.3));
   }
 
   private void assertEqualsAndHashCode(ImmutableWorkerInfo o1, ImmutableWorkerInfo o2, boolean shouldMatch)
   {
     if (shouldMatch) {
-      Assert.assertTrue(o1.equals(o2));
-      Assert.assertEquals(o1.hashCode(), o2.hashCode());
+      Assertions.assertTrue(o1.equals(o2));
+      Assertions.assertEquals(o1.hashCode(), o2.hashCode());
     } else {
-      Assert.assertFalse(o1.equals(o2));
-      Assert.assertNotEquals(o1.hashCode(), o2.hashCode());
+      Assertions.assertFalse(o1.equals(o2));
+      Assertions.assertNotEquals(o1.hashCode(), o2.hashCode());
     }
   }
 }

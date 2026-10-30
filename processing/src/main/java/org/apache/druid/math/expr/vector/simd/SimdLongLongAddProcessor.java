@@ -1,0 +1,93 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.math.expr.vector.simd;
+
+import jdk.incubator.vector.LongVector;
+import jdk.incubator.vector.VectorMask;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.functional.LongBivariateLongsFunction;
+
+import java.util.Arrays;
+
+/**
+ * SIMD specialization of {@code (long[], long[]) -> long[]} addition. The op is hardcoded to {@link LongVector#add}
+ * so the JIT statically resolves it to the platform's long-add intrinsic.
+ */
+public final class SimdLongLongAddProcessor extends SimdLongLongProcessor
+{
+  public SimdLongLongAddProcessor(
+      ExprVectorProcessor<?> left,
+      ExprVectorProcessor<?> right,
+      LongBivariateLongsFunction scalarFallback
+  )
+  {
+    super(left, right, scalarFallback);
+  }
+
+  @Override
+  protected void processVector(
+      long[] leftInput,
+      long[] rightInput,
+      boolean[] leftNulls,
+      boolean[] rightNulls,
+      int currentSize
+  )
+  {
+    final boolean hasLeftNulls = leftNulls != null;
+    final boolean hasRightNulls = rightNulls != null;
+    final int laneCount = SPECIES.length();
+    final int upperBound = SPECIES.loopBound(currentSize);
+    int i = 0;
+    if (!hasLeftNulls && !hasRightNulls) {
+      for (; i < upperBound; i += laneCount) {
+        final LongVector va = LongVector.fromArray(SPECIES, leftInput, i);
+        final LongVector vb = LongVector.fromArray(SPECIES, rightInput, i);
+        va.add(vb).intoArray(outValues, i);
+      }
+      for (; i < currentSize; i++) {
+        outValues[i] = scalarFallback.process(leftInput[i], rightInput[i]);
+      }
+      Arrays.fill(outNulls, 0, currentSize, false);
+    } else {
+      for (; i < upperBound; i += laneCount) {
+        final VectorMask<Long> nm;
+        if (hasLeftNulls && hasRightNulls) {
+          nm = VectorMask.fromArray(SPECIES, leftNulls, i)
+                         .or(VectorMask.fromArray(SPECIES, rightNulls, i));
+        } else if (hasLeftNulls) {
+          nm = VectorMask.fromArray(SPECIES, leftNulls, i);
+        } else {
+          nm = VectorMask.fromArray(SPECIES, rightNulls, i);
+        }
+        final LongVector va = LongVector.fromArray(SPECIES, leftInput, i);
+        final LongVector vb = LongVector.fromArray(SPECIES, rightInput, i);
+        va.add(vb).intoArray(outValues, i);
+        nm.intoArray(outNulls, i);
+      }
+      for (; i < currentSize; i++) {
+        final boolean isNull = (hasLeftNulls && leftNulls[i]) || (hasRightNulls && rightNulls[i]);
+        outNulls[i] = isNull;
+        if (!isNull) {
+          outValues[i] = scalarFallback.process(leftInput[i], rightInput[i]);
+        }
+      }
+    }
+  }
+}

@@ -20,8 +20,8 @@
 package org.apache.druid.metadata;
 
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SortOrderTest
 {
@@ -29,23 +29,23 @@ public class SortOrderTest
   @Test
   public void testAsc()
   {
-    Assert.assertEquals(SortOrder.ASC, SortOrder.fromValue("asc"));
-    Assert.assertEquals("ASC", SortOrder.fromValue("asc").toString());
-    Assert.assertEquals(SortOrder.ASC, SortOrder.fromValue("ASC"));
-    Assert.assertEquals("ASC", SortOrder.fromValue("ASC").toString());
-    Assert.assertEquals(SortOrder.ASC, SortOrder.fromValue("AsC"));
-    Assert.assertEquals("ASC", SortOrder.fromValue("AsC").toString());
+    Assertions.assertEquals(SortOrder.ASC, SortOrder.fromValue("asc"));
+    Assertions.assertEquals("ASC", SortOrder.fromValue("asc").toString());
+    Assertions.assertEquals(SortOrder.ASC, SortOrder.fromValue("ASC"));
+    Assertions.assertEquals("ASC", SortOrder.fromValue("ASC").toString());
+    Assertions.assertEquals(SortOrder.ASC, SortOrder.fromValue("AsC"));
+    Assertions.assertEquals("ASC", SortOrder.fromValue("AsC").toString());
   }
 
   @Test
   public void testDesc()
   {
-    Assert.assertEquals(SortOrder.DESC, SortOrder.fromValue("desc"));
-    Assert.assertEquals("DESC", SortOrder.fromValue("desc").toString());
-    Assert.assertEquals(SortOrder.DESC, SortOrder.fromValue("DESC"));
-    Assert.assertEquals("DESC", SortOrder.fromValue("DESC").toString());
-    Assert.assertEquals(SortOrder.DESC, SortOrder.fromValue("DesC"));
-    Assert.assertEquals("DESC", SortOrder.fromValue("DesC").toString());
+    Assertions.assertEquals(SortOrder.DESC, SortOrder.fromValue("desc"));
+    Assertions.assertEquals("DESC", SortOrder.fromValue("desc").toString());
+    Assertions.assertEquals(SortOrder.DESC, SortOrder.fromValue("DESC"));
+    Assertions.assertEquals("DESC", SortOrder.fromValue("DESC").toString());
+    Assertions.assertEquals(SortOrder.DESC, SortOrder.fromValue("DesC"));
+    Assertions.assertEquals("DESC", SortOrder.fromValue("DesC").toString());
   }
 
   @Test

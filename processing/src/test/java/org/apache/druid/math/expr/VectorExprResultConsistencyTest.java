@@ -35,19 +35,23 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorTestAssertions;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedUnaryOp;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.TestMapLookupExtractorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -56,6 +60,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * randomize inputs to various vector expressions and make sure the results match nonvectorized expressions
@@ -67,7 +73,47 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(VectorExprResultConsistencyTest.class);
   private static final int NUM_ITERATIONS = 10;
-  private static final int VECTOR_SIZE = 4;
+  private static final List<Integer> VECTOR_SIZES = List.of(3, 8, 17, 67);
+
+  // Regexes for detecting VO_MATHLIB function calls in an expression string so the ulp tolerance below only kicks in
+  // where the SIMD path can actually diverge from scalar Math. Everything else stays on strict equality. Derived from
+  // SimdSupportedUnaryOp so future ops picked up by the enum's isMathLib() classification get covered automatically.
+  // This part could probably be done nicer if we exposed Simd stuff via the Expr itself instead of this semi-fragile
+  // regex.
+  private static final Set<String> HYPERBOLIC_FN_NAMES = Set.of("sinh", "cosh", "tanh");
+  private static final Pattern HYPERBOLIC_FN_PATTERN = functionNamePattern(HYPERBOLIC_FN_NAMES);
+  private static final Pattern MATH_LIB_FN_PATTERN = functionNamePattern(
+      Arrays.stream(SimdSupportedUnaryOp.values())
+            .filter(SimdSupportedUnaryOp::isMathLib)
+            .map(op -> op.name().toLowerCase(Locale.ROOT))
+            .collect(Collectors.toSet())
+  );
+
+  private static Pattern functionNamePattern(Set<String> names)
+  {
+    // Longest names first so e.g. LOG10 matches before LOG. Word-boundary + open-paren avoids matching
+    // substrings inside identifiers (e.g. "expression" won't match "exp").
+    final String alternation = names.stream()
+                                    .sorted((a, b) -> Integer.compare(b.length(), a.length()))
+                                    .collect(Collectors.joining("|"));
+    return Pattern.compile("\\b(" + alternation + ")\\s*\\(", Pattern.CASE_INSENSITIVE);
+  }
+
+  /**
+   * Ulp tolerance the vector-vs-scalar comparison should allow for the given expression. Returns 0 for
+   * expressions with no VO_MATHLIB ops (strict equality); the same per-op bounds SimdVoMathlibParityTest
+   * uses otherwise.
+   */
+  private static int allowedUlpsFor(String exprString)
+  {
+    if (HYPERBOLIC_FN_PATTERN.matcher(exprString).find()) {
+      return 5;
+    }
+    if (MATH_LIB_FN_PATTERN.matcher(exprString).find()) {
+      return 2;
+    }
+    return 0;
+  }
 
 
   private static final Map<String, String> LOOKUP = Map.of(
@@ -764,16 +810,18 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       final int numIterations
   )
   {
-    for (int iter = 0; iter < numIterations; iter++) {
-      assertEvalsMatch(
-          expr,
-          parsed,
-          makeSequentialBinding(
-              VECTOR_SIZE,
-              types,
-              -2 + (iter * VECTOR_SIZE) // include negative numbers and zero
-          )
-      );
+    for (int vectorSize : VECTOR_SIZES) {
+      for (int iter = 0; iter < numIterations; iter++) {
+        assertEvalsMatch(
+            expr,
+            parsed,
+            makeSequentialBinding(
+                vectorSize,
+                types,
+                -2 + (iter * vectorSize) // include negative numbers and zero
+            )
+        );
+      }
     }
   }
 
@@ -784,8 +832,10 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       final int numIterations
   )
   {
-    for (int iterations = 0; iterations < numIterations; iterations++) {
-      assertEvalsMatch(expr, parsed, makeRandomizedBindings(VECTOR_SIZE, types));
+    for (int vectorSize : VECTOR_SIZES) {
+      for (int iterations = 0; iterations < numIterations; iterations++) {
+        assertEvalsMatch(expr, parsed, makeRandomizedBindings(vectorSize, types));
+      }
     }
   }
 
@@ -795,20 +845,21 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings
   )
   {
-    Assert.assertTrue(StringUtils.format("Cannot vectorize[%s]", expr), expr.canVectorize(bindings.rhs));
+    Assertions.assertTrue(expr.canVectorize(bindings.rhs), StringUtils.format("Cannot vectorize[%s]", expr));
 
     final ExpressionType outputType = expr.getOutputType(bindings.rhs);
     final Either<String, Object[]> vectorEval = evalVector(expr, bindings.rhs, outputType);
     final Either<String, Object[]> nonVectorEval = evalNonVector(expr, bindings.lhs, outputType);
 
-    Assert.assertEquals(
-        StringUtils.format("Errors do not match for expr[%s], bindings[%s]", exprString, bindings.lhs),
+    Assertions.assertEquals(
         nonVectorEval.isError() ? nonVectorEval.error() : "",
-        vectorEval.isError() ? vectorEval.error() : ""
+        vectorEval.isError() ? vectorEval.error() : "",
+        StringUtils.format("Errors do not match for expr[%s], bindings[%s]", exprString, Arrays.toString(bindings.lhs))
     );
 
     if (vectorEval.isValue() && nonVectorEval.isValue()) {
-      for (int i = 0; i < VECTOR_SIZE; i++) {
+      final int vectorSize = bindings.lhs.length;
+      for (int i = 0; i < vectorSize; i++) {
         final String message = StringUtils.format(
             "Values do not match for row[%s] for expression[%s], bindings[%s]",
             i,
@@ -816,17 +867,24 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
             bindings.lhs[i]
         );
         if (outputType != null && outputType.isArray()) {
-          Assert.assertArrayEquals(
-              message,
+          Assertions.assertArrayEquals(
               (Object[]) nonVectorEval.valueOrThrow()[i],
-              (Object[]) vectorEval.valueOrThrow()[i]
+              (Object[]) vectorEval.valueOrThrow()[i],
+              message
           );
         } else {
-          Assert.assertEquals(
-              message,
-              nonVectorEval.valueOrThrow()[i],
-              vectorEval.valueOrThrow()[i]
-          );
+          final Object expected = nonVectorEval.valueOrThrow()[i];
+          final Object actual = vectorEval.valueOrThrow()[i];
+          // For expressions that don't use any VO_MATHLIB op the SIMD and scalar paths are bit-identical,
+          // so keep strict equality there and only loosen when at least one such op appears in the
+          // expression (see allowedUlpsFor + the useVectorMathApi javadoc). Two-tier bound matches
+          // SimdVoMathlibParityTest: 5 ulps if any hyperbolic (sinh/cosh/tanh) appears, otherwise 2.
+          final int allowedUlps = allowedUlpsFor(exprString);
+          if (allowedUlps > 0 && expected instanceof Double && actual instanceof Double) {
+            VectorTestAssertions.assertDoublesEquivalent(message, (Double) expected, (Double) actual, allowedUlps);
+          } else {
+            Assertions.assertEquals(expected, actual, message);
+          }
         }
       }
     }
@@ -960,6 +1018,9 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
           }
           vectorBinding.addString(entry.getKey(), strings);
           break;
+        case ARRAY:
+        case COMPLEX:
+          throw new IllegalArgumentException("Unsupported vector binding type: " + entry.getValue());
       }
     }
 
@@ -988,7 +1049,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final Object[] vectorVals = vectorEval.getObjectVector();
     // if outputType is known, verify the expr returns the correct type
     if (outputType != null) {
-      Assert.assertEquals("vector eval type", outputType, vectorEval.getType());
+      Assertions.assertEquals(outputType, vectorEval.getType(), "vector eval type");
     }
 
     return Either.value(vectorVals);
@@ -1000,9 +1061,9 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       @Nullable ExpressionType outputType
   )
   {
-    final Object[] exprValues = new Object[VECTOR_SIZE];
+    final Object[] exprValues = new Object[bindings.length];
 
-    for (int i = 0; i < VECTOR_SIZE; i++) {
+    for (int i = 0; i < bindings.length; i++) {
       ExprEval<?> eval;
       try {
         eval = expr.eval(bindings[i]);
@@ -1016,7 +1077,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       }
       // if outputType is known, verify the expr returns the correct type
       if (outputType != null && eval.value() != null) {
-        Assert.assertEquals("nonvector eval type", eval.type(), outputType);
+        Assertions.assertEquals(eval.type(), outputType, "nonvector eval type");
       }
       exprValues[i] = eval.value();
     }

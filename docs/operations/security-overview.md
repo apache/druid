@@ -1,7 +1,7 @@
 ---
 id: security-overview
 title: "Security overview"
-description: Overiew of Apache Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.
+description: Overview of Apache® Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.
 ---
 
 <!--
@@ -24,7 +24,7 @@ description: Overiew of Apache Druid security. Includes best practices, configur
   -->
 
 
-This document provides an overview of Apache Druid security features, configuration instructions, and some best practices to secure Druid.
+This document provides an overview of Apache&circledR; Druid security features, configuration instructions, and some best practices to secure Druid.
 
 By default, security features in Druid are disabled, which simplifies the initial deployment experience. However, security features must be configured in a production deployment. These features include TLS, authentication, and authorization.
 
@@ -47,11 +47,11 @@ The following recommendations apply to the network where Druid runs:
   - Restrict access from untrusted networks
   - Create an allow list of specific APIs that your users need to access
   - Implement account lockout and throttling features.
-* When possible, use firewall and other network layer filtering to only expose Druid services and ports specifically required for your use case. For example, only expose Broker ports to downstream applications that execute queries. You can limit access to a specific IP address or IP range to further tighten and enhance security.
+* When possible, use firewall and other network layer filtering to only expose Druid services and ports specifically required for your use case. For example, only expose Broker ports to downstream applications that execute queries. You can limit access to a specific IP address or IP range to further tighten and enhance security. This is especially important for the Avatica JDBC endpoint (`/druid/v2/sql/avatica/`), which authenticates within the JDBC protocol itself, so network-level restriction is the primary control for that endpoint. 
 
 The following recommendation applies to Druid's authorization and authentication model:
 * Only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the web console process. Additionally, users with `WRITE` permissions can make changes to datasources and they have access to both task and supervisor update (POST) APIs which may affect ingestion.
-* Only grant `STATE READ`, `STATE WRITE`, `CONFIG WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allow users to access resources on behalf of the Druid server process regardless of the datasource.
+* Only grant `STATE READ`, `STATE WRITE`, `CONFIG READ`, `CONFIG WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allow users to access resources on behalf of the Druid server process regardless of the datasource.
 * If your Druid client application allows less-trusted users to control the input source of an ingestion task, validate the URLs from the users. It is possible to point unchecked URLs to other locations and resources within your network or local file system.
 
 ## Enable TLS

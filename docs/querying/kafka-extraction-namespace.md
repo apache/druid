@@ -22,7 +22,7 @@ title: "Apache Kafka Lookups"
   ~ under the License.
   -->
 
-To use this Apache Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` in the extensions load list.
+To use this Apache&circledR; Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` in the extensions load list.
 
 If you need updates to populate as promptly as possible, it is possible to plug into a Kafka topic whose key is the old value and message is the desired new value (both in UTF-8) as a LookupExtractorFactory.
 
@@ -43,7 +43,7 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 | `connectTimeout`  | How long to wait for an initial connection                                              | No       | `0` (do not wait) |
 | `isOneToOne`      | The map is a one-to-one (see [Lookup DimensionSpecs](./dimensionspecs.md)) | No       | `false`           |
 
-The extension `kafka-extraction-namespace` enables reading from an [Apache Kafka](https://kafka.apache.org/) topic which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human-readable format.
+The extension `kafka-extraction-namespace` enables reading from an [Apache Kafka&circledR;](https://kafka.apache.org/) topic which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human-readable format.
 
 ## How it Works
 
@@ -74,6 +74,10 @@ This input topic would be consumed from the beginning, and result in a lookup na
 | CZ  | Czechia   |
 
 Now when a query uses this extraction namespace, the country codes can be mapped to the full country name at query time.
+
+## Amazon MSK with IAM authentication
+
+The `druid-kafka-extraction-namespace` extension includes the [Amazon MSK Library for AWS Identity and Access Management](https://github.com/aws/aws-msk-iam-auth), so a lookup can read from an MSK cluster that uses IAM access control. Put the properties from [Kafka ingestion](../ingestion/kafka-ingestion.md#amazon-msk-with-iam-authentication) in `kafkaProperties`. Every service that loads the lookup needs IAM credentials with the permissions listed there.
 
 ## Tombstones and Deleting Records
 

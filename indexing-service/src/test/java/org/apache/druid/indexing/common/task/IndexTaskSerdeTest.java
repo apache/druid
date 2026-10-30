@@ -32,11 +32,9 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -44,10 +42,7 @@ public class IndexTaskSerdeTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @BeforeClass
+  @BeforeAll
   public static void setup()
   {
     MAPPER.registerSubtypes(new NamedType(IndexTuningConfig.class, "index"));
@@ -132,29 +127,33 @@ public class IndexTaskSerdeTest
   @Test
   public void testForceGuaranteedRollupWithDynamicPartitionsSpec()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("DynamicPartitionsSpec cannot be used for perfect rollup");
-    TuningConfigBuilder.forIndexTask()
-                       .withForceGuaranteedRollup(true)
-                       .withPartitionsSpec(new DynamicPartitionsSpec(1000, 2000L))
-                       .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> TuningConfigBuilder.forIndexTask()
+                                  .withForceGuaranteedRollup(true)
+                                  .withPartitionsSpec(new DynamicPartitionsSpec(1000, 2000L))
+                                  .build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("DynamicPartitionsSpec cannot be used for perfect rollup"));
   }
 
   @Test
   public void testBestEffortRollupWithHashedPartitionsSpec()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
-    TuningConfigBuilder.forIndexTask()
-                       .withForceGuaranteedRollup(false)
-                       .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
-                       .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> TuningConfigBuilder.forIndexTask()
+                                  .withForceGuaranteedRollup(false)
+                                  .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
+                                  .build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("DynamicPartitionsSpec must be used for best-effort rollup"));
   }
 
   private static void assertSerdeTuningConfig(IndexTuningConfig tuningConfig) throws IOException
   {
     final byte[] json = MAPPER.writeValueAsBytes(tuningConfig);
     final IndexTuningConfig fromJson = (IndexTuningConfig) MAPPER.readValue(json, TuningConfig.class);
-    Assert.assertEquals(tuningConfig, fromJson);
+    Assertions.assertEquals(tuningConfig, fromJson);
   }
 }

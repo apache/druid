@@ -20,12 +20,14 @@
 package org.apache.druid.consul.discovery;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -33,6 +35,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,6 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ConsulDruidNodeAnnouncer implements DruidNodeAnnouncer
 {
   private static final Logger LOGGER = new Logger(ConsulDruidNodeAnnouncer.class);
+  private static final int MAX_ANNOUNCE_REGISTRATION_TRIES = 3;
 
   private final ConsulApiClient consulApiClient;
   private final ConsulDiscoveryConfig config;
@@ -159,7 +163,7 @@ public class ConsulDruidNodeAnnouncer implements DruidNodeAnnouncer
       long registerStart = System.nanoTime();
 
       // Register in Consul, then track locally atomically in this block
-      consulApiClient.registerService(discoveryDruidNode);
+      registerServiceWithRetry(serviceId, discoveryDruidNode);
       announcedNodes.put(serviceId, discoveryDruidNode);
 
       long registerLatency = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - registerStart);
@@ -195,6 +199,32 @@ public class ConsulDruidNodeAnnouncer implements DruidNodeAnnouncer
     finally {
       registeringNodes.remove(serviceId);
     }
+  }
+
+  private void registerServiceWithRetry(String serviceId, DiscoveryDruidNode discoveryDruidNode) throws Exception
+  {
+    RetryUtils.retry(
+        () -> {
+          consulApiClient.registerService(discoveryDruidNode);
+          return null;
+        },
+        ConsulDruidNodeAnnouncer::isTransientConsulFailure,
+        1,
+        MAX_ANNOUNCE_REGISTRATION_TRIES,
+        null,
+        "Registering Consul service [" + serviceId + "] failed"
+    );
+  }
+
+  private static boolean isTransientConsulFailure(Throwable throwable)
+  {
+    for (Throwable cause : Throwables.getCausalChain(throwable)) {
+      if (cause instanceof IOException) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @Override

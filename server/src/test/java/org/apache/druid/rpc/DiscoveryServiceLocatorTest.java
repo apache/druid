@@ -28,14 +28,15 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.server.DruidNode;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,6 +44,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class DiscoveryServiceLocatorTest
 {
   private static final DiscoveryDruidNode NODE1 = new DiscoveryDruidNode(
@@ -57,15 +60,12 @@ public class DiscoveryServiceLocatorTest
       Collections.emptyMap()
   );
 
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule();
-
   @Mock
   public DruidNodeDiscoveryProvider discoveryProvider;
 
   private DiscoveryServiceLocator locator;
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (locator != null) {
@@ -82,10 +82,10 @@ public class DiscoveryServiceLocatorTest
     locator.start();
 
     final ListenableFuture<ServiceLocations> future = locator.locate();
-    Assert.assertFalse(future.isDone());
+    Assertions.assertFalse(future.isDone());
 
     discovery.fire(DruidNodeDiscovery.Listener::nodeViewInitialized);
-    Assert.assertEquals(ServiceLocations.forLocations(Collections.emptySet()), future.get());
+    Assertions.assertEquals(ServiceLocations.forLocations(Collections.emptySet()), future.get());
   }
 
   @Test
@@ -97,7 +97,7 @@ public class DiscoveryServiceLocatorTest
     locator.start();
 
     final ListenableFuture<ServiceLocations> future = locator.locate();
-    Assert.assertFalse(future.isDone());
+    Assertions.assertFalse(future.isDone());
 
     discovery.fire(listener -> {
       listener.nodesAdded(ImmutableSet.of(NODE1));
@@ -105,7 +105,7 @@ public class DiscoveryServiceLocatorTest
       listener.nodeViewInitialized();
     });
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ServiceLocations.forLocations(
             ImmutableSet.of(
                 ServiceLocation.fromDruidNode(NODE1.getDruidNode()),
@@ -131,7 +131,7 @@ public class DiscoveryServiceLocatorTest
       listener.nodesRemoved(ImmutableSet.of(NODE1));
     });
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ServiceLocations.forLocations(
             ImmutableSet.of(
                 ServiceLocation.fromDruidNode(NODE2.getDruidNode())
@@ -152,10 +152,10 @@ public class DiscoveryServiceLocatorTest
     final ListenableFuture<ServiceLocations> future = locator.locate();
     locator.close();
 
-    Assert.assertEquals(ServiceLocations.closed(), future.get()); // Call made prior to close()
-    Assert.assertEquals(ServiceLocations.closed(), locator.locate().get()); // Call made after close()
+    Assertions.assertEquals(ServiceLocations.closed(), future.get()); // Call made prior to close()
+    Assertions.assertEquals(ServiceLocations.closed(), locator.locate().get()); // Call made after close()
 
-    Assert.assertEquals(0, discovery.getListeners().size());
+    Assertions.assertEquals(0, discovery.getListeners().size());
   }
 
   private static class TestDiscovery implements DruidNodeDiscovery

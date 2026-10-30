@@ -43,20 +43,20 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.file.DirectoryBackedRangeReader;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileBuilderV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.Closeable;
 import java.io.File;
@@ -64,6 +64,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -75,6 +76,8 @@ class PartialSegmentBundleCacheEntryTest
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private static final SegmentId SEGMENT_ID = SegmentId.of("test", Intervals.of("2025/2026"), "v1", 0);
   private static final String AGG_BUNDLE = "dim1_metric1_sum";
+  private static final String TWO_CONTAINER_BUNDLE = "two_container";
+  private static final String TWO_CONTAINER_EXTERNAL = "two_container_ext.segment";
   private static final long ESTIMATE = 16 * 1024 * 1024L;
 
   private static final DateTime TIME = DateTimes.of("2025-01-01");
@@ -100,21 +103,21 @@ class PartialSegmentBundleCacheEntryTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  @TempDir
-  static File sharedTempDir;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File segmentDir;
 
-  @TempDir
-  File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cacheDir;
   private File deepStorageDir;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmp)
@@ -145,8 +148,7 @@ class PartialSegmentBundleCacheEntryTest
   void setup() throws IOException
   {
     deepStorageDir = segmentDir;
-    cacheDir = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheDir);
+    cacheDir = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @Test
@@ -261,13 +263,46 @@ class PartialSegmentBundleCacheEntryTest
   }
 
   @Test
+  void testRuntimeAcquireOfProjectionBundleMountsParentBaseFirst() throws IOException
+  {
+    // Runtime acquire path (the cursor factory's PartialBundleAcquirer): acquiring a projection bundle must first
+    // mount its parent __base bundle, since the projection bundle's mount() takes holds/references on its parents and
+    // fails with "parent entry not registered" otherwise. Unlike the bootstrap restore path, the runtime path reaches
+    // the projection bundle directly with no __base mounted, so the acquirer is responsible for the ordering.
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = newMetadataEntry();
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+
+    final PartialSegmentBundleCacheEntryIdentifier baseId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+
+    // Precondition: nothing has mounted __base yet; the acquirer must do it as the projection bundle's parent.
+    Assertions.assertNull(location.getCacheEntry(baseId), "test setup: __base must not be mounted yet");
+
+    final Closeable handle = metadata.getBundleAcquirer().acquire(AGG_BUNDLE);
+    try {
+      final PartialSegmentBundleCacheEntry agg = location.getCacheEntry(aggId);
+      final PartialSegmentBundleCacheEntry base = location.getCacheEntry(baseId);
+      Assertions.assertNotNull(agg, "projection bundle should be registered");
+      Assertions.assertTrue(agg.isMounted(), "projection bundle should be mounted");
+      Assertions.assertNotNull(base, "parent __base bundle should be auto-registered by the acquirer");
+      Assertions.assertTrue(base.isMounted(), "parent __base bundle should be auto-mounted by the acquirer");
+    }
+    finally {
+      handle.close();
+    }
+  }
+
+  @Test
   void testMountFailsIfMetadataNotRegisteredWithLocation() throws IOException
   {
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = newMetadataEntry();
     // mount metadata standalone without registering with the location, so no hold can be acquired below
-    final File anotherDir = new File(perTestTempDir, "adhoc");
-    FileUtils.mkdirp(anotherDir);
+    final File anotherDir = temporaryFolder.newFolder("adhoc");
     final StorageLocation otherLocation = new StorageLocation(anotherDir, ESTIMATE * 8, null);
     Assertions.assertTrue(otherLocation.reserve(metadata));
     metadata.mount(otherLocation);
@@ -323,6 +358,7 @@ class PartialSegmentBundleCacheEntryTest
     final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
     Assertions.assertNotNull(mapper);
     final String anyFile = mapper.getInternalFilenames().stream().findFirst().orElseThrow();
+    mapper.fetchFiles(Set.of(anyFile));
     Assertions.assertNotNull(mapper.mapFile(anyFile));
     Assertions.assertEquals(1, mapper.getDownloadedFiles().size());
     final PartialSegmentBundleCacheEntry.BundleContainerRef evictedRef = baseEntry.getContainerRefs().getFirst();
@@ -447,6 +483,7 @@ class PartialSegmentBundleCacheEntryTest
     final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
     Assertions.assertNotNull(mapper);
     final String anyFile = mapper.getInternalFilenames().stream().findFirst().orElseThrow();
+    mapper.fetchFiles(Set.of(anyFile));
     Assertions.assertNotNull(mapper.mapFile(anyFile));
     final PartialSegmentBundleCacheEntry.BundleContainerRef containerRef = base.getContainerRefs().getFirst();
     final String mapperFilename =
@@ -477,8 +514,9 @@ class PartialSegmentBundleCacheEntryTest
     // are unambiguous. forBundle should accept them as long as a container exists with that exact bundle name.
     // Build a V10 segment with a slashy bundle name and verify the cache layer attributes containers correctly.
     final File deepDir = writeSlashyGroupSegment("nested/group");
-    final File cache = new File(perTestTempDir, "slashy_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cache);
+    final File cache = temporaryFolder.newFolder(
+        "slashy_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final StorageLocation location = new StorageLocation(cache, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,
@@ -487,7 +525,10 @@ class PartialSegmentBundleCacheEntryTest
         List.of(),
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
-        ESTIMATE
+        null,
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(metadata));
     metadata.mount(location);
@@ -507,25 +548,27 @@ class PartialSegmentBundleCacheEntryTest
     // Bundle "proj1" lives in BOTH the main file and an external file. forBundle should pick up containers from
     // both via the explicit bundle field, producing a single logical bundle spanning multiple physical files.
     final String externalName = "ext.segment";
-    final File deepDir = new File(perTestTempDir, "multi_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(deepDir);
+    final File deepDir = temporaryFolder.newFolder(
+        "multi_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     try (SegmentFileBuilderV10 builder =
              SegmentFileBuilderV10.create(JSON_MAPPER, deepDir)) {
       // Attach the external builder BEFORE startFileBundle so the group propagates to it.
       final org.apache.druid.segment.file.SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       builder.startFileBundle("proj1");
 
-      final File mainTmp = new File(perTestTempDir, "main-col.bin");
+      final File mainTmp = temporaryFolder.newFile("main-col.bin");
       Files.write(Ints.toByteArray(1), mainTmp);
       builder.add("proj1/main_col", mainTmp);
 
-      final File extTmp = new File(perTestTempDir, "ext-col.bin");
+      final File extTmp = temporaryFolder.newFile("ext-col.bin");
       Files.write(Ints.toByteArray(2), extTmp);
       external.add("proj1/ext_col", extTmp);
     }
 
-    final File cache = new File(perTestTempDir, "multi_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cache);
+    final File cache = temporaryFolder.newFolder(
+        "multi_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final StorageLocation location = new StorageLocation(cache, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,
@@ -534,7 +577,10 @@ class PartialSegmentBundleCacheEntryTest
         List.of(externalName),
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
-        ESTIMATE
+        null,
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(metadata));
     metadata.mount(location);
@@ -566,8 +612,9 @@ class PartialSegmentBundleCacheEntryTest
     // A V10 segment written without any startFileBundle calls produces containers tagged with ROOT_BUNDLE_NAME.
     // forBundle(ROOT_BUNDLE_NAME) must own every such container.
     final File deepDir = writeRootOnlySegment();
-    final File cache = new File(perTestTempDir, "root_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cache);
+    final File cache = temporaryFolder.newFolder(
+        "root_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final StorageLocation location = new StorageLocation(cache, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,
@@ -576,7 +623,10 @@ class PartialSegmentBundleCacheEntryTest
         List.of(),
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
-        ESTIMATE
+        null,
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(metadata));
     metadata.mount(location);
@@ -590,6 +640,77 @@ class PartialSegmentBundleCacheEntryTest
         metadata.getSegmentFileMetadata().getContainers().size(),
         root.getContainerRefs().size(),
         "root bundle should own every container in a no-startFileBundle segment"
+    );
+  }
+
+  @Test
+  void testResolveBundleNameFallsBackToRootWhenRootIsSoleBundle() throws IOException
+  {
+    // A segment whose every container defaulted to the root bundle (legacy / never called startFileBundle).
+    final File deepDir = writeRootOnlySegment();
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
+        SEGMENT_ID,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        new DirectoryBackedRangeReader(deepDir),
+        JSON_MAPPER,
+        null,
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+    );
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+
+    Assertions.assertEquals(
+        Set.of(SegmentFileBuilder.ROOT_BUNDLE_NAME),
+        PartialSegmentBundleCacheEntry.bundleNames(mapper),
+        "an untagged segment has only the root bundle"
+    );
+    // A request for the base bundle (or any projection) resolves to the root catch-all, since root is the sole bundle.
+    Assertions.assertEquals(
+        SegmentFileBuilder.ROOT_BUNDLE_NAME,
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, Projections.BASE_TABLE_PROJECTION_NAME)
+    );
+    Assertions.assertEquals(
+        SegmentFileBuilder.ROOT_BUNDLE_NAME,
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, "some_projection")
+    );
+    // A request for the root bundle by name resolves to itself (it exists; no fallback logic needed).
+    Assertions.assertEquals(
+        SegmentFileBuilder.ROOT_BUNDLE_NAME,
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, SegmentFileBuilder.ROOT_BUNDLE_NAME)
+    );
+  }
+
+  @Test
+  void testResolveBundleNameNoFallbackWhenNamedBundlesPresent() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = newMetadataEntry();
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+
+    final Set<String> present = PartialSegmentBundleCacheEntry.bundleNames(mapper);
+    Assertions.assertTrue(present.contains(Projections.BASE_TABLE_PROJECTION_NAME));
+    Assertions.assertTrue(present.contains(AGG_BUNDLE));
+    Assertions.assertFalse(present.contains(SegmentFileBuilder.ROOT_BUNDLE_NAME), "a tagged segment has no root bundle");
+
+    // Present bundles resolve to themselves.
+    Assertions.assertEquals(
+        Projections.BASE_TABLE_PROJECTION_NAME,
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, Projections.BASE_TABLE_PROJECTION_NAME)
+    );
+    Assertions.assertEquals(AGG_BUNDLE, PartialSegmentBundleCacheEntry.resolveBundleName(mapper, AGG_BUNDLE));
+    // An absent request does NOT fall back to root when named bundles are present: the name passes through unchanged
+    // so the downstream forBundle fails loudly rather than silently serving the wrong data.
+    Assertions.assertEquals(
+        "does_not_exist",
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, "does_not_exist")
     );
   }
 
@@ -625,6 +746,152 @@ class PartialSegmentBundleCacheEntryTest
         base.isMounted(),
         "post-mount check should roll back when entry was evicted from the location during mount"
     );
+  }
+
+  @Test
+  void testFailedMountKeepsInitializedContainersForRetry() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = newTwoContainerBundleMetadata();
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+
+    final PartialSegmentBundleCacheEntry bundle =
+        PartialSegmentBundleCacheEntry.forBundle(metadata, TWO_CONTAINER_BUNDLE, List.of());
+    Assertions.assertNotNull(location.addWeakReservationHold(bundle.getId(), () -> bundle));
+
+    final List<PartialSegmentBundleCacheEntry.BundleContainerRef> refs = bundle.getContainerRefs();
+    Assertions.assertEquals(2, refs.size());
+    final File firstContainerFile = containerFileFor(refs.getFirst());
+    final File blocked = containerFileFor(refs.getLast());
+    // Fail the container-initialization loop on its last container by parking a directory where that container's file
+    // needs to go, so RandomAccessFile(..., "rw") can't open it. The one before it initializes normally.
+    FileUtils.mkdirp(blocked);
+
+    Assertions.assertThrows(IOException.class, () -> bundle.mount(location));
+    Assertions.assertFalse(bundle.isMounted());
+
+    // The entry is still in the cache, so the container that did initialize stays put for a retry to reuse rather
+    // than being torn down and re-created.
+    Assertions.assertTrue(
+        firstContainerFile.exists(),
+        "a failed mount should leave already-initialized containers in place"
+    );
+
+    // ...and the retry succeeds against that reused state once the failure clears.
+    Assertions.assertTrue(blocked.delete());
+    bundle.mount(location);
+    Assertions.assertTrue(bundle.isMounted());
+    for (PartialSegmentBundleCacheEntry.BundleContainerRef ref : refs) {
+      Assertions.assertTrue(containerFileFor(ref).exists(), "container " + ref + " should be allocated after retry");
+    }
+  }
+
+  @Test
+  void testFailedMountEvictsContainersWhenEntryIsNoLongerReserved() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    // ephemeral mode: releasing the last hold drops the weak entry immediately, so the mount below runs for an entry
+    // the cache no longer knows about.
+    location.setAreWeakEntriesEphemeral(true);
+    final PartialSegmentMetadataCacheEntry metadata = newTwoContainerBundleMetadata();
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+
+    final PartialSegmentBundleCacheEntry bundle =
+        PartialSegmentBundleCacheEntry.forBundle(metadata, TWO_CONTAINER_BUNDLE, List.of());
+    try (StorageLocation.ReservationHold<?> hold = location.addWeakReservationHold(bundle.getId(), () -> bundle)) {
+      Assertions.assertNotNull(hold);
+    }
+    Assertions.assertFalse(location.isWeakReserved(bundle.getId()), "ephemeral release should have evicted");
+
+    final List<PartialSegmentBundleCacheEntry.BundleContainerRef> refs = bundle.getContainerRefs();
+    Assertions.assertEquals(2, refs.size());
+    final File firstContainerFile = containerFileFor(refs.getFirst());
+    FileUtils.mkdirp(containerFileFor(refs.getLast()));
+
+    Assertions.assertThrows(IOException.class, () -> bundle.mount(location));
+    Assertions.assertFalse(bundle.isMounted());
+
+    // Nothing will ever mount this entry again, and unmount only cleans up a mount that committed, so the container
+    // this attempt initialized would have no owner. It has to be reaped by the failed mount itself.
+    Assertions.assertFalse(
+        firstContainerFile.exists(),
+        "containers of an entry the cache has dropped should be evicted by the failed mount"
+    );
+  }
+
+  @Test
+  void testUnmountReapsContainersLeftBehindByAFailedMount() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = newTwoContainerBundleMetadata();
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+
+    final PartialSegmentBundleCacheEntry bundle =
+        PartialSegmentBundleCacheEntry.forBundle(metadata, TWO_CONTAINER_BUNDLE, List.of());
+    Assertions.assertNotNull(location.addWeakReservationHold(bundle.getId(), () -> bundle));
+
+    final List<PartialSegmentBundleCacheEntry.BundleContainerRef> refs = bundle.getContainerRefs();
+    Assertions.assertEquals(2, refs.size());
+    final File firstContainerFile = containerFileFor(refs.getFirst());
+    FileUtils.mkdirp(containerFileFor(refs.getLast()));
+
+    Assertions.assertThrows(IOException.class, () -> bundle.mount(location));
+    Assertions.assertFalse(bundle.isMounted());
+    Assertions.assertTrue(firstContainerFile.exists(), "the failed mount should have kept its container");
+
+    // The entry is dropped without anyone retrying the mount. doActualUnmount never runs for a mount that did not
+    // commit, and nothing else deletes container files, so unmount() has to reap them or they outlive the entry with
+    // their reservation already released.
+    bundle.unmount();
+    Assertions.assertFalse(
+        firstContainerFile.exists(),
+        "unmount should evict containers left behind by a mount that never committed"
+    );
+  }
+
+  /**
+   * A metadata entry for a segment whose {@link #TWO_CONTAINER_BUNDLE} bundle spans two containers, one in the main
+   * file and one in an external file. Two containers is what lets a test fail a mount partway through the
+   * container-initialization loop, with one container already initialized behind it.
+   */
+  private PartialSegmentMetadataCacheEntry newTwoContainerBundleMetadata() throws IOException
+  {
+    final int salt = ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
+    final File deepDir = temporaryFolder.newFolder("two_container_deep_" + salt);
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, deepDir)) {
+      // Attach the external builder BEFORE startFileBundle so the bundle propagates to it.
+      final SegmentFileBuilder external = builder.getExternalBuilder(TWO_CONTAINER_EXTERNAL);
+      builder.startFileBundle(TWO_CONTAINER_BUNDLE);
+
+      final File mainTmp = temporaryFolder.newFile("two-container-main-" + salt + ".bin");
+      Files.write(Ints.toByteArray(1), mainTmp);
+      builder.add(TWO_CONTAINER_BUNDLE + "/main_col", mainTmp);
+
+      final File extTmp = temporaryFolder.newFile("two-container-ext-" + salt + ".bin");
+      Files.write(Ints.toByteArray(2), extTmp);
+      external.add(TWO_CONTAINER_BUNDLE + "/ext_col", extTmp);
+    }
+    return new PartialSegmentMetadataCacheEntry(
+        SEGMENT_ID,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(TWO_CONTAINER_EXTERNAL),
+        new DirectoryBackedRangeReader(deepDir),
+        JSON_MAPPER,
+        null,
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+    );
+  }
+
+  private File containerFileFor(PartialSegmentBundleCacheEntry.BundleContainerRef ref)
+  {
+    final String mapperFilename = ref.externalFilename() != null ? ref.externalFilename() : IndexIO.V10_FILE_NAME;
+    return new File(cacheDir, StringUtils.format("%s.container.%05d", mapperFilename, ref.containerIndex()));
   }
 
   @Test
@@ -783,7 +1050,10 @@ class PartialSegmentBundleCacheEntryTest
         List.of(),
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
-        ESTIMATE
+        null,
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
   }
 
@@ -794,13 +1064,14 @@ class PartialSegmentBundleCacheEntryTest
    */
   private File writeSlashyGroupSegment(String groupName) throws IOException
   {
-    final File deepDir = new File(perTestTempDir, "slashy_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(deepDir);
+    final File deepDir = temporaryFolder.newFolder(
+        "slashy_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     try (SegmentFileBuilderV10 builder =
              SegmentFileBuilderV10.create(JSON_MAPPER, deepDir)) {
       builder.startFileBundle(groupName);
       for (int i = 0; i < 3; i++) {
-        final File tmp = new File(perTestTempDir, "slashy-col" + i + ".bin");
+        final File tmp = temporaryFolder.newFile("slashy-col" + i + ".bin");
         Files.write(Ints.toByteArray(i), tmp);
         builder.add(groupName + "/col" + i, tmp);
       }
@@ -815,13 +1086,14 @@ class PartialSegmentBundleCacheEntryTest
    */
   private File writeRootOnlySegment() throws IOException
   {
-    final File deepDir = new File(perTestTempDir, "root_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(deepDir);
+    final File deepDir = temporaryFolder.newFolder(
+        "root_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     try (SegmentFileBuilderV10 builder =
              SegmentFileBuilderV10.create(JSON_MAPPER, deepDir)) {
       // Never call startFileBundle; all writes default to the root bundle.
       for (int i = 0; i < 3; i++) {
-        final File tmp = new File(perTestTempDir, "root-col" + i + ".bin");
+        final File tmp = temporaryFolder.newFile("root-col" + i + ".bin");
         Files.write(Ints.toByteArray(i), tmp);
         builder.add("col" + i, tmp);
       }

@@ -62,4 +62,21 @@ public class VSizeColumnarIntsTest
       Assertions.assertEquals(array[i], deserialized.get(i));
     }
   }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final VSizeColumnarInts ints = VSizeColumnarInts.fromArray(new int[]{1, 2, 3});
+    final VSizeColumnarInts equalInts = VSizeColumnarInts.fromArray(new int[]{1, 2, 3});
+    final VSizeColumnarInts differentValues = VSizeColumnarInts.fromArray(new int[]{1, 2, 4});
+    final VSizeColumnarInts differentWidth = VSizeColumnarInts.fromArray(new int[]{1, 2, 3}, 256);
+
+    Assertions.assertEquals(ints, ints);
+    Assertions.assertEquals(ints, equalInts);
+    Assertions.assertEquals(ints.hashCode(), equalInts.hashCode());
+    Assertions.assertNotEquals(ints, null);
+    Assertions.assertNotEquals(ints, "not columnar ints");
+    Assertions.assertNotEquals(ints, differentValues);
+    Assertions.assertNotEquals(ints, differentWidth);
+  }
 }

@@ -37,12 +37,11 @@ import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionC
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.Writer;
@@ -58,11 +57,11 @@ public class NamespacedExtractorModuleTest
   private CacheScheduler scheduler;
   private Lifecycle lifecycle;
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
   private NamespaceExtractionCacheManager cacheManager;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> factoryMap =
@@ -92,7 +91,7 @@ public class NamespacedExtractorModuleTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     lifecycle.stop();
@@ -101,7 +100,7 @@ public class NamespacedExtractorModuleTest
   @Test
   public void testNewTask() throws Exception
   {
-    final File tmpFile = temporaryFolder.newFile();
+    final File tmpFile = File.createTempFile("junit", null, temporaryFolder);
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
@@ -121,16 +120,16 @@ public class NamespacedExtractorModuleTest
     );
     CacheHandler cache = cacheManager.allocateCache();
     String version = factory.generateCache(namespace, null, null, cache);
-    Assert.assertNotNull(version);
+    Assertions.assertNotNull(version);
     Map<String, String> map = cache.getCache();
-    Assert.assertEquals("bar", map.get("foo"));
-    Assert.assertNull(map.get("baz"));
+    Assertions.assertEquals("bar", map.get("foo"));
+    Assertions.assertNull(map.get("baz"));
   }
 
   @Test
   public void testListNamespaces() throws Exception
   {
-    final File tmpFile = temporaryFolder.newFile();
+    final File tmpFile = File.createTempFile("junit", null, temporaryFolder);
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
@@ -143,16 +142,16 @@ public class NamespacedExtractorModuleTest
         null
     );
     try (CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 1_000)) {
-      Assert.assertNotNull(entry);
+      Assertions.assertNotNull(entry);
       entry.awaitTotalUpdates(1);
-      Assert.assertEquals(1, scheduler.getActiveEntries());
+      Assertions.assertEquals(1, scheduler.getActiveEntries());
     }
   }
 
   @Test//(timeout = 60_000L)
   public void testDeleteNamespaces() throws Exception
   {
-    final File tmpFile = temporaryFolder.newFile();
+    final File tmpFile = File.createTempFile("junit", null, temporaryFolder);
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
@@ -167,14 +166,14 @@ public class NamespacedExtractorModuleTest
         null
     );
     try (CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 1_000)) {
-      Assert.assertNotNull(entry);
+      Assertions.assertNotNull(entry);
     }
   }
 
   @Test
   public void testNewUpdate() throws Exception
   {
-    final File tmpFile = temporaryFolder.newFile();
+    final File tmpFile = File.createTempFile("junit", null, temporaryFolder);
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
@@ -188,11 +187,11 @@ public class NamespacedExtractorModuleTest
         null,
         null
     );
-    Assert.assertEquals(0, scheduler.getActiveEntries());
+    Assertions.assertEquals(0, scheduler.getActiveEntries());
     try (CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000)) {
-      Assert.assertNotNull(entry);
+      Assertions.assertNotNull(entry);
       entry.awaitTotalUpdates(1);
-      Assert.assertEquals(1, scheduler.getActiveEntries());
+      Assertions.assertEquals(1, scheduler.getActiveEntries());
     }
   }
 }

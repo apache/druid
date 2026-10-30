@@ -244,15 +244,12 @@ public class IndexingStateCacheTest
   public void test_addIndexingState_withDifferentStateForSameFingerprint_updatesCache()
   {
     CompactionState state1 = createTestIndexingState();
-    CompactionState state2 = new CompactionState(
-        new DynamicPartitionsSpec(200, null),
-        DimensionsSpec.EMPTY,
-        null,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    CompactionState state2 =
+        CompactionState.builder()
+                       .partitionsSpec(new DynamicPartitionsSpec(200, null))
+                       .dimensionsSpec(DimensionsSpec.EMPTY)
+                       .indexSpec(IndexSpec.getDefault())
+                       .build();
     String fingerprint = "same_fp";
 
     // Add first state
@@ -288,14 +285,10 @@ public class IndexingStateCacheTest
 
   private CompactionState createTestIndexingState()
   {
-    return new CompactionState(
-        new DynamicPartitionsSpec(100, null),
-        DimensionsSpec.EMPTY,
-        null,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(100, null))
+                          .dimensionsSpec(DimensionsSpec.EMPTY)
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 }

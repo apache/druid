@@ -28,8 +28,8 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.selector.TestColumnValueSelector;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -61,25 +61,25 @@ public abstract class CompressedBigDecimalFactoryTestBase
   @Test
   public abstract void testCompressedBigDecimalAggregateCombinerGetObject();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public abstract void testCompressedBigDecimalAggregateCombinerGetLong();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public abstract void testCompressedBigDecimalAggregateCombinerGetFloat();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public abstract void testCompressedBigDecimalAggregateCombinerGetDouble();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public abstract void testCompressedBigDecimalAggregatorGetFloat();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public abstract void testCompressedBigDecimalAggregatorGetLong();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public abstract void testCompressedBigDecimalBufferAggregatorGetFloat();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public abstract void testCompressedBigDecimalBufferAggregatorGetLong();
 
   @Test
@@ -99,7 +99,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
     String jsonString = objectMapper.writeValueAsString(aggregatorFactory);
     T deserializedAggregatorFactory = objectMapper.readValue(jsonString, clazz);
 
-    Assert.assertEquals(aggregatorFactory, deserializedAggregatorFactory);
+    Assertions.assertEquals(aggregatorFactory, deserializedAggregatorFactory);
   }
 
   @SuppressWarnings("ConstantConditions")
@@ -109,42 +109,42 @@ public abstract class CompressedBigDecimalFactoryTestBase
         new ArrayCompressedBigDecimal(new BigDecimal("100.3141592"))
     );
 
-    Assert.assertEquals("100.3141592", result1.toString());
+    Assertions.assertEquals("100.3141592", result1.toString());
 
     ArrayCompressedBigDecimal result2 = (ArrayCompressedBigDecimal) aggregatorFactory.finalizeComputation(
         new ArrayCompressedBigDecimal(new BigDecimal("0.000000000"))
     );
 
-    Assert.assertEquals("0", result2.toString());
+    Assertions.assertEquals("0", result2.toString());
 
     Object result3 = aggregatorFactory.finalizeComputation(null);
 
-    Assert.assertNull(result3);
+    Assertions.assertNull(result3);
 
     ArrayCompressedBigDecimal result4 = (ArrayCompressedBigDecimal) aggregatorFactory.finalizeComputation(
         new ArrayCompressedBigDecimal(new BigDecimal("1.000000000"))
     );
 
-    Assert.assertEquals("1.000000000", result4.toString());
+    Assertions.assertEquals("1.000000000", result4.toString());
 
   }
 
   protected void testCompressedBigDecimalAggregatorFactoryDeserializeHelper(AggregatorFactory aggregatorFactory)
   {
     CompressedBigDecimal compressedBigDecimal = (CompressedBigDecimal) aggregatorFactory.deserialize(5);
-    Assert.assertEquals("5", compressedBigDecimal.toString());
+    Assertions.assertEquals("5", compressedBigDecimal.toString());
   }
 
   protected void testCompressedBigDecimalBufferAggregatorGetFloatHelper(BufferAggregator aggregator)
   {
     ByteBuffer byteBuffer = ByteBuffer.allocate(10);
-    aggregator.getFloat(byteBuffer, 0);
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getFloat(byteBuffer, 0));
   }
 
   protected void testCompressedBigDecimalBufferAggregatorGetLongHelper(BufferAggregator aggregator)
   {
     ByteBuffer byteBuffer = ByteBuffer.allocate(10);
-    aggregator.getLong(byteBuffer, 0);
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getLong(byteBuffer, 0));
   }
 
   protected <T> void testCombinerResetHelper(AggregateCombiner<T> combiner)
@@ -156,7 +156,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
 
     columnValueSelector.advance();
     combiner.reset(columnValueSelector);
-    Assert.assertEquals("67", combiner.getObject().toString());
+    Assertions.assertEquals("67", combiner.getObject().toString());
   }
 
   protected <T> void testCombinerFoldHelper(AggregateCombiner<T> combiner, String result1, String result2)
@@ -171,41 +171,41 @@ public abstract class CompressedBigDecimalFactoryTestBase
 
     columnValueSelector.advance();
     combiner.fold(columnValueSelector);
-    Assert.assertEquals(result1, combiner.getObject().toString());
+    Assertions.assertEquals(result1, combiner.getObject().toString());
     columnValueSelector.advance();
     combiner.fold(columnValueSelector);
-    Assert.assertEquals(result2, combiner.getObject().toString());
+    Assertions.assertEquals(result2, combiner.getObject().toString());
   }
 
   protected <T> void testCompressedBigDecimalAggregateCombinerGetObjectHelper(AggregateCombiner<T> combiner)
   {
     T compressedBigDecimal = combiner.getObject();
-    Assert.assertSame(null, compressedBigDecimal);
+    Assertions.assertSame(null, compressedBigDecimal);
   }
 
   protected <T> void testCompressedBigDecimalAggregateCombinerGetLongHelper(AggregateCombiner<T> combiner)
   {
-    combiner.getLong();
+    Assertions.assertThrows(UnsupportedOperationException.class, combiner::getLong);
   }
 
   protected <T> void testCompressedBigDecimalAggregateCombinerGetFloatHelper(AggregateCombiner<T> combiner)
   {
-    combiner.getFloat();
+    Assertions.assertThrows(UnsupportedOperationException.class, combiner::getFloat);
   }
 
   protected <T> void testCompressedBigDecimalAggregateCombinerGetDoubleHelper(AggregateCombiner<T> combiner)
   {
-    combiner.getDouble();
+    Assertions.assertThrows(UnsupportedOperationException.class, combiner::getDouble);
   }
 
   protected void testCompressedBigDecimalAggregatorGetFloatHelper(Aggregator aggregator)
   {
-    aggregator.getFloat();
+    Assertions.assertThrows(UnsupportedOperationException.class, aggregator::getFloat);
   }
 
   protected void testCompressedBigDecimalAggregatorGetLongHelper(Aggregator aggregator)
   {
-    aggregator.getLong();
+    Assertions.assertThrows(UnsupportedOperationException.class, aggregator::getLong);
   }
 
   /**
@@ -214,7 +214,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
    */
   protected void testCacheKeyEqualityHelper(CompressedBigDecimalAggregatorFactoryCreator factoryCreator)
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Base64.getEncoder().encodeToString(
             factoryCreator.create(
                 "name1",
@@ -234,7 +234,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
             ).getCacheKey()
         )
     );
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         Base64.getEncoder().encodeToString(
             factoryCreator.create(
                 "name1",
@@ -254,7 +254,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
             ).getCacheKey()
         )
     );
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         Base64.getEncoder().encodeToString(
             factoryCreator.create(
                 "name1",
@@ -274,7 +274,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
             ).getCacheKey()
         )
     );
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         Base64.getEncoder().encodeToString(
             factoryCreator.create(
                 "name1",
@@ -294,7 +294,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
             ).getCacheKey()
         )
     );
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         Base64.getEncoder().encodeToString(
             factoryCreator.create(
                 "name1",

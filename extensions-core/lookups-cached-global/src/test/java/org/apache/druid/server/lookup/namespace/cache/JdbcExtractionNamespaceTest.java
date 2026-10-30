@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
@@ -42,17 +43,22 @@ import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -66,11 +72,10 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class JdbcExtractionNamespaceTest
 {
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public final DerbyConnectorExtension derbyConnectorRule = new DerbyConnectorExtension();
 
   private static final Logger log = new Logger(JdbcExtractionNamespaceTest.class);
   private static final String TABLE_NAME = "abstractDbRenameTest";
@@ -85,8 +90,55 @@ public class JdbcExtractionNamespaceTest
       "empty string", new String[]{"empty string", "0"}
   );
 
+  private static class DerbyConnectorExtension implements BeforeEachCallback, AfterEachCallback
+  {
+    private final TestDerbyConnector connector = new TestDerbyConnector();
 
-  @Parameterized.Parameters(name = "{0}")
+    @Override
+    public void beforeEach(ExtensionContext context)
+    {
+      connector.createDatabase();
+    }
+
+    @Override
+    public void afterEach(ExtensionContext context)
+    {
+      try {
+        new DBI(connector.getJdbcUri() + ";drop=true").open().close();
+      }
+      catch (UnableToObtainConnectionException e) {
+        final SQLException cause = Assertions.assertInstanceOf(
+            SQLException.class,
+            e.getCause(),
+            "Expected Derby shutdown failure to wrap a SQLException"
+        );
+        Assertions.assertEquals(
+            "08006",
+            cause.getSQLState(),
+            StringUtils.format("Derby not shutdown: [%s]", cause)
+        );
+      }
+    }
+
+    public TestDerbyConnector getConnector()
+    {
+      return connector;
+    }
+
+    public MetadataStorageConnectorConfig getMetadataConnectorConfig()
+    {
+      return new MetadataStorageConnectorConfig()
+      {
+        @Override
+        public String getConnectURI()
+        {
+          return connector.getJdbcUri();
+        }
+      };
+    }
+  }
+
+
   public static Collection<Object[]> getParameters()
   {
     return ImmutableList.of(
@@ -95,14 +147,21 @@ public class JdbcExtractionNamespaceTest
     );
   }
 
-  public JdbcExtractionNamespaceTest(
+  public void initJdbcExtractionNamespaceTest(
       String tsColumn
   )
   {
     this.tsColumn = tsColumn;
+    this.lifecycle = new Lifecycle();
+    try {
+      initializeJdbcExtractionNamespaceTest();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
-  private final String tsColumn;
+  private String tsColumn;
   private CacheScheduler scheduler;
   private Lifecycle lifecycle;
   private AtomicLong updates;
@@ -111,10 +170,8 @@ public class JdbcExtractionNamespaceTest
   private ListeningExecutorService setupTeardownService;
   private Handle handleRef = null;
 
-  @Before
-  public void setup() throws Exception
+  private void initializeJdbcExtractionNamespaceTest() throws Exception
   {
-    lifecycle = new Lifecycle();
     updates = new AtomicLong(0L);
     updateLock = new ReentrantLock(true);
     closer = Closer.create();
@@ -123,7 +180,7 @@ public class JdbcExtractionNamespaceTest
     final ListenableFuture<Handle> setupFuture = setupTeardownService.submit(
         () -> {
           final Handle handle = derbyConnectorRule.getConnector().getDBI().open();
-          Assert.assertEquals(
+          Assertions.assertEquals(
               0,
               handle.createStatement(
                   StringUtils.format(
@@ -159,7 +216,7 @@ public class JdbcExtractionNamespaceTest
             if (scheduler == null) {
               return;
             }
-            Assert.assertEquals(0, scheduler.getActiveEntries());
+            Assertions.assertEquals(0, scheduler.getActiveEntries());
           });
           for (Map.Entry<String, String[]> entry : RENAMES.entrySet()) {
             try {
@@ -238,10 +295,10 @@ public class JdbcExtractionNamespaceTest
     try (final Closeable ignore = () -> setupFuture.cancel(true)) {
       handleRef = setupFuture.get(10, TimeUnit.SECONDS);
     }
-    Assert.assertNotNull(handleRef);
+    Assertions.assertNotNull(handleRef);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws InterruptedException, ExecutionException, TimeoutException, IOException
   {
     final ListenableFuture<?> tearDownFuture = setupTeardownService.submit(
@@ -304,17 +361,20 @@ public class JdbcExtractionNamespaceTest
           updateTs, filter, key, val
       );
     }
-    Assert.assertEquals(1, handle.createStatement(query).setQueryTimeout(1).execute());
+    Assertions.assertEquals(1, handle.createStatement(query).setQueryTimeout(1).execute());
     handle.commit();
     // Some internals have timing resolution no better than MS. This is to help make sure that checks for timings
     // have elapsed at least to the next ms... 2 is for good measure.
     Thread.sleep(2);
   }
 
-  @Test(timeout = 60_000L)
-  public void testMappingWithoutFilter()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testMappingWithoutFilter(String tsColumn)
       throws InterruptedException
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         TABLE_NAME,
@@ -336,20 +396,23 @@ public class JdbcExtractionNamespaceTest
         String key = e.getKey();
         String[] val = e.getValue();
         String field = val[0];
-        Assert.assertEquals(
-            "non-null check",
+        Assertions.assertEquals(
             field,
-            map.get(key)
+            map.get(key),
+            "non-null check"
         );
       }
-      Assert.assertEquals("null check", null, map.get("baz"));
+      Assertions.assertEquals(null, map.get("baz"), "null check");
     }
   }
 
-  @Test(timeout = 60_000L)
-  public void testMappingWithFilter()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testMappingWithFilter(String tsColumn)
       throws InterruptedException
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         TABLE_NAME,
@@ -374,22 +437,25 @@ public class JdbcExtractionNamespaceTest
         String filterVal = val[1];
 
         if ("1".equals(filterVal)) {
-          Assert.assertEquals(
-              "non-null check",
+          Assertions.assertEquals(
               field,
-              map.get(key)
+              map.get(key),
+              "non-null check"
           );
         } else {
-          Assert.assertEquals("non-null check", null, map.get(key));
+          Assertions.assertEquals(null, map.get(key), "non-null check");
         }
       }
     }
   }
 
-  @Test(timeout = 60_000L)
-  public void testEmptyTable()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testEmptyTable(String tsColumn)
       throws InterruptedException
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     // Delete existing rows from table.
     final Handle handle = derbyConnectorRule.getConnector().getDBI().open();
     handle.createStatement(
@@ -412,14 +478,17 @@ public class JdbcExtractionNamespaceTest
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
       CacheSchedulerTest.waitFor(entry);
       final Map<String, String> map = entry.getCache();
-      Assert.assertTrue(map.isEmpty());
+      Assertions.assertTrue(map.isEmpty());
     }
   }
 
-  @Test(timeout = 60_000L)
-  public void testSkipOld()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testSkipOld(String tsColumn)
       throws InterruptedException
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
       if (tsColumn != null) {
@@ -429,9 +498,11 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
-  @Test
-  public void testRandomJitter()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testRandomJitter(String tsColumn)
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         TABLE_NAME,
@@ -447,12 +518,14 @@ public class JdbcExtractionNamespaceTest
     );
     long jitter = extractionNamespace.getJitterMills();
     // jitter will be a random value between 0 and 120 seconds.
-    Assert.assertTrue(jitter >= 0 && jitter <= 120000);
+    Assertions.assertTrue(jitter >= 0 && jitter <= 120000);
   }
 
-  @Test
-  public void testRandomJitterNotSpecified()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testRandomJitterNotSpecified(String tsColumn)
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         TABLE_NAME,
@@ -467,13 +540,16 @@ public class JdbcExtractionNamespaceTest
         new JdbcAccessSecurityConfig()
     );
     // jitter will be a random value between 0 and 120 seconds.
-    Assert.assertEquals(0, extractionNamespace.getJitterMills());
+    Assertions.assertEquals(0, extractionNamespace.getJitterMills());
   }
 
-  @Test(timeout = 60_000L)
-  public void testFindNew()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testFindNew(String tsColumn)
       throws InterruptedException
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
       insertValues(handleRef, "foo", "baz", null, "2900-01-01 00:00:00");
@@ -481,22 +557,27 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
-  @Test(timeout = 60_000L)
-  public void testIgnoresNullValues()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testIgnoresNullValues(String tsColumn)
       throws InterruptedException
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       insertValues(handleRef, "fooz", null, null, "2900-01-01 00:00:00");
       waitForUpdates(1_000L, 2L);
       Thread.sleep(100);
       Set set = entry.getCache().keySet();
-      Assert.assertFalse(set.contains("fooz"));
+      Assertions.assertFalse(set.contains("fooz"));
     }
   }
 
-  @Test
-  public void testSerde() throws IOException
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testSerde(String tsColumn) throws IOException
   {
+    initJdbcExtractionNamespaceTest(tsColumn);
     final JdbcAccessSecurityConfig securityConfig = new JdbcAccessSecurityConfig();
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
@@ -519,7 +600,7 @@ public class JdbcExtractionNamespaceTest
         ExtractionNamespace.class
     );
 
-    Assert.assertEquals(extractionNamespace, extractionNamespace2);
+    Assertions.assertEquals(extractionNamespace, extractionNamespace2);
   }
 
   private CacheScheduler.Entry ensureEntry()
@@ -542,10 +623,10 @@ public class JdbcExtractionNamespaceTest
 
     waitForUpdates(1_000L, 2L);
 
-    Assert.assertEquals(
-        "sanity check not correct",
+    Assertions.assertEquals(
         "bar",
-        entry.getCache().get("foo")
+        entry.getCache().get("foo"),
+        "sanity check not correct"
     );
     return entry;
   }
@@ -568,7 +649,7 @@ public class JdbcExtractionNamespaceTest
       log.debug("Waiting for updateLock");
       updateLock.lockInterruptibly();
       try {
-        Assert.assertTrue("Failed waiting for update", System.currentTimeMillis() - startTime < timeout);
+        Assertions.assertTrue(System.currentTimeMillis() - startTime < timeout, "Failed waiting for update");
         post = updates.get();
       }
       finally {
@@ -589,10 +670,10 @@ public class JdbcExtractionNamespaceTest
       map = entry.getCache();
     }
 
-    Assert.assertEquals(
-        "update check",
+    Assertions.assertEquals(
         expected,
-        map.get(key)
+        map.get(key),
+        "update check"
     );
   }
 }

@@ -28,13 +28,14 @@ import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.server.WebserverTestUtils;
 import org.easymock.EasyMock;
 import org.glassfish.grizzly.http.server.HttpServer;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.net.URI;
 import java.util.Optional;
 
@@ -54,7 +55,7 @@ public class LookupIntrospectionResourceTest
   private URI baseUri;
   private HttpServer server;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     LookupExtractorFactory actualLookupExtractorFactory = new MapLookupExtractorFactory(
@@ -92,15 +93,14 @@ public class LookupIntrospectionResourceTest
         "lookup-test",
         baseUri,
         LookupIntrospectionResource.class.getName(),
-        binder -> {
+        binder ->
           binder.bind(LookupExtractorFactoryContainerProvider.class)
-                .toInstance(mockLookupExtractorFactoryContainerProvider);
-        }
+                .toInstance(mockLookupExtractorFactoryContainerProvider)
     );
     server.start();
   }
 
-  @After
+  @AfterEach
   public void teardown()
   {
     if (server != null) {
@@ -116,7 +116,7 @@ public class LookupIntrospectionResourceTest
             .andReturn(new MapLookupExtractor(ImmutableMap.of(), false))
             .anyTimes();
     EasyMock.replay(mockLookupExtractorFactory);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Response.status(Response.Status.NOT_FOUND).build().getStatus(),
         ((Response) lookupIntrospectionResource.introspectLookup("lookupId")).getStatus()
     );
@@ -125,7 +125,7 @@ public class LookupIntrospectionResourceTest
   @Test
   public void testNotExistingLookup()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Response.status(Response.Status.NOT_FOUND).build().getStatus(),
         ((Response) lookupIntrospectionResource.introspectLookup("not there")).getStatus()
     );
@@ -139,7 +139,7 @@ public class LookupIntrospectionResourceTest
             .andReturn(new MapLookupExtractor(ImmutableMap.of(), false))
             .anyTimes();
     EasyMock.replay(mockLookupExtractorFactory);
-    Assert.assertEquals(mockLookupIntrospectHandler, lookupIntrospectionResource.introspectLookup("lookupId"));
+    Assertions.assertEquals(mockLookupIntrospectHandler, lookupIntrospectionResource.introspectLookup("lookupId"));
   }
 
   @Test
@@ -152,8 +152,8 @@ public class LookupIntrospectionResourceTest
                                  .accept(MediaType.APPLICATION_JSON)
                                  .get(ClientResponse.class);
     String s = resp.getEntity(String.class);
-    Assert.assertEquals("[\"key\",\"key2\"]", s);
-    Assert.assertEquals(200, resp.getStatus());
+    Assertions.assertEquals("[\"key\",\"key2\"]", s);
+    Assertions.assertEquals(200, resp.getStatus());
   }
 
   @Test
@@ -166,8 +166,8 @@ public class LookupIntrospectionResourceTest
                                  .accept(MediaType.APPLICATION_JSON)
                                  .get(ClientResponse.class);
     String s = resp.getEntity(String.class);
-    Assert.assertEquals("[\"value\",\"value2\"]", s);
-    Assert.assertEquals(200, resp.getStatus());
+    Assertions.assertEquals("[\"value\",\"value2\"]", s);
+    Assertions.assertEquals(200, resp.getStatus());
   }
 
   @Test
@@ -180,7 +180,7 @@ public class LookupIntrospectionResourceTest
                                  .accept(MediaType.APPLICATION_JSON)
                                  .get(ClientResponse.class);
     String s = resp.getEntity(String.class);
-    Assert.assertEquals("{\"key\":\"value\",\"key2\":\"value2\"}", s);
-    Assert.assertEquals(200, resp.getStatus());
+    Assertions.assertEquals("{\"key\":\"value\",\"key2\":\"value2\"}", s);
+    Assertions.assertEquals(200, resp.getStatus());
   }
 }

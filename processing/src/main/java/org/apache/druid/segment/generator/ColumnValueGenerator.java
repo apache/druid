@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.generator;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
@@ -207,8 +208,18 @@ public class ColumnValueGenerator implements Supplier<Object>
         distribution = new UniformIntegerDistribution(schema.getStartInt(), schema.getEndInt());
         break;
       case ENUMERATED:
-        for (int i = 0; i < enumeratedValues.size(); i++) {
-          probabilities.add(new Pair<>(enumeratedValues.get(i), enumeratedProbabilities.get(i)));
+        final List<Object> nonNullEnumeratedValues =
+            Preconditions.checkNotNull(enumeratedValues, "enumeratedValues");
+        final List<Double> nonNullEnumeratedProbabilities =
+            Preconditions.checkNotNull(enumeratedProbabilities, "enumeratedProbabilities");
+        Preconditions.checkArgument(
+            nonNullEnumeratedValues.size() == nonNullEnumeratedProbabilities.size(),
+            "enumeratedValues size[%s] must match enumeratedProbabilities size[%s]",
+            nonNullEnumeratedValues.size(),
+            nonNullEnumeratedProbabilities.size()
+        );
+        for (int i = 0; i < nonNullEnumeratedValues.size(); i++) {
+          probabilities.add(new Pair<>(nonNullEnumeratedValues.get(i), nonNullEnumeratedProbabilities.get(i)));
         }
         distribution = new EnumeratedTreeDistribution<>(probabilities);
         break;

@@ -38,16 +38,18 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
 {
 
@@ -69,7 +71,6 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
     this.mmap = mmap;
   }
 
-  @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder()
   {
     final ArrayList<TestQueryRunner<SegmentAnalysis>> runners = QueryRunnerTestHelper.mapQueryRunnersToMerge(

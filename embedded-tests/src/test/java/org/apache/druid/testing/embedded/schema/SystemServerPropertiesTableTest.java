@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.schema;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.RequestBuilder;
@@ -29,7 +30,6 @@ import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

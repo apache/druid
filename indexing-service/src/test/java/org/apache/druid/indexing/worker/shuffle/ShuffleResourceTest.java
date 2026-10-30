@@ -34,16 +34,16 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import javax.ws.rs.core.Response;
@@ -60,14 +60,14 @@ public class ShuffleResourceTest
 {
   private static final String DATASOURCE = "datasource";
 
-  @Rule
-  public TemporaryFolder tempDir = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private ShuffleMetrics shuffleMetrics;
   private ShuffleResource shuffleResource;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     final WorkerConfig workerConfig = new WorkerConfig()
@@ -92,7 +92,9 @@ public class ShuffleResourceTest
 
     };
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
+        .setShuffleDataLocations(
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder("shuffle"), null, null))
+        )
         .build();
     final OverlordClient overlordClient = new NoopOverlordClient()
     {
@@ -121,10 +123,10 @@ public class ShuffleResourceTest
         "2020-01-02",
         0
     );
-    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
-    Assert.assertNotNull(response.getEntity());
+    Assertions.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    Assertions.assertNotNull(response.getEntity());
     final String errorMessage = (String) response.getEntity();
-    Assert.assertTrue(errorMessage.contains("Can't find the partition for supervisorTask"));
+    Assertions.assertTrue(errorMessage.contains("Can't find the partition for supervisorTask"));
   }
 
   @Test
@@ -145,16 +147,16 @@ public class ShuffleResourceTest
         segment.getId().getPartitionNum()
     );
     final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshotAndReset();
-    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertEquals(1, snapshot.get(supervisorTaskId).getShuffleRequests());
-    Assert.assertEquals(254, snapshot.get(supervisorTaskId).getShuffleBytes());
+    Assertions.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(1, snapshot.get(supervisorTaskId).getShuffleRequests());
+    Assertions.assertEquals(254, snapshot.get(supervisorTaskId).getShuffleBytes());
   }
 
   @Test
   public void testDeleteUnknownPartitionReturnOk()
   {
     final Response response = shuffleResource.deletePartitions("unknownSupervisorTask");
-    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
   @Test
@@ -168,7 +170,7 @@ public class ShuffleResourceTest
     intermediaryDataManager.addSegment(supervisorTaskId, subtaskId, segment, segmentDir);
 
     final Response response = shuffleResource.deletePartitions(supervisorTaskId);
-    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 
   @Test
@@ -181,7 +183,7 @@ public class ShuffleResourceTest
     final ShuffleResource shuffleResource = new ShuffleResource(exceptionThrowingManager, Optional.of(shuffleMetrics));
 
     final Response response = shuffleResource.deletePartitions("supervisorTask");
-    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
   }
 
   private static DataSegment newSegment(Interval interval)
@@ -205,9 +207,10 @@ public class ShuffleResourceTest
   private File generateSegmentDir(String fileName) throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = tempDir.newFolder();
+    final File segmentDir = temporaryFolder.newFolder(fileName);
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
   }
+
 }

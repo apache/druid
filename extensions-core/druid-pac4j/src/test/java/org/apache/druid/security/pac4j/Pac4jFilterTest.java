@@ -19,13 +19,13 @@
 
 package org.apache.druid.security.pac4j;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.exception.http.ForbiddenAction;
 import org.pac4j.core.exception.http.FoundAction;
@@ -43,8 +43,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class Pac4jFilterTest
 {
   private static final String DRUID_AUTHENTICATION_RESULT = "Druid-Authentication-Result";
@@ -65,11 +66,11 @@ public class Pac4jFilterTest
   private JEEContext context;
   private Pac4jFilter pac4jFilter;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     // Mock the PrintWriter for the response
-    Mockito.when(response.getWriter()).thenReturn(printWriter);
+    lenient().when(response.getWriter()).thenReturn(printWriter);
     context = new JEEContext(request, response);
     pac4jFilter = new Pac4jFilter("test", "testAuthorizer", pac4jConfig, "/callback", "testPassphrase");
   }
@@ -175,8 +176,8 @@ public class Pac4jFilterTest
     Mockito.doReturn(httpAction.getCode()).when(response).getStatus();
     Mockito.doReturn(((WithLocationAction) httpAction).getLocation()).when(response).getHeader(any());
     JEEHttpActionAdapter.INSTANCE.adapt(httpAction, context);
-    Assert.assertEquals(response.getStatus(), 302);
-    Assert.assertEquals(response.getHeader("Location"), "testUrl");
+    Assertions.assertEquals(response.getStatus(), 302);
+    Assertions.assertEquals(response.getHeader("Location"), "testUrl");
   }
 
   @Test
@@ -185,7 +186,7 @@ public class Pac4jFilterTest
     HttpAction httpAction = ForbiddenAction.INSTANCE;
     Mockito.doReturn(httpAction.getCode()).when(response).getStatus();
     JEEHttpActionAdapter.INSTANCE.adapt(httpAction, context);
-    Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_FORBIDDEN);
+    Assertions.assertEquals(response.getStatus(), HttpServletResponse.SC_FORBIDDEN);
   }
 
   @Test
@@ -193,7 +194,6 @@ public class Pac4jFilterTest
   {
     // Test that filter can be created without exceptions
     Pac4jFilter filter = new Pac4jFilter("testName", "testAuthorizer", pac4jConfig, "/test-callback", "testPassphrase");
-    Assert.assertNotNull(filter);
+    Assertions.assertNotNull(filter);
   }
 }
-

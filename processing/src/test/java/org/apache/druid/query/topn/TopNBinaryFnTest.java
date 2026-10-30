@@ -35,8 +35,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -73,9 +73,9 @@ public class TopNBinaryFnTest
     Iterator i1 = ((Iterable) o1).iterator();
     Iterator i2 = ((Iterable) o2).iterator();
     while (i1.hasNext() && i2.hasNext()) {
-      Assert.assertEquals(i1.next(), i2.next());
+      Assertions.assertEquals(i1.next(), i2.next());
     }
-    Assert.assertTrue(!i1.hasNext() && !i2.hasNext());
+    Assertions.assertTrue(!i1.hasNext() && !i2.hasNext());
   }
 
   @Test
@@ -156,7 +156,7 @@ public class TopNBinaryFnTest
         result1,
         result2
     );
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertTopNMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -237,7 +237,7 @@ public class TopNBinaryFnTest
         result1,
         result2
     );
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertTopNMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -281,7 +281,7 @@ public class TopNBinaryFnTest
         result1,
         result2
     );
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertTopNMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -376,7 +376,7 @@ public class TopNBinaryFnTest
         result1,
         result2
     );
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertTopNMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -457,7 +457,7 @@ public class TopNBinaryFnTest
         result1,
         result2
     );
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertTopNMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -514,7 +514,7 @@ public class TopNBinaryFnTest
         result1,
         result2
     );
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertTopNMergeResult(expected.getValue(), actual.getValue());
   }
 }

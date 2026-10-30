@@ -15,4 +15,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.git/hooks/run-all-in-dir.py .git/hooks/pre-commits
+HOOKS_DIR="$(dirname "$0")"
+"${HOOKS_DIR}/run-all-in-dir.py" "${HOOKS_DIR}/pre-commits"

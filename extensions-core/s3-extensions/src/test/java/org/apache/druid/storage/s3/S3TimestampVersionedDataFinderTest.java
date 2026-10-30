@@ -21,8 +21,8 @@ package org.apache.druid.storage.s3;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -75,7 +75,7 @@ public class S3TimestampVersionedDataFinderTest
 
     URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object1.key()));
 
-    Assert.assertEquals(expected, latest);
+    Assertions.assertEquals(expected, latest);
   }
 
   @Test
@@ -104,7 +104,7 @@ public class S3TimestampVersionedDataFinderTest
 
     EasyMock.verify(s3Client);
 
-    Assert.assertEquals(null, latest);
+    Assertions.assertNull(latest);
   }
 
   @Test
@@ -142,7 +142,7 @@ public class S3TimestampVersionedDataFinderTest
 
     URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.key()));
 
-    Assert.assertEquals(expected, latest);
+    Assertions.assertEquals(expected, latest);
   }
 
   @Test
@@ -177,6 +177,6 @@ public class S3TimestampVersionedDataFinderTest
 
     URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.key()));
 
-    Assert.assertEquals(expected, latest);
+    Assertions.assertEquals(expected, latest);
   }
 }

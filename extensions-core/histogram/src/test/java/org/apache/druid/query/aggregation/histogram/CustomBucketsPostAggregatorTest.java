@@ -22,8 +22,8 @@ package org.apache.druid.query.aggregation.histogram;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CustomBucketsPostAggregatorTest
 {
@@ -39,9 +39,9 @@ public class CustomBucketsPostAggregatorTest
         CustomBucketsPostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
-    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
@@ -50,7 +50,7 @@ public class CustomBucketsPostAggregatorTest
     PostAggregator postAgg =
         new CustomBucketsPostAggregator("buckets_post_aggregator", "test_field", new float[]{2f, 4f});
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "CustomBucketsPostAggregator{name='buckets_post_aggregator', fieldName='test_field', breaks=[2.0, 4.0]}",
         postAgg.toString()
     );

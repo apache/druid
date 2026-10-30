@@ -20,8 +20,8 @@
 package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
@@ -89,11 +89,15 @@ public class SqlWindowFunctionsBenchmark extends SqlBaseQueryBenchmark
   @Override
   protected Map<String, Object> getContext()
   {
-    return ImmutableMap.of(
-        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "disabled",
-        QueryContexts.MAX_SUBQUERY_ROWS_KEY, -1,
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    return QueryContext.ofMap(
+        QueryContextParameters.MAX_SUBQUERY_BYTES,
+        "disabled",
+        QueryContextParameters.MAX_SUBQUERY_ROWS,
+        -1,
+        QueryContextParameters.VECTORIZE,
+        vectorizeContext,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorizeContext
     );
   }
 }

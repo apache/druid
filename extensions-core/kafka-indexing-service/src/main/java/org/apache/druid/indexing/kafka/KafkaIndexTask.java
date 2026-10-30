@@ -116,8 +116,15 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
       props.put("auto.offset.reset", "none");
 
       final KafkaRecordSupplier recordSupplier =
-          new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides(),
-                                  kafkaIndexTaskIOConfig.isMultiTopic());
+          new KafkaRecordSupplier(
+              props,
+              configMapper,
+              kafkaIndexTaskIOConfig.getConfigOverrides(),
+              kafkaIndexTaskIOConfig.isMultiTopic(),
+              this::getMetricBuilder,
+              kafkaIndexTaskIOConfig.getHeaderBasedFilterConfig(),
+              null
+          );
 
       if (toolbox.getMonitorScheduler() != null) {
         toolbox.getMonitorScheduler().addMonitor(recordSupplier.monitor());

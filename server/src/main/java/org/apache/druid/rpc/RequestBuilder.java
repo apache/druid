@@ -26,9 +26,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.http.client.Request;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;

@@ -45,6 +45,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MiddleManagerServiceModule;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
@@ -72,7 +73,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
@@ -140,7 +140,7 @@ public class CliMiddleManager extends ServerRunnable
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
-            binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(new NoopChatHandlerProvider()));
+            binder.bind(ChatHandlerProvider.class).in(LazySingleton.class);
             PolyBind.createChoice(
                 binder,
                 "druid.indexer.task.rowIngestionMeters.type",
@@ -244,7 +244,8 @@ public class CliMiddleManager extends ServerRunnable
         new LookupSerdeModule(),
         new MSQIndexingModule(),
         new MSQDurableStorageModule(),
-        new MSQExternalDataSourceModule()
+        new MSQExternalDataSourceModule(),
+        new RegexEngineModule()
     );
   }
 

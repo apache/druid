@@ -48,7 +48,9 @@ public class TestModifiedDataSchema extends DataSchema
         dimensionsSpec,
         aggregators,
         granularitySpec,
+        null,
         transformSpec,
+        null,
         null,
         null
     );

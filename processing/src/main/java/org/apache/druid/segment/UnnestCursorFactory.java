@@ -50,6 +50,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -77,8 +78,38 @@ public class UnnestCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
+    final UnnestFilterSplit filterSplit = computeFilterSplit(spec);
+    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(spec, unnestColumn, filterSplit.getBaseTableFilter());
+
+    final Closer closer = Closer.create();
+    // base holder is built lazily on first asCursor()/getOrdering() and registered for close at that point
+    final Supplier<CursorHolder> baseHolderSupplier = Suppliers.memoize(
+        () -> closer.register(baseCursorFactory.makeCursorHolder(unnestBuildSpec))
+    );
+    return unnestCursorHolder(spec, filterSplit, closer, baseHolderSupplier);
+  }
+
+  @Override
+  public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
+  {
+    final UnnestFilterSplit filterSplit = computeFilterSplit(spec);
+    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(spec, unnestColumn, filterSplit.getBaseTableFilter());
+
+    // Build the base-table holder asynchronously (a partial base segment downloads its required columns here), then
+    // wrap the ready holder in the unnest holder, which owns closing it.
+    return baseCursorFactory
+        .makeCursorHolderAsync(unnestBuildSpec)
+        .transform(baseHolder -> unnestCursorHolder(spec, filterSplit, baseHolder, Suppliers.ofInstance(baseHolder)));
+  }
+
+  /**
+   * Split the spec's filters into base-table and post-unnest filters (see
+   * {@link #computeBaseAndPostUnnestFilters}). Cheap and metadata-only; shared by the sync and async holder paths.
+   */
+  private UnnestFilterSplit computeFilterSplit(CursorBuildSpec spec)
+  {
     final String input = getUnnestInputIfDirectAccess(unnestColumn);
-    final UnnestFilterSplit filterSplit = computeBaseAndPostUnnestFilters(
+    return computeBaseAndPostUnnestFilters(
         spec.getFilter(),
         filter != null ? filter.toFilter() : null,
         spec.getVirtualColumns(),
@@ -86,23 +117,26 @@ public class UnnestCursorFactory implements CursorFactory
         input,
         input == null ? null : spec.getVirtualColumns().getColumnCapabilitiesWithFallback(baseCursorFactory, input)
     );
-    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(
-        spec,
-        unnestColumn,
-        filterSplit.getBaseTableFilter()
-    );
+  }
 
+  /**
+   * Build the unnest {@link CursorHolder} on top of a base-table holder. {@code baseHolderSupplier} provides the base
+   * holder and closing {@code closeable} releases it: the sync path builds it lazily on first use and registers it with
+   * a {@link Closer}, while the async path supplies an already-materialized holder and passes it as {@code closeable}.
+   */
+  private CursorHolder unnestCursorHolder(
+      CursorBuildSpec spec,
+      UnnestFilterSplit filterSplit,
+      Closeable closeable,
+      Supplier<CursorHolder> baseHolderSupplier
+  )
+  {
     return new CursorHolder()
     {
-      final Closer closer = Closer.create();
-      final Supplier<CursorHolder> cursorHolderSupplier = Suppliers.memoize(
-          () -> closer.register(baseCursorFactory.makeCursorHolder(unnestBuildSpec))
-      );
-
       @Override
       public Cursor asCursor()
       {
-        final Cursor cursor = cursorHolderSupplier.get().asCursor();
+        final Cursor cursor = baseHolderSupplier.get().asCursor();
         if (cursor == null) {
           return null;
         }
@@ -135,13 +169,13 @@ public class UnnestCursorFactory implements CursorFactory
       @Override
       public List<OrderBy> getOrdering()
       {
-        return computeOrdering(cursorHolderSupplier.get().getOrdering());
+        return computeOrdering(baseHolderSupplier.get().getOrdering(), spec.getVirtualColumns());
       }
 
       @Override
       public void close()
       {
-        CloseableUtils.closeAndWrapExceptions(closer);
+        CloseableUtils.closeAndWrapExceptions(closeable);
       }
     };
   }
@@ -382,14 +416,19 @@ public class UnnestCursorFactory implements CursorFactory
 
   /**
    * Computes ordering of a join {@link CursorHolder} based on the ordering of an underlying {@link CursorHolder}.
+   * {@code postUnnestVirtualColumns} are those applied on top of the unnest, which the base cannot account for.
    */
-  private List<OrderBy> computeOrdering(final List<OrderBy> baseOrdering)
+  private List<OrderBy> computeOrdering(
+      final List<OrderBy> baseOrdering,
+      final VirtualColumns postUnnestVirtualColumns
+  )
   {
-    // Sorted the same way as the base segment, unless the unnested column shadows one of the base columns.
+    // Sorted the same way as the base segment, unless the unnested column or a post-unnest virtual column shadows
+    // one of the base columns.
     int limit = 0;
     for (; limit < baseOrdering.size(); limit++) {
       final String columnName = baseOrdering.get(limit).getColumnName();
-      if (columnName.equals(unnestColumn.getOutputName())) {
+      if (columnName.equals(unnestColumn.getOutputName()) || postUnnestVirtualColumns.exists(columnName)) {
         break;
       }
     }

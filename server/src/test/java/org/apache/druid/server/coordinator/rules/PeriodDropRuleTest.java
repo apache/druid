@@ -25,8 +25,8 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -48,7 +48,7 @@ public class PeriodDropRuleTest
         false
     );
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         rule.appliesTo(
             BUILDER.interval(
                 new Interval(
@@ -59,7 +59,7 @@ public class PeriodDropRuleTest
             now
         )
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         rule.appliesTo(
             BUILDER.interval(new Interval(now.minusYears(100), now.minusDays(1)))
                        .build(),
@@ -77,28 +77,28 @@ public class PeriodDropRuleTest
         false
     );
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         rule.appliesTo(
             BUILDER.interval(new Interval(now.minusWeeks(1), now.minusDays(1)))
                        .build(),
             now
         )
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         rule.appliesTo(
             BUILDER.interval(new Interval(now.minusDays(1), now))
                    .build(),
             now
         )
     );
-    Assert.assertFalse(
+    Assertions.assertFalse(
         rule.appliesTo(
             BUILDER.interval(new Interval(now.minusYears(1), now.minusDays(1)))
                        .build(),
             now
         )
     );
-    Assert.assertFalse(
+    Assertions.assertFalse(
         rule.appliesTo(
             BUILDER.interval(new Interval(now.minusMonths(2), now.minusDays(1)))
                        .build(),
@@ -120,13 +120,13 @@ public class PeriodDropRuleTest
         false
     );
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         includeFutureRule.appliesTo(
             BUILDER.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
             now
         )
     );
-    Assert.assertFalse(
+    Assertions.assertFalse(
         notIncludeFutureRule.appliesTo(
             BUILDER.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
             now

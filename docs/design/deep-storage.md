@@ -23,7 +23,7 @@ title: "Deep storage"
   -->
 
 
-Deep storage is where segments are stored.  It is a storage mechanism that Apache Druid does not provide.  This deep storage infrastructure defines the level of durability of your data. As long as Druid processes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
+Deep storage is where segments are stored.  It is a storage mechanism that Apache&circledR; Druid does not provide.  This deep storage infrastructure defines the level of durability of your data. As long as Druid processes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
 
 In addition to being the backing store for segments, you can use [query from deep storage](#querying-from-deep-storage) and run queries against segments stored primarily in deep storage. The [load rules](../operations/rule-configuration.md#load-rules) you configure determine whether segments exist primarily in deep storage or in a combination of deep storage and Historical processes.
 

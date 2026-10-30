@@ -22,12 +22,16 @@ package org.apache.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 import com.google.common.util.concurrent.Futures;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -59,23 +63,23 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -87,6 +91,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -100,17 +105,21 @@ import static org.easymock.EasyMock.isA;
  */
 public class HttpRemoteTaskRunnerTest
 {
-  @Before
+  private StubServiceEmitter emitter;
+
+  @BeforeEach
   public void setup()
   {
-    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+    emitter = new StubServiceEmitter();
+    EmittingLogger.registerEmitter(emitter);
   }
 
   /*
   Simulates startup of Overlord and Workers being discovered with no previously known tasks. Fresh tasks are given
   and expected to be completed.
    */
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testFreshStart() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -150,17 +159,19 @@ public class HttpRemoteTaskRunnerTest
     }
 
     for (Future<TaskStatus> future : futures) {
-      Assert.assertTrue(future.get().isSuccess());
+      Assertions.assertTrue(future.get().isSuccess());
     }
 
-    Assert.assertEquals(numTasks, taskRunner.getKnownTasks().size());
-    Assert.assertEquals(numTasks, taskRunner.getCompletedTasks().size());
-    Assert.assertEquals(4, taskRunner.getTotalCapacity());
-    Assert.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
-    Assert.assertEquals(0, taskRunner.getUsedCapacity());
+    Assertions.assertEquals(numTasks, taskRunner.getKnownTasks().size());
+    Assertions.assertEquals(numTasks, taskRunner.getCompletedTasks().size());
+    Assertions.assertEquals(4, taskRunner.getTotalCapacity());
+    Assertions.assertTrue(taskRunner.getBlacklistedTaskSlotCount().isEmpty());
+    Assertions.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
+    Assertions.assertEquals(0, taskRunner.getUsedCapacity());
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testFreshStart_nodeDiscoveryTimedOut() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery(true);
@@ -200,19 +211,20 @@ public class HttpRemoteTaskRunnerTest
     }
 
     for (Future<TaskStatus> future : futures) {
-      Assert.assertTrue(future.get().isSuccess());
+      Assertions.assertTrue(future.get().isSuccess());
     }
 
-    Assert.assertEquals(numTasks, taskRunner.getKnownTasks().size());
-    Assert.assertEquals(numTasks, taskRunner.getCompletedTasks().size());
-    Assert.assertEquals(4, taskRunner.getTotalCapacity());
-    Assert.assertEquals(0, taskRunner.getUsedCapacity());
+    Assertions.assertEquals(numTasks, taskRunner.getKnownTasks().size());
+    Assertions.assertEquals(numTasks, taskRunner.getCompletedTasks().size());
+    Assertions.assertEquals(4, taskRunner.getTotalCapacity());
+    Assertions.assertEquals(0, taskRunner.getUsedCapacity());
   }
 
   /*
   Simulates startup of Overlord. Overlord is then stopped and is expected to close down certain things.
    */
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testFreshStartAndStop()
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -250,13 +262,13 @@ public class HttpRemoteTaskRunnerTest
     taskRunner.start();
     druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1, druidNode2));
     ConcurrentMap<String, WorkerHolder> workers = taskRunner.getWorkersForTestingReadOnly();
-    Assert.assertEquals(2, workers.size());
-    Assert.assertTrue(workers.values().stream().noneMatch(w -> w.getUnderlyingSyncer().isExecutorShutdown()));
+    Assertions.assertEquals(2, workers.size());
+    Assertions.assertTrue(workers.values().stream().noneMatch(w -> w.getUnderlyingSyncer().isExecutorShutdown()));
     workers.values().iterator().next().stop();
     taskRunner.stop();
-    Assert.assertTrue(druidNodeDiscovery.getListeners().isEmpty());
-    Assert.assertEquals(2, workers.size());
-    Assert.assertTrue(workers.values().stream().allMatch(w -> w.getUnderlyingSyncer().isExecutorShutdown()));
+    Assertions.assertTrue(druidNodeDiscovery.getListeners().isEmpty());
+    Assertions.assertEquals(2, workers.size());
+    Assertions.assertTrue(workers.values().stream().allMatch(w -> w.getUnderlyingSyncer().isExecutorShutdown()));
     EasyMock.verify(druidNodeDiscoveryProvider, provisioningStrategy, provisioningService);
   }
 
@@ -264,7 +276,8 @@ public class HttpRemoteTaskRunnerTest
   Simulates startup of Overlord with no provisoner. Overlord is then stopped and is expected to close down certain
   things.
    */
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testFreshStartAndStopNoProvisioner()
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -332,7 +345,8 @@ public class HttpRemoteTaskRunnerTest
   Simulates one task not getting acknowledged to be running after assigning it to a worker. But, other tasks are
   successfully assigned to other worker and get completed.
    */
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testOneStuckTaskAssignmentDoesntBlockOthers() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -414,16 +428,17 @@ public class HttpRemoteTaskRunnerTest
     Future<TaskStatus> future2 = taskRunner.run(task2);
     Future<TaskStatus> future3 = taskRunner.run(task3);
 
-    Assert.assertTrue(future2.get().isSuccess());
-    Assert.assertTrue(future3.get().isSuccess());
+    Assertions.assertTrue(future2.get().isSuccess());
+    Assertions.assertTrue(future3.get().isSuccess());
 
-    Assert.assertEquals(task1.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
+    Assertions.assertEquals(task1.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
   }
 
   /*
   Simulates restart of the Overlord where taskRunner, on start, discovers workers with prexisting tasks.
    */
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testTaskRunnerRestart() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -443,9 +458,15 @@ public class HttpRemoteTaskRunnerTest
     TaskStorage taskStorageMock = EasyMock.createStrictMock(TaskStorage.class);
     EasyMock.expect(taskStorageMock.getStatus(task1.getId())).andReturn(Optional.absent());
     EasyMock.expect(taskStorageMock.getStatus(task2.getId())).andReturn(Optional.absent()).times(2);
+
     EasyMock.expect(taskStorageMock.getStatus(task3.getId())).andReturn(Optional.of(TaskStatus.running(task3.getId())));
+    EasyMock.expect(taskStorageMock.getTask(task3.getId())).andReturn(Optional.of(task3));
+
     EasyMock.expect(taskStorageMock.getStatus(task4.getId())).andReturn(Optional.of(TaskStatus.running(task4.getId())));
+    EasyMock.expect(taskStorageMock.getTask(task4.getId())).andReturn(Optional.of(task4));
+
     EasyMock.expect(taskStorageMock.getStatus(task5.getId())).andReturn(Optional.of(TaskStatus.success(task5.getId())));
+
     EasyMock.replay(taskStorageMock);
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
@@ -566,19 +587,20 @@ public class HttpRemoteTaskRunnerTest
 
     EasyMock.verify(taskStorageMock);
 
-    Assert.assertEquals(ImmutableSet.of(task2.getId(), task5.getId()), taskShutdowns);
-    Assert.assertTrue(taskRunner.getPendingTasks().isEmpty());
+    Assertions.assertEquals(ImmutableSet.of(task2.getId(), task5.getId()), taskShutdowns);
+    Assertions.assertTrue(taskRunner.getPendingTasks().isEmpty());
 
     TaskRunnerWorkItem item = Iterables.getOnlyElement(taskRunner.getRunningTasks());
-    Assert.assertEquals(task4.getId(), item.getTaskId());
+    Assertions.assertEquals(task4.getId(), item.getTaskId());
 
-    Assert.assertTrue(taskRunner.run(task3).get().isSuccess());
+    Assertions.assertTrue(taskRunner.run(task3).get().isSuccess());
 
-    Assert.assertEquals(2, taskRunner.getKnownTasks().size());
+    Assertions.assertEquals(2, taskRunner.getKnownTasks().size());
 
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testWorkerDisapperAndReappearBeforeItsCleanup() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -748,11 +770,12 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    Assert.assertTrue(future1.get().isSuccess());
-    Assert.assertTrue(future2.get().isSuccess());
+    Assertions.assertTrue(future1.get().isSuccess());
+    Assertions.assertTrue(future2.get().isSuccess());
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testWorkerDisapperAndReappearAfterItsCleanup() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -883,16 +906,16 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    Assert.assertTrue(future1.get().isFailure());
-    Assert.assertTrue(future2.get().isFailure());
-    Assert.assertNotNull(future1.get().getErrorMsg());
-    Assert.assertNotNull(future2.get().getErrorMsg());
-    Assert.assertTrue(
+    Assertions.assertTrue(future1.get().isFailure());
+    Assertions.assertTrue(future2.get().isFailure());
+    Assertions.assertNotNull(future1.get().getErrorMsg());
+    Assertions.assertNotNull(future2.get().getErrorMsg());
+    Assertions.assertTrue(
         future1.get().getErrorMsg().startsWith(
             "The worker that this task was assigned disappeared and did not report cleanup within timeout"
         )
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         future2.get().getErrorMsg().startsWith(
             "The worker that this task was assigned disappeared and did not report cleanup within timeout"
         )
@@ -939,12 +962,13 @@ public class HttpRemoteTaskRunnerTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(ImmutableSet.of(task2.getId()), actualShutdowns);
-    Assert.assertTrue(taskRunner.run(task1).get().isFailure());
-    Assert.assertTrue(taskRunner.run(task2).get().isFailure());
+    Assertions.assertEquals(ImmutableSet.of(task2.getId()), actualShutdowns);
+    Assertions.assertTrue(taskRunner.run(task1).get().isFailure());
+    Assertions.assertTrue(taskRunner.run(task2).get().isFailure());
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testMarkWorkersLazy() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -1006,9 +1030,9 @@ public class HttpRemoteTaskRunnerTest
 
     taskRunner.start();
 
-    Assert.assertTrue(taskRunner.getTotalTaskSlotCount().isEmpty());
-    Assert.assertTrue(taskRunner.getIdleTaskSlotCount().isEmpty());
-    Assert.assertTrue(taskRunner.getUsedTaskSlotCount().isEmpty());
+    Assertions.assertTrue(taskRunner.getTotalTaskSlotCount().isEmpty());
+    Assertions.assertTrue(taskRunner.getIdleTaskSlotCount().isEmpty());
+    Assertions.assertTrue(taskRunner.getUsedTaskSlotCount().isEmpty());
 
     AtomicInteger ticks = new AtomicInteger();
 
@@ -1052,9 +1076,9 @@ public class HttpRemoteTaskRunnerTest
 
     druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1));
 
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
 
     taskRunner.run(task1);
 
@@ -1062,9 +1086,9 @@ public class HttpRemoteTaskRunnerTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
 
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
         new DruidNode("service", "host2", false, 8080, null, true, false),
@@ -1094,12 +1118,12 @@ public class HttpRemoteTaskRunnerTest
 
     druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode2));
 
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
-    Assert.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(additionalWorkerCategory).longValue());
-    Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
 
     taskRunner.run(task2);
 
@@ -1107,12 +1131,12 @@ public class HttpRemoteTaskRunnerTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
-    Assert.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
-    Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
+    Assertions.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
 
     DiscoveryDruidNode druidNode3 = new DiscoveryDruidNode(
         new DruidNode("service", "host3", false, 8080, null, true, false),
@@ -1142,52 +1166,54 @@ public class HttpRemoteTaskRunnerTest
 
     druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode3));
 
-    Assert.assertEquals(2, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
-    Assert.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
-    Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
-    Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
-    Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(additionalWorkerCategory));
+    Assertions.assertEquals(2, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
+    Assertions.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
+    Assertions.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(additionalWorkerCategory));
 
-    Assert.assertEquals(task1.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
-    Assert.assertEquals(task2.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
+    Assertions.assertEquals(task1.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
+    Assertions.assertEquals(task2.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.emptyList(),
         taskRunner.markWorkersLazy(Predicates.alwaysTrue(), 0)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "host3:8080",
         Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), 1))
                  .getHost()
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "host3:8080",
         Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), Integer.MAX_VALUE))
                  .getHost()
     );
 
-    Assert.assertEquals(2, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
-    Assert.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
-    Assert.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
-    Assert.assertEquals(1, taskRunner.getLazyTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
-    Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(additionalWorkerCategory));
+    Assertions.assertEquals(2, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertEquals(0, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertFalse(taskRunner.getIdleTaskSlotCount().containsKey(additionalWorkerCategory));
+    Assertions.assertEquals(1, taskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertEquals(0, taskRunner.getUsedTaskSlotCount().get(additionalWorkerCategory).longValue());
+    Assertions.assertEquals(1, taskRunner.getLazyTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assertions.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(additionalWorkerCategory));
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testStreamTaskReportsFromWorker() throws Exception
   {
     assertStreamTaskReportsFromWorker(HttpResponseStatus.OK, Optional.of("my report!"));
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testStreamTaskReportsUnavailableFromWorker() throws Exception
   {
     assertStreamTaskReportsFromWorker(HttpResponseStatus.SERVICE_UNAVAILABLE, Optional.absent());
@@ -1214,7 +1240,7 @@ public class HttpRemoteTaskRunnerTest
     EasyMock.replay(workerHolder);
 
     Future<TaskStatus> future = taskRunner.run(task);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
 
     // RUNNING notification from worker
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -1222,7 +1248,7 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.running(task.getId()),
         TaskLocation.create("worker", 1000, 1001)
     ), workerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
 
     // Another RUNNING notification from worker, notifying change in location
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -1230,7 +1256,7 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.running(task.getId()),
         TaskLocation.create("worker", 1, 2)
     ), workerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
 
     // Redundant RUNNING notification from worker, ignored
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -1238,7 +1264,7 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.running(task.getId()),
         TaskLocation.create("worker", 1, 2)
     ), workerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
 
     // Another "rogue-worker" reports running it, and gets asked to shutdown the task
     WorkerHolder rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
@@ -1252,7 +1278,7 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.running(task.getId()),
         TaskLocation.create("rogue-worker", 1, 2)
     ), rogueWorkerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
     EasyMock.verify(rogueWorkerHolder);
 
     // "rogue-worker" reports FAILURE for the task, ignored
@@ -1266,7 +1292,7 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.failure(task.getId(), "Dummy task status failure err message"),
         TaskLocation.create("rogue-worker", 1, 2)
     ), rogueWorkerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
     EasyMock.verify(rogueWorkerHolder);
 
     // workers sends SUCCESS notification, task is marked SUCCESS now.
@@ -1275,8 +1301,8 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.success(task.getId()),
         TaskLocation.create("worker", 1, 2)
     ), workerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     // "rogue-worker" reports running it, and gets asked to shutdown the task
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
@@ -1290,7 +1316,7 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.running(task.getId()),
         TaskLocation.create("rogue-worker", 1, 2)
     ), rogueWorkerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
     EasyMock.verify(rogueWorkerHolder);
 
     // "rogue-worker" reports FAILURE for the tasks, ignored
@@ -1304,14 +1330,14 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.failure(task.getId(), "Dummy task status failure for testing"),
         TaskLocation.create("rogue-worker", 1, 2)
     ), rogueWorkerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
     EasyMock.verify(rogueWorkerHolder);
 
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     EasyMock.verify(workerHolder);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         listenerNotificationsAccumulator,
         ImmutableList.of(
             ImmutableList.of(task.getId(), TaskLocation.create("worker", 1000, 1001)),
@@ -1345,20 +1371,20 @@ public class HttpRemoteTaskRunnerTest
     EasyMock.replay(workerHolder);
 
     Future<TaskStatus> future = taskRunner.run(task);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
 
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
         task,
         TaskStatus.success(task.getId()),
         TaskLocation.create("worker", 1, 2)
     ), workerHolder);
-    Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
 
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     EasyMock.verify(workerHolder);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         listenerNotificationsAccumulator,
         ImmutableList.of(
             ImmutableList.of(task.getId(), TaskLocation.create("worker", 1, 2)),
@@ -1383,7 +1409,9 @@ public class HttpRemoteTaskRunnerTest
 
     TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
     EasyMock.expect(taskStorage.getStatus(task1.getId())).andReturn(Optional.of(TaskStatus.running(task1.getId())));
+    EasyMock.expect(taskStorage.getTask(task1.getId())).andReturn(Optional.of(task1));
     EasyMock.expect(taskStorage.getStatus(task2.getId())).andReturn(Optional.of(TaskStatus.running(task2.getId())));
+    EasyMock.expect(taskStorage.getTask(task2.getId())).andReturn(Optional.of(task2));
     EasyMock.expect(taskStorage.getStatus(task3.getId())).andReturn(Optional.of(TaskStatus.success(task3.getId())));
     EasyMock.expect(taskStorage.getStatus(task4.getId())).andReturn(Optional.of(TaskStatus.success(task4.getId())));
     EasyMock.expect(taskStorage.getStatus(task5.getId())).andReturn(Optional.absent());
@@ -1405,7 +1433,7 @@ public class HttpRemoteTaskRunnerTest
     workerHolder.shutdownTask(task5.getId());
     EasyMock.replay(workerHolder);
 
-    Assert.assertEquals(0, taskRunner.getKnownTasks().size());
+    Assertions.assertEquals(0, taskRunner.getKnownTasks().size());
 
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
         task1,
@@ -1445,7 +1473,7 @@ public class HttpRemoteTaskRunnerTest
 
     EasyMock.verify(workerHolder, taskStorage);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         listenerNotificationsAccumulator,
         ImmutableList.of(
             ImmutableList.of(task1.getId(), TaskLocation.create("worker", 1, 2)),
@@ -1453,6 +1481,54 @@ public class HttpRemoteTaskRunnerTest
             ImmutableList.of(task2.getId(), TaskStatus.success(task2.getId()))
         )
     );
+  }
+
+  @Test
+  public void test_taskAddedOrUpdated_taskNotFoundInStorage_raisesAlert_andShutsDownTask()
+  {
+    final Task task = NoopTask.create();
+
+    // Setup storage to return a task status but not the task payload
+    final TaskStatus statusInStorage = TaskStatus.running(task.getId());
+
+    final TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
+    EasyMock.expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(statusInStorage));
+    EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.absent());
+    EasyMock.replay(taskStorage);
+
+    final HttpRemoteTaskRunner taskRunner =
+        createTaskRunnerForTestTaskAddedOrUpdated(taskStorage, new ArrayList<>());
+
+    // Expect worker to get shutdown notification
+    final Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY);
+    final WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    workerHolder.shutdownTask(task.getId());
+    EasyMock.replay(workerHolder);
+
+    Assertions.assertEquals(0, taskRunner.getKnownTasks().size());
+
+    // Send the announcement to the TaskRunner
+    final TaskAnnouncement announcement = TaskAnnouncement.create(
+        task,
+        TaskStatus.running(task.getId()),
+        TaskLocation.create("worker", 1, 2)
+    );
+    taskRunner.taskAddedOrUpdated(announcement, workerHolder);
+
+    // Verify that alert has been raised
+    final List<AlertEvent> alerts = emitter.getAlerts();
+    Assertions.assertEquals(1, alerts.size());
+    Assertions.assertEquals(
+        StringUtils.format(
+            "Could not fetch payload of task[%s] with status[%s]."
+            + " Ignoring notification[%s] from worker[%s].",
+            task.getId(), statusInStorage, announcement, worker.getHost()
+        ),
+        alerts.getFirst().getDescription()
+    );
+
+    EasyMock.verify(workerHolder, taskStorage);
   }
 
   @Test
@@ -1559,9 +1635,9 @@ public class HttpRemoteTaskRunnerTest
     druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1));
 
     Future<TaskStatus> future = taskRunner.run(NoopTask.create());
-    Assert.assertTrue(future.get().isFailure());
-    Assert.assertNotNull(future.get().getErrorMsg());
-    Assert.assertTrue(
+    Assertions.assertTrue(future.get().isFailure());
+    Assertions.assertNotNull(future.get().getErrorMsg());
+    Assertions.assertTrue(
         future.get().getErrorMsg().startsWith("The worker that this task is assigned did not start it in timeout")
     );
   }
@@ -1669,11 +1745,11 @@ public class HttpRemoteTaskRunnerTest
     druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1));
 
     Future<TaskStatus> future = taskRunner.run(NoopTask.create());
-    Assert.assertTrue(future.get().isFailure());
-    Assert.assertNotNull(future.get().getErrorMsg());
-    Assert.assertTrue(
-        StringUtils.format("Actual message is: %s", future.get().getErrorMsg()),
-        future.get().getErrorMsg().startsWith("Failed to assign this task")
+    Assertions.assertTrue(future.get().isFailure());
+    Assertions.assertNotNull(future.get().getErrorMsg());
+    Assertions.assertTrue(
+        future.get().getErrorMsg().startsWith("Failed to assign this task"),
+        StringUtils.format("Actual message is: %s", future.get().getErrorMsg())
     );
   }
 
@@ -1705,12 +1781,13 @@ public class HttpRemoteTaskRunnerTest
     taskRunner.run(pendingTask);
     // Pending task is not cleaned up immediately
     taskRunner.shutdown(pendingTask.getId(), "Forced shutdown");
-    Assert.assertTrue(taskRunner.getKnownTasks()
+    Assertions.assertTrue(taskRunner.getKnownTasks()
                                 .stream()
                                 .map(TaskRunnerWorkItem::getTaskId)
                                 .collect(Collectors.toSet())
                                 .contains(pendingTask.getId())
     );
+    Assertions.assertTrue(taskRunner.getPendingTasks().isEmpty());
 
     Task completedTask = NoopTask.create();
     taskRunner.run(completedTask);
@@ -1719,7 +1796,13 @@ public class HttpRemoteTaskRunnerTest
         TaskStatus.success(completedTask.getId()),
         TaskLocation.create("worker", 1, 2)
     ), workerHolder);
-    Assert.assertEquals(completedTask.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    Assertions.assertEquals(
+        ImmutableSet.of(pendingTask.getId(), completedTask.getId()),
+        taskRunner.getCompletedTasks()
+                  .stream()
+                  .map(TaskRunnerWorkItem::getTaskId)
+                  .collect(Collectors.toSet())
+    );
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
@@ -1729,7 +1812,7 @@ public class HttpRemoteTaskRunnerTest
 
     // Completed tasks are cleaned up when shutdown is invokded on them (by TaskQueue)
     taskRunner.shutdown(completedTask.getId(), "Cleanup");
-    Assert.assertFalse(taskRunner.getKnownTasks()
+    Assertions.assertFalse(taskRunner.getKnownTasks()
                                 .stream()
                                 .map(TaskRunnerWorkItem::getTaskId)
                                 .collect(Collectors.toSet())
@@ -1738,7 +1821,134 @@ public class HttpRemoteTaskRunnerTest
 
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
+  public void testShutdownPendingTaskIsNotAssignedToWorker() throws Exception
+  {
+    final TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery)
+            .times(2);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    final HttpRemoteTaskRunner taskRunner = newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        new NoopProvisioningStrategy<>()
+    );
+    taskRunner.start();
+    try {
+      // No workers yet, so the task stays pending
+      final Task killedTask = NoopTask.create();
+      final Future<TaskStatus> killedTaskFuture = taskRunner.run(killedTask);
+      taskRunner.shutdown(killedTask.getId(), "Killed while pending");
+
+      final Task otherTask = NoopTask.create();
+      final Future<TaskStatus> otherTaskFuture = taskRunner.run(otherTask);
+
+      druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(
+          new DiscoveryDruidNode(
+              new DruidNode("service", "host1", false, 8080, null, true, false),
+              NodeRole.MIDDLE_MANAGER,
+              ImmutableMap.of(
+                  WorkerNodeService.DISCOVERY_SERVICE_KEY,
+                  new WorkerNodeService("ip1", 1, "0", WorkerConfig.DEFAULT_CATEGORY)
+              )
+          )
+      ));
+
+      Assertions.assertTrue(otherTaskFuture.get().isSuccess());
+      final TaskStatus killedTaskStatus = killedTaskFuture.get();
+      Assertions.assertEquals(TaskState.FAILED, killedTaskStatus.getStatusCode());
+      Assertions.assertEquals("Killed while pending", killedTaskStatus.getErrorMsg());
+    }
+    finally {
+      taskRunner.stop();
+    }
+  }
+
+  @Timeout(60)
+  @Test
+  public void testShutdownTaskBeingAssignedLeavesItToAssigningThread() throws Exception
+  {
+    final TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery)
+            .times(2);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    final Task task = NoopTask.create();
+    final CountDownLatch assignmentStarted = new CountDownLatch(1);
+    final CountDownLatch assignmentAllowed = new CountDownLatch(1);
+    // The test worker looks the task up here while assigning it, so this holds the task in PENDING_WORKER_ASSIGN
+    final Map<Task, List<TaskAnnouncement>> toBeAssignedTasks = new ForwardingMap<Task, List<TaskAnnouncement>>()
+    {
+      @Override
+      protected Map<Task, List<TaskAnnouncement>> delegate()
+      {
+        return ImmutableMap.of(
+            task,
+            ImmutableList.of(TaskAnnouncement.create(task, TaskStatus.running(task.getId()), TaskLocation.unknown()))
+        );
+      }
+
+      @Override
+      public boolean containsKey(Object key)
+      {
+        assignmentStarted.countDown();
+        try {
+          assignmentAllowed.await();
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        return super.containsKey(key);
+      }
+    };
+
+    final HttpRemoteTaskRunner taskRunner = newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        new NoopProvisioningStrategy<>(),
+        EasyMock.createNiceMock(HttpClient.class),
+        toBeAssignedTasks
+    );
+    taskRunner.start();
+    try {
+      druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(
+          new DiscoveryDruidNode(
+              new DruidNode("service", "host1", false, 8080, null, true, false),
+              NodeRole.MIDDLE_MANAGER,
+              ImmutableMap.of(
+                  WorkerNodeService.DISCOVERY_SERVICE_KEY,
+                  new WorkerNodeService("ip1", 1, "0", WorkerConfig.DEFAULT_CATEGORY)
+              )
+          )
+      ));
+
+      final Future<TaskStatus> future = taskRunner.run(task);
+      assignmentStarted.await();
+      taskRunner.shutdown(task.getId(), "Killed while being assigned");
+
+      Assertions.assertFalse(future.isDone());
+      Assertions.assertFalse(taskRunner.getPendingTasksList().contains(task.getId()));
+
+      // The assignment goes through, so the next shutdown request finds the task RUNNING on the worker
+      assignmentAllowed.countDown();
+      while (taskRunner.getRunningTasks().isEmpty()) {
+        Thread.sleep(10);
+      }
+      Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
+      Assertions.assertFalse(future.isDone());
+    }
+    finally {
+      assignmentAllowed.countDown();
+      taskRunner.stop();
+    }
+  }
+
+  @Timeout(60)
+  @Test
   public void testSyncMonitoring_finiteIteration()
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -1777,9 +1987,9 @@ public class HttpRemoteTaskRunnerTest
     taskRunner.addWorker(createWorker("abc"));
     taskRunner.addWorker(createWorker("xyz"));
     taskRunner.addWorker(createWorker("lol"));
-    Assert.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
+    Assertions.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
     taskRunner.syncMonitoring();
-    Assert.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
+    Assertions.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
   }
 
   @Test
@@ -1801,7 +2011,7 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createMock(TaskStorage.class),
         new NoopServiceEmitter()
     );
-    Assert.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
+    Assertions.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
   }
 
   @Test
@@ -1823,7 +2033,7 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createMock(TaskStorage.class),
         new NoopServiceEmitter()
     );
-    Assert.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
+    Assertions.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
   }
 
   @Test
@@ -1846,7 +2056,7 @@ public class HttpRemoteTaskRunnerTest
         new NoopServiceEmitter()
     );
     // Default autoscaler has max workers of 0
-    Assert.assertEquals(0, taskRunner.getMaximumCapacityWithAutoscale());
+    Assertions.assertEquals(0, taskRunner.getMaximumCapacityWithAutoscale());
   }
 
   public static HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
@@ -1891,15 +2101,15 @@ public class HttpRemoteTaskRunnerTest
             }
 
             @Override
-            public void locationChanged(String taskId, TaskLocation newLocation)
+            public void locationChanged(Task task, TaskLocation newLocation)
             {
-              listenerNotificationsAccumulator.add(ImmutableList.of(taskId, newLocation));
+              listenerNotificationsAccumulator.add(ImmutableList.of(task.getId(), newLocation));
             }
 
             @Override
-            public void statusChanged(String taskId, TaskStatus status)
+            public void statusChanged(Task task, TaskStatus status)
             {
-              listenerNotificationsAccumulator.add(ImmutableList.of(taskId, status));
+              listenerNotificationsAccumulator.add(ImmutableList.of(task.getId(), status));
             }
           },
           Execs.directExecutor()
@@ -1991,7 +2201,7 @@ public class HttpRemoteTaskRunnerTest
       );
       taskRunner.run(task);
 
-      Assert.assertTrue(
+      Assertions.assertTrue(
           TestUtils.conditionValid(
               () ->
                   !taskRunner.getRunningTasks().isEmpty()
@@ -2003,13 +2213,13 @@ public class HttpRemoteTaskRunnerTest
 
       final Optional<InputStream> stream = taskRunner.streamTaskReports(task.getId());
       if (expectedReport.isPresent()) {
-        Assert.assertTrue(stream.isPresent());
-        Assert.assertEquals(expectedReport.get(), StringUtils.fromUtf8(ByteStreams.toByteArray(stream.get())));
+        Assertions.assertTrue(stream.isPresent());
+        Assertions.assertEquals(expectedReport.get(), StringUtils.fromUtf8(ByteStreams.toByteArray(stream.get())));
       } else {
-        Assert.assertEquals(Optional.absent(), stream);
+        Assertions.assertEquals(Optional.absent(), stream);
       }
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "http://host:1234/druid/worker/v1/chat/task%20id%20with%20spaces/liveReports",
           capturedRequest.getValue().getUrl().toString()
       );

@@ -40,9 +40,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
@@ -64,7 +64,7 @@ public class HllSketchAggregatorFactoryTest
 
   private TestHllSketchAggregatorFactory target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     target = new TestHllSketchAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, STRING_ENCODING, ROUND);
@@ -73,27 +73,27 @@ public class HllSketchAggregatorFactoryTest
   @Test
   public void testIsRound()
   {
-    Assert.assertEquals(ROUND, target.isRound());
+    Assertions.assertEquals(ROUND, target.isRound());
   }
 
   @Test
   public void testStringEncoding()
   {
-    Assert.assertEquals(STRING_ENCODING, target.getStringEncoding());
+    Assertions.assertEquals(STRING_ENCODING, target.getStringEncoding());
   }
 
   @Test
   public void testFinalizeComputationNull()
   {
-    Assert.assertEquals(0.0D, target.finalizeComputation(null));
+    Assertions.assertEquals(0.0D, target.finalizeComputation(null));
   }
 
   @Test
   public void testFinalizeComputationRound()
   {
     Object actual = target.finalizeComputation(getMockSketch());
-    Assert.assertTrue(actual instanceof Long);
-    Assert.assertEquals(3L, actual);
+    Assertions.assertTrue(actual instanceof Long);
+    Assertions.assertEquals(3L, actual);
   }
 
   private static HllSketch getMockSketch()
@@ -116,8 +116,8 @@ public class HllSketchAggregatorFactoryTest
         !ROUND
     );
     Object actual = t.finalizeComputation(getMockSketch());
-    Assert.assertTrue(actual instanceof Double);
-    Assert.assertEquals(ESTIMATE, actual);
+    Assertions.assertTrue(actual instanceof Double);
+    Assertions.assertEquals(ESTIMATE, actual);
   }
 
   @Test
@@ -129,13 +129,13 @@ public class HllSketchAggregatorFactoryTest
   @Test
   public void testEqualsOtherNull()
   {
-    Assert.assertNotEquals(target, null);
+    Assertions.assertNotEquals(target, null);
   }
 
   @Test
   public void testEqualsOtherDiffClass()
   {
-    Assert.assertNotEquals(target, NAME);
+    Assertions.assertNotEquals(target, NAME);
   }
 
   @Test
@@ -149,8 +149,8 @@ public class HllSketchAggregatorFactoryTest
         STRING_ENCODING,
         ROUND
     );
-    Assert.assertNotEquals(target, other);
-    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
+    Assertions.assertNotEquals(target, other);
+    Assertions.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -164,8 +164,8 @@ public class HllSketchAggregatorFactoryTest
         STRING_ENCODING,
         ROUND
     );
-    Assert.assertNotEquals(target, other);
-    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
+    Assertions.assertNotEquals(target, other);
+    Assertions.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -179,8 +179,8 @@ public class HllSketchAggregatorFactoryTest
         STRING_ENCODING,
         ROUND
     );
-    Assert.assertNotEquals(target, other);
-    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
+    Assertions.assertNotEquals(target, other);
+    Assertions.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -194,8 +194,8 @@ public class HllSketchAggregatorFactoryTest
         STRING_ENCODING,
         ROUND
     );
-    Assert.assertNotEquals(target, other);
-    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
+    Assertions.assertNotEquals(target, other);
+    Assertions.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -209,10 +209,10 @@ public class HllSketchAggregatorFactoryTest
         STRING_ENCODING,
         !ROUND
     );
-    Assert.assertNotEquals(target, other);
+    Assertions.assertNotEquals(target, other);
 
     // Rounding does not affect per-segment results, so it does not affect cache key
-    Assert.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
+    Assertions.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
   }
 
   @Test
@@ -226,8 +226,8 @@ public class HllSketchAggregatorFactoryTest
         STRING_ENCODING,
         ROUND
     );
-    Assert.assertEquals(target, other);
-    Assert.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
+    Assertions.assertEquals(target, other);
+    Assertions.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
   }
 
   @Test
@@ -261,9 +261,9 @@ public class HllSketchAggregatorFactoryTest
         false,
         false
     );
-    Assert.assertNotNull(other.substituteCombiningFactory(factory));
-    Assert.assertNotNull(factory.substituteCombiningFactory(other));
-    Assert.assertNull(factory.substituteCombiningFactory(incompatible));
+    Assertions.assertNotNull(other.substituteCombiningFactory(factory));
+    Assertions.assertNotNull(factory.substituteCombiningFactory(other));
+    Assertions.assertNull(factory.substituteCombiningFactory(incompatible));
   }
 
   @Test
@@ -281,7 +281,7 @@ public class HllSketchAggregatorFactoryTest
       }
 
       Pattern expectedPattern = testPatternForToString(field);
-      Assert.assertTrue("Missing \"" + field.getName() + "\"", expectedPattern.matcher(string).find());
+      Assertions.assertTrue(expectedPattern.matcher(string).find(), "Missing \"" + field.getName() + "\"");
     }
   }
 
@@ -360,7 +360,7 @@ public class HllSketchAggregatorFactoryTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

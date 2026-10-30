@@ -23,16 +23,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerStats;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,11 @@ import org.mockito.MockitoAnnotations;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class DartWorkerManagerTest
 {
@@ -124,7 +130,7 @@ public class DartWorkerManagerTest
     Assertions.assertTrue(workerManager.launchWorkersIfNeeded(0).isEmpty()); // Does nothing, less than WORKERS.size()
     Assertions.assertTrue(workerManager.launchWorkersIfNeeded(1).isEmpty()); // Does nothing, less than WORKERS.size()
     Assertions.assertTrue(workerManager.launchWorkersIfNeeded(2).isEmpty()); // Does nothing, equal to WORKERS.size()
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> workerManager.launchWorkersIfNeeded(3)
     );
@@ -199,5 +205,41 @@ public class DartWorkerManagerTest
 
     // Ensure the future from start() resolves.
     Assertions.assertNull(FutureUtils.getUnchecked(future, true));
+  }
+
+  @Test
+  public void test_concurrentStop_waitsForFirstStop() throws Exception
+  {
+    final SettableFuture<Void> stopFuture = SettableFuture.create();
+    final CountDownLatch stopRequested = new CountDownLatch(1);
+    Mockito.when(workerClient.stopWorker(WORKERS.get(0))).thenAnswer(invocation -> {
+      stopRequested.countDown();
+      return stopFuture;
+    });
+    Mockito.when(workerClient.stopWorker(WORKERS.get(1))).thenReturn(Futures.immediateFuture(null));
+
+    workerManager.start();
+    final ExecutorService stopExecutor = Execs.multiThreaded(2, "dart-worker-manager-stop-test-%s");
+
+    try {
+      final Future<?> firstStop = stopExecutor.submit(() -> workerManager.stop(true));
+      Assertions.assertTrue(stopRequested.await(10, TimeUnit.SECONDS));
+
+      final Future<?> concurrentStop = stopExecutor.submit(() -> workerManager.stop(true));
+      Assertions.assertThrows(
+          TimeoutException.class,
+          () -> concurrentStop.get(1, TimeUnit.SECONDS),
+          "Concurrent stop returned before the first stop completed"
+      );
+
+      stopFuture.set(null);
+      firstStop.get(10, TimeUnit.SECONDS);
+      concurrentStop.get(10, TimeUnit.SECONDS);
+    }
+    finally {
+      stopFuture.set(null);
+      stopExecutor.shutdownNow();
+      Assertions.assertTrue(stopExecutor.awaitTermination(10, TimeUnit.SECONDS));
+    }
   }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+@use '../../variables' as *;
 
 .table-clickable-cell {
   padding: $table-cell-v-padding $table-cell-h-padding;

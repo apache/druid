@@ -21,19 +21,22 @@ package org.apache.druid.msq.input;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.asyncresource.AsyncResource;
+import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * Implementation of {@link LoadableSegment} for segments adapted from non-regular sources such as inline data,
@@ -43,65 +46,76 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class AdaptedLoadableSegment implements LoadableSegment
 {
-  private final AtomicBoolean acquired = new AtomicBoolean(false);
-  private final SegmentDescriptor descriptor;
-  @Nullable
-  private final ChannelCounters inputCounters;
-  @Nullable
-  private final String description;
-  private final ListenableFuture<DataSegment> dataSegmentFuture;
-  private final AcquireSegmentAction acquireSegmentAction;
-
-  private AdaptedLoadableSegment(
+  /**
+   * Creates an AdaptedLoadableSegment wrapper around a Segment object which is not a regular Druid segment,
+   * has no associated {@link DataSegment}, and whose lifecycle is not managed by the LoadableSegment instance.
+   *
+   * @param segment       the segment to wrap
+   * @param descriptor    descriptor containing the interval to use for filtering
+   * @param description   user-oriented description for error messages
+   * @param inputCounters counters for tracking input
+   */
+  public static AdaptedLoadableSegment fromUnmanagedSegment(
       final Segment segment,
       final SegmentDescriptor descriptor,
       @Nullable final String description,
       @Nullable final ChannelCounters inputCounters
   )
   {
+    // Pre-create the acquire result since the segment is already available. The segment's lifecycle is unmanaged so
+    // close is a no-op on the wrapped segment.
+    final AcquireSegmentResult acquireSegmentResult =
+        AcquireSegmentResult.of(ReferenceCountedSegmentProvider.unmanaged(segment));
+
+    final AsyncResource<AcquireSegmentResult> resource = AsyncResources.unmanaged(acquireSegmentResult);
+    return new AdaptedLoadableSegment(
+        () -> resource,
+        descriptor,
+        description,
+        inputCounters
+    );
+  }
+
+  private final AtomicBoolean acquired = new AtomicBoolean(false);
+  private final Supplier<AsyncResource<AcquireSegmentResult>> asyncSegmentSupplier;
+  private final SegmentDescriptor descriptor;
+  @Nullable
+  private final String description;
+
+  @Nullable
+  private final ChannelCounters inputCounters;
+
+  /**
+   * Creates a wrapper around a supplier of an {@link AcquireSegmentResult}. The lifecycle of the supplied
+   * {@link AsyncResource} is folded into the {@link AcquireSegmentAction} returned from {@link #acquire}: closing
+   * the delivered segment (or the un-released action) closes the resource, releasing whatever it owns.
+   *
+   * @param asyncSegmentSupplier the supplier to wrap. The supplied resource's result must contain a segment that is a
+   *                             {@link ReferenceCountedSegmentProvider.LeafReference} so the resource's close can be
+   *                             folded into the segment's close.
+   * @param descriptor           descriptor containing the interval to use for filtering
+   * @param description          user-oriented description for error messages
+   * @param inputCounters        counters for tracking input, updated at delivery via {@link #countDelivered}.
+   */
+  public AdaptedLoadableSegment(
+      final Supplier<AsyncResource<AcquireSegmentResult>> asyncSegmentSupplier,
+      final SegmentDescriptor descriptor,
+      @Nullable final String description,
+      @Nullable final ChannelCounters inputCounters
+  )
+  {
+    this.asyncSegmentSupplier = asyncSegmentSupplier;
     this.descriptor = descriptor;
     this.description = description;
     this.inputCounters = inputCounters;
-
-    // These segments don't have an associated DataSegment
-    this.dataSegmentFuture = Futures.immediateFailedFuture(
-        DruidException.defensive("DataSegment not available for adapted segments")
-    );
-
-    // Pre-create the acquire action since the segment is already available
-    final ListenableFuture<AcquireSegmentResult> segmentFuture =
-        Futures.immediateFuture(AcquireSegmentResult.cached(ReferenceCountedSegmentProvider.of(segment)));
-    this.acquireSegmentAction = new AcquireSegmentAction(() -> segmentFuture, null);
-  }
-
-  /**
-   * Creates an AdaptedLoadableSegment wrapper around a Segment object which is not a regular Druid segment,
-   * has no associated {@link DataSegment}, and whose lifecycle is not managed by the LoadableSegment instance.
-   *
-   * @param segment         the segment to wrap
-   * @param queryInterval   the query interval to use for filtering
-   * @param description     user-oriented description for error messages
-   * @param channelCounters counters for tracking input
-   */
-  public static AdaptedLoadableSegment create(
-      final Segment segment,
-      final Interval queryInterval,
-      @Nullable final String description,
-      @Nullable final ChannelCounters channelCounters
-  )
-  {
-    return new AdaptedLoadableSegment(
-        segment,
-        new SegmentDescriptor(queryInterval, "0", 0),
-        description,
-        channelCounters
-    );
   }
 
   @Override
   public ListenableFuture<DataSegment> dataSegmentFuture()
   {
-    return dataSegmentFuture;
+    return Futures.immediateFailedFuture(
+        DruidException.defensive("DataSegment not available for adapted segments")
+    );
   }
 
   @Override
@@ -112,33 +126,54 @@ public class AdaptedLoadableSegment implements LoadableSegment
 
   @Override
   @Nullable
-  public ChannelCounters inputCounters()
-  {
-    return inputCounters;
-  }
-
-  @Override
-  @Nullable
   public String description()
   {
     return description;
   }
 
   /**
-   * Adapted segments are not managed by SegmentManager, so they are never cached.
+   * Adapted segments are not managed by SegmentManager, so they are never cached. The {@code acquireMode} is ignored:
+   * an adapted segment is produced by its own async supplier, not the cache manager's full-vs-partial machinery.
    */
   @Override
-  public Optional<Segment> acquireIfCached()
+  public Optional<Segment> acquireIfCached(AcquireMode acquireMode)
   {
     return Optional.empty();
   }
 
+  /**
+   * The {@code acquireMode} is ignored: an adapted segment is produced by its own async supplier, not the cache
+   * manager's full-vs-partial machinery.
+   */
   @Override
-  public AcquireSegmentAction acquire()
+  public AcquireSegmentAction acquire(AcquireMode acquireMode)
   {
     if (!acquired.compareAndSet(false, true)) {
       throw DruidException.defensive("Segment with descriptor[%s] is already acquired", descriptor);
     }
-    return acquireSegmentAction;
+
+    // The supplier starts the underlying work (e.g. VSF file fetches); fromResource folds the resource's lifecycle
+    // into the delivered segment's close (and cancels it if the action is closed before readiness).
+    final AcquireSegmentAction action = AcquireSegmentHandles.fromResource(asyncSegmentSupplier.get());
+    action.setOnRelease(this::countDelivered);
+    return action;
+  }
+
+  /**
+   * Counter accounting for a delivered acquire, installed on the returned action via
+   * {@link AcquireSegmentAction#setOnRelease} so it runs exactly once, inside a successful
+   * {@link AcquireSegmentAction#release()}.
+   */
+  private void countDelivered(AcquireSegmentResult result)
+  {
+    if (inputCounters == null) {
+      return;
+    }
+    inputCounters.addLoad(result);
+    final int rowCount = result.getSegment().map(LoadableSegmentUtils::getSegmentRowCount).orElse(0);
+    // Use byteCount = 0 for adapted segments; we can't really tell what it is from the AcquireSegmentResult
+    // (the "load size" may not be the entire size if the segment was fully or partially cached). Implementations will
+    // call ChannelCounters#incrementBytes if they have something useful to put there.
+    inputCounters.addFile(rowCount, 0);
   }
 }

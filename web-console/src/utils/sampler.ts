@@ -37,6 +37,7 @@ import {
   getDimensionNamesFromTransforms,
   getDimensionSpecName,
   getFlattenSpec,
+  getPossibleSystemFieldsForInputSource,
   getSpecType,
   getTimestampSchema,
   isDruidSource,
@@ -221,6 +222,7 @@ function makeSamplerIoConfig(
   if (ioConfig.inputFormat) {
     ioConfig = deepSet(ioConfig, 'inputFormat.keepNullColumns', true);
   }
+
   return ioConfig;
 }
 
@@ -280,9 +282,17 @@ export async function sampleForConnect(
       samplerType === 'kafka'
         ? KAFKA_SAMPLE_INPUT_FORMAT
         : samplerType === 'kinesis'
-        ? KINESIS_SAMPLE_INPUT_FORMAT
-        : WHOLE_ROW_INPUT_FORMAT,
+          ? KINESIS_SAMPLE_INPUT_FORMAT
+          : WHOLE_ROW_INPUT_FORMAT,
     );
+  }
+
+  const addFileUri = Boolean(
+    ioConfig.inputSource &&
+    getPossibleSystemFieldsForInputSource(ioConfig.inputSource).includes('__file_uri'),
+  );
+  if (addFileUri) {
+    ioConfig = deepSet(ioConfig, 'inputSource.systemFields', ['__file_uri']);
   }
 
   const reingestMode = isDruidSource(spec);
@@ -294,7 +304,12 @@ export async function sampleForConnect(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
-        dimensionsSpec: { useSchemaDiscovery: true },
+        dimensionsSpec: reingestMode
+          ? {}
+          : {
+              useSchemaDiscovery: true,
+              dimensions: addFileUri ? ['__file_uri'] : undefined,
+            },
         granularitySpec: {
           rollup: false,
         },
@@ -612,8 +627,7 @@ export async function sampleForSchema(
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
-  const transformSpec: TransformSpec =
-    deepGet(spec, 'spec.dataSchema.transformSpec') || ({} as TransformSpec);
+  const transformSpec: TransformSpec = deepGet(spec, 'spec.dataSchema.transformSpec') || {};
   const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec');
   const metricsSpec: MetricSpec[] = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
   const queryGranularity: string =
@@ -697,7 +711,7 @@ export function changeLookupInExpressionsSampling(druidExpression: string): stri
 
   // If we can not parse the expression as SQL then bash it with a regexp
   return druidExpression.replace(/lookup\s*\(([^)]+)\)/g, (_, argString: string) => {
-    const args = argString.trim().split(/\s*,\s*/);
+    const args = argString.split(',').map(arg => arg.trim());
     if (args.length < 2 || args.length > 3) return 'null';
     const concat = `concat(${args[1]},'[',${args[0]},'] -- This is a placeholder, lookups are not supported in sampling')`;
     const replaceMissingValueWith = args[2];

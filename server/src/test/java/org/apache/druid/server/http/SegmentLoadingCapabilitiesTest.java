@@ -22,8 +22,8 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SegmentLoadingCapabilitiesTest
 {
@@ -36,8 +36,8 @@ public class SegmentLoadingCapabilitiesTest
 
     SegmentLoadingCapabilities reread = jsonMapper.readValue(jsonMapper.writeValueAsString(capabilities), SegmentLoadingCapabilities.class);
 
-    Assert.assertEquals(capabilities.getNumLoadingThreads(), reread.getNumLoadingThreads());
-    Assert.assertEquals(capabilities.getNumTurboLoadingThreads(), reread.getNumTurboLoadingThreads());
+    Assertions.assertEquals(capabilities.getNumLoadingThreads(), reread.getNumLoadingThreads());
+    Assertions.assertEquals(capabilities.getNumTurboLoadingThreads(), reread.getNumTurboLoadingThreads());
   }
 
   @Test
@@ -46,8 +46,8 @@ public class SegmentLoadingCapabilitiesTest
     String json = "{\"numLoadingThreads\":3,\"numTurboLoadingThreads\":5}";
     SegmentLoadingCapabilities reread = jsonMapper.readValue(json, SegmentLoadingCapabilities.class);
 
-    Assert.assertEquals(3, reread.getNumLoadingThreads());
-    Assert.assertEquals(5, reread.getNumTurboLoadingThreads());
+    Assertions.assertEquals(3, reread.getNumLoadingThreads());
+    Assertions.assertEquals(5, reread.getNumTurboLoadingThreads());
   }
 
 }

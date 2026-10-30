@@ -26,15 +26,17 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class TimeChunkLockAcquireActionTest
 {
-  @Rule
+  @RegisterExtension
   public TaskActionTestKit actionTestKit = new TaskActionTestKit();
 
   private final ObjectMapper mapper = new DefaultObjectMapper();
@@ -50,9 +52,9 @@ public class TimeChunkLockAcquireActionTest
 
     final byte[] bytes = mapper.writeValueAsBytes(expected);
     final TimeChunkLockAcquireAction actual = mapper.readValue(bytes, TimeChunkLockAcquireAction.class);
-    Assert.assertEquals(expected.getType(), actual.getType());
-    Assert.assertEquals(expected.getInterval(), actual.getInterval());
-    Assert.assertEquals(expected.getTimeoutMs(), actual.getTimeoutMs());
+    Assertions.assertEquals(expected.getType(), actual.getType());
+    Assertions.assertEquals(expected.getInterval(), actual.getInterval());
+    Assertions.assertEquals(expected.getTimeoutMs(), actual.getTimeoutMs());
   }
 
   @Test
@@ -66,12 +68,13 @@ public class TimeChunkLockAcquireActionTest
         Intervals.of("2017-01-01/2017-01-02"),
         0
     );
-    Assert.assertEquals(expected.getType(), actual.getType());
-    Assert.assertEquals(expected.getInterval(), actual.getInterval());
-    Assert.assertEquals(expected.getTimeoutMs(), actual.getTimeoutMs());
+    Assertions.assertEquals(expected.getType(), actual.getType());
+    Assertions.assertEquals(expected.getInterval(), actual.getInterval());
+    Assertions.assertEquals(expected.getTimeoutMs(), actual.getTimeoutMs());
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testWithLockType()
   {
     final Task task = NoopTask.create();
@@ -83,10 +86,11 @@ public class TimeChunkLockAcquireActionTest
 
     actionTestKit.getTaskLockbox().add(task);
     final TaskLock lock = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertNotNull(lock);
+    Assertions.assertNotNull(lock);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testWithoutLockType()
   {
     final Task task = NoopTask.create();
@@ -98,6 +102,6 @@ public class TimeChunkLockAcquireActionTest
 
     actionTestKit.getTaskLockbox().add(task);
     final TaskLock lock = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertNotNull(lock);
+    Assertions.assertNotNull(lock);
   }
 }

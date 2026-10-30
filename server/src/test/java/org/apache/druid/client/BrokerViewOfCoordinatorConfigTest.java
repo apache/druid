@@ -20,14 +20,20 @@
 package org.apache.druid.client;
 
 import com.google.common.util.concurrent.Futures;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.query.CloneQueryMode;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class BrokerViewOfCoordinatorConfigTest
 {
@@ -37,7 +43,7 @@ public class BrokerViewOfCoordinatorConfigTest
   private CoordinatorDynamicConfig config;
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     config = CoordinatorDynamicConfig.builder()
@@ -53,6 +59,106 @@ public class BrokerViewOfCoordinatorConfigTest
   {
     target.start();
     Mockito.verify(coordinatorClient, Mockito.times(1)).getCoordinatorDynamicConfig();
-    Assert.assertEquals(config, target.getDynamicConfig());
+    Assertions.assertEquals(config, target.getDynamicConfig());
+  }
+
+  @Test
+  public void testExcludeClonesFiltersTargetCloneServers()
+  {
+    target.start();
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers = makeServers("host1", "host2", "host3");
+
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> result =
+        target.getQueryableServers(servers, CloneQueryMode.EXCLUDECLONES);
+
+    Set<String> hosts = extractHosts(result);
+    Assertions.assertFalse(hosts.contains("host1"), "target clone server host1 should be filtered");
+    Assertions.assertTrue(hosts.contains("host2"), "source clone server host2 should remain");
+    Assertions.assertTrue(hosts.contains("host3"), "non-clone server host3 should remain");
+  }
+
+  @Test
+  public void testPreferClonesFiltersSourceCloneServers()
+  {
+    target.start();
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers = makeServers("host1", "host2", "host3");
+
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> result =
+        target.getQueryableServers(servers, CloneQueryMode.PREFERCLONES);
+
+    Set<String> hosts = extractHosts(result);
+    Assertions.assertTrue(hosts.contains("host1"), "target clone server host1 should remain");
+    Assertions.assertFalse(hosts.contains("host2"), "source clone server host2 should be filtered");
+    Assertions.assertTrue(hosts.contains("host3"), "non-clone server host3 should remain");
+  }
+
+  @Test
+  public void testIncludeClonesReturnsAll()
+  {
+    target.start();
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers = makeServers("host1", "host2", "host3");
+
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> result =
+        target.getQueryableServers(servers, CloneQueryMode.INCLUDECLONES);
+
+    Assertions.assertSame(servers, result, "INCLUDECLONES should return the original map");
+  }
+
+  @Test
+  public void testConfigUpdateChangesFiltering()
+  {
+    target.start();
+
+    CoordinatorDynamicConfig newConfig = CoordinatorDynamicConfig.builder()
+                                                                 .withCloneServers(Map.of("host3", "host1"))
+                                                                 .build();
+    target.setDynamicConfig(newConfig);
+
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers = makeServers("host1", "host2", "host3");
+
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> result =
+        target.getQueryableServers(servers, CloneQueryMode.EXCLUDECLONES);
+
+    Set<String> hosts = extractHosts(result);
+    Assertions.assertFalse(hosts.contains("host3"), "new target clone host3 should be filtered");
+    Assertions.assertTrue(hosts.contains("host1"), "host1 is now source, should remain");
+    Assertions.assertTrue(hosts.contains("host2"), "host2 is unrelated, should remain");
+  }
+
+  /**
+   * Creates a priority-to-servers map with all servers at priority 0.
+   *
+   * @param hosts host names to create historical servers for
+   * @return map of priority to queryable server set, matching the structure used by
+   *         {@link BrokerViewOfCoordinatorConfig#getQueryableServers}
+   */
+  private static Int2ObjectRBTreeMap<Set<QueryableDruidServer>> makeServers(String... hosts)
+  {
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> map = new Int2ObjectRBTreeMap<>();
+    Set<QueryableDruidServer> serverSet = new HashSet<>();
+    for (String host : hosts) {
+      DruidServer druidServer = new DruidServer(host, host, null, 100, null, ServerType.HISTORICAL, "tier1", 0);
+      serverSet.add(new QueryableDruidServer(druidServer, Mockito.mock(QueryRunner.class)));
+    }
+    map.put(0, serverSet);
+    return map;
+  }
+
+  /**
+   * Flattens the priority-to-servers map into a set of host names for easy assertion.
+   *
+   * @param servers priority-to-servers map returned by {@link BrokerViewOfCoordinatorConfig#getQueryabl
+  eServers}
+   * @return set of host names across all priority levels
+   */
+  private static Set<String> extractHosts(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers)
+  {
+    Set<String> hosts = new HashSet<>();
+    for (Set<QueryableDruidServer> serverSet : servers.values()) {
+      for (QueryableDruidServer server : serverSet) {
+        hosts.add(server.getServer().getHost());
+      }
+    }
+    return hosts;
   }
 }

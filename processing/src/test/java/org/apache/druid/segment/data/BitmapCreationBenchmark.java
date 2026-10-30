@@ -19,20 +19,18 @@
 
 package org.apache.druid.segment.data;
 
-import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
-import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -43,13 +41,13 @@ import java.util.Random;
 /**
  *
  */
-@Ignore
-@RunWith(Parameterized.class)
-public class BitmapCreationBenchmark extends AbstractBenchmark
+@Disabled
+@ParameterizedClass
+@MethodSource("factoryClasses")
+public class BitmapCreationBenchmark
 {
   private static final Logger log = new Logger(BitmapCreationBenchmark.class);
 
-  @Parameterized.Parameters
   public static List<Class<? extends BitmapSerdeFactory>[]> factoryClasses()
   {
     return Arrays.asList(
@@ -77,7 +75,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   static Random random;
   static int[] randIndex = new int[NUM_BITS];
 
-  @AfterClass
+  @AfterAll
   public static void cleanupAfterClass()
   {
     List<Class<? extends BitmapSerdeFactory>[]> classes = factoryClasses();
@@ -86,7 +84,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass()
   {
     for (int i = 0; i < NUM_BITS; ++i) {
@@ -107,7 +105,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   byte[] baseBytes;
   ByteBuffer baseByteBuffer;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     baseMutableBitmap = factory.makeEmptyMutableBitmap();
@@ -118,9 +116,6 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
     baseBytes = baseImmutableBitmap.toBytes();
     baseByteBuffer = ByteBuffer.wrap(baseBytes);
   }
-
-
-  @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
   @Test
   public void testLinearAddition()
   {
@@ -128,10 +123,8 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
     for (int i = 0; i < NUM_BITS; ++i) {
       mutableBitmap.add(i);
     }
-    Assert.assertEquals(NUM_BITS, mutableBitmap.size());
+    Assertions.assertEquals(NUM_BITS, mutableBitmap.size());
   }
-
-  @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 10)
   @Test
   public void testRandomAddition()
   {
@@ -139,10 +132,8 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
     for (int i : randIndex) {
       mutableBitmap.add(i);
     }
-    Assert.assertEquals(NUM_BITS, mutableBitmap.size());
+    Assertions.assertEquals(NUM_BITS, mutableBitmap.size());
   }
-
-  @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
   @Test
   public void testLinearAdditionDescending()
   {
@@ -150,25 +141,19 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
     for (int i = NUM_BITS - 1; i >= 0; --i) {
       mutableBitmap.add(i);
     }
-    Assert.assertEquals(NUM_BITS, mutableBitmap.size());
+    Assertions.assertEquals(NUM_BITS, mutableBitmap.size());
   }
-
-
-  @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
   @Test
   public void testToImmutableByteArray()
   {
     ImmutableBitmap immutableBitmap = factory.makeImmutableBitmap(baseMutableBitmap);
-    Assert.assertArrayEquals(baseBytes, immutableBitmap.toBytes());
+    Assertions.assertArrayEquals(baseBytes, immutableBitmap.toBytes());
   }
-
-
-  @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
   @Test
   public void testFromImmutableByteArray()
   {
     ImmutableBitmap immutableBitmap = factory.mapImmutableBitmap(baseByteBuffer);
-    Assert.assertEquals(NUM_BITS, immutableBitmap.size());
+    Assertions.assertEquals(NUM_BITS, immutableBitmap.size());
   }
 
 }

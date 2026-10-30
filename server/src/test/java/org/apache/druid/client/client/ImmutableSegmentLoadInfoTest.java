@@ -21,7 +21,6 @@ package org.apache.druid.client.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
-import junit.framework.Assert;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
@@ -29,7 +28,8 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -58,7 +58,7 @@ public class ImmutableSegmentLoadInfoTest
         ImmutableSegmentLoadInfo.class
     );
 
-    Assert.assertEquals(segmentLoadInfo, serde);
+    Assertions.assertEquals(segmentLoadInfo, serde);
   }
 
 }

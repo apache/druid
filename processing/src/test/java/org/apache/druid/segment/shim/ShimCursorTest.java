@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.AutoTypeColumnSchema;
@@ -55,9 +55,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -81,7 +81,6 @@ public class ShimCursorTest
     ExpressionProcessing.initializeForTests();
   }
 
-  @Parameterized.Parameters
   public static Collection<Object> vectorSizes()
   {
     return List.of(1, 2, 4, 7, 512);
@@ -155,7 +154,8 @@ public class ShimCursorTest
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
                                                      .setQueryContext(
                                                          QueryContext.of(
-                                                             Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
+                                                             QueryContextParameters.VECTOR_SIZE,
+                                                             vectorSize
                                                          )
                                                      )
                                                      .build();
@@ -223,7 +223,8 @@ public class ShimCursorTest
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
                                                      .setQueryContext(
                                                          QueryContext.of(
-                                                             Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
+                                                             QueryContextParameters.VECTOR_SIZE,
+                                                             vectorSize
                                                          )
                                                      )
                                                      .build();
@@ -275,7 +276,8 @@ public class ShimCursorTest
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
                                                      .setQueryContext(
                                                          QueryContext.of(
-                                                             Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
+                                                             QueryContextParameters.VECTOR_SIZE,
+                                                             vectorSize
                                                          )
                                                      )
                                                      .build();
@@ -337,9 +339,7 @@ public class ShimCursorTest
     CursorBuildSpec cursorBuildSpec =
         CursorBuildSpec.builder()
                        .setQueryContext(
-                           QueryContext.of(
-                               Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
-                           )
+                           QueryContext.of(QueryContextParameters.VECTOR_SIZE, vectorSize)
                        )
                        .setVirtualColumns(VirtualColumns.create(
                                               new ExpressionVirtualColumn(
@@ -400,7 +400,9 @@ public class ShimCursorTest
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
     final CursorBuildSpec cursorBuildSpec =
         CursorBuildSpec.builder()
-                       .setQueryContext(QueryContext.of(Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)))
+                       .setQueryContext(
+                           QueryContext.of(QueryContextParameters.VECTOR_SIZE, vectorSize)
+                       )
                        .build();
     final CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
     assertTrue(cursorHolder.canVectorize());

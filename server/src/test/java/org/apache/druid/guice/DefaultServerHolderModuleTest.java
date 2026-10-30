@@ -27,8 +27,8 @@ import org.apache.druid.java.util.metrics.NoopTaskHolder;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
@@ -39,24 +39,24 @@ public class DefaultServerHolderModuleTest
   public void testModuleLoadedForNonPeonRoles()
   {
     final Injector injector = makeInjector(Set.of());
-    Assert.assertTrue(injector.getInstance(TaskHolder.class) instanceof NoopTaskHolder);
-    Assert.assertTrue(injector.getInstance(LoadSpecHolder.class) instanceof DefaultLoadSpecHolder);
+    Assertions.assertTrue(injector.getInstance(TaskHolder.class) instanceof NoopTaskHolder);
+    Assertions.assertTrue(injector.getInstance(LoadSpecHolder.class) instanceof DefaultLoadSpecHolder);
   }
 
   @Test
   public void testModuleExcludedForPeonRole()
   {
     final Injector injector = makeInjector(Set.of(NodeRole.PEON));
-    Assert.assertThrows(
-        "TaskHolder should not be bound for Peon servers",
+    Assertions.assertThrows(
         ConfigurationException.class,
-        () -> injector.getInstance(TaskHolder.class)
+        () -> injector.getInstance(TaskHolder.class),
+        "TaskHolder should not be bound for Peon servers"
     );
 
-    Assert.assertThrows(
-        "LoadSpecHolder should not be bound for Peon servers",
+    Assertions.assertThrows(
         ConfigurationException.class,
-        () -> injector.getInstance(LoadSpecHolder.class)
+        () -> injector.getInstance(LoadSpecHolder.class),
+        "LoadSpecHolder should not be bound for Peon servers"
     );
   }
 

@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.remote.TypedValue;
@@ -31,6 +30,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -45,16 +45,15 @@ import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -68,6 +67,7 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -88,11 +88,8 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -117,24 +114,24 @@ public class MSQSelectTest extends MSQTestBase
   public static final String QUERY_RESULTS_WITH_DEFAULT = "query_results_with_default_storage";
 
   public static final Map<String, Object> QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2)
+                  .put(QueryContextParameters.ROWS_PER_PAGE, 2)
                   .put(
-                      MultiStageQueryContext.CTX_SELECT_DESTINATION,
+                      QueryContextParameters.SELECT_DESTINATION,
                       StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
-                  .build();
+                  .toMap();
 
 
   public static final Map<String, Object> QUERY_RESULTS_WITH_DEFAULT_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
-                      MultiStageQueryContext.CTX_SELECT_DESTINATION,
+                      QueryContextParameters.SELECT_DESTINATION,
                       StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
-                  .build();
+                  .toMap();
 
   public static Collection<Object[]> data()
   {
@@ -747,7 +744,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {6} : new long[] {2, 2, 2}),
+                .with().rows(!QueryContext.of(context).has(QueryContextParameters.ROWS_PER_PAGE) ? new long[] {6} : new long[] {2, 2, 2}),
             1, 0, "shuffle"
         )
         .setExpectedResultRows(expectedResults)
@@ -806,7 +803,7 @@ public class MSQSelectTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testSelectRestricted(String contextName, Map<String, Object> context)
   {
-    boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
+    boolean isSuperUser = QueryContext.of(context).get(QueryContextParameters.USER).equals(CalciteTests.TEST_SUPERUSER_NAME);
     Policy policy = isSuperUser ? CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER : CalciteTests.POLICY_RESTRICTION;
     long expectedResultRows = isSuperUser ? 6L : 1L;
 
@@ -936,7 +933,7 @@ public class MSQSelectTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testJoinRestrictedWithLookup(String contextName, Map<String, Object> context)
   {
-    boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
+    boolean isSuperUser = QueryContext.of(context).get(QueryContextParameters.USER).equals(CalciteTests.TEST_SUPERUSER_NAME);
     Policy policy = isSuperUser ? CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER : CalciteTests.POLICY_RESTRICTION;
     ImmutableList<Object[]> expectedResult = isSuperUser ? ImmutableList.of(new Object[]{"xabc", 1L}) : ImmutableList.of();
 
@@ -1072,10 +1069,10 @@ public class MSQSelectTest extends MSQTestBase
   private void testJoin(String contextName, Map<String, Object> context, final JoinAlgorithm joinAlgorithm)
   {
     final Map<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(context)
-                    .put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString())
-                    .build();
+                    .putRaw(QueryContextParameters.SQL_JOIN_ALGORITHM.getName(), joinAlgorithm.toString())
+                    .toMap();
 
     final RowSignature resultSignature = RowSignature.builder()
                                                      .add("dim2", ColumnType.STRING)
@@ -1520,7 +1517,7 @@ public class MSQSelectTest extends MSQTestBase
   public void testExternSelectWithMultipleWorkers(String contextName, Map<String, Object> context) throws IOException
   {
     Map<String, Object> multipleWorkerContext = new HashMap<>(context);
-    multipleWorkerContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 3);
+    QueryContextParameters.MAX_NUM_TASKS.set(multipleWorkerContext, 3);
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
@@ -2059,7 +2056,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {4} : new long[] {2, 2}),
+                .with().rows(!QueryContext.of(context).has(QueryContextParameters.ROWS_PER_PAGE) ? new long[] {4} : new long[] {2, 2}),
             2, 0, "shuffle"
         )
         .setQueryContext(context)
@@ -2194,12 +2191,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select dim3, count(*) as cnt1 from foo group by dim3")
         .setQueryContext(localContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
+                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
             )
-        ))
+        )
         .verifyExecutionError();
   }
 
@@ -2377,13 +2373,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by dim3")
         .setQueryContext(localContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(
-                CoreMatchers.containsString(
-                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
+                "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false."
             )
-        ))
+        )
         .setExpectedMetricDimensions(
             Map.of(
                 DruidMetrics.DATASOURCE, "foo",
@@ -2401,11 +2395,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
         .setQueryContext(context)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."))
-        ))
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessageContains(
+                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."
+            )
+        )
         .verifyExecutionError();
   }
 
@@ -2539,7 +2533,7 @@ public class MSQSelectTest extends MSQTestBase
       result.add(new Object[]{1});
     }
 
-    Assert.assertTrue(result.size() > Limits.MAX_SELECT_RESULT_ROWS);
+    Assertions.assertTrue(result.size() > Limits.MAX_SELECT_RESULT_ROWS);
 
     testSelectQuery()
         .setSql(StringUtils.format(
@@ -2780,10 +2774,10 @@ public class MSQSelectTest extends MSQTestBase
                                                .add("dim2", ColumnType.STRING)
                                                .build();
 
-    ImmutableMap<String, Object> timeoutContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> timeoutContext = QueryContext.builder()
                                                               .putAll(context)
-                                                              .put(QueryContexts.TIMEOUT_KEY, 1) // Trigger timeout
-                                                              .build();
+                                                              .put(QueryContextParameters.TIMEOUT, 1L) // Trigger timeout
+                                                              .toMap();
 
     testSelectQuery()
         .setSql("select m1,dim2 from foo2")
@@ -2806,10 +2800,9 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setQueryContext(timeoutContext)
         .setExpectedMSQFault(CanceledFault.timeout())
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Query timed out"))
-        ))
+        .setExpectedExecutionErrorMatcher(
+            ThrowableMatcher.of(ISE.class).expectMessageContains("Query timed out")
+        )
         .verifyExecutionError();
   }
 
@@ -2913,6 +2906,54 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testUnionAllUsingUnionDataSourceWithFilteredArms(String contextName, Map<String, Object> context)
+  {
+    final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+
+    testSelectQuery()
+        .setSql("SELECT COUNT(*) FROM (\n"
+                + "SELECT dim1 FROM foo WHERE dim2 = 'a'\n"
+                + "UNION ALL\n"
+                + "SELECT dim1 FROM foo2 WHERE dim2 = 'en'\n"
+                + ")")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(
+                                       new UnionDataSource(
+                                           ImmutableList.of(
+                                               FilteredDataSource.create(
+                                                   new TableDataSource(CalciteTests.DATASOURCE1),
+                                                   equality("dim2", "a", ColumnType.STRING)
+                                               ),
+                                               FilteredDataSource.create(
+                                                   new TableDataSource(CalciteTests.DATASOURCE2),
+                                                   equality("dim2", "en", ColumnType.STRING)
+                                               )
+                                           )
+                                       )
+                                   )
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setGranularity(Granularities.ALL)
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{3L}))
+        .verifyResults();
+  }
+
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2941,10 +2982,10 @@ public class MSQSelectTest extends MSQTestBase
 
   private static Map<String, Object> enableMultiValueUnnesting(Map<String, Object> context, boolean value)
   {
-    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> localContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .put("groupByEnableMultiValueUnnesting", value)
-                                                   .build();
+                                                   .put(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING, value)
+                                                   .toMap();
     return localContext;
   }
 

@@ -23,7 +23,7 @@ title: "Test stats aggregators"
   -->
 
 
-The `druid-stats` extension for Apache Druid incorporates aggregators to compute test statistics, including z-scores and p-values.
+The `druid-stats` extension for Apache&circledR; Druid incorporates aggregators to compute test statistics, including z-scores and p-values.
 Please refer to [Democratizing Experimentation Data for Product Innovations](https://medium.com/paypal-tech/democratizing-experimentation-data-for-product-innovations-8b6e1cf40c27) for math background and details.
 
 Make sure to include `druid-stats` extension in order to use these aggregators.

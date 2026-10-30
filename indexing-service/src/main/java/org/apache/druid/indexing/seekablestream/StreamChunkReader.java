@@ -32,6 +32,7 @@ import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.Transformer;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -64,13 +65,14 @@ class StreamChunkReader<RecordType extends ByteEntity>
   )
   {
     InvalidInput.notNull(inputFormat, "inputFormat");
+    final Transformer transformer = transformSpec.toTransformer();
     this.byteEntityReader = new SettableByteEntityReader<>(
         inputFormat,
         inputRowSchema,
-        transformSpec,
+        transformer,
         indexingTmpDir
     );
-    this.rowFilter = rowFilter;
+    this.rowFilter = transformer.hasFilter() ? withTransformFilter(transformer, rowFilter) : rowFilter;
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;
   }
@@ -89,8 +91,42 @@ class StreamChunkReader<RecordType extends ByteEntity>
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
+  private static InputRowFilter withTransformFilter(final Transformer transformer, final InputRowFilter rowFilter)
+  {
+    final InputRowFilter transformFilter = row ->
+        transformer.rowMatchesFilter(row) ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.CUSTOM_FILTER;
+    return transformFilter.and(rowFilter);
+  }
+
   List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
   {
+    return parse(streamChunk, isEndOfShard, false);
+  }
+
+  /**
+   * Parses a stream chunk into input rows.
+   *
+   * @param streamChunk the raw records read from the stream
+   * @param isEndOfShard whether this record marks the end of a shard (Kinesis only)
+   * @param isFiltered   whether this record was dropped by pre-ingestion filtering (for example, Kafka header-based
+   *                     filtering) before parsing. When {@code true}, the record's payload bytes are still counted
+   *                     towards input bytes (they were read from the stream), the record is tracked under the
+   *                     dedicated {@link RowIngestionMeters#FILTERED} meter, and parsing is skipped entirely — avoiding
+   *                     the parse cost is the point of pre-ingestion filtering. The record still flows through so that
+   *                     stream offsets advance.
+   */
+  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard, boolean isFiltered)
+      throws IOException
+  {
+    if (isFiltered) {
+      if (streamChunk != null) {
+        for (RecordType valueBytes : streamChunk) {
+          rowIngestionMeters.incrementProcessedBytes(valueBytes.getBuffer().remaining());
+        }
+      }
+      rowIngestionMeters.incrementFiltered();
+      return Collections.emptyList();
+    }
     if (streamChunk == null || streamChunk.isEmpty()) {
       if (!isEndOfShard) {
         // We do not count end of shard record as thrown away event since this is a record created by Druid

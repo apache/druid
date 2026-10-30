@@ -72,6 +72,7 @@ public class ViewSqlEngine implements SqlEngine
       case WINDOW_LEAF_OPERATOR:
       case CAN_INSERT:
       case CAN_REPLACE:
+      case CAN_DDL:
         return false;
 
       // Simplify planning by sticking to basic query types.

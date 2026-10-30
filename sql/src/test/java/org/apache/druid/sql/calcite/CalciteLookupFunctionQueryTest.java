@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -36,6 +36,7 @@ import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -49,13 +50,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
@@ -64,25 +60,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-
 public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                  .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 1)
-                  .build();
+                  .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
+                  .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 1)
+                  .toMap();
 
   /**
    * For tests that use the lookup extraction function rather than expressions.
    */
   private static final Map<String, Object> QUERY_CONTEXT_WITH_EXTRACTION_FNS =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT)
-                  .put(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
-                  .build();
+                  .put(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true)
+                  .toMap();
 
   private static final String LOOKUP_EXPRESSION = "lookup(\"dim1\",'lookyloo')";
   private static final ExtractionFn EXTRACTION_FN =
@@ -213,12 +207,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     // One optimize call is needed for each "IN" value, because this expression is decomposed into a sequence of
     // [(LOOKUP(dim1, 'lookyloo') = 'xabc' AND dim1 = 'abc') OR ...]. They can't be collected and combined.
 
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 2)
-                    .build();
+                    .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 2)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql("CONCAT(LOOKUP(dim1, 'lookyloo'), ' (', dim1, ')') IN ('xa (a)', 'xabc (abc)')"),
@@ -252,12 +246,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     // One optimize call is needed for each "IN" value, because this expression is decomposed into a sequence of
     // [(LOOKUP(dim1, 'lookyloo') = 'xabc' AND dim1 = 'abc') OR ...]. They can't be collected and combined.
 
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 2)
-                    .build();
+                    .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 2)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql(
@@ -394,12 +388,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
 
     // Set inFunctionThreshold = 1 to cause the IN to be converted to SCALAR_IN_ARRAY.
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(QueryContexts.IN_FUNCTION_THRESHOLD, 1)
-                    .build();
+                    .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.IN_FUNCTION_THRESHOLD, 1)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent')"),
@@ -414,12 +408,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
 
     // Set sqlReverseLookupThreshold = 1 to stop the LOOKUP call from being reversed.
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(ReverseLookupRule.CTX_THRESHOLD, 1)
-                    .build();
+                    .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.SQL_REVERSE_LOOKUP_THRESHOLD, 1)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent')"),
@@ -437,12 +431,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
 
     // Set inSubQueryThreshold = 1 to stop the LOOKUP call from being reversed.
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY, 1)
-                    .build();
+                    .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.IN_SUB_QUERY_THRESHOLD, 1)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'xabc' OR LOOKUP(dim1, 'lookyloo') = 'x6'"),
@@ -518,9 +512,8 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             and(
-                not(equality("v0", "x6", ColumnType.STRING)),
-                not(equality("v0", "nonexistent", ColumnType.STRING)),
-                notNull("v0")
+                notNull("v0"),
+                not(in("v0", ImmutableList.of("nonexistent", "x6")))
             )
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -574,11 +567,8 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             or(
-                and(
-                    not(equality("v0", "x6", ColumnType.STRING)),
-                    not(equality("v0", "nonexistent", ColumnType.STRING))
-                ),
-                isNull("v0")
+                isNull("v0"),
+                not(in("v0", ImmutableList.of("nonexistent", "x6")))
             )
         ),
         ImmutableList.of(
@@ -617,7 +607,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
-            and(not(equality("v0", "x6", ColumnType.STRING)), not(equality("v0", "nonexistent", ColumnType.STRING)))
+            not(in("v0", ImmutableList.of("nonexistent", "x6")))
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
@@ -841,12 +831,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     // "(x = y) IS NOT TRUE", and ReverseLookupRule doesn't peek into the "IS NOT TRUE" calls nested beneatth
     // the "AND".
 
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 3)
-                    .build();
+                    .put(QueryContextParameters.SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContextParameters.MAX_OPTIMIZE_COUNT_FOR_DRUID_REVERSE_LOOKUP_RULE, 3)
+                    .toMap();
 
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS DISTINCT FROM 'xabc' AND "
@@ -1337,7 +1327,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
     // Test to verify that "maxUnapplyCountForDruidReverseLookupRule" works properly. This ensures that the *other*
     // tests are correctly validating that we aren't doing too many reverse lookups.
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'xabc' OR LOOKUP(dim2, 'lookyloo') = 'x6'"),
@@ -1347,10 +1337,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Too many optimize calls[2]"))
-    );
+    Assertions.assertTrue(e.getMessage().startsWith("Too many optimize calls[2]"));
   }
 
   @Test
@@ -1551,7 +1538,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(),
                 "true"
             )
         ),

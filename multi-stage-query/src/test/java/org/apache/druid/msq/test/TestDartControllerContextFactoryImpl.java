@@ -20,12 +20,18 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.discovery.DiscoveryDruidNode;
+import org.apache.druid.discovery.DruidNodeDiscovery;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
@@ -38,6 +44,7 @@ import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
+import org.apache.druid.msq.dart.worker.DartWorkerService;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MSQMetricEventBuilder;
@@ -52,10 +59,15 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
@@ -78,6 +90,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       final TimelineServerView serverView,
       @Dart final Set<InputSpecSlicerProvider> inputSpecSlicerProviders,
       final ServiceEmitter emitter,
+      final DruidNodeDiscoveryProvider discoveryProvider,
       @Dart Map<String, WorkerRunRef> workerMap
   )
   {
@@ -90,7 +103,8 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         memoryIntrospector,
         serverView,
         inputSpecSlicerProviders,
-        emitter
+        emitter,
+        discoveryProvider
     );
     this.workerMap = workerMap;
   }
@@ -107,7 +121,8 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         serverView,
         inputSpecSlicerProviders,
         emitter,
-        context
+        context,
+        advertiseAllHistoricals(serverView)
     )
     {
       @Override
@@ -129,6 +144,61 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         return true;
       }
     };
+  }
+
+  /**
+   * Builds a {@link DruidNodeDiscovery} that reports every {@link ServerType#HISTORICAL} in the server view as a
+   * Dart worker (advertising {@link DartWorkerService}). {@link DartControllerContext#queryKernelConfig} reads
+   * only {@link DruidNodeDiscovery#getAllNodes()}, so a no-op listener registration is sufficient.
+   */
+  private static DruidNodeDiscovery advertiseAllHistoricals(final TimelineServerView serverView)
+  {
+    final List<DiscoveryDruidNode> nodes =
+        serverView.getDruidServerMetadatas()
+                  .stream()
+                  .filter(server -> server.getType() == ServerType.HISTORICAL)
+                  .map(TestDartControllerContextFactoryImpl::historicalDartWorkerNode)
+                  .collect(Collectors.toList());
+
+    return new DruidNodeDiscovery()
+    {
+      @Override
+      public Collection<DiscoveryDruidNode> getAllNodes()
+      {
+        return nodes;
+      }
+
+      @Override
+      public void registerListener(Listener listener)
+      {
+        // Not used by queryKernelConfig.
+      }
+    };
+  }
+
+  /**
+   * A Historical {@link DiscoveryDruidNode} advertising {@link DartWorkerService}, whose
+   * {@link DruidNode#getHostAndPortToUse()} matches {@link DruidServerMetadata#getHost()}.
+   */
+  public static DiscoveryDruidNode historicalDartWorkerNode(final DruidServerMetadata server)
+  {
+    // Build a DruidNode whose getHostAndPortToUse() equals server.getHost() (the key queryKernelConfig matches on).
+    final boolean tls = server.getHostAndTlsPort() != null;
+    final HostAndPort hostAndPort = HostAndPort.fromString(server.getHost());
+    final DruidNode druidNode = new DruidNode(
+        "no",
+        hostAndPort.getHost(),
+        false,
+        tls ? -1 : hostAndPort.getPort(),
+        tls ? hostAndPort.getPort() : -1,
+        !tls,
+        tls
+    );
+    return new DiscoveryDruidNode(
+        druidNode,
+        NodeRole.HISTORICAL,
+        ImmutableMap.of(DartWorkerService.NAME, new DartWorkerService())
+    );
   }
 
   public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient

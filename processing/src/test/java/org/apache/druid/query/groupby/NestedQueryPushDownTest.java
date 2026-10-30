@@ -25,7 +25,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -47,6 +46,7 @@ import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -56,6 +56,7 @@ import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -78,10 +79,10 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -137,7 +138,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .build();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     closer = Closer.create();
@@ -248,9 +249,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     TestBufferPool mergePool2 = TestBufferPool.offHeap(10_000_000, 10);
     closer.register(() -> {
       // Verify that all objects have been returned to the pool.
-      Assert.assertEquals(0, bufferPool.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePool.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePool2.getOutstandingObjectCount());
+      Assertions.assertEquals(0, bufferPool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, mergePool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, mergePool2.getOutstandingObjectCount());
     });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
@@ -324,7 +325,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     closer.close();
@@ -369,11 +370,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(intervalSpec)
         .setDimensions(new DefaultDimensionSpec("dimB", "dimB"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("totalSum", "metASum"))
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .build();
 
@@ -393,9 +390,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         "totalSum", 6000L
     );
 
-    Assert.assertEquals(2, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
-    Assert.assertEquals(expectedRow1, results.get(1));
+    Assertions.assertEquals(2, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(expectedRow1, results.get(1));
   }
 
   @Test
@@ -424,11 +421,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(intervalSpec)
         .setDimensions(new DefaultDimensionSpec("newDimB", "renamedDimB"))
         .setAggregatorSpecs(new LongMaxAggregatorFactory("maxBSum", "metBSum"))
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .build();
 
@@ -447,9 +440,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         "renamedDimB", "sweet",
         "maxBSum", 60L
     );
-    Assert.assertEquals(2, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
-    Assert.assertEquals(expectedRow1, results.get(1));
+    Assertions.assertEquals(2, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(expectedRow1, results.get(1));
   }
 
   @Test
@@ -481,11 +474,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .setDataSource(query)
         .setDimensions(new DefaultDimensionSpec("dimA", "newDimA"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("finalSum", "metASum"))
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .setDimFilter(new JavaScriptDimFilter(
             "dimA",
@@ -499,7 +488,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(0, results.size());
+    Assertions.assertEquals(0, results.size());
   }
 
   @Test
@@ -525,11 +514,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .setDataSource(query)
         .setDimensions(new DefaultDimensionSpec("dimA", "newDimA"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("finalSum", "metASum"))
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .setDimFilter(new JavaScriptDimFilter(
             "dimA",
@@ -549,8 +534,8 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
   }
 
   @Test
@@ -582,11 +567,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .setDataSource(query)
         .setDimensions(new DefaultDimensionSpec("dimA", "newDimA"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("finalSum", "metASum"))
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(intervalSpec)
         .build();
@@ -600,8 +581,8 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
   }
 
   @Test
@@ -629,11 +610,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
                                                                                                      "replacement"
         )))
         .setAggregatorSpecs(new LongSumAggregatorFactory("finalSum", "metASum"))
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(intervalSpec)
         .build();
@@ -653,9 +630,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(2, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
-    Assert.assertEquals(expectedRow1, results.get(1));
+    Assertions.assertEquals(2, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(expectedRow1, results.get(1));
   }
 
   @Test
@@ -682,11 +659,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("dimB", "dimB"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("finalSum", "metBSum"))
         .setHavingSpec(new GreaterThanHavingSpec("finalSum", 70L))
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
-            )
-        )
+        .setContext(QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(intervalSpec)
         .build();
@@ -700,8 +673,8 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
   }
 
   private Sequence<ResultRow> runNestedQueryWithForcePushDown(GroupByQuery nestedQuery)
@@ -757,10 +730,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     );
     GroupingEngine groupingEngine = ((GroupByQueryRunnerFactory) groupByFactory).getGroupingEngine();
     // Historicals execute the query with force push down flag as false
-    GroupByQuery queryWithPushDownDisabled = pushDownQuery.withOverriddenContext(ImmutableMap.of(
-        GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY,
-        false
-    ));
+    GroupByQuery queryWithPushDownDisabled = pushDownQuery.withOverriddenContext(
+        QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, false)
+    );
     Sequence<ResultRow> pushDownQueryResults = groupingEngine.mergeResults(
         queryRunnerForSegments,
         (GroupByQuery) GroupByQueryRunnerTestHelper.populateResourceId(queryWithPushDownDisabled),
@@ -798,13 +770,13 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(intervalSpec)
         .setDimensions(new DefaultDimensionSpec("dimB", outputNameB))
         .setAggregatorSpecs(new LongSumAggregatorFactory(outputNameAgg, "metASum"))
-        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true))
+        .setContext(QueryContext.ofMap(QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .build();
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
     GroupByQuery rewrittenQuery = ((GroupByQueryQueryToolChest) toolChest).rewriteNestedQueryForPushDown(nestedQuery);
-    Assert.assertEquals(outputNameB, rewrittenQuery.getDimensions().get(0).getDimension());
-    Assert.assertEquals(outputNameAgg, rewrittenQuery.getAggregatorSpecs().get(0).getName());
+    Assertions.assertEquals(outputNameB, rewrittenQuery.getDimensions().get(0).getDimension());
+    Assertions.assertEquals(outputNameAgg, rewrittenQuery.getAggregatorSpecs().get(0).getName());
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(

@@ -29,7 +29,7 @@ import org.apache.druid.msq.logical.StageMaker;
 import org.apache.druid.msq.logical.stages.LogicalStage;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -113,7 +113,7 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
         null
     );
 
-    String dartQueryId = queryContext.getString(QueryContexts.CTX_DART_QUERY_ID);
+    final String dartQueryId = queryContext.get(QueryContextParameters.DART_QUERY_ID);
 
     QueryDefinition queryDef = new QueryKitBasedMSQPlanner(
         querySpec,

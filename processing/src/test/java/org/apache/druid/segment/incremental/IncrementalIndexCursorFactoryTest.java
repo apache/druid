@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -61,7 +62,7 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
-import org.apache.druid.segment.CloserRule;
+import org.apache.druid.segment.CloserExtension;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -72,23 +73,27 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IncrementalIndexTimeBoundaryInspector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -100,7 +105,8 @@ import java.util.Set;
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTest
 {
   public final IncrementalIndexCreator indexCreator;
@@ -116,8 +122,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
    */
   public final boolean sortByDim;
 
-  @Rule
-  public final CloserRule closer = new CloserRule(false);
+  @RegisterExtension
+  public final CloserExtension closer = new CloserExtension(false);
 
   public IncrementalIndexCursorFactoryTest(String indexType, boolean sortByDim)
       throws JsonProcessingException
@@ -182,7 +188,6 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     topnQueryEngine = new TopNQueryEngine(nonBlockingPool);
   }
 
-  @Parameterized.Parameters(name = "{index}: {0}, sortByDim: {1}")
   public static Collection<?> constructorFeeder()
   {
     return IncrementalIndexCreator.indexTypeCartesianProduct(
@@ -230,13 +235,39 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
 
     final List<ResultRow> results = rows.toList();
 
-    Assert.assertEquals(2, results.size());
+    Assertions.assertEquals(2, results.size());
 
-    ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{null, "bo", 1L}, row.getArray());
+    // GroupingEngine.process returns raw grouped results without applying the query's order-by post-processing.
+    // The result order is therefore not guaranteed when the incremental index is not sorted by dimensions.
+    Assertions.assertTrue(
+        results.stream().anyMatch(row -> Arrays.deepEquals(new Object[]{null, "bo", 1L}, row.getArray()))
+    );
+    Assertions.assertTrue(
+        results.stream().anyMatch(row -> Arrays.deepEquals(new Object[]{"hi", null, 1L}, row.getArray()))
+    );
+  }
 
-    row = results.get(1);
-    Assert.assertArrayEquals(new Object[]{"hi", null, 1L}, row.getArray());
+  @Test
+  public void testOrderingEndsAtVirtualColumn() throws Exception
+  {
+    // Test is only valid when sortByDim = true, since otherwise the ordering is by time alone.
+    Assumptions.assumeTrue(sortByDim);
+
+    final IncrementalIndex index = indexCreator.createIndex();
+    index.add(
+        new MapBasedInputRow(
+            System.currentTimeMillis() - 1,
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", "hi")
+        )
+    );
+
+    // A virtual column takes the place of the stored "billy", which leads the ordering, so none of it is left.
+    final VirtualColumn billy = new ExpressionVirtualColumn("billy", "'q'", null, ExprMacroTable.nil());
+    final CursorBuildSpec spec = CursorBuildSpec.builder().setVirtualColumns(VirtualColumns.create(billy)).build();
+    try (final CursorHolder holder = new IncrementalIndexCursorFactory(index).makeCursorHolder(spec)) {
+      Assertions.assertEquals(List.of(), holder.getOrdering());
+    }
   }
 
   @Test
@@ -293,13 +324,13 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
 
     final List<ResultRow> results = rows.toList();
 
-    Assert.assertEquals(2, results.size());
+    Assertions.assertEquals(2, results.size());
 
     ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{"hi", null, 1L, 2.0}, row.getArray());
+    Assertions.assertArrayEquals(new Object[]{"hi", null, 1L, 2.0}, row.getArray());
 
     row = results.get(1);
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new Object[]{"hip", "hop", 1L, 6.0},
         row.getArray()
     );
@@ -309,7 +340,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
   public void testResetSanity() throws IOException
   {
     // Test is only valid when sortByDim = false, due to usage of Granularities.NONE.
-    Assume.assumeFalse(sortByDim);
+    Assumptions.assumeFalse(sortByDim);
 
     IncrementalIndex index = indexCreator.createIndex();
     DateTime t = DateTimes.nowUtc();
@@ -347,7 +378,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         dimSelector = cursor
             .getColumnSelectorFactory()
             .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
-        Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+        Assertions.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
 
         index.add(
             new MapBasedInputRow(
@@ -363,7 +394,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         dimSelector = cursor
             .getColumnSelectorFactory()
             .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
-        Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+        Assertions.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
       }
     }
   }
@@ -397,8 +428,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         )
         .toList();
 
-    Assert.assertEquals(1, Iterables.size(results));
-    Assert.assertEquals(1, results.iterator().next().getValue().getValue().size());
+    Assertions.assertEquals(1, Iterables.size(results));
+    Assertions.assertEquals(1, results.iterator().next().getValue().getValue().size());
   }
 
   @Test
@@ -442,10 +473,10 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
 
     final List<ResultRow> results = rows.toList();
 
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
 
     ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{"hi", null, 1L}, row.getArray());
+    Assertions.assertArrayEquals(new Object[]{"hi", null, 1L}, row.getArray());
   }
 
   @Test
@@ -494,11 +525,11 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
       // and then, cursoring continues in the other thread
       while (!cursor.isDone()) {
         IndexedInts row = dimSelector.getRow();
-        row.forEach(i -> Assert.assertTrue(i < cardinality));
+        row.forEach(i -> Assertions.assertTrue(i < cardinality));
         cursor.advance();
         rowNumInCursor++;
       }
-      Assert.assertEquals(2, rowNumInCursor);
+      Assertions.assertEquals(2, rowNumInCursor);
     }
   }
 
@@ -536,11 +567,11 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
       int rowNumInCursor = 0;
       while (!cursor.isDone()) {
         IndexedInts row = dimSelector.getRow();
-        row.forEach(i -> Assert.assertTrue(i < cardinality));
+        row.forEach(i -> Assertions.assertTrue(i < cardinality));
         cursor.advance();
         rowNumInCursor++;
       }
-      Assert.assertEquals(5, rowNumInCursor);
+      Assertions.assertEquals(5, rowNumInCursor);
     }
   }
 
@@ -622,21 +653,21 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
       // and then, cursoring continues in the other thread
       while (!cursor.isDone()) {
         IndexedInts rowA = dimSelector1A.getRow();
-        rowA.forEach(i -> Assert.assertTrue(i < cardinalityA));
+        rowA.forEach(i -> Assertions.assertTrue(i < cardinalityA));
         IndexedInts rowB = dimSelector1B.getRow();
-        rowB.forEach(i -> Assert.assertTrue(i < cardinalityA));
+        rowB.forEach(i -> Assertions.assertTrue(i < cardinalityA));
         IndexedInts rowC = dimSelector1C.getRow();
-        rowC.forEach(i -> Assert.assertTrue(i < cardinalityA));
+        rowC.forEach(i -> Assertions.assertTrue(i < cardinalityA));
         IndexedInts rowD = dimSelector2D.getRow();
-        Assert.assertEquals(1, rowD.size());
-        Assert.assertEquals(1, rowD.get(0));
+        Assertions.assertEquals(1, rowD.size());
+        Assertions.assertEquals(1, rowD.get(0));
         IndexedInts rowE = dimSelector3E.getRow();
-        Assert.assertEquals(1, rowE.size());
-        Assert.assertEquals(1, rowE.get(0));
+        Assertions.assertEquals(1, rowE.size());
+        Assertions.assertEquals(1, rowE.get(0));
         cursor.advance();
         rowNumInCursor++;
       }
-      Assert.assertEquals(2, rowNumInCursor);
+      Assertions.assertEquals(2, rowNumInCursor);
     }
   }
 

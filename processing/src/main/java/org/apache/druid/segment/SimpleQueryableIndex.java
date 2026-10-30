@@ -29,18 +29,25 @@ import com.google.common.collect.Interners;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.BaseColumnHolder;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ConstantColumns;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.file.SegmentFileMapper;
+import org.apache.druid.segment.projections.ClusteredColumnInspector;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,11 +65,16 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   private final List<String> columnNames;
   private final Indexed<String> availableDimensions;
   private final BitmapFactory bitmapFactory;
-  private final Map<String, Supplier<BaseColumnHolder>> columns;
+  private final ColumnHolderTable columns;
   private final List<OrderBy> ordering;
   private final Map<String, AggregateProjectionMetadata> projectionsMap;
   private final SortedSet<AggregateProjectionMetadata> projections;
-  private final Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumns;
+  private final Map<String, ColumnHolderTable> projectionColumns;
+  @Nullable
+  private final ClusteredValueGroupsBaseTableSchema clusteredBaseSummary;
+  @Nullable
+  private final ClusteredColumnInspector clusteredColumnInspector;
+  private final List<ColumnHolderTable> clusterGroupColumns;
   private final SegmentFileMapper fileMapper;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
 
@@ -74,7 +86,18 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       SegmentFileMapper fileMapper
   )
   {
-    this(dataInterval, dimNames, bitmapFactory, columns, fileMapper, null, null);
+    this(
+        dataInterval,
+        dimNames,
+        bitmapFactory,
+        ColumnHolderTable.fromSupplierMap(columns),
+        fileMapper,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
   }
 
   public SimpleQueryableIndex(
@@ -87,26 +110,71 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       @Nullable Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumns
   )
   {
-    Preconditions.checkNotNull(columns.get(ColumnHolder.TIME_COLUMN_NAME));
+    this(
+        dataInterval,
+        dimNames,
+        bitmapFactory,
+        ColumnHolderTable.fromSupplierMap(columns),
+        fileMapper,
+        metadata,
+        projectionTablesFromMaps(projectionColumns),
+        null,
+        null,
+        null
+    );
+  }
+
+  /**
+   * Creates an index from {@link ColumnHolderTable}s.
+   */
+  SimpleQueryableIndex(
+      Interval dataInterval,
+      Indexed<String> dimNames,
+      BitmapFactory bitmapFactory,
+      ColumnHolderTable columns,
+      SegmentFileMapper fileMapper,
+      @Nullable Metadata metadata,
+      @Nullable Map<String, ColumnHolderTable> projectionColumns,
+      @Nullable ClusteredValueGroupsBaseTableSchema clusteredBaseSummary,
+      @Nullable List<ColumnHolderTable> clusterGroupColumns,
+      @Nullable ClusteredColumnInspector clusteredColumnInspector
+  )
+  {
+    // For clustered base tables, the top-level columns map is empty; all column data lives under per-cluster-group
+    // entries in clusterGroupColumns. For all other schema shapes, __time must be present in the top-level columns map
+    Preconditions.checkState(
+        columns.isEmpty() || columns.contains(ColumnHolder.TIME_COLUMN_NAME),
+        "Missing column[%s]",
+        ColumnHolder.TIME_COLUMN_NAME
+    );
     this.dataInterval = Preconditions.checkNotNull(dataInterval, "dataInterval");
-    ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
     LinkedHashSet<String> dimsFirst = new LinkedHashSet<>();
     for (String dimName : dimNames) {
       dimsFirst.add(dimName);
     }
-    for (String columnName : columns.keySet()) {
+    for (String columnName : columns.getColumnNames()) {
       if (!ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
         dimsFirst.add(columnName);
       }
     }
-    columnNamesBuilder.addAll(dimsFirst);
-    this.columnNames = columnNamesBuilder.build();
+    this.columnNames = ImmutableList.copyOf(dimsFirst);
     this.availableDimensions = dimNames;
     this.bitmapFactory = bitmapFactory;
     this.columns = columns;
     this.fileMapper = fileMapper;
 
-    this.projectionColumns = projectionColumns == null ? Collections.emptyMap() : projectionColumns;
+    this.projectionColumns = projectionColumns == null || projectionColumns.isEmpty()
+                             ? Collections.emptyMap()
+                             : projectionColumns;
+    DruidException.conditionalDefensive(
+        (clusteredBaseSummary == null) == (clusteredColumnInspector == null),
+        "Clustered column capabilities must be provided exactly when the clustered summary is"
+    );
+    this.clusteredBaseSummary = clusteredBaseSummary;
+    this.clusteredColumnInspector = clusteredColumnInspector;
+    this.clusterGroupColumns = clusterGroupColumns == null
+                               ? Collections.emptyList()
+                               : List.copyOf(clusterGroupColumns);
     this.dimensionHandlers = Suppliers.memoize(() -> initDimensionHandlers(availableDimensions));
 
     if (metadata != null) {
@@ -115,7 +183,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       } else {
         this.ordering = Cursors.ascendingTimeOrder();
       }
-      if (metadata.getProjections() != null) {
+      if (metadata.getProjections() != null && !metadata.getProjections().isEmpty()) {
         this.projectionsMap = Maps.newHashMapWithExpectedSize(metadata.getProjections().size());
         this.projections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
         for (AggregateProjectionMetadata projection : metadata.getProjections()) {
@@ -127,7 +195,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         this.projections = Collections.emptySortedSet();
       }
     } else {
-      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
+      // When sort order isn't available from metadata, assume the segment is sorted by __time.
       this.ordering = Cursors.ascendingTimeOrder();
       this.projections = Collections.emptySortedSet();
       this.projectionsMap = Collections.emptyMap();
@@ -143,7 +211,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   @Override
   public int getNumRows()
   {
-    return columns.get(ColumnHolder.TIME_COLUMN_NAME).get().getLength();
+    return columns.get(ColumnHolder.TIME_COLUMN_NAME).getLength();
   }
 
   @Override
@@ -174,14 +242,115 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   @Override
   public BaseColumnHolder getColumnHolder(String columnName)
   {
-    Supplier<BaseColumnHolder> columnHolderSupplier = columns.get(columnName);
-    return columnHolderSupplier == null ? null : columnHolderSupplier.get();
+    return columns.get(columnName);
+  }
+
+  /**
+   * Clustered segments store no top-level columns, so the default holder-based lookup would report null for every
+   * logical column. Resolve instead from {@link ClusteredColumnInspector}, which combines every cluster group's
+   * column descriptors without reading column data. Group sub-indexes have a null summary and fall through to the
+   * default holder-based path, as do non-clustered segments.
+   */
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    if (clusteredColumnInspector != null) {
+      return clusteredColumnInspector.getColumnCapabilities(column);
+    } else {
+      return QueryableIndex.super.getColumnCapabilities(column);
+    }
   }
 
   @VisibleForTesting
   public Map<String, Supplier<BaseColumnHolder>> getColumns()
   {
-    return columns;
+    return columns.toSupplierMap();
+  }
+
+  /**
+   * Returns the {@link ClusteredValueGroupsBaseTableSchema} summary entry if this index is for a clustered segment, or null for
+   * a non-clustered segment. The summary owns segment-wide clustering config (clustering column signature, shared-
+   * column markers, naming-scheme version)
+   */
+  @Override
+  @Nullable
+  public ClusteredValueGroupsBaseTableSchema getClusteredBaseSummary()
+  {
+    return clusteredBaseSummary;
+  }
+
+  /**
+   * Returns the cluster groups nested in this index's summary, in their original order. Empty for a non-clustered
+   * segment. Used by query-time dispatch to enumerate groups and feed {@link Projections#pruneClusterGroups}.
+   */
+  @Override
+  public List<TableClusterGroupSpec> getClusterGroupSchemas()
+  {
+    return clusteredBaseSummary == null ? Collections.emptyList() : clusteredBaseSummary.getClusterGroups();
+  }
+
+  /**
+   * Returns a {@link QueryableIndex} sub-view scoped to a single cluster group's column data. Mirrors
+   * {@link #getProjectionQueryableIndex(String)} but for cluster groups: addressed by reference to the spec, not by
+   * name. The returned index's columns are the group's per-group columns; clustering columns are NOT present in
+   * the returned index, they're injected at the cursor-factory level via {@code ClusteringColumnSelectorFactory}.
+   */
+  @Override
+  public QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec, boolean withClusteringColumns)
+  {
+    if (clusteredBaseSummary == null) {
+      throw DruidException.defensive("getClusterGroupQueryableIndex called on a non-clustered segment");
+    }
+    final List<TableClusterGroupSpec> groups = clusteredBaseSummary.getClusterGroups();
+    final int index = groups.indexOf(groupSpec);
+    if (index < 0) {
+      throw DruidException.defensive("Cluster group spec is not part of this segment");
+    }
+    // add clustering columns are constants for query paths
+    final ColumnHolderTable groupColumns;
+    if (withClusteringColumns) {
+      final ColumnHolderTable.Builder groupColumnsBuilder = clusterGroupColumns.get(index).toBuilder();
+      ConstantColumns.addConstantClusteringColumns(
+          groupColumnsBuilder::put,
+          clusteredBaseSummary.getClusteringColumns(),
+          groupSpec.lookupClusteringValues(),
+          groupSpec.getNumRows(),
+          bitmapFactory
+      );
+      groupColumns = groupColumnsBuilder.build();
+    } else {
+      groupColumns = clusterGroupColumns.get(index);
+    }
+    final Metadata groupMetadata = new Metadata(
+        null,
+        null,
+        null,
+        clusteredBaseSummary.getEffectiveGranularity(),
+        false,
+        clusteredBaseSummary.getGroupOrdering(),
+        null,
+        null
+    );
+    return new SimpleQueryableIndex(
+        dataInterval,
+        new ListIndexed<>(clusteredBaseSummary.getGroupDimensionNames()),
+        bitmapFactory,
+        groupColumns,
+        fileMapper,
+        groupMetadata,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+      @Override
+      public Metadata getMetadata()
+      {
+        return groupMetadata;
+      }
+    };
   }
 
   @VisibleForTesting
@@ -227,7 +396,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         projections,
         dataInterval,
         (projectionName, columnName) ->
-            projectionColumns.get(projectionName).containsKey(columnName) || getColumnCapabilities(columnName) == null,
+            projectionColumns.get(projectionName).contains(columnName) || getColumnCapabilities(columnName) == null,
         this::getProjectionQueryableIndex
     );
   }
@@ -243,6 +412,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         null,
         true,
         projectionSpec.getSchema().getOrderingWithTimeColumnSubstitution(),
+        null,
         null
     );
     return new SimpleQueryableIndex(
@@ -258,6 +428,9 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         projectionColumns.get(name),
         fileMapper,
         projectionMetadata,
+        null,
+        null,
+        null,
         null
     )
     {
@@ -281,5 +454,22 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       }
     };
   }
-}
 
+  /**
+   * Converts per-projection column maps to {@link ColumnHolderTable}s.
+   */
+  @Nullable
+  private static Map<String, ColumnHolderTable> projectionTablesFromMaps(
+      @Nullable Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumns
+  )
+  {
+    if (projectionColumns == null) {
+      return null;
+    }
+    final Map<String, ColumnHolderTable> tables = new LinkedHashMap<>();
+    for (Map.Entry<String, Map<String, Supplier<BaseColumnHolder>>> entry : projectionColumns.entrySet()) {
+      tables.put(entry.getKey(), ColumnHolderTable.fromSupplierMap(entry.getValue()));
+    }
+    return tables;
+  }
+}

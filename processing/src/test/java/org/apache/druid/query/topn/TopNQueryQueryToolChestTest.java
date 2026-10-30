@@ -68,8 +68,8 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -157,8 +157,8 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
         null
     ).getCacheStrategy(query2);
 
-    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -242,9 +242,9 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     ).getCacheStrategy(query2);
 
     //segment level cache key excludes postaggregates in topn
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy1.computeResultLevelCacheKey(query1)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy1.computeResultLevelCacheKey(query1)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -281,16 +281,16 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
       TopNQuery query1 = builder.threshold(10).context(null).build();
       MockQueryRunner mockRunner = new MockQueryRunner(runner);
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner).run(QueryPlus.wrap(query1));
-      Assert.assertEquals(1000, mockRunner.query.getThreshold());
+      Assertions.assertEquals(1000, mockRunner.query.getThreshold());
 
       TopNQuery query2 = builder.threshold(10).context(context).build();
 
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner).run(QueryPlus.wrap(query2));
-      Assert.assertEquals(500, mockRunner.query.getThreshold());
+      Assertions.assertEquals(500, mockRunner.query.getThreshold());
 
       TopNQuery query3 = builder.threshold(2000).context(context).build();
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner).run(QueryPlus.wrap(query3));
-      Assert.assertEquals(2000, mockRunner.query.getThreshold());
+      Assertions.assertEquals(2000, mockRunner.query.getThreshold());
     }
   }
 
@@ -308,7 +308,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
         .threshold(1)
         .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("dim", ColumnType.STRING)
@@ -466,7 +466,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     Result<TopNResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    Assertions.assertEquals(result1, fromCacheResult);
 
     final Result<TopNResultValue> result2 = new Result<>(
         // test timestamps that result in integer size millis
@@ -528,7 +528,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     );
 
     Result<TopNResultValue> fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
-    Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
+    Assertions.assertEquals(typeAdjustedResult2, fromResultCacheResult);
   }
 
   private void doTestCacheStrategyOrderByPost(final ColumnType valueType, final Object dimValue) throws IOException
@@ -597,7 +597,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     Result<TopNResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    Assertions.assertEquals(result1, fromCacheResult);
 
     final Result<TopNResultValue> resultLevelCacheResult = new Result<>(
         // test timestamps that result in integer size millis
@@ -624,7 +624,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     );
 
     Result<TopNResultValue> fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
-    Assert.assertEquals(resultLevelCacheResult, fromResultCacheResult);
+    Assertions.assertEquals(resultLevelCacheResult, fromResultCacheResult);
   }
 
   static class MockQueryRunner implements QueryRunner<Result<TopNResultValue>>

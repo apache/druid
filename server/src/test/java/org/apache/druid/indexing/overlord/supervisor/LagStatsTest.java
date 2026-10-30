@@ -21,8 +21,8 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class LagStatsTest
 {
@@ -31,9 +31,9 @@ public class LagStatsTest
   {
     LagStats lagStats = new LagStats(1, 2, 3);
 
-    Assert.assertEquals(1, lagStats.getMetric(AggregateFunction.MAX));
-    Assert.assertEquals(2, lagStats.getMetric(AggregateFunction.SUM));
-    Assert.assertEquals(3, lagStats.getMetric(AggregateFunction.AVERAGE));
-    Assert.assertEquals(AggregateFunction.SUM, lagStats.getAggregateForScaling());
+    Assertions.assertEquals(1, lagStats.getMetric(AggregateFunction.MAX));
+    Assertions.assertEquals(2, lagStats.getMetric(AggregateFunction.SUM));
+    Assertions.assertEquals(3, lagStats.getMetric(AggregateFunction.AVERAGE));
+    Assertions.assertEquals(AggregateFunction.SUM, lagStats.getAggregateForScaling());
   }
 }

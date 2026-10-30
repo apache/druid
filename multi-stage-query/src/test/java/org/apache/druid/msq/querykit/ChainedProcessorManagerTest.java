@@ -33,6 +33,7 @@ import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.FrameProcessorExecutorTest;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.manager.NilFrameProcessor;
+import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.processor.test.SimpleReturningFrameProcessor;
@@ -46,10 +47,12 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -59,19 +62,23 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
 /**
  * Unit tests for {@link ChainedProcessorManager}.
  */
-@RunWith(Parameterized.class)
+
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.BaseFrameProcessorExecutorTestSuite
 {
-  private final Bouncer bouncer;
-  private final int maxOutstandingProcessors;
+  private Bouncer bouncer;
+  private int maxOutstandingProcessors;
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                .addTimeColumn()
@@ -85,7 +92,20 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     this.maxOutstandingProcessors = maxOutstandingProcessors;
   }
 
-  @Parameterized.Parameters(name = "numThreads = {0}, bouncerPoolSize = {1}, maxOutstandingProcessors = {2}")
+  @BeforeEach
+  @Override
+  public void setUp() throws Exception
+  {
+    super.setUp();
+  }
+
+  @AfterEach
+  @Override
+  public void tearDown() throws Exception
+  {
+    super.tearDown();
+  }
+
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -132,7 +152,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
         actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
-    Assert.assertEquals(new HashSet<>(expectedValues), actualValues);
+    Assertions.assertEquals(new HashSet<>(expectedValues), actualValues);
   }
 
   /**
@@ -171,7 +191,50 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
         actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
-    Assert.assertEquals(expectedValues, actualValues);
+    Assertions.assertEquals(expectedValues, actualValues);
+  }
+
+  @Test
+  public void test_first_processor_manager_closed_after_exhaustion() throws ExecutionException, InterruptedException
+  {
+    final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(3);
+    final ProcessorManager<List<Long>, Long> firstManager =
+        ProcessorManagers.of(() -> new SimpleReturningFrameProcessor<>(ImmutableList.of(1L, 2L, 3L)));
+    final AtomicBoolean firstClosed = new AtomicBoolean(false);
+
+    final ChainedProcessorManager<List<Long>, Long, Long> chainedProcessorManager = new ChainedProcessorManager<>(
+        new ProcessorManager<List<Long>, Long>()
+        {
+          @Override
+          public ListenableFuture<Optional<ProcessorAndCallback<List<Long>>>> next()
+          {
+            return firstManager.next();
+          }
+
+          @Override
+          public Long result()
+          {
+            return firstManager.result();
+          }
+
+          @Override
+          public void close()
+          {
+            firstClosed.set(true);
+            firstManager.close();
+          }
+        },
+        (values) -> createNextProcessors(outputChannel.writable(), values.stream().flatMap(List::stream).collect(Collectors.toList()))
+    );
+
+    exec.runAllFully(
+        chainedProcessorManager,
+        maxOutstandingProcessors,
+        bouncer,
+        null
+    ).get();
+
+    Assertions.assertTrue(firstClosed.get(), "first manager must be closed even after returning all its processors");
   }
 
   @Test
@@ -200,7 +263,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
         null
     );
 
-    Assert.assertThrows(ExecutionException.class, future::get);
+    Assertions.assertThrows(ExecutionException.class, future::get);
 
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
@@ -208,7 +271,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
         actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
-    Assert.assertEquals(expectedValues, actualValues);
+    Assertions.assertEquals(expectedValues, actualValues);
   }
 
   @Test
@@ -255,7 +318,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
         actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
-    Assert.assertEquals(expectedValues, actualValues);
+    Assertions.assertEquals(expectedValues, actualValues);
   }
 
   @SuppressWarnings("rawtypes")

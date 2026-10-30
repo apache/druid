@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -40,11 +41,10 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,17 +56,19 @@ import java.util.Set;
 
 public class LocalIntermediaryDataManagerAutoCleanupTest
 {
-  @Rule
-  public TemporaryFolder tempDir = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private TaskConfig taskConfig;
   private OverlordClient overlordClient;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     this.taskConfig = new TaskConfigBuilder()
-        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
+        .setShuffleDataLocations(
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder("shuffle"), null, null))
+        )
         .build();
     this.overlordClient = new NoopOverlordClient()
     {
@@ -86,7 +88,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Test
   public void testCompletedExpiredSupervisor() throws IOException, InterruptedException
   {
-    Assert.assertTrue(
+    Assertions.assertTrue(
         isCleanedUpAfter3s("supervisor_1", new Period("PT1S"))
     );
   }
@@ -94,7 +96,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Test
   public void testCompletedNotExpiredSupervisor() throws IOException, InterruptedException
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         isCleanedUpAfter3s("supervisor_2", new Period("PT10S"))
     );
   }
@@ -102,7 +104,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Test
   public void testRunningSupervisor() throws IOException, InterruptedException
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         isCleanedUpAfter3s("running_supervisor_1", new Period("PT1S"))
     );
   }
@@ -148,7 +150,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   private File generateSegmentDir(String fileName) throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = tempDir.newFolder();
+    final File segmentDir = temporaryFolder.newFolder("segment");
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;

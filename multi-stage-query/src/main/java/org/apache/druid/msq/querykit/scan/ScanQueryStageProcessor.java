@@ -29,6 +29,7 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
+import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
@@ -38,6 +39,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 
 import javax.annotation.Nullable;
@@ -46,8 +48,6 @@ import java.util.concurrent.atomic.AtomicLong;
 @JsonTypeName("scan")
 public class ScanQueryStageProcessor extends BaseLeafStageProcessor
 {
-  private static final String IRRELEVANT = "irrelevant";
-
   private final ScanQuery query;
 
   /**
@@ -76,7 +76,7 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
     DimFilter newFilter = filtration.getDimFilter();
 
     ScanQuery scanQuery = Druids.newScanQueryBuilder()
-        .dataSource(IRRELEVANT)
+        .dataSource(new InputNumberDataSource(0))
         .intervals(QuerySegmentSpec.ETERNITY)
         .filters(newFilter)
         .virtualColumns(virtualColumns)
@@ -121,6 +121,21 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
         outputChannelHolder,
         frameWriterFactoryHolder
     );
+  }
+
+  @Override
+  protected boolean canSkipRemainingInputs()
+  {
+    return runningCountForLimit != null
+           && runningCountForLimit.get() >= ScanQueryFrameProcessor.getOffsetPlusLimit(query);
+  }
+
+  @Override
+  protected AcquireMode getDefaultAcquireMode()
+  {
+    // Scan reads segments through the async cursor API, so acquire them partially: only the columns the query
+    // touches are downloaded.
+    return AcquireMode.PARTIAL;
   }
 
   @Override

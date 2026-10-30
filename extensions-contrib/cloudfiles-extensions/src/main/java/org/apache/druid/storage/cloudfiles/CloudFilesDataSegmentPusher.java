@@ -72,8 +72,8 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
     File zipOutFile = null;
 
     try {
-      final File descFile = descriptorFile = File.createTempFile("descriptor", ".json");
-      final File outFile = zipOutFile = File.createTempFile("druid", "index.zip");
+      final File descFile = descriptorFile = Files.createTempFile("descriptor", ".json").toFile();
+      final File outFile = zipOutFile = Files.createTempFile("druid", "index.zip").toFile();
 
       final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 

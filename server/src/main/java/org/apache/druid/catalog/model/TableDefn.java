@@ -22,7 +22,9 @@ package org.apache.druid.catalog.model;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -106,9 +108,27 @@ public class TableDefn extends ObjectDefn
   /**
    * Table-specific validation of a column spec. Override for table definitions
    * that need table-specific validation rules.
+   * <p>
+   * A column declared without a type is legal (the type is resolved from the physical schema, the ingestion query, or
+   * the input format), but a declared type must parse to a Druid type, otherwise we would silently substitute STRING
+   * for the unrecognized declaration. This runs at catalog write time only: reads never validate, so tables stored
+   * before this rule keep resolving (though editing them surfaces the invalid type). {@link Columns#druidType} maps
+   * {@code __time} to LONG regardless of the declared type, which {@link ColumnSpec#validate} already restricts to
+   * LONG or untyped.
    */
   protected void validateColumn(ColumnSpec colSpec)
   {
+    if (colSpec.dataType() != null && Columns.druidType(colSpec) == null) {
+      throw InvalidInput.exception(
+          "Column [%s] has an unrecognized type [%s]; declare a SQL type (such as [%s]) or a Druid type string"
+          + " (such as [%s] or [%s])",
+          colSpec.name(),
+          colSpec.dataType(),
+          Columns.SQL_BIGINT,
+          ColumnType.LONG_ARRAY.asTypeString(),
+          ColumnType.NESTED_DATA.asTypeString()
+      );
+    }
   }
 
   /**

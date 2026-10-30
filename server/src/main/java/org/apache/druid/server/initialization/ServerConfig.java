@@ -30,23 +30,23 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.eclipse.jetty.http.UriCompliance;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
@@ -88,6 +88,63 @@ public class ServerConfig
       boolean enforceStrictSNIHostChecking
   )
   {
+    this(
+        numThreads,
+        queueSize,
+        enableRequestLimit,
+        maxIdleTime,
+        defaultQueryTimeout,
+        maxScatterGatherBytes,
+        maxSubqueryRows,
+        maxSubqueryBytes,
+        useNestedForUnknownTypeInSubquery,
+        maxQueryTimeout,
+        maxRequestHeaderSize,
+        gracefulShutdownTimeout,
+        unannouncePropagationDelay,
+        inflateBufferSize,
+        compressionLevel,
+        enableForwardedRequestCustomizer,
+        allowedHttpMethods,
+        showDetailedJettyErrors,
+        errorResponseTransformStrategy,
+        contentSecurityPolicy,
+        enableHSTS,
+        false,
+        uriCompliance,
+        enforceStrictSNIHostChecking,
+        true
+    );
+  }
+
+  public ServerConfig(
+      int numThreads,
+      int queueSize,
+      boolean enableRequestLimit,
+      @NotNull Period maxIdleTime,
+      long defaultQueryTimeout,
+      long maxScatterGatherBytes,
+      int maxSubqueryRows,
+      String maxSubqueryBytes,
+      boolean useNestedForUnknownTypeInSubquery,
+      long maxQueryTimeout,
+      int maxRequestHeaderSize,
+      @NotNull Period gracefulShutdownTimeout,
+      @NotNull Period unannouncePropagationDelay,
+      int inflateBufferSize,
+      int compressionLevel,
+      boolean enableForwardedRequestCustomizer,
+      @NotNull List<String> allowedHttpMethods,
+      boolean showDetailedJettyErrors,
+      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
+      @Nullable String contentSecurityPolicy,
+      boolean enableHSTS,
+      boolean enableResponseIdentityHeaders,
+      @Nullable UriCompliance uriCompliance,
+      boolean enforceStrictSNIHostChecking,
+      boolean enableQueryRequestsQueuing
+  )
+  {
     this.numThreads = numThreads;
     this.queueSize = queueSize;
     this.enableRequestLimit = enableRequestLimit;
@@ -109,8 +166,10 @@ public class ServerConfig
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
     this.contentSecurityPolicy = contentSecurityPolicy;
     this.enableHSTS = enableHSTS;
+    this.enableResponseIdentityHeaders = enableResponseIdentityHeaders;
     this.uriCompliance = uriCompliance != null ? uriCompliance : UriCompliance.LEGACY;
     this.enforceStrictSNIHostChecking = enforceStrictSNIHostChecking;
+    this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
   }
 
   public ServerConfig()
@@ -122,6 +181,12 @@ public class ServerConfig
   public ServerConfig(boolean enableQueryRequestsQueuing)
   {
     this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
+  }
+
+  @VisibleForTesting
+  public ServerConfig(@NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy)
+  {
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
   }
 
   @JsonProperty
@@ -156,7 +221,7 @@ public class ServerConfig
   private String maxSubqueryBytes = SubqueryGuardrailHelper.LIMIT_DISABLED_VALUE;
 
   @JsonProperty
-  private boolean useNestedForUnknownTypeInSubquery = QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
+  private boolean useNestedForUnknownTypeInSubquery = false;
 
   @JsonProperty
   @Min(1)
@@ -198,6 +263,9 @@ public class ServerConfig
 
   @JsonProperty
   private boolean enableHSTS = false;
+
+  @JsonProperty
+  private boolean enableResponseIdentityHeaders = false;
 
   @JsonProperty
   @JsonDeserialize(using = UriComplianceDeserializer.class)
@@ -282,6 +350,40 @@ public class ServerConfig
     return unannouncePropagationDelay;
   }
 
+  /**
+   * Returns a copy of this config with {@link #getUnannouncePropagationDelay()} replaced by the given value.
+   */
+  public ServerConfig withUnannouncePropagationDelay(final Period newUnannouncePropagationDelay)
+  {
+    return new ServerConfig(
+        numThreads,
+        queueSize,
+        enableRequestLimit,
+        maxIdleTime,
+        defaultQueryTimeout,
+        maxScatterGatherBytes.getBytes(),
+        maxSubqueryRows,
+        maxSubqueryBytes,
+        useNestedForUnknownTypeInSubquery,
+        maxQueryTimeout,
+        maxRequestHeaderSize,
+        gracefulShutdownTimeout,
+        newUnannouncePropagationDelay,
+        inflateBufferSize,
+        compressionLevel,
+        enableForwardedRequestCustomizer,
+        allowedHttpMethods,
+        showDetailedJettyErrors,
+        errorResponseTransformStrategy,
+        contentSecurityPolicy,
+        enableHSTS,
+        enableResponseIdentityHeaders,
+        uriCompliance,
+        enforceStrictSNIHostChecking,
+        enableQueryRequestsQueuing
+    );
+  }
+
   public int getInflateBufferSize()
   {
     return inflateBufferSize;
@@ -321,6 +423,11 @@ public class ServerConfig
   public boolean isEnableHSTS()
   {
     return enableHSTS;
+  }
+
+  public boolean isEnableResponseIdentityHeaders()
+  {
+    return enableResponseIdentityHeaders;
   }
 
   public boolean isEnableQueryRequestsQueuing()
@@ -369,6 +476,7 @@ public class ServerConfig
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
            enableHSTS == that.enableHSTS &&
+           enableResponseIdentityHeaders == that.enableResponseIdentityHeaders &&
            enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
            Objects.equals(uriCompliance, that.uriCompliance) &&
            enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking;
@@ -399,6 +507,7 @@ public class ServerConfig
         showDetailedJettyErrors,
         contentSecurityPolicy,
         enableHSTS,
+        enableResponseIdentityHeaders,
         enableQueryRequestsQueuing,
         uriCompliance,
         enforceStrictSNIHostChecking
@@ -430,6 +539,7 @@ public class ServerConfig
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
+           ", enableResponseIdentityHeaders=" + enableResponseIdentityHeaders +
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
            ", uriCompliance=" + uriCompliance +
            ", enforceStrictSNIHostChecking=" + enforceStrictSNIHostChecking +
@@ -439,6 +549,17 @@ public class ServerConfig
   public static int getDefaultNumThreads()
   {
     return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
+  }
+
+  public static int getNumThreadsFromProperties(Properties properties)
+  {
+    final String value = properties.getProperty("druid.server.http.numThreads");
+    return value == null ? getDefaultNumThreads() : Integer.parseInt(value);
+  }
+
+  public static int getDefaultMaxConcurrentRequests(int numThreads)
+  {
+    return Math.max(1, Math.max(numThreads - 4, (int) (numThreads * 0.8)));
   }
 
   public static class UriComplianceDeserializer extends JsonDeserializer<UriCompliance>

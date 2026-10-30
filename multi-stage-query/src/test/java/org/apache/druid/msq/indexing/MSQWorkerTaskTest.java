@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -54,15 +54,15 @@ public class MSQWorkerTaskTest
   @Test
   public void testEquals()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         msqWorkerTask,
         new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         msqWorkerTask.getRetryTask(),
         new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount + 1)
     );
-    Assert.assertNotEquals(msqWorkerTask, msqWorkerTask.getRetryTask());
+    Assertions.assertNotEquals(msqWorkerTask, msqWorkerTask.getRetryTask());
   }
 
   @Test
@@ -72,19 +72,19 @@ public class MSQWorkerTaskTest
 
     msqWorkerTaskSet.add(msqWorkerTask);
     msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount));
-    Assert.assertTrue(msqWorkerTaskSet.size() == 1);
+    Assertions.assertTrue(msqWorkerTaskSet.size() == 1);
 
     msqWorkerTaskSet.add(msqWorkerTask.getRetryTask());
-    Assert.assertTrue(msqWorkerTaskSet.size() == 2);
+    Assertions.assertTrue(msqWorkerTaskSet.size() == 2);
 
     msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId + 1, dataSource, workerNumber, context, retryCount));
-    Assert.assertTrue(msqWorkerTaskSet.size() == 3);
+    Assertions.assertTrue(msqWorkerTaskSet.size() == 3);
 
     msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource + 1, workerNumber, context, retryCount));
-    Assert.assertTrue(msqWorkerTaskSet.size() == 4);
+    Assertions.assertTrue(msqWorkerTaskSet.size() == 4);
 
     msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber + 1, context, retryCount));
-    Assert.assertTrue(msqWorkerTaskSet.size() == 5);
+    Assertions.assertTrue(msqWorkerTaskSet.size() == 5);
 
     msqWorkerTaskSet.add(new MSQWorkerTask(
         controllerTaskId,
@@ -93,42 +93,42 @@ public class MSQWorkerTaskTest
         ImmutableMap.of("key1", "v1"),
         retryCount
     ));
-    Assert.assertTrue(msqWorkerTaskSet.size() == 6);
+    Assertions.assertTrue(msqWorkerTaskSet.size() == 6);
 
     msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount + 1));
-    Assert.assertTrue(msqWorkerTaskSet.size() == 6);
+    Assertions.assertTrue(msqWorkerTaskSet.size() == 6);
   }
 
   @Test
   public void testGetter()
   {
-    Assert.assertEquals(controllerTaskId, msqWorkerTask.getControllerTaskId());
-    Assert.assertEquals(dataSource, msqWorkerTask.getDataSource());
-    Assert.assertEquals(workerNumber, msqWorkerTask.getWorkerNumber());
-    Assert.assertEquals(retryCount, msqWorkerTask.getRetryCount());
+    Assertions.assertEquals(controllerTaskId, msqWorkerTask.getControllerTaskId());
+    Assertions.assertEquals(dataSource, msqWorkerTask.getDataSource());
+    Assertions.assertEquals(workerNumber, msqWorkerTask.getWorkerNumber());
+    Assertions.assertEquals(retryCount, msqWorkerTask.getRetryCount());
   }
 
   @Test
   public void testGetInputSourceResources()
   {
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
-    Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
+    Assertions.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
   }
 
   @Test
   public void testGetPeonProcessingModuleConfig()
   {
     final PeonProcessingModule.Config config = msqWorkerTask.getPeonProcessingModuleConfig();
-    Assert.assertTrue(config.hasProcessingThreads());
-    Assert.assertTrue(config.hasProcessingBuffers());
-    Assert.assertFalse(config.hasMergeBuffers());
+    Assertions.assertTrue(config.hasProcessingThreads());
+    Assertions.assertTrue(config.hasProcessingBuffers());
+    Assertions.assertFalse(config.hasMergeBuffers());
   }
 
   @Test
   public void testGetDefaultLookupLoadingSpec()
   {
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
-    Assert.assertEquals(LookupLoadingSpec.ALL, msqWorkerTask.getLookupLoadingSpec());
+    Assertions.assertEquals(LookupLoadingSpec.ALL, msqWorkerTask.getLookupLoadingSpec());
   }
 
   @Test
@@ -136,7 +136,7 @@ public class MSQWorkerTaskTest
   {
     final ImmutableMap<String, Object> context = ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE);
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
-    Assert.assertEquals(LookupLoadingSpec.NONE, msqWorkerTask.getLookupLoadingSpec());
+    Assertions.assertEquals(LookupLoadingSpec.NONE, msqWorkerTask.getLookupLoadingSpec());
   }
 
   @Test
@@ -146,8 +146,8 @@ public class MSQWorkerTaskTest
         LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"),
         LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
-    Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, msqWorkerTask.getLookupLoadingSpec().getMode());
-    Assert.assertEquals(ImmutableSet.of("lookupName1", "lookupName2"), msqWorkerTask.getLookupLoadingSpec().getLookupsToLoad());
+    Assertions.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, msqWorkerTask.getLookupLoadingSpec().getMode());
+    Assertions.assertEquals(ImmutableSet.of("lookupName1", "lookupName2"), msqWorkerTask.getLookupLoadingSpec().getLookupsToLoad());
   }
 
   @Test
@@ -160,11 +160,11 @@ public class MSQWorkerTaskTest
     context.put(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, null);
 
     MSQWorkerTask taskWithNullLookups = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         taskWithNullLookups::getLookupLoadingSpec
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Set of lookups to load cannot be null for mode[ONLY_REQUIRED].",
         exception.getMessage());
 
@@ -172,11 +172,11 @@ public class MSQWorkerTaskTest
     context.put(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, Collections.emptyList());
 
     MSQWorkerTask taskWithEmptyLookups = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
-    exception = Assert.assertThrows(
+    exception = Assertions.assertThrows(
         DruidException.class,
         taskWithEmptyLookups::getLookupLoadingSpec
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Set of lookups to load cannot be [] for mode[ONLY_REQUIRED].",
         exception.getMessage());
   }

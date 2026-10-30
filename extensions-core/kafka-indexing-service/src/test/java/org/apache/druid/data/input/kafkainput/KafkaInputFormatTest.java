@@ -47,9 +47,9 @@ import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -110,7 +110,7 @@ public class KafkaInputFormatTest
   );
   private KafkaInputFormat format;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     format = new KafkaInputFormat(
@@ -189,11 +189,11 @@ public class KafkaInputFormatTest
         "kafka.new.partition",
         "kafka.new.offset"
     );
-    Assert.assertEquals(format, kif);
+    Assertions.assertEquals(format, kif);
 
     final byte[] formatBytes = mapper.writeValueAsBytes(format);
     final byte[] kifBytes = mapper.writeValueAsBytes(kif);
-    Assert.assertArrayEquals(formatBytes, kifBytes);
+    Assertions.assertArrayEquals(formatBytes, kifBytes);
   }
 
   @Test
@@ -230,7 +230,7 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-        Assert.assertEquals(
+        Assertions.assertEquals(
             Arrays.asList(
                 "bar",
                 "foo",
@@ -245,27 +245,27 @@ public class KafkaInputFormatTest
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
         
-        Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         verifyHeader(row);
 
         // Key verification
-        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+        Assertions.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -305,11 +305,11 @@ public class KafkaInputFormatTest
         final InputRow row = iterator.next();
 
         // Key verification
-        Assert.assertTrue(row.getDimension("kafka.newkey.key").isEmpty());
+        Assertions.assertTrue(row.getDimension("kafka.newkey.key").isEmpty());
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
 
   }
@@ -371,27 +371,27 @@ public class KafkaInputFormatTest
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
 
-        Assert.assertEquals(DateTimes.of("2021-06-24"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(DateTimes.of("2021-06-24"), row.getTimestamp());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         verifyHeader(row);
 
         // Key verification
-        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+        Assertions.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -456,17 +456,17 @@ public class KafkaInputFormatTest
         // Key verification
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
-        Assert.assertTrue(row.getDimension("kafka.newkey.key").isEmpty());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertTrue(row.getDimension("kafka.newkey.key").isEmpty());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
 
   }
@@ -541,47 +541,47 @@ public class KafkaInputFormatTest
           // Payload verification
           // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
           // but test reading them anyway since it isn't technically illegal
-          Assert.assertEquals(DateTimes.of("2021-06-2" + i), row.getTimestamp());
-          Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-          Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-          Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-          Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
-          Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
+          Assertions.assertEquals(DateTimes.of("2021-06-2" + i), row.getTimestamp());
+          Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+          Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+          Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+          Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+          Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+          Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+          Assertions.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
 
           // Header verification
-          Assert.assertEquals(
+          Assertions.assertEquals(
               "application/json",
               Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding"))
           );
-          Assert.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
-          Assert.assertEquals(
+          Assertions.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
+          Assertions.assertEquals(
               String.valueOf(DateTimes.of("2021-06-24").getMillis()),
               Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
           );
-          Assert.assertEquals(
+          Assertions.assertEquals(
               TOPIC,
               Iterables.getOnlyElement(row.getDimension("kafka.newtopic.topic"))
           );
-          Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("kafka.newheader.indexH")));
+          Assertions.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("kafka.newheader.indexH")));
 
 
           // Key verification
           if (i == 2) {
-            Assert.assertEquals(Collections.emptyList(), row.getDimension("kafka.newkey.key"));
+            Assertions.assertEquals(Collections.emptyList(), row.getDimension("kafka.newkey.key"));
           } else {
-            Assert.assertEquals("sampleKey-" + i, Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+            Assertions.assertEquals("sampleKey-" + i, Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
           }
 
-          Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-          Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-          Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+          Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+          Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+          Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
           numActualIterations++;
         }
 
-        Assert.assertEquals(numExpectedIterations, numActualIterations);
+        Assertions.assertEquals(numExpectedIterations, numActualIterations);
       }
     }
   }
@@ -616,8 +616,8 @@ public class KafkaInputFormatTest
 
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
-        Throwable t = Assert.assertThrows(ParseException.class, iterator::next);
-        Assert.assertTrue(
+        Throwable t = Assertions.assertThrows(ParseException.class, iterator::next);
+        Assertions.assertTrue(
             t.getMessage().startsWith("Timestamp[null] is unparseable! Event: {")
         );
       }
@@ -647,7 +647,7 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-        Assert.assertEquals(
+        Assertions.assertEquals(
             Arrays.asList(
                 "kafka.newtopic.topic",
                 "foo",
@@ -671,27 +671,27 @@ public class KafkaInputFormatTest
         );
 
         // Payload verifications
-        Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         verifyHeader(row);
 
         // Key verification
-        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+        Assertions.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -763,7 +763,7 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-        Assert.assertEquals(
+        Assertions.assertEquals(
             Arrays.asList(
                 "bar",
                 "foo",
@@ -779,20 +779,20 @@ public class KafkaInputFormatTest
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
 
-        Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertTrue(row.getDimension("bar").isEmpty());
+        Assertions.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertTrue(row.getDimension("bar").isEmpty());
 
         verifyHeader(row);
 
         // Key verification
-        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+        Assertions.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -857,7 +857,7 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-        Assert.assertEquals(
+        Assertions.assertEquals(
             Arrays.asList(
                 "bar",
                 "foo",
@@ -872,20 +872,20 @@ public class KafkaInputFormatTest
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
 
-        Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertTrue(row.getDimension("bar").isEmpty());
+        Assertions.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertTrue(row.getDimension("bar").isEmpty());
 
         verifyHeader(row);
 
         // Key verification
-        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+        Assertions.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -916,7 +916,7 @@ public class KafkaInputFormatTest
 
         final InputRow row = iterator.next();
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
             Arrays.asList(
                 "bar",
                 "kafka.newheader.kafkapkc",
@@ -940,27 +940,27 @@ public class KafkaInputFormatTest
         );
 
         // Payload verifications
-        Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         verifyHeader(row);
 
         // Key verification
-        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+        Assertions.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -985,17 +985,17 @@ public class KafkaInputFormatTest
 
   private void verifyHeader(InputRow row)
   {
-    Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
-    Assert.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
-    Assert.assertEquals(
+    Assertions.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
+    Assertions.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
+    Assertions.assertEquals(
         String.valueOf(DateTimes.of("2021-06-24").getMillis()),
         Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TOPIC,
         Iterables.getOnlyElement(row.getDimension("kafka.newtopic.topic"))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "2021-06-25",
         Iterables.getOnlyElement(row.getDimension("timestamp"))
     );

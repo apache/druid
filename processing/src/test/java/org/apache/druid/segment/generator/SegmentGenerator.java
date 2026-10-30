@@ -24,6 +24,7 @@ import com.google.common.hash.Hashing;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -37,6 +38,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
@@ -321,6 +324,145 @@ public class SegmentGenerator implements Closeable
     return retVal;
   }
 
+  /**
+   * Generates a V10-format segment, used to benchmark clustered base-table segments against an equivalent unclustered
+   * layout. Mirrors {@link #generate}, but always uses {@link IndexMergerV10} and threads an optional
+   * {@link ClusteredValueGroupsBaseTableProjectionSpec}:
+   * <ul>
+   *   <li>when {@code clusterSpec} is non-null the segment is written as clustered value groups;</li>
+   *   <li>when {@code clusterSpec} is null the segment is a regular V10 segment, sorted according to
+   *       {@code dimensionsSpec}.</li>
+   * </ul>
+   * Clustered base tables have no rollup and no metrics, so this path always builds with rollup off and an empty
+   * aggregator set; {@code dimensionsSpec} is expected to include {@code __time} as the explicit (non-clustering) time
+   * position.
+   */
+  public QueryableIndex generateV10(
+      final DataSegment dataSegment,
+      final GeneratorSchemaInfo schemaInfo,
+      final DimensionsSpec dimensionsSpec,
+      final TransformSpec transformSpec,
+      final IndexSpec indexSpec,
+      final Granularity queryGranularity,
+      @Nullable final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec,
+      final int numRows,
+      final ObjectMapper jsonMapper
+  )
+  {
+    BuiltInTypesModule.registerHandlersAndSerde();
+
+    final String dataHash = Hashing.sha256()
+                                   .newHasher()
+                                   .putString(dataSegment.getId().toString(), StandardCharsets.UTF_8)
+                                   .putString(schemaInfo.toString(), StandardCharsets.UTF_8)
+                                   .putString(dimensionsSpec.toString(), StandardCharsets.UTF_8)
+                                   .putString(queryGranularity.toString(), StandardCharsets.UTF_8)
+                                   .putString(indexSpec.toString(), StandardCharsets.UTF_8)
+                                   .putString(transformSpec.toString(), StandardCharsets.UTF_8)
+                                   .putString(String.valueOf(clusterSpec), StandardCharsets.UTF_8)
+                                   .putString("v10", StandardCharsets.UTF_8)
+                                   .putInt(numRows)
+                                   .hash()
+                                   .toString();
+
+    final IndexIO indexIO = TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT);
+    final File outDir = new File(getSegmentDir(dataSegment.getId(), dataHash), "merged");
+
+    if (outDir.exists()) {
+      try {
+        log.info("Found segment with hash[%s] cached in directory[%s].", dataHash, outDir);
+        return indexIO.loadIndex(outDir);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    log.info("Writing segment with hash[%s] to directory[%s].", dataHash, outDir);
+
+    final DataGenerator dataGenerator = new DataGenerator(
+        schemaInfo.getColumnSchemas(),
+        dataSegment.getId().hashCode(),
+        schemaInfo.getDataInterval(),
+        numRows
+    );
+
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(dimensionsSpec)
+        .withRollup(false)
+        .withQueryGranularity(queryGranularity)
+        .withClusterSpec(clusterSpec)
+        .build();
+
+    final List<InputRow> rows = new ArrayList<>();
+    final List<QueryableIndex> indexes = new ArrayList<>();
+
+    final Transformer transformer = transformSpec.toTransformer();
+    final InputRowSchema rowSchema = new InputRowSchema(
+        TimestampSpec.DEFAULT,
+        dimensionsSpec,
+        null
+    );
+
+    for (int i = 0; i < numRows; i++) {
+      final Map<String, Object> raw = dataGenerator.nextRaw();
+      final InputRow inputRow = MapInputRowParser.parse(rowSchema, raw);
+      final InputRow transformedRow = transformer.transform(inputRow);
+      rows.add(transformedRow);
+
+      if ((i + 1) % 20000 == 0) {
+        log.info("%,d/%,d rows generated for[%s].", i + 1, numRows, dataSegment);
+      }
+
+      if (rows.size() % MAX_ROWS_IN_MEMORY == 0) {
+        indexes.add(makeIndexV10(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema, indexSpec, jsonMapper));
+        rows.clear();
+      }
+    }
+
+    log.info("%,d/%,d rows generated for[%s].", numRows, numRows, dataSegment);
+
+    if (rows.size() > 0) {
+      indexes.add(makeIndexV10(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema, indexSpec, jsonMapper));
+      rows.clear();
+    }
+
+    final QueryableIndex retVal;
+
+    if (indexes.isEmpty()) {
+      throw new ISE("No rows to index?");
+    } else {
+      try {
+        retVal = indexIO.loadIndex(
+            new IndexMergerV10(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                .mergeQueryableIndex(
+                    indexes,
+                    false,
+                    new AggregatorFactory[0],
+                    null,
+                    outDir,
+                    indexSpec,
+                    indexSpec,
+                    new BaseProgressIndicator(),
+                    null,
+                    -1
+                )
+        );
+
+        for (QueryableIndex index : indexes) {
+          index.close();
+        }
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    log.info("Finished writing segment[%s] to[%s]", dataSegment, outDir);
+
+    return retVal;
+  }
+
   public IncrementalIndex generateIncrementalIndex(
       final DataSegment dataSegment,
       final GeneratorSchemaInfo schemaInfo,
@@ -467,6 +609,27 @@ public class SegmentGenerator implements Closeable
   {
     return IndexBuilder
         .create(jsonMapper)
+        .schema(indexSchema)
+        .indexSpec(indexSpec)
+        .tmpDir(new File(getSegmentDir(identifier, dataHash), String.valueOf(indexNumber)))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .rows(rows)
+        .buildMMappedIndex();
+  }
+
+  private QueryableIndex makeIndexV10(
+      final SegmentId identifier,
+      final String dataHash,
+      final int indexNumber,
+      final List<InputRow> rows,
+      final IncrementalIndexSchema indexSchema,
+      final IndexSpec indexSpec,
+      final ObjectMapper jsonMapper
+  )
+  {
+    return IndexBuilder
+        .create(jsonMapper)
+        .useV10()
         .schema(indexSchema)
         .indexSpec(indexSpec)
         .tmpDir(new File(getSegmentDir(identifier, dataHash), String.valueOf(indexNumber)))

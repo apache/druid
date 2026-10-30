@@ -21,8 +21,7 @@ package org.apache.druid.storage.aliyun;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 public class OssTaskLogsConfig
 {

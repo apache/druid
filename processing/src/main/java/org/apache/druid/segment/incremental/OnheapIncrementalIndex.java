@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -52,6 +54,8 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.virtual.ExprEvalSelectorCache;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -62,6 +66,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +117,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   private final SortedSet<AggregateProjectionMetadata> aggregateProjections;
   private final HashMap<String, OnHeapAggregateProjection> projections;
+  @Nullable
+  private final OnHeapClusteredBaseTable clusteredBaseTable;
 
   OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
@@ -136,6 +143,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     this.aggregateProjections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
     this.projections = new HashMap<>();
     initializeProjections(incrementalIndexSchema);
+
+    if (incrementalIndexSchema.getClusterSpec() != null) {
+      this.clusteredBaseTable = new OnHeapClusteredBaseTable(
+          incrementalIndexSchema.getClusterSpec(),
+          incrementalIndexSchema.getVirtualColumns(),
+          inputRowHolder,
+          incrementalIndexSchema.isRollup(),
+          timePosition
+      );
+    } else {
+      this.clusteredBaseTable = null;
+    }
   }
 
   private void initializeProjections(IncrementalIndexSchema incrementalIndexSchema)
@@ -170,17 +189,51 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     return facts;
   }
 
+  /**
+   * In clustered mode, the root of the per-tuple sub-index machinery. Null in classic mode. Exposed for downstream
+   * consumers like the IndexableAdapter to enumerate per-group facts holders + segment-wide clustering
+   * dictionaries at persist time.
+   */
+  @Nullable
+  public OnHeapClusteredBaseTable getClusteredBaseTable()
+  {
+    return clusteredBaseTable;
+  }
+
+  @Override
+  protected long getMinTimeMillis()
+  {
+    // In clustered mode the base facts holder is empty; row timestamps live on the per-group facts holders.
+    if (clusteredBaseTable != null) {
+      return clusteredBaseTable.getMinTimeMillis();
+    }
+    return super.getMinTimeMillis();
+  }
+
+  @Override
+  protected long getMaxTimeMillis()
+  {
+    if (clusteredBaseTable != null) {
+      return clusteredBaseTable.getMaxTimeMillis();
+    }
+    return super.getMaxTimeMillis();
+  }
+
   @Override
   public Metadata getMetadata()
   {
-    if (aggregateProjections.isEmpty()) {
-      return super.getMetadata();
+    Metadata base = super.getMetadata();
+    if (!aggregateProjections.isEmpty()) {
+      final List<AggregateProjectionMetadata> projectionMetadata = projections.values()
+                                                                              .stream()
+                                                                              .map(OnHeapAggregateProjection::toMetadata)
+                                                                              .collect(Collectors.toList());
+      base = base.withProjections(projectionMetadata);
     }
-    final List<AggregateProjectionMetadata> projectionMetadata = projections.values()
-                                                                            .stream()
-                                                                            .map(OnHeapAggregateProjection::toMetadata)
-                                                                            .collect(Collectors.toList());
-    return super.getMetadata().withProjections(projectionMetadata);
+    if (clusteredBaseTable != null) {
+      base = base.withClusteredBaseTable(clusteredBaseTable.toMetadataSchema());
+    }
+    return base;
   }
 
   @Override
@@ -238,6 +291,23 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     // rows are not added atomically to all facts holders at once
     for (OnHeapAggregateProjection projection : projections.values()) {
       projection.addToFacts(key, inputRowHolder.getRow(), parseExceptionMessages, totalSizeInBytes);
+    }
+
+    if (clusteredBaseTable != null) {
+      // Clustered mode: rows live in per-tuple cluster groups, not the base facts holder. Skip the base
+      // facts holder entirely, the parent's dimensionDescs etc. exist only to keep the existing
+      // toIncrementalIndexRow pipeline working (so timestamps get bucketed, etc.). The segment-wide entry count
+      // still tracks per-group fact entries so isEmpty / size-based persist triggers see the real row count.
+      final boolean isNewEntry = clusteredBaseTable.addToFacts(
+          key,
+          inputRowHolder.getRow(),
+          parseExceptionMessages,
+          totalSizeInBytes
+      );
+      if (isNewEntry) {
+        getNumEntries().incrementAndGet();
+      }
+      return new AddToFactsResult(getNumEntries().get(), totalSizeInBytes.get(), parseExceptionMessages);
     }
 
     final int priorIndex = facts.getPriorIndex(key);
@@ -605,19 +675,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   /**
-   * Caches references to selector objects for each column instead of creating a new object each time in order to save
-   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
-   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
+   * Caches references to selector objects instead of creating them for each row key in order to save heap space and
+   * avoid repeated expression planning and selector construction.
    */
-  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
+  static class CachingColumnSelectorFactory implements ColumnSelectorFactory, ExprEvalSelectorCache
   {
     private final HashMap<String, ColumnValueSelector<?>> columnSelectorMap;
+    private final IdentityHashMap<Expr, ColumnValueSelector<ExprEval>> expressionSelectorMap;
     private final ColumnSelectorFactory delegate;
 
     public CachingColumnSelectorFactory(ColumnSelectorFactory delegate)
     {
       this.delegate = delegate;
       this.columnSelectorMap = new HashMap<>();
+      this.expressionSelectorMap = new IdentityHashMap<>();
     }
 
     @Override
@@ -640,6 +711,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
       existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
       return existing != null ? existing : columnValueSelector;
+    }
+
+    @Override
+    public ColumnValueSelector<ExprEval> getOrCreateExprEvalSelector(final Expr expression)
+    {
+      ColumnValueSelector<ExprEval> selector = expressionSelectorMap.get(expression);
+      if (selector == null) {
+        // Do not use computeIfAbsent: building the expression selector can re-enter makeColumnValueSelector on this
+        // factory through expression bindings.
+        selector = ExpressionSelectors.makeExprEvalSelectorUncached(this, expression);
+        expressionSelectorMap.put(expression, selector);
+      }
+      return selector;
     }
 
     @Nullable

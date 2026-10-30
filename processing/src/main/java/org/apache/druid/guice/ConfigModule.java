@@ -21,9 +21,8 @@ package org.apache.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-
-import javax.validation.Validation;
-import javax.validation.Validator;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 
 /**
  */

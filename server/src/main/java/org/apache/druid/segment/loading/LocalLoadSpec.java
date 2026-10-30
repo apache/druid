@@ -25,7 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
+import org.apache.druid.segment.IndexIO;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -62,5 +64,19 @@ public class LocalLoadSpec implements LoadSpec
   {
     Preconditions.checkArgument(Files.exists(path), "[%s] does not exist", path);
     return new LoadSpecResult(puller.getSegmentFiles(path.toFile(), outDir).size());
+  }
+
+  @Nullable
+  @Override
+  public SegmentRangeReader openRangeReader()
+  {
+    final File pathFile = path.toFile();
+    if (!pathFile.isDirectory()) {
+      return null;
+    }
+    if (!new File(pathFile, IndexIO.V10_FILE_NAME).isFile()) {
+      return null;
+    }
+    return new DirectoryBackedRangeReader(pathFile);
   }
 }

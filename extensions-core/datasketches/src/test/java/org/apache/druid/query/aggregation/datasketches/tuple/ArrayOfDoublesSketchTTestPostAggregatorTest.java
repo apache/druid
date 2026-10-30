@@ -37,43 +37,43 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class ArrayOfDoublesSketchTTestPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testConstructorTooFewPostAggInputs()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Illegal number of fields[1], must be 2");
-    new ArrayOfDoublesSketchTTestPostAggregator(
-        "a",
-        ImmutableList.of(new ConstantPostAggregator("", 0))
-    );
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      new ArrayOfDoublesSketchTTestPostAggregator(
+          "a",
+          ImmutableList.of(new ConstantPostAggregator("", 0))
+      );
+    });
+    assertTrue(exception.getMessage().contains("Illegal number of fields[1], must be 2"));
   }
 
   @Test
   public void testConstructorTooManyPostAggInputs()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Illegal number of fields[3], must be 2");
-    new ArrayOfDoublesSketchTTestPostAggregator(
-        "a",
-        Arrays.asList(
-            new ConstantPostAggregator("", 0),
-            new ConstantPostAggregator("", 0),
-            new ConstantPostAggregator("", 0)
-        )
-    );
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      new ArrayOfDoublesSketchTTestPostAggregator(
+          "a",
+          Arrays.asList(
+              new ConstantPostAggregator("", 0),
+              new ConstantPostAggregator("", 0),
+              new ConstantPostAggregator("", 0)
+          )
+      );
+    });
+    assertTrue(exception.getMessage().contains("Illegal number of fields[3], must be 2"));
   }
 
   @Test
@@ -90,8 +90,8 @@ public class ArrayOfDoublesSketchTTestPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -102,7 +102,7 @@ public class ArrayOfDoublesSketchTTestPostAggregatorTest
         Arrays.asList(new ConstantPostAggregator("", 0), new ConstantPostAggregator("", 0))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ArrayOfDoublesSketchTTestPostAggregator{name='a', fields=[ConstantPostAggregator{name='', constantValue=0}, ConstantPostAggregator{name='', constantValue=0}]}",
         postAgg.toString()
     );
@@ -111,13 +111,14 @@ public class ArrayOfDoublesSketchTTestPostAggregatorTest
   @Test
   public void testComparator()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing arrays of p values is not supported");
-    PostAggregator postAgg = new ArrayOfDoublesSketchTTestPostAggregator(
-        "a",
-        Arrays.asList(new ConstantPostAggregator("", 0), new ConstantPostAggregator("", 0))
-    );
-    postAgg.getComparator();
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      PostAggregator postAgg = new ArrayOfDoublesSketchTTestPostAggregator(
+          "a",
+          Arrays.asList(new ConstantPostAggregator("", 0), new ConstantPostAggregator("", 0))
+      );
+      postAgg.getComparator();
+    });
+    assertTrue(exception.getMessage().contains("Comparing arrays of p values is not supported"));
   }
 
   @Test
@@ -133,23 +134,24 @@ public class ArrayOfDoublesSketchTTestPostAggregatorTest
   @Test
   public void testComputeMismatchedSketches()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Sketches have different number of values: 2 and 100");
-    ArrayOfDoublesUpdatableSketch s1 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(16)
-                                                                                 .setNumberOfValues(2)
-                                                                                 .build();
-    ArrayOfDoublesUpdatableSketch s2 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(16)
-                                                                                 .setNumberOfValues(100)
-                                                                                 .build();
-    PostAggregator field1 = EasyMock.createMock(PostAggregator.class);
-    EasyMock.expect(field1.compute(EasyMock.anyObject(Map.class))).andReturn(s1).anyTimes();
-    PostAggregator field2 = EasyMock.createMock(PostAggregator.class);
-    EasyMock.expect(field2.compute(EasyMock.anyObject(Map.class))).andReturn(s2).anyTimes();
-    EasyMock.replay(field1, field2);
-    new ArrayOfDoublesSketchTTestPostAggregator(
-        "a",
-        Arrays.asList(field1, field2)
-    ).compute(ImmutableMap.of());
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      ArrayOfDoublesUpdatableSketch s1 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(16)
+          .setNumberOfValues(2)
+          .build();
+      ArrayOfDoublesUpdatableSketch s2 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(16)
+          .setNumberOfValues(100)
+          .build();
+      PostAggregator field1 = EasyMock.createMock(PostAggregator.class);
+      EasyMock.expect(field1.compute(EasyMock.anyObject(Map.class))).andReturn(s1).anyTimes();
+      PostAggregator field2 = EasyMock.createMock(PostAggregator.class);
+      EasyMock.expect(field2.compute(EasyMock.anyObject(Map.class))).andReturn(s2).anyTimes();
+      EasyMock.replay(field1, field2);
+      new ArrayOfDoublesSketchTTestPostAggregator(
+          "a",
+          Arrays.asList(field1, field2)
+      ).compute(ImmutableMap.of());
+    });
+    assertTrue(exception.getMessage().contains("Sketches have different number of values: 2 and 100"));
   }
 
   @Test
@@ -174,7 +176,7 @@ public class ArrayOfDoublesSketchTTestPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

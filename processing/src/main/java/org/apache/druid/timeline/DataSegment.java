@@ -40,13 +40,16 @@ import org.apache.druid.jackson.CommaListJoinSerializer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -67,15 +70,35 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   /**
-   * Shared canonical interner for {@link org.apache.druid.segment.VirtualColumn} instances embedded in segment-side
+   * Shared canonical interner for {@link VirtualColumn} instances embedded in segment-side
    * metadata that lives in broker/coordinator memory. Used by callers that carry virtual columns through
    * {@link DataSegment}'s wire form (clustering virtual columns on {@link ClusterGroupTuples},
    * {@link org.apache.druid.timeline.partition.BaseDimensionRangeShardSpec}'s range-clustering virtual columns) so
-   * identical VC definitions across segments collapse to a single instance in memory.
+   * identical VC definitions across segments collapse to a single instance in memory. Callers holding a whole
+   * {@link VirtualColumns} should use {@link #internVirtualColumns}.
    */
   public static Interner<VirtualColumn> virtualColumnInterner()
   {
     return VIRTUAL_COLUMN_INTERNER;
+  }
+
+  /**
+   * Returns a shared {@link VirtualColumns} instance equal to the given one, so segments with the same virtual column
+   * definitions reuse one object in memory instead of each holding its own copy. Returns {@link VirtualColumns#EMPTY}
+   * if the input is null or empty.
+   */
+  public static VirtualColumns internVirtualColumns(@Nullable VirtualColumns virtualColumns)
+  {
+    if (virtualColumns == null || virtualColumns.isEmpty()) {
+      return VirtualColumns.EMPTY;
+    }
+    return VIRTUAL_COLUMNS_INTERNER.intern(
+        VirtualColumns.create(
+            Arrays.stream(virtualColumns.getVirtualColumns())
+                  .map(VIRTUAL_COLUMN_INTERNER::intern)
+                  .toList()
+        )
+    );
   }
 
   /*
@@ -108,6 +131,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private static final Interner<List<String>> PROJECTIONS_INTERNER = Interners.newWeakInterner();
   private static final Interner<ClusterGroupTuples> CLUSTER_GROUPS_INTERNER = Interners.newWeakInterner();
   private static final Interner<VirtualColumn> VIRTUAL_COLUMN_INTERNER = Interners.newWeakInterner();
+  private static final Interner<VirtualColumns> VIRTUAL_COLUMNS_INTERNER = Interners.newWeakInterner();
   private static final Interner<CompactionState> COMPACTION_STATE_INTERNER = Interners.newWeakInterner();
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
@@ -124,7 +148,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   /**
    * Typed clustering tuples for clustered base-table segments, or {@code null} for non-clustered segments. Each tuple
    * is one cluster group's clustering-column values in the order declared by
-   * {@link ClusterGroupTuples#getClusteringColumns()}. Consumed by cluster-group partial-load matchers.
+   * {@link ClusterGroupTuples#clusteringColumns()}. Consumed by cluster-group partial-load matchers.
    */
   @Nullable
   private final ClusterGroupTuples clusterGroups;
@@ -220,46 +244,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         null,
         null,
         PruneSpecsHolder.DEFAULT
-    );
-  }
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      @Nullable Map<String, Object> loadSpec,
-      @Nullable List<String> dimensions,
-      @Nullable List<String> metrics,
-      @Nullable List<String> projections,
-      @Nullable ShardSpec shardSpec,
-      @Nullable CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size,
-      Integer totalRows,
-      String indexingStateFingerprint,
-      PruneSpecsHolder pruneSpecsHolder
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        projections,
-        null,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        totalRows,
-        indexingStateFingerprint,
-        pruneSpecsHolder
     );
   }
 
@@ -570,6 +554,32 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public DataSegment withIndexingStateFingerprint(String indexingStateFingerprint)
   {
     return builder(this).indexingStateFingerprint(indexingStateFingerprint).build();
+  }
+
+  /**
+   * Returns a copy of this segment with every optional top-level field that is not listed in {@code details} removed.
+   * The fields that are not optional are always retained; see {@link SegmentDetail} for the full split.
+   *
+   * @param details the optional details to retain; null retains all details and an empty set retains none
+   */
+  public DataSegment retainOnlyDetails(@Nullable final Set<SegmentDetail> details)
+  {
+    if (details == null) {
+      return this;
+    } else {
+      return builder(this)
+          .dimensions(details.contains(SegmentDetail.DIMENSIONS) ? dimensions : null)
+          .metrics(details.contains(SegmentDetail.METRICS) ? metrics : null)
+          .projections(details.contains(SegmentDetail.PROJECTIONS) ? projections : null)
+          .clusterGroups(details.contains(SegmentDetail.CLUSTER_GROUPS) ? clusterGroups : null)
+          .lastCompactionState(details.contains(SegmentDetail.COMPACTION_STATE) ? lastCompactionState : null)
+          .loadSpec(details.contains(SegmentDetail.LOAD_SPEC) ? loadSpec : null)
+          .totalRows(details.contains(SegmentDetail.ROW_COUNT) ? totalRows : null)
+          .indexingStateFingerprint(
+              details.contains(SegmentDetail.INDEXING_STATE_FINGERPRINT) ? indexingStateFingerprint : null
+          )
+          .build();
+    }
   }
 
   public DataSegment.Builder toBuilder()

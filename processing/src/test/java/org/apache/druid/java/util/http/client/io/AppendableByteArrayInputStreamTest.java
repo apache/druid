@@ -212,6 +212,55 @@ public class AppendableByteArrayInputStreamTest
   }
 
   @Test
+  public void testAvailableSaturatesInsteadOfOverflowing() throws Exception
+  {
+    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+
+    // The same array is queued repeatedly: the stream retains references, so this accounts for 2 GiB of queued
+    // bytes while allocating only one chunk.
+    final byte[] oneMebibyte = new byte[1024 * 1024];
+    for (int i = 0; i < 2048; i++) {
+      in.add(oneMebibyte);
+    }
+
+    Assertions.assertEquals(Integer.MAX_VALUE, in.available());
+
+    in.read(new byte[oneMebibyte.length]);
+
+    Assertions.assertEquals((2048L - 1) * oneMebibyte.length, (long) in.available());
+  }
+
+  @Test
+  public void testExceptionCaughtReleasesQueuedBytes() throws IOException
+  {
+    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    in.add(new byte[10]);
+    in.add(new byte[8192]);
+    Assertions.assertEquals(5, in.read(new byte[5]));
+
+    in.exceptionCaught(new IOException("connection reset"));
+
+    Assertions.assertEquals(0, in.available());
+    Assertions.assertEquals(5, in.read(new byte[5]), "the chunk being read is still handed out");
+    Assertions.assertEquals(0, in.available());
+    Assertions.assertThrows(IOException.class, () -> in.read(new byte[8192]));
+  }
+
+  @Test
+  public void testCloseDiscardsQueuedAndLaterChunks()
+  {
+    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    in.add(new byte[8192]);
+    in.add(new byte[8192]);
+
+    in.close();
+    in.add(new byte[8192]);
+
+    Assertions.assertEquals(0, in.available());
+    Assertions.assertThrows(IOException.class, in::read);
+  }
+
+  @Test
   public void testExceptionUnblocks() throws InterruptedException
   {
     final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
@@ -256,5 +305,90 @@ public class AppendableByteArrayInputStreamTest
       Assertions.assertEquals(expected, thrown.getCause());
     }
 
+  }
+
+  @Test
+  public void testDoneUnblocksAllReaders() throws Exception
+  {
+    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    final AtomicReference<Integer> firstResult = new AtomicReference<>();
+    final AtomicReference<Integer> secondResult = new AtomicReference<>();
+    final AtomicReference<Throwable> firstError = new AtomicReference<>();
+    final AtomicReference<Throwable> secondError = new AtomicReference<>();
+    final Thread firstReader = readerThread(in, firstResult, firstError);
+    final Thread secondReader = readerThread(in, secondResult, secondError);
+
+    firstReader.start();
+    secondReader.start();
+    waitUntilWaiting(firstReader, secondReader);
+
+    in.done();
+
+    firstReader.join(1_000);
+    secondReader.join(1_000);
+    Assertions.assertFalse(firstReader.isAlive());
+    Assertions.assertFalse(secondReader.isAlive());
+    Assertions.assertNull(firstError.get());
+    Assertions.assertNull(secondError.get());
+    Assertions.assertEquals(-1, firstResult.get());
+    Assertions.assertEquals(-1, secondResult.get());
+  }
+
+  @Test
+  public void testExceptionUnblocksAllReaders() throws Exception
+  {
+    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    final AtomicReference<Integer> firstResult = new AtomicReference<>();
+    final AtomicReference<Integer> secondResult = new AtomicReference<>();
+    final AtomicReference<Throwable> firstError = new AtomicReference<>();
+    final AtomicReference<Throwable> secondError = new AtomicReference<>();
+    final Thread firstReader = readerThread(in, firstResult, firstError);
+    final Thread secondReader = readerThread(in, secondResult, secondError);
+
+    firstReader.start();
+    secondReader.start();
+    waitUntilWaiting(firstReader, secondReader);
+
+    final Exception expected = new Exception();
+    in.exceptionCaught(expected);
+
+    firstReader.join(1_000);
+    secondReader.join(1_000);
+    Assertions.assertFalse(firstReader.isAlive());
+    Assertions.assertFalse(secondReader.isAlive());
+    Assertions.assertNull(firstResult.get());
+    Assertions.assertNull(secondResult.get());
+    Assertions.assertSame(expected, firstError.get().getCause());
+    Assertions.assertSame(expected, secondError.get().getCause());
+  }
+
+  private static Thread readerThread(
+      final AppendableByteArrayInputStream in,
+      final AtomicReference<Integer> result,
+      final AtomicReference<Throwable> error
+  )
+  {
+    final Thread reader = new Thread(() -> {
+      try {
+        result.set(in.read());
+      }
+      catch (Throwable t) {
+        error.set(t);
+      }
+    });
+    reader.setDaemon(true);
+    return reader;
+  }
+
+  private static void waitUntilWaiting(final Thread... readers) throws InterruptedException
+  {
+    for (int i = 0; i < 100; i++) {
+      if (Arrays.stream(readers).allMatch(reader -> reader.getState() == Thread.State.WAITING)) {
+        return;
+      }
+      Thread.sleep(10);
+    }
+
+    Assertions.fail("Readers did not all block on the input stream");
   }
 }

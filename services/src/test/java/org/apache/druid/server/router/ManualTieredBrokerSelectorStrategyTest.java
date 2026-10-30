@@ -21,31 +21,32 @@ package org.apache.druid.server.router;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.sql.http.SqlQuery;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+
+
+
 
 public class ManualTieredBrokerSelectorStrategyTest
 {
   private TieredBrokerConfig tieredBrokerConfig;
   private Druids.TimeseriesQueryBuilder queryBuilder;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     tieredBrokerConfig = new TieredBrokerConfig()
@@ -89,18 +90,18 @@ public class ManualTieredBrokerSelectorStrategyTest
         json,
         TieredBrokerSelectorStrategy.class
     );
-    assertTrue(strategy instanceof ManualTieredBrokerSelectorStrategy);
+    Assertions.assertTrue(strategy instanceof ManualTieredBrokerSelectorStrategy);
 
     ManualTieredBrokerSelectorStrategy queryContextStrategy =
         (ManualTieredBrokerSelectorStrategy) strategy;
-    assertNull(queryContextStrategy.getDefaultManualBrokerService());
+    Assertions.assertNull(queryContextStrategy.getDefaultManualBrokerService());
 
     json = "{\"type\":\"manual\",\"defaultManualBrokerService\":\"hotBroker\"}";
     queryContextStrategy = mapper.readValue(
         json,
         ManualTieredBrokerSelectorStrategy.class
     );
-    assertEquals(queryContextStrategy.getDefaultManualBrokerService(), "hotBroker");
+    Assertions.assertEquals(queryContextStrategy.getDefaultManualBrokerService(), "hotBroker");
   }
 
   @Test
@@ -109,34 +110,34 @@ public class ManualTieredBrokerSelectorStrategyTest
     final ManualTieredBrokerSelectorStrategy strategy =
         new ManualTieredBrokerSelectorStrategy(null);
 
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(tieredBrokerConfig, queryBuilder.build())
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.INVALID_BROKER))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.INVALID_BROKER))
                 .build()
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_HOT),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_HOT))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.BROKER_SVC_HOT))
                 .build()
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_COLD),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_COLD))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.BROKER_SVC_COLD))
                 .build()
         )
     );
@@ -148,25 +149,25 @@ public class ManualTieredBrokerSelectorStrategyTest
     final ManualTieredBrokerSelectorStrategy strategy =
         new ManualTieredBrokerSelectorStrategy(Names.BROKER_SVC_MEDIUM);
 
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_MEDIUM),
         strategy.getBrokerServiceName(tieredBrokerConfig, queryBuilder.build())
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_MEDIUM),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.INVALID_BROKER))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.INVALID_BROKER))
                 .build()
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_HOT),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_HOT))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.BROKER_SVC_HOT))
                 .build()
         )
     );
@@ -178,25 +179,25 @@ public class ManualTieredBrokerSelectorStrategyTest
     final ManualTieredBrokerSelectorStrategy strategy =
         new ManualTieredBrokerSelectorStrategy("noSuchBroker");
 
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(tieredBrokerConfig, queryBuilder.build())
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.INVALID_BROKER))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.INVALID_BROKER))
                 .build()
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_HOT),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_HOT))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.BROKER_SVC_HOT))
                 .build()
         )
     );
@@ -208,34 +209,34 @@ public class ManualTieredBrokerSelectorStrategyTest
     final ManualTieredBrokerSelectorStrategy strategy =
         new ManualTieredBrokerSelectorStrategy(null);
 
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(tieredBrokerConfig, createSqlQueryWithContext(null))
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             createSqlQueryWithContext(
-                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.INVALID_BROKER)
+                QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.INVALID_BROKER)
             )
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_HOT),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             createSqlQueryWithContext(
-                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_HOT)
+                QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.BROKER_SVC_HOT)
             )
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_COLD),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
             createSqlQueryWithContext(
-                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, Names.BROKER_SVC_COLD)
+                QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, Names.BROKER_SVC_COLD)
             )
         )
     );

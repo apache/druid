@@ -34,7 +34,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContextTestUtils;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ResourceAction;
@@ -48,10 +49,7 @@ import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -216,10 +214,13 @@ public class QueryTestRunner
     public void run()
     {
       final QueryTestBuilder builder = builder();
+      // Pass the context as a client does, so that tests also exercise parsing values in their JSON form
+      final Map<String, Object> queryContext =
+          QueryContextTestUtils.asJsonContext(builder.config.jsonMapper(), builder.queryContext);
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
                                                 .systemDefaultContext(Map.of())
-                                                .queryContext(builder.queryContext)
-                                                .sqlParameters(builder.parameters)
+                                                .queryContext(queryContext)
+                                                .parameters(builder.parameters)
                                                 .auth(builder.authenticationResult)
                                                 .build();
       final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
@@ -271,21 +272,25 @@ public class QueryTestRunner
         vectorizeValues.add("force");
       }
 
+      // Pass the context as a client does, so that tests also exercise parsing values in their JSON form
+      final Map<String, Object> queryContext =
+          QueryContextTestUtils.asJsonContext(builder.config.jsonMapper(), builder.queryContext);
       for (final String vectorize : vectorizeValues) {
         // Need to create sqlQuery inside the loop, because SqlQueryPlus can only be used once
         final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                  .sqlParameters(builder.parameters)
+                                                  .parameters(builder.parameters)
                                                   .auth(builder.authenticationResult)
                                                   .systemDefaultContext(Map.of())
-                                                  .queryContext(builder.queryContext)
+                                                  .queryContext(queryContext)
                                                   .build();
 
+        // Pass the string form, as clients do, so that the suite also exercises parsing it.
         final Map<String, Object> theQueryContext = new HashMap<>(sqlQuery.context());
-        theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
-        theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
+        theQueryContext.put(QueryContextParameters.VECTORIZE.getName(), vectorize);
+        theQueryContext.put(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.getName(), vectorize);
 
         if (!"false".equals(vectorize)) {
-          theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
+          QueryContextParameters.VECTOR_SIZE.set(theQueryContext, 2); // Small vector size to ensure we use more than one.
         }
 
         results.add(runQuery(
@@ -442,32 +447,32 @@ public class QueryTestRunner
           .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, queryJsonMapper))
           .collect(Collectors.toList());
 
-      Assert.assertEquals(
-          StringUtils.format("query count: %s", builder.sql),
+      Assertions.assertEquals(
           expectedQueries.size(),
-          recordedQueries.size()
+          recordedQueries.size(),
+          StringUtils.format("query count: %s", builder.sql)
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
         Query<?> expectedQuery = expectedQueries.get(i);
         Query<?> actualQuery = recordedQueries.get(i);
-        Assert.assertEquals(
-            StringUtils.format("query #%d: %s", i + 1, builder.sql),
+        Assertions.assertEquals(
             expectedQuery,
-            actualQuery
+            actualQuery,
+            StringUtils.format("query #%d: %s", i + 1, builder.sql)
         );
 
         try {
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
-          // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
+          // Assertions.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
           // in the recorded queries, but it is a regular map after deserialization
           final String recordedString = queryJsonMapper.writeValueAsString(actualQuery);
           final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
           final String expectedString = queryJsonMapper.writeValueAsString(expectedQuery);
           final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
-          Assert.assertEquals(expectedStringAndBack, stringAndBack);
+          Assertions.assertEquals(expectedStringAndBack, stringAndBack);
         }
         catch (JsonProcessingException e) {
-          Assert.fail(e.getMessage());
+          Assertions.fail(e.getMessage());
         }
       }
     }
@@ -489,7 +494,7 @@ public class QueryTestRunner
     public void verify()
     {
       QueryTestBuilder builder = prepareStep.builder();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableSet.copyOf(builder.expectedResources),
           prepareStep.resourceActions()
       );
@@ -512,7 +517,7 @@ public class QueryTestRunner
     public void verify()
     {
       QueryTestBuilder builder = prepareStep.builder();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           builder.expectedSqlSchema,
           SqlSchema.of(prepareStep.sqlSignature)
       );
@@ -537,7 +542,7 @@ public class QueryTestRunner
     {
       QueryTestBuilder builder = execStep.builder();
       for (QueryResults queryResults : execStep.results()) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             builder.expectedSqlSchema,
             SqlSchema.of(queryResults.sqlSignature)
         );
@@ -566,7 +571,7 @@ public class QueryTestRunner
     {
       String expectedPlan = execStep.builder().expectedLogicalPlan;
       String actualPlan = visualizePlan(queryResults.capture);
-      Assert.assertEquals(expectedPlan, actualPlan);
+      Assertions.assertEquals(expectedPlan, actualPlan);
     }
 
     private String visualizePlan(PlannerCaptureHook hook)
@@ -613,11 +618,11 @@ public class QueryTestRunner
    * runs, but that's an exercise for later.
    */
 
-  public static class VerifyExpectedException implements QueryVerifyStep
+  public static class VerifyExpectedFailure implements QueryVerifyStep
   {
     protected final BaseExecuteQuery execStep;
 
-    public VerifyExpectedException(BaseExecuteQuery execStep)
+    public VerifyExpectedFailure(BaseExecuteQuery execStep)
     {
       this.execStep = execStep;
     }
@@ -634,21 +639,14 @@ public class QueryTestRunner
         // Delayed exception checking to let other verify steps run before running vectorized checks
         if (builder.queryCannotVectorize && "force".equals(queryResults.vectorizeOption)) {
           if (queryResults.exception == null) {
-            Assert.fail(
+            Assertions.fail(
                 "Expected vectorized execution to fail, but it did not. "
                 + "Please remove cannotVectorize() from this test case."
             );
           }
 
-          MatcherAssert.assertThat(
-              queryResults.exception,
-              CoreMatchers.allOf(
-                  CoreMatchers.instanceOf(RuntimeException.class),
-                  ThrowableMessageMatcher.hasMessage(
-                      CoreMatchers.containsString("Cannot vectorize!")
-                  )
-              )
-          );
+          Assertions.assertInstanceOf(RuntimeException.class, queryResults.exception);
+          Assertions.assertTrue(queryResults.exception.getMessage().contains("Cannot vectorize!"));
         } else if (queryResults.exception != null) {
           throw queryResults.exception;
         }
@@ -760,7 +758,7 @@ public class QueryTestRunner
 
       // The exception is always verified: either there should be no exception
       // (the other steps ran), or there should be the defined exception.
-      verifySteps.add(new VerifyExpectedException(finalExecStep));
+      verifySteps.add(new VerifyExpectedFailure(finalExecStep));
     }
   }
 

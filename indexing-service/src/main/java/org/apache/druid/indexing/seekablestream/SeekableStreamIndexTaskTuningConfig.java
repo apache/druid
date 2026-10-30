@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -70,6 +71,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private final int numPersistThreads;
   private final int maxColumnsToMerge;
   private final boolean releaseLocksOnHandoff;
+  @Nullable
+  private final StreamingPartitionsSpec streamingPartitionsSpec;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -97,6 +100,62 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable Boolean releaseLocksOnHandoff
   )
   {
+    this(
+        appendableIndexSpec,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
+        maxRowsPerSegment,
+        maxTotalRows,
+        intermediatePersistPeriod,
+        basePersistDirectory,
+        maxPendingPersists,
+        indexSpec,
+        indexSpecForIntermediatePersists,
+        reportParseExceptions,
+        handoffConditionTimeout,
+        resetOffsetAutomatically,
+        skipSequenceNumberAvailabilityCheck,
+        segmentWriteOutMediumFactory,
+        intermediateHandoffPeriod,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions,
+        numPersistThreads,
+        maxColumnsToMerge,
+        releaseLocksOnHandoff,
+        null
+    );
+  }
+
+  public SeekableStreamIndexTaskTuningConfig(
+      @Nullable AppendableIndexSpec appendableIndexSpec,
+      @Nullable Integer maxRowsInMemory,
+      @Nullable Long maxBytesInMemory,
+      @Nullable Boolean skipBytesInMemoryOverheadCheck,
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable Long maxTotalRows,
+      @Nullable Period intermediatePersistPeriod,
+      @Nullable File basePersistDirectory,
+      @Nullable Integer maxPendingPersists,
+      @Nullable IndexSpec indexSpec,
+      @Nullable IndexSpec indexSpecForIntermediatePersists,
+      @Deprecated @Nullable Boolean reportParseExceptions,
+      @Nullable Long handoffConditionTimeout,
+      @Nullable Boolean resetOffsetAutomatically,
+      Boolean skipSequenceNumberAvailabilityCheck,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @Nullable Period intermediateHandoffPeriod,
+      @Nullable Boolean logParseExceptions,
+      @Nullable Integer maxParseExceptions,
+      @Nullable Integer maxSavedParseExceptions,
+      @Nullable Integer numPersistThreads,
+      @Nullable Integer maxColumnsToMerge,
+      @Nullable Boolean releaseLocksOnHandoff,
+      @Nullable StreamingPartitionsSpec streamingPartitionsSpec
+  )
+  {
+    this.streamingPartitionsSpec = streamingPartitionsSpec;
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY_REALTIME : maxRowsInMemory;
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
@@ -196,6 +255,18 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public DynamicPartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;
+  }
+
+  /**
+   * Dimensions whose observed values are recorded per published segment for query-time pruning via
+   * {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec}. Null when not configured.
+   */
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public StreamingPartitionsSpec getStreamingPartitionsSpec()
+  {
+    return streamingPartitionsSpec;
   }
 
   @JsonProperty
@@ -336,7 +407,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
            Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod);
+           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod) &&
+           Objects.equals(streamingPartitionsSpec, that.streamingPartitionsSpec);
   }
 
   @Override
@@ -364,7 +436,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        streamingPartitionsSpec
     );
   }
 

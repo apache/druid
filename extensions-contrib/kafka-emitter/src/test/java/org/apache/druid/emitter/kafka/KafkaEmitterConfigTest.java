@@ -23,14 +23,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MapStringDynamicConfigProvider;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -59,12 +58,15 @@ public class KafkaEmitterConfigTest
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS,
-        50L
+        50L,
+        null,
+        null,
+        null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);
-    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
+    Assertions.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
   }
 
   @Test
@@ -82,12 +84,15 @@ public class KafkaEmitterConfigTest
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS,
+        null,
+        null,
+        null,
         null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);
-    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
+    Assertions.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
   }
 
   @Test
@@ -107,12 +112,15 @@ public class KafkaEmitterConfigTest
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS,
+        null,
+        null,
+        null,
         null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);
-    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
+    Assertions.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
   }
 
   @Test
@@ -129,33 +137,36 @@ public class KafkaEmitterConfigTest
         ImmutableMap.of("env", "preProd"),
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);
-    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
+    Assertions.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
     try {
       @SuppressWarnings("unused")
       KafkaEmitter emitter = new KafkaEmitter(kafkaEmitterConfig, MAPPER);
     }
     catch (NullPointerException e) {
-      Assert.fail();
+      Assertions.fail();
     }
   }
 
   @Test
   public void testDeserializeEventTypesWithDifferentCase() throws JsonProcessingException
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KafkaEmitterConfig.EventType.SEGMENT_METADATA,
         MAPPER.readValue("\"segment_metadata\"", KafkaEmitterConfig.EventType.class)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KafkaEmitterConfig.EventType.ALERTS,
         MAPPER.readValue("\"alerts\"", KafkaEmitterConfig.EventType.class)
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ValueInstantiationException.class,
         () -> MAPPER.readValue("\"segmentMetadata\"", KafkaEmitterConfig.EventType.class)
     );
@@ -164,16 +175,19 @@ public class KafkaEmitterConfigTest
   @Test
   public void testJacksonModules()
   {
-    Assert.assertTrue(new KafkaEmitterModule().getJacksonModules().isEmpty());
+    Assertions.assertTrue(new KafkaEmitterModule().getJacksonModules().isEmpty());
   }
 
   @Test
   public void testNullBootstrapServers()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    assertOperatorException(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new KafkaEmitterConfig(
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -187,16 +201,15 @@ public class KafkaEmitterConfigTest
                 null
             )
         ),
-        operatorExceptionMatcher()
-            .expectMessageIs("druid.emitter.kafka.bootstrap.servers must be specified.")
+        "druid.emitter.kafka.bootstrap.servers must be specified."
     );
   }
 
   @Test
   public void testNullMetricTopic()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    assertOperatorException(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new KafkaEmitterConfig(
                 "foo",
@@ -209,19 +222,21 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
-        operatorExceptionMatcher()
-            .expectMessageIs("druid.emitter.kafka.metric.topic must be specified if druid.emitter.kafka.event.types contains metrics.")
+        "druid.emitter.kafka.metric.topic must be specified if druid.emitter.kafka.event.types contains metrics."
     );
   }
 
   @Test
   public void testNullAlertTopic()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    assertOperatorException(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new KafkaEmitterConfig(
                 "foo",
@@ -234,21 +249,21 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
-        operatorExceptionMatcher()
-            .expectMessageIs(
-                "druid.emitter.kafka.alert.topic must be specified if druid.emitter.kafka.event.types contains alerts."
-            )
+        "druid.emitter.kafka.alert.topic must be specified if druid.emitter.kafka.event.types contains alerts."
     );
   }
 
   @Test
   public void testNullRequestTopic()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    assertOperatorException(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new KafkaEmitterConfig(
                 "foo",
@@ -261,21 +276,21 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
-        operatorExceptionMatcher()
-            .expectMessageIs(
-                "druid.emitter.kafka.request.topic must be specified if druid.emitter.kafka.event.types contains requests."
-            )
+        "druid.emitter.kafka.request.topic must be specified if druid.emitter.kafka.event.types contains requests."
     );
   }
 
   @Test
   public void testNullSegmentMetadataTopic()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    assertOperatorException(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new KafkaEmitterConfig(
                 "foo",
@@ -288,13 +303,13 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
-        operatorExceptionMatcher()
-            .expectMessageIs(
-                "druid.emitter.kafka.segmentMetadata.topic must be specified if druid.emitter.kafka.event.types contains segment_metadata."
-            )
+        "druid.emitter.kafka.segmentMetadata.topic must be specified if druid.emitter.kafka.event.types contains segment_metadata."
     );
   }
 
@@ -315,20 +330,139 @@ public class KafkaEmitterConfigTest
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS,
+        null,
+        null,
+        null,
         null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);
-    Assert.assertEquals(Long.MAX_VALUE, (long) kafkaEmitterConfigExpected.getShutdownTimeout());
+    Assertions.assertEquals(Long.MAX_VALUE, (long) kafkaEmitterConfigExpected.getShutdownTimeout());
   }
 
-  private DruidExceptionMatcher operatorExceptionMatcher()
+  @Test
+  public void testSamplingDefaults()
   {
-    return new DruidExceptionMatcher(
-        DruidException.Persona.OPERATOR,
-        DruidException.Category.NOT_FOUND,
-        "general"
+    KafkaEmitterConfig config = newSamplingConfig(null, null, null);
+    Assertions.assertEquals(100, config.getSamplingRate());
+    Assertions.assertEquals(Collections.emptySet(), config.getSampledMetrics());
+    Assertions.assertEquals(Collections.emptySet(), config.getSampledServiceTypes());
+  }
+
+  @Test
+  public void testSerDeserSamplingConfig() throws IOException
+  {
+    KafkaEmitterConfig config = newSamplingConfig(
+        10,
+        ImmutableSet.of("query/time", "query/bytes"),
+        ImmutableSet.of("druid/broker")
+    );
+    KafkaEmitterConfig roundTripped = MAPPER.readerFor(KafkaEmitterConfig.class)
+                                            .readValue(MAPPER.writeValueAsString(config));
+    Assertions.assertEquals(config, roundTripped);
+    Assertions.assertEquals(config.hashCode(), roundTripped.hashCode());
+    Assertions.assertEquals(10, roundTripped.getSamplingRate());
+    Assertions.assertEquals(ImmutableSet.of("query/time", "query/bytes"), roundTripped.getSampledMetrics());
+    Assertions.assertEquals(ImmutableSet.of("druid/broker"), roundTripped.getSampledServiceTypes());
+  }
+
+  @Test
+  public void testDeserSamplingConfigFromPropertyNames() throws IOException
+  {
+    KafkaEmitterConfig config = MAPPER.readValue(
+        "{\"bootstrap.servers\": \"localhost:9092\","
+        + " \"metric.topic\": \"metrics\","
+        + " \"alert.topic\": \"alerts\","
+        + " \"samplingRate\": 25,"
+        + " \"sampledMetrics\": [\"query/time\"],"
+        + " \"sampledServiceTypes\": [\"druid/broker\", \"druid/historical\"]}",
+        KafkaEmitterConfig.class
+    );
+    Assertions.assertEquals(25, config.getSamplingRate());
+    Assertions.assertEquals(ImmutableSet.of("query/time"), config.getSampledMetrics());
+    Assertions.assertEquals(ImmutableSet.of("druid/broker", "druid/historical"), config.getSampledServiceTypes());
+  }
+
+  @Test
+  public void testSamplingConfigsAffectEquality()
+  {
+    KafkaEmitterConfig base = newSamplingConfig(10, ImmutableSet.of("query/time"), ImmutableSet.of("druid/broker"));
+    Assertions.assertEquals(
+        base,
+        newSamplingConfig(10, ImmutableSet.of("query/time"), ImmutableSet.of("druid/broker"))
+    );
+    Assertions.assertNotEquals(
+        base,
+        newSamplingConfig(20, ImmutableSet.of("query/time"), ImmutableSet.of("druid/broker"))
+    );
+    Assertions.assertNotEquals(
+        base,
+        newSamplingConfig(10, ImmutableSet.of("query/bytes"), ImmutableSet.of("druid/broker"))
+    );
+    Assertions.assertNotEquals(
+        base,
+        newSamplingConfig(10, ImmutableSet.of("query/time"), ImmutableSet.of("druid/historical"))
+    );
+  }
+
+  @Test
+  public void testSamplingRateBoundariesAccepted()
+  {
+    Assertions.assertEquals(0, newSamplingConfig(0, null, null).getSamplingRate());
+    Assertions.assertEquals(100, newSamplingConfig(100, null, null).getSamplingRate());
+  }
+
+  @Test
+  public void testSamplingRateOutOfRangeRejected()
+  {
+    for (int invalidRate : new int[]{-1, 101}) {
+      DruidException exception = Assertions.assertThrows(
+          DruidException.class,
+          () -> newSamplingConfig(invalidRate, null, null)
+      );
+      Assertions.assertAll(
+          () -> Assertions.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona()),
+          () -> Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory()),
+          () -> Assertions.assertEquals(
+              "druid.emitter.kafka.samplingRate must be between 0 and 100, got [" + invalidRate + "].",
+              exception.getMessage()
+          )
+      );
+    }
+  }
+
+  private static KafkaEmitterConfig newSamplingConfig(
+      Integer samplingRate,
+      Set<String> sampledMetrics,
+      Set<String> sampledServiceTypes
+  )
+  {
+    return new KafkaEmitterConfig(
+        "localhost:9092",
+        null,
+        "metrics",
+        "alerts",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        samplingRate,
+        sampledMetrics,
+        sampledServiceTypes
+    );
+  }
+
+  private void assertOperatorException(final DruidException exception, final String expectedMessage)
+  {
+    Assertions.assertAll(
+        () -> Assertions.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona()),
+        () -> Assertions.assertEquals(DruidException.Category.NOT_FOUND, exception.getCategory()),
+        () -> Assertions.assertEquals("general", exception.getErrorCode()),
+        () -> Assertions.assertEquals(expectedMessage, exception.getMessage())
     );
   }
 }

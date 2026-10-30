@@ -24,13 +24,13 @@ sidebar_label: "GroupBy"
   -->
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes a query
  type in the native language. For information about when Druid SQL will use this query type, refer to the
  [SQL documentation](sql-translation.md#query-types).
 :::
 
-These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
+These types of Apache&circledR; Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
 :::info
@@ -364,9 +364,9 @@ Supported query contexts:
 
 |Key|Description|
 |---|-----------|
-|`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
-|`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.|
-|`minSpillFileSize`|Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.|
+|`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.| <!-- GENERATED QUERY CONTEXT PARAMETER: maxOnDiskStorage -->
+|`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.| <!-- GENERATED QUERY CONTEXT PARAMETER: maxSpillFileCount -->
+|`minSpillFileSize`|Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.| <!-- GENERATED QUERY CONTEXT PARAMETER: minSpillFileSize -->
 
 ### Advanced configurations
 
@@ -382,25 +382,30 @@ Supported runtime properties:
 |`druid.query.groupBy.intermediateCombineDegree`|Number of intermediate nodes combined together in the combining tree. Higher degrees will need less threads which might be helpful to improve the query performance by reducing the overhead of too many threads if the server has sufficiently powerful cpu cores.|8|
 |`druid.query.groupBy.numParallelCombineThreads`|Hint for the number of parallel combining threads. This should be larger than 1 to turn on the parallel combining feature. The actual number of threads used for parallel combining is min(`druid.query.groupBy.numParallelCombineThreads`, `druid.processing.numThreads`).|1 (disabled)|
 |`druid.query.groupBy.applyLimitPushDownToSegment`|If Broker pushes limit down to queryable data server (historicals, peons) then limit results during segment scan. If typically there are a large number of segments taking part in a query on a data server, this setting may counterintuitively reduce performance if enabled.|false (disabled)|
+|`druid.query.groupBy.mergeThreadLocal`|Whether merge buffers should always be split into thread-local buffers. Setting this to `true` reduces thread contention, but uses memory less efficiently.|false|
+|`druid.query.groupBy.forcePushDownLimit`|Whether the Broker pushes limit application down to the Historical processes even when the sorting order uses fields that are not in the grouping key, which can produce approximate results with unknown accuracy.|false|
+|`druid.query.groupBy.enableMultiValueUnnesting`|Whether multi-value grouping keys are implicitly unnested. If false, a query that has a multi-value column in its grouping key fails.|true|
+|`druid.query.groupBy.deferExpressionDimensions`|Whether expression evaluation for `expression` virtual columns in `dimensions` is deferred from cursor processing to the merge step. See the `deferExpressionDimensions` query context parameter for the options.|`fixedWidthNonNumeric`|
 
 Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|None|
-|`bufferGrouperInitialBuckets`|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|None|
-|`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|None|
-|`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`|None|
-|`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree`|None|
-|`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads`|None|
-|`maxSelectorDictionarySize`|Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`|None|
-|`maxMergingDictionarySize`|Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`|None|
-|`mergeThreadLocal`|Whether merge buffers should always be split into thread-local buffers. Setting this to `true` reduces thread contention, but uses memory less efficiently. This tradeoff is beneficial when memory is plentiful. |false|
-|`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|false|
-|`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|false|
-|`applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan. This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.|true|
-|`groupByEnableMultiValueUnnesting`|Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key. 'true' indicates multi-value grouping keys are unnested. 'false' returns an error if a multi value column is found as part of the grouping key.|true|
-|`deferExpressionDimensions`|When an entry in `dimensions` references an `expression` virtual column, this property influences whether expression evaluation is deferred from cursor processing to the merge step. Options are:<ul><li>`fixedWidth`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string).</li><li>`fixedWidthNonNumeric`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string), unless the expression output and all inputs are numeric.</li><li>`singleString`: Defer string-typed expressions with a single dictionary-encoded string input.</li><li>`always`: Defer all expressions. May require building dictionaries for expression inputs.</li></ul><br />These properties only take effect when the `groupBy` query can be vectorized. Non-vectorized queries only defer string-typed expressions of single string inputs.|`fixedWidthNonNumeric`|
+|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|`druid.query.groupBy.singleThreaded`| <!-- GENERATED QUERY CONTEXT PARAMETER: groupByIsSingleThreaded -->
+|`bufferGrouperInitialBuckets`|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|`druid.query.groupBy.bufferGrouperInitialBuckets`| <!-- GENERATED QUERY CONTEXT PARAMETER: bufferGrouperInitialBuckets -->
+|`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|`druid.query.groupBy.bufferGrouperMaxLoadFactor`| <!-- GENERATED QUERY CONTEXT PARAMETER: bufferGrouperMaxLoadFactor -->
+|`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`.|`druid.query.groupBy.forceHashAggregation`| <!-- GENERATED QUERY CONTEXT PARAMETER: forceHashAggregation -->
+|`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree`.|`druid.query.groupBy.intermediateCombineDegree`| <!-- GENERATED QUERY CONTEXT PARAMETER: intermediateCombineDegree -->
+|`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads`.|`druid.query.groupBy.numParallelCombineThreads`| <!-- GENERATED QUERY CONTEXT PARAMETER: numParallelCombineThreads -->
+|`maxSelectorDictionarySize`|Overrides the value of `druid.query.groupBy.maxSelectorDictionarySize`.|`druid.query.groupBy.maxSelectorDictionarySize`| <!-- GENERATED QUERY CONTEXT PARAMETER: maxSelectorDictionarySize -->
+|`maxMergingDictionarySize`|Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`.|`druid.query.groupBy.maxMergingDictionarySize`| <!-- GENERATED QUERY CONTEXT PARAMETER: maxMergingDictionarySize -->
+|`mergeThreadLocal`|Whether merge buffers should always be split into thread-local buffers. Setting this to `true` reduces thread contention, but uses memory less efficiently. This tradeoff is beneficial when memory is plentiful.|`druid.query.groupBy.mergeThreadLocal`| <!-- GENERATED QUERY CONTEXT PARAMETER: mergeThreadLocal -->
+|`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|`false`| <!-- GENERATED QUERY CONTEXT PARAMETER: sortByDimsFirst -->
+|`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|`druid.query.groupBy.forcePushDownLimit`| <!-- GENERATED QUERY CONTEXT PARAMETER: forceLimitPushDown -->
+|`applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan. This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.|`druid.query.groupBy.applyLimitPushDownToSegment`| <!-- GENERATED QUERY CONTEXT PARAMETER: applyLimitPushDownToSegment -->
+|`groupByEnableMultiValueUnnesting`|Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key. 'true' indicates multi-value grouping keys are unnested. 'false' returns an error if a multi value column is found as part of the grouping key.|`druid.query.groupBy.enableMultiValueUnnesting`| <!-- GENERATED QUERY CONTEXT PARAMETER: groupByEnableMultiValueUnnesting -->
+|`deferExpressionDimensions`|When an entry in `dimensions` references an `expression` virtual column, this property influences whether expression evaluation is deferred from cursor processing to the merge step. Options are:<ul><li>`fixedWidth`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string).</li><li>`fixedWidthNonNumeric`: Defer expressions with fixed-width inputs (numeric and dictionary-encoded string), unless the expression output and all inputs are numeric.</li><li>`singleString`: Defer string-typed expressions with a single dictionary-encoded string input.</li><li>`always`: Defer all expressions. May require building dictionaries for expression inputs.</li></ul><br />These properties only take effect when the `groupBy` query can be vectorized. Non-vectorized queries only defer string-typed expressions of single string inputs.|`druid.query.groupBy.deferExpressionDimensions`| <!-- GENERATED QUERY CONTEXT PARAMETER: deferExpressionDimensions -->
+|`resultAsArray`|If true, groupBy results are returned as arrays instead of maps.|`false`| <!-- GENERATED QUERY CONTEXT PARAMETER: resultAsArray -->
 
 #### Array based result rows
 

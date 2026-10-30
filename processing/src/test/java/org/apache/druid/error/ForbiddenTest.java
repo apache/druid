@@ -47,7 +47,7 @@ public class ForbiddenTest
 
     ErrorResponse recomposed = ErrorResponse.fromMap(asMap);
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         recomposed.getUnderlyingException(),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,

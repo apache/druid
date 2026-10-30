@@ -36,10 +36,6 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -189,9 +185,18 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         payload.getResults().getResults()
     );
 
-    // Verify that realtime queries were issued and no files were read (all data is realtime).
-    MatcherAssert.assertThat(msqApis.getQueriesSum(payload), Matchers.greaterThan(0L));
-    Assertions.assertEquals(0, msqApis.getFilesSum(payload));
+    // Verify that for the first stage, realtime queries were issued and no files were read (all data is realtime).
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(payload, 0);
+
+    // 2 realtime tasks running on an Indexer => 1 query that gets data from both.
+    Assertions.assertEquals(1, channelSums.queries());
+    Assertions.assertEquals(1, channelSums.totalQueries());
+    Assertions.assertEquals(0, channelSums.files());
+    Assertions.assertEquals(0, channelSums.totalFiles());
+
+    // We get 1 row back with the COUNT from both tasks.
+    Assertions.assertEquals(1, channelSums.rows());
+    Assertions.assertEquals(0, channelSums.bytes()); // Realtime queries do not report bytes
   }
 
   @Test
@@ -233,16 +238,15 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
                        + "  LIMIT 1\n"
                        + ")";
 
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            RuntimeException.class,
-            () -> msqApis.runDartSql(sql, dataSource, dataSource)
-        ),
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
-                + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
-            )
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> msqApis.runDartSql(sql, dataSource, dataSource)
+    );
+    Assertions.assertNotNull(exception.getMessage());
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
+            + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
         )
     );
   }
@@ -281,11 +285,12 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         StringUtils.format("Task[%s] has unexpected status", taskId)
     );
 
+    Assertions.assertNotNull(currentStatus.getStatus().getErrorMsg());
     Assertions.assertTrue(
-        CoreMatchers.containsString(
+        currentStatus.getStatus().getErrorMsg().contains(
             "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
             + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
-        ).matches(currentStatus.getStatus().getErrorMsg())
+        )
     );
   }
 
@@ -432,6 +437,19 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         ),
         payload.getResults().getResults()
     );
+
+    // Verify that for the first stage, realtime queries were issued and no files were read (all data is realtime).
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(payload, 0);
+
+    // 2 realtime tasks running on an Indexer => 1 query that gets data from both.
+    Assertions.assertEquals(1, channelSums.queries());
+    Assertions.assertEquals(1, channelSums.totalQueries());
+    Assertions.assertEquals(0, channelSums.files());
+    Assertions.assertEquals(0, channelSums.totalFiles());
+
+    // We get 3 rows back.
+    Assertions.assertEquals(3, channelSums.rows());
+    Assertions.assertEquals(0, channelSums.bytes()); // Realtime queries do not report bytes
   }
 
   @Test
@@ -487,7 +505,6 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         payload.getResults().getResults()
     );
   }
-
 
   @Test
   @Timeout(60)
@@ -602,6 +619,124 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
 
     Assertions.assertEquals(
         "Andy Wilman,109.156.217.121,0\nAngharad Rees,89.240.46.182,578\nChazz Palminteri,81.178.229.60,10",
+        result
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_groupByUnionWithFilteredProjectedArms_task_withRealtime()
+  {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT \"channel\", COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT \"channel\" FROM \"%s\" WHERE \"countryName\" = 'Australia'\n"
+        + "  UNION ALL\n"
+        + "  SELECT UPPER(\"channel\") FROM \"%s\" WHERE \"countryName\" = 'Australia' AND \"channel\" = '#de.wikipedia'\n"
+        + ")\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 1 DESC",
+        dataSource,
+        dataSource
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"#en.wikipedia", 63},
+            new Object[]{"#de.wikipedia", 2},
+            new Object[]{"#DE.WIKIPEDIA", 2}
+        ),
+        payload.getResults().getResults()
+    );
+
+    // Verify that for the first stage, each arm issued its own realtime query and no files were read.
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(payload, 0);
+    Assertions.assertEquals(2, channelSums.queries());
+    Assertions.assertEquals(2, channelSums.totalQueries());
+    Assertions.assertEquals(0, channelSums.files());
+    Assertions.assertEquals(0, channelSums.totalFiles());
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_groupByUnionWithFilteredProjectedArms_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT \"channel\", COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT \"channel\" FROM \"%s\" WHERE \"countryName\" = 'Australia'\n"
+        + "  UNION ALL\n"
+        + "  SELECT UPPER(\"channel\") FROM \"%s\" WHERE \"countryName\" = 'Australia' AND \"channel\" = '#de.wikipedia'\n"
+        + ")\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 1 DESC",
+        dataSource,
+        dataSource
+    );
+
+    final String result = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals("#en.wikipedia,63\n#de.wikipedia,2\n#DE.WIKIPEDIA,2", result);
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_scanUnionWithFilteredProjectedArms_task_withRealtime()
+  {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT \"channel\", \"page\"\n"
+        + "FROM (\n"
+        + "  SELECT \"channel\", \"page\" FROM \"%s\" WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10\n"
+        + "  UNION ALL\n"
+        + "  SELECT UPPER(\"channel\"), \"user\" FROM \"%s\"\n"
+        + "  WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10 AND \"page\" = 'Coca-Cola formula'\n"
+        + ")\n"
+        + "ORDER BY 1, 2",
+        dataSource,
+        dataSource
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"#EN.WIKIPEDIA", "124.169.17.234"},
+            new Object[]{"#en.wikipedia", "Coca-Cola formula"},
+            new Object[]{"#en.wikipedia", "List of Harry Potter characters"}
+        ),
+        payload.getResults().getResults()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_scanUnionWithFilteredProjectedArms_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT \"channel\", \"page\"\n"
+        + "FROM (\n"
+        + "  SELECT \"channel\", \"page\" FROM \"%s\" WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10\n"
+        + "  UNION ALL\n"
+        + "  SELECT UPPER(\"channel\"), \"user\" FROM \"%s\"\n"
+        + "  WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10 AND \"page\" = 'Coca-Cola formula'\n"
+        + ")\n"
+        + "ORDER BY 1, 2",
+        dataSource,
+        dataSource
+    );
+
+    final String result = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals(
+        "#EN.WIKIPEDIA,124.169.17.234\n"
+        + "#en.wikipedia,Coca-Cola formula\n"
+        + "#en.wikipedia,List of Harry Potter characters",
         result
     );
   }

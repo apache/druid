@@ -33,8 +33,10 @@ import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,16 +44,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import java.util.stream.Stream;
 
 /**
  * Place where tests can live that are testing the interactions of multiple semantic interfaces
  */
 @SuppressWarnings("ConstantConditions")
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class CombinedSemanticInterfacesTest extends SemanticTestBase
 {
+  public static Stream<Object[]> constructorFeeder()
+  {
+    return SemanticTestBase.parameterFeed();
+  }
+
   public CombinedSemanticInterfacesTest(
       String name,
       Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn
@@ -69,7 +76,7 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
     AtomicInteger currRow = new AtomicInteger();
     ColumnSelectorFactory csfm = ColumnSelectorFactoryMaker.fromRAC(rac).make(currRow);
 
-    assertEquals(DimensionSelector.nilSelector(), csfm.makeColumnValueSelector("nonexistent"));
+    Assertions.assertEquals(DimensionSelector.nilSelector(), csfm.makeColumnValueSelector("nonexistent"));
   }
 
   @Test
@@ -81,7 +88,7 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
     AtomicInteger currRow = new AtomicInteger();
     ColumnSelectorFactory csfm = ColumnSelectorFactoryMaker.fromRAC(rac).make(currRow);
 
-    assertNull(csfm.getColumnCapabilities("nonexistent"));
+    Assertions.assertNull(csfm.getColumnCapabilities("nonexistent"));
   }
 
   /**
@@ -103,7 +110,7 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
     }
 
     final ArrayList<RowsAndColumns> partitioned = parter.partitionOnBoundaries(Collections.singletonList("sorted"));
-    Assert.assertEquals(4, partitioned.size());
+    Assertions.assertEquals(4, partitioned.size());
 
     NaiveSortMaker.NaiveSorter sorter = null;
     for (RowsAndColumns rowsAndColumns : partitioned) {
@@ -115,13 +122,13 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
       if (sorter == null) {
         sorter = NaiveSortMaker.fromRAC(aggedRAC).make(ColumnWithDirection.ascending("unsorted"));
       } else {
-        Assert.assertNull(sorter.moreData(aggedRAC));
+        Assertions.assertNull(sorter.moreData(aggedRAC));
       }
     }
-    Assert.assertNotNull(sorter);
+    Assertions.assertNotNull(sorter);
 
     final RowsAndColumns completed = sorter.complete();
-    Assert.assertNotNull(completed);
+    Assertions.assertNotNull(completed);
 
     new RowsAndColumnsHelper()
         .expectColumn("sorted", new int[]{1, 4, 0, 4, 1, 0, 0, 2, 4})
@@ -147,7 +154,7 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
     ClusteredGroupPartitioner parter = ClusteredGroupPartitioner.fromRAC(rac);
 
     final ArrayList<RowsAndColumns> partitioned = parter.partitionOnBoundaries(Collections.singletonList("sorted"));
-    Assert.assertEquals(4, partitioned.size());
+    Assertions.assertEquals(4, partitioned.size());
 
     Map<String, ObjectArrayColumn> outputCols = new LinkedHashMap<>();
     outputCols.put("sorted", new ObjectArrayColumn(new Object[9], ColumnType.LONG));

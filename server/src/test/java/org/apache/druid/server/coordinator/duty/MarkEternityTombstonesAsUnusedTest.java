@@ -42,9 +42,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -148,7 +148,7 @@ public class MarkEternityTombstonesAsUnusedTest
 
   private TestSegmentsMetadataManager segmentsMetadataManager;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     segmentsMetadataManager = new TestSegmentsMetadataManager();
@@ -174,10 +174,10 @@ public class MarkEternityTombstonesAsUnusedTest
                                                             .get(ds1);
 
     // Verify that the half-infinity tombstone is overshadowed and everything else is not
-    Assert.assertTrue(timeline.isOvershadowed(ds1NumberedSegmentMinToMaxV0));
-    Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
-    Assert.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
-    Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
+    Assertions.assertTrue(timeline.isOvershadowed(ds1NumberedSegmentMinToMaxV0));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -199,8 +199,8 @@ public class MarkEternityTombstonesAsUnusedTest
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds1);
 
-    Assert.assertTrue(ds1Timeline.isOvershadowed(ds1NumberedSegmentMinToMaxV0));
-    Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinToMaxV1));
+    Assertions.assertTrue(ds1Timeline.isOvershadowed(ds1NumberedSegmentMinToMaxV0));
+    Assertions.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinToMaxV1));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -225,9 +225,9 @@ public class MarkEternityTombstonesAsUnusedTest
                                                       .getUsedSegmentsTimelinesPerDataSource()
                                                       .get(ds1);
 
-    Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
-    Assert.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
-    Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -248,7 +248,7 @@ public class MarkEternityTombstonesAsUnusedTest
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds1);
 
-    Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinToMaxV1));
+    Assertions.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinToMaxV1));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -274,11 +274,11 @@ public class MarkEternityTombstonesAsUnusedTest
                                                       .getUsedSegmentsTimelinesPerDataSource()
                                                       .get(ds1);
 
-    Assert.assertTrue(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
-    Assert.assertTrue(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
-    Assert.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
-    Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
-    Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV2));
+    Assertions.assertTrue(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
+    Assertions.assertTrue(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
+    Assertions.assertFalse(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV2));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -323,17 +323,17 @@ public class MarkEternityTombstonesAsUnusedTest
     SegmentTimeline ds1Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                          .getUsedSegmentsTimelinesPerDataSource()
                                                          .get(ds1);
-    Assert.assertTrue(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
-    Assert.assertFalse(ds1Timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
-    Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
-    Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
+    Assertions.assertTrue(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
+    Assertions.assertFalse(ds1Timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
+    Assertions.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
+    Assertions.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
 
     SegmentTimeline ds2Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                          .getUsedSegmentsTimelinesPerDataSource()
                                                          .get(ds2);
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -362,10 +362,10 @@ public class MarkEternityTombstonesAsUnusedTest
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
 
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment1995To2005V0));
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment1995To2005V0));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -394,10 +394,10 @@ public class MarkEternityTombstonesAsUnusedTest
     final SegmentTimeline ds2Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment1999To2500V2));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment1999To2500V2));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -420,7 +420,7 @@ public class MarkEternityTombstonesAsUnusedTest
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
 
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000To4001V1));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000To4001V1));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -444,7 +444,7 @@ public class MarkEternityTombstonesAsUnusedTest
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
 
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1With1CorePartition));
+    Assertions.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1With1CorePartition));
 
     runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
@@ -492,11 +492,11 @@ public class MarkEternityTombstonesAsUnusedTest
         segmentsMetadataManager.getRecentDataSourcesSnapshot().iterateAllUsedSegmentsInSnapshot()
     );
 
-    Assert.assertEquals(expectedUsedSegments.size(), actualUsedSegments.size());
-    Assert.assertTrue(actualUsedSegments.containsAll(expectedUsedSegments));
+    Assertions.assertEquals(expectedUsedSegments.size(), actualUsedSegments.size());
+    Assertions.assertTrue(actualUsedSegments.containsAll(expectedUsedSegments));
 
     final CoordinatorRunStats runStats = params.getCoordinatorStats();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         allUsedSegments.size() - expectedUsedSegments.size(),
         runStats.get(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds1)) +
         runStats.get(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds2))

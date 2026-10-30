@@ -28,15 +28,15 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Locale;
 
 public class SqlSegmentsMetadataManagerProviderTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
       = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -61,21 +61,21 @@ public class SqlSegmentsMetadataManagerProviderTest
         NoopServiceEmitter.instance()
     );
     SegmentsMetadataManager manager = provider.get();
-    Assert.assertTrue(manager instanceof SqlSegmentsMetadataManagerV2);
+    Assertions.assertTrue(manager instanceof SqlSegmentsMetadataManagerV2);
 
     final MetadataStorageTablesConfig storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     final String segmentsTable = storageConfig.getSegmentsTable();
     final String upgradeSegmentsTable = storageConfig.getUpgradeSegmentsTable();
 
     // Verify that the tables do not exist yet
-    Assert.assertFalse(tableExists(segmentsTable, connector));
-    Assert.assertFalse(tableExists(upgradeSegmentsTable, connector));
+    Assertions.assertFalse(tableExists(segmentsTable, connector));
+    Assertions.assertFalse(tableExists(upgradeSegmentsTable, connector));
 
     lifecycle.start();
 
     // Verify that tables have now been created
-    Assert.assertTrue(tableExists(segmentsTable, connector));
-    Assert.assertTrue(tableExists(upgradeSegmentsTable, connector));
+    Assertions.assertTrue(tableExists(segmentsTable, connector));
+    Assertions.assertTrue(tableExists(upgradeSegmentsTable, connector));
 
     lifecycle.stop();
   }

@@ -43,6 +43,7 @@ then
     --add-opens=java.base/java.io=ALL-UNNAMED \
     --add-opens=java.base/java.lang=ALL-UNNAMED \
     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
+    --add-modules=jdk.incubator.vector \
     "$@"
 else
   exec "$JAVA_BIN" "$@"

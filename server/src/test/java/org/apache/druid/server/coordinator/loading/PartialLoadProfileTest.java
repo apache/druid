@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -49,13 +48,12 @@ public class PartialLoadProfileTest
     Assertions.assertEquals(WRAPPED, profile.wrappedLoadSpec());
     Assertions.assertEquals(FINGERPRINT, profile.fingerprint());
     Assertions.assertNull(profile.loadedBytes());
-    Assertions.assertFalse(profile.isFullFallback());
   }
 
   @Test
   public void testForRequestRejectsNullWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forRequest(null, FINGERPRINT)
@@ -67,7 +65,7 @@ public class PartialLoadProfileTest
   @Test
   public void testForRequestRejectsEmptyWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forRequest(Map.of(), FINGERPRINT)
@@ -83,29 +81,18 @@ public class PartialLoadProfileTest
     Assertions.assertEquals(WRAPPED, profile.wrappedLoadSpec());
     Assertions.assertEquals(FINGERPRINT, profile.fingerprint());
     Assertions.assertEquals(12345L, profile.loadedBytes());
-    Assertions.assertFalse(profile.isFullFallback());
   }
 
   @Test
   public void testForLoadedRejectsEmptyWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forLoaded(Map.of(), FINGERPRINT, 100L)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageContains("wrappedLoadSpec must not be null or empty")
     );
-  }
-
-  @Test
-  public void testForFullFallback()
-  {
-    PartialLoadProfile profile = PartialLoadProfile.forFullFallback(FINGERPRINT, 99999L);
-    Assertions.assertNull(profile.wrappedLoadSpec());
-    Assertions.assertEquals(FINGERPRINT, profile.fingerprint());
-    Assertions.assertEquals(99999L, profile.loadedBytes());
-    Assertions.assertTrue(profile.isFullFallback());
   }
 
   @Test
@@ -128,10 +115,31 @@ public class PartialLoadProfileTest
   }
 
   @Test
+  public void testAsCloneRequestDropsTheAnnouncedFootprint()
+  {
+    // The realized footprint belongs to the announcement of the server that loaded the segment, not to the request the
+    // clone target or move destination is about to get. Everything that identifies the request carries over as-is.
+    final PartialLoadProfile loaded = PartialLoadProfile.forLoaded(WRAPPED, FINGERPRINT, 12345L);
+
+    final PartialLoadProfile request = loaded.asCloneRequest();
+
+    Assertions.assertNull(request.loadedBytes(), "a request carries no realized footprint");
+    Assertions.assertEquals(WRAPPED, request.wrappedLoadSpec());
+    Assertions.assertEquals(FINGERPRINT, request.fingerprint());
+  }
+
+  @Test
+  public void testAsCloneRequestOfARequestIsItself()
+  {
+    final PartialLoadProfile request = PartialLoadProfile.forRequest(WRAPPED, FINGERPRINT);
+    Assertions.assertSame(request, request.asCloneRequest());
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(PartialLoadProfile.class)
-                  .withNonnullFields("fingerprint")
+                  .withNonnullFields("wrappedLoadSpec", "fingerprint")
                   .usingGetClass()
                   .verify();
   }
@@ -155,11 +163,5 @@ public class PartialLoadProfileTest
     // Different fingerprint ⇒ different profile, no sharing.
     PartialLoadProfile pd = PartialLoadProfile.forLoaded(WRAPPED, "v1:differentfingerprint", 12345L);
     Assertions.assertNotSame(pa, pd);
-
-    // Full-fallback variants intern independently of forLoaded variants.
-    PartialLoadProfile fb1 = PartialLoadProfile.forFullFallback(FINGERPRINT, 12345L);
-    PartialLoadProfile fb2 = PartialLoadProfile.forFullFallback(FINGERPRINT, 12345L);
-    Assertions.assertSame(fb1, fb2);
-    Assertions.assertNotSame(pa, fb1);
   }
 }

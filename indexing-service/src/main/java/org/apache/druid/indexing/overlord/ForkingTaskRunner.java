@@ -53,6 +53,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -87,6 +88,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -100,6 +102,7 @@ public class ForkingTaskRunner
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
 
+  private static final String RUN_JAVA_COMMAND = "bin/run-java";
   /**
    * Properties to add on Java 11+. When updating this list, update all four:
    *  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES (here) -->
@@ -115,7 +118,8 @@ public class ForkingTaskRunner
       "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED",
       "--add-opens=java.base/java.io=ALL-UNNAMED",
       "--add-opens=java.base/java.lang=ALL-UNNAMED",
-      "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED"
+      "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED",
+      "--add-modules=jdk.incubator.vector"
   );
 
   private final ForkingTaskRunnerConfig config;
@@ -244,7 +248,7 @@ public class ForkingTaskRunner
                           taskClasspath = config.getClasspath();
                         }
 
-                        command.add(config.getJavaCommand());
+                        command.add(getJavaCommand());
 
                         if (JvmUtils.majorVersion() >= 11) {
                           command.addAll(STRONG_ENCAPSULATION_PROPERTIES);
@@ -351,6 +355,8 @@ public class ForkingTaskRunner
 
                         command.addSystemProperty("druid.host", childHost);
                         command.addSystemProperty("druid.plaintextPort", childPort);
+                        // Forked peons listen on their own port; never let them advertise an inherited one.
+                        command.addSystemProperty("druid.advertisedPlaintextPort", -1);
                         command.addSystemProperty("druid.tlsPort", tlsChildPort);
 
                         // Let tasks know where they are running on.
@@ -411,10 +417,10 @@ public class ForkingTaskRunner
                         processHolder.registerWithCloser(closer);
                       }
 
-                      TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                      TaskRunnerUtils.notifyLocationChanged(listeners, task, taskLocation);
                       TaskRunnerUtils.notifyStatusChanged(
                           listeners,
-                          task.getId(),
+                          task,
                           TaskStatus.running(task.getId())
                       );
 
@@ -442,7 +448,7 @@ public class ForkingTaskRunner
                       } else {
                         failedTaskCount.incrementAndGet();
                       }
-                      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+                      TaskRunnerUtils.notifyStatusChanged(listeners, task, status);
                       return status;
                     }
                     catch (Throwable t) {
@@ -503,6 +509,33 @@ public class ForkingTaskRunner
       saveRunningTasks();
       return tasks.get(task.getId()).getResult();
     }
+  }
+
+  private String getJavaCommand()
+  {
+    return getJavaCommand(config.getJavaCommand(), new File("."));
+  }
+
+  /**
+   * Resolves the command used to launch the peon JVM, in order of precedence:
+   * <ol>
+   *   <li>the operator-specified {@code druid.indexer.runner.javaCommand}, if set;</li>
+   *   <li>the bundled {@link #RUN_JAVA_COMMAND} script if present in {@code workingDir}, so that
+   *   {@code DRUID_JAVA_HOME} / {@code JAVA_HOME} are honored;</li>
+   *   <li>otherwise plain {@code java} on the {@code PATH}.</li>
+   * </ol>
+   * The existence check against {@code workingDir} is reliable because peons inherit this process's working
+   * directory.
+   */
+  public static String getJavaCommand(@Nullable String configuredJavaCommand, File workingDir)
+  {
+    if (configuredJavaCommand != null) {
+      return configuredJavaCommand;
+    }
+    if (new File(workingDir, RUN_JAVA_COMMAND).exists()) {
+      return RUN_JAVA_COMMAND;
+    }
+    return ForkingTaskRunnerConfig.DEFAULT_JAVA_COMMAND;
   }
 
   @VisibleForTesting
@@ -666,6 +699,20 @@ public class ForkingTaskRunner
         return RunnerTaskState.NONE;
       }
     }
+  }
+
+  @Override
+  protected void notifyLocationChanged(
+      ForkingTaskRunnerWorkItem item,
+      TaskRunnerListener listener,
+      Executor executor
+  )
+  {
+    TaskRunnerUtils.notifyLocationChanged(
+        List.of(Pair.of(listener, executor)),
+        item.getTask(),
+        item.getLocation()
+    );
   }
 
   @Override
@@ -905,7 +952,7 @@ public class ForkingTaskRunner
       FileUtils.mkdirp(attemptDir);
     }
     catch (IOException e) {
-      throw new ISE("Error creating directory", e);
+      throw new ISE(e, "Error creating directory[%s]", attemptDir);
     }
     int maxAttempt =
         Arrays.stream(attemptDir.listFiles(File::isDirectory))
@@ -917,7 +964,7 @@ public class ForkingTaskRunner
       FileUtils.mkdirp(attempt);
     }
     catch (IOException e) {
-      throw new ISE("Error creating directory", e);
+      throw new ISE(e, "Error creating directory[%s]", attempt);
     }
     return maxAttempt + 1;
   }
@@ -967,4 +1014,3 @@ public class ForkingTaskRunner
 
   }
 }
-

@@ -62,10 +62,12 @@ CORS
 CNF
 CPUs
 CSVs
+CTEs
 CentralizedDatasourceSchema
 Ceph
 circledR
 CloudWatch
+ClusterRole
 ColumnDescriptor
 Corretto
 CLI
@@ -73,6 +75,7 @@ CUME_DIST
 DDL
 DENSE_RANK
 DML
+DN
 DNS
 DRUIDVERSION
 DataSketches
@@ -102,9 +105,11 @@ DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
+EKS
 EMR
 EMRFS
 ETL
+emits
 Elasticsearch
 Enums
 FIRST_VALUE
@@ -115,6 +120,7 @@ Float.POSITIVE_INFINITY
 Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
+GKE
 GPG
 GoogleCloudStorageInputSource
 GSSAPI
@@ -146,6 +152,7 @@ ISO8601
 IndexSpec
 IndexTask
 InfluxDB
+InnoDB
 InputFormat
 InputSource
 InputSources
@@ -158,8 +165,10 @@ JDBC
 JDK
 JDK7
 JDK8
+JIT
 JKS
 jks
+JNDI
 JMX
 JRE
 JS
@@ -174,6 +183,7 @@ Joda
 JsonProperty
 Jupyter
 JupyterLab
+KIP-392
 KMS
 Kerberized
 Kerberos
@@ -196,21 +206,27 @@ Lucene
 MapBD
 MapDB
 MariaDB
+Marquez
 MiddleManager
 MiddleManagers
 Montréal
+MSK
 MSQ
 Murmur3
 MVCC
 MV_TO_ARRAY
+Netty
 NFS
 NodeCache
 OCF
 OIDC
 OLAP
 OOMs
+OPA
 OpenJDK
 OpenLDAP
+openlineage
+OpenLineage
 OpenTSDB
 OutputStream
 ParAccel
@@ -226,6 +242,7 @@ ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
 ROUTINE_TYPE
+RPC
 Rackspace
 Redis
 residualFilterMode
@@ -233,6 +250,8 @@ S3
 SAS
 SDK
 SIGAR
+SIMD
+SLEEF
 SNI
 SPNEGO
 Splunk
@@ -246,6 +265,7 @@ Splunk
 SqlParameter
 SslContextFactory
 StatsD
+SVML
 SYSTEM_TABLE
 TaskRunner
 TabItem
@@ -265,7 +285,9 @@ uris
 UTF-16
 UTF-8
 UTF8
+VO_MATHLIB
 XMLs
+x86
 ZK
 ZSTD
 accessor
@@ -333,6 +355,7 @@ deepstore
 denormalization
 denormalize
 denormalized
+deduplicated
 deprioritization
 deprioritizes
 dequeued
@@ -409,6 +432,7 @@ kbps
 kerberos
 keystore
 keytool
+kubelet
 keytab
 kubeconfig
 kubernetes
@@ -416,6 +440,7 @@ kubexit
 k8s
 laning
 lifecycle
+lineage
 localhost
 log4j
 log4j2
@@ -516,6 +541,7 @@ processFromRaw
 programmatically
 proto
 proxied
+proxying
 proxyConfig
 python2
 python3
@@ -526,9 +552,11 @@ quantile
 quantiles
 queryable
 quickstart
+RE2
 realtime
 rebalance
 redis
+ReDoS
 regexes
 reimported
 reindex
@@ -601,6 +629,7 @@ transactionally
 try_parse_json
 tsv
 ulimit
+ulps
 unannounce
 unannouncements
 unary
@@ -619,6 +648,7 @@ unnesting
 unnests
 unparseable
 unparsed
+unsets
 unsetting
 untrusted
 useFilterCNF
@@ -688,6 +718,7 @@ P1M
 P1Y
 PT1M
 PT5M
+QUERY_CONTEXT_PARAMETERS
 SCHEMA_NAME
 SCHEMA_OWNER
 SERVER_SEGMENTS
@@ -708,6 +739,8 @@ avg_num_rows
 avg_size
 created_time
 current_size
+default_description
+default_value
 detailed_state
 druid.server.maxSize
 druid.server.tier
@@ -718,6 +751,8 @@ druid.sql.planner.useApproximateTopN
 druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
+effective_source
+effective_value
 error_message
 error_msg
 exprs
@@ -726,12 +761,14 @@ interval_expr
 is_active
 is_available
 is_leader
+is_nullable
 is_overshadowed
 is_published
 is_realtime
 java.sql.Types
 last_compaction_state
 max_size
+native_query_types
 available_processors
 total_memory
 num_replicas
@@ -740,11 +777,13 @@ num_segments
 partition_num
 plaintext_port
 queue_insertion_time
+query_languages
 replication_factor
 runner_status
 segment_id
 server_type
 shard_spec
+statement_types
 sqlTimeZone
 sql-msq-task
 supervisor_id
@@ -758,6 +797,7 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 useLexicographicTopN
+value_range
 wikipedia
 your-table
 enableTimeBoundaryPlanning
@@ -899,8 +939,6 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
-minScaleUpDelay
-minScaleDownDelay
 NUMBER_FEATURES
 NUMBER_OF_CONTRIBUTORS
 PreparedStatement
@@ -1578,7 +1616,10 @@ case_simple
 cbrt
 concat
 copysign
+cosh
 expm1
+sinh
+tanh
 expr
 expr1
 expr2
@@ -1687,6 +1728,7 @@ un
 G1GC
 GroupBys
 QoS-type
+QoS
 DumpSegment
 SegmentMetadata
 __time
@@ -2080,6 +2122,7 @@ addr
 affinityConfig
 allowAll
 ANDed
+ANDs
 array_mod
 autoscale
 autoscalers
@@ -2397,6 +2440,7 @@ druid-orc-extensions
 druid-parquet-extensions
 druid-protobuf-extensions
 druid-ranger-security
+druid-opa-authorizer
 druid-s3-extensions
 druid-ec2-extensions
 druid-aws-rds-extensions
@@ -2607,6 +2651,7 @@ SRE
 reachability
 ownership_mismatch
 giveup
+retryable
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2650,3 +2695,19 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+checksum
+
+- ../docs/development/extensions-contrib/druid-opa-authorizer.md
+Rego
+alice
+christy
+dylan
+eve
+opaUri
+rego
+
+- ../docs/querying/sql-jdbc.md
+getters
+savepoints
+Scrollable
+updatable

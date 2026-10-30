@@ -135,7 +135,7 @@ public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
   private void insertMinimalCompactionConfig(TestDerbyConnector sqlConnector)
   {
     DataSourceCompactionConfig dataSourceCompactionConfig =
-        new CatalogDataSourceCompactionConfig(dataSource, null, Period.ZERO, null, null, null, null);
+        new CatalogDataSourceCompactionConfig(dataSource, null, Period.ZERO, null, null, null, null, null);
     DruidCompactionConfig config = DruidCompactionConfig.legacy().withDatasourceConfig(dataSourceCompactionConfig);
     sqlConnector.retryWithHandle(
         handle -> handle.insert(

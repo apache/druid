@@ -21,8 +21,8 @@ package org.apache.druid.iceberg.filter;
 
 import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.expressions.Expressions;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class IcebergEqualsFilterTest
 {
@@ -31,6 +31,6 @@ public class IcebergEqualsFilterTest
   {
     IcebergEqualsFilter testFilter = new IcebergEqualsFilter("column1", "value1");
     Expression expectedExpression = Expressions.equal("column1", "value1");
-    Assert.assertEquals(expectedExpression.toString(), testFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), testFilter.getFilterExpression().toString());
   }
 }

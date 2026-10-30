@@ -49,7 +49,7 @@ export const RegexpFilterControl = React.memo(function RegexpFilterControl(
   props: RegexpFilterControlProps,
 ) {
   const { querySource, extraFilter, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
-  const { column, negated, regexp } = filterPattern;
+  const { column, regexp } = filterPattern;
 
   const previewQuery = useMemo(
     () =>
@@ -65,8 +65,7 @@ export const RegexpFilterControl = React.memo(function RegexpFilterControl(
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
         .changeLimitValue(101)
         .toString(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- exclude 'makePattern' from deps
-    [querySource.query, extraFilter, filter, column, regexp, negated],
+    [querySource, extraFilter, filter, column, regexp, filterPattern],
   );
 
   const [previewState] = useQueryManager<string, string[]>({

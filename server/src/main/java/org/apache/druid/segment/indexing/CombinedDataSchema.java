@@ -20,9 +20,11 @@
 package org.apache.druid.segment.indexing;
 
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.TransformSpec;
 
@@ -35,6 +37,30 @@ import java.util.Set;
  */
 public class CombinedDataSchema extends DataSchema
 {
+  /**
+   * Builds a base-table-mode schema for compaction. The legacy dimensions/metrics/granularity fields are left empty.
+   */
+  public static CombinedDataSchema forBaseTable(
+      String dataSource,
+      @Nullable TimestampSpec timestampSpec,
+      @Nullable SegmentGranularitySpec segmentGranularitySpec,
+      @Nullable TransformSpec transformSpec,
+      @Nullable List<AggregateProjectionSpec> projections,
+      BaseTableProjectionSpec baseTable,
+      @Nullable Set<String> multiValuedDimensions
+  )
+  {
+    return new CombinedDataSchema(
+        dataSource,
+        timestampSpec,
+        segmentGranularitySpec,
+        transformSpec,
+        projections,
+        baseTable,
+        multiValuedDimensions
+    );
+  }
+
   private final Set<String> multiValuedDimensions;
 
   public CombinedDataSchema(
@@ -54,10 +80,26 @@ public class CombinedDataSchema extends DataSchema
         dimensionsSpec,
         aggregators,
         granularitySpec,
+        null,
         transformSpec,
         projections,
+        null,
         null
     );
+    this.multiValuedDimensions = multiValuedDimensions;
+  }
+
+  private CombinedDataSchema(
+      String dataSource,
+      @Nullable TimestampSpec timestampSpec,
+      @Nullable SegmentGranularitySpec segmentGranularitySpec,
+      @Nullable TransformSpec transformSpec,
+      @Nullable List<AggregateProjectionSpec> projections,
+      BaseTableProjectionSpec baseTable,
+      @Nullable Set<String> multiValuedDimensions
+  )
+  {
+    super(dataSource, timestampSpec, null, null, null, segmentGranularitySpec, transformSpec, projections, baseTable, null);
     this.multiValuedDimensions = multiValuedDimensions;
   }
 

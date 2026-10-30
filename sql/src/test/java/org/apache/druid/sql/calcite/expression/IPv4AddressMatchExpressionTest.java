@@ -26,7 +26,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -67,15 +67,15 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   @Test
   public void testTooFewArgs()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Collections.emptyList(),
-            buildExpectedExpression(),
+            expectedIpv4MatchFunctionCall(),
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
   }
 
   @Test
@@ -83,7 +83,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   {
     String address = IPV4;
     String subnet = SUBNET_192_168;
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -91,11 +91,11 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
                 testHelper.makeLiteral(subnet),
                 testHelper.makeLiteral(address)
             ),
-            buildExpectedExpression(address, subnet, address),
+            expectedIpv4MatchFunctionCall(address, subnet, address),
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
   }
 
   @Test
@@ -103,18 +103,18 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   {
     String address = IPV4;
     String variableName = VAR;
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
                 testHelper.makeLiteral(address),
                 testHelper.makeInputRef(variableName)
             ),
-            buildExpectedExpression(address, testHelper.makeVariable(variableName)),
+            expectedIpv4MatchFunctionCall(address, testHelper.makeVariable(variableName)),
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] subnet argument must be a literal", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_match] subnet argument must be a literal", t.getMessage());
   }
 
   @Test
@@ -122,18 +122,18 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   {
     String address = IPV4;
     String invalidSubnet = "192.168.0.1/invalid";
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
                 testHelper.makeLiteral(address),
                 testHelper.makeLiteral(invalidSubnet)
             ),
-            buildExpectedExpression(address, invalidSubnet),
+            expectedIpv4MatchFunctionCall(address, invalidSubnet),
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] subnet arg has an invalid format: 192.168.0.1/invalid", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_match] subnet arg has an invalid format: 192.168.0.1/invalid", t.getMessage());
   }
 
   @Test
@@ -145,7 +145,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             testHelper.getConstantNull(),
             testHelper.makeLiteral(subnet)
         ),
-        buildExpectedExpression(null, subnet),
+        expectedIpv4MatchFunctionCall(null, subnet),
         NO_MATCH
     );
   }
@@ -160,7 +160,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             testHelper.makeInputRef(variableNameWithInvalidType),
             testHelper.makeLiteral(subnet)
         ),
-        buildExpectedExpression(testHelper.makeVariable(variableNameWithInvalidType), subnet),
+        expectedIpv4MatchFunctionCall(testHelper.makeVariable(variableNameWithInvalidType), subnet),
         NO_MATCH
     );
   }
@@ -247,7 +247,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(address),
             testHelper.makeLiteral(subnet)
         ),
-        buildExpectedExpression(address, subnet),
+        expectedIpv4MatchFunctionCall(address, subnet),
         match
     );
   }
@@ -259,7 +259,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             testHelper.makeLiteral(address),
             testHelper.makeLiteral(subnet)
         ),
-        buildExpectedExpression(address, subnet),
+        expectedIpv4MatchFunctionCall(address, subnet),
         match
     );
   }
@@ -270,11 +270,11 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
       final Object expectedResult
   )
   {
-    testHelper.testExpressionString(target.calciteOperator(), exprs, expectedExpression, expectedResult);
+    testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
-  private DruidExpression buildExpectedExpression(Object... args)
+  private DruidExpression expectedIpv4MatchFunctionCall(Object... args)
   {
-    return testHelper.buildExpectedExpression(target.getDruidFunctionName(), args);
+    return testHelper.expectedFunctionCall(ColumnType.LONG, target.getDruidFunctionName(), args);
   }
 }

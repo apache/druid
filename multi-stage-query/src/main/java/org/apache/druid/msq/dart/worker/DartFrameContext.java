@@ -40,6 +40,7 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.SegmentManager;
 
 import javax.annotation.Nullable;
@@ -54,6 +55,7 @@ public class DartFrameContext implements FrameContext
   private final FrameWriterSpec frameWriterSpec;
   private final SegmentWrangler segmentWrangler;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   private final CoordinatorClient coordinatorClient;
   private final WorkerContext workerContext;
 
@@ -78,6 +80,7 @@ public class DartFrameContext implements FrameContext
       final FrameWriterSpec frameWriterSpec,
       final SegmentWrangler segmentWrangler,
       final SegmentManager segmentManager,
+      final VirtualStorageManager virtualStorageManager,
       final CoordinatorClient coordinatorClient,
       @Nullable final ProcessingBuffersSet processingBuffersSet,
       final WorkerMemoryParameters memoryParameters,
@@ -89,6 +92,7 @@ public class DartFrameContext implements FrameContext
     this.segmentWrangler = segmentWrangler;
     this.frameWriterSpec = frameWriterSpec;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.coordinatorClient = coordinatorClient;
     this.workerContext = workerContext;
     this.processingBuffersSet = processingBuffersSet;
@@ -119,6 +123,12 @@ public class DartFrameContext implements FrameContext
   public SegmentManager segmentManager()
   {
     return segmentManager;
+  }
+
+  @Override
+  public VirtualStorageManager virtualStorageManager()
+  {
+    return virtualStorageManager;
   }
 
   @Override

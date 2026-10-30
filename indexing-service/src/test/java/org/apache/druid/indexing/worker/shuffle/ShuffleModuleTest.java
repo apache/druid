@@ -26,9 +26,9 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -38,7 +38,7 @@ public class ShuffleModuleTest
 {
   private ShuffleModule shuffleModule;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     shuffleModule = new ShuffleModule();
@@ -55,7 +55,7 @@ public class ShuffleModuleTest
     final Optional<ShuffleMetrics> optional = injector.getInstance(
         Key.get(new TypeLiteral<>() {})
     );
-    Assert.assertTrue(optional.isPresent());
+    Assertions.assertTrue(optional.isPresent());
   }
 
   @Test
@@ -68,7 +68,7 @@ public class ShuffleModuleTest
     final Optional<ShuffleMetrics> optional = injector.getInstance(
         Key.get(new TypeLiteral<>() {})
     );
-    Assert.assertFalse(optional.isPresent());
+    Assertions.assertFalse(optional.isPresent());
   }
 
   private Injector createInjector(MonitorScheduler monitorScheduler)

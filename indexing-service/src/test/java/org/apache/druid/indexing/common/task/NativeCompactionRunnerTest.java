@@ -29,8 +29,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Collections;
@@ -64,8 +64,8 @@ public class NativeCompactionRunnerTest
         inputSchemas
     );
 
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "Virtual columns in filter rules are not supported by the Native compaction engine. Use MSQ compaction engine instead.",
         validationResult.getReason()
     );
@@ -82,7 +82,7 @@ public class NativeCompactionRunnerTest
         inputSchemas
     );
 
-    Assert.assertTrue(validationResult.isValid());
+    Assertions.assertTrue(validationResult.isValid());
   }
 
   @Test
@@ -98,7 +98,7 @@ public class NativeCompactionRunnerTest
         inputSchemas
     );
 
-    Assert.assertTrue(validationResult.isValid());
+    Assertions.assertTrue(validationResult.isValid());
   }
 
   private CompactionTask createCompactionTask(CompactionTransformSpec transformSpec)

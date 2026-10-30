@@ -18,7 +18,7 @@
 
 @use 'sass:math';
 
-@import '../../variables';
+@use '../../variables' as *;
 
 $control-bar-width: 300px;
 
@@ -201,6 +201,19 @@ $actual-icon-height: 400px;
       white-space: pre;
     }
 
+    .raw-lines {
+      overflow: auto;
+      padding-top: 8px;
+
+      .raw-line {
+        line-height: 1.4em;
+
+        &:hover {
+          background: rgba($gray3, 0.15);
+        }
+      }
+    }
+
     .table-with-control {
       position: absolute;
       width: 100%;
@@ -222,13 +235,13 @@ $actual-icon-height: 400px;
         }
       }
 
-      .ReactTable {
+      .console-table {
         position: absolute;
         width: 100%;
         top: 45px;
         bottom: 0;
 
-        .rt-th {
+        .ct-th {
           position: relative;
 
           &.selected::after {
@@ -255,7 +268,7 @@ $actual-icon-height: 400px;
           }
         }
 
-        .rt-td {
+        .ct-td {
           &.timestamp {
             background: rgba($cobalt3, 0.16);
           }

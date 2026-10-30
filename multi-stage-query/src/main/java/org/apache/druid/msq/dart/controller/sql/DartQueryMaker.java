@@ -48,7 +48,7 @@ import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -254,7 +254,7 @@ public class DartQueryMaker implements QueryMaker
                 "maxQueryReportSize[%,d] exceeded. "
                 + "Try limiting the result set for your query, or run it with %s[false]",
                 limit,
-                QueryContexts.CTX_FULL_REPORT
+                QueryContextParameters.FULL_REPORT
             )
         ),
         plannerContext.getJsonMapper(),
@@ -279,7 +279,7 @@ public class DartQueryMaker implements QueryMaker
       return Sequences.simple(List.<Object[]>of(new Object[]{reportMap}));
     }
     catch (InterruptedException e) {
-      controllerHolder.cancel(CancellationReason.UNKNOWN);
+      controllerHolder.cancel(CancellationReason.UNKNOWN, null);
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
@@ -321,8 +321,11 @@ public class DartQueryMaker implements QueryMaker
           @Override
           public void after(final boolean isDone, final Throwable thrown)
           {
-            if (!isDone || thrown != null) {
-              controllerHolder.cancel(CancellationReason.UNKNOWN);
+            if (thrown != null || !isDone) {
+              // If an exception is set (thrown != null), retain it. Otherwise, if we're in here, !isDone indicates
+              // the caller went away before reading the entire stream of results. The best we can do in that case
+              // is a generic UNKNOWN cancellation reason.
+              controllerHolder.cancel(CancellationReason.UNKNOWN, thrown);
             }
           }
         }

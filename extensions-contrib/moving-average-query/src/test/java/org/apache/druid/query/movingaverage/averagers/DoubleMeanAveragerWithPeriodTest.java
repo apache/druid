@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -47,10 +47,10 @@ public class DoubleMeanAveragerWithPeriodTest
     averager.addElement(Collections.singletonMap("field", 5.0), new HashMap<>());
     averager.addElement(Collections.singletonMap("field", 6.0), new HashMap<>());
 
-    Assert.assertEquals(7, averager.computeResult(), 0.0); // (7+7)/2
+    Assertions.assertEquals(7, averager.computeResult(), 0.0); // (7+7)/2
 
     averager.addElement(Collections.singletonMap("field", 3.0), new HashMap<>());
-    Assert.assertEquals(1, averager.computeResult(), 0.0); // (1+1)/2
+    Assertions.assertEquals(1, averager.computeResult(), 0.0); // (1+1)/2
 
     BaseAverager<Number, Double> averager1 = new DoubleMeanAverager(14, "test", "field", 3);
 
@@ -69,10 +69,10 @@ public class DoubleMeanAveragerWithPeriodTest
     averager1.addElement(Collections.singletonMap("field", 1.0), new HashMap<>());
     averager1.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
 
-    Assert.assertEquals(1, averager1.computeResult(), 0.0); // (1+1+1+1+1)/5
+    Assertions.assertEquals(1, averager1.computeResult(), 0.0); // (1+1+1+1+1)/5
 
-    Assert.assertEquals(2, averager1.computeResult(), 0.0); // (2+2+2+2+2)/5
+    Assertions.assertEquals(2, averager1.computeResult(), 0.0); // (2+2+2+2+2)/5
 
-    Assert.assertEquals(13.0 / 5, averager1.computeResult(), 0.0); // (3+3+3+3+1)/5
+    Assertions.assertEquals(13.0 / 5, averager1.computeResult(), 0.0); // (3+3+3+3+1)/5
   }
 }

@@ -32,7 +32,7 @@ sidebar_label: "Scalar functions"
 
 
 :::info
- Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
 
@@ -56,6 +56,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`LOG10(expr)`|Logarithm (base 10).|
 |`POWER(expr, power)`|`expr` raised to the power of `power`.|
 |`SQRT(expr)`|Square root.|
+|`CBRT(expr)`|Cube root.|
 |`TRUNCATE(expr[, digits])`|Truncates `expr` to a specific number of decimal digits. If `digits` is negative, then this truncates that many places to the left of the decimal point. If not specified, `digits` defaults to zero.|
 |`TRUNC(expr[, digits])`|Alias for `TRUNCATE`.|
 |`ROUND(expr[, digits])`|Rounds `expr` to a specific number of decimal digits. If `digits` is negative, then it rounds that many places to the left of the decimal point. If not specified, `digits` defaults to zero.|
@@ -68,6 +69,9 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`ACOS(expr)`|Arc cosine of `expr`.|
 |`ATAN(expr)`|Arc tangent of `expr`.|
 |`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
+|`SINH(expr)`|Hyperbolic sine of `expr`.|
+|`COSH(expr)`|Hyperbolic cosine of `expr`.|
+|`TANH(expr)`|Hyperbolic tangent of `expr`.|
 |`DEGREES(expr)`|Converts an angle measured in radians to an approximately equivalent angle measured in degrees.|
 |`RADIANS(expr)`|Converts an angle measured in degrees to an approximately equivalent angle measured in radians.|
 |`BITWISE_AND(expr1, expr2)`|Returns the result of `expr1 & expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles.|
@@ -275,7 +279,7 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the base64-serialized Bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details. See the [`BLOOM_FILTER` function](sql-aggregations.md) for computing Bloom filters.|
 |`CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`|Simple CASE.|
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
-|`CAST(value AS TYPE)`|Cast value to another type. See [Data types](sql-data-types.md) for details about how Druid SQL handles CAST.|
+|`CAST(value AS TYPE)`|Cast value to another type. Can also be written as `value::TYPE`. See [Data types](sql-data-types.md) for details about how Druid SQL handles CAST.|
 |`COALESCE(value1, value2, ...)`|Returns the first non-null value.|
 |`DECODE_BASE64_COMPLEX(dataType, expr)`| Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode. The `hyperUnique` and `serializablePairLongString` data types are supported by default. You can enable support for the following complex data types by loading their extensions:<br/><ul><li>`druid-bloom-filter`: `bloom`</li><li>`druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`</li><li>`druid-histogram`: `approximateHistogram`, `fixedBucketsHistogram`</li><li>`druid-stats`: `variance`</li><li>`druid-compressed-bigdecimal`: `compressedBigDecimal`</li><li>`druid-momentsketch`: `momentSketch`</li><li>`druid-tdigestsketch`: `tDigestSketch`</li></ul>|
 |`NULLIF(value1, value2)`|Returns NULL if `value1` and `value2` match, else returns `value1`.|

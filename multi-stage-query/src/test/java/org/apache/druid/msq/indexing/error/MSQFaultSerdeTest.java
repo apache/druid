@@ -29,9 +29,9 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -41,7 +41,7 @@ public class MSQFaultSerdeTest
 {
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     objectMapper = TestHelper.makeJsonMapper();
@@ -128,6 +128,6 @@ public class MSQFaultSerdeTest
   {
     final String json = objectMapper.writeValueAsString(fault);
     final MSQFault fault2 = objectMapper.readValue(json, MSQFault.class);
-    Assert.assertEquals(json, fault, fault2);
+    Assertions.assertEquals(fault, fault2, json);
   }
 }

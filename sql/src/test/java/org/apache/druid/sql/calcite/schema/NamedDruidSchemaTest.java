@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite.schema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,12 +46,12 @@ public class NamedDruidSchemaTest extends CalciteTestBase
   @Test
   public void testGetSchemaNameShouldReturnName()
   {
-    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
+    Assertions.assertEquals(SCHEMA_NAME, target.getSchemaName());
   }
 
   @Test
   public void testGetSchemaShouldReturnSchema()
   {
-    Assert.assertEquals(druidSchema, target.getSchema());
+    Assertions.assertEquals(druidSchema, target.getSchema());
   }
 }

@@ -20,9 +20,8 @@
 package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import org.joda.time.Period;
-
-import javax.validation.constraints.NotNull;
 
 /**
  */

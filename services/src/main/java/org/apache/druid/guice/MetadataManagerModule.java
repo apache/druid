@@ -138,6 +138,7 @@ public class MetadataManagerModule implements Module
             .in(LazySingleton.class);
       binder.bind(IndexingStateCache.class).in(LazySingleton.class);
     } else {
+      // Non-Overlord nodes (i.e. Coordinator) can only read from metadata store
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataReadOnlyTransactionFactory.class)
             .in(LazySingleton.class);

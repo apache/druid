@@ -27,25 +27,30 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.guice.annotations.EphemeralStorageLoading;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Collections;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class StorageNodeModuleTest
 {
   private static final boolean INJECT_SERVER_TYPE_CONFIG = true;
@@ -61,13 +66,13 @@ public class StorageNodeModuleTest
 
   private StorageNodeModule target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     self = new DruidNode("test", "test-host", true, 80, 443, false, true);
     serverTypeConfig = new ServerTypeConfig(ServerType.HISTORICAL);
 
-    Mockito.when(segmentLoaderConfig.getLocations()).thenReturn(Collections.singletonList(storageLocation));
+    Mockito.lenient().when(segmentLoaderConfig.getLocations()).thenReturn(Collections.singletonList(storageLocation));
 
     target = new StorageNodeModule();
   }
@@ -78,8 +83,8 @@ public class StorageNodeModuleTest
     Boolean isSegmentCacheConfigured = injector().getInstance(
         Key.get(Boolean.class, Names.named(StorageNodeModule.IS_SEGMENT_CACHE_CONFIGURED))
     );
-    Assert.assertNotNull(isSegmentCacheConfigured);
-    Assert.assertTrue(isSegmentCacheConfigured);
+    Assertions.assertNotNull(isSegmentCacheConfigured);
+    Assertions.assertTrue(isSegmentCacheConfigured);
   }
 
   @Test
@@ -89,8 +94,8 @@ public class StorageNodeModuleTest
     Boolean isSegmentCacheConfigured = injector().getInstance(
         Key.get(Boolean.class, Names.named(StorageNodeModule.IS_SEGMENT_CACHE_CONFIGURED))
     );
-    Assert.assertNotNull(isSegmentCacheConfigured);
-    Assert.assertFalse(isSegmentCacheConfigured);
+    Assertions.assertNotNull(isSegmentCacheConfigured);
+    Assertions.assertFalse(isSegmentCacheConfigured);
   }
 
   @Test
@@ -121,18 +126,18 @@ public class StorageNodeModuleTest
     final Injector injector = injector();
 
     DataNodeService dataNodeService = injector.getInstance(DataNodeService.class);
-    Assert.assertNotNull(dataNodeService);
+    Assertions.assertNotNull(dataNodeService);
 
     DataNodeService other = injector.getInstance(DataNodeService.class);
-    Assert.assertSame(dataNodeService, other);
+    Assertions.assertSame(dataNodeService, other);
   }
 
   @Test
   public void getDataNodeServiceIsInjectedAndDiscoverable()
   {
     DataNodeService dataNodeService = injector().getInstance(DataNodeService.class);
-    Assert.assertNotNull(dataNodeService);
-    Assert.assertTrue(dataNodeService.isDiscoverable());
+    Assertions.assertNotNull(dataNodeService);
+    Assertions.assertTrue(dataNodeService.isDiscoverable());
   }
 
   @Test
@@ -141,8 +146,8 @@ public class StorageNodeModuleTest
     mockSegmentCacheNotConfigured();
     serverTypeConfig = new ServerTypeConfig(ServerType.BROKER);
     DataNodeService dataNodeService = injector().getInstance(DataNodeService.class);
-    Assert.assertNotNull(dataNodeService);
-    Assert.assertFalse(dataNodeService.isDiscoverable());
+    Assertions.assertNotNull(dataNodeService);
+    Assertions.assertFalse(dataNodeService.isDiscoverable());
   }
 
   @Test
@@ -150,10 +155,10 @@ public class StorageNodeModuleTest
   {
     final Injector injector = injector();
     DruidServerMetadata druidServerMetadata = injector.getInstance(DruidServerMetadata.class);
-    Assert.assertNotNull(druidServerMetadata);
+    Assertions.assertNotNull(druidServerMetadata);
 
     DruidServerMetadata other = injector.getInstance(DruidServerMetadata.class);
-    Assert.assertSame(druidServerMetadata, other);
+    Assertions.assertSame(druidServerMetadata, other);
   }
 
   @Test
@@ -165,6 +170,26 @@ public class StorageNodeModuleTest
         .of(ProvisionException.class)
         .expectMessageContains("Must override the binding for ServerTypeConfig if you want a DruidServerMetadata.")
         .assertThrowsAndMatches(() -> injector.getInstance(DruidServerMetadata.class));
+  }
+
+  @Test
+  public void testEphemeralStorageLoadingThreadPoolIsInjectedAndAvailable()
+  {
+    // The qualified ephemeral loading pool must resolve from the core injector (StorageNodeModule is universal via
+    // CoreInjectorBuilder), so SegmentCacheManagerFactory's @Inject constructor can be satisfied on every process.
+    // The provider forces virtual storage via config.toEphemeralVirtualStorage() regardless of the node's flag.
+    Mockito.when(segmentLoaderConfig.toEphemeralVirtualStorage())
+           .thenReturn(SegmentLoaderConfig.builder().virtualStorage(true).build());
+
+    final StorageLoadingThreadPool pool = injector().getInstance(
+        Key.get(StorageLoadingThreadPool.class, EphemeralStorageLoading.class)
+    );
+    try {
+      Assertions.assertTrue(pool.isAvailable());
+    }
+    finally {
+      pool.stop();
+    }
   }
 
   private Injector injector()

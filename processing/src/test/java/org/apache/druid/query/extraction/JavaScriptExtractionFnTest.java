@@ -26,18 +26,13 @@ import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.js.JavaScriptConfig;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 
 public class JavaScriptExtractionFnTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private static final String[] TEST_STRINGS = {
       "Quito",
       "Calgary",
@@ -57,7 +52,7 @@ public class JavaScriptExtractionFnTest
 
     for (String str : TEST_STRINGS) {
       String res = extractionFn.apply(str);
-      Assert.assertEquals(str.substring(0, 3), res);
+      Assertions.assertEquals(str.substring(0, 3), res);
     }
   }
 
@@ -67,10 +62,11 @@ public class JavaScriptExtractionFnTest
     String function = "function(str) { return str.substring(0,3); }";
     ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, new JavaScriptConfig(false));
 
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
-    extractionFn.apply("hey");
-    Assert.assertTrue(false);
+    IllegalStateException ex = Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> extractionFn.apply("hey")
+    );
+    Assertions.assertTrue(ex.getMessage().contains("JavaScript is disabled"));
   }
 
   @Test
@@ -78,21 +74,21 @@ public class JavaScriptExtractionFnTest
   {
     String utcHour = "function(t) {\nreturn 'Second ' + Math.floor((t % 60000) / 1000);\n}";
     final long millis = DateTimes.of("2015-01-02T13:00:59.999Z").getMillis();
-    Assert.assertEquals("Second 59", new JavaScriptExtractionFn(utcHour, false, JavaScriptConfig.getEnabledInstance()).apply(millis));
+    Assertions.assertEquals("Second 59", new JavaScriptExtractionFn(utcHour, false, JavaScriptConfig.getEnabledInstance()).apply(millis));
   }
 
   @Test
   public void testLongs()
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
-    Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getEnabledInstance()).apply(1234L));
+    Assertions.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getEnabledInstance()).apply(1234L));
   }
 
   @Test
   public void testFloats()
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
-    Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getEnabledInstance()).apply(1234.0));
+    Assertions.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getEnabledInstance()).apply(1234.0));
   }
 
   @Test
@@ -106,7 +102,7 @@ public class JavaScriptExtractionFnTest
     for (String str : Lists.newArrayList("1", "5", "6", "10", "CA")) {
       String res = extractionFn.apply(str);
       String expected = it.next();
-      Assert.assertEquals(expected, res);
+      Assertions.assertEquals(expected, res);
     }
   }
 
@@ -119,7 +115,7 @@ public class JavaScriptExtractionFnTest
     Iterator it = Iterators.forArray("Qt", "Clgry", "Tky", "Stckhlm", "Vncvr", "Prtr", "Wllngtn", "Ontr");
     for (String str : TEST_STRINGS) {
       String res = extractionFn.apply(str);
-      Assert.assertEquals(it.next(), res);
+      Assertions.assertEquals(it.next(), res);
     }
   }
 
@@ -129,12 +125,12 @@ public class JavaScriptExtractionFnTest
     String function = "function(x) { if (x == null) { return 'yes'; } else { return 'no' } }";
     ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
-    Assert.assertEquals("yes", extractionFn.apply((String) null));
-    Assert.assertEquals("yes", extractionFn.apply((Object) null));
-    Assert.assertEquals("no", extractionFn.apply(""));
-    Assert.assertEquals("no", extractionFn.apply("abc"));
-    Assert.assertEquals("no", extractionFn.apply(new Object()));
-    Assert.assertEquals("no", extractionFn.apply(1));
+    Assertions.assertEquals("yes", extractionFn.apply((String) null));
+    Assertions.assertEquals("yes", extractionFn.apply((Object) null));
+    Assertions.assertEquals("no", extractionFn.apply(""));
+    Assertions.assertEquals("no", extractionFn.apply("abc"));
+    Assertions.assertEquals("no", extractionFn.apply(new Object()));
+    Assertions.assertEquals("no", extractionFn.apply(1));
   }
 
   @Test
@@ -339,7 +335,7 @@ public class JavaScriptExtractionFnTest
 
     while (inputs.hasNext()) {
       String res = extractionFn.apply(inputs.next());
-      Assert.assertEquals(it.next(), res);
+      Assertions.assertEquals(it.next(), res);
     }
   }
 
@@ -357,10 +353,10 @@ public class JavaScriptExtractionFnTest
     final String json = "{ \"type\" : \"javascript\", \"function\" : \"function(str) { return str.substring(0,3); }\" }";
     JavaScriptExtractionFn extractionFn = (JavaScriptExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
 
-    Assert.assertEquals("function(str) { return str.substring(0,3); }", extractionFn.getFunction());
+    Assertions.assertEquals("function(str) { return str.substring(0,3); }", extractionFn.getFunction());
 
     // round trip
-    Assert.assertEquals(
+    Assertions.assertEquals(
         extractionFn,
         objectMapper.readValue(
             objectMapper.writeValueAsBytes(extractionFn),
@@ -372,7 +368,7 @@ public class JavaScriptExtractionFnTest
   @Test
   public void testInjective()
   {
-    Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, new JavaScriptExtractionFn("function(str) { return str; }", false, JavaScriptConfig.getEnabledInstance()).getExtractionType());
-    Assert.assertEquals(ExtractionFn.ExtractionType.ONE_TO_ONE, new JavaScriptExtractionFn("function(str) { return str; }", true, JavaScriptConfig.getEnabledInstance()).getExtractionType());
+    Assertions.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, new JavaScriptExtractionFn("function(str) { return str; }", false, JavaScriptConfig.getEnabledInstance()).getExtractionType());
+    Assertions.assertEquals(ExtractionFn.ExtractionType.ONE_TO_ONE, new JavaScriptExtractionFn("function(str) { return str; }", true, JavaScriptConfig.getEnabledInstance()).getExtractionType());
   }
 }

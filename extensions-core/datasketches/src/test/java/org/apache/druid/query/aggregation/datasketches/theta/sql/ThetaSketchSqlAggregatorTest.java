@@ -31,12 +31,12 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimatePostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
@@ -45,6 +45,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSqlA
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -76,13 +77,13 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 @SqlTestFrameworkConfig.ComponentSupplier(ThetaSketchComponentSupplier.class)
@@ -379,7 +380,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
   {
-    DruidException druidException = Assert.assertThrows(
+    DruidException druidException = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             "SELECT APPROX_COUNT_DISTINCT_DS_THETA(double_first_added) FROM druid.wikipedia_first_last",
@@ -387,7 +388,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    Assert.assertTrue(druidException.getMessage().contains(
+    Assertions.assertTrue(druidException.getMessage().contains(
         "Cannot apply 'APPROX_COUNT_DISTINCT_DS_THETA' to arguments of type 'APPROX_COUNT_DISTINCT_DS_THETA(<COMPLEX<SERIALIZABLEPAIRLONGDOUBLE>>)'"
     ));
   }
@@ -593,11 +594,11 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testThetaSketchPostAggsFinalizeOuterSketches()
   {
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(SketchQueryContext.CTX_FINALIZE_OUTER_SKETCHES, true)
-                    .build();
+                    .put(QueryContextParameters.SQL_FINALIZE_OUTER_SKETCHES, true)
+                    .toMap();
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
@@ -803,11 +804,11 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     final String sql = "SELECT DS_THETA(dim2) as y FROM druid.foo ORDER BY THETA_SKETCH_ESTIMATE(DS_THETA(dim2)) DESC LIMIT 10";
 
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(SketchQueryContext.CTX_FINALIZE_OUTER_SKETCHES, true)
-                    .build();
+                    .put(QueryContextParameters.SQL_FINALIZE_OUTER_SKETCHES, true)
+                    .toMap();
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
@@ -990,11 +991,11 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAggregatorDefaultValuesFinalizeOuterSketches()
   {
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(SketchQueryContext.CTX_FINALIZE_OUTER_SKETCHES, true)
-                    .build();
+                    .put(QueryContextParameters.SQL_FINALIZE_OUTER_SKETCHES, true)
+                    .toMap();
 
     testQuery(
         "SELECT\n"
@@ -1148,7 +1149,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
       );
     }
     catch (IllegalArgumentException e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.getMessage().contains("requires a ThetaSketch as the argument")
       );
     }

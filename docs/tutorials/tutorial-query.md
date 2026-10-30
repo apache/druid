@@ -24,7 +24,7 @@ sidebar_label: Query data
   -->
 
 
-This tutorial demonstrates how to query data in Apache Druid using SQL.  
+This tutorial demonstrates how to query data in Apache&circledR; Druid using SQL.  
 
 It assumes that you've completed the [Quickstart](../tutorials/index.md) 
 or one of the following tutorials, since we'll query datasources that you would have created

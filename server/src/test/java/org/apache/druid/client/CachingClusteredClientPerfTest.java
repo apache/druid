@@ -19,7 +19,6 @@
 
 package org.apache.druid.client;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.cache.CacheConfig;
@@ -36,6 +35,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -44,6 +44,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -59,8 +60,10 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -69,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
 
@@ -79,7 +83,8 @@ import static org.mockito.ArgumentMatchers.any;
 public class CachingClusteredClientPerfTest
 {
 
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testGetQueryRunnerForSegments_singleIntervalLargeSegments()
   {
     final int segmentCount = 30_000;
@@ -153,7 +158,7 @@ public class CachingClusteredClientPerfTest
         segmentDescriptors
     );
     Sequence<SegmentDescriptor> sequence = queryRunner.run(QueryPlus.wrap(fakeQuery));
-    Assert.assertEquals(segmentDescriptors, sequence.toList());
+    Assertions.assertEquals(segmentDescriptors, sequence.toList());
   }
 
   private Query<SegmentDescriptor> makeFakeQuery(Interval interval)
@@ -161,7 +166,7 @@ public class CachingClusteredClientPerfTest
     return new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(Collections.singletonList(interval)),
-        ImmutableMap.of(BaseQuery.QUERY_ID, "testQuery")
+        QueryContext.ofMap(QueryContextParameters.QUERY_ID, "testQuery")
     );
   }
 

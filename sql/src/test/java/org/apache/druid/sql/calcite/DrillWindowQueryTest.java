@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
@@ -29,7 +28,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -44,7 +44,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.LocalTime;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -52,6 +52,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,9 +74,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -139,7 +140,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           string,
           string.replace('/', '_'));
     }
-    assertEquals("Found some non-declared testcases; please add the new testcases printed to the console!", 0, allCases.size());
+    assertEquals(0, allCases.size(), "Found some non-declared testcases; please add the new testcases printed to the console!");
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -253,7 +254,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     public void verifyRowSignature(RowSignature rowSignature)
     {
       if (expectedResultRowSignature != null) {
-        Assert.assertEquals(expectedResultRowSignature, rowSignature);
+        Assertions.assertEquals(expectedResultRowSignature, rowSignature);
       }
       currentRowSignature = rowSignature;
     }
@@ -264,7 +265,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       List<Object[]> results = queryResults.results;
       List<Object[]> expectedResults = parseResults(currentRowSignature, expectedResultsText);
       try {
-        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
+        Assertions.assertEquals(expectedResultsText.size(), results.size(), StringUtils.format("result count: %s", sql));
         if (!isOrdered(queryResults)) {
           // in case the resultset is not ordered; order via the same comparator before comparison
           results.sort(new ArrayRowCmp());
@@ -400,10 +401,10 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   protected Map<String, Object> getQueryContext()
   {
-    return ImmutableMap.of(
-        PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
-        QueryContexts.ENABLE_DEBUG, true
-    );
+    return QueryContext.builder()
+        .put(QueryContextParameters.DEBUG, true)
+        .putRaw(PlannerCaptureHook.NEED_CAPTURE_HOOK, true)
+        .toMap();
   }
 
   // testcases_start

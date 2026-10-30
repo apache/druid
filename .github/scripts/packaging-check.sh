@@ -19,7 +19,10 @@ set -e
 set -x
 
 ./.github/scripts/setup_generate_license.sh
-mvn -B clean install -Prat --fail-at-end \
-  -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false -T1C
-mvn -B install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
-  -pl 'distribution' -P skip-tests -Dweb.console.skip=false -T1C
+CODE_CHECKS_SKIP="-Dcheckstyle.skip -Dpmd.skip -Dforbiddenapis.skip -Danimal.sniffer.skip"
+./mvnw -B install -Papache-release -Prat --fail-at-end \
+  -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false \
+  -Dgpg.skip -Ddependency-check.skip $CODE_CHECKS_SKIP
+./mvnw -B install -Papache-release -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
+  -pl 'distribution' -P skip-tests -Dweb.console.skip=false \
+  -Dgpg.skip -Ddependency-check.skip $CODE_CHECKS_SKIP

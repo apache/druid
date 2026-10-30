@@ -29,8 +29,8 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,16 +57,16 @@ public class FilterJoinExcludePushToChildRuleTest
     joinFilters.add(equalityFilter);
 
     FilterJoinExcludePushToChildRule.removeRedundantIsNotNullFilters(joinFilters, JoinRelType.INNER);
-    Assert.assertEquals(joinFilters.size(), 1);
-    Assert.assertEquals("Equality Filter changed", joinFilters.get(0), equalityFilter);
+    Assertions.assertEquals(joinFilters.size(), 1);
+    Assertions.assertEquals(joinFilters.get(0), equalityFilter, "Equality Filter changed");
 
     // add IS NOT NULL filter on a join column
     joinFilters.add(isNotNullFilterOnNonJoinColumn);
     joinFilters.add(isNotNullFilterOnJoinColumn);
-    Assert.assertEquals(joinFilters.size(), 3);
+    Assertions.assertEquals(joinFilters.size(), 3);
     FilterJoinExcludePushToChildRule.removeRedundantIsNotNullFilters(joinFilters, JoinRelType.INNER);
-    Assert.assertEquals(joinFilters.size(), 2);
-    Assert.assertEquals("Equality Filter changed", joinFilters.get(0), equalityFilter);
-    Assert.assertEquals("IS NOT NULL filter on non-join column changed", joinFilters.get(1), isNotNullFilterOnNonJoinColumn);
+    Assertions.assertEquals(joinFilters.size(), 2);
+    Assertions.assertEquals(joinFilters.get(0), equalityFilter, "Equality Filter changed");
+    Assertions.assertEquals(joinFilters.get(1), isNotNullFilterOnNonJoinColumn, "IS NOT NULL filter on non-join column changed");
   }
 }

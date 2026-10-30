@@ -19,16 +19,17 @@
 
 package org.apache.druid.storage.s3;
 
-import com.google.common.collect.ImmutableList;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.common.aws.AWSModule;
-import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ServerModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class S3StorageDruidModuleTest
 {
@@ -37,8 +38,8 @@ public class S3StorageDruidModuleTest
   {
     Injector injector = createInjector();
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
-    Assert.assertTrue(killer.getKillers().containsKey(S3StorageDruidModule.SCHEME_S3_ZIP));
-    Assert.assertSame(
+    Assertions.assertTrue(killer.getKillers().containsKey(S3StorageDruidModule.SCHEME_S3_ZIP));
+    Assertions.assertSame(
         killer.getKillers().get(S3StorageDruidModule.SCHEME_S3_ZIP).get(),
         killer.getKillers().get(S3StorageDruidModule.SCHEME_S3_ZIP).get()
     );
@@ -49,8 +50,8 @@ public class S3StorageDruidModuleTest
   {
     Injector injector = createInjector();
     OmniDataSegmentArchiver archiver = injector.getInstance(OmniDataSegmentArchiver.class);
-    Assert.assertTrue(archiver.getArchivers().containsKey(S3StorageDruidModule.SCHEME_S3_ZIP));
-    Assert.assertSame(
+    Assertions.assertTrue(archiver.getArchivers().containsKey(S3StorageDruidModule.SCHEME_S3_ZIP));
+    Assertions.assertSame(
         archiver.getArchivers().get(S3StorageDruidModule.SCHEME_S3_ZIP).get(),
         archiver.getArchivers().get(S3StorageDruidModule.SCHEME_S3_ZIP).get()
     );
@@ -61,8 +62,8 @@ public class S3StorageDruidModuleTest
   {
     Injector injector = createInjector();
     OmniDataSegmentMover mover = injector.getInstance(OmniDataSegmentMover.class);
-    Assert.assertTrue(mover.getMovers().containsKey(S3StorageDruidModule.SCHEME_S3_ZIP));
-    Assert.assertSame(
+    Assertions.assertTrue(mover.getMovers().containsKey(S3StorageDruidModule.SCHEME_S3_ZIP));
+    Assertions.assertSame(
         mover.getMovers().get(S3StorageDruidModule.SCHEME_S3_ZIP).get(),
         mover.getMovers().get(S3StorageDruidModule.SCHEME_S3_ZIP).get()
     );
@@ -70,12 +71,12 @@ public class S3StorageDruidModuleTest
 
   private static Injector createInjector()
   {
-    return GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.of(
-            new AWSModule(),
-            new S3StorageDruidModule(),
-            new ServerModule()
-        )
+    final Injector startupInjector = new StartupInjectorBuilder().forServer().build();
+    return Guice.createInjector(
+        startupInjector.getInstance(DruidSecondaryModule.class),
+        new AWSModule(),
+        new S3StorageDruidModule(),
+        new ServerModule()
     );
   }
 }

@@ -29,11 +29,12 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.Streams;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,8 +53,8 @@ import java.util.stream.Collectors;
 public class LocalInputSourceTest
 {
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSerdeAbsoluteBaseDir() throws IOException
@@ -180,7 +181,7 @@ public class LocalInputSourceTest
   @Test
   public void testGetFileIteratorWithBothBaseDirAndDuplicateFilesIteratingFilesOnlyOnce() throws IOException
   {
-    File baseDir = temporaryFolder;
+    File baseDir = temporaryFolder.getRoot();
     List<File> filesInBaseDir = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
@@ -208,7 +209,7 @@ public class LocalInputSourceTest
   @Test
   public void testGetFileIteratorWithOnlyBaseDirIteratingAllFiles() throws IOException
   {
-    File baseDir = temporaryFolder;
+    File baseDir = temporaryFolder.getRoot();
     Set<File> filesInBaseDir = new HashSet<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
@@ -225,7 +226,7 @@ public class LocalInputSourceTest
   @Test
   public void testGetFileIteratorWithOnlyFilesIteratingAllFiles() throws IOException
   {
-    File baseDir = temporaryFolder;
+    File baseDir = temporaryFolder.getRoot();
     List<File> filesInBaseDir = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);

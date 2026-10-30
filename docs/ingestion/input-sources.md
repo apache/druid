@@ -23,7 +23,7 @@ sidebar_label: "Input sources"
   ~ under the License.
   -->
 
-The input source defines where your index task reads data for Apache Druid native batch ingestion. Only the native parallel task and simple task support the input source.
+The input source defines where your index task reads data for Apache&circledR; Druid native batch ingestion. Only the native parallel task and simple task support the input source.
 
 For general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
 
@@ -212,7 +212,7 @@ Properties Object:
 
 :::info
 
-If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used. If the Druid process sets `druid.s3.intermediateAssumeRoleArn`, the resolved credentials assume that role before assuming `assumeRoleArn`.
 
 :::
 

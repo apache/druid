@@ -37,6 +37,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -54,6 +55,7 @@ import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.destination.TableDestination;
 import org.apache.druid.storage.ExportStorageProvider;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class IngestHandler extends QueryHandler
@@ -126,8 +128,8 @@ public abstract class IngestHandler extends QueryHandler
           operationName()
       );
     } else {
-      handlerContext.plannerContext().queryContextMap().put(
-          DruidSqlIngest.SQL_EXPORT_FILE_FORMAT,
+      QueryContextParameters.EXPORT_FILE_FORMAT.set(
+          handlerContext.plannerContext().queryContextMap(),
           exportFileFormat.toString()
       );
     }
@@ -147,12 +149,22 @@ public abstract class IngestHandler extends QueryHandler
       }
     }
 
-    // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
+    // Check if sqlOuterLimit is specified and fail the query if it is. sqlOuterLimit being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
-    if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
+    if (handlerContext.queryContext().has(QueryContextParameters.SQL_OUTER_LIMIT)) {
       throw InvalidSqlInput.exception(
           "Context parameter [%s] cannot be provided on operator [%s]",
-          PlannerContext.CTX_SQL_OUTER_LIMIT,
+          QueryContextParameters.SQL_OUTER_LIMIT,
+          operationName()
+      );
+    }
+
+    // Fail the query if sqlTimeCondition is specified, since it limits the rows read without limiting the time
+    // chunks that are overwritten, so REPLACE would delete data outside the condition.
+    if (handlerContext.queryContext().has(QueryContextParameters.SQL_TIME_CONDITION)) {
+      throw InvalidSqlInput.exception(
+          "Context parameter [%s] cannot be provided on operator [%s]",
+          QueryContextParameters.SQL_TIME_CONDITION,
           operationName()
       );
     }
@@ -161,8 +173,8 @@ public abstract class IngestHandler extends QueryHandler
     validatedQueryNode = validatedNode.getSource();
     // This context key is set during validation in
     // org.apache.druid.sql.calcite.planner.DruidSqlValidator.validateInsert.
-    String effectiveGranularity = (String) handlerContext.queryContextMap()
-        .get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY);
+    String effectiveGranularity =
+        handlerContext.queryContext().get(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY);
     try {
       ingestionGranularity = effectiveGranularity != null
           ? handlerContext.jsonMapper().readValue(effectiveGranularity, Granularity.class)
@@ -215,7 +227,7 @@ public abstract class IngestHandler extends QueryHandler
       String tableName = Iterables.getOnlyElement(tableIdentifier.names);
       IdUtils.validateId("table", tableName);
       dataSource = new TableDestination(tableName);
-      resourceActions.add(new ResourceAction(new Resource(tableName, ResourceType.DATASOURCE), Action.WRITE));
+      resourceActions.addAll(getIngestResourceActions(tableName));
     } else {
       // Qualified name.
       final String defaultSchemaName =
@@ -225,7 +237,7 @@ public abstract class IngestHandler extends QueryHandler
         String tableName = tableIdentifier.names.get(1);
         IdUtils.validateId("table", tableName);
         dataSource = new TableDestination(tableName);
-        resourceActions.add(new ResourceAction(new Resource(tableName, ResourceType.DATASOURCE), Action.WRITE));
+        resourceActions.addAll(getIngestResourceActions(tableName));
       } else {
         throw InvalidSqlInput.exception(
             "Table [%s] does not support operation [%s] because it is not a Druid datasource",
@@ -252,6 +264,17 @@ public abstract class IngestHandler extends QueryHandler
         rootQueryRel,
         handlerContext.plannerContext()
     );
+  }
+
+  private List<ResourceAction> getIngestResourceActions(final String dataSource)
+  {
+    final List<ResourceAction> resourceActions = new ArrayList<>();
+    final Resource resource = new Resource(dataSource, ResourceType.DATASOURCE);
+    resourceActions.add(new ResourceAction(resource, Action.WRITE));
+    if (handlerContext.plannerContext().getPlannerConfig().isAuthorizeTableVisibility()) {
+      resourceActions.add(new ResourceAction(resource, Action.READ));
+    }
+    return resourceActions;
   }
 
   /**
@@ -394,10 +417,7 @@ public abstract class IngestHandler extends QueryHandler
       );
       if (replaceIntervalsList != null) {
         replaceIntervals = String.join(",", replaceIntervalsList);
-        handlerContext.queryContextMap().put(
-            DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-            replaceIntervals
-        );
+        QueryContextParameters.SQL_REPLACE_TIME_CHUNKS.set(handlerContext.queryContextMap(), replaceIntervals);
       }
     }
 

@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.worker.config;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -36,8 +36,8 @@ public class WorkerConfigTest
         .setBaseTaskDirs(Arrays.asList("1", "2", "another"))
         .build();
 
-    Assert.assertEquals(10, config.getCapacity());
-    Assert.assertEquals(100_000_000L, config.getBaseTaskDirSize());
-    Assert.assertEquals(Arrays.asList("1", "2", "another"), config.getBaseTaskDirs());
+    Assertions.assertEquals(10, config.getCapacity());
+    Assertions.assertEquals(100_000_000L, config.getBaseTaskDirSize());
+    Assertions.assertEquals(Arrays.asList("1", "2", "another"), config.getBaseTaskDirs());
   }
 }

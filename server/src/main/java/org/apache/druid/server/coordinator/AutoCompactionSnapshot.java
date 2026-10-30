@@ -22,11 +22,11 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.compaction.CompactionStatistics;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
 public class AutoCompactionSnapshot

@@ -42,7 +42,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * SysMonitor implemented using {@link oshi}
+ * System monitor implemented using {@link oshi}
  * <p>
  * Following stats are emitted:
  * <ul>

@@ -45,7 +45,6 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -585,7 +584,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    assertThat(
+    assertDruidException(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
@@ -605,7 +604,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L))
         )
     );
-    assertThat(
+    assertDruidException(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [2])")
     );
@@ -627,7 +626,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
+    assertDruidException(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );

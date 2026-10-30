@@ -27,8 +27,8 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -47,7 +47,7 @@ public class InlineInputSpecTest
 
     final InlineInputSpec spec = new InlineInputSpec(dataSource);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         spec,
         mapper.readValue(mapper.writeValueAsString(spec), InputSpec.class)
     );

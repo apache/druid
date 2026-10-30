@@ -32,6 +32,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -48,8 +50,6 @@ import org.apache.druid.java.util.common.parsers.Parser;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;

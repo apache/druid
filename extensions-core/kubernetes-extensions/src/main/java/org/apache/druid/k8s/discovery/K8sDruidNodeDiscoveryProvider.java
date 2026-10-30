@@ -223,7 +223,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
         return;
       }
 
-      while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
+      while (lifecycleLock.isStarted()) {
         try {
           DiscoveryDruidNodeList list = k8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, nodeRole);
           baseNodeRoleWatcher.resetNodes(list.getDruidNodes());
@@ -241,8 +241,10 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
         catch (Throwable ex) {
           LOGGER.error(ex, "Exception while watching for role[%s].", nodeRole);
 
-          // Wait a little before trying again.
-          sleep(watcherErrorRetryWaitMS);
+          if (lifecycleLock.isStarted()) {
+            // If not stopped, wait a little before trying again.
+            sleep(watcherErrorRetryWaitMS);
+          }
         }
       }
 
@@ -252,59 +254,64 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
     private void keepWatching(String labelSelector, String resourceVersion)
     {
       String nextResourceVersion = resourceVersion;
-      while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-        try {
-          WatchResult iter =
-              k8sApiClient.watchPods(podInfo.getPodNamespace(), labelSelector, nextResourceVersion, nodeRole);
 
+      while (lifecycleLock.isStarted()) {
+        try (WatchResult iter = k8sApiClient.watchPods(podInfo.getPodNamespace(), labelSelector, nextResourceVersion, nodeRole)) {
           if (iter == null) {
             // history not available, we need to start from scratch
             return;
           }
 
-          try {
-            while (iter.hasNext()) {
-              Watch.Response<DiscoveryDruidNodeAndResourceVersion> item = iter.next();
-              if (item != null && item.type != null && item.object != null) {
-                switch (item.type) {
-                  case WatchResult.ADDED:
-                    baseNodeRoleWatcher.childAdded(item.object.getNode());
-                    break;
-                  case WatchResult.DELETED:
-                  case WatchResult.NOT_READY:
-                    // Use skipIfUnknown=true for all k8s discovery removals.
-                    // DELETED can fire after NOT_READY (so the service is already removed), or before ADDED (pod deleted before becoming ready).
-                    // NOT_READY can repeat during CrashLoopBackOff. None of these warrant the error-level logging that
-                    // comes with trying to remove an unknown service.
-                    baseNodeRoleWatcher.childRemoved(item.object.getNode(), true);
-                    break;
-                  default:
-                }
+          while (iter.hasNext()) {
+            Watch.Response<DiscoveryDruidNodeAndResourceVersion> item = iter.next();
 
-                // This should be updated after the action has been dealt with successfully
-                nextResourceVersion = item.object.getResourceVersion();
-
-              } else {
-                // Try again by starting the watch from the beginning. This can happen if the
-                // watch goes bad.
-                LOGGER.debug("Received NULL item while watching role[%s]. Restarting watch.", this.nodeRole);
-                return;
-              }
+            if (item == null || item.type == null || item.object == null) {
+              LOGGER.debug("Received NULL item while watching role[%s]. Restarting watch.", this.nodeRole);
+              return;
             }
-          }
-          finally {
-            iter.close();
+
+            switch (item.type) {
+              case WatchResult.ADDED:
+                baseNodeRoleWatcher.childAdded(item.object.getNode());
+                break;
+              case WatchResult.DELETED:
+              case WatchResult.NOT_READY:
+                // Use skipIfUnknown=true for all k8s discovery removals.
+                // DELETED can fire after NOT_READY (so the service is already removed), or before ADDED (pod deleted before becoming ready).
+                // NOT_READY can repeat during CrashLoopBackOff. None of these warrant the error-level logging that
+                // comes with trying to remove an unknown service.
+                baseNodeRoleWatcher.childRemoved(item.object.getNode(), true);
+                break;
+              default:
+            }
+
+            // This should be updated after the action has been dealt with successfully
+            nextResourceVersion = item.object.getResourceVersion();
           }
 
+          LOGGER.trace("Watch closed normally for role[%s]", this.nodeRole);
+          return;
+        }
+        catch (ChannelResetException ex) {
+          LOGGER.debug("Watch stream terminated normally for role[%s], restarting", this.nodeRole);
+          // Apply the same backoff as other retry paths below: a persistently reset stream
+          // (flaky proxy, LB idle timeout shorter than expected) would otherwise cause an
+          // unbounded relist/watch loop against the API server.
+          sleep(watcherErrorRetryWaitMS);
+          return;
         }
         catch (SocketTimeoutException ex) {
           // socket read timeout can happen normally due to k8s not having anything new to push leading to socket
           // read timeout, so no error log
-          sleep(watcherErrorRetryWaitMS);
+          if (lifecycleLock.isStarted()) {
+            sleep(watcherErrorRetryWaitMS);
+          }
         }
         catch (Throwable ex) {
           LOGGER.error(ex, "Error while watching role[%s]", this.nodeRole);
-          sleep(watcherErrorRetryWaitMS);
+          if (lifecycleLock.isStarted()) {
+            sleep(watcherErrorRetryWaitMS);
+          }
         }
       }
     }

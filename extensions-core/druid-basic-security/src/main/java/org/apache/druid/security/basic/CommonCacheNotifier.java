@@ -21,6 +21,9 @@ package org.apache.druid.security.basic;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -36,9 +39,6 @@ import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.DruidNode;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
@@ -195,12 +195,7 @@ public class CommonCacheNotifier
   private URL getListenerURL(DruidNode druidNode, String baseUrl)
   {
     try {
-      return new URL(
-          druidNode.getServiceScheme(),
-          druidNode.getHost(),
-          druidNode.getPortToUse(),
-          baseUrl
-      );
+      return druidNode.getUriToUse().resolve(baseUrl).toURL();
     }
     catch (MalformedURLException mue) {
       LOG.error(callerName + ": Malformed url for DruidNode[%s] and baseUrl[%s]", druidNode, baseUrl);
@@ -228,7 +223,7 @@ public class CommonCacheNotifier
     @Override
     public ClientResponse<StatusResponseHolder> handleChunk(
         ClientResponse<StatusResponseHolder> response,
-        HttpChunk chunk,
+        HttpContent chunk,
         long chunkNum
     )
     {

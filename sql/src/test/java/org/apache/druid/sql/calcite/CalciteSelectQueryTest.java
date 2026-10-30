@@ -20,8 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.rel.RelNode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
@@ -32,12 +30,14 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Order;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -50,21 +50,20 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 {
@@ -936,8 +935,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectCurrentTimeAndDateLosAngeles()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00.123Z");
-    context.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
+    context.put(QueryContextParameters.SQL_CURRENT_TIMESTAMP.getName(), "2000-01-01T00:00:00.123Z");
+    QueryContextParameters.SQL_TIME_ZONE.set(context, LOS_ANGELES);
 
     DateTimeZone timeZone = DateTimes.inferTzFromString(LOS_ANGELES);
     testQuery(
@@ -1233,69 +1232,122 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarOnForbiddenTable()
+  public void testSelectStarOnForbiddenTable_regularUser()
   {
-    assertQueryIsForbidden(
-        "SELECT * FROM druid.forbiddenDatasource",
-        CalciteTests.REGULAR_USER_AUTH_RESULT
-    );
+    final String sql = "SELECT * FROM druid.forbiddenDatasource";
 
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        "SELECT * FROM druid.forbiddenDatasource",
-        CalciteTests.SUPER_USER_AUTH_RESULT,
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "dim1", "dim2", "cnt", "m1", "m2", "unique_dim1")
-                .columnTypes(
-                    ColumnType.LONG,
-                    ColumnType.STRING,
-                    ColumnType.STRING,
-                    ColumnType.LONG,
-                    ColumnType.FLOAT,
-                    ColumnType.DOUBLE,
-                    ColumnType.ofComplex("hyperUnique")
-                )
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{
-                timestamp("2000-01-01"),
-                "forbidden",
-                "abcd",
-                1L,
-                9999.0f,
-                null,
-                "\"AQAAAQAAAALFBA==\""
-            },
-            new Object[]{
-                timestamp("2000-01-02"),
-                "forbidden",
-                "a",
-                1L,
-                1234.0f,
-                null,
-                "\"AQAAAQAAAALFBA==\""
-            }
-        )
+    // The regular user does not have access to forbiddenDatasource, so they shouldn't see it.
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql(sql)
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .build()
+            .run()
     );
+    DruidExceptionMatcher.assertThat(
+        e,
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("Object 'forbiddenDatasource' not found within 'druid'")
+    );
+  }
+
+  @Test
+  public void testSelectStarOnForbiddenTable_regularUser_noAuthorizeTableVisibility()
+  {
+    final String sql = "SELECT * FROM druid.forbiddenDatasource";
+
+    // The regular user does not have access to forbiddenDatasource. When authorizeTableVisibility = false, the
+    // validator is aware of it, but querying is still forbidden.
+    ForbiddenException e = Assertions.assertThrows(
+        ForbiddenException.class,
+        () -> testBuilder()
+            .sql(sql)
+            .plannerConfig(PlannerConfig.builder().authorizeTableVisibility(false).build())
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .build()
+            .run()
+    );
+    Assertions.assertTrue(e.getMessage().contains("Unauthorized"));
+  }
+
+  @Test
+  public void testSelectStarOnForbiddenTable_superUser()
+  {
+    // The superuser can see and query forbiddenDatasource.
+    testBuilder()
+        .sql("SELECT * FROM druid.forbiddenDatasource")
+        .plannerConfig(PLANNER_CONFIG_DEFAULT)
+        .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectedQueries(
+            ImmutableList.of(
+                newScanQueryBuilder()
+                    .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .columns("__time", "dim1", "dim2", "cnt", "m1", "m2", "unique_dim1")
+                    .columnTypes(
+                        ColumnType.LONG,
+                        ColumnType.STRING,
+                        ColumnType.STRING,
+                        ColumnType.LONG,
+                        ColumnType.FLOAT,
+                        ColumnType.DOUBLE,
+                        ColumnType.ofComplex("hyperUnique")
+                    )
+                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .context(QUERY_CONTEXT_DEFAULT)
+                    .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{
+                    timestamp("2000-01-01"),
+                    "forbidden",
+                    "abcd",
+                    1L,
+                    9999.0f,
+                    null,
+                    "\"AQAAAQAAAALFBA==\""
+                },
+                new Object[]{
+                    timestamp("2000-01-02"),
+                    "forbidden",
+                    "a",
+                    1L,
+                    1234.0f,
+                    null,
+                    "\"AQAAAQAAAALFBA==\""
+                }
+            )
+        )
+        .run();
   }
 
   @Test
   public void testSelectStarOnForbiddenView()
   {
-    assertQueryIsForbidden(
-        "SELECT * FROM view.forbiddenView",
-        CalciteTests.REGULAR_USER_AUTH_RESULT
+    final String sql = "SELECT * FROM view.forbiddenView";
+
+    // The regular user does not have access to forbiddenDatasource, so they shouldn't see it.
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql(sql)
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .build()
+            .run()
+    );
+    DruidExceptionMatcher.assertThat(
+        e,
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("Object 'forbiddenView' not found within 'view'")
     );
 
+    // The superuser can see forbiddenDatasource.
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        "SELECT * FROM view.forbiddenView",
+        sql,
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
@@ -2156,8 +2208,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+            QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) from druid.foo where m1 < -1.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2171,7 +2222,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                             dimensions(
                                                 new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
                                         .setDimFilter(
-                                            range("m1", ColumnType.DOUBLE, null, -1.0, false, true))
+                                            range("m1", ColumnType.FLOAT, null, -1.0, false, true))
                                         .build())
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
@@ -2195,8 +2246,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+            QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) from druid.foo where m1 < 111.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2210,7 +2260,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                             dimensions(
                                                 new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
                                         .setDimFilter(
-                                            range("m1", ColumnType.DOUBLE, null, 111.0, false, true))
+                                            range("m1", ColumnType.FLOAT, null, 111.0, false, true))
                                         .build())
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
@@ -2234,8 +2284,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+            QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) FILTER (where m1 < -1.0) from druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2276,8 +2325,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+            QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) FILTER (where m1 < -1.0) c from druid.foo HAVING c > 3",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2387,12 +2435,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSqlToRelInConversion()
   {
-    assertEquals(
-        "1.37.0",
-        RelNode.class.getPackage().getImplementationVersion(),
-        "Calcite version changed; check if CALCITE-6435 is fixed and remove:\n * method CalciteRulesManager#sqlToRelWorkaroundProgram\n * FixIncorrectInExpansionTypes class\n* this assertion"
-    );
-
     testBuilder()
         .sql(
             "SELECT channel FROM wikipedia\n"
@@ -2411,16 +2453,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRejectHavingWithWindowExpression()
   {
-    assertEquals(
-        "1.37.0",
-        RelNode.class.getPackage().getImplementationVersion(),
-        "Calcite version changed; check if CALCITE-6473 is fixed and remove:\n * this assertion\n * DruidSqlValidator#validateHavingClause"
-    );
-
     testQueryThrows(
         "SELECT cityName,sum(1) OVER () as w FROM wikipedia group by cityName HAVING w > 10",
         DruidException.class,
-        invalidSqlContains("Window functions are not allowed in HAVING")
+        invalidSqlContains("not permitted in the HAVING clause")
     );
   }
 }

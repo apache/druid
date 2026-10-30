@@ -21,26 +21,26 @@ package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class ProcFsReaderTest
 {
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
 
   @BeforeEach
   public void setUp() throws IOException
   {
-    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    procDir = temporaryFolder.newFolder("procDir");
     File kernelDir = new File(
         procDir,
         "sys/kernel/random"

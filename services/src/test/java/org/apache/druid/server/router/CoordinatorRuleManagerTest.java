@@ -23,6 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.java.util.common.ISE;
@@ -35,13 +38,9 @@ import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -57,9 +56,6 @@ public class CoordinatorRuleManagerTest
       new ForeverLoadRule(ImmutableMap.of("__default", 2), null)
   );
 
-  @org.junit.Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final TieredBrokerConfig tieredBrokerConfig = new TieredBrokerConfig();
 
   @Test
@@ -70,8 +66,10 @@ public class CoordinatorRuleManagerTest
         mockClient()
     );
     final Map<String, List<Rule>> rules = manager.getRules();
-    expectedException.expect(UnsupportedOperationException.class);
-    rules.put("testKey", Collections.emptyList());
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> rules.put("testKey", Collections.emptyList())
+    );
   }
 
   @Test
@@ -83,8 +81,10 @@ public class CoordinatorRuleManagerTest
     );
     manager.poll();
     final Map<String, List<Rule>> rules = manager.getRules();
-    expectedException.expect(UnsupportedOperationException.class);
-    rules.get(DATASOURCE1).add(new ForeverDropRule());
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> rules.get(DATASOURCE1).add(new ForeverDropRule())
+    );
   }
 
   @Test
@@ -108,7 +108,7 @@ public class CoordinatorRuleManagerTest
         client
     );
 
-    Assert.assertThrows(ISE.class, manager::poll);
+    Assertions.assertThrows(ISE.class, manager::poll);
   }
 
 
@@ -121,7 +121,7 @@ public class CoordinatorRuleManagerTest
     );
     manager.poll();
     final List<Rule> rules = manager.getRulesWithDefault("unknown");
-    Assert.assertEquals(DEFAULT_RULES, rules);
+    Assertions.assertEquals(DEFAULT_RULES, rules);
   }
 
   @Test
@@ -137,7 +137,7 @@ public class CoordinatorRuleManagerTest
     expectedRules.add(new ForeverLoadRule(null, null));
     expectedRules.add(new IntervalDropRule(Intervals.of("2020-01-01/2020-01-02")));
     expectedRules.addAll(DEFAULT_RULES);
-    Assert.assertEquals(expectedRules, rules);
+    Assertions.assertEquals(expectedRules, rules);
   }
 
   private CoordinatorClient mockClient()

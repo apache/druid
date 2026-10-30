@@ -22,7 +22,7 @@ package org.apache.druid.indexing.overlord.duty;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 

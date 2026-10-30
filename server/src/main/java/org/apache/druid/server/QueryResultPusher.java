@@ -51,6 +51,7 @@ import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -129,8 +130,10 @@ public abstract class QueryResultPusher
 
       final Response.ResponseBuilder startResponse = resultsWriter.start();
       if (startResponse != null) {
-        startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId)
-                     .header(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
+        startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
+        if (clientAcceptsTrailers(request)) {
+          startResponse.header(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
+        }
 
         for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
           startResponse.header(entry.getKey(), entry.getValue());
@@ -154,8 +157,10 @@ public abstract class QueryResultPusher
         response.setHeader(entry.getKey(), entry.getValue());
       }
 
-      response.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
-      response.setTrailerFields(() -> trailerFields);
+      if (clientAcceptsTrailers(request)) {
+        response.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
+        response.setTrailerFields(() -> trailerFields);
+      }
 
       // Start with complete status
       trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "true");
@@ -228,7 +233,10 @@ public abstract class QueryResultPusher
     return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)));
   }
 
-  private void incrementQueryCounterForException(final DruidException e)
+  static void incrementQueryCounterForException(
+      final QueryResource.QueryMetricCounter counter,
+      final DruidException e
+  )
   {
     switch (e.getCategory()) {
       case INVALID_INPUT:
@@ -246,12 +254,17 @@ public abstract class QueryResultPusher
       case TIMEOUT:
         counter.incrementTimedOut();
         break;
+      case CONFLICT:
+      case FORBIDDEN:
+      case NOT_FOUND:
+      case SERVICE_UNAVAILABLE:
+        break;
     }
   }
 
   private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
   {
-    incrementQueryCounterForException(e);
+    incrementQueryCounterForException(counter, e);
 
     if (resultsWriter != null) {
       final long bytesWritten = accumulator != null ? accumulator.getNumBytesSent() : 0;
@@ -311,6 +324,30 @@ public abstract class QueryResultPusher
       }
       return null;
     }
+  }
+
+  /**
+   * Whether the client sent {@code TE: trailers}, which is how a client signals that it accepts trailer fields
+   * (RFC 9110 section 10.1.4). Trailers are only sent to such clients, because some clients reject a chunked response
+   * that carries trailers: {@link java.net.http.HttpClient} fails with {@code java.net.ProtocolException: CR expected}
+   * since JDK 17.0.21, 21.0.13 and 25.0.5 (JDK-8383439).
+   */
+  static boolean clientAcceptsTrailers(final HttpServletRequest request)
+  {
+    final Enumeration<String> teHeaders = request.getHeaders(HttpHeader.TE.asString());
+    if (teHeaders == null) {
+      return false;
+    }
+    while (teHeaders.hasMoreElements()) {
+      for (final String coding : teHeaders.nextElement().split(",")) {
+        final int paramsStart = coding.indexOf(';');
+        final String codingName = paramsStart < 0 ? coding : coding.substring(0, paramsStart);
+        if ("trailers".equalsIgnoreCase(codingName.trim())) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -439,8 +476,6 @@ public abstract class QueryResultPusher
         validateAndWriteResponseContextHeader();
 
         response.setContentType(contentType.toString());
-
-        response.setTrailerFields(() -> trailerFields);
 
         try {
           out = new CountingOutputStream(response.getOutputStream());

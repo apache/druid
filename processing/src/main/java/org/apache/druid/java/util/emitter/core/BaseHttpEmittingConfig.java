@@ -20,11 +20,11 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.validation.constraints.Min;
 import java.util.concurrent.TimeUnit;
 
 public class BaseHttpEmittingConfig

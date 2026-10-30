@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.io.InputStream;
 

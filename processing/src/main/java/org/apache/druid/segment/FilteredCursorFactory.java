@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 
@@ -42,8 +43,19 @@ public class FilteredCursorFactory implements CursorFactory
   {
     if (filter == null) {
       return delegate.makeCursorHolder(spec);
+    } else {
+      return delegate.makeCursorHolder(specWithFilter(spec));
     }
-    return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).andFilter(filter.toFilter()).build());
+  }
+
+  @Override
+  public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
+  {
+    if (filter == null) {
+      return delegate.makeCursorHolderAsync(spec);
+    } else {
+      return delegate.makeCursorHolderAsync(specWithFilter(spec));
+    }
   }
 
   @Override
@@ -57,5 +69,10 @@ public class FilteredCursorFactory implements CursorFactory
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     return delegate.getColumnCapabilities(column);
+  }
+
+  private CursorBuildSpec specWithFilter(final CursorBuildSpec spec)
+  {
+    return CursorBuildSpec.builder(spec).andBaseFilter(Filters.toFilter(filter)).build();
   }
 }

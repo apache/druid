@@ -22,7 +22,6 @@ package org.apache.druid.benchmark.query;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -45,6 +44,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
@@ -60,16 +60,19 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexPhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -98,7 +101,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
@@ -225,11 +228,21 @@ public class SqlBaseBenchmark
 
   protected Map<String, Object> getContext()
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    final Map<String, Object> context = QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        vectorizeContext,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorizeContext
     );
     return context;
+  }
+
+  /**
+   * Additional lookups, by name, to make available to queries via LOOKUP
+   */
+  protected Map<String, LookupExtractor> getLookups()
+  {
+    return Collections.emptyMap();
   }
 
   protected IndexSpec getIndexSpec()
@@ -246,7 +259,7 @@ public class SqlBaseBenchmark
   @Setup(Level.Trial)
   public void setup() throws JsonProcessingException
   {
-    vectorizeContext = QueryContexts.Vectorize.fromString(vectorize);
+    vectorizeContext = QueryContextParameters.VECTORIZE.parse(vectorize);
     checkIncompatibleParameters();
 
     Map<DataSegment, IncrementalIndex> realtimeSegments = new HashMap<>();
@@ -287,17 +300,33 @@ public class SqlBaseBenchmark
           );
           realtimeSegments.put(dataSegment, index);
         } else {
-          final QueryableIndex index = segmentGenerator.generate(
-              dataSegment,
-              schema.getGeneratorSchemaInfo(),
-              schema.getDimensionsSpec(),
-              schema.getTransformSpec(),
-              getIndexSpec(),
-              schema.getQueryGranularity(),
-              schema.getProjections(),
-              rowsPerSegment,
-              CalciteTests.getJsonMapper()
-          );
+          final QueryableIndex index;
+          if (schema.isUseV10()) {
+            // clustered (and the unclustered comparison) segments use the V10 writer
+            index = segmentGenerator.generateV10(
+                dataSegment,
+                schema.getGeneratorSchemaInfo(),
+                schema.getDimensionsSpec(),
+                schema.getTransformSpec(),
+                getIndexSpec(),
+                schema.getQueryGranularity(),
+                schema.getClusterSpec(),
+                rowsPerSegment,
+                CalciteTests.getJsonMapper()
+            );
+          } else {
+            index = segmentGenerator.generate(
+                dataSegment,
+                schema.getGeneratorSchemaInfo(),
+                schema.getDimensionsSpec(),
+                schema.getTransformSpec(),
+                getIndexSpec(),
+                schema.getQueryGranularity(),
+                schema.getProjections(),
+                rowsPerSegment,
+                CalciteTests.getJsonMapper()
+            );
+          }
           log.info(
               "Segment metadata: %s",
               CalciteTests.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(index.getMetadata())
@@ -310,7 +339,7 @@ public class SqlBaseBenchmark
     final Pair<PlannerFactory, SqlEngine> sqlSystem = createSqlSystem(
         segments,
         realtimeSegments,
-        Collections.emptyMap(),
+        getLookups(),
         storageType,
         closer
     );
@@ -321,13 +350,10 @@ public class SqlBaseBenchmark
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(
         engine,
         "EXPLAIN PLAN FOR " + getQuery(),
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(getContext())
-                    .put(
-                        "useNativeQueryExplain",
-                        true
-                    )
-                    .build()
+                    .put(QueryContextParameters.USE_NATIVE_QUERY_EXPLAIN, true)
+                    .toMap()
     )) {
       final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
@@ -371,7 +397,7 @@ public class SqlBaseBenchmark
     }
   }
 
-  private void checkIncompatibleParameters()
+  protected void checkIncompatibleParameters()
   {
     // we only support NONE object storage encoding for auto column with mmap segments
     if (ObjectStorageEncoding.NONE.equals(jsonObjectStorageEncoding)) {
@@ -462,8 +488,8 @@ public class SqlBaseBenchmark
     ObjectMapper injected = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     injected.registerModules(new HllSketchModule().getJacksonModules());
 
-    final DruidSchemaCatalog rootSchema =
-        QueryFrameworkUtils.createMockRootSchema(
+    final DruidSchemaCatalogProvider schemaProvider =
+        QueryFrameworkUtils.createMockRootSchemaProvider(
             injector,
             conglomerate,
             walker,
@@ -474,7 +500,7 @@ public class SqlBaseBenchmark
     final SqlEngine engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        schemaProvider,
         createOperatorTable(injector),
         injector.getInstance(ExprMacroTable.class),
         plannerConfig,
@@ -521,8 +547,10 @@ public class SqlBaseBenchmark
             public <T> T as(@Nonnull Class<T> clazz)
             {
               // computed sql schema uses segment metadata, which relies on physical inspector, use the underlying index
-              if (clazz.equals(PhysicalSegmentInspector.class)) {
+              if (clazz.equals(RowCountInspector.class) || clazz.equals(PhysicalSegmentColumnInspector.class)) {
                 return (T) new QueryableIndexPhysicalSegmentInspector(index);
+              } else if (clazz.equals(Metadata.class)) {
+                return (T) index.getMetadata();
               }
               return super.as(clazz);
             }
@@ -548,8 +576,10 @@ public class SqlBaseBenchmark
             public <T> T as(@Nonnull Class<T> clazz)
             {
               // computed sql schema uses segment metadata, which relies on physical inspector, use the underlying index
-              if (clazz.equals(PhysicalSegmentInspector.class)) {
+              if (clazz.equals(RowCountInspector.class) || clazz.equals(PhysicalSegmentColumnInspector.class)) {
                 return (T) new QueryableIndexPhysicalSegmentInspector(index);
+              } else if (clazz.equals(Metadata.class)) {
+                return (T) index.getMetadata();
               }
               return super.as(clazz);
             }

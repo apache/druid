@@ -25,8 +25,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -60,6 +60,6 @@ public class AlertEventSerdeTest
                       + "\"description\":\"my-description\","
                       + "\"data\":{}"
                       + "}";
-    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assertions.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 }

@@ -31,11 +31,11 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,8 +43,8 @@ import java.util.Objects;
 
 public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testFetchOnReadCleanupAfterExhaustingIterator() throws IOException
@@ -60,14 +60,14 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
     ParquetInputFormat parquet = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
     File tempDir = temporaryFolder.newFolder();
     InputEntityReader reader = parquet.createReader(schema, entity, tempDir);
-    Assert.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
+    Assertions.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertTrue(Objects.requireNonNull(tempDir.list()).length > 0);
+      Assertions.assertTrue(Objects.requireNonNull(tempDir.list()).length > 0);
       while (iterator.hasNext()) {
         iterator.next();
       }
     }
-    Assert.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
+    Assertions.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
   }
 
   private static class FetchingFileEntity extends FileEntity
@@ -113,5 +113,7 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
         throw new RuntimeException(e);
       }
     }
+
   }
+
 }

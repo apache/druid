@@ -24,12 +24,11 @@ import io.delta.kernel.types.LongType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
+import org.apache.druid.delta.DeltaAssertions;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -51,8 +50,8 @@ public class DeltaNotFilterTest
 
     Predicate predicate = notFilter.getFilterPredicate(SCHEMA);
 
-    Assert.assertEquals(predicate.getName(), "NOT");
-    Assert.assertEquals(1, predicate.getChildren().size());
+    Assertions.assertEquals(predicate.getName(), "NOT");
+    Assertions.assertEquals(1, predicate.getChildren().size());
   }
 
   @Test
@@ -74,8 +73,8 @@ public class DeltaNotFilterTest
 
     Predicate predicate = notFilter.getFilterPredicate(SCHEMA);
 
-    Assert.assertEquals(predicate.getName(), "NOT");
-    Assert.assertEquals(1, predicate.getChildren().size());
+    Assertions.assertEquals(predicate.getName(), "NOT");
+    Assertions.assertEquals(1, predicate.getChildren().size());
   }
 
   @Test
@@ -87,25 +86,21 @@ public class DeltaNotFilterTest
     );
     DeltaNotFilter notFilter = new DeltaNotFilter(equalsFilter);
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () -> notFilter.getFilterPredicate(SCHEMA)),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            StringUtils.format("column[name2] doesn't exist in schema[%s]", SCHEMA)
-        )
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(DruidException.class, () -> notFilter.getFilterPredicate(SCHEMA)),
+        StringUtils.format("column[name2] doesn't exist in schema[%s]", SCHEMA)
     );
   }
 
   @Test
   public void testNotFilterWithNoFilterPredicates()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new DeltaNotFilter(null)
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Delta not filter requiers 1 filter predicate and must be non-empty. None provided."
-        )
+        "Delta not filter requiers 1 filter predicate and must be non-empty. None provided."
     );
   }
 }

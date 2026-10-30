@@ -40,14 +40,14 @@ describe('TableFilter', () => {
   });
 
   describe('toFilter', () => {
-    it('converts to react-table Filter format', () => {
+    it('converts to a column filter', () => {
       const filter = new TableFilter('datasource', '=', 'test');
       expect(filter.toFilter()).toEqual({ id: 'datasource', value: '=test' });
     });
   });
 
   describe('fromFilter', () => {
-    it('converts from react-table Filter format', () => {
+    it('converts from a column filter', () => {
       const filter = TableFilter.fromFilter({ id: 'datasource', value: '=test' });
       expect(filter.key).toBe('datasource');
       expect(filter.mode).toBe('=');
@@ -81,6 +81,32 @@ describe('TableFilter', () => {
       const filter = new TableFilter('count', '<', '10');
       expect(filter.matches('05')).toBe(true); // String comparison: '05' < '10'
       expect(filter.matches('2')).toBe(false); // String comparison: '2' > '10'
+    });
+  });
+
+  describe('splitNeedle / joinNeedle', () => {
+    it('splits on |', () => {
+      expect(TableFilter.splitNeedle('a|b')).toEqual(['a', 'b']);
+      expect(TableFilter.splitNeedle('a')).toEqual(['a']);
+      expect(TableFilter.splitNeedle('')).toEqual(['']);
+    });
+
+    it('unescapes \\| and \\\\, and keeps any other \\', () => {
+      expect(TableFilter.splitNeedle('a\\|b|c')).toEqual(['a|b', 'c']);
+      expect(TableFilter.splitNeedle('a\\\\|b')).toEqual(['a\\', 'b']);
+      expect(TableFilter.splitNeedle('C:\\dir')).toEqual(['C:\\dir']);
+    });
+
+    it('round trips any values', () => {
+      const values = ['a|b', 'c\\', '\\|', '', 'C:\\dir'];
+      expect(TableFilter.splitNeedle(TableFilter.joinNeedle(values))).toEqual(values);
+    });
+
+    it('keeps a literal value that contains | as one value', () => {
+      const filter = new TableFilter('datasource', '=', ['a|b']);
+      expect(filter.value).toEqual('a\\|b');
+      expect(TableFilter.fromFilter(filter.toFilter()).values).toEqual(['a|b']);
+      expect(String(filter.toSqlExpression())).toEqual(`"datasource" = 'a|b'`);
     });
   });
 

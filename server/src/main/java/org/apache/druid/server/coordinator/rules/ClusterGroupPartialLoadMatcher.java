@@ -46,11 +46,36 @@ public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatch
 
   /**
    * Returns the sorted, deduped list of indices into {@code segment.getClusterGroups().getTuples()} selected by this
-   * matcher. Returns an empty list when nothing matches (the segment is not clustered, or no configured pattern /
-   * tuple intersects what the segment has).
+   * matcher. Returns {@code null} when this matcher is incompatible with the segment's clustering scheme (e.g. none
+   * of the configured patterns' columns or virtual columns resolve against the segment's clustering signature),
+   * meaning the matcher cannot meaningfully reason about this segment's content. Returns an empty list when the
+   * matcher applies (its patterns are resolvable) but no configured pattern matches any tuple; the matcher can
+   * reason about the segment but found no positive content.
    */
+  @Nullable
   protected abstract List<Integer> resolveClusterGroupIndices(DataSegment segment);
 
+  /**
+   * Returns the load spec for the resolved cluster-group indices, or null when this matcher has nothing to
+   * contribute for the given segment.
+   *
+   * <p>Null (opaque) is returned only when the matcher cannot reason about the segment at all:
+   * <ul>
+   *   <li>the segment is not clustered, or</li>
+   *   <li>the matcher's patterns are incompatible with the segment's clustering scheme (see
+   *       {@link #resolveClusterGroupIndices}).</li>
+   * </ul>
+   * A null result hands the decision to the rule's {@link CannotMatchBehavior}.
+   *
+   * <p>When the matcher <em>is</em> compatible with the segment's clustering scheme, it always returns a non-null
+   * result: a positive load for the matched cluster-group indices, or the "empty" load (same
+   * {@code partialClusterGroup} type with an empty index list and {@link #EMPTY_LOAD_FINGERPRINT}) when no configured
+   * pattern matches any tuple. This holds regardless of whether the segment is a core or an appended
+   * ({@code partitionNum >= numCorePartitions}) partition: an empty result means "the matcher analyzed this segment
+   * and nothing here should load," which keeps the segment announceable rather than silently dropping it. The empty
+   * load is dispatched like any other partial load onto the rule's tiered replicants, so the segment stays in the
+   * broker's timeline; the historical-side loader honors the empty index list by downloading no cluster-group data.
+   */
   @Override
   @Nullable
   public MatchResult match(DataSegment segment, Map<String, Object> baseLoadSpec)
@@ -59,10 +84,12 @@ public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatch
       return null;
     }
     final List<Integer> resolved = resolveClusterGroupIndices(segment);
-    if (resolved.isEmpty()) {
+    if (resolved == null) {
+      // Matcher is incompatible with this segment's clustering scheme. Treat as opaque so the rule's cannot-match
+      // handling takes over rather than dispatching a stub empty load.
       return null;
     }
-    final String fingerprint = computeFingerprint(resolved);
+    final String fingerprint = resolved.isEmpty() ? EMPTY_LOAD_FINGERPRINT : computeFingerprint(resolved);
     return new MatchResult(PartialClusterGroupLoadSpec.wireForm(baseLoadSpec, resolved, fingerprint), fingerprint);
   }
 

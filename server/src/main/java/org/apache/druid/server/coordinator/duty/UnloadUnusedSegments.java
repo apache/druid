@@ -26,6 +26,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -43,14 +44,9 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   private static final Logger log = new Logger(UnloadUnusedSegments.class);
 
   private final SegmentLoadQueueManager loadQueueManager;
-  private final MetadataAction.GetDatasourceRules ruleHandler;
 
-  public UnloadUnusedSegments(
-      SegmentLoadQueueManager loadQueueManager,
-      MetadataAction.GetDatasourceRules ruleHandler
-  )
+  public UnloadUnusedSegments(SegmentLoadQueueManager loadQueueManager)
   {
-    this.ruleHandler = ruleHandler;
     this.loadQueueManager = loadQueueManager;
   }
 
@@ -89,7 +85,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
     final AtomicInteger numQueuedDrops = new AtomicInteger(0);
     final ImmutableDruidServer server = serverHolder.getServer();
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-      if (shouldSkipUnload(serverHolder, dataSource.getName(), broadcastStatusByDatasource)) {
+      if (shouldSkipUnload(serverHolder, dataSource.getName(), broadcastStatusByDatasource, params.getRetentionRulesSnapshot())) {
         continue;
       }
 
@@ -122,7 +118,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   {
     final AtomicInteger cancelledOperations = new AtomicInteger(0);
     server.getQueuedSegments().forEach((segment, action) -> {
-      if (shouldSkipUnload(server, segment.getDataSource(), broadcastStatusByDatasource)) {
+      if (shouldSkipUnload(server, segment.getDataSource(), broadcastStatusByDatasource, params.getRetentionRulesSnapshot())) {
         // do nothing
       } else if (params.isUsedSegment(segment)) {
         // do nothing
@@ -147,21 +143,22 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   private boolean shouldSkipUnload(
       ServerHolder server,
       String dataSource,
-      Map<String, Boolean> broadcastStatusByDatasource
+      Map<String, Boolean> broadcastStatusByDatasource,
+      RetentionRulesSnapshot rulesSnapshot
   )
   {
     boolean isBroadcastDatasource = broadcastStatusByDatasource
-        .computeIfAbsent(dataSource, this::isBroadcastDatasource);
+        .computeIfAbsent(dataSource, ds -> isBroadcastDatasource(ds, rulesSnapshot));
     return server.isRealtimeServer() && !isBroadcastDatasource;
   }
 
   /**
    * A datasource is considered a broadcast datasource if it has even one broadcast rule.
    */
-  private boolean isBroadcastDatasource(String datasource)
+  private boolean isBroadcastDatasource(String datasource, RetentionRulesSnapshot rulesSnapshot)
   {
-    return ruleHandler.getRulesWithDefault(datasource)
-                      .stream()
-                      .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
+    return rulesSnapshot.getEffectiveRules(datasource)
+                        .stream()
+                        .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

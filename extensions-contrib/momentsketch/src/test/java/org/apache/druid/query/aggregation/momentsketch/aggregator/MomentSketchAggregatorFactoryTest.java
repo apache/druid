@@ -23,15 +23,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
+import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class MomentSketchAggregatorFactoryTest
 {
@@ -48,7 +51,41 @@ public class MomentSketchAggregatorFactoryTest
         MomentSketchAggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, other);
+    Assertions.assertEquals(factory, other);
+  }
+
+  @Test
+  public void testMakeAggregateCombiner()
+  {
+    final MomentSketchAggregatorFactory factory = new MomentSketchAggregatorFactory("name", "fieldName", 10, true);
+
+    final MomentSketchWrapper first = new MomentSketchWrapper(10);
+    first.setCompressed(true);
+    first.add(1);
+    first.add(2);
+    final MomentSketchWrapper second = new MomentSketchWrapper(10);
+    second.setCompressed(true);
+    second.add(3);
+
+    final TestObjectColumnSelector<MomentSketchWrapper> selector =
+        new TestObjectColumnSelector<>(new MomentSketchWrapper[]{first, second, null});
+    final AggregateCombiner<MomentSketchWrapper> combiner = factory.makeAggregateCombiner();
+
+    combiner.reset(selector);
+    selector.increment();
+    combiner.fold(selector);
+    selector.increment();
+    combiner.fold(selector);
+
+    final MomentSketchWrapper combined = combiner.getObject();
+    Assertions.assertNotNull(combined);
+    Assertions.assertEquals(3.0, combined.getPowerSums()[0], 1e-10);
+    Assertions.assertEquals(1.0, combined.getMin(), 1e-10);
+    Assertions.assertEquals(3.0, combined.getMax(), 1e-10);
+    Assertions.assertTrue(combined.getCompressed());
+    // the inputs come from segment columns and must not be modified
+    Assertions.assertEquals(2.0, first.getPowerSums()[0], 1e-10);
+    Assertions.assertEquals(1.0, second.getPowerSums()[0], 1e-10);
   }
 
   @Test
@@ -72,7 +109,7 @@ public class MomentSketchAggregatorFactoryTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)
@@ -93,14 +130,14 @@ public class MomentSketchAggregatorFactoryTest
     MomentSketchAggregatorFactory sketchAggFactory = new MomentSketchAggregatorFactory(
         "name", "fieldName", 128, true
     );
-    Assert.assertEquals(sketchAggFactory, sketchAggFactory.withName("name"));
-    Assert.assertEquals("newTest", sketchAggFactory.withName("newTest").getName());
+    Assertions.assertEquals(sketchAggFactory, sketchAggFactory.withName("name"));
+    Assertions.assertEquals("newTest", sketchAggFactory.withName("newTest").getName());
 
 
     MomentSketchMergeAggregatorFactory sketchMergeAggregatorFactory = new MomentSketchMergeAggregatorFactory(
         "name", 128, true
     );
-    Assert.assertEquals(sketchMergeAggregatorFactory, sketchMergeAggregatorFactory.withName("name"));
-    Assert.assertEquals("newTest", sketchMergeAggregatorFactory.withName("newTest").getName());
+    Assertions.assertEquals(sketchMergeAggregatorFactory, sketchMergeAggregatorFactory.withName("name"));
+    Assertions.assertEquals("newTest", sketchMergeAggregatorFactory.withName("newTest").getName());
   }
 }

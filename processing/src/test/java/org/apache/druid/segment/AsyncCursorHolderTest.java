@@ -24,9 +24,29 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 class AsyncCursorHolderTest
 {
+  @Test
+  void testIsReadyStaysTrueThroughReleaseAndClose()
+  {
+    final CountingCursorHolder holder = new CountingCursorHolder();
+    final AsyncCursorHolder asyncHolder = new AsyncCursorHolder(null);
+    Assertions.assertFalse(asyncHolder.isReady());
+
+    Assertions.assertTrue(asyncHolder.set(holder));
+    Assertions.assertTrue(asyncHolder.isReady());
+
+    // Releasing transfers ownership, and closing afterwards is a no-op, but acquisition is over either way: readiness
+    // must not flip back to false, or a consumer that gates its waiting on it could be sent back to waiting.
+    asyncHolder.release();
+    Assertions.assertTrue(asyncHolder.isReady());
+
+    asyncHolder.close();
+    Assertions.assertTrue(asyncHolder.isReady());
+  }
+
   @Test
   void testCloseAfterReleaseDoesNotDoubleCloseHolder()
   {
@@ -202,6 +222,89 @@ class AsyncCursorHolderTest
     Assertions.assertEquals(3, fired.get(), "all registered callbacks should fire");
   }
 
+  @Test
+  void testTransformWrapsHolderOnceReady()
+  {
+    final AsyncCursorHolder base = new AsyncCursorHolder(null);
+    final AsyncCursorHolder transformed = base.transform(WrappingCursorHolder::new);
+    Assertions.assertFalse(transformed.isReady());
+
+    final CountingCursorHolder baseHolder = new CountingCursorHolder();
+    base.set(baseHolder);
+    Assertions.assertTrue(transformed.isReady());
+
+    final WrappingCursorHolder wrapped = (WrappingCursorHolder) transformed.release();
+    Assertions.assertSame(baseHolder, wrapped.delegate);
+    Assertions.assertEquals(0, baseHolder.closeCount());
+
+    wrapped.close();
+    Assertions.assertEquals(1, baseHolder.closeCount());
+  }
+
+  @Test
+  void testTransformPropagatesBaseFailure()
+  {
+    final AsyncCursorHolder base = new AsyncCursorHolder(null);
+    final AsyncCursorHolder transformed = base.transform(WrappingCursorHolder::new);
+
+    final IllegalArgumentException failure = new IllegalArgumentException("boom");
+    base.setException(failure);
+
+    Assertions.assertSame(failure, Assertions.assertThrows(IllegalArgumentException.class, transformed::release));
+  }
+
+  @Test
+  void testTransformClosesBaseHolderWhenFunctionThrows()
+  {
+    final IllegalStateException failure = new IllegalStateException("boom");
+    final AsyncCursorHolder base = new AsyncCursorHolder(null);
+    final AsyncCursorHolder transformed = base.transform(
+        holder -> {
+          throw failure;
+        }
+    );
+
+    final CountingCursorHolder baseHolder = new CountingCursorHolder();
+    base.set(baseHolder);
+
+    // The function took ownership of the base holder but made nothing that would close it, so transform closes it.
+    Assertions.assertEquals(1, baseHolder.closeCount());
+    Assertions.assertSame(failure, Assertions.assertThrows(IllegalStateException.class, transformed::release));
+  }
+
+  @Test
+  void testTransformCloseBeforeReadyCancelsBase()
+  {
+    final AtomicInteger cancelerCalls = new AtomicInteger();
+    final AsyncCursorHolder base = new AsyncCursorHolder(cancelerCalls::incrementAndGet);
+    final AsyncCursorHolder transformed = base.transform(WrappingCursorHolder::new);
+
+    transformed.close();
+    Assertions.assertEquals(1, cancelerCalls.get(), "closing before ready should cancel the base");
+  }
+
+  @Test
+  void testTransformClosesHolderMadeAfterClose()
+  {
+    final AsyncCursorHolder base = new AsyncCursorHolder(null);
+    final AtomicReference<AsyncCursorHolder> transformedRef = new AtomicReference<>();
+    transformedRef.set(
+        base.transform(
+            holder -> {
+              // The caller closes the returned holder while the function is still making the wrapper.
+              transformedRef.get().close();
+              return new WrappingCursorHolder(holder);
+            }
+        )
+    );
+
+    final CountingCursorHolder baseHolder = new CountingCursorHolder();
+    base.set(baseHolder);
+
+    // Nobody is left to take the wrapper, so transform closes it, which closes the base holder.
+    Assertions.assertEquals(1, baseHolder.closeCount());
+  }
+
   /**
    * Minimal {@link CursorHolder} that just counts close invocations. Other methods are unimplemented because the
    * tests don't exercise them.
@@ -225,6 +328,31 @@ class AsyncCursorHolderTest
     public void close()
     {
       closeCount++;
+    }
+  }
+
+  /**
+   * {@link CursorHolder} that wraps another one, and closes it when closed, as a cursor factory's wrapper would.
+   */
+  private static class WrappingCursorHolder implements CursorHolder
+  {
+    private final CursorHolder delegate;
+
+    WrappingCursorHolder(final CursorHolder delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public Cursor asCursor()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void close()
+    {
+      delegate.close();
     }
   }
 }

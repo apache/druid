@@ -28,9 +28,10 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.annotation.Nullable;
@@ -62,6 +63,7 @@ public class BrokerQueryResource extends QueryResource
       AuthorizerMapper authorizerMapper,
       QueryResourceQueryResultPusherFactory queryResultPusherFactory,
       ResourceIOReaderWriterFactory resourceIOReaderWriterFactory,
+      ServerConfig serverConfig,
       TimelineServerView brokerServerView
   )
   {
@@ -71,7 +73,8 @@ public class BrokerQueryResource extends QueryResource
         queryScheduler,
         authorizerMapper,
         queryResultPusherFactory,
-        resourceIOReaderWriterFactory
+        resourceIOReaderWriterFactory,
+        serverConfig
     );
     this.brokerServerView = brokerServerView;
   }
@@ -90,12 +93,8 @@ public class BrokerQueryResource extends QueryResource
   ) throws IOException
   {
     final ResourceIOReaderWriterFactory.ResourceIOReaderWriter ioReaderWriter = resourceIOReaderWriterFactory.factorize(req, pretty != null);
-    final CloneQueryMode cloneQueryMode = QueryContexts.getAsEnum(
-        QueryContexts.CLONE_QUERY_MODE,
-        cloneQueryModeString,
-        CloneQueryMode.class,
-        QueryContexts.DEFAULT_CLONE_QUERY_MODE
-    );
+    final CloneQueryMode cloneQueryMode =
+        QueryContextParameters.CLONE_QUERY_MODE.parseOrDefault(cloneQueryModeString);
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
       ExecutionVertex ev = ExecutionVertex.of(query);

@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
@@ -29,7 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -37,7 +36,6 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToCDFPostAggregator;
@@ -50,6 +48,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSket
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -72,7 +71,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -306,12 +305,12 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + "  FROM \"foo\"\n"
         + "  GROUP BY 1\n"
         + ") AS alias\n",
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                    .put(QueryContextParameters.MAX_SUBQUERY_BYTES, "100000")
                     // Disallows the fallback to row based limiting
-                    .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "10")
-                    .build(),
+                    .put(QueryContextParameters.MAX_SUBQUERY_ROWS, 10)
+                    .toMap(),
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -396,7 +395,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
                 .virtualColumns(
                     new ExpressionVirtualColumn("v0", "946684800000", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-                    new ExpressionVirtualColumn("v1", "case_searched((\"j0.a0\" < \"_a0\"),'val2',((\"j0.a0\" >= \"_a0\") && (\"j0.a0\" < \"_a1\")),'val3',(\"j0.a0\" >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                    new ExpressionVirtualColumn("v1", "case_searched((CAST(\"j0.a0\", 'DOUBLE') < \"_a0\"),'val2',((CAST(\"j0.a0\", 'DOUBLE') >= \"_a0\") && (CAST(\"j0.a0\", 'DOUBLE') < \"_a1\")),'val3',(CAST(\"j0.a0\", 'DOUBLE') >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
                 )
                 .columns("v0", "j0.d0", "j0.a0", "v1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.STRING)
@@ -895,11 +894,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testEmptyTimeseriesResultsWithFinalizeSketches()
   {
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(SketchQueryContext.CTX_FINALIZE_OUTER_SKETCHES, true)
-                    .build();
+                    .put(QueryContextParameters.SQL_FINALIZE_OUTER_SKETCHES, true)
+                    .toMap();
 
     testQuery(
         "SELECT\n"
@@ -1006,11 +1005,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAggregatorDefaultValuesWithFinalizeSketches()
   {
-    final ImmutableMap<String, Object> queryContext =
-        ImmutableMap.<String, Object>builder()
+    final Map<String, Object> queryContext =
+        QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(SketchQueryContext.CTX_FINALIZE_OUTER_SKETCHES, true)
-                    .build();
+                    .put(QueryContextParameters.SQL_FINALIZE_OUTER_SKETCHES, true)
+                    .toMap();
 
     testQuery(
         "SELECT\n"
@@ -1078,10 +1077,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   public void testSuccessWithSmallMaxStreamLength()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(
-        DoublesSketchApproxQuantileSqlAggregator.CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
-        1
-    );
+    QueryContextParameters.APPROX_QUANTILE_DS_MAX_STREAM_LENGTH.set(context, 1L);
     testQuery(
         "SELECT\n"
         + "APPROX_QUANTILE_DS(m1, 0.01),\n"
@@ -1121,12 +1117,12 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, ImmutableList.of(), ImmutableList.of());
-      Assert.fail("Expected DruidException but query succeeded");
+      Assertions.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-      Assert.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
     }
   }
 
@@ -1138,12 +1134,12 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, ImmutableList.of(), ImmutableList.of());
-      Assert.fail("Expected DruidException but query succeeded");
+      Assertions.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-      Assert.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
     }
   }
 

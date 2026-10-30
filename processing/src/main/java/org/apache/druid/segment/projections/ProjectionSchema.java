@@ -43,7 +43,8 @@ import java.util.List;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = AggregateProjectionSpec.TYPE_NAME, value = AggregateProjectionSchema.class),
     @JsonSubTypes.Type(name = TableProjectionSchema.TYPE_NAME, value = TableProjectionSchema.class),
-    @JsonSubTypes.Type(name = RollupTableProjectionSchema.TYPE_NAME, value = RollupTableProjectionSchema.class)
+    @JsonSubTypes.Type(name = RollupTableProjectionSchema.TYPE_NAME, value = RollupTableProjectionSchema.class),
+    @JsonSubTypes.Type(name = ClusteredValueGroupsBaseTableSchema.TYPE_NAME, value = ClusteredValueGroupsBaseTableSchema.class)
 })
 public interface ProjectionSchema
 {

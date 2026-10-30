@@ -1,0 +1,108 @@
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/druidjoinrule-fullouter-dataset
+!set outputformat mysql
+
+# Ensures that FULL OUTER JOIN constant projects are handled properly by the hoisting
+# logic in DruidJoinRule.
+#
+# Table left_dims.a: 'abc', 'xyz'
+# Table right_nulls.k: 'abc', NULL
+
+SELECT l.a, r.tag
+FROM left_dims l
+FULL JOIN (SELECT k, 42 AS tag FROM right_nulls) r ON l.a = r.k
+ORDER BY 1, 2;
++-----+-----+
+| a   | tag |
++-----+-----+
+|     |  42 |
+| abc |  42 |
+| xyz |     |
++-----+-----+
+(3 rows)
+
+!ok
+{
+  "queryType" : "windowOperator",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "left_dims"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "right_nulls"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "42",
+          "outputType" : "LONG"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "k", "v0" ],
+        "columnTypes" : [ "STRING", "LONG" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"a\" == \"j0.k\")",
+    "joinType" : "FULL"
+  },
+  "intervals" : {
+    "type" : "LegacySegmentSpec",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "outputSignature" : [ {
+    "name" : "a",
+    "type" : "STRING"
+  }, {
+    "name" : "j0.v0",
+    "type" : "LONG"
+  } ],
+  "operatorDefinition" : [ {
+    "type" : "naiveSort",
+    "columns" : [ {
+      "column" : "a",
+      "direction" : "ASC"
+    }, {
+      "column" : "j0.v0",
+      "direction" : "ASC"
+    } ]
+  }, {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : null,
+    "offsetLimit" : null,
+    "projectedColumns" : [ "a", "j0.v0" ],
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "leafOperators" : [ {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : null,
+    "offsetLimit" : {
+      "offset" : 0,
+      "limit" : 9223372036854775807
+    },
+    "projectedColumns" : [ "a", "j0.v0" ],
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+!nativePlan

@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnectorModule;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -47,7 +47,7 @@ public class ExportResultsStageProcessorTest
         exportFactoryString,
         ExportResultsStageProcessor.class
     );
-    Assert.assertNull(exportResultsFrameProcessor.getColumnMappings());
-    Assert.assertNull(exportResultsFrameProcessor.getResultsContext());
+    Assertions.assertNull(exportResultsFrameProcessor.getColumnMappings());
+    Assertions.assertNull(exportResultsFrameProcessor.getResultsContext());
   }
 }

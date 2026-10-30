@@ -21,9 +21,9 @@ package org.apache.druid.indexing.seekablestream.common;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.impl.ByteEntity;
 
-import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -42,6 +42,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   private final SequenceOffsetType sequenceNumber;
   private final List<RecordType> data;
   private final Long timestamp;
+  private final boolean filtered;
 
   public OrderedPartitionableRecord(
       String stream,
@@ -50,7 +51,22 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
       List<RecordType> data
   )
   {
-    this(stream, partitionId, sequenceNumber, data, null);
+    this(stream, partitionId, sequenceNumber, data, null, false);
+  }
+
+  /**
+   * Backwards-compatible overload without {@code filtered} (defaults to false), retained so that existing
+   * stream extensions compiled against the previous signature keep working.
+   */
+  public OrderedPartitionableRecord(
+      String stream,
+      PartitionIdType partitionId,
+      SequenceOffsetType sequenceNumber,
+      List<RecordType> data,
+      Long timestamp
+  )
+  {
+    this(stream, partitionId, sequenceNumber, data, timestamp, false);
   }
 
   public OrderedPartitionableRecord(
@@ -58,7 +74,8 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
       PartitionIdType partitionId,
       SequenceOffsetType sequenceNumber,
       List<RecordType> data,
-      Long timestamp
+      Long timestamp,
+      boolean filtered
   )
   {
     Preconditions.checkNotNull(stream, "stream");
@@ -69,6 +86,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
     this.sequenceNumber = sequenceNumber;
     this.data = data == null ? ImmutableList.of() : data;
     this.timestamp = timestamp;
+    this.filtered = filtered;
   }
 
   public String getStream()
@@ -108,6 +126,18 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   public List<? extends ByteEntity> getData()
   {
     return data;
+  }
+
+  /**
+   * Returns whether this record was filtered by pre-ingestion filtering (e.g., header-based filtering).
+   * Filtered records are used for offset advancement but should be excluded from ingestion metrics
+   * like "thrownAway" and instead tracked separately as "filtered".
+   *
+   * @return true if this record was filtered, false otherwise
+   */
+  public boolean isFiltered()
+  {
+    return filtered;
   }
 
   public StreamPartition<PartitionIdType> getStreamPartition()

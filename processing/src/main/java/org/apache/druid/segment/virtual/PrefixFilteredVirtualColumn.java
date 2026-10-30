@@ -116,14 +116,20 @@ public class PrefixFilteredVirtualColumn implements VirtualColumn
     return new ColumnCapabilitiesImpl()
         .setType(delegate.getOutputType())
         .setDictionaryEncoded(true)
-        .setHasBitmapIndexes(true);
+        .setHasBitmapIndexes(true)
+        .setHasMultipleValues(true);
   }
 
   @Nullable
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
-    return inspector.getColumnCapabilities(delegate.getDimension());
+    final ColumnCapabilities delegateCapabilities = inspector.getColumnCapabilities(delegate.getDimension());
+    if (delegateCapabilities == null) {
+      return null;
+    }
+    // filtering can leave a row with no values, so even if the delegate is single-valued this column is not
+    return ColumnCapabilitiesImpl.copyOf(delegateCapabilities).setHasMultipleValues(true).setHasNulls(true);
   }
 
   @Override

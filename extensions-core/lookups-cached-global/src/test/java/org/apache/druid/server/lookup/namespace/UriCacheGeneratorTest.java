@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -40,14 +41,13 @@ import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionC
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -67,13 +67,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class UriCacheGeneratorTest
 {
   private static final String FAKE_SCHEME = "wabblywoo";
@@ -117,7 +119,6 @@ public class UriCacheGeneratorTest
       }
   );
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> getParameters()
   {
     final List<Object[]> compressionParams = ImmutableList.of(
@@ -217,20 +218,20 @@ public class UriCacheGeneratorTest
     };
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
-  private final String suffix;
+  private String suffix;
 
-  private final Function<File, OutputStream> outStreamSupplier;
-  private final Lifecycle lifecycle;
-  private final NamespaceExtractionCacheManager cacheManager;
-  private final CacheScheduler scheduler;
+  private Function<File, OutputStream> outStreamSupplier;
+  private Lifecycle lifecycle;
+  private NamespaceExtractionCacheManager cacheManager;
+  private CacheScheduler scheduler;
   private File tmpFile;
   private UriCacheGenerator generator;
   private UriExtractionNamespace namespace;
 
-  public UriCacheGeneratorTest(
+  public void initUriCacheGeneratorTest(
       String suffix,
       Function<File, OutputStream> outStreamSupplier,
       Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator
@@ -238,22 +239,32 @@ public class UriCacheGeneratorTest
   {
     this.suffix = suffix;
     this.outStreamSupplier = outStreamSupplier;
-    this.lifecycle = new Lifecycle();
     this.cacheManager = cacheManagerCreator.apply(lifecycle);
     this.scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
         ImmutableMap.of(UriExtractionNamespace.class, new UriCacheGenerator(FINDERS, JvmUtils.getRuntimeInfo())),
         cacheManager
     );
+    try {
+      initializeUriCacheGeneratorTest();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
+    lifecycle = new Lifecycle();
     lifecycle.start();
-    File tmpFileParent = new File(temporaryFolder.newFolder(), "☃");
-    Assert.assertTrue(tmpFileParent.mkdir());
-    Assert.assertTrue(tmpFileParent.isDirectory());
+  }
+
+  private void initializeUriCacheGeneratorTest() throws Exception
+  {
+    File tmpFileParent = new File(newFolder(temporaryFolder, "junit"), "☃");
+    Assertions.assertTrue(tmpFileParent.mkdir());
+    Assertions.assertTrue(tmpFileParent.isDirectory());
     tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
     final ObjectMapper mapper = new DefaultObjectMapper();
     try (OutputStream ostream = outStreamSupplier.apply(tmpFile);
@@ -282,26 +293,30 @@ public class UriCacheGeneratorTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     lifecycle.stop();
   }
 
-  @Test
-  public void simpleTest() throws InterruptedException
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void simpleTest(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
   {
-    Assert.assertEquals(0, scheduler.getActiveEntries());
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    Assertions.assertEquals(0, scheduler.getActiveEntries());
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
     CacheSchedulerTest.waitFor(entry);
     Map<String, String> map = entry.getCache();
-    Assert.assertEquals("bar", map.get("foo"));
-    Assert.assertEquals(null, map.get("baz"));
+    Assertions.assertEquals("bar", map.get("foo"));
+    Assertions.assertEquals(null, map.get("baz"));
   }
 
-  @Test
-  public void simpleTestRegex() throws InterruptedException
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void simpleTestRegex(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
   {
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         null,
         Paths.get(this.namespace.getUri()).getParent().toUri(),
@@ -314,14 +329,16 @@ public class UriCacheGeneratorTest
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
     CacheSchedulerTest.waitFor(entry);
     Map<String, String> map = entry.getCache();
-    Assert.assertNotNull(map);
-    Assert.assertEquals("bar", map.get("foo"));
-    Assert.assertEquals(null, map.get("baz"));
+    Assertions.assertNotNull(map);
+    Assertions.assertEquals("bar", map.get("foo"));
+    Assertions.assertEquals(null, map.get("baz"));
   }
 
-  @Test
-  public void simplePileONamespacesTest() throws InterruptedException
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void simplePileONamespacesTest(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
   {
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     final int size = 128;
     List<CacheScheduler.Entry> entries = new ArrayList<>(size);
     for (int i = 0; i < size; ++i) {
@@ -343,134 +360,166 @@ public class UriCacheGeneratorTest
 
     for (CacheScheduler.Entry entry : entries) {
       final Map<String, String> map = entry.getCache();
-      Assert.assertEquals("bar", map.get("foo"));
-      Assert.assertEquals(null, map.get("baz"));
+      Assertions.assertEquals("bar", map.get("foo"));
+      Assertions.assertEquals(null, map.get("baz"));
       entry.close();
     }
-    Assert.assertEquals(0, scheduler.getActiveEntries());
+    Assertions.assertEquals(0, scheduler.getActiveEntries());
   }
 
-  @Test
-  public void testLoadOnlyOnce() throws Exception
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testLoadOnlyOnce(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
   {
-    Assert.assertEquals(0, scheduler.getActiveEntries());
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    Assertions.assertEquals(0, scheduler.getActiveEntries());
 
     CacheHandler cache = cacheManager.allocateCache();
     String newVersion = generator.generateCache(namespace, null, null, cache);
-    Assert.assertNotNull(newVersion);
+    Assertions.assertNotNull(newVersion);
     Map<String, String> map = cache.getCache();
-    Assert.assertEquals("bar", map.get("foo"));
-    Assert.assertEquals(null, map.get("baz"));
+    Assertions.assertEquals("bar", map.get("foo"));
+    Assertions.assertEquals(null, map.get("baz"));
     String version = newVersion;
-    Assert.assertNotNull(version);
+    Assertions.assertNotNull(version);
 
-    Assert.assertNull(generator.generateCache(namespace, null, version, cacheManager.allocateCache()));
+    Assertions.assertNull(generator.generateCache(namespace, null, version, cacheManager.allocateCache()));
   }
 
-  @Test(expected = FileNotFoundException.class)
-  public void testMissing() throws Exception
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testMissing(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
-    UriExtractionNamespace badNamespace = new UriExtractionNamespace(
-        namespace.getUri(),
-        null, null,
-        namespace.getNamespaceParseSpec(),
-        Period.millis((int) namespace.getPollMs()),
-        null,
-        null
-    );
-    Assert.assertTrue(new File(namespace.getUri()).delete());
-    generator.generateCache(badNamespace, null, null, cacheManager.allocateCache());
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    assertThrows(FileNotFoundException.class, () -> {
+      UriExtractionNamespace badNamespace = new UriExtractionNamespace(
+          namespace.getUri(),
+          null, null,
+          namespace.getNamespaceParseSpec(),
+          Period.millis((int) namespace.getPollMs()),
+          null,
+          null
+      );
+      Assertions.assertTrue(new File(namespace.getUri()).delete());
+      generator.generateCache(badNamespace, null, null, cacheManager.allocateCache());
+    });
   }
 
-  @Test(expected = FileNotFoundException.class)
-  public void testMissingRegex() throws Exception
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testMissingRegex(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
-    UriExtractionNamespace badNamespace = new UriExtractionNamespace(
-        null,
-        Paths.get(namespace.getUri()).getParent().toUri(),
-        Pattern.quote(Paths.get(namespace.getUri()).getFileName().toString()),
-        namespace.getNamespaceParseSpec(),
-        Period.millis((int) namespace.getPollMs()),
-        null,
-        null
-    );
-    Assert.assertTrue(new File(namespace.getUri()).delete());
-    generator.generateCache(badNamespace, null, null, cacheManager.allocateCache());
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    assertThrows(FileNotFoundException.class, () -> {
+      UriExtractionNamespace badNamespace = new UriExtractionNamespace(
+          null,
+          Paths.get(namespace.getUri()).getParent().toUri(),
+          Pattern.quote(Paths.get(namespace.getUri()).getFileName().toString()),
+          namespace.getNamespaceParseSpec(),
+          Period.millis((int) namespace.getPollMs()),
+          null,
+          null
+      );
+      Assertions.assertTrue(new File(namespace.getUri()).delete());
+      generator.generateCache(badNamespace, null, null, cacheManager.allocateCache());
+    });
   }
 
-  @Test(expected = IAE.class)
-  public void testExceptionalCreationDoubleURI()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testExceptionalCreationDoubleURI(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
-    new UriExtractionNamespace(
-        namespace.getUri(),
-        namespace.getUri(),
-        null,
-        namespace.getNamespaceParseSpec(),
-        Period.millis((int) namespace.getPollMs()),
-        null,
-        null
-    );
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    assertThrows(IAE.class, () -> {
+      new UriExtractionNamespace(
+          namespace.getUri(),
+          namespace.getUri(),
+          null,
+          namespace.getNamespaceParseSpec(),
+          Period.millis((int) namespace.getPollMs()),
+          null,
+          null
+      );
+    });
   }
 
-  @Test(expected = IAE.class)
-  public void testExceptionalCreationURIWithPattern()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testExceptionalCreationURIWithPattern(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
-    new UriExtractionNamespace(
-        namespace.getUri(),
-        null,
-        "",
-        namespace.getNamespaceParseSpec(),
-        Period.millis((int) namespace.getPollMs()),
-        null,
-        null
-    );
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    assertThrows(IAE.class, () -> {
+      new UriExtractionNamespace(
+          namespace.getUri(),
+          null,
+          "",
+          namespace.getNamespaceParseSpec(),
+          Period.millis((int) namespace.getPollMs()),
+          null,
+          null
+      );
+    });
   }
 
-  @Test(expected = IAE.class)
-  public void testExceptionalCreationURIWithLegacyPattern()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testExceptionalCreationURIWithLegacyPattern(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
-    new UriExtractionNamespace(
-        namespace.getUri(),
-        null,
-        null,
-        namespace.getNamespaceParseSpec(),
-        Period.millis((int) namespace.getPollMs()),
-        "",
-        null
-    );
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    assertThrows(IAE.class, () -> {
+      new UriExtractionNamespace(
+          namespace.getUri(),
+          null,
+          null,
+          namespace.getNamespaceParseSpec(),
+          Period.millis((int) namespace.getPollMs()),
+          "",
+          null
+      );
+    });
   }
 
-  @Test(expected = IAE.class)
-  public void testLegacyMix()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testLegacyMix(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
-    new UriExtractionNamespace(
-        null,
-        namespace.getUri(),
-        "",
-        namespace.getNamespaceParseSpec(),
-        Period.millis((int) namespace.getPollMs()),
-        "",
-        null
-    );
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    assertThrows(IAE.class, () -> {
+      new UriExtractionNamespace(
+          null,
+          namespace.getUri(),
+          "",
+          namespace.getNamespaceParseSpec(),
+          Period.millis((int) namespace.getPollMs()),
+          "",
+          null
+      );
+    });
   }
 
-  @Test(expected = IAE.class)
-  public void testBadPattern()
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testBadPattern(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
-    new UriExtractionNamespace(
-        null,
-        namespace.getUri(),
-        "[",
-        namespace.getNamespaceParseSpec(),
-        Period.millis((int) namespace.getPollMs()),
-        null,
-        null
-    );
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    assertThrows(IAE.class, () -> {
+      new UriExtractionNamespace(
+          null,
+          namespace.getUri(),
+          "[",
+          namespace.getNamespaceParseSpec(),
+          Period.millis((int) namespace.getPollMs()),
+          null,
+          null
+      );
+    });
   }
 
-  @Test
-  public void testWeirdSchemaOnExactURI() throws Exception
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  public void testWeirdSchemaOnExactURI(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
   {
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     final UriExtractionNamespace extractionNamespace = new UriExtractionNamespace(
         new URI(
             FAKE_SCHEME,
@@ -488,13 +537,16 @@ public class UriCacheGeneratorTest
         null,
         null
     );
-    Assert.assertNotNull(generator.generateCache(extractionNamespace, null, null, cacheManager.allocateCache()));
+    Assertions.assertNotNull(generator.generateCache(extractionNamespace, null, null, cacheManager.allocateCache()));
   }
 
-  @Test(timeout = 60_000L)
-  public void testDeleteOnScheduleFail() throws Exception
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{0}")
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testDeleteOnScheduleFail(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
   {
-    Assert.assertNull(scheduler.scheduleAndWait(
+    initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
+    Assertions.assertNull(scheduler.scheduleAndWait(
         new UriExtractionNamespace(
             new URI("file://tmp/I_DONT_REALLY_EXIST" + UUID.randomUUID()),
             null,
@@ -510,6 +562,11 @@ public class UriCacheGeneratorTest
         ),
         500
     ));
-    Assert.assertEquals(0, scheduler.getActiveEntries());
+    Assertions.assertEquals(0, scheduler.getActiveEntries());
+  }
+
+  private static File newFolder(File root, String... subDirs)
+  {
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

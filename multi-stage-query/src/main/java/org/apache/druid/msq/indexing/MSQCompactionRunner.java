@@ -55,16 +55,15 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -89,7 +88,6 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.joda.time.Interval;
@@ -290,7 +288,7 @@ public class MSQCompactionRunner implements CompactionRunner
       boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
 
       LegacyMSQSpec msqSpec = LegacyMSQSpec.builder()
-                               .query(query.withOverriddenContext(Collections.singletonMap(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)))
+                               .query(query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.IS_REINDEX, isReindex)))
                                .columnMappings(getColumnMappings(dataSchema))
                                .destination(destination)
                                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext))
@@ -323,6 +321,19 @@ public class MSQCompactionRunner implements CompactionRunner
     final Interval replaceInterval = compactionTask.getIoConfig()
                                                    .getInputSpec()
                                                    .findInterval(compactionTask.getDataSource());
+
+    if (dataSchema.getBaseTable() != null) {
+      return new DataSourceMSQDestination(
+          dataSchema.getDataSource(),
+          dataSchema.getGranularitySpec().getSegmentGranularity(),
+          null,
+          ImmutableList.of(replaceInterval),
+          null,
+          dataSchema.getBaseTable(),
+          dataSchema.getProjections(),
+          null
+      );
+    }
 
     return new DataSourceMSQDestination(
         dataSchema.getDataSource(),
@@ -537,7 +548,7 @@ public class MSQCompactionRunner implements CompactionRunner
       return taskContext;
     }
     Map<String, Object> queryContext = new HashMap<>(taskContext);
-    queryContext.put(MultiStageQueryContext.CTX_FORCE_TIME_SORT, false);
+    QueryContextParameters.FORCE_SEGMENT_SORT_BY_TIME.set(queryContext, false);
     return queryContext;
   }
 
@@ -757,7 +768,7 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     Map<String, Object> context = new HashMap<>(compactionTask.getContext());
     context.put(
-        DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+        QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY.getName(),
         serializeGranularity(dataSchema.getGranularitySpec() != null
                              ? dataSchema.getGranularitySpec()
                                          .getSegmentGranularity()
@@ -765,19 +776,26 @@ public class MSQCompactionRunner implements CompactionRunner
     );
     if (!isQueryGranularityEmptyOrNone(dataSchema)) {
       context.put(
-          DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY,
+          QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY.getName(),
           serializeGranularity(dataSchema.getGranularitySpec().getQueryGranularity(), jsonMapper)
       );
     }
     // Similar to compaction using the native engine, don't finalize aggregations.
     // Used for writing the data schema during segment generation phase.
-    context.putIfAbsent(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
+    context.putIfAbsent(QueryContextParameters.FINALIZE_AGGREGATIONS.getName(), false);
     // Add appropriate finalization to native query context i.e. for the GroupBy query
-    context.putIfAbsent(QueryContexts.FINALIZE_KEY, false);
+    context.putIfAbsent(QueryContextParameters.FINALIZE.getName(), false);
     // Only scalar or array-type dimensions are allowed as grouping keys.
-    context.putIfAbsent(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
-    // Always override CTX_ARRAY_INGEST_MODE since it can otherwise lead to mixed ARRAY and MVD types for a column.
-    context.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    context.putIfAbsent(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING.getName(), false);
+    // Always override ARRAY_INGEST_MODE since it can otherwise lead to mixed ARRAY and MVD types for a column.
+    QueryContextParameters.ARRAY_INGEST_MODE.set(context, "array");
+    if (compactionTask.getTuningConfig() != null
+        && compactionTask.getTuningConfig().getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
+      // Ingestion may fall back to dynamic partitioning when the data turns out to hold multi-valued fields, since it
+      // stores the rows either way. Compaction cannot: the segments it wrote would disagree with the partitionsSpec
+      // its config asks for, so the interval would never read as compacted and would be submitted again every run.
+      QueryContextParameters.FAIL_ON_MULTI_VALUED_RANGE_PARTITION.set(context, true);
+    }
     return context;
   }
 

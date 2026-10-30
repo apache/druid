@@ -20,10 +20,10 @@
 package org.apache.druid.metadata;
 
 import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -35,11 +35,13 @@ public interface MetadataRuleManager
 
   void poll();
 
-  Map<String, List<Rule>> getAllRules();
-
-  List<Rule> getRules(String dataSource);
-
-  List<Rule> getRulesWithDefault(String dataSource);
+  /**
+   * Current snapshot of the rules of all datasources.
+   * <p>
+   * Using a single snapshot while performing an operation (such as a Coordinator duty run) allows the steps within the
+   * operation to remain consistent with each other, even if the rules are updated concurrently.
+   */
+  RetentionRulesSnapshot getRulesSnapshot();
 
   boolean overrideRule(String dataSource, List<Rule> rulesConfig, AuditInfo auditInfo);
 

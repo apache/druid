@@ -21,8 +21,8 @@ package org.apache.druid.indexing.overlord.duty;
 
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.tasklogs.TaskLogKiller;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -61,11 +61,11 @@ public class TaskLogAutoCleanerTest
   {
     TaskLogAutoCleanerConfig cleanerConfig = new TaskLogAutoCleanerConfig(true, 2000L, 1000L, 60_000L);
     TaskLogAutoCleaner taskLogAutoCleaner = new TaskLogAutoCleaner(null, cleanerConfig, null);
-    Assert.assertTrue(taskLogAutoCleaner.isEnabled());
+    Assertions.assertTrue(taskLogAutoCleaner.isEnabled());
 
     final DutySchedule schedule = taskLogAutoCleaner.getSchedule();
-    Assert.assertEquals(cleanerConfig.getDelay(), schedule.getPeriodMillis());
-    Assert.assertEquals(cleanerConfig.getInitialDelay(), schedule.getInitialDelayMillis());
+    Assertions.assertEquals(cleanerConfig.getDelay(), schedule.getPeriodMillis());
+    Assertions.assertEquals(cleanerConfig.getInitialDelay(), schedule.getInitialDelayMillis());
   }
 
   @Test
@@ -73,7 +73,7 @@ public class TaskLogAutoCleanerTest
   {
     TaskLogAutoCleanerConfig cleanerConfig = new TaskLogAutoCleanerConfig(false, 2000L, 1000L, 60_000L);
     TaskLogAutoCleaner taskLogAutoCleaner = new TaskLogAutoCleaner(null, cleanerConfig, null);
-    Assert.assertFalse(taskLogAutoCleaner.isEnabled());
+    Assertions.assertFalse(taskLogAutoCleaner.isEnabled());
   }
 
 }

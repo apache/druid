@@ -37,10 +37,10 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,8 +49,8 @@ import java.util.Map;
 
 public class AvroOCFReaderTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testParse() throws Exception
@@ -117,11 +117,11 @@ public class AvroOCFReaderTest
     final InputEntityReader reader = createReader(mapper, readerSchema);
 
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
       // eventType is aliased to eventClass in the reader schema and should be transformed at read time
-      Assert.assertEquals("type-a", Iterables.getOnlyElement(row.getDimension("eventClass")));
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertEquals("type-a", Iterables.getOnlyElement(row.getDimension("eventClass")));
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 
@@ -134,14 +134,14 @@ public class AvroOCFReaderTest
     );
     final InputEntityReader reader = createReader(mapper, null);
     try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRowListPlusRawValues row = iterator.next();
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertFalse(iterator.hasNext());
       final Map<String, Object> rawColumns = row.getRawValues();
-      Assert.assertNotNull(rawColumns);
-      Assert.assertEquals(20, rawColumns.size());
+      Assertions.assertNotNull(rawColumns);
+      Assertions.assertEquals(20, rawColumns.size());
       final List<InputRow> inputRows = row.getInputRows();
-      Assert.assertNotNull(inputRows);
+      Assertions.assertNotNull(inputRows);
       final InputRow inputRow = Iterables.getOnlyElement(inputRows);
       assertInputRow(inputRow);
     }
@@ -156,11 +156,11 @@ public class AvroOCFReaderTest
     );
     final InputEntityReader reader = createReader(mapper, null);
     try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRowListPlusRawValues row = iterator.next();
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertFalse(iterator.hasNext());
       final List<InputRow> inputRows = row.getInputRows();
-      Assert.assertNotNull(inputRows);
+      Assertions.assertNotNull(inputRows);
       final InputRow inputRow = Iterables.getOnlyElement(inputRows);
       assertInputRow(inputRow);
       // Ensure the raw values can be serialised into JSON
@@ -171,18 +171,18 @@ public class AvroOCFReaderTest
   private void assertRow(InputEntityReader reader) throws IOException
   {
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
       assertInputRow(row);
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 
   private void assertInputRow(InputRow row)
   {
-    Assert.assertEquals(DateTimes.of("2015-10-25T19:30:00.000Z"), row.getTimestamp());
-    Assert.assertEquals("type-a", Iterables.getOnlyElement(row.getDimension("eventType")));
-    Assert.assertEquals(679865987569912369L, row.getMetric("someLong"));
+    Assertions.assertEquals(DateTimes.of("2015-10-25T19:30:00.000Z"), row.getTimestamp());
+    Assertions.assertEquals("type-a", Iterables.getOnlyElement(row.getDimension("eventType")));
+    Assertions.assertEquals(679865987569912369L, row.getMetric("someLong"));
   }
 
   private InputEntityReader createReader(

@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -58,6 +58,6 @@ public class KllDoublesSketchMergeAggregatorFactoryTest
         json,
         AggregatorFactory.class
     );
-    Assert.assertEquals(factory, fromJson);
+    Assertions.assertEquals(factory, fromJson);
   }
 }

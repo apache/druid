@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.ProvisionException;
+import jakarta.validation.Validation;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -32,20 +33,15 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import javax.validation.Validation;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
 
 public class FilteredRequestLoggerTest
 {
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
   private final DefaultObjectMapper mapper = new DefaultObjectMapper();
   private final SegmentMetadataQuery testSegmentMetadataQuery = new SegmentMetadataQuery(
       new TableDataSource("foo"),
@@ -152,8 +148,8 @@ public class FilteredRequestLoggerTest
     logger.logSqlQuery(sqlRequestLogLine);
     logger.logSqlQuery(sqlRequestLogLine);
 
-    Assert.assertEquals(2, delegate.nativeCount);
-    Assert.assertEquals(2, delegate.sqlCount);
+    Assertions.assertEquals(2, delegate.nativeCount);
+    Assertions.assertEquals(2, delegate.sqlCount);
   }
 
   @Test
@@ -186,8 +182,8 @@ public class FilteredRequestLoggerTest
     logger.logNativeQuery(nativeRequestLogLine);
     logger.logSqlQuery(sqlRequestLogLine);
 
-    Assert.assertEquals(0, delegate.nativeCount);
-    Assert.assertEquals(1, delegate.sqlCount);
+    Assertions.assertEquals(0, delegate.nativeCount);
+    Assertions.assertEquals(1, delegate.sqlCount);
   }
 
   @Test
@@ -215,9 +211,9 @@ public class FilteredRequestLoggerTest
         ((FilteredRequestLoggerProvider.FilteredRequestLogger) provider.get());
     final LoggingRequestLogger delegate = (LoggingRequestLogger) logger.getDelegate();
 
-    Assert.assertEquals(100, logger.getQueryTimeThresholdMs());
-    Assert.assertTrue(delegate.isSetContextMDC());
-    Assert.assertTrue(delegate.isSetMDC());
+    Assertions.assertEquals(100, logger.getQueryTimeThresholdMs());
+    Assertions.assertTrue(delegate.isSetContextMDC());
+    Assertions.assertTrue(delegate.isSetMDC());
   }
 
   @Test
@@ -244,13 +240,13 @@ public class FilteredRequestLoggerTest
         ((FilteredRequestLoggerProvider.FilteredRequestLogger) provider.get());
     final TestRequestLogger delegate = (TestRequestLogger) logger.getDelegate();
 
-    Assert.assertFalse(delegate.isStarted());
+    Assertions.assertFalse(delegate.isStarted());
 
     logger.start();
-    Assert.assertTrue(delegate.isStarted());
+    Assertions.assertTrue(delegate.isStarted());
 
     logger.stop();
-    Assert.assertFalse(delegate.isStarted());
+    Assertions.assertFalse(delegate.isStarted());
   }
 
   @Test
@@ -267,9 +263,11 @@ public class FilteredRequestLoggerTest
                   .getValidator()
     );
 
-    expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("Could not resolve type id 'nope'");
-    configurator.configurate(properties, "log", RequestLoggerProvider.class);
+    final ProvisionException exception = Assertions.assertThrows(
+        ProvisionException.class,
+        () -> configurator.configurate(properties, "log", RequestLoggerProvider.class)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Could not resolve type id 'nope'"));
   }
 
   @Test
@@ -285,8 +283,10 @@ public class FilteredRequestLoggerTest
                   .getValidator()
     );
 
-    expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("log.delegate - must not be null");
-    configurator.configurate(properties, "log", RequestLoggerProvider.class);
+    final ProvisionException exception = Assertions.assertThrows(
+        ProvisionException.class,
+        () -> configurator.configurate(properties, "log", RequestLoggerProvider.class)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("log.delegate - must not be null"));
   }
 }

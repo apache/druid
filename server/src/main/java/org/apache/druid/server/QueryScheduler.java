@@ -66,6 +66,12 @@ public class QueryScheduler implements QueryWatcher
   private static final Logger LOGGER = new Logger(QueryScheduler.class);
   public static final int UNAVAILABLE = -1;
   public static final String TOTAL = "total";
+  /**
+   * Lane name used for queries that are not assigned to any explicit lane (interactive pool). It has special meaning
+   * for the resilience4j bulkhead used to enforce lane limits, and is also emitted as the {@code lane} metric dimension
+   * for un-laned queries. It is therefore reserved and cannot be used as a configured lane name.
+   */
+  public static final String DEFAULT = "default";
   private final int totalCapacity;
   private final QueryPrioritizationStrategy prioritizationStrategy;
   private final QueryLaningStrategy laningStrategy;
@@ -165,12 +171,12 @@ public class QueryScheduler implements QueryWatcher
     Optional<String> lane = laningStrategy.computeLane(queryPlus.withQuery(query), segments);
     LOGGER.debug(
         "[%s] lane assigned to [%s] query with [%,d] priority",
-        lane.orElse("default"),
+        lane.orElse(DEFAULT),
         query.getType(),
         priority.orElse(0)
     );
     final ServiceMetricEvent.Builder builderUsr = ServiceMetricEvent.builder().setFeed("metrics")
-                                                                    .setDimension("lane", lane.orElse("default"))
+                                                                    .setDimension("lane", lane.orElse(DEFAULT))
                                                                     .setDimension("dataSource", query.getDataSource().getTableNames())
                                                                     .setDimension("type", query.getType());
     emitter.emit(builderUsr.setMetric("query/priority", priority.orElse(Integer.valueOf(0))));

@@ -24,11 +24,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.timeline.SegmentDetail;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -42,13 +44,17 @@ public class RetrieveUsedSegmentsActionSerdeTest
   {
     Interval interval = Intervals.of("2014/2015");
 
-    RetrieveUsedSegmentsAction expected =
-        new RetrieveUsedSegmentsAction("dataSource", Collections.singletonList(interval), Segments.ONLY_VISIBLE);
+    RetrieveUsedSegmentsAction expected = new RetrieveUsedSegmentsAction(
+        "dataSource",
+        Collections.singletonList(interval),
+        Segments.ONLY_VISIBLE,
+        SegmentDetail.all()
+    );
 
     RetrieveUsedSegmentsAction actual =
         MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
-    Assert.assertEquals(ImmutableList.of(interval), actual.getIntervals());
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(ImmutableList.of(interval), actual.getIntervals());
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -57,13 +63,33 @@ public class RetrieveUsedSegmentsActionSerdeTest
     List<Interval> intervals = ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017"));
     RetrieveUsedSegmentsAction expected = new RetrieveUsedSegmentsAction(
         "dataSource",
-        intervals
+        intervals,
+        SegmentDetail.none()
     );
 
     RetrieveUsedSegmentsAction actual =
         MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
-    Assert.assertEquals(intervals, actual.getIntervals());
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(intervals, actual.getIntervals());
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testPartialDetailsSerde() throws Exception
+  {
+    RetrieveUsedSegmentsAction expected = new RetrieveUsedSegmentsAction(
+        "dataSource",
+        Collections.singletonList(Intervals.of("2014/2015")),
+        Segments.INCLUDING_OVERSHADOWED,
+        EnumSet.of(SegmentDetail.LOAD_SPEC, SegmentDetail.DIMENSIONS)
+    );
+
+    final String json = MAPPER.writeValueAsString(expected);
+    RetrieveUsedSegmentsAction actual = MAPPER.readValue(json, RetrieveUsedSegmentsAction.class);
+    Assertions.assertEquals(
+        EnumSet.of(SegmentDetail.DIMENSIONS, SegmentDetail.LOAD_SPEC),
+        actual.getDetails()
+    );
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -72,13 +98,15 @@ public class RetrieveUsedSegmentsActionSerdeTest
     String jsonStr = "{\"type\": \"segmentListUsed\", \"dataSource\": \"test\", \"intervals\": [\"2014/2015\"]}";
     RetrieveUsedSegmentsAction actual = (RetrieveUsedSegmentsAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new RetrieveUsedSegmentsAction(
             "test",
             Collections.singletonList(Intervals.of("2014/2015")),
-            Segments.ONLY_VISIBLE
+            Segments.ONLY_VISIBLE,
+            null
         ),
         actual
     );
+    Assertions.assertNull(actual.getDetails());
   }
 }

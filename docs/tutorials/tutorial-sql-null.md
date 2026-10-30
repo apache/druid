@@ -24,7 +24,7 @@ description: Introduction to null handling in Druid
   ~ under the License.
   -->
 
-This tutorial introduces the basic concepts of null handling for string and numeric columns in Apache Druid.
+This tutorial introduces the basic concepts of null handling for string and numeric columns in Apache&circledR; Druid.
 The tutorial focuses on filters using the logical NOT operation on columns with NULL values.
 
 ## Prerequisites

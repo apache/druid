@@ -23,12 +23,14 @@ import org.apache.druid.compressedbigdecimal.ArrayCompressedBigDecimal;
 import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorTestBase;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.easymock.EasyMock;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
 public class CompressedBigDecimalSumAggregatorTest extends CompressedBigDecimalAggregatorTestBase
 {
   @Override
+  @Test
   public void testNoData()
   {
     CompressedBigDecimalSumAggregator aggregator = new CompressedBigDecimalSumAggregator(

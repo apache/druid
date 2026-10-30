@@ -18,11 +18,14 @@
 
 import { L } from 'druid-query-toolkit';
 import React from 'react';
-import ReactTable from 'react-table';
 
-import { Loader } from '../../../components';
+import {
+  ConsoleTable,
+  Loader,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../components';
 import { useQueryManager } from '../../../hooks';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import type { ColumnMetadata } from '../../../utils';
 import { queryDruidSql } from '../../../utils';
 
@@ -57,7 +60,7 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
   function renderTable() {
     const columns = columnsState.data || [];
     return (
-      <ReactTable
+      <ConsoleTable
         data={columns}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}

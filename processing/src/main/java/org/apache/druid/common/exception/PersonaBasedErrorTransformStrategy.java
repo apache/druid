@@ -42,7 +42,7 @@ public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransfor
    * exception was modified. Returns an empty optional if no transformation was performed.
    */
   @Override
-  public Optional<Exception> maybeTransform(DruidException druidException, Optional<String> optionalErrorId)
+  public Optional<DruidException> maybeTransform(DruidException druidException, Optional<String> optionalErrorId)
   {
     if (druidException.getTargetPersona() == DruidException.Persona.USER) {
       return Optional.empty();

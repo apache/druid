@@ -57,11 +57,9 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.logging.log4j.ThreadContext;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -72,9 +70,6 @@ import java.util.Map;
 
 public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
-
   private final WorkerConfig workerConfig = new WorkerConfig();
   private final UnifiedIndexerAppenderatorsManager manager = new UnifiedIndexerAppenderatorsManager(
       DirectQueryProcessingPool.INSTANCE,
@@ -91,7 +86,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   private AppenderatorConfig appenderatorConfig;
   private Appenderator appenderator;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     appenderatorConfig = EasyMock.createMock(AppenderatorConfig.class);
@@ -133,7 +128,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
               .build()
     );
 
-    Assert.assertEquals("myDataSource", bundle.getWalker().getDataSource());
+    Assertions.assertEquals("myDataSource", bundle.getWalker().getDataSource());
   }
 
   @Test
@@ -144,18 +139,19 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
                                   .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
                                   .build();
 
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Could not find segment walker for datasource");
-
-    manager.getBundle(query);
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.getBundle(query)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Could not find segment walker for datasource"));
   }
 
   @Test
   public void test_removeAppenderatorsForTask()
   {
-    Assert.assertEquals(ImmutableSet.of("myDataSource"), manager.getDatasourceBundles().keySet());
+    Assertions.assertEquals(ImmutableSet.of("myDataSource"), manager.getDatasourceBundles().keySet());
     manager.removeAppenderatorsForTask("taskId", "myDataSource");
-    Assert.assertTrue(manager.getDatasourceBundles().isEmpty());
+    Assertions.assertTrue(manager.getDatasourceBundles().isEmpty());
   }
 
   @Test
@@ -166,7 +162,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     manager.removeAppenderatorsForTask("someOtherTaskId", "myDataSource");
 
     // Should be no change.
-    Assert.assertEquals(ImmutableSet.of("myDataSource"), manager.getDatasourceBundles().keySet());
+    Assertions.assertEquals(ImmutableSet.of("myDataSource"), manager.getDatasourceBundles().keySet());
   }
 
   @Test
@@ -182,14 +178,14 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
     // Three forms of persist.
 
-    Assert.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null, null));
-    Assert.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null));
+    Assertions.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null, null));
+    Assertions.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null));
 
     // Need a mocked index for this test, since getInterval is called on it.
     final IncrementalIndex index = EasyMock.createMock(IncrementalIndex.class);
     EasyMock.expect(index.getInterval()).andReturn(null);
     EasyMock.replay(index);
-    Assert.assertEquals(file, limitedPoolIndexMerger.persist(index, file, null, null));
+    Assertions.assertEquals(file, limitedPoolIndexMerger.persist(index, file, null, null));
     EasyMock.verify(index);
   }
 
@@ -204,10 +200,10 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
     final File file = new File("xyz");
 
-    Assert.assertThrows(
-        "failed",
+    Assertions.assertThrows(
         RuntimeException.class, // Wrapped IOException
-        () -> limitedPoolIndexMerger.persist(null, null, file, null, null, null)
+        () -> limitedPoolIndexMerger.persist(null, null, file, null, null, null),
+        "failed"
     );
   }
 
@@ -222,8 +218,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
     final File file = new File("xyz");
 
-    Assert.assertThrows(
-        "failed",
+    Assertions.assertThrows(
         RuntimeException.class, // Wrapped IOException
         () -> limitedPoolIndexMerger.mergeQueryableIndex(
             null,
@@ -236,7 +231,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
             null,
             null,
             -1
-        )
+        ),
+        "failed"
     );
   }
 
@@ -252,8 +248,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     final File file = new File("xyz");
 
     // Two forms of mergeQueryableIndex
-    Assert.assertEquals(file, limitedPoolIndexMerger.mergeQueryableIndex(null, false, null, file, null, null, -1));
-    Assert.assertEquals(
+    Assertions.assertEquals(file, limitedPoolIndexMerger.mergeQueryableIndex(null, false, null, file, null, null, -1));
+    Assertions.assertEquals(
         file,
         limitedPoolIndexMerger.mergeQueryableIndex(
             null,
@@ -282,14 +278,16 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     final File file = new File("xyz");
 
     // "merge" is neither necessary nor implemented
-    expectedException.expect(UnsupportedOperationException.class);
-    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1));
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1)
+    );
   }
 
   @Test
   public void test_getWorkerConfig()
   {
-    Assert.assertSame(workerConfig, manager.getWorkerConfig());
+    Assertions.assertSame(workerConfig, manager.getWorkerConfig());
   }
 
   @Test
@@ -297,7 +295,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   {
     appenderator.setTaskThreadContext();
     final Map<String, String> threadContext = ThreadContext.getContext();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Map.of("task.log.id", "taskId", "task.log.file", "/mnt/var/taskId"),
         threadContext
     );

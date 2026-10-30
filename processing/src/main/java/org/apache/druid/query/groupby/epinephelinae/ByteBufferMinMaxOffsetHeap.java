@@ -308,10 +308,8 @@ public class ByteBufferMinMaxOffsetHeap
         int minGcOffset = buf.getInt(minGrandchild * Integer.BYTES);
         int cmp = comparator.compare(minChildOffset, minGcOffset);
         minIndex = (cmp > 0) ? minGrandchild : minChild;
-      } else if (minChild > -1) {
-        minIndex = minChild;
       } else {
-        break;
+        minIndex = minChild;
       }
       if (minIndex == minGrandchild) {
         int offset = buf.getInt(pos * Integer.BYTES);
@@ -337,6 +335,8 @@ public class ByteBufferMinMaxOffsetHeap
             }
           }
           minChild = findMinChild(comparator, minIndex);
+        } else {
+          break;
         }
         pos = minIndex;
       } else {

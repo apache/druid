@@ -24,6 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -31,26 +35,25 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.segment.TestHelper;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.io.ByteArrayInputStream;
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
 public class ChangeRequestHttpSyncerTest
 {
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testSimple() throws Exception
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
@@ -190,13 +193,11 @@ public class ChangeRequestHttpSyncerTest
             HttpVersion.HTTP_1_1,
             HttpResponseStatus.INTERNAL_SERVER_ERROR
         );
-        httpResponse.setContent(ChannelBuffers.buffer(0));
         httpResponseHandler.handleResponse(httpResponse, null);
         return Futures.immediateFailedFuture(new RuntimeException("server error"));
       }
 
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
       try {
         return results.take();

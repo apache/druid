@@ -32,13 +32,13 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
@@ -50,8 +50,8 @@ import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -72,7 +72,7 @@ public class DataSourceMetadataQueryTest
     String json = JSON_MAPPER.writeValueAsString(query);
     Query<?> serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
-    Assert.assertEquals(query, serdeQuery);
+    Assertions.assertEquals(query, serdeQuery);
   }
 
   @Test
@@ -82,14 +82,14 @@ public class DataSourceMetadataQueryTest
                                                 .dataSource("foo")
                                                 .intervals("2013/2014")
                                                 .context(
-                                                    ImmutableMap.of(
-                                                        QueryContexts.PRIORITY_KEY,
+                                                    QueryContext.ofMap(
+                                                        QueryContextParameters.PRIORITY,
                                                         1,
-                                                        QueryContexts.USE_CACHE_KEY,
+                                                        QueryContextParameters.USE_CACHE,
                                                         true,
-                                                        QueryContexts.POPULATE_CACHE_KEY,
-                                                        "true",
-                                                        QueryContexts.FINALIZE_KEY,
+                                                        QueryContextParameters.POPULATE_CACHE,
+                                                        true,
+                                                        QueryContextParameters.FINALIZE,
                                                         true
                                                     )
                                                 ).build();
@@ -107,13 +107,13 @@ public class DataSourceMetadataQueryTest
     );
 
     final QueryContext queryContext = serdeQuery.context();
-    Assert.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
-    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
-    Assert.assertEquals("true", queryContext.getString(QueryContexts.POPULATE_CACHE_KEY));
-    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY));
-    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY, false));
-    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
-    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY, false));
+    Assertions.assertEquals(1, (int) queryContext.getInt(QueryContextParameters.PRIORITY.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.USE_CACHE.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.POPULATE_CACHE.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.FINALIZE.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.USE_CACHE.getName(), false));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.POPULATE_CACHE.getName(), false));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.FINALIZE.getName(), false));
   }
 
   /**
@@ -161,7 +161,7 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataResultValue val = results.iterator().next().getValue();
     DateTime maxIngestedEventTime = val.getMaxIngestedEventTime();
 
-    Assert.assertEquals(timestamp, maxIngestedEventTime);
+    Assertions.assertEquals(timestamp, maxIngestedEventTime);
   }
 
   @Test
@@ -190,7 +190,7 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataResultValue val = results.iterator().next().getValue();
     DateTime maxIngestedEventTime = val.getMaxIngestedEventTime();
 
-    Assert.assertEquals(timestamp, maxIngestedEventTime);
+    Assertions.assertEquals(timestamp, maxIngestedEventTime);
   }
 
   @Test
@@ -275,7 +275,7 @@ public class DataSourceMetadataQueryTest
             )
         );
 
-    Assert.assertEquals(segments.size(), 2);
+    Assertions.assertEquals(segments.size(), 2);
     // should only have the latest segments.
     List<LogicalSegment> expected = Arrays.asList(
         new LogicalSegment()
@@ -309,7 +309,7 @@ public class DataSourceMetadataQueryTest
     );
 
     for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
+      Assertions.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
     }
   }
 
@@ -442,11 +442,11 @@ public class DataSourceMetadataQueryTest
         }
     );
 
-    Assert.assertEquals(expected.size(), segments.size());
+    Assertions.assertEquals(expected.size(), segments.size());
 
     for (int i = 0; i < expected.size(); i++) {
-      Assert.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
-      Assert.assertEquals(expected.get(i).getTrueInterval(), segments.get(i).getTrueInterval());
+      Assertions.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
+      Assertions.assertEquals(expected.get(i).getTrueInterval(), segments.get(i).getTrueInterval());
     }
   }
 
@@ -458,7 +458,7 @@ public class DataSourceMetadataQueryTest
         resultValue,
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>of("maxIngestedEventTime", "2000-01-01T00:00:00.000Z"),
         resultValueMap
     );
@@ -475,7 +475,7 @@ public class DataSourceMetadataQueryTest
         resultValueMap,
         DataSourceMetadataResultValue.class
     );
-    Assert.assertEquals(DateTimes.of("2000"), resultValue.getMaxIngestedEventTime());
+    Assertions.assertEquals(DateTimes.of("2000"), resultValue.getMaxIngestedEventTime());
   }
 
 }

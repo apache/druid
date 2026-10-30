@@ -23,7 +23,7 @@ title: "DataSketches HLL Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators for distinct counting based on HLL sketch from [Apache DataSketches](https://datasketches.apache.org/) library. At ingestion time, this aggregator creates the HLL sketch objects to store in Druid segments. By default, Druid reads and merges sketches at query time. The default result is
+This module provides Apache&circledR; Druid aggregators for distinct counting based on HLL sketch from [Apache DataSketches](https://datasketches.apache.org/) library. At ingestion time, this aggregator creates the HLL sketch objects to store in Druid segments. By default, Druid reads and merges sketches at query time. The default result is
 the estimate of the number of distinct values presented to the sketch. You can also use post aggregators to produce a union of sketch columns in the same row.
 You can use the HLL sketch aggregator on any column to estimate its cardinality.
 

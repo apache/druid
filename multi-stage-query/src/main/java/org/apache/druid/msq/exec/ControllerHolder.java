@@ -36,9 +36,9 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.http.StandardQueryState;
 import org.joda.time.DateTime;
@@ -198,7 +198,7 @@ public class ControllerHolder
               e,
               "Controller[%s] failed, queryId[%s], sqlQueryId[%s]",
               controller.queryId(),
-              controller.getQueryContext().getString(BaseQuery.QUERY_ID),
+              controller.getQueryContext().get(QueryContextParameters.QUERY_ID),
               sqlQueryId
           );
         }
@@ -238,7 +238,7 @@ public class ControllerHolder
   /**
    * Places this holder into {@link State#CANCELED} and stops the controller.
    */
-  public void cancel(final CancellationReason reason)
+  public void cancel(final CancellationReason reason, @Nullable final Throwable cause)
   {
     final State prevState;
     synchronized (this) {
@@ -251,7 +251,7 @@ public class ControllerHolder
     }
 
     if (prevState == State.RUNNING) {
-      controller.stop(reason);
+      controller.stop(reason, cause);
 
       // Interrupt the controller thread as a failsafe, in case the controller is blocked on something.
       synchronized (this) {
@@ -299,12 +299,12 @@ public class ControllerHolder
     if (delayMs <= 0) {
       // Deadline has already passed. Cancel immediately rather than scheduling, so the cancellation
       // takes effect even when using a direct executor for the controller thread.
-      cancel(CancellationReason.QUERY_TIMEOUT);
+      cancel(CancellationReason.QUERY_TIMEOUT, null);
       return null;
     }
 
     return scheduledExec.schedule(
-        () -> cancel(CancellationReason.QUERY_TIMEOUT),
+        () -> cancel(CancellationReason.QUERY_TIMEOUT, null),
         delayMs,
         TimeUnit.MILLISECONDS
     );
@@ -347,6 +347,9 @@ public class ControllerHolder
 
       case FAILED:
         state = State.FAILED;
+        break;
+
+      case RUNNING:
         break;
     }
   }

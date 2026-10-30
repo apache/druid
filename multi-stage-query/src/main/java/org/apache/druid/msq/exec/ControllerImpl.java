@@ -41,6 +41,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
@@ -58,6 +59,7 @@ import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -173,6 +175,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexSpec;
@@ -185,7 +188,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.timeline.CompactionState;
@@ -252,11 +254,19 @@ public class ControllerImpl implements Controller
   private final AtomicReference<MSQErrorReport> workerErrorRef = new AtomicReference<>();
 
   /**
-   * Set by {@link #stop(CancellationReason)}. If non-null, this reason takes priority over any exception
-   * encountered during execution when building the error report. If we didn't do this, interrupts arising
-   * from cancellation could produce errors that are less informative than the actual cancellation reason.
+   * Set by {@link #stop(CancellationReason, Throwable)}. If non-null, this reason takes priority over any
+   * exception encountered during execution when building the error report. If we didn't do this, interrupts
+   * arising from cancellation could produce errors that are less informative than the actual cancellation reason.
    */
   private volatile CancellationReason cancelReason;
+
+  /**
+   * Set by {@link #stop(CancellationReason, Throwable)} when cancellation was triggered by an external error
+   * (such as a failure writing results back to the client). If non-null, this exception is logged and included
+   * in the error report instead of a bare {@link CanceledFault}, so the original error is not lost.
+   */
+  @Nullable
+  private volatile Throwable cancelException;
 
   // For system warning reporting
   private final ConcurrentLinkedQueue<MSQErrorReport> workerWarnings = new ConcurrentLinkedQueue<>();
@@ -375,14 +385,20 @@ public class ControllerImpl implements Controller
   }
 
   @Override
-  public void stop(CancellationReason reason)
+  public void stop(CancellationReason reason, @Nullable Throwable cause)
   {
     final QueryDefinition queryDef = queryDefRef.get();
 
     // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
-    log.info("Query [%s] canceled.", queryDef != null ? queryDef.getQueryId() : "<no id yet>");
+    final String queryIdForLog = queryDef != null ? queryDef.getQueryId() : "<no id yet>";
+    if (cause != null) {
+      log.warn(cause, "Query[%s] canceled, reason[%s].", queryIdForLog, reason);
+    } else {
+      log.info("Query[%s] canceled, reason[%s].", queryIdForLog, reason);
+    }
 
     cancelReason = reason;
+    cancelException = cause;
     stopExternalFetchers();
     kernelManipulationQueue.clear(); // No point processing any possibly-queued commands.
     addToKernelManipulationQueue(
@@ -422,6 +438,7 @@ public class ControllerImpl implements Controller
           MultiStageQueryContext.getSketchEncoding(querySpec.getContext())
       );
       closer.register(workerSketchFetcher::close);
+      closer.register(() -> workerManager.stop(true));
 
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory = makeInputSpecSlicerFactory(
@@ -483,7 +500,14 @@ public class ControllerImpl implements Controller
 
       taskStateForReport = TaskState.FAILED;
 
-      if (cancelReason != null) {
+      if (cancelReason == CancellationReason.UNKNOWN && cancelException != null) {
+        // Cancellation triggered by an external error. Report the original error.
+        if (exceptionEncountered != null) {
+          cancelException.addSuppressed(exceptionEncountered);
+        }
+        errorForReport =
+            MSQErrorReport.fromException(queryId(), selfHost, null, cancelException, querySpec.getColumnMappings());
+      } else if (cancelReason != null) {
         errorForReport = MSQErrorReport.fromFault(queryId(), selfHost, null, new CanceledFault(cancelReason));
       } else {
         errorForReport = MSQTasks.makeErrorReport(queryId(), selfHost, controllerError, workerError);
@@ -827,7 +851,7 @@ public class ControllerImpl implements Controller
   /**
    * Adds the work orders for worker to {@link ControllerImpl#workOrdersToRetry} if the {@link ControllerQueryKernel} determines that there
    * are work orders which needs reprocessing.
-   * <br></br>
+   * <br>
    * This method is not thread safe, so it should always be called inside the main controller thread.
    */
   private void addToRetryQueue(ControllerQueryKernel kernel, int worker, MSQFault fault)
@@ -1289,7 +1313,8 @@ public class ControllerImpl implements Controller
         clusterBy,
         querySpec.getColumnMappings(),
         clusterByVirtualColumnMappings,
-        mayHaveMultiValuedClusterByFields
+        mayHaveMultiValuedClusterByFields,
+        MultiStageQueryContext.isFailOnMultiValuedRangePartition(querySpec.getContext())
     );
     final List<String> shardColumns = shardReasonPair.lhs;
     final String commentary = shardReasonPair.rhs;
@@ -1737,11 +1762,7 @@ public class ControllerImpl implements Controller
       @SuppressWarnings("unchecked")
       Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
 
-      boolean storeCompactionState = querySpec.getContext()
-          .getBoolean(
-              Tasks.STORE_COMPACTION_STATE_KEY,
-              Tasks.DEFAULT_STORE_COMPACTION_STATE
-          );
+      boolean storeCompactionState = querySpec.getContext().getOrDefault(QueryContextParameters.STORE_COMPACTION_STATE);
 
       final String indexingStateFingerprint = querySpec.getContext().getString(Tasks.INDEXING_STATE_FINGERPRINT_KEY);
 
@@ -1855,13 +1876,26 @@ public class ControllerImpl implements Controller
 
     Granularity segmentGranularity = destination.getSegmentGranularity();
 
-    GranularitySpec granularitySpec = new UniformGranularitySpec(
-        segmentGranularity,
-        querySpec.getContext().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
-        dataSchema.getGranularitySpec().isRollup(),
-        // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
-        destination.getReplaceTimeChunks()
-    );
+    // For baseTable (clustered) mode, segment granularity + intervals live in a SegmentGranularitySpec and query
+    // granularity lives in the baseTable spec's virtual column (already recorded via dataSchema.getBaseTable()), so the
+    // legacy UniformGranularitySpec is left null. For the legacy (non-baseTable) path, the GranularitySpec carries
+    // everything as before and the SegmentGranularitySpec is left null.
+    final GranularitySpec granularitySpec;
+    final SegmentGranularitySpec segmentGranularitySpec;
+    if (dataSchema.getBaseTable() != null) {
+      // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
+      segmentGranularitySpec = new SegmentGranularitySpec(segmentGranularity, destination.getReplaceTimeChunks());
+      granularitySpec = null;
+    } else {
+      granularitySpec = new UniformGranularitySpec(
+          segmentGranularity,
+          querySpec.getContext().getGranularity(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY.getName(), jsonMapper),
+          dataSchema.getGranularitySpec().isRollup(),
+          // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
+          destination.getReplaceTimeChunks()
+      );
+      segmentGranularitySpec = null;
+    }
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
 
@@ -1895,6 +1929,8 @@ public class ControllerImpl implements Controller
         transformSpec,
         indexSpec,
         granularitySpec,
+        segmentGranularitySpec,
+        dataSchema.getBaseTable(),
         dataSchema.getProjections()
     );
   }
@@ -1965,11 +2001,21 @@ public class ControllerImpl implements Controller
       final ClusterBy clusterBy,
       final ColumnMappings columnMappings,
       final Map<String, VirtualColumn> clusterByVirtualColumns,
-      boolean mayHaveMultiValuedClusterByFields
+      boolean mayHaveMultiValuedClusterByFields,
+      boolean failOnMultiValuedRangePartition
   )
   {
     if (mayHaveMultiValuedClusterByFields) {
       // DimensionRangeShardSpec cannot handle multivalued fields.
+      if (failOnMultiValuedRangePartition) {
+        // Falling back would silently store the rows under a different partitioning than was asked for. A caller that
+        // compares what it wrote against what it asked for, as compaction does, would never see the two agree.
+        throw InvalidInput.exception(
+            "Cannot use 'range' partitioning because CLUSTERED BY %s contains multi-valued fields. Use 'dynamic'"
+            + " partitioning, or partition by single-valued columns only.",
+            clusterBy.getColumns().stream().map(KeyColumn::columnName).collect(Collectors.toList())
+        );
+      }
       return Pair.of(
           Collections.emptyList(),
           "Cannot use 'range' shard specs since CLUSTERED BY contains multi-valued fields."
@@ -2505,7 +2551,6 @@ public class ControllerImpl implements Controller
       log.debug("Query [%s] starting task launcher.", queryDef.getQueryId());
 
       workerTaskLauncherFuture = workerManager.start();
-      closer.register(() -> workerManager.stop(true));
 
       workerTaskLauncherFuture.addListener(
           () ->

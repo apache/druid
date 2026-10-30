@@ -148,7 +148,8 @@ public class MultipleKubernetesTaskRunnerConfig extends KubernetesTaskRunnerStat
       @JsonProperty("taskJoinTimeout") Period taskJoinTimeout,
       @JsonProperty("useK8sSharedInformers") Boolean useK8sSharedInformers,
       @JsonProperty("k8sSharedInformerResyncPeriod") Period k8sSharedInformerResyncPeriod,
-      @JsonProperty("allowTaskPodTemplateSelection") Boolean allowTaskPodTemplateSelection
+      @JsonProperty("allowTaskPodTemplateSelection") Boolean allowTaskPodTemplateSelection,
+      @JsonProperty("advertisedPlaintextPort") Integer advertisedPlaintextPort
   )
   {
     super(
@@ -175,7 +176,8 @@ public class MultipleKubernetesTaskRunnerConfig extends KubernetesTaskRunnerStat
         taskJoinTimeout,
         useK8sSharedInformers != null && useK8sSharedInformers,
         k8sSharedInformerResyncPeriod,
-        allowTaskPodTemplateSelection != null && allowTaskPodTemplateSelection
+        allowTaskPodTemplateSelection != null && allowTaskPodTemplateSelection,
+        advertisedPlaintextPort
     );
     Preconditions.checkNotNull(clusters);
     Preconditions.checkState(

@@ -27,23 +27,23 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class CgroupCpuMonitorTest
 {
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private File statFile;
@@ -52,8 +52,8 @@ public class CgroupCpuMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File cpuDir = new File(
@@ -119,8 +119,8 @@ public class CgroupCpuMonitorTest
   public void testCgroupsV2Detection() throws IOException, URISyntaxException
   {
     // Set up cgroups v2 structure
-    File cgroupV2Dir = FileUtils.createTempDirInLocation(tempDir, "cgroupV2Dir");
-    File procV2Dir = FileUtils.createTempDirInLocation(tempDir, "procV2Dir");
+    File cgroupV2Dir = temporaryFolder.newFolder("cgroupV2Dir");
+    File procV2Dir = temporaryFolder.newFolder("procV2Dir");
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
 
 

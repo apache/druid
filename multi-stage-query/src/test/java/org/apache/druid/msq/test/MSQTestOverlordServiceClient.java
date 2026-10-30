@@ -59,7 +59,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -195,7 +195,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
       final ControllerHolder controllerHolder = new ControllerHolder(
           controller,
-          controller.getQueryContext().getString(QueryContexts.CTX_SQL_QUERY_ID, controller.queryId()),
+          controller.getQueryContext().getString(QueryContextParameters.SQL_QUERY_ID.getName(), controller.queryId()),
           null,
           null,
           DateTimes.nowUtc()
@@ -250,7 +250,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   {
     MSQTestTaskDetails old = taskDetailsByQueryId.get(queryId);
     if (old != null) {
-      throw DruidException.defensive("There is an existing queryId {}!", queryId);
+      throw DruidException.defensive("There is an existing queryId [%s]!", queryId);
     }
     taskDetailsByQueryId.put(queryId, msqTestTaskDetails);
   }
@@ -258,7 +258,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   @Override
   public ListenableFuture<Void> cancelTask(String taskId)
   {
-    getControllerForQueryId(taskId).stop(CancellationReason.TASK_SHUTDOWN);
+    getControllerForQueryId(taskId).stop(CancellationReason.TASK_SHUTDOWN, null);
     return Futures.immediateFuture(null);
   }
 

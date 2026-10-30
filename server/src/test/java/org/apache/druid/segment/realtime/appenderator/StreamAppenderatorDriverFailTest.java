@@ -50,14 +50,11 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -100,10 +97,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   StreamAppenderatorDriver driver;
   DataSegmentKiller dataSegmentKiller;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setUp()
   {
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
@@ -111,7 +105,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     dataSegmentKiller = createStrictMock(DataSegmentKiller.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     if (driver != null) {
@@ -123,12 +117,6 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   @Test
   public void testFailDuringPersist() throws IOException, InterruptedException, TimeoutException, ExecutionException
   {
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage("Fail test while persisting segments"
-                                    + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
-                                    + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
-
     driver = new StreamAppenderatorDriver(
         createPersistFailAppenderator(),
         allocator,
@@ -144,29 +132,34 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.setHandoffDelay(100);
 
-    Assert.assertNull(driver.startJob(null));
+    Assertions.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
+      Assertions.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
-    driver.publish(
-        StreamAppenderatorDriverTest.makeOkPublisher(),
-        committerSupplier.get(),
-        ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+    final ExecutionException exception = Assertions.assertThrows(
+        ExecutionException.class,
+        () -> driver.publish(
+            StreamAppenderatorDriverTest.makeOkPublisher(),
+            committerSupplier.get(),
+            ImmutableList.of("dummy")
+        ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+    );
+    Assertions.assertTrue(exception.getCause() instanceof ISE);
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "Fail test while persisting segments"
+            + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
+            + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]"
+        )
+    );
   }
 
   @Test
   public void testFailDuringPush() throws IOException, InterruptedException, TimeoutException, ExecutionException
   {
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage("Fail test while pushing segments"
-                                    + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
-                                    + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
-
     driver = new StreamAppenderatorDriver(
         createPushFailAppenderator(),
         allocator,
@@ -182,29 +175,34 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.setHandoffDelay(100);
 
-    Assert.assertNull(driver.startJob(null));
+    Assertions.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
+      Assertions.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
-    driver.publish(
-        StreamAppenderatorDriverTest.makeOkPublisher(),
-        committerSupplier.get(),
-        ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+    final ExecutionException exception = Assertions.assertThrows(
+        ExecutionException.class,
+        () -> driver.publish(
+            StreamAppenderatorDriverTest.makeOkPublisher(),
+            committerSupplier.get(),
+            ImmutableList.of("dummy")
+        ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+    );
+    Assertions.assertTrue(exception.getCause() instanceof ISE);
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "Fail test while pushing segments"
+            + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
+            + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]"
+        )
+    );
   }
 
   @Test
   public void testFailDuringDrop() throws IOException, InterruptedException, TimeoutException, ExecutionException
   {
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage(
-        "Fail test while dropping segment"
-    );
-
     driver = new StreamAppenderatorDriver(
         createDropFailAppenderator(),
         allocator,
@@ -220,10 +218,10 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.setHandoffDelay(100);
 
-    Assert.assertNull(driver.startJob(null));
+    Assertions.assertNull(driver.startJob(null));
 
     committerSupplier.setMetadata(1);
-    Assert.assertTrue(driver.add(ROWS.get(0), "dummy", committerSupplier, false, true).isOk());
+    Assertions.assertTrue(driver.add(ROWS.get(0), "dummy", committerSupplier, false, true).isOk());
 
     final SegmentsAndCommitMetadata published = driver.publish(
         StreamAppenderatorDriverTest.makeOkPublisher(),
@@ -231,27 +229,34 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
-    driver.registerHandoff(published).get();
+    final ExecutionException exception = Assertions.assertThrows(
+        ExecutionException.class,
+        () -> driver.registerHandoff(published).get()
+    );
+    Assertions.assertTrue(exception.getCause() instanceof ISE);
+    Assertions.assertTrue(exception.getMessage().contains("Fail test while dropping segment"));
   }
 
   @Test
   public void testFailDuringPublish() throws Exception
   {
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage("Failed to publish segments because of [test]");
-
-    testFailDuringPublishInternal(false);
+    final ExecutionException exception = Assertions.assertThrows(
+        ExecutionException.class,
+        () -> testFailDuringPublishInternal(false)
+    );
+    Assertions.assertTrue(exception.getCause() instanceof ISE);
+    Assertions.assertTrue(exception.getMessage().contains("Failed to publish segments because of [test]"));
   }
 
   @Test
   public void testFailWithExceptionDuringPublish() throws Exception
   {
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(RuntimeException.class));
-    expectedException.expectMessage("test");
-
-    testFailDuringPublishInternal(true);
+    final ExecutionException exception = Assertions.assertThrows(
+        ExecutionException.class,
+        () -> testFailDuringPublishInternal(true)
+    );
+    Assertions.assertTrue(exception.getCause() instanceof RuntimeException);
+    Assertions.assertTrue(exception.getMessage().contains("test"));
   }
 
   private void testFailDuringPublishInternal(boolean failWithException) throws Exception
@@ -271,11 +276,11 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.setHandoffDelay(100);
 
-    Assert.assertNull(driver.startJob(null));
+    Assertions.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
+      Assertions.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
     if (!failWithException) {

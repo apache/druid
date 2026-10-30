@@ -155,13 +155,13 @@ public class FrontCodedIndexedBenchmark
       frontCodedIndexedWriterIncrementalBuckets.write(StringUtils.toUtf8Nullable(next));
     }
     smooshDirFrontCoded = FileUtils.createTempDir();
-    fileFrontCoded = File.createTempFile("frontCodedIndexedBenchmark", "meta");
+    fileFrontCoded = new File(smooshDirFrontCoded, "meta");
 
     smooshDirGeneric = FileUtils.createTempDir();
-    fileGeneric = File.createTempFile("genericIndexedBenchmark", "meta");
+    fileGeneric = new File(smooshDirGeneric, "meta");
 
     smooshDirFrontCodedIncrementalBuckets = FileUtils.createTempDir();
-    fileFrontCodedIncrementalBuckets = File.createTempFile("frontCodedIndexedBenchmarkv1Buckets", "meta");
+    fileFrontCodedIncrementalBuckets = new File(smooshDirFrontCodedIncrementalBuckets, "meta");
 
     EncodingSizeProfiler.encodedSize = (int) ("generic".equals(indexType)
                                               ? genericIndexedWriter.getSerializedSize()

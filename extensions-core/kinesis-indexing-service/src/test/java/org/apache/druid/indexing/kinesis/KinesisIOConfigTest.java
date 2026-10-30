@@ -31,13 +31,10 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.indexing.IOConfig;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -53,9 +50,6 @@ public class KinesisIOConfigTest
     mapper = new DefaultObjectMapper();
     mapper.registerModules(new KinesisIndexingServiceModule().getJacksonModules());
   }
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testSerdeWithDefaults() throws Exception
@@ -77,25 +71,25 @@ public class KinesisIOConfigTest
         ), IOConfig.class
     );
 
-    Assert.assertNull(config.getTaskGroupId());
-    Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertNull(config.getTaskGroupId());
+    Assertions.assertEquals("my-sequence-name", config.getBaseSequenceName());
+    Assertions.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
         config.getStartSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
         config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertTrue(config.isUseTransaction());
-    Assert.assertNull("minimumMessageTime", config.getMinimumMessageTime());
-    Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
-    Assert.assertEquals(config.getFetchDelayMillis(), 0);
-    Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
-    Assert.assertNull(config.getAwsAssumedRoleArn());
-    Assert.assertNull(config.getAwsExternalId());
+    Assertions.assertTrue(config.isUseTransaction());
+    Assertions.assertNull(config.getMinimumMessageTime(), "minimumMessageTime");
+    Assertions.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
+    Assertions.assertEquals(config.getFetchDelayMillis(), 0);
+    Assertions.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
+    Assertions.assertNull(config.getAwsAssumedRoleArn());
+    Assertions.assertNull(config.getAwsExternalId());
   }
 
   @Test
@@ -125,26 +119,26 @@ public class KinesisIOConfigTest
         ), IOConfig.class
     );
 
-    Assert.assertEquals((Integer) 0, config.getTaskGroupId());
-    Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals((Integer) 0, config.getTaskGroupId());
+    Assertions.assertEquals("my-sequence-name", config.getBaseSequenceName());
+    Assertions.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
         config.getStartSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
         config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertFalse(config.isUseTransaction());
-    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime());
-    Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime());
-    Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
-    Assert.assertEquals(config.getStartSequenceNumbers().getExclusivePartitions(), ImmutableSet.of("0"));
-    Assert.assertEquals(1000, config.getFetchDelayMillis());
-    Assert.assertEquals("role", config.getAwsAssumedRoleArn());
-    Assert.assertEquals("awsexternalid", config.getAwsExternalId());
+    Assertions.assertFalse(config.isUseTransaction());
+    Assertions.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime());
+    Assertions.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime());
+    Assertions.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
+    Assertions.assertEquals(config.getStartSequenceNumbers().getExclusivePartitions(), ImmutableSet.of("0"));
+    Assertions.assertEquals(1000, config.getFetchDelayMillis());
+    Assertions.assertEquals("role", config.getAwsAssumedRoleArn());
+    Assertions.assertEquals("awsexternalid", config.getAwsExternalId());
   }
 
   @Test
@@ -157,10 +151,12 @@ public class KinesisIOConfigTest
                      + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("baseSequenceName"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
+    Assertions.assertInstanceOf(NullPointerException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("baseSequenceName"));
   }
 
   @Test
@@ -173,10 +169,12 @@ public class KinesisIOConfigTest
                      + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("startSequenceNumbers"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
+    Assertions.assertInstanceOf(NullPointerException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("startSequenceNumbers"));
   }
 
   @Test
@@ -189,10 +187,12 @@ public class KinesisIOConfigTest
                      + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}}\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("endSequenceNumbers"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
+    Assertions.assertInstanceOf(NullPointerException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("endSequenceNumbers"));
   }
 
   @Test
@@ -206,10 +206,12 @@ public class KinesisIOConfigTest
                      + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"notmystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-    exception.expectMessage(CoreMatchers.containsString("must match"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
+    Assertions.assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("must match"));
   }
 
   @Test
@@ -223,10 +225,14 @@ public class KinesisIOConfigTest
                      + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"2\":\"200\"}}\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-    exception.expectMessage(CoreMatchers.containsString("start partition set and end partition set must match"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
+    Assertions.assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+    Assertions.assertTrue(
+        exception.getMessage().contains("start partition set and end partition set must match")
+    );
   }
 
   @Test
@@ -239,10 +245,12 @@ public class KinesisIOConfigTest
                      + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("endpoint"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
+    Assertions.assertInstanceOf(NullPointerException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("endpoint"));
   }
 
   @Test
@@ -277,23 +285,23 @@ public class KinesisIOConfigTest
         IOConfig.class
     );
 
-    Assert.assertEquals(currentConfig.getBaseSequenceName(), oldConfig.getBaseSequenceName());
-    Assert.assertEquals(
+    Assertions.assertEquals(currentConfig.getBaseSequenceName(), oldConfig.getBaseSequenceName());
+    Assertions.assertEquals(
         currentConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap(),
         oldConfig.getStartPartitions().getPartitionSequenceNumberMap()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         currentConfig.getStartSequenceNumbers().getExclusivePartitions(),
         oldConfig.getExclusiveStartSequenceNumberPartitions()
     );
-    Assert.assertEquals(currentConfig.getEndSequenceNumbers(), oldConfig.getEndPartitions());
-    Assert.assertEquals(currentConfig.isUseTransaction(), oldConfig.isUseTransaction());
-    Assert.assertEquals(currentConfig.getMinimumMessageTime(), oldConfig.getMinimumMessageTime());
-    Assert.assertEquals(currentConfig.getMaximumMessageTime(), oldConfig.getMaximumMessageTime());
-    Assert.assertEquals(currentConfig.getEndpoint(), oldConfig.getEndpoint());
-    Assert.assertEquals(currentConfig.getFetchDelayMillis(), oldConfig.getFetchDelayMillis());
-    Assert.assertEquals(currentConfig.getAwsAssumedRoleArn(), oldConfig.getAwsAssumedRoleArn());
-    Assert.assertEquals(currentConfig.getAwsExternalId(), oldConfig.getAwsExternalId());
+    Assertions.assertEquals(currentConfig.getEndSequenceNumbers(), oldConfig.getEndPartitions());
+    Assertions.assertEquals(currentConfig.isUseTransaction(), oldConfig.isUseTransaction());
+    Assertions.assertEquals(currentConfig.getMinimumMessageTime(), oldConfig.getMinimumMessageTime());
+    Assertions.assertEquals(currentConfig.getMaximumMessageTime(), oldConfig.getMaximumMessageTime());
+    Assertions.assertEquals(currentConfig.getEndpoint(), oldConfig.getEndpoint());
+    Assertions.assertEquals(currentConfig.getFetchDelayMillis(), oldConfig.getFetchDelayMillis());
+    Assertions.assertEquals(currentConfig.getAwsAssumedRoleArn(), oldConfig.getAwsAssumedRoleArn());
+    Assertions.assertEquals(currentConfig.getAwsExternalId(), oldConfig.getAwsExternalId());
   }
 
   @Test
@@ -319,24 +327,24 @@ public class KinesisIOConfigTest
     final byte[] json = oldMapper.writeValueAsBytes(oldConfig);
     final KinesisIndexTaskIOConfig currentConfig = (KinesisIndexTaskIOConfig) mapper.readValue(json, IOConfig.class);
 
-    Assert.assertNull(currentConfig.getTaskGroupId());
-    Assert.assertEquals(oldConfig.getBaseSequenceName(), currentConfig.getBaseSequenceName());
-    Assert.assertEquals(
+    Assertions.assertNull(currentConfig.getTaskGroupId());
+    Assertions.assertEquals(oldConfig.getBaseSequenceName(), currentConfig.getBaseSequenceName());
+    Assertions.assertEquals(
         oldConfig.getStartPartitions().getPartitionSequenceNumberMap(),
         currentConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         oldConfig.getExclusiveStartSequenceNumberPartitions(),
         currentConfig.getStartSequenceNumbers().getExclusivePartitions()
     );
-    Assert.assertEquals(oldConfig.getEndPartitions(), currentConfig.getEndSequenceNumbers());
-    Assert.assertEquals(oldConfig.isUseTransaction(), currentConfig.isUseTransaction());
-    Assert.assertEquals(oldConfig.getMinimumMessageTime(), currentConfig.getMinimumMessageTime());
-    Assert.assertEquals(oldConfig.getMaximumMessageTime(), currentConfig.getMaximumMessageTime());
-    Assert.assertEquals(oldConfig.getEndpoint(), currentConfig.getEndpoint());
-    Assert.assertEquals(oldConfig.getFetchDelayMillis(), currentConfig.getFetchDelayMillis());
-    Assert.assertEquals(oldConfig.getAwsAssumedRoleArn(), currentConfig.getAwsAssumedRoleArn());
-    Assert.assertEquals(oldConfig.getAwsExternalId(), currentConfig.getAwsExternalId());
+    Assertions.assertEquals(oldConfig.getEndPartitions(), currentConfig.getEndSequenceNumbers());
+    Assertions.assertEquals(oldConfig.isUseTransaction(), currentConfig.isUseTransaction());
+    Assertions.assertEquals(oldConfig.getMinimumMessageTime(), currentConfig.getMinimumMessageTime());
+    Assertions.assertEquals(oldConfig.getMaximumMessageTime(), currentConfig.getMaximumMessageTime());
+    Assertions.assertEquals(oldConfig.getEndpoint(), currentConfig.getEndpoint());
+    Assertions.assertEquals(oldConfig.getFetchDelayMillis(), currentConfig.getFetchDelayMillis());
+    Assertions.assertEquals(oldConfig.getAwsAssumedRoleArn(), currentConfig.getAwsAssumedRoleArn());
+    Assertions.assertEquals(oldConfig.getAwsExternalId(), currentConfig.getAwsExternalId());
   }
 
   private static class OldKinesisIndexTaskIoConfig implements IOConfig

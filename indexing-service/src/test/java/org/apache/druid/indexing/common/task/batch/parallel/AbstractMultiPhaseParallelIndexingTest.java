@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -53,12 +52,13 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -155,7 +155,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
-    Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
+    Assertions.assertEquals(expectedTaskStatus, taskStatus.getStatusCode(), "Actual task status: " + taskStatus);
   }
 
   DataSegmentsWithSchemas runTask(Task task, TaskState expectedTaskStatus)
@@ -167,7 +167,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   TaskReport.ReportMap runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
-    return FutureUtils.getUnchecked(getIndexingServiceClient().taskReportAsMap(task.getId()), true);
+    // Live reports always omit oversizedSegments; use the completion report written after publish.
+    final ParallelIndexSupervisorTask executedTask =
+        (ParallelIndexSupervisorTask) getIndexingServiceClient().getTaskContainer(task.getId()).getTask();
+    return executedTask.getCompletionReports();
   }
 
   protected ParallelIndexSupervisorTask createTask(
@@ -256,11 +259,11 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
 
   private Segment loadSegment(DataSegment dataSegment, File tempSegmentDir)
   {
-    final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper())
-        .manufacturate(tempSegmentDir, false);
+    final SegmentCacheManager cacheManager = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, getObjectMapper())
+        .manufacturate(tempSegmentDir, null, false, false);
     try {
       cacheManager.load(dataSegment);
-      return cacheManager.acquireCachedSegment(dataSegment.getId()).orElseThrow();
+      return cacheManager.acquireCachedSegment(dataSegment.getId(), AcquireMode.FULL).orElseThrow();
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

@@ -50,14 +50,13 @@ import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
-import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -83,9 +82,9 @@ public class MSQTaskSqlEngine implements SqlEngine
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS =
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
-                  .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
-                  .add(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT)
-                  .add(MultiStageQueryContext.CTX_IS_REINDEX)
+                  .add(QueryContextParameters.TIME_COLUMN.getName())
+                  .add(QueryContextParameters.EXPORT_FILE_FORMAT.getName())
+                  .add(QueryContextParameters.IS_REINDEX.getName())
                   .build();
 
   public static final List<String> TASK_STRUCT_FIELD_NAMES = ImmutableList.of("TASK");
@@ -158,6 +157,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       case GROUPING_SETS:
       case ALLOW_TOP_LEVEL_UNION_ALL:
       case GROUPBY_IMPLICITLY_SORTS:
+      case CAN_DDL:
         return false;
       case WINDOW_FUNCTIONS:
       case WINDOW_LEAF_OPERATOR:
@@ -206,11 +206,7 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateInsert(
         relRoot,
         destination instanceof TableDestination
-        ? plannerContext.getPlannerToolbox()
-                        .rootSchema()
-                        .getNamedSchema(plannerContext.getPlannerToolbox().druidSchemaName())
-                        .getSchema()
-                        .getTable(((TableDestination) destination).getTableName())
+        ? plannerContext.getDruidTable(((TableDestination) destination).getTableName())
         : null,
         plannerContext
     );
@@ -231,13 +227,13 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   /**
-   * Checks if the SELECT contains {@link DruidSqlInsert#SQL_INSERT_SEGMENT_GRANULARITY} in the context. This is a
-   * defensive cheeck because {@link org.apache.druid.sql.calcite.planner.DruidPlanner} should have called the
+   * Checks if the SELECT contains {@link QueryContextParameters#SQL_INSERT_SEGMENT_GRANULARITY} in the context. This is
+   * a defensive cheeck because {@link org.apache.druid.sql.calcite.planner.DruidPlanner} should have called the
    * {@link #validateContext}
    */
   private static void validateSelect(final PlannerContext plannerContext)
   {
-    if (plannerContext.queryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
+    if (plannerContext.queryContext().has(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY)) {
       throw DruidException
           .forPersona(DruidException.Persona.DEVELOPER)
           .ofCategory(DruidException.Category.DEFENSIVE)
@@ -245,7 +241,7 @@ public class MSQTaskSqlEngine implements SqlEngine
               "The SELECT query's context contains invalid parameter [%s] which is supposed to be populated "
               + "by Druid for INSERT queries. If the user is seeing this exception, that means there's a bug in Druid "
               + "that is populating the query context with the segment's granularity.",
-              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
+              QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY
           );
     }
   }
@@ -463,7 +459,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   /**
    * Validate that the sort order given by CLUSTERED BY or {@link MultiStageQueryContext#getSortOrder(QueryContext)}
-   * begins with {@link ColumnHolder#TIME_COLUMN_NAME}, unless {@link MultiStageQueryContext#CTX_FORCE_TIME_SORT}
+   * begins with {@link ColumnHolder#TIME_COLUMN_NAME}, unless {@link QueryContextParameters#FORCE_SEGMENT_SORT_BY_TIME}
    * is set.
    *
    * @param fieldMappings  field mappings from {@link #validateInsert(RelRoot, Table, PlannerContext)}
@@ -494,9 +490,9 @@ public class MSQTaskSqlEngine implements SqlEngine
       if (!timeIsFirst) {
         throw InvalidSqlInput.exception(
             "Context parameter[%s] must start with[%s] unless context parameter[%s] is set to[false]. %s",
-            MultiStageQueryContext.CTX_SORT_ORDER,
+            QueryContextParameters.SEGMENT_SORT_ORDER,
             ColumnHolder.TIME_COLUMN_NAME,
-            MultiStageQueryContext.CTX_FORCE_TIME_SORT,
+            QueryContextParameters.FORCE_SEGMENT_SORT_BY_TIME,
             DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
         );
       }
@@ -524,7 +520,7 @@ public class MSQTaskSqlEngine implements SqlEngine
             + "is set to[false]. %s",
             ColumnHolder.TIME_COLUMN_NAME,
             timePositionInCollation,
-            MultiStageQueryContext.CTX_FORCE_TIME_SORT,
+            QueryContextParameters.FORCE_SEGMENT_SORT_BY_TIME,
             DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
         );
       }
@@ -557,7 +553,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       );
     }
     catch (Exception e) {
-      // This is a defensive check as the DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY in the query context is
+      // This is a defensive check as the QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY in the query context is
       // populated by Druid. If the user entered an incorrect granularity, that should have been flagged before reaching
       // here.
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
@@ -565,8 +561,8 @@ public class MSQTaskSqlEngine implements SqlEngine
                           .build(
                               e,
                               "[%s] is not a valid value for [%s]",
-                              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY),
-                              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
+                              plannerContext.queryContext().get(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY.getName()),
+                              QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY
                           );
 
     }

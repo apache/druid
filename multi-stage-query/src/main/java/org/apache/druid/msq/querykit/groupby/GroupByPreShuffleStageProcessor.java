@@ -42,6 +42,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -167,6 +168,14 @@ public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
     }
 
     return filteredSlices;
+  }
+
+  @Override
+  protected AcquireMode getDefaultAcquireMode()
+  {
+    // GroupBy reads segments through the async cursor API, so acquire them partially: only the columns the query
+    // touches are downloaded.
+    return AcquireMode.PARTIAL;
   }
 
   @Override

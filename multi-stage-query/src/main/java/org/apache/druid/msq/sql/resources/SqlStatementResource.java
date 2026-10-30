@@ -27,6 +27,8 @@ import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.api.core.HttpContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
@@ -60,7 +62,6 @@ import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
@@ -74,6 +75,7 @@ import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -98,10 +100,8 @@ import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.NotNull;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -122,13 +122,17 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-
 @Path("/druid/v2/sql/statements/")
 public class SqlStatementResource
 {
 
+  /**
+   * @deprecated Use {@link QueryContextParameters#RESULT_FORMAT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String RESULT_FORMAT = "__resultFormat";
   public static final String CONTENT_DISPOSITION_RESPONSE_HEADER = "Content-Disposition";
+
   private static final Pattern FILENAME_PATTERN = Pattern.compile("^[^/:*?><\\\\\"|\0\n\r]*$");
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
@@ -195,16 +199,16 @@ public class SqlStatementResource
     final HttpStatement stmt;
 
     try {
-      if (sqlQuery.getContext().containsKey(RESULT_FORMAT)) {
-        throw InvalidInput.exception("Query context parameter [%s] is not allowed", RESULT_FORMAT);
+      if (sqlQuery.getContext().containsKey(QueryContextParameters.RESULT_FORMAT.getName())) {
+        throw InvalidInput.exception("Query context parameter [%s] is not allowed", QueryContextParameters.RESULT_FORMAT);
       }
       sqlQueryPlus = SqlResource.makeSqlQueryPlus(
           sqlQuery,
           req,
-          ImmutableMap.<String, Object>builder()
+          QueryContext.builder()
                       .putAll(queryConfigProvider.getContext())
-                      .put(RESULT_FORMAT, sqlQuery.getResultFormat())
-                      .build()
+                      .put(QueryContextParameters.RESULT_FORMAT, sqlQuery.getResultFormat().toString())
+                      .toMap()
       );
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
@@ -717,7 +721,7 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = (MSQControllerTask) taskPayloadResponse.getPayload();
     String queryUser = String.valueOf(msqControllerTask.getQuerySpec()
                                                        .getContext()
-                                                       .get(MSQTaskQueryMaker.USER_KEY));
+                                                       .get(QueryContextParameters.USER));
 
     String currentUser = authenticationResult.getIdentity();
 
@@ -746,8 +750,8 @@ public class SqlStatementResource
   {
     if (resultFormatParam == null) {
       return QueryContexts.getAsEnum(
-          RESULT_FORMAT,
-          msqSpec.getContext().get(RESULT_FORMAT),
+          QueryContextParameters.RESULT_FORMAT.getName(),
+          msqSpec.getContext().get(QueryContextParameters.RESULT_FORMAT),
           ResultFormat.class,
           ResultFormat.DEFAULT_RESULT_FORMAT
       );
@@ -958,13 +962,13 @@ public class SqlStatementResource
 
   private void contextChecks(QueryContext queryContext)
   {
-    ExecutionMode executionMode = queryContext.getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, null);
+    final ExecutionMode executionMode = queryContext.get(QueryContextParameters.EXECUTION_MODE);
 
     if (executionMode == null) {
       throw InvalidInput.exception(
           "Execution mode is not provided to the sql statement api. "
           + "Please set [%s] to [%s] in the query context",
-          QueryContexts.CTX_EXECUTION_MODE,
+          QueryContextParameters.EXECUTION_MODE,
           ExecutionMode.ASYNC
       );
     }
@@ -974,7 +978,7 @@ public class SqlStatementResource
           "The sql statement api currently does not support the provided execution mode [%s]. "
           + "Please set [%s] to [%s] in the query context",
           executionMode,
-          QueryContexts.CTX_EXECUTION_MODE,
+          QueryContextParameters.EXECUTION_MODE,
           ExecutionMode.ASYNC
       );
     }
@@ -997,7 +1001,7 @@ public class SqlStatementResource
                                   + "as it allows the user to fetch large result sets. Please contact your cluster admin to "
                                   + "configure durable storage.",
                                   MSQSelectDestination.DURABLESTORAGE.getName(),
-                                  MultiStageQueryContext.CTX_SELECT_DESTINATION,
+                                  QueryContextParameters.SELECT_DESTINATION,
                                   NodeRole.BROKER.getJsonName()
                               )
                           );

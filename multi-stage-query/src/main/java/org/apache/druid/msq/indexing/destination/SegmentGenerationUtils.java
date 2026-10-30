@@ -22,11 +22,13 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
@@ -44,8 +46,8 @@ import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -57,7 +59,6 @@ import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.Transform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.utils.CollectionUtils;
@@ -65,6 +66,7 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -85,20 +87,6 @@ public final class SegmentGenerationUtils
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
     final boolean isRollupQuery = isRollupQuery(query);
-    final boolean forceSegmentSortByTime =
-        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getContext());
-
-    final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
-        makeDimensionsAndAggregatorsForIngestion(
-            querySignature,
-            queryClusterBy,
-            destination.getSegmentSortOrder(),
-            forceSegmentSortByTime,
-            columnMappings,
-            isRollupQuery,
-            query,
-            destination.getDimensionSchemas()
-        );
 
     final TransformSpec transformSpec;
     if (query.getFilter() != null) {
@@ -112,6 +100,41 @@ public final class SegmentGenerationUtils
     } else {
       transformSpec = null;
     }
+
+    // base-table mode, the destination supplies the base-table shape
+    if (destination.getBaseTable() != null) {
+      final Granularity queryGranularity =
+          query.context().getGranularity(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY.getName(), jsonMapper);
+      final BaseTableProjectionSpec declared =
+          destination.getBaseTable().withQueryGranularity(queryGranularity);
+      // The query may produce columns the base table does not declare, which happens when the target table does not
+      // require a strict schema. Store them rather than drop them; they are appended after the declared columns, so
+      // the shape the operator asked for is unchanged.
+      final BaseTableProjectionSpec baseTable = declared.withAdditionalColumns(
+          undeclaredColumns(declared, querySignature, columnMappings, query, destination.getDimensionSchemas())
+      );
+      return DataSchema.builder()
+                       .withDataSource(destination.getDataSource())
+                       .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
+                       .withTransform(transformSpec)
+                       .withBaseTable(baseTable)
+                       .withProjections(destination.getProjections())
+                       .build();
+    }
+
+    final boolean forceSegmentSortByTime =
+        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getContext());
+    final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
+        makeDimensionsAndAggregatorsForIngestion(
+            querySignature,
+            queryClusterBy,
+            destination.getSegmentSortOrder(),
+            forceSegmentSortByTime,
+            columnMappings,
+            isRollupQuery,
+            query,
+            destination.getDimensionSchemas()
+        );
     return DataSchema.builder()
                      .withDataSource(destination.getDataSource())
                      .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
@@ -136,10 +159,10 @@ public final class SegmentGenerationUtils
   )
   {
     final Granularity insertQueryGranularity =
-        query.context().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper);
+        query.context().getGranularity(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY.getName(), jsonMapper);
     if (isRollupQuery) {
       final String queryGranularityString =
-          query.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
+          query.context().getOrDefault(QueryContextParameters.TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
 
       if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularityString.isEmpty()) {
         try {
@@ -160,7 +183,7 @@ public final class SegmentGenerationUtils
    * The logic here is roundabout. First, we check which column in the {@link GroupByQuery} corresponds to the
    * output column {@link ColumnHolder#TIME_COLUMN_NAME}, using our {@link ColumnMappings}. Then, we check for the
    * presence of an optimization done in {@link DruidQuery#toGroupByQuery()}, where the context parameter
-   * {@link GroupByQuery#CTX_TIMESTAMP_RESULT_FIELD} and various related parameters are set when one of the dimensions
+   * {@link QueryContextParameters#TIMESTAMP_RESULT_FIELD} and various related parameters are set when one of the dimensions
    * is detected to be a time-floor. Finally, we check that the name of that dimension, and the name of our time field
    * from {@link ColumnMappings}, are the same.
    */
@@ -170,7 +193,7 @@ public final class SegmentGenerationUtils
 
     if (positions.size() == 1) {
       final String queryTimeColumn = columnMappings.getQueryColumnName(positions.getInt(0));
-      return queryTimeColumn.equals(groupByQuery.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
+      return queryTimeColumn.equals(groupByQuery.context().get(QueryContextParameters.TIMESTAMP_RESULT_FIELD));
     } else {
       return false;
     }
@@ -185,7 +208,7 @@ public final class SegmentGenerationUtils
    * aggregations.
    * - The query must not finalize aggregations, because rollup requires inserting the intermediate type of
    * complex aggregations, not the finalized type. (So further rollup is possible.)
-   * - The query must explicitly disable {@link GroupByQueryConfig#CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING}, because
+   * - The query must explicitly disable {@link QueryContextParameters#GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING}, because
    * groupBy on multi-value dimensions implicitly unnests, which is not desired behavior for rollup at ingestion time
    * (rollup expects multi-value dimensions to be treated as arrays).
    */
@@ -193,7 +216,63 @@ public final class SegmentGenerationUtils
   {
     return query instanceof GroupByQuery
            && !MultiStageQueryContext.isFinalizeAggregations(query.context())
-           && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
+           && !query.context().getOrDefault(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING, true);
+  }
+
+  /**
+   * The columns a query produces that a base table does not declare, in query output order, as the
+   * {@link DimensionSchema}s they should be stored with.
+   * <p>
+   * A base table declares the columns an operator asked for. When the target table does not require a strict schema,
+   * a query may produce others; they are stored so that ingesting a column is never silently a no-op.
+   */
+  private static List<DimensionSchema> undeclaredColumns(
+      final BaseTableProjectionSpec baseTable,
+      final RowSignature querySignature,
+      final ColumnMappings columnMappings,
+      final Query<?> query,
+      @Nullable final Map<String, DimensionSchema> dimensionSchemas
+  )
+  {
+    final Set<String> declared = new HashSet<>();
+    for (DimensionSchema dimension : baseTable.getDimensionsSpec().getDimensions()) {
+      declared.add(dimension.getName());
+    }
+    for (AggregatorFactory metric : baseTable.getMetrics() == null ? new AggregatorFactory[0] : baseTable.getMetrics()) {
+      declared.add(metric.getName());
+    }
+    // The time column is positional in a base table, never appended.
+    declared.add(ColumnHolder.TIME_COLUMN_NAME);
+
+    final List<DimensionSchema> undeclared = new ArrayList<>();
+    for (final String outputColumnName : columnMappings.getOutputColumnNames()) {
+      if (!declared.add(outputColumnName)) {
+        continue;
+      }
+      final int outputColumn = CollectionUtils.getOnlyElement(
+          columnMappings.getOutputColumnsByName(outputColumnName),
+          xs -> new ISE("Expected single output column for name [%s], but got [%s]", outputColumnName, xs)
+      );
+      final String queryColumn = columnMappings.getQueryColumnName(outputColumn);
+      final ColumnType type =
+          querySignature.getColumnType(queryColumn)
+                        .orElseThrow(() -> new ISE("No type for column [%s]", outputColumnName));
+
+      if (type.is(ValueType.COMPLEX)) {
+        final String typeName = type.getComplexTypeName();
+        if (typeName == null || !DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(typeName)) {
+          // A base table stores columns as dimensions, so a complex type with no dimension handler has nowhere to go
+          throw InvalidInput.exception(
+              "Column [%s] has type [%s], which cannot be stored in a base table that does not declare it. Declare the"
+              + " column in the table, or cast it to a type that can be stored as a dimension",
+              outputColumnName,
+              type
+          );
+        }
+      }
+      undeclared.add(getDimensionSchema(outputColumnName, type, query.context(), dimensionSchemas));
+    }
+    return undeclared;
   }
 
   private static DimensionSchema getDimensionSchema(
@@ -238,8 +317,8 @@ public final class SegmentGenerationUtils
           + "separation between multi-value strings and true arrays. In either[mvd] or[array] mode, you can write "
           + "out multi-value string dimensions using ARRAY_TO_MV. "
           + "See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode for more details.",
-          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
+          QueryContextParameters.ARRAY_INGEST_MODE,
+          QueryContextParameters.ARRAY_INGEST_MODE
       );
     }
 

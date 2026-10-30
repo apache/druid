@@ -33,6 +33,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Wraps an {@link ExecutorService} into a {@link ScheduledExecutorService}.
@@ -188,7 +189,10 @@ public class WrappingScheduledExecutorService implements ScheduledExecutorServic
    */
   private static class WrappingScheduledFuture<V> implements ScheduledFuture<V>
   {
+    private static final AtomicLong NEXT_SEQUENCE_NUMBER = new AtomicLong();
+
     private final Future<V> future;
+    private final long sequenceNumber = NEXT_SEQUENCE_NUMBER.getAndIncrement();
 
     private WrappingScheduledFuture(Future<V> future)
     {
@@ -202,9 +206,27 @@ public class WrappingScheduledExecutorService implements ScheduledExecutorServic
     }
 
     @Override
-    public int compareTo(Delayed o)
+    public int compareTo(final Delayed o)
     {
-      return 0;
+      if (this == o) {
+        return 0;
+      }
+      if (o instanceof WrappingScheduledFuture) {
+        return Long.compare(sequenceNumber, ((WrappingScheduledFuture<?>) o).sequenceNumber);
+      }
+      return getClass().getName().compareTo(o.getClass().getName());
+    }
+
+    @Override
+    public boolean equals(final Object o)
+    {
+      return this == o;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return System.identityHashCode(this);
     }
 
     @Override

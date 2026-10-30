@@ -35,6 +35,7 @@ import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -328,8 +329,8 @@ public class GroupByQueryEngine
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : granularizer.getBucketStart();
       this.allSingleValueDims = allSingleValueDims;
-      this.allowMultiValueGrouping = query.context().getBoolean(
-          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+      this.allowMultiValueGrouping = query.context().getOrDefault(
+          QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING,
           true
       );
     }
@@ -751,16 +752,16 @@ public class GroupByQueryEngine
     @Override
     protected void aggregateSingleValueDims(Grouper<IntKey> grouper)
     {
-      aggregateSingleValueDims((IntGrouper) grouper);
+      aggregateSingleValueDimsWithIntGrouper((IntGrouper) grouper);
     }
 
     @Override
     protected void aggregateMultiValueDims(Grouper<IntKey> grouper)
     {
-      aggregateMultiValueDims((IntGrouper) grouper);
+      aggregateMultiValueDimsWithIntGrouper((IntGrouper) grouper);
     }
 
-    private void aggregateSingleValueDims(IntGrouper grouper)
+    private void aggregateSingleValueDimsWithIntGrouper(IntGrouper grouper)
     {
       // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
       // It accesses dimension selectors directly and only works on truly dictionary-coded columns.
@@ -783,7 +784,7 @@ public class GroupByQueryEngine
       }
     }
 
-    private void aggregateMultiValueDims(IntGrouper grouper)
+    private void aggregateMultiValueDimsWithIntGrouper(IntGrouper grouper)
     {
       // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
       // It accesses dimension selectors directly and only works on truly dictionary-coded columns.

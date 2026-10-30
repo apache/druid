@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -88,7 +89,8 @@ public class CompactionStatus
       Evaluator::dimensionsSpecIsUpToDate,
       Evaluator::metricsSpecIsUpToDate,
       Evaluator::transformSpecIsUpToDate,
-      Evaluator::projectionsAreUpToDate
+      Evaluator::projectionsAreUpToDate,
+      Evaluator::baseTableIsUpToDate
   );
 
   private final State state;
@@ -569,6 +571,11 @@ public class CompactionStatus
       return evaluateForAllCompactionStates(this::projectionsAreUpToDate);
     }
 
+    private CompactionStatus baseTableIsUpToDate()
+    {
+      return evaluateForAllCompactionStates(this::baseTableIsUpToDate);
+    }
+
     private CompactionStatus segmentGranularityIsUpToDate()
     {
       return evaluateForAllCompactionStates(this::segmentGranularityIsUpToDate);
@@ -638,6 +645,25 @@ public class CompactionStatus
       );
     }
 
+    private CompactionStatus baseTableIsUpToDate(CompactionState lastCompactionState)
+    {
+      // The baseTable spec compares its own state; segment/query granularity and rollup are covered by their own
+      // checks, so the spec excludes them. A null configured baseTable means "don't care".
+      //
+      // When the config is not sealed, the compaction task appends the columns it finds in the segments to the spec,
+      // so the recorded state is a superset of the configured one and a strict comparison would recompact forever.
+      // The relaxed comparison accepts that superset. The cost is that the config-derived fingerprint never matches
+      // either, so these datasources always fall through to this field-by-field pass instead of the fingerprint fast
+      // path; recording the declared spec instead is not an option, since it would misdescribe the segment.
+      final BaseTableProjectionSpec configured = compactionConfig.getBaseTable();
+      final BaseTableProjectionSpec current = lastCompactionState.getBaseTable();
+      if (configured == null
+          || (current != null && configured.hasEqualCompactionState(current, !compactionConfig.isSealed()))) {
+        return COMPLETE;
+      }
+      return configChanged("baseTable", configured, current, String::valueOf);
+    }
+
     private CompactionStatus inputBytesAreWithinLimit()
     {
       final long inputSegmentSize = compactionConfig.getInputSegmentSizeBytes();
@@ -659,9 +685,18 @@ public class CompactionStatus
       }
 
       final Granularity configuredSegmentGranularity = configuredGranularitySpec.getSegmentGranularity();
-      final UserCompactionTaskGranularityConfig existingGranularitySpec = getGranularitySpec(lastCompactionState);
-      final Granularity existingSegmentGranularity
-          = existingGranularitySpec == null ? null : existingGranularitySpec.getSegmentGranularity();
+      final Granularity existingSegmentGranularity;
+      if (lastCompactionState.getBaseTable() != null) {
+        // baseTable mode: segment granularity is recorded in the SegmentGranularitySpec, not the (null) GranularitySpec.
+        existingSegmentGranularity = lastCompactionState.getSegmentGranularitySpec() == null
+                                     ? null
+                                     : lastCompactionState.getSegmentGranularitySpec().getSegmentGranularity();
+      } else {
+        final UserCompactionTaskGranularityConfig existingGranularitySpec = getGranularitySpec(lastCompactionState);
+        existingSegmentGranularity = existingGranularitySpec == null
+                                     ? null
+                                     : existingGranularitySpec.getSegmentGranularity();
+      }
 
       if (configuredSegmentGranularity.equals(existingSegmentGranularity)) {
         return COMPLETE;
@@ -692,6 +727,9 @@ public class CompactionStatus
 
     private CompactionStatus rollupIsUpToDate(CompactionState lastCompactionState)
     {
+      if (lastCompactionState.getBaseTable() != null) {
+        return COMPLETE;
+      }
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
@@ -710,16 +748,23 @@ public class CompactionStatus
     {
       if (configuredGranularitySpec == null) {
         return COMPLETE;
+      }
+      final Granularity existingQueryGranularity;
+      if (lastCompactionState.getBaseTable() != null) {
+        // baseTable mode: query granularity is owned by the baseTable spec's virtual column, not the (null)
+        // GranularitySpec.
+        existingQueryGranularity = lastCompactionState.getBaseTable().getQueryGranularity();
       } else {
         final UserCompactionTaskGranularityConfig existingGranularitySpec
             = getGranularitySpec(lastCompactionState);
-        return CompactionStatus.completeIfNullOrEqual(
-            "queryGranularity",
-            configuredGranularitySpec.getQueryGranularity(),
-            existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity(),
-            CompactionStatus::asString
-        );
+        existingQueryGranularity = existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity();
       }
+      return CompactionStatus.completeIfNullOrEqual(
+          "queryGranularity",
+          configuredGranularitySpec.getQueryGranularity(),
+          existingQueryGranularity,
+          CompactionStatus::asString
+      );
     }
 
     /**

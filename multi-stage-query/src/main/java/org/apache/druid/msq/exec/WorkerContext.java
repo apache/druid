@@ -28,6 +28,7 @@ import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 
@@ -110,12 +111,26 @@ public interface WorkerContext extends Closeable
   int threadCount();
 
   /**
+   * Effective number of segments to load ahead of when they are needed while processing the given {@code workOrder},
+   * used to size the segment prefetch in {@link org.apache.druid.msq.querykit.ReadableInputQueue}.
+   *
+   * The default honors {@link QueryContextParameters#SEGMENT_LOAD_AHEAD_COUNT} from the work order's context
+   * (set by the controller from client and broker-default context), and otherwise falls back to
+   * {@code 2 * threadCount()}. Implementations may override to layer in worker-local configuration.
+   */
+  default int segmentLoadAheadCount(WorkOrder workOrder)
+  {
+    final Integer fromContext = MultiStageQueryContext.getSegmentLoadAheadCount(workOrder.getWorkerContext());
+    return fromContext != null ? fromContext : threadCount() * 2;
+  }
+
+  /**
    * Fetch node info about self.
    */
   DruidNode selfNode();
 
   /**
-   * Whether to include all counters in reports. See {@link MultiStageQueryContext#CTX_INCLUDE_ALL_COUNTERS} for detail.
+   * Whether to include all counters in reports. See {@link QueryContextParameters#INCLUDE_ALL_COUNTERS} for detail.
    */
   boolean includeAllCounters();
 

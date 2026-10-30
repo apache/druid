@@ -42,9 +42,11 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,6 +61,9 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
   private final List<Segment> mmappedSegments;
   private final List<Segment> inMemorySegments;
   private final List<Segment> mixedSegments;
+
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final AggregationTestHelper topNTestHelper;
   private final AggregationTestHelper groupByTestHelper;
@@ -80,13 +85,13 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     topNTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
         Collections.emptyList(),
-        null
+        temporaryFolder
     );
 
     groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
         new GroupByQueryConfig(),
-        null
+        temporaryFolder
     );
   }
 
@@ -106,7 +111,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupBy(inMemorySegments, false, true);
-      Assert.fail("must need row based methods");
+      Assertions.fail("must need row based methods");
     }
     catch (Exception ex) {
     }
@@ -120,7 +125,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupBy(mixedSegments, false, true);
-      Assert.fail("must need row based methods");
+      Assertions.fail("must need row based methods");
     }
     catch (Exception ex) {
     }
@@ -143,7 +148,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupByWithSelectFilter(inMemorySegments, true, true, true, true);
-      Assert.fail("value matchers must be required");
+      Assertions.fail("value matchers must be required");
     }
     catch (Exception ex) {
 
@@ -158,7 +163,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupByWithSelectFilter(mixedSegments, true, true, true, true);
-      Assert.fail("value matchers must be required");
+      Assertions.fail("value matchers must be required");
     }
     catch (Exception ex) {
 
@@ -182,7 +187,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupByWithRegexFilter(inMemorySegments, true, true, true, true);
-      Assert.fail("value matchers must be required");
+      Assertions.fail("value matchers must be required");
     }
     catch (Exception ex) {
 
@@ -197,7 +202,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupByWithRegexFilter(mixedSegments, true, true, true, true);
-      Assert.fail("value matchers must be required");
+      Assertions.fail("value matchers must be required");
     }
     catch (Exception ex) {
 
@@ -220,7 +225,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testTopN(inMemorySegments, false, true);
-      Assert.fail("must need row based methods");
+      Assertions.fail("must need row based methods");
     }
     catch (Exception ex) {
     }
@@ -234,7 +239,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testTopN(mixedSegments, false, true);
-      Assert.fail("must need row based methods");
+      Assertions.fail("must need row based methods");
     }
     catch (Exception ex) {
     }

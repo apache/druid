@@ -23,11 +23,11 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.pretty.SqlPrettyWriter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.StringReader;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A class containing unit tests for testing implementations of {@link org.apache.calcite.sql.SqlNode#unparse(SqlWriter, int, int)}

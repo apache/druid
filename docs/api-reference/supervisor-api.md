@@ -25,8 +25,8 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-This topic describes the API endpoints to manage and monitor supervisors for Apache Druid.
-The topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
+This topic describes the API endpoints to manage and monitor supervisors for Apache&circledR; Druid.
+The topic uses the Apache Kafka&circledR; term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -2288,12 +2288,21 @@ The following table lists the properties of a supervisor spec:
 |`dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
 |`tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
 
-When you call this endpoint on an existing supervisor, the running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
-This way, you can apply configuration changes without a pause in ingestion.
+When called on an existing supervisor, Druid compares the submitted spec with the running one. If the change requires a restart, the supervisor signals its tasks to stop reading and begin publishing, then exits. Druid creates a new supervisor using the submitted spec, retaining existing publishing tasks and starting new tasks from the previous task offsets. This allows configuration changes without interrupting data processing.
+
+Otherwise, Druid does not restart the supervisor. If the spec is unchanged, the call is a no-op. If the only difference is `taskCount` while task auto-scaling is enabled, Druid persists the updated `taskCount` without restarting the supervisor.
+
+Set `skipRestartIfUnmodified` to false to always restart the supervisor and its tasks, even when the spec is effectively unchanged.
 
 #### URL
 
 `POST` `/druid/indexer/v1/supervisor`
+
+#### Query parameters
+
+|Property|Type|Description|Default|
+|--------|----|-----------|-------|
+|`skipRestartIfUnmodified`|Boolean|Whether to skip restarting the supervisor if the submitted spec is unchanged or differs only in ways that can be applied without a restart. Set to `false` to always restart the supervisor.|`true`|
 
 #### Responses
 
@@ -2445,9 +2454,11 @@ Content-Length: 1359
 
 #### Sample request with `skipRestartIfUnmodified`
 
-The following example sets the `skipRestartIfUnmodified` flag to true. With this flag set to true, the Supervisor will only restart if there has been a modification to the SupervisorSpec. If left unset, the flag defaults to false.
+By default, `skipRestartIfUnmodified` is `true`, so Druid only restarts the supervisor for changes that require it. Set `skipRestartIfUnmodified=false` to always restart the supervisor on this call.
+
+The following example sets `skipRestartIfUnmodified` to `false`, so this call always restarts the supervisor, even if the spec is unchanged.
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true" \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmodified=false" \
 --header 'Content-Type: application/json' \
 --data '{
     "type": "kafka",
@@ -2516,6 +2527,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmo
 
 The response includes the following fields:
 - `id`: The supervisor ID.
+- `modified`: A boolean indicating whether the submitted spec was different from the existing spec and was persisted as a new version.
 - `restarted`: A boolean indicating whether the supervisor was restarted. When `skipRestartIfUnmodified` is set to `true` and the supervisor spec is unchanged, this field will be `false`; otherwise, it will be `true`.
 
 ### Suspend a running supervisor

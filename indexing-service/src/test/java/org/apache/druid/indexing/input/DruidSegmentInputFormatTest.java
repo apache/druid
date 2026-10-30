@@ -27,12 +27,12 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 public class DruidSegmentInputFormatTest
@@ -54,7 +54,7 @@ public class DruidSegmentInputFormatTest
         DruidSegmentReaderTest.makeInputEntity(Intervals.of("2000/P1D"), null, ImmutableList.of("s", "d"), ImmutableList.of("cnt", "met_s")),
         null
     );
-    Assert.assertTrue(reader instanceof DruidSegmentReader);
+    Assertions.assertTrue(reader instanceof DruidSegmentReader);
   }
 
 
@@ -67,7 +67,7 @@ public class DruidSegmentInputFormatTest
         DruidSegmentReaderTest.makeTombstoneInputEntity(Intervals.of("2000/P1D")),
         null
     );
-    Assert.assertTrue(reader instanceof DruidTombstoneSegmentReader);
+    Assertions.assertTrue(reader instanceof DruidTombstoneSegmentReader);
   }
 
   @Test
@@ -84,6 +84,6 @@ public class DruidSegmentInputFormatTest
     String expectedMessage =
         "org.apache.druid.indexing.input.DruidSegmentInputEntity required, but org.apache.druid.data.input.impl.FileEntity provided.";
     String actualMessage = exception.getMessage();
-    Assert.assertEquals(expectedMessage, actualMessage);
+    Assertions.assertEquals(expectedMessage, actualMessage);
   }
 }

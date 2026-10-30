@@ -20,10 +20,10 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 import com.google.common.annotations.Beta;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.impl.ByteEntity;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;
@@ -150,6 +150,15 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * Used by the supervisor auto-scaler to find an optimal task count that minimizes idle time.
    */
   default double getPollIdleRatioMetric()
+  {
+    return -1;
+  }
+
+  /**
+   * Running average of the {@link #getPollIdleRatioMetric()} averaged over the
+   * entire lifecycle of the task.
+   */
+  default double getRunningAvgPollIdleRatio()
   {
     return -1;
   }

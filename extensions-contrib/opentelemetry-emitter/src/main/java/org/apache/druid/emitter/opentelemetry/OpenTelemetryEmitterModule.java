@@ -24,7 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import io.opentelemetry.sdk.autoconfigure.OpenTelemetrySdkAutoConfiguration;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
@@ -32,10 +33,16 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class OpenTelemetryEmitterModule implements DruidModule
 {
   private static final String EMITTER_TYPE = "opentelemetry";
+  // The emitter only produces spans, so the SDK's own metrics and logs are not exported unless configured.
+  private static final Map<String, String> DEFAULT_PROPERTIES = Map.of(
+      "otel.metrics.exporter", "none",
+      "otel.logs.exporter", "none"
+  );
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -55,6 +62,14 @@ public class OpenTelemetryEmitterModule implements DruidModule
   public Emitter getEmitter(OpenTelemetryEmitterConfig config, ObjectMapper mapper)
   {
     // It's a good practice to not set the GlobalOpenTelemetry since there's no need to do that
-    return new OpenTelemetryEmitter(OpenTelemetrySdkAutoConfiguration.initialize(false));
+    return new OpenTelemetryEmitter(buildOpenTelemetrySdk());
+  }
+
+  static OpenTelemetrySdk buildOpenTelemetrySdk()
+  {
+    return AutoConfiguredOpenTelemetrySdk.builder()
+                                         .addPropertiesSupplier(() -> DEFAULT_PROPERTIES)
+                                         .build()
+                                         .getOpenTelemetrySdk();
   }
 }

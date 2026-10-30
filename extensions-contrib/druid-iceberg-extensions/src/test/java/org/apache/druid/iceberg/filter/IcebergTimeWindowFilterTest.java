@@ -27,8 +27,8 @@ import org.apache.iceberg.types.Types;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class IcebergTimeWindowFilterTest
 {
@@ -57,6 +57,6 @@ public class IcebergTimeWindowFilterTest
                    .value()
         )
     );
-    Assert.assertEquals(expectedExpression.toString(), intervalFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), intervalFilter.getFilterExpression().toString());
   }
 }

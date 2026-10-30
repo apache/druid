@@ -21,13 +21,13 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.RequestLogLine;
 
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Set;
 

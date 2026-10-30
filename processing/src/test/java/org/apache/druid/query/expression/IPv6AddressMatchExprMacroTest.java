@@ -24,9 +24,9 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionProcessingException;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.InputBindings;
-import org.junit.Assert;
-import org.junit.Test;
- 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.Collections;
  
@@ -43,58 +43,67 @@ public class IPv6AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(ExpressionValidationException.class, "requires 2 arguments");
-    apply(Collections.emptyList());
+    assertException(
+        ExpressionValidationException.class,
+        "requires 2 arguments",
+        () -> apply(Collections.emptyList())
+    );
   }
  
   @Test
   public void testTooManyArgs()
   {
     Expr extraArgument = ExprEval.ofString("An extra argument").toExpr();
-    expectException(ExpressionValidationException.class, "requires 2 arguments");
-    apply(Arrays.asList(IPV6, IPV6_CIDR, extraArgument));
+    assertException(
+        ExpressionValidationException.class,
+        "requires 2 arguments",
+        () -> apply(Arrays.asList(IPV6, IPV6_CIDR, extraArgument))
+    );
   }
  
   @Test
   public void testSubnetArgInvalid()
   {
-    expectException(ExpressionProcessingException.class, "Function[ipv6_match] failed to parse address");
-    Expr invalidSubnet = ExprEval.ofString("201:ef:168::/invalid").toExpr();
-    apply(Arrays.asList(IPV6, invalidSubnet));
+    final Expr invalidSubnet = ExprEval.ofString("201:ef:168::/invalid").toExpr();
+    assertException(
+        ExpressionProcessingException.class,
+        "Function[ipv6_match] failed to parse address",
+        () -> apply(Arrays.asList(IPV6, invalidSubnet))
+    );
   }
 
   @Test
   public void testNullStringArg()
   {
     Expr nullString = ExprEval.ofString(null).toExpr();
-    Assert.assertFalse(eval(nullString, IPV6_CIDR));
+    Assertions.assertFalse(eval(nullString, IPV6_CIDR));
   }
 
   @Test
   public void testMatchingStringArgIPv6()
   {
-    Assert.assertTrue(eval(IPV6, IPV6_CIDR));
+    Assertions.assertTrue(eval(IPV6, IPV6_CIDR));
   }
  
   @Test
   public void testNotMatchingStringArgIPv6()
   {
     Expr nonMatchingIpv6 = ExprEval.ofString("2002:ef:168::").toExpr();
-    Assert.assertFalse(eval(nonMatchingIpv6, IPV6_CIDR));
+    Assertions.assertFalse(eval(nonMatchingIpv6, IPV6_CIDR));
   }
  
   @Test
   public void testNotIpAddress()
   {
     Expr notIpAddress = ExprEval.ofString("druid.apache.org").toExpr();
-    Assert.assertFalse(eval(notIpAddress, IPV6_CIDR));
+    Assertions.assertFalse(eval(notIpAddress, IPV6_CIDR));
   }
  
   @Test
   public void testInclusive()
   {
     Expr subnet = IPV6_CIDR;
-    Assert.assertTrue(eval(IPV6, subnet));
+    Assertions.assertTrue(eval(IPV6, subnet));
   }
 
   private boolean eval(Expr... args)

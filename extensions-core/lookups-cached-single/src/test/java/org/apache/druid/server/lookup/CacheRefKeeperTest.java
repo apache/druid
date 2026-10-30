@@ -21,8 +21,8 @@ package org.apache.druid.server.lookup;
 
 import org.apache.druid.server.lookup.cache.polling.PollingCache;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CacheRefKeeperTest
 {
@@ -32,7 +32,7 @@ public class CacheRefKeeperTest
   {
     PollingCache mockPollingCache = EasyMock.createStrictMock(PollingCache.class);
     PollingLookup.CacheRefKeeper cacheRefKeeper = new PollingLookup.CacheRefKeeper(mockPollingCache);
-    Assert.assertEquals(mockPollingCache, cacheRefKeeper.getAndIncrementRef());
+    Assertions.assertEquals(mockPollingCache, cacheRefKeeper.getAndIncrementRef());
   }
 
   @Test
@@ -57,8 +57,8 @@ public class CacheRefKeeperTest
     EasyMock.replay(mockPollingCache);
     cacheRefKeeper.doneWithIt();
     EasyMock.verify(mockPollingCache);
-    Assert.assertEquals(null, cacheRefKeeper.getAndIncrementRef());
-    Assert.assertEquals(null, cacheRefKeeper.getAndIncrementRef());
+    Assertions.assertEquals(null, cacheRefKeeper.getAndIncrementRef());
+    Assertions.assertEquals(null, cacheRefKeeper.getAndIncrementRef());
   }
 
 }

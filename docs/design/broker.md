@@ -28,7 +28,7 @@ The Broker service routes queries in a distributed cluster setup. It discovers d
 
 ## Configuration
 
-For Apache Druid Broker service configuration, see [Broker Configuration](../configuration/index.md#broker).
+For Apache&circledR; Druid Broker service configuration, see [Broker Configuration](../configuration/index.md#broker).
 
 For basic tuning guidance for the Broker service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#broker).
 

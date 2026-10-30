@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
@@ -87,7 +88,6 @@ import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -114,6 +114,10 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
    * Only set when {@link ScanQuery#getOrderBys()} is empty.
    */
   private final AtomicLong sharedRunningCountForLimit;
+  /**
+   * Cached result of {@link #getOffsetPlusLimit(ScanQuery)}.
+   */
+  private final long queryOffsetPlusLimit;
   private final ObjectMapper jsonMapper;
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
   private final VirtualColumns frameWriterVirtualColumns;
@@ -168,6 +172,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     );
     this.query = query;
     this.sharedRunningCountForLimit = sharedRunningCountForLimit;
+    this.queryOffsetPlusLimit = getOffsetPlusLimit(query);
     this.jsonMapper = jsonMapper;
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
 
@@ -187,8 +192,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
-    if (sharedRunningCountForLimit != null
-        && sharedRunningCountForLimit.get() >= getQueryOffsetPlusLimit()) {
+    if (isSharedLimitReached(0)) {
       return ReturnOrAwait.returnObject(Unit.instance());
     }
 
@@ -223,14 +227,16 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
    */
   private static ScanQuery prepareScanQueryForDataServer(@NotNull ScanQuery scanQuery)
   {
+    // Add the offset to the limit, and remove the offset, when pushing down a query.
+    final Druids.ScanQueryBuilder builder = Druids.ScanQueryBuilder.copy(scanQuery).offset(0);
+
     if (Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
-      return Druids.ScanQueryBuilder.copy(scanQuery)
-                                    .orderBy(ImmutableList.of())
-                                    .limit(0)
-                                    .build();
+      builder.orderBy(ImmutableList.of()).limit(0);
     } else {
-      return scanQuery;
+      builder.limit(getOffsetPlusLimit(scanQuery));
     }
+
+    return builder.build();
   }
 
   @Override
@@ -483,8 +489,9 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         cursorOffset.increment();
         partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
 
-        // Flush if we reached cursorPushDownLimit.
-        flush = cursorPushDownLimit >= 0 && cursorRowsRead >= cursorPushDownLimit;
+        // Flush if we reached cursorPushDownLimit or the shared limit.
+        flush = (cursorPushDownLimit >= 0 && cursorRowsRead >= cursorPushDownLimit)
+                || isSharedLimitReached(frameWriter.getNumRows());
       } else {
         // addSelection failed because the frame is full.
         if (frameWriter.getNumRows() == 0) {
@@ -495,12 +502,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       }
 
       if (flush) {
-        final long numRowsWritten = flushFrameWriter();
-
-        if (sharedRunningCountForLimit != null) {
-          sharedRunningCountForLimit.addAndGet(numRowsWritten);
-        }
-
+        flushFrameWriter();
         break;
       }
     }
@@ -524,6 +526,11 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       Iterables.getOnlyElement(outputChannels()).write(frame);
       frameWriter.close();
       frameWriter = null;
+
+      if (sharedRunningCountForLimit != null) {
+        sharedRunningCountForLimit.addAndGet(frame.numRows());
+      }
+
       return frame.numRows();
     } else {
       if (frameWriter != null) {
@@ -557,7 +564,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (query.isLimited()
         && ordering.size() >= query.getOrderBys().size()
         && query.getOrderBys().equals(ordering.subList(0, query.getOrderBys().size()))) {
-      cursorPushDownLimit = getQueryOffsetPlusLimit();
+      cursorPushDownLimit = queryOffsetPlusLimit;
     } else {
       cursorPushDownLimit = NO_LIMIT;
     }
@@ -566,10 +573,20 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   /**
+   * Whether the limit in {@link #sharedRunningCountForLimit} has been reached, or would be reached if
+   * {@code pendingRows} were added.
+   */
+  private boolean isSharedLimitReached(final long pendingRows)
+  {
+    return sharedRunningCountForLimit != null
+           && sharedRunningCountForLimit.get() + pendingRows >= queryOffsetPlusLimit;
+  }
+
+  /**
    * Returns the {@link ScanQuery#getScanRowsOffset()} plus {@link ScanQuery#getScanRowsLimit()}, or
    * {@link Long#MAX_VALUE} if that addition would overflow.
    */
-  private long getQueryOffsetPlusLimit()
+  static long getOffsetPlusLimit(final ScanQuery query)
   {
     final long sum = query.getScanRowsOffset() + query.getScanRowsLimit();
     if (sum < 0) {

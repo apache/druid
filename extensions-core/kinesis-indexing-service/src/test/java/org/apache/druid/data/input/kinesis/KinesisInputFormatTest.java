@@ -43,9 +43,9 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import java.io.IOException;
@@ -76,7 +76,7 @@ public class KinesisInputFormatTest
 
   private KinesisInputFormat format;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     format = new KinesisInputFormat(
@@ -129,11 +129,11 @@ public class KinesisInputFormatTest
         "kinesis.newts.partitionKey",
         "kinesis.newts.timestamp"
     );
-    Assert.assertEquals(format, kif);
+    Assertions.assertEquals(format, kif);
 
     final byte[] formatBytes = mapper.writeValueAsBytes(format);
     final byte[] kifBytes = mapper.writeValueAsBytes(kif);
-    Assert.assertArrayEquals(formatBytes, kifBytes);
+    Assertions.assertArrayEquals(formatBytes, kifBytes);
   }
 
   @Test
@@ -168,27 +168,27 @@ public class KinesisInputFormatTest
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
 
-        Assert.assertEquals(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE), row.getTimestamp());
-        Assert.assertEquals(
+        Assertions.assertEquals(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE), row.getTimestamp());
+        Assertions.assertEquals(
             String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
-        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -220,33 +220,33 @@ public class KinesisInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRowListPlusRawValues rawValues = iterator.next();
-        Assert.assertEquals(1, rawValues.getInputRows().size());
+        Assertions.assertEquals(1, rawValues.getInputRows().size());
         InputRow row = rawValues.getInputRows().get(0);
         // Payload verifications
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
             String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
-        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -278,34 +278,34 @@ public class KinesisInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRowListPlusRawValues rawValues = iterator.next();
-        Assert.assertEquals(1, rawValues.getInputRows().size());
+        Assertions.assertEquals(1, rawValues.getInputRows().size());
         InputRow row = rawValues.getInputRows().get(0);
         // Payload verifications
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
 
-        Assert.assertEquals(DateTimes.of(String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS)), row.getTimestamp());
-        Assert.assertEquals(
+        Assertions.assertEquals(DateTimes.of(String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS)), row.getTimestamp());
+        Assertions.assertEquals(
             String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
-        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -362,28 +362,28 @@ public class KinesisInputFormatTest
           // Payload verification
           // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
           // but test reading them anyway since it isn't technically illegal
-          Assert.assertEquals(DateTimes.of("2024-07-1" + i), row.getTimestamp());
-          Assert.assertEquals(
+          Assertions.assertEquals(DateTimes.of("2024-07-1" + i), row.getTimestamp());
+          Assertions.assertEquals(
               String.valueOf(DateTimes.of("2024-07-1" + i).getMillis()),
               Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
           );
-          Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-          Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-          Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-          Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-          Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
-          Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
+          Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+          Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+          Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+          Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+          Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+          Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+          Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+          Assertions.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
 
-          Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-          Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-          Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+          Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+          Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+          Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
           numActualIterations++;
         }
 
-        Assert.assertEquals(numExpectedIterations, numActualIterations);
+        Assertions.assertEquals(numExpectedIterations, numActualIterations);
       }
     }
   }
@@ -420,27 +420,27 @@ public class KinesisInputFormatTest
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
 
-        Assert.assertEquals(DateTimes.of(DATA_TIMSTAMP_DATE), row.getTimestamp());
-        Assert.assertEquals(
+        Assertions.assertEquals(DateTimes.of(DATA_TIMSTAMP_DATE), row.getTimestamp());
+        Assertions.assertEquals(
             String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
-        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -497,28 +497,28 @@ public class KinesisInputFormatTest
           // Payload verification
           // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
           // but test reading them anyway since it isn't technically illegal
-          Assert.assertEquals(DateTimes.of("2024-07-2" + i), row.getTimestamp());
-          Assert.assertEquals(
+          Assertions.assertEquals(DateTimes.of("2024-07-2" + i), row.getTimestamp());
+          Assertions.assertEquals(
               String.valueOf(DateTimes.of("2024-07-29").getMillis()),
               Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
           );
-          Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-          Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-          Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-          Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-          Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
-          Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
+          Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+          Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+          Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+          Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+          Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+          Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+          Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+          Assertions.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
 
-          Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-          Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-          Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+          Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+          Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+          Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
           numActualIterations++;
         }
 
-        Assert.assertEquals(numExpectedIterations, numActualIterations);
+        Assertions.assertEquals(numExpectedIterations, numActualIterations);
       }
     }
   }
@@ -549,8 +549,8 @@ public class KinesisInputFormatTest
 
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
-        Throwable t = Assert.assertThrows(ParseException.class, iterator::next);
-        Assert.assertTrue(
+        Throwable t = Assertions.assertThrows(ParseException.class, iterator::next);
+        Assertions.assertTrue(
             t.getMessage().startsWith("Timestamp[null] is unparseable! Event: {")
         );
       }
@@ -597,33 +597,33 @@ public class KinesisInputFormatTest
         );
         Collections.sort(expectedDimensions);
         Collections.sort(row.getDimensions());
-        Assert.assertEquals(
+        Assertions.assertEquals(
             expectedDimensions,
             row.getDimensions()
         );
 
         // Payload verifications
-        Assert.assertEquals(DateTimes.of(DATA_TIMSTAMP_DATE), row.getTimestamp());
-        Assert.assertEquals(
+        Assertions.assertEquals(DateTimes.of(DATA_TIMSTAMP_DATE), row.getTimestamp());
+        Assertions.assertEquals(
             String.valueOf(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis()),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
-        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -667,33 +667,33 @@ public class KinesisInputFormatTest
         );
         Collections.sort(expectedDimensions);
         Collections.sort(row.getDimensions());
-        Assert.assertEquals(
+        Assertions.assertEquals(
             expectedDimensions,
             row.getDimensions()
         );
 
         // Payload verifications
-        Assert.assertEquals(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE), row.getTimestamp());
-        Assert.assertEquals(
+        Assertions.assertEquals(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE), row.getTimestamp());
+        Assertions.assertEquals(
             String.valueOf(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis()),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
-        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -742,7 +742,7 @@ public class KinesisInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-        Assert.assertEquals(
+        Assertions.assertEquals(
             Arrays.asList(
                 "bar",
                 "foo",
@@ -755,20 +755,20 @@ public class KinesisInputFormatTest
         // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
         // but test reading them anyway since it isn't technically illegal
 
-        Assert.assertEquals(DateTimes.of("2024-07-30"), row.getTimestamp());
-        Assert.assertEquals(
+        Assertions.assertEquals(DateTimes.of("2024-07-30"), row.getTimestamp());
+        Assertions.assertEquals(
             String.valueOf(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis()),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
-        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertTrue(row.getDimension("bar").isEmpty());
+        Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertTrue(row.getDimension("bar").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -813,33 +813,33 @@ public class KinesisInputFormatTest
         );
         Collections.sort(expectedDimensions);
         Collections.sort(row.getDimensions());
-        Assert.assertEquals(
+        Assertions.assertEquals(
             expectedDimensions,
             row.getDimensions()
         );
 
         // Payload verifications
-        Assert.assertEquals(DateTimes.of(DATA_TIMSTAMP_DATE), row.getTimestamp());
-        Assert.assertEquals(
+        Assertions.assertEquals(DateTimes.of(DATA_TIMSTAMP_DATE), row.getTimestamp());
+        Assertions.assertEquals(
             String.valueOf(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis()),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
-        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+        Assertions.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -883,10 +883,10 @@ public class KinesisInputFormatTest
   public void testInvalidInputFormatConstruction()
   {
     // null value format is invalid
-    Assert.assertThrows(
-        "valueFormat must not be null",
+    Assertions.assertThrows(
         NullPointerException.class,
-        () -> new KinesisInputFormat(null, null, null)
+        () -> new KinesisInputFormat(null, null, null),
+        "valueFormat must not be null"
     );
 
     InputFormat valueFormat = new JsonInputFormat(
@@ -908,10 +908,10 @@ public class KinesisInputFormatTest
     );
 
     // partitionKeyColumnName == timestampColumnName is invalid
-    Assert.assertThrows(
-        "timestampColumnName and partitionKeyColumnName must be different",
+    Assertions.assertThrows(
         IllegalStateException.class,
-        () -> new KinesisInputFormat(valueFormat, "kinesis.timestamp", "kinesis.timestamp")
+        () -> new KinesisInputFormat(valueFormat, "kinesis.timestamp", "kinesis.timestamp"),
+        "timestampColumnName and partitionKeyColumnName must be different"
     );
   }
 

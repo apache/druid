@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+@SuppressWarnings("deprecation")
 public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentInspector
 {
   private final QueryableIndex index;
@@ -49,6 +50,11 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   @Nullable
   public Comparable getMinValue(String dimension)
   {
+    // Clustered segments have no top-level column to read a per-segment min from (data is split across per-group
+    // sub-indexes, each with its own dictionary). Report unknown rather than a wrong value.
+    if (index.getClusteredBaseSummary() != null) {
+      return null;
+    }
     BaseColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
       ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
@@ -62,6 +68,9 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   @Nullable
   public Comparable getMaxValue(String dimension)
   {
+    if (index.getClusteredBaseSummary() != null) {
+      return null;
+    }
     BaseColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
       ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
@@ -74,6 +83,11 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   @Override
   public int getDimensionCardinality(String column)
   {
+    // Clustered segments have no top-level dictionary; per-group dictionaries aren't a single segment-wide
+    // cardinality. Report unknown rather than the misleading "1" the null-column-holder branch below would give.
+    if (index.getClusteredBaseSummary() != null) {
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+    }
     BaseColumnHolder columnHolder = index.getColumnHolder(column);
     if (columnHolder == null) {
       // NullDimensionSelector has cardinality = 1 (one null, nothing else).
@@ -94,7 +108,16 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return index.getColumnCapabilities(column);
+    // For a clustered segment (empty top-level columns) the index resolves logical-column capabilities from its
+    // summary and cluster group descriptors.
+    if (index.getClusteredBaseSummary() != null) {
+      return index.getColumnCapabilities(column);
+    }
+
+    // For everything else, read the holder rather than calling index.getColumnCapabilities. Allows returning
+    // full-fidelity capabilities from PartialQueryableIndex when the segment is fully-downloaded.
+    final BaseColumnHolder columnHolder = index.getColumnHolder(column);
+    return columnHolder == null ? null : columnHolder.getCapabilities();
   }
 
   @Override

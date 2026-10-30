@@ -29,6 +29,7 @@ import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
+import org.apache.druid.data.input.InputFilePointer;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -39,6 +40,7 @@ import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.data.input.impl.systemfield.SystemFieldInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 
@@ -49,6 +51,7 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -209,6 +212,66 @@ public abstract class CloudObjectInputSource
         .flatMap(split -> split.get().stream())
         .map(this::createEntity)
         .iterator();
+  }
+
+  @Nullable
+  @Override
+  public List<InputFilePointer> asFilePointers()
+  {
+    if (!systemFields.getFields().isEmpty()) {
+      // System fields cannot be added to file pointers.
+      return null;
+    }
+
+    final List<CloudObjectLocation> locations;
+    if (!CollectionUtils.isNullOrEmpty(objects)) {
+      locations = objects;
+    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
+      locations = Lists.transform(uris, CloudObjectLocation::new);
+    } else {
+      // Only uris + objects can be expressed as file pointers. Prefixes could be if we listed them here, but
+      // we'd rather avoid doing that, since this method is likely to be called in a thread that should not
+      // be doing blocking I/O.
+      return null;
+    }
+
+    final PathMatcher globMatcher =
+        StringUtils.isNotBlank(objectGlob)
+        ? FileSystems.getDefault().getPathMatcher("glob:" + objectGlob)
+        : null;
+
+    final CloudObjectSplitWidget splitWidget = getSplitWidget();
+    final List<InputFilePointer> pointers = new ArrayList<>();
+    for (final CloudObjectLocation location : locations) {
+      if (globMatcher != null && !globMatcher.matches(Paths.get(location.getPath()))) {
+        continue;
+      }
+
+      final InputEntity entity = createEntity(location);
+      final URI uri = location.toUri(scheme);
+      pointers.add(
+          new InputFilePointer(
+              uri,
+              () -> {
+                try {
+                  return splitWidget.getObjectSize(location);
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              },
+              dstFile -> FileUtils.copyLarge(
+                  entity::openRaw,
+                  dstFile,
+                  new byte[InputEntity.DEFAULT_FETCH_BUFFER_SIZE],
+                  entity.getRetryCondition(),
+                  InputEntity.DEFAULT_MAX_NUM_FETCH_TRIES,
+                  "Failed to fetch [" + uri + "]"
+              )
+          )
+      );
+    }
+    return pointers;
   }
 
   @Override

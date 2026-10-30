@@ -20,8 +20,7 @@
 package org.apache.druid.storage.google;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Min;
 
 /**
  * Stores the configuration for options related to reading

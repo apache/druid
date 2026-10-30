@@ -22,8 +22,8 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -43,51 +43,51 @@ public class BoundedStreamConfigTest
   @Test
   public void testConstructorWithNullStartSequenceNumbers()
   {
-    DruidException ex = Assert.assertThrows(
+    DruidException ex = Assertions.assertThrows(
         DruidException.class,
         () -> new BoundedStreamConfig(null, Map.of("0", 500L))
     );
-    Assert.assertTrue(ex.getMessage().contains("cannot be null or empty"));
+    Assertions.assertTrue(ex.getMessage().contains("cannot be null or empty"));
   }
 
   @Test
   public void testConstructorWithNullEndSequenceNumbers()
   {
-    DruidException ex = Assert.assertThrows(
+    DruidException ex = Assertions.assertThrows(
         DruidException.class,
         () -> new BoundedStreamConfig(Map.of("0", 100L), null)
     );
-    Assert.assertTrue(ex.getMessage().contains("cannot be null or empty"));
+    Assertions.assertTrue(ex.getMessage().contains("cannot be null or empty"));
   }
 
   @Test
   public void testConstructorWithEmptyStartSequenceNumbers()
   {
-    DruidException ex = Assert.assertThrows(
+    DruidException ex = Assertions.assertThrows(
         DruidException.class,
         () -> new BoundedStreamConfig(Map.of(), Map.of("0", 500L))
     );
-    Assert.assertTrue(ex.getMessage().contains("cannot be null or empty"));
+    Assertions.assertTrue(ex.getMessage().contains("cannot be null or empty"));
   }
 
   @Test
   public void testConstructorWithEmptyEndSequenceNumbers()
   {
-    DruidException ex = Assert.assertThrows(
+    DruidException ex = Assertions.assertThrows(
         DruidException.class,
         () -> new BoundedStreamConfig(Map.of("0", 100L), Map.of())
     );
-    Assert.assertTrue(ex.getMessage().contains("cannot be null or empty"));
+    Assertions.assertTrue(ex.getMessage().contains("cannot be null or empty"));
   }
 
   @Test
   public void testConstructorWithMismatchedPartitions()
   {
-    DruidException ex = Assert.assertThrows(
+    DruidException ex = Assertions.assertThrows(
         DruidException.class,
         () -> new BoundedStreamConfig(Map.of("0", 100L), Map.of("1", 500L))
     );
-    Assert.assertTrue(ex.getMessage().contains("must have matching partition sets"));
+    Assertions.assertTrue(ex.getMessage().contains("must have matching partition sets"));
   }
 
   @Test
@@ -103,12 +103,12 @@ public class BoundedStreamConfigTest
         BoundedStreamConfig.class
     );
 
-    Assert.assertEquals(2, deserialized.getStartSequenceNumbers().size());
-    Assert.assertEquals(2, deserialized.getEndSequenceNumbers().size());
-    Assert.assertEquals(100, deserialized.getStartSequenceNumbers().get("0"));
-    Assert.assertEquals(200, deserialized.getStartSequenceNumbers().get("1"));
-    Assert.assertEquals(500, deserialized.getEndSequenceNumbers().get("0"));
-    Assert.assertEquals(600, deserialized.getEndSequenceNumbers().get("1"));
+    Assertions.assertEquals(2, deserialized.getStartSequenceNumbers().size());
+    Assertions.assertEquals(2, deserialized.getEndSequenceNumbers().size());
+    Assertions.assertEquals(100, deserialized.getStartSequenceNumbers().get("0"));
+    Assertions.assertEquals(200, deserialized.getStartSequenceNumbers().get("1"));
+    Assertions.assertEquals(500, deserialized.getEndSequenceNumbers().get("0"));
+    Assertions.assertEquals(600, deserialized.getEndSequenceNumbers().get("1"));
   }
 
   @Test
@@ -121,8 +121,8 @@ public class BoundedStreamConfigTest
 
     BoundedStreamConfig config = mapper.readValue(json, BoundedStreamConfig.class);
 
-    Assert.assertEquals(2, config.getStartSequenceNumbers().size());
-    Assert.assertEquals(2, config.getEndSequenceNumbers().size());
+    Assertions.assertEquals(2, config.getStartSequenceNumbers().size());
+    Assertions.assertEquals(2, config.getEndSequenceNumbers().size());
   }
 
   @Test
@@ -135,7 +135,7 @@ public class BoundedStreamConfigTest
 
     BoundedStreamConfig config = mapper.readValue(json, BoundedStreamConfig.class);
 
-    Assert.assertEquals(2, config.getStartSequenceNumbers().size());
-    Assert.assertEquals(2, config.getEndSequenceNumbers().size());
+    Assertions.assertEquals(2, config.getStartSequenceNumbers().size());
+    Assertions.assertEquals(2, config.getEndSequenceNumbers().size());
   }
 }

@@ -23,10 +23,10 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -49,7 +49,7 @@ public class PeriodicControllerCheckerTest
   private AutoCloseable mockCloser;
   private CountDownLatch workerCanceled;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mockCloser = MockitoAnnotations.openMocks(this);
@@ -57,7 +57,7 @@ public class PeriodicControllerCheckerTest
     workerCanceled = new CountDownLatch(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     testExecutor.shutdownNow();
@@ -92,7 +92,7 @@ public class PeriodicControllerCheckerTest
     checker.start();
 
     // Wait for checker to finish
-    Assert.assertTrue(workerCanceled.await(1, TimeUnit.MINUTES));
+    Assertions.assertTrue(workerCanceled.await(1, TimeUnit.MINUTES));
 
     // Verify ServiceLocator was called exactly four times
     Mockito.verify(controllerLocator, Mockito.times(4)).locate();

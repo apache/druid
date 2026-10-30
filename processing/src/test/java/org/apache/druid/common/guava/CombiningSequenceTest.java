@@ -32,41 +32,36 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class CombiningSequenceTest
 {
-  @Parameterized.Parameters
-  public static Collection<Object[]> valuesToTry()
+  public static Stream<Object[]> constructorFeeder()
   {
-    return Arrays.asList(new Object[][]{
+    return Arrays.stream(new Object[][]{
         {1}, {2}, {3}, {4}, {5}, {1000}
     });
   }
 
-  private final int yieldEvery;
-
-  public CombiningSequenceTest(int yieldEvery)
-  {
-    this.yieldEvery = yieldEvery;
-  }
+  @Parameter(0)
+  public int yieldEvery;
 
   @Test
   public void testMerge() throws Exception
@@ -225,13 +220,13 @@ public class CombiningSequenceTest
             }
           }
       );
-      Assert.fail("Expected exception");
+      Assertions.fail("Expected exception");
     }
     catch (Exception e) {
-      Assert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("boom")));
+      Assertions.assertEquals("boom", e.getMessage());
     }
 
-    Assert.assertEquals("Closes resources", 1, bomb.getCloseCount());
+    Assertions.assertEquals(1, bomb.getCloseCount(), "Closes resources");
   }
 
   private void testCombining(List<Pair<Integer, Integer>> pairs, List<Pair<Integer, Integer>> expected)
@@ -279,7 +274,7 @@ public class CombiningSequenceTest
 
     List<Pair<Integer, Integer>> merged = seq.toList();
 
-    Assert.assertEquals(prefix, expected, merged);
+    Assertions.assertEquals(expected, merged, prefix);
 
     Yielder<Pair<Integer, Integer>> yielder = seq.toYielder(
         null,
@@ -326,14 +321,14 @@ public class CombiningSequenceTest
       while (!yielder.isDone()) {
         final Pair<Integer, Integer> expectedVal = expectedVals.next();
         final Pair<Integer, Integer> actual = yielder.get();
-        Assert.assertEquals(StringUtils.format("%s, i[%s]", prefix, i++), expectedVal, actual);
+        Assertions.assertEquals(expectedVal, actual, StringUtils.format("%s, i[%s]", prefix, i++));
         yielder = yielder.next(actual);
       }
     }
-    Assert.assertTrue(prefix, yielder.isDone());
-    Assert.assertFalse(prefix, expectedVals.hasNext());
+    Assertions.assertTrue(yielder.isDone(), prefix);
+    Assertions.assertFalse(expectedVals.hasNext(), prefix);
     yielder.close();
 
-    Assert.assertTrue("resource closed", closed.await(10000, TimeUnit.MILLISECONDS));
+    Assertions.assertTrue(closed.await(10000, TimeUnit.MILLISECONDS), "resource closed");
   }
 }

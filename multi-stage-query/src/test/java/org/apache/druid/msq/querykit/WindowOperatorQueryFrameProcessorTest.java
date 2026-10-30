@@ -38,10 +38,11 @@ import org.apache.druid.msq.indexing.CountingWritableFrameChannel;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
@@ -51,10 +52,8 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -144,15 +143,15 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     );
 
     List<List<Object>> outputRows = rowsFromProcessor.toList();
-    Assert.assertEquals(INPUT_ROWS.size(), outputRows.size());
+    Assertions.assertEquals(INPUT_ROWS.size(), outputRows.size());
 
     for (int i = 0; i < INPUT_ROWS.size(); i++) {
       Map<String, Object> inputRow = INPUT_ROWS.get(i);
       List<Object> outputRow = outputRows.get(i);
 
-      Assert.assertEquals("cityName should match", inputRow.get("cityName"), outputRow.get(0));
-      Assert.assertEquals("added should match", inputRow.get("added"), outputRow.get(1));
-      Assert.assertEquals("row_number() should be correct", (long) i + 1, outputRow.get(2));
+      Assertions.assertEquals(inputRow.get("cityName"), outputRow.get(0), "cityName should match");
+      Assertions.assertEquals(inputRow.get("added"), outputRow.get(1), "added should match");
+      Assertions.assertEquals((long) i + 1, outputRow.get(2), "row_number() should be correct");
     }
   }
 
@@ -188,7 +187,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
         new HashMap<>(
             // This ends up satisfying the criteria of needToProcessBatch() method,
             // so we end up processing the rows we've read, hence writing the 1st frame to the output channel.
-            ImmutableMap.of(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, 12)
+            QueryContext.ofMap(QueryContextParameters.MAX_ROWS_MATERIALIZED_IN_WINDOW, 12)
         ),
         outputSignature,
         ImmutableList.of(
@@ -229,15 +228,15 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     );
 
     List<List<Object>> outputRows = rowsFromProcessor.toList();
-    Assert.assertEquals(INPUT_ROWS.size(), outputRows.size());
+    Assertions.assertEquals(INPUT_ROWS.size(), outputRows.size());
 
     for (int i = 0; i < INPUT_ROWS.size(); i++) {
       Map<String, Object> inputRow = INPUT_ROWS.get(i);
       List<Object> outputRow = outputRows.get(i);
 
-      Assert.assertEquals("cityName should match", inputRow.get("cityName"), outputRow.get(0));
-      Assert.assertEquals("added should match", inputRow.get("added"), outputRow.get(1));
-      Assert.assertEquals("row_number() should be correct", (long) i + 1, outputRow.get(2));
+      Assertions.assertEquals(inputRow.get("cityName"), outputRow.get(0), "cityName should match");
+      Assertions.assertEquals(inputRow.get("added"), outputRow.get(1), "added should match");
+      Assertions.assertEquals((long) i + 1, outputRow.get(2), "row_number() should be correct");
     }
   }
 
@@ -250,15 +249,13 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
   @Test
   public void testMaxRowsMaterializedConstraint()
   {
-    final RuntimeException e = Assert.assertThrows(
+    final RuntimeException e = Assertions.assertThrows(
         RuntimeException.class,
         () -> runProcessor(2, 3)
     );
-    MatcherAssert.assertThat(
-        ((MSQException) e.getCause().getCause()).getFault(),
-        CoreMatchers.instanceOf(TooManyRowsInAWindowFault.class)
-    );
-    Assert.assertTrue(e.getMessage().contains("TooManyRowsInAWindow: Too many rows in a window (requested = 7, max = 2)"));
+    final MSQException msqException = Assertions.assertInstanceOf(MSQException.class, e.getCause().getCause());
+    Assertions.assertInstanceOf(TooManyRowsInAWindowFault.class, msqException.getFault());
+    Assertions.assertTrue(e.getMessage().contains("TooManyRowsInAWindow: Too many rows in a window (requested = 7, max = 2)"));
   }
 
   public void runProcessor(int maxRowsMaterialized, int expectedNumFramesWritten) throws Exception
@@ -296,7 +293,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
                      .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         new HashMap<>(
-            ImmutableMap.of(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, maxRowsMaterialized)
+            QueryContext.ofMap(QueryContextParameters.MAX_ROWS_MATERIALIZED_IN_WINDOW, maxRowsMaterialized)
         ),
         outputSignature,
         ImmutableList.of(
@@ -339,8 +336,8 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     final List<List<Object>> rows = rowsFromProcessor.toList();
 
     long actualNumFrames = Arrays.stream(channelCounters.snapshot().getFrames()).findFirst().getAsLong();
-    Assert.assertEquals(expectedNumFramesWritten, actualNumFrames);
-    Assert.assertEquals(7, rows.size());
+    Assertions.assertEquals(expectedNumFramesWritten, actualNumFrames);
+    Assertions.assertEquals(7, rows.size());
   }
 
   private ReadableInput buildWindowTestInputChannel() throws IOException

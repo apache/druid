@@ -52,7 +52,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class DruidQuidemCommandHandler implements CommandHandler
 {
@@ -357,7 +357,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
         try {
           Injector injector = DruidConnectionExtras.unwrapOrThrow(context.connection()).getInjector();
           SqlTestFrameworkConfig cfg = injector.getInstance(SqlTestFrameworkConfig.class);
-          assumeFalse(message, cfg.componentSupplier.getSimpleName().equals(supplierName));
+          assumeFalse(cfg.componentSupplier.getSimpleName().equals(supplierName), message);
         }
         catch (Exception e) {
           // This is packaged as an Error because Quidem grabs anything else and pushes it into the output file

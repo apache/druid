@@ -20,6 +20,7 @@
 package org.apache.druid.query.planning;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -27,27 +28,42 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.ProjectDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.List;
 import java.util.Optional;
@@ -69,19 +85,34 @@ public class ExecutionVertexTest
       RowSignature.builder().add("column", ColumnType.STRING).build()
   );
 
+  /**
+   * Virtual column that takes the name of the table's "dim1", and reads "dim2" in its place.
+   */
+  private static final VirtualColumn DIM1_FROM_DIM2 =
+      new ExpressionVirtualColumn("dim1", "\"dim2\"", ColumnType.STRING, ExprMacroTable.nil());
+
+  /**
+   * Filter that matches "dim1" equal to "z", which {@link #SEGMENT_DIM1_A_TO_B} cannot hold.
+   */
+  private static final DimFilter DIM1_IS_Z = new EqualityFilter("dim1", ColumnType.STRING, "z", null);
+
+  /**
+   * Segment of {@link #TABLE_FOO} that is range-partitioned on "dim1", holding values from "a" up to "b".
+   */
+  private static final DataSegment SEGMENT_DIM1_A_TO_B = makeDim1RangeSegment();
+
   @Test
   public void testTable()
   {
     ScanQuery makeScanQuery = makeScanQuery(TABLE_FOO);
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery);
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -89,13 +120,12 @@ public class ExecutionVertexTest
   {
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(RESTRICTED_FOO));
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -110,13 +140,12 @@ public class ExecutionVertexTest
 
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(ds));
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -125,13 +154,167 @@ public class ExecutionVertexTest
     final UnionDataSource unionDataSource = new UnionDataSource(ImmutableList.of(TABLE_FOO, TABLE_BAR));
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(unionDataSource));
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(unionDataSource, ev.getBaseDataSource());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(unionDataSource, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
+  }
+
+  @Test
+  public void test_splitUnion_union()
+  {
+    final UnionDataSource unionDataSource = new UnionDataSource(ImmutableList.of(RESTRICTED_FOO, TABLE_BAR));
+    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(unionDataSource));
+
+    // A union's arms read different segments, so it has no segment map function or pruner until it is split by arm.
+    Assertions.assertThrows(DruidException.class, () -> ev.createSegmentMapFunction(NoopPolicyEnforcer.instance()));
+    Assertions.assertThrows(DruidException.class, ev::getSegmentPruner);
+
+    final List<ExecutionVertex> arms = ev.splitUnion();
+    Assertions.assertEquals(
+        List.of(TABLE_FOO, TABLE_BAR),
+        arms.stream().map(ExecutionVertex::getBaseDataSource).toList()
+    );
+    for (final ExecutionVertex arm : arms) {
+      Assertions.assertNotNull(arm.createSegmentMapFunction(NoopPolicyEnforcer.instance()));
+    }
+  }
+
+  @Test
+  public void test_splitUnion_table()
+  {
+    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(TABLE_FOO));
+
+    final List<ExecutionVertex> arms = ev.splitUnion();
+    Assertions.assertEquals(1, arms.size());
+    Assertions.assertSame(ev, arms.get(0));
+  }
+
+  @Test
+  public void test_splitUnion_unionSegmentMapFunctions()
+  {
+    // The outer groupBy collapses into the inner one, so the projection above the union is part of this vertex.
+    final ExecutionVertex ev = ExecutionVertex.of(
+        makeGroupByQuery(
+            makeQueryDS(
+                new ProjectDataSource(
+                    new UnionDataSource(ImmutableList.of(FilteredDataSource.create(TABLE_FOO, DIM1_IS_Z), TABLE_BAR)),
+                    VirtualColumns.create(DIM1_FROM_DIM2)
+                )
+            )
+        )
+    );
+
+    Assertions.assertEquals(
+        List.of("project->filtered->base", "project->base"),
+        debugStrings(ev.splitUnionSegmentMapFunctions(NoopPolicyEnforcer.instance()))
+    );
+  }
+
+  @Test
+  public void test_splitUnion_SegmentMapFunctions_table()
+  {
+    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(FilteredDataSource.create(TABLE_FOO, DIM1_IS_Z)));
+
+    Assertions.assertEquals(
+        List.of("filtered->base"),
+        debugStrings(ev.splitUnionSegmentMapFunctions(NoopPolicyEnforcer.instance()))
+    );
+  }
+
+  @Test
+  public void test_getSegmentPruner_table()
+  {
+    final ExecutionVertex ev = ExecutionVertex.of(makeDim1ScanQuery(TABLE_FOO));
+
+    // The filter reads the table's own "dim1", so it prunes a segment whose "dim1" values cannot match it.
+    Assertions.assertFalse(ev.getSegmentPruner().include(SEGMENT_DIM1_A_TO_B));
+  }
+
+  @Test
+  public void test_getSegmentPruner_projectedColumn()
+  {
+    final ProjectDataSource dataSource = new ProjectDataSource(TABLE_FOO, VirtualColumns.create(DIM1_FROM_DIM2));
+    final ExecutionVertex ev = ExecutionVertex.of(makeDim1ScanQuery(dataSource));
+
+    // The filter reads the projection's "dim1" rather than the table's, so the table's partitioning cannot prune.
+    Assertions.assertTrue(ev.getSegmentPruner().include(SEGMENT_DIM1_A_TO_B));
+  }
+
+  @Test
+  public void test_getSegmentPruner_unnestedColumn()
+  {
+    final UnnestDataSource dataSource = UnnestDataSource.create(TABLE_FOO, DIM1_FROM_DIM2, null);
+    final ExecutionVertex ev = ExecutionVertex.of(makeDim1ScanQuery(dataSource));
+
+    // The filter reads the unnested "dim1" rather than the table's, so the table's partitioning cannot prune.
+    Assertions.assertTrue(ev.getSegmentPruner().include(SEGMENT_DIM1_A_TO_B));
+  }
+
+  @Test
+  public void test_getSegmentPruner_filteredDataSource()
+  {
+    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(FilteredDataSource.create(TABLE_FOO, DIM1_IS_Z)));
+
+    // The datasource's own filter prunes, even though the query has none.
+    Assertions.assertFalse(ev.getSegmentPruner().include(SEGMENT_DIM1_A_TO_B));
+  }
+
+  @Test
+  public void test_getSegmentPruner_policyUnderProjection()
+  {
+    final DataSource dataSource = new ProjectDataSource(
+        RestrictedDataSource.create(TABLE_FOO, RowFilterPolicy.from(DIM1_IS_Z)),
+        VirtualColumns.create(new ExpressionVirtualColumn("v", "\"dim2\"", ColumnType.STRING, ExprMacroTable.nil()))
+    );
+    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(dataSource));
+
+    // The policy prunes from underneath the projection.
+    Assertions.assertFalse(ev.getSegmentPruner().include(SEGMENT_DIM1_A_TO_B));
+  }
+
+  @Test
+  public void test_getSegmentPruner_joinLeftColumn()
+  {
+    final ExecutionVertex ev =
+        ExecutionVertex.of(makeDim1ScanQuery(join(TABLE_FOO, LOOKUP_LOOKYLOO, "j.", JoinType.INNER)));
+
+    Assertions.assertFalse(ev.getSegmentPruner().include(SEGMENT_DIM1_A_TO_B));
+  }
+
+  @Test
+  public void test_getSegmentPruner_joinRightColumn()
+  {
+    final ExecutionVertex ev =
+        ExecutionVertex.of(makeDim1ScanQuery(join(TABLE_FOO, LOOKUP_LOOKYLOO, "d", JoinType.INNER)));
+
+    // With "d" as the right-hand prefix, the filter reads the right-hand "dim1", which the table's partitioning says
+    // nothing about, even though the table has a column of that name.
+    Assertions.assertNull(ev.getSegmentPruner());
+  }
+
+  @Test
+  public void test_getSegmentPruner_joinLeftFilter()
+  {
+    final ExecutionVertex inner =
+        ExecutionVertex.of(makeScanQuery(join(TABLE_FOO, LOOKUP_LOOKYLOO, "j.", JoinType.INNER, DIM1_IS_Z)));
+    final ExecutionVertex right =
+        ExecutionVertex.of(makeScanQuery(join(TABLE_FOO, LOOKUP_LOOKYLOO, "j.", JoinType.RIGHT, DIM1_IS_Z)));
+
+    // The left filter prunes, unless the join also emits right-hand rows that matched nothing on the left.
+    Assertions.assertFalse(inner.getSegmentPruner().include(SEGMENT_DIM1_A_TO_B));
+    Assertions.assertNull(right.getSegmentPruner());
+  }
+
+  @Test
+  public void test_getSegmentPruner_subquery()
+  {
+    final ExecutionVertex ev = ExecutionVertex.of(makeDim1ScanQuery(makeQueryDS(TABLE_FOO)));
+
+    // The filter reads the subquery's results, which the table's partitioning says nothing about.
+    Assertions.assertNull(ev.getSegmentPruner());
   }
 
   @Test
@@ -140,13 +323,12 @@ public class ExecutionVertexTest
     final QueryDataSource queryDataSource = makeQueryDS(TABLE_FOO);
     final ExecutionVertex ev = ExecutionVertex.of(makeGroupByQuery(queryDataSource));
 
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -156,13 +338,12 @@ public class ExecutionVertexTest
     final QueryDataSource queryDataSource = makeQueryDS(unionDataSource);
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(queryDataSource));
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertFalse(ev.isTableBased());
-    Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(queryDataSource, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -170,13 +351,12 @@ public class ExecutionVertexTest
   {
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(LOOKUP_LOOKYLOO));
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertFalse(ev.isTableBased());
-    Assert.assertEquals(LOOKUP_LOOKYLOO, ev.getBaseDataSource());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(LOOKUP_LOOKYLOO, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -185,12 +365,11 @@ public class ExecutionVertexTest
     final QueryDataSource queryDataSource = makeQueryDS(LOOKUP_LOOKYLOO);
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(queryDataSource));
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertFalse(ev.isTableBased());
-    Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(queryDataSource, ev.getBaseDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -198,13 +377,12 @@ public class ExecutionVertexTest
   {
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(INLINE));
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertFalse(ev.isTableBased());
-    Assert.assertEquals(INLINE, ev.getBaseDataSource());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(INLINE, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -234,13 +412,13 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertEquals(
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause((JoinDataSource) ((JoinDataSource) joinDataSource.getLeft()).getLeft()),
             new PreJoinableClause((JoinDataSource) joinDataSource.getLeft()),
@@ -248,11 +426,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertFalse(ev.isBaseColumn("1.foo"));
-    Assert.assertFalse(ev.isBaseColumn("2.foo"));
-    Assert.assertFalse(ev.isBaseColumn("3.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -280,13 +454,13 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertEquals(
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause((JoinDataSource) ((JoinDataSource) joinDataSource.getLeft()).getLeft()),
             new PreJoinableClause((JoinDataSource) joinDataSource.getLeft()),
@@ -294,11 +468,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertFalse(ev.isBaseColumn("1.foo"));
-    Assert.assertFalse(ev.isBaseColumn("2.foo"));
-    Assert.assertFalse(ev.isBaseColumn("3.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -333,23 +503,19 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertEquals(
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertTrue(ev.isBaseColumn("1.foo"));
-    Assert.assertTrue(ev.isBaseColumn("2.foo"));
-    Assert.assertFalse(ev.isBaseColumn("3.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -380,23 +546,19 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertEquals(
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertTrue(ev.isBaseColumn("1.foo"));
-    Assert.assertTrue(ev.isBaseColumn("2.foo"));
-    Assert.assertFalse(ev.isBaseColumn("3.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -413,20 +575,18 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertFalse(ev.isBaseColumn("1.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -443,21 +603,19 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis1 = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(Optional.empty(), analysis1.getJoinBaseTableFilter());
-    Assert.assertEquals(unionDataSource, ev.getBaseDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertEquals(
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(Optional.empty(), analysis1.getJoinBaseTableFilter());
+    Assertions.assertEquals(unionDataSource, ev.getBaseDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause(joinDataSource)
         ),
         analysis1.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertFalse(ev.isBaseColumn("1.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -478,14 +636,12 @@ public class ExecutionVertexTest
 
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(queryDataSource));
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertFalse(ev.isTableBased());
-    Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertTrue(ev.isBaseColumn("1.foo"));
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(queryDataSource, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -511,22 +667,20 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(query);
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertTrue(ev.isTableBased());
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
-    Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertEquals(
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertTrue(ev.isTableBased());
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseDataSource());
+    Assertions.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
+    Assertions.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertFalse(ev.isBaseColumn("1.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -543,14 +697,12 @@ public class ExecutionVertexTest
 
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(queryDataSource));
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertFalse(ev.isTableBased());
-    Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertTrue(ev.isBaseColumn("1.foo"));
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(queryDataSource, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertFalse(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -566,21 +718,19 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertTrue(ev.isProcessable());
-    Assert.assertFalse(ev.isTableBased());
-    Assert.assertEquals(LOOKUP_LOOKYLOO, ev.getBaseDataSource());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
-    Assert.assertEquals(
+    Assertions.assertTrue(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(LOOKUP_LOOKYLOO, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertFalse(ev.isBaseColumn("1.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -596,21 +746,47 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertFalse(ev.isProcessable());
-    Assert.assertFalse(ev.isTableBased());
-    Assert.assertEquals(LOOKUP_LOOKYLOO, ev.getBaseDataSource());
-    Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
-    Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
-    Assert.assertEquals(
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(LOOKUP_LOOKYLOO, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
+    Assertions.assertEquals(
         ImmutableList.of(
             new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
-    Assert.assertTrue(ev.isBaseColumn("foo"));
-    Assert.assertFalse(ev.isBaseColumn("1.foo"));
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
+  }
+
+  @Test
+  public void testJoinSubqueryToLookup()
+  {
+    final QueryDataSource queryDataSource = new QueryDataSource(
+        GroupByQuery.builder()
+                    .setDataSource(TABLE_FOO)
+                    .setInterval(Intervals.ONLY_ETERNITY)
+                    .setGranularity(Granularities.ALL)
+                    .build()
+    );
+    final JoinDataSource joinDataSource = join(
+        queryDataSource,
+        LOOKUP_LOOKYLOO,
+        "1.",
+        JoinType.INNER
+    );
+
+    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
+
+    // The subquery is executed separately, so it is the base, and the effective intervals are the outer query's.
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(queryDataSource, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
   }
 
   @Test
@@ -696,6 +872,45 @@ public class ExecutionVertexTest
     return Druids.newScanQueryBuilder()
         .dataSource(dataSource)
         .intervals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS))
+        .build();
+  }
+
+  /**
+   * Returns the debug string of the segment that each function makes from a base segment whose debug string is
+   * {@code base}, which shows the wrappers each function applies, outermost first.
+   */
+  private static List<String> debugStrings(final List<SegmentMapFunction> fns)
+  {
+    final Segment segment = Mockito.mock(Segment.class);
+    Mockito.when(segment.getDebugString()).thenReturn("base");
+    return fns.stream().map(fn -> fn.apply(Optional.of(segment)).orElseThrow().getDebugString()).toList();
+  }
+
+  private static DataSegment makeDim1RangeSegment()
+  {
+    final Interval interval = Intervals.of("2000/2001");
+    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
+        List.of("dim1"),
+        null,
+        StringTuple.create("a"),
+        StringTuple.create("b"),
+        0,
+        1
+    );
+    return DataSegment.builder(SegmentId.of(TABLE_FOO.getName(), interval, "0", shardSpec))
+                      .shardSpec(shardSpec)
+                      .build();
+  }
+
+  /**
+   * Returns a scan query filtered by {@link #DIM1_IS_Z}.
+   */
+  private static ScanQuery makeDim1ScanQuery(final DataSource dataSource)
+  {
+    return Druids.newScanQueryBuilder()
+        .dataSource(dataSource)
+        .intervals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS))
+        .filters(DIM1_IS_Z)
         .build();
   }
 }

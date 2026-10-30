@@ -42,8 +42,8 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopJoinableFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -58,14 +58,14 @@ public class DataSourceTest
     DataSource dataSource = new TableDataSource("somedatasource");
     String json = JSON_MAPPER.writeValueAsString(dataSource);
     DataSource serdeDataSource = JSON_MAPPER.readValue(json, DataSource.class);
-    Assert.assertEquals(dataSource, serdeDataSource);
+    Assertions.assertEquals(dataSource, serdeDataSource);
   }
 
   @Test
   public void testLegacyDataSource() throws IOException
   {
     DataSource dataSource = JSON_MAPPER.readValue("\"somedatasource\"", DataSource.class);
-    Assert.assertEquals(new TableDataSource("somedatasource"), dataSource);
+    Assertions.assertEquals(new TableDataSource("somedatasource"), dataSource);
   }
 
   @Test
@@ -75,7 +75,7 @@ public class DataSourceTest
         "{\"type\":\"table\", \"name\":\"somedatasource\"}",
         DataSource.class
     );
-    Assert.assertEquals(new TableDataSource("somedatasource"), dataSource);
+    Assertions.assertEquals(new TableDataSource("somedatasource"), dataSource);
   }
 
   @Test
@@ -86,7 +86,7 @@ public class DataSourceTest
         DataSource.class
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RestrictedDataSource.create(TableDataSource.create("somedatasource"), NoRestrictionPolicy.instance()),
         dataSource
     );
@@ -107,7 +107,7 @@ public class DataSourceTest
     String dataSourceJSON = "{\"type\":\"query\", \"query\":" + JSON_MAPPER.writeValueAsString(query) + "}";
 
     DataSource dataSource = JSON_MAPPER.readValue(dataSourceJSON, DataSource.class);
-    Assert.assertEquals(new QueryDataSource(query), dataSource);
+    Assertions.assertEquals(new QueryDataSource(query), dataSource);
   }
 
   @Test
@@ -117,18 +117,18 @@ public class DataSourceTest
         "{\"type\":\"union\", \"dataSources\":[\"ds1\", \"ds2\"]}",
         DataSource.class
     );
-    Assert.assertTrue(dataSource instanceof UnionDataSource);
-    Assert.assertEquals(
+    Assertions.assertInstanceOf(UnionDataSource.class, dataSource);
+    Assertions.assertEquals(
         Lists.newArrayList(new TableDataSource("ds1"), new TableDataSource("ds2")),
         Lists.newArrayList(dataSource.getChildren())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("ds1", "ds2"),
         dataSource.getTableNames()
     );
 
     final DataSource serde = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(dataSource), DataSource.class);
-    Assert.assertEquals(dataSource, serde);
+    Assertions.assertEquals(dataSource, serde);
   }
 
   @Test
@@ -150,7 +150,7 @@ public class DataSourceTest
     );
     PolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         unionDataSource.withPolicies(restrictions, policyEnforcer),
         new UnionDataSource(Lists.newArrayList(
             RestrictedDataSource.create(
@@ -188,13 +188,13 @@ public class DataSourceTest
     );
     PolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(NoRestrictionPolicy.class.getName()));
 
-    DruidException e = Assert.assertThrows(
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> unionDataSource.withPolicies(restrictions, policyEnforcer)
     );
-    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
-    Assert.assertEquals(
+    Assertions.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals(
         "Failed security validation with dataSource [table2]",
         e.getMessage()
     );
@@ -214,7 +214,7 @@ public class DataSourceTest
     );
     PolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
 
-    Assert.assertEquals(restrictedDataSource, restrictedDataSource.withPolicies(noRestrictionPolicy, policyEnforcer));
+    Assertions.assertEquals(restrictedDataSource, restrictedDataSource.withPolicies(noRestrictionPolicy, policyEnforcer));
   }
 
   @Test
@@ -230,7 +230,7 @@ public class DataSourceTest
     );
     PolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
 
-    Assert.assertEquals(restrictedDataSource, restrictedDataSource.withPolicies(policyMap, policyEnforcer));
+    Assertions.assertEquals(restrictedDataSource, restrictedDataSource.withPolicies(policyMap, policyEnforcer));
   }
 
   @Test
@@ -248,20 +248,20 @@ public class DataSourceTest
     ImmutableMap<String, Optional<Policy>> policyWasNotChecked = ImmutableMap.of();
     PolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
 
-    ISE e = Assert.assertThrows(
+    ISE e = Assertions.assertThrows(
         ISE.class,
         () -> restrictedDataSource.withPolicies(anotherRestrictions, policyEnforcer)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Different restrictions on table [table1]: previous policy [RowFilterPolicy{rowFilter=random-column IS NULL}] and new policy [RowFilterPolicy{rowFilter=some-column IS NULL}]",
         e.getMessage()
     );
 
-    ISE e3 = Assert.assertThrows(
+    ISE e3 = Assertions.assertThrows(
         ISE.class,
         () -> restrictedDataSource.withPolicies(policyWasNotChecked, policyEnforcer)
     );
-    Assert.assertEquals("Missing policy check result for table [table1]", e3.getMessage());
+    Assertions.assertEquals("Missing policy check result for table [table1]", e3.getMessage());
   }
 
   @Test
@@ -269,7 +269,7 @@ public class DataSourceTest
   {
     InlineDataSource inlineDataSource = InlineDataSource.fromIterable(ImmutableList.of(), RowSignature.empty());
     DataSource withPolicies = inlineDataSource.withPolicies(ImmutableMap.of(), NoopPolicyEnforcer.instance());
-    Assert.assertEquals(inlineDataSource, withPolicies);
+    Assertions.assertEquals(inlineDataSource, withPolicies);
   }
 
   @Test
@@ -289,16 +289,16 @@ public class DataSourceTest
     );
     final PolicyEnforcer policyEnforcer = NoopPolicyEnforcer.instance();
     DataSource mapped = joinDataSource.withPolicies(ImmutableMap.of(), policyEnforcer);
-    Assert.assertEquals(joinDataSource, mapped);
+    Assertions.assertEquals(joinDataSource, mapped);
 
     // Use stricter enforcer
     final PolicyEnforcer restrictAllTablesPolicyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
     // Fail, policy must exist on both tables
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> joinDataSource.withPolicies(ImmutableMap.of(), restrictAllTablesPolicyEnforcer)
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> joinDataSource.withPolicies(ImmutableMap.of(
             "table1",
@@ -324,6 +324,6 @@ public class DataSourceTest
         joinableFactoryWrapper,
         JoinAlgorithm.BROADCAST
     );
-    Assert.assertEquals(expected, mapped2);
+    Assertions.assertEquals(expected, mapped2);
   }
 }

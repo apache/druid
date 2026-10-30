@@ -28,18 +28,24 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.util.CancelFlag;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.InDimFilter;
@@ -51,6 +57,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
@@ -60,13 +67,16 @@ import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
+import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -75,6 +85,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * Like {@link PlannerConfig}, but that has static configuration and this class
@@ -83,52 +95,119 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class PlannerContext
 {
-  // Query context keys
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_CURRENT_TIMESTAMP} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
-  public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
-  public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
-  private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
 
   /**
-   * Undocumented context key, used internally, to allow the web console to
-   * apply a limit without having to rewrite the SQL query.
+   * @deprecated Use {@link QueryContextParameters#SQL_TIME_ZONE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
+
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_JOIN_ALGORITHM} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
+
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_OUTER_LIMIT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
   /**
-   * Key to enable transfer of RACs over wire.
+   * @deprecated Use {@link QueryContextParameters#ENABLE_RAC_OVER_WIRE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_ENABLE_RAC_TRANSFER_OVER_WIRE = "enableRACOverWire";
 
   /**
-   * Context key for {@link PlannerContext#isUseBoundsAndSelectors()}.
+   * @deprecated Use {@link QueryContextParameters#SQL_USE_BOUND_AND_SELECTORS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
+
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SQL_USE_BOUND_AND_SELECTORS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = false;
 
   /**
-   * Context key for {@link PlannerContext#isUseExtractionFns()}.
+   * @deprecated Use {@link QueryContextParameters#SQL_USE_EXTRACTION_FNS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_USE_EXTRACTION_FNS = "sqlUseExtractionFns";
+
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SQL_USE_EXTRACTION_FNS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_SQL_USE_EXTRACTION_FNS = false;
 
   /**
-   * Context key for {@link PlannerContext#isPullUpLookup()}.
+   * @deprecated Use {@link QueryContextParameters#SQL_PULL_UP_LOOKUP} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_PULL_UP_LOOKUP = "sqlPullUpLookup";
+
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SQL_PULL_UP_LOOKUP} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_SQL_PULL_UP_LOOKUP = true;
 
   /**
-   * Context key for {@link PlannerContext#isReverseLookup()}.
+   * @deprecated Use {@link QueryContextParameters#SQL_REVERSE_LOOKUP} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_REVERSE_LOOKUP = "sqlReverseLookup";
+
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SQL_REVERSE_LOOKUP} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_SQL_REVERSE_LOOKUP = true;
 
   /**
-   * Context key for {@link PlannerContext#isUseGranularity()}.
+   * @deprecated Use {@link QueryContextParameters#SQL_USE_GRANULARITY} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_USE_GRANULARITY = "sqlUseGranularity";
+
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SQL_USE_GRANULARITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_SQL_USE_GRANULARITY = true;
+
+  /**
+   * Returns the join algorithm specified in a query context.
+   *
+   * @deprecated Use {@link QueryContext#getOrDefault(QueryContextParameter)} with
+   * {@link QueryContextParameters#SQL_JOIN_ALGORITHM} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static JoinAlgorithm getJoinAlgorithm(QueryContext queryContext)
+  {
+    return queryContext.getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
+  }
+
+  /**
+   * Returns the join algorithm specified in a query context.
+   *
+   * @deprecated Use {@link QueryContext#getOrDefault(QueryContextParameter)} with
+   * {@link QueryContextParameters#SQL_JOIN_ALGORITHM} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static JoinAlgorithm getJoinAlgorithm(Map<String, Object> queryContext)
+  {
+    return getJoinAlgorithm(QueryContext.of(queryContext));
+  }
 
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
@@ -138,13 +217,32 @@ public class PlannerContext
   private final String sql;
   private final SqlNode sqlNode;
   private final SqlEngine engine;
+  private final DruidSchemaCatalog rootSchema;
+  private final AuthenticationResult authenticationResult;
   private final Set<String> authContextKeys;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
 
+  /**
+   * Cancel flag inherited by any {@link PlannerContext} created on this thread while set, so nested view-expansion
+   * planners share the top-level query's {@link #cancelFlag}. Managed by {@link #withInheritedCancelFlag}.
+   */
+  private static final ThreadLocal<CancelFlag> INHERITED_CANCEL_FLAG = new ThreadLocal<>();
+
+  /**
+   * Calcite cancellation flag, wired into the planner via the framework {@link org.apache.calcite.plan.Context} in
+   * {@link PlannerFactory}; tripping it enforces the planning timeout ({@link PlannerConfig#getMaxPlanningTimeMs()}).
+   */
+  private final CancelFlag cancelFlag = inheritedOrNewCancelFlag();
+
   private PlannerConfig plannerConfig;
+  /**
+   * Root schema created with {@link DruidSchemaCatalogProvider#createEscalatedRootSchema()}, for use in
+   * view expansion. See {@link ViewManager} for details on the security model.
+   */
+  private DruidSchemaCatalog escalatedRootSchema;
   private String sqlQueryId;
   private boolean stringifyArrays;
   private boolean useBoundsAndSelectors;
@@ -152,12 +250,12 @@ public class PlannerContext
   private boolean pullUpLookup;
   private boolean reverseLookup;
   private boolean useGranularity;
+  @Nullable
+  private List<Interval> timeCondition;
   private DateTime localNow;
 
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
-  // result of authentication, providing identity to authorize set of resources produced by validation
-  private AuthenticationResult authenticationResult;
   // set of datasources and views which must be authorized, initialized to null so we can detect if it has been set.
   private Set<ResourceAction> resourceActions;
   // result of authorizing set of resources against authentication identity
@@ -176,6 +274,8 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
+      final DruidSchemaCatalog rootSchema,
+      final AuthenticationResult authenticationResult,
       final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -186,6 +286,8 @@ public class PlannerContext
     this.sql = sql;
     this.sqlNode = sqlNode;
     this.engine = engine;
+    this.rootSchema = rootSchema;
+    this.authenticationResult = authenticationResult;
     this.authContextKeys = authContextKeys;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
@@ -197,6 +299,7 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
+      final AuthenticationResult authenticationResult,
       final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -207,46 +310,12 @@ public class PlannerContext
         sql,
         sqlNode,
         engine,
+        plannerToolbox.rootSchemaProvider.createRootSchema(authenticationResult),
+        authenticationResult,
         authContextKeys,
         queryContext,
         hook
     );
-  }
-
-  /**
-   * Returns the join algorithm specified in a query context.
-   */
-  public static JoinAlgorithm getJoinAlgorithm(QueryContext queryContext)
-  {
-    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
-  }
-
-  /**
-   * Returns the join algorithm specified in a query context.
-   */
-  public static JoinAlgorithm getJoinAlgorithm(Map<String, Object> queryContext)
-  {
-    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
-  }
-
-  private static JoinAlgorithm getJoinAlgorithmFromContextValue(final Object object)
-  {
-    final String s = QueryContexts.getAsString(
-        CTX_SQL_JOIN_ALGORITHM,
-        object,
-        DEFAULT_SQL_JOIN_ALGORITHM.toString()
-    );
-
-    try {
-      return JoinAlgorithm.fromString(s);
-    }
-    catch (IllegalArgumentException e) {
-      throw QueryContexts.badValueException(
-          CTX_SQL_JOIN_ALGORITHM,
-          StringUtils.format("one of %s", Arrays.toString(JoinAlgorithm.values())),
-          object
-      );
-    }
   }
 
   public PlannerToolbox getPlannerToolbox()
@@ -263,7 +332,6 @@ public class PlannerContext
   {
     return expressionParser;
   }
-
 
   /**
    * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.
@@ -284,6 +352,37 @@ public class PlannerContext
     return plannerConfig;
   }
 
+  public CancelFlag getCancelFlag()
+  {
+    return cancelFlag;
+  }
+
+  private static CancelFlag inheritedOrNewCancelFlag()
+  {
+    final CancelFlag inherited = INHERITED_CANCEL_FLAG.get();
+    return inherited != null ? inherited : new CancelFlag(new AtomicBoolean(false));
+  }
+
+  /**
+   * Runs {@code action} with {@code cancelFlag} installed as the flag that {@link PlannerContext}s created on this
+   * thread inherit, so one planning timeout governs nested view-expansion planners. Restores the prior value after.
+   */
+  public static <T> T withInheritedCancelFlag(final CancelFlag cancelFlag, final Supplier<T> action)
+  {
+    final CancelFlag previous = INHERITED_CANCEL_FLAG.get();
+    INHERITED_CANCEL_FLAG.set(cancelFlag);
+    try {
+      return action.get();
+    }
+    finally {
+      if (previous != null) {
+        INHERITED_CANCEL_FLAG.set(previous);
+      } else {
+        INHERITED_CANCEL_FLAG.remove();
+      }
+    }
+  }
+
   public DateTime getLocalNow()
   {
     return localNow;
@@ -299,10 +398,45 @@ public class PlannerContext
     return plannerToolbox.joinableFactoryWrapper();
   }
 
+  /**
+   * Returns the {@link Table} object corresponding to a Druid table/datasource, or null if none exists.
+   */
   @Nullable
-  public String getSchemaResourceType(String schema, String resourceName)
+  public Table getDruidTable(String tableName)
   {
-    return plannerToolbox.rootSchema().getResourceType(schema, resourceName);
+    return rootSchema.getSubSchema(plannerToolbox.druidSchemaName()).tables().get(tableName);
+  }
+
+  /**
+   * Returns the root schema created with {@link DruidSchemaCatalogProvider#createRootSchema(AuthenticationResult)},
+   * scoped for {@link #getAuthenticationResult()}.
+   */
+  public DruidSchemaCatalog getRootSchema()
+  {
+    return rootSchema;
+  }
+
+  /**
+   * Returns the root schema created with {@link DruidSchemaCatalogProvider#createEscalatedRootSchema()},
+   * for use in view expansion. See {@link ViewManager} for details on the security model.
+   */
+  public DruidSchemaCatalog getEscalatedRootSchema()
+  {
+    if (escalatedRootSchema == null) {
+      escalatedRootSchema = plannerToolbox.rootSchemaProvider.createEscalatedRootSchema();
+    }
+    return escalatedRootSchema;
+  }
+
+  /**
+   * Returns the {@link Resource} to authorize against for a particular resource (e.g. table, view) located in a
+   * particular schema. If null, there is no authorization associated with the named resource (all authenticated
+   * users may access it).
+   */
+  @Nullable
+  public Resource getSchemaResource(String schema, String resourceName)
+  {
+    return rootSchema.getResource(schema, resourceName);
   }
 
   /**
@@ -357,7 +491,7 @@ public class PlannerContext
    * {@link org.apache.druid.query.filter.SelectorDimFilter} (true) or {@link org.apache.druid.query.filter.RangeFilter},
    * {@link org.apache.druid.query.filter.EqualityFilter}, and {@link org.apache.druid.query.filter.NullFilter} (false).
    *
-   * Can be overriden by the context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
+   * Can be overridden by the context parameter {@link QueryContextParameters#SQL_USE_BOUND_AND_SELECTORS}.
    */
   public boolean isUseBoundsAndSelectors()
   {
@@ -408,6 +542,16 @@ public class PlannerContext
     return useGranularity;
   }
 
+  /**
+   * Returns intervals that should be applied (via AND) to table reads. The returned list is sorted and
+   * non-overlapping.
+   */
+  @Nullable
+  public List<Interval> getTimeCondition()
+  {
+    return timeCondition;
+  }
+
   public List<TypedValue> getParameters()
   {
     return parameters;
@@ -420,7 +564,7 @@ public class PlannerContext
 
   public JoinAlgorithm getJoinAlgorithm()
   {
-    return getJoinAlgorithm(queryContext);
+    return QueryContext.of(queryContext).getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
   }
 
   public String getSql()
@@ -540,16 +684,6 @@ public class PlannerContext
   public void setParameters(List<TypedValue> parameters)
   {
     this.parameters = Preconditions.checkNotNull(parameters, "parameters");
-  }
-
-  public void setAuthenticationResult(AuthenticationResult authenticationResult)
-  {
-    if (this.authenticationResult != null) {
-      // It's a bug if this happens, because setAuthenticationResult should be called exactly once.
-      throw new ISE("Authentication result has already been set");
-    }
-
-    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
   }
 
   public void setAuthorizationResult(AuthorizationResult access)
@@ -674,70 +808,34 @@ public class PlannerContext
 
   private void initializeContextFieldsAndPlannerConfig()
   {
-    final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
-    final DateTime utcNow;
-    if (tsParam != null) {
-      utcNow = new DateTime(tsParam, DateTimeZone.UTC);
-    } else {
-      utcNow = new DateTime(DateTimeZone.UTC);
-    }
+    final QueryContext context = QueryContext.of(queryContext);
+    final String tsParam = context.get(QueryContextParameters.SQL_CURRENT_TIMESTAMP);
+    final DateTime utcNow = tsParam != null ? DateTimes.of(tsParam) : DateTimes.nowUtc();
 
-    final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
+    final String tzParam = context.get(QueryContextParameters.SQL_TIME_ZONE);
     final DateTimeZone timeZone;
     if (tzParam != null) {
-      timeZone = DateTimes.inferTzFromString(String.valueOf(tzParam));
+      timeZone = DateTimes.inferTzFromString(tzParam);
     } else {
       timeZone = plannerToolbox.plannerConfig().getSqlTimeZone();
     }
     localNow = utcNow.withZone(timeZone);
 
-    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
-    if (stringifyParam != null) {
-      stringifyArrays = Numbers.parseBoolean(stringifyParam);
-    } else {
-      stringifyArrays = true;
-    }
+    stringifyArrays = context.getOrDefault(QueryContextParameters.SQL_STRINGIFY_ARRAYS, true);
+    useBoundsAndSelectors = context.getOrDefault(QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS);
+    useExtractionFns = context.getOrDefault(QueryContextParameters.SQL_USE_EXTRACTION_FNS);
+    pullUpLookup = context.getOrDefault(QueryContextParameters.SQL_PULL_UP_LOOKUP);
+    reverseLookup = context.getOrDefault(QueryContextParameters.SQL_REVERSE_LOOKUP);
 
-    final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
-    if (useBoundsAndSelectorsParam != null) {
-      useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
-    } else {
-      useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
-    }
+    useGranularity = context.getOrDefault(QueryContextParameters.SQL_USE_GRANULARITY);
 
-    final Object useExtractionFnsParam = queryContext.get(CTX_SQL_USE_EXTRACTION_FNS);
-    if (useExtractionFnsParam != null) {
-      useExtractionFns = Numbers.parseBoolean(useExtractionFnsParam);
-    } else {
-      useExtractionFns = DEFAULT_SQL_USE_EXTRACTION_FNS;
-    }
+    timeCondition = parseTimeCondition(context.get(QueryContextParameters.SQL_TIME_CONDITION));
 
-    final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
-    if (pullUpLookupParam != null) {
-      pullUpLookup = Numbers.parseBoolean(pullUpLookupParam);
-    } else {
-      pullUpLookup = DEFAULT_SQL_PULL_UP_LOOKUP;
-    }
-
-    final Object reverseLookupParam = queryContext.get(CTX_SQL_REVERSE_LOOKUP);
-    if (reverseLookupParam != null) {
-      reverseLookup = Numbers.parseBoolean(reverseLookupParam);
-    } else {
-      reverseLookup = DEFAULT_SQL_REVERSE_LOOKUP;
-    }
-
-    final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
-    if (useGranularityParam != null) {
-      useGranularity = Numbers.parseBoolean(useGranularityParam);
-    } else {
-      useGranularity = DEFAULT_SQL_USE_GRANULARITY;
-    }
-
-    sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
+    sqlQueryId = context.get(QueryContextParameters.SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
-      this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+      QueryContextParameters.SQL_QUERY_ID.set(this.queryContext, sqlQueryId);
     }
 
     if (plannerConfig != null) {
@@ -745,5 +843,35 @@ public class PlannerContext
     } else {
       plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(queryContext);
     }
+  }
+
+  /**
+   * Parses the value of {@link QueryContextParameters#SQL_TIME_CONDITION}, a comma-separated string of ISO8601
+   * intervals. Returns null if the value is null. Throws an error if the string is empty or if there are empty items
+   * after splitting on commas. The returned intervals are condensed and sorted.
+   */
+  @Nullable
+  static List<Interval> parseTimeCondition(@Nullable final String value)
+  {
+    if (value == null) {
+      return null;
+    }
+
+    final List<Interval> intervals = new ArrayList<>();
+    for (final String intervalString : value.split(",", -1)) {
+      try {
+        intervals.add(Intervals.of(intervalString.trim()));
+      }
+      catch (DruidException e) {
+        throw InvalidInput.exception(
+            e,
+            "Query context parameter [%s] must be a comma-separated string of ISO8601 intervals, but got [%s]",
+            QueryContextParameters.SQL_TIME_CONDITION,
+            value
+        );
+      }
+    }
+
+    return JodaUtils.condenseIntervals(intervals);
   }
 }

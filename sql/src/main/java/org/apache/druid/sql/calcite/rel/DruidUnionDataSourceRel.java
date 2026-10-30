@@ -31,12 +31,10 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.ArrayList;
@@ -57,43 +55,30 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
 {
   static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__union__");
   private final Union unionRel;
-  private final List<String> unionColumnNames;
   private final PartialDruidQuery partialQuery;
 
   private DruidUnionDataSourceRel(
       final RelOptCluster cluster,
       final RelTraitSet traitSet,
       final Union unionRel,
-      final List<String> unionColumnNames,
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext
   )
   {
     super(cluster, traitSet, plannerContext);
     this.unionRel = unionRel;
-    this.unionColumnNames = unionColumnNames;
     this.partialQuery = partialQuery;
   }
 
-  public static DruidUnionDataSourceRel create(
-      final Union unionRel,
-      final List<String> unionColumnNames,
-      final PlannerContext plannerContext
-  )
+  public static DruidUnionDataSourceRel create(final Union unionRel, final PlannerContext plannerContext)
   {
     return new DruidUnionDataSourceRel(
         unionRel.getCluster(),
         unionRel.getTraitSet(),
         unionRel,
-        unionColumnNames,
         PartialDruidQuery.create(unionRel),
         plannerContext
     );
-  }
-
-  public List<String> getUnionColumnNames()
-  {
-    return unionColumnNames;
   }
 
   @Override
@@ -109,7 +94,6 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         getCluster(),
         newQueryBuilder.getTraitSet(getConvention(), getPlannerContext()),
         unionRel,
-        unionColumnNames,
         newQueryBuilder,
         getPlannerContext()
     );
@@ -118,52 +102,48 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
   @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
-    final List<DataSource> dataSources = new ArrayList<>();
-    RowSignature signature = null;
+    final List<SourceDesc> arms = new ArrayList<>();
 
     for (final RelNode relNode : unionRel.getInputs()) {
       final DruidRel<?> druidRel = (DruidRel<?>) relNode;
-      if (!DruidRels.isScanOrMapping(druidRel, false)) {
-        getPlannerContext().setPlanningError("SQL requires union between inputs that are not simple table scans " +
-            "and involve a filter or aliasing");
+      if (!DruidRels.isScanOrFilterOrProject(druidRel)) {
+        getPlannerContext().setPlanningError(
+            "Query requires union with an input that does more than scan, filter, or project a table, "
+            + "which is not supported."
+        );
         throw new CannotBuildQueryException(druidRel);
       }
 
       final DruidQuery query = druidRel.toDruidQuery(false);
-      final DataSource dataSource = query.getDataSource();
-      if (!(dataSource instanceof TableDataSource) && !(dataSource instanceof RestrictedDataSource)) {
-        getPlannerContext().setPlanningError("SQL requires union with input of '%s' type that is not supported."
-                + " Union operation is only supported between regular tables. ",
-            dataSource.getClass().getSimpleName());
+      final SourceDesc arm = DruidRels.makeUnionArm(query, DruidRels.dataSourceSignature(druidRel));
+      if (arm == null) {
+        getPlannerContext().setPlanningError(
+            "Query requires union with an input that reads from '%s' rather than a regular table, "
+            + "which is not supported.",
+            query.getDataSource().getClass().getSimpleName()
+        );
         throw new CannotBuildQueryException(druidRel);
       }
 
-      if (signature == null) {
-        signature = query.getOutputRowSignature();
-      }
-
-      if (signature.getColumnNames().equals(query.getOutputRowSignature().getColumnNames())) {
-        dataSources.add(dataSource);
-      } else {
-        getPlannerContext().setPlanningError("There is a mismatch between the output row signature of input tables and the row signature of union output.");
+      if (arm.rowSignature.size() != unionRel.getRowType().getFieldCount()) {
+        getPlannerContext().setPlanningError(
+            "Query requires union between inputs with different numbers of columns, which is not supported."
+        );
         throw new CannotBuildQueryException(druidRel);
       }
+
+      arms.add(arm);
     }
 
-    if (signature == null) {
+    if (arms.isEmpty()) {
       // No inputs.
       throw new CannotBuildQueryException(unionRel);
     }
 
-    // Sanity check: the columns we think we're building off must equal the "unionColumnNames" registered at
-    // creation time.
-    if (!signature.getColumnNames().equals(unionColumnNames)) {
-      throw new CannotBuildQueryException(unionRel);
-    }
-
+    final SourceDesc union = DruidRels.makeUnionSourceDesc(arms, unionRel.getRowType());
     return partialQuery.build(
-        new UnionDataSource(dataSources),
-        signature,
+        union.dataSource,
+        union.rowSignature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
@@ -176,10 +156,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
   {
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignatures.fromRelDataType(
-            unionRel.getRowType().getFieldNames(),
-            unionRel.getRowType()
-        ),
+        RowSignatures.fromRelDataTypeWithUniqueFields(unionRel.getRowType()),
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false,
@@ -200,7 +177,6 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
                     .map(input -> RelOptRule.convert(input, DruidConvention.instance()))
                     .collect(Collectors.toList())
         ),
-        unionColumnNames,
         partialQuery,
         getPlannerContext()
     );
@@ -225,7 +201,6 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         getCluster(),
         traitSet,
         (Union) unionRel.copy(unionRel.getTraitSet(), inputs),
-        unionColumnNames,
         partialQuery,
         getPlannerContext()
     );

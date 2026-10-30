@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, MenuDivider, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { SqlQuery, SqlTable } from 'druid-query-toolkit';
 import type { JSX } from 'react';
@@ -66,11 +66,12 @@ export const SourcePane = React.memo(function SourcePane(props: SourcePaneProps)
   });
 
   return (
-    <Popover
+    <PopoverNext
       className="source-pane"
       disabled={disabled}
-      minimal
-      position={Position.BOTTOM_LEFT}
+      animation="minimal"
+      arrow={false}
+      placement="bottom-start"
       content={
         <Menu className="source-pane-menu">
           {onShowSourceQuery && (
@@ -84,15 +85,17 @@ export const SourcePane = React.memo(function SourcePane(props: SourcePaneProps)
           {!tables.data?.length && <MenuItem text="No tables" disabled />}
         </Menu>
       }
+      lazy
+      shouldReturnFocusOnClose={false}
     >
       <Button
         icon={IconNames.TH}
         text={formatQuerySource(selectedSource)}
-        rightIcon={IconNames.CARET_DOWN}
+        endIcon={IconNames.CARET_DOWN}
         fill={fill}
-        minimal={minimal}
+        variant={minimal ? 'minimal' : undefined}
         disabled={disabled}
       />
-    </Popover>
+    </PopoverNext>
   );
 });

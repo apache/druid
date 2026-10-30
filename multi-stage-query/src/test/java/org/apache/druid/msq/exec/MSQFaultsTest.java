@@ -20,15 +20,14 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -47,15 +46,15 @@ import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
@@ -291,10 +290,10 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testInsertWithTooManyPartitions() throws IOException
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    Map<String, Object> context = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
-                                              .build();
+                                              .put(QueryContextParameters.ROWS_PER_SEGMENT, 1)
+                                              .toMap();
 
 
     RowSignature rowSignature = RowSignature.builder()
@@ -330,11 +329,11 @@ public class MSQFaultsTest extends MSQTestBase
     final int rowsPerSegment = 10;
     final int numRowsInInputFile = 50;
 
-    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> context = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("maxNumSegments", maxNumSegments)
-                                              .put("rowsPerSegment", rowsPerSegment)
-                                              .build();
+                                              .put(QueryContextParameters.MAX_NUM_SEGMENTS, maxNumSegments)
+                                              .put(QueryContextParameters.ROWS_PER_SEGMENT, rowsPerSegment)
+                                              .toMap();
 
 
     final File file = createNdJsonFile(newTempFile("ndjson30k"), numRowsInInputFile, 1);
@@ -448,10 +447,10 @@ public class MSQFaultsTest extends MSQTestBase
                                       .collect(Collectors.joining(", "));
 
     final Map<String, Object> context =
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(MultiStageQueryContext.CTX_MAX_CLUSTERED_BY_COLUMNS, maxClusteredByColumns)
-                    .build();
+                    .put(QueryContextParameters.MAX_CLUSTERED_BY_COLUMNS, maxClusteredByColumns)
+                    .toMap();
 
     testIngestQuery()
         .setSql(StringUtils.format(
@@ -488,11 +487,12 @@ public class MSQFaultsTest extends MSQTestBase
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
     final String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
 
-    final Map<String, Object> context =
-        ImmutableMap.<String, Object>builder()
-                    .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 8)
-                    .put(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, maxInputFilesPerWorker)
-                    .build();
+    final Map<String, Object> context = QueryContext.ofMap(
+        QueryContextParameters.MAX_NUM_TASKS,
+        8,
+        QueryContextParameters.MAX_INPUT_FILES_PER_WORKER,
+        maxInputFilesPerWorker
+    );
 
     testIngestQuery()
         .setSql(StringUtils.format(
@@ -520,11 +520,11 @@ public class MSQFaultsTest extends MSQTestBase
     final int maxPartitions = 5;
 
     final Map<String, Object> context =
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
-                    .put(MultiStageQueryContext.CTX_MAX_PARTITIONS, maxPartitions)
-                    .build();
+                    .put(QueryContextParameters.ROWS_PER_SEGMENT, 1)
+                    .put(QueryContextParameters.MAX_PARTITIONS, maxPartitions)
+                    .toMap();
 
     final RowSignature rowSignature = RowSignature.builder().addTimeColumn().build();
 
@@ -549,28 +549,6 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testUnionAllWithDifferentColumnNames()
-  {
-    // This test fails till MSQ can support arbitrary column names and column types for UNION ALL
-    testIngestQuery()
-        .setSql(
-            "INSERT INTO druid.dst "
-            + "SELECT dim2, dim1, m1 FROM foo2 "
-            + "UNION ALL "
-            + "SELECT dim1, dim2, m1 FROM foo "
-            + "PARTITIONED BY ALL TIME")
-        .setExpectedValidationErrorMatcher(
-            new DruidExceptionMatcher(
-                DruidException.Persona.USER,
-                DruidException.Category.INVALID_INPUT,
-                "general"
-            ).expectMessageContains(
-                "SQL requires union between two tables and column names queried for each table are different "
-                + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."))
-        .verifyPlanningErrors();
-  }
-
-  @Test
   public void testTopLevelUnionAllWithJoins()
   {
     // This test fails becaues it is a top level UNION ALL which cannot be planned using MSQ. It will be supported once
@@ -587,7 +565,8 @@ public class MSQFaultsTest extends MSQTestBase
                 DruidException.Category.INVALID_INPUT,
                 "general"
             ).expectMessageContains(
-                "SQL requires union between inputs that are not simple table scans and involve a filter or aliasing"))
+                "Query requires union with an input that reads from something other than a regular table, "
+                + "which is not supported."))
         .verifyPlanningErrors();
   }
 
@@ -654,12 +633,7 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(
-                                 CoreMatchers.containsString(expectedError)
-                             )
-                         )
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(expectedError)
                      )
                      .verifyExecutionError();
   }
@@ -702,12 +676,7 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(
-                                 CoreMatchers.containsString(expectedError)
-                             )
-                         )
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(expectedError)
                      )
                      .verifyExecutionError();
   }
@@ -717,10 +686,10 @@ public class MSQFaultsTest extends MSQTestBase
   {
     // BITWISE_COMPLEMENT(m1 * 1e19) throws because the double value exceeds Long range. The expression engine
     // wraps this in DruidException, which getFaultFromException() converts to DruidExceptionFault.
-    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .put("vectorize", "false")
-                                                    .build();
+                                                    .put(QueryContextParameters.VECTORIZE, QueryContexts.Vectorize.FALSE)
+                                                    .toMap();
 
     testSelectQuery()
         .setSql("SELECT BITWISE_COMPLEMENT(m1 * 1e19) FROM foo")
@@ -741,7 +710,7 @@ public class MSQFaultsTest extends MSQTestBase
   private void testLockTypes(TaskLockType contextTaskLockType, String sql, String errorMessage)
   {
     Map<String, Object> context = new HashMap<>(DEFAULT_MSQ_CONTEXT);
-    context.put(Tasks.TASK_LOCK_TYPE, contextTaskLockType.name());
+    QueryContextParameters.TASK_LOCK_TYPE.set(context, contextTaskLockType.name());
     testIngestQuery()
         .setSql(
             sql

@@ -32,15 +32,13 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ArrayOfDoublesSketchToMeansPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws JsonProcessingException
@@ -56,8 +54,8 @@ public class ArrayOfDoublesSketchToMeansPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -68,7 +66,7 @@ public class ArrayOfDoublesSketchToMeansPostAggregatorTest
         new ConstantPostAggregator("", 0)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ArrayOfDoublesSketchToMeansPostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
         postAgg.toString()
     );
@@ -77,13 +75,14 @@ public class ArrayOfDoublesSketchToMeansPostAggregatorTest
   @Test
   public void testComparator()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing arrays of mean values is not supported");
-    final PostAggregator postAgg = new ArrayOfDoublesSketchToMeansPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0)
-    );
-    postAgg.getComparator();
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      final PostAggregator postAgg = new ArrayOfDoublesSketchToMeansPostAggregator(
+          "a",
+          new ConstantPostAggregator("", 0)
+      );
+      postAgg.getComparator();
+    });
+    assertTrue(exception.getMessage().contains("Comparing arrays of mean values is not supported"));
   }
 
   @Test
@@ -114,7 +113,7 @@ public class ArrayOfDoublesSketchToMeansPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

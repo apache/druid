@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
@@ -34,16 +35,19 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.NoopTaskLogs;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -54,7 +58,7 @@ public class ThreadingTaskRunnerTest
 
   private ThreadingTaskRunner runner;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     final TaskConfig taskConfig = ForkingTaskRunnerTest.makeDefaultTaskConfigBuilder().build();
@@ -84,9 +88,9 @@ public class ThreadingTaskRunnerTest
       }
     });
 
-    TaskStatus status = statusFuture.get();
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals(
+    final TaskStatus status = statusFuture.get();
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assertions.assertEquals(
         "Failed with exception [Task failure test]. See indexer logs for details.",
         status.getErrorMsg()
     );
@@ -117,11 +121,11 @@ public class ThreadingTaskRunnerTest
 
     // Stream and verify the contents of the task logs
     final Optional<InputStream> logStream = runner.streamTaskLog(indexerTask.getId(), 0);
-    Assert.assertTrue(logStream.isPresent());
+    Assertions.assertTrue(logStream.isPresent());
 
     try (final InputStream in = logStream.get()) {
       final String fullTaskLogs = IOUtils.toString(in, StandardCharsets.UTF_8);
-      Assert.assertTrue(
+      Assertions.assertTrue(
           fullTaskLogs.contains(
               StringUtils.format("Running test task[%s]", indexerTask.getId())
           )
@@ -130,15 +134,61 @@ public class ThreadingTaskRunnerTest
 
     // Finish the task and verify status
     finishTask.countDown();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskStatus.success(indexerTask.getId()),
         statusFuture.get()
     );
 
     // Verify that task logs cannot be streamed anymore as task has finished
-    Assert.assertFalse(
+    Assertions.assertFalse(
         runner.streamTaskLog(indexerTask.getId(), 0).isPresent()
     );
+  }
+
+  @Test
+  public void testTaskLocationUsesAdvertisedPlaintextPort() throws Exception
+  {
+    final TaskConfig taskConfig = ForkingTaskRunnerTest.makeDefaultTaskConfigBuilder().build();
+    final WorkerConfig workerConfig = new WorkerConfig();
+    runner = new ThreadingTaskRunner(
+        mockTaskToolboxFactory(),
+        taskConfig,
+        workerConfig,
+        new NoopTaskLogs(),
+        new DefaultObjectMapper(),
+        new TestAppenderatorsManager(),
+        new MultipleFileTaskReportFileWriter(),
+        new DruidNode("druid/indexer", "host", false, 8091, null, null, true, false, null, 9091),
+        TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
+    );
+
+    final List<TaskLocation> locations = new CopyOnWriteArrayList<>();
+    runner.registerListener(
+        new TaskRunnerListener()
+        {
+          @Override
+          public String getListenerId()
+          {
+            return "testTaskLocationUsesAdvertisedPlaintextPort";
+          }
+
+          @Override
+          public void locationChanged(final Task task, final TaskLocation newLocation)
+          {
+            locations.add(newLocation);
+          }
+
+          @Override
+          public void statusChanged(final Task task, final TaskStatus status)
+          {
+          }
+        },
+        Execs.directExecutor()
+    );
+
+    final TaskStatus status = runner.run(new NoopTask(null, null, null, 1L, 0L, Map.of())).get();
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode());
+    Assertions.assertEquals(List.of(TaskLocation.create("host", 9091, -1)), locations);
   }
 
   private static TaskToolboxFactory mockTaskToolboxFactory()

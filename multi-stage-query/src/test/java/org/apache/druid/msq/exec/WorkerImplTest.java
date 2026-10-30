@@ -21,10 +21,10 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.query.context.QueryContextParameters;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -45,7 +45,7 @@ public class WorkerImplTest
         ImmutableMap.of("foo", "bar")
     );
 
-    Assert.assertSame(
+    Assertions.assertSame(
         workOrder,
         WorkerImpl.makeWorkOrderToUse(
             workOrder,
@@ -58,7 +58,7 @@ public class WorkerImplTest
   public void test_makeWorkOrderToUse_missingOutputChannelModeAndWorkerContext()
   {
     final Map<String, Object> taskContext =
-        ImmutableMap.of("foo", "bar", MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true);
+        QueryContext.builder().putRaw("foo", "bar").put(QueryContextParameters.DURABLE_SHUFFLE_STORAGE, true).toMap();
 
     final WorkOrder workOrder = new WorkOrder(
         QueryValidatorTest.createQueryDefinition(10, 2),
@@ -71,7 +71,7 @@ public class WorkerImplTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new WorkOrder(
             workOrder.getQueryDefinition(),
             workOrder.getStageNumber(),

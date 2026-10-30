@@ -22,9 +22,9 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class GenericPartitionLocationTest
 {
@@ -32,7 +32,7 @@ public class GenericPartitionLocationTest
 
   private GenericPartitionLocation target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     target = new GenericPartitionLocation(
@@ -54,7 +54,7 @@ public class GenericPartitionLocationTest
   @Test
   public void hasPartitionIdThatMatchesShardSpec()
   {
-    Assert.assertEquals(ParallelIndexTestingFactory.PARTITION_ID, target.getBucketId());
+    Assertions.assertEquals(ParallelIndexTestingFactory.PARTITION_ID, target.getBucketId());
   }
 
   @Test

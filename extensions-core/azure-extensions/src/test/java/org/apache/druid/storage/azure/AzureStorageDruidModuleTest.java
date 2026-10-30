@@ -25,6 +25,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.ProvisionException;
 import com.google.inject.TypeLiteral;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
@@ -42,8 +44,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;

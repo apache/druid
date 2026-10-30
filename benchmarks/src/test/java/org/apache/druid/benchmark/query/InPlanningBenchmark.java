@@ -53,7 +53,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
@@ -135,6 +135,8 @@ public class InPlanningBenchmark
   private SqlEngine engine;
   @Nullable
   private PlannerFactory plannerFactory;
+  private String planOnlyLongSql;
+  private String planOnlyStringSql;
   private final Closer closer = Closer.create();
 
   @Setup(Level.Trial)
@@ -186,13 +188,17 @@ public class InPlanningBenchmark
     );
     closer.register(walker);
     final ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
-    final DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final DruidSchemaCatalogProvider rootSchemaProvider = CalciteTests.createMockRootSchemaProvider(
+        conglomerate,
+        walker,
+        plannerConfig,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+    );
 
     engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
 
     plannerFactory = new PlannerFactory(
-        rootSchema,
+        rootSchemaProvider,
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -206,6 +212,9 @@ public class InPlanningBenchmark
         NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
+
+    planOnlyLongSql = createQuery("select long1 from foo where long1 in ", inClauseLiteralsCount, ValueType.LONG);
+    planOnlyStringSql = createQuery("select string1 from foo where string1 in ", inClauseLiteralsCount, ValueType.STRING);
 
     String prefix = ("explain plan for select long1 from foo where long1 in ");
     final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
@@ -234,6 +243,22 @@ public class InPlanningBenchmark
     String prefix = "explain plan for select long1 from foo where long1 in ";
     final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
     getPlan(sql, blackhole);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryLongInSqlPlanOnly(Blackhole blackhole)
+  {
+    planOnly(planOnlyLongSql, blackhole);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryStringInSqlPlanOnly(Blackhole blackhole)
+  {
+    planOnly(planOnlyStringSql, blackhole);
   }
 
   @Benchmark
@@ -339,6 +364,16 @@ public class InPlanningBenchmark
         blackhole.consume(lastRow);
       }
       return resultSequence;
+    }
+  }
+
+  private void planOnly(final String sql, final Blackhole blackhole)
+  {
+    final Map<String, Object> context = ImmutableMap.of(
+        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false);
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
+      blackhole.consume(planner.plan());
     }
   }
 }

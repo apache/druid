@@ -27,9 +27,12 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.VirtualColumns;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,8 +40,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DimensionRangeShardSpecTest
 {
@@ -79,7 +82,7 @@ public class DimensionRangeShardSpecTest
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -87,7 +90,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -95,7 +98,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -103,7 +106,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(1),
         lookup.getShardSpec(
             currentTime,
@@ -111,7 +114,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(1),
         lookup.getShardSpec(
             currentTime,
@@ -119,7 +122,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(1),
         lookup.getShardSpec(
             currentTime,
@@ -127,7 +130,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(2),
         lookup.getShardSpec(
             currentTime,
@@ -135,7 +138,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(2),
         lookup.getShardSpec(
             currentTime,
@@ -143,7 +146,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(2),
         lookup.getShardSpec(
             currentTime,
@@ -195,20 +198,20 @@ public class DimensionRangeShardSpecTest
     final ShardSpecLookup lookup = shard0.getLookup(Arrays.asList(shard0, shard1, shard2, shard3));
     final long timestamp = System.currentTimeMillis();
 
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Delhi")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Kolkata")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Japan", "Tokyo")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", "Barcelona")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Bengaluru")));
-    Assert.assertEquals(shard2, lookup.getShardSpec(timestamp, createRow("Spain", "Valencia")));
-    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", "London")));
+    Assertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Delhi")));
+    Assertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Kolkata")));
+    Assertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Japan", "Tokyo")));
+    Assertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", "Barcelona")));
+    Assertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Bengaluru")));
+    Assertions.assertEquals(shard2, lookup.getShardSpec(timestamp, createRow("Spain", "Valencia")));
+    Assertions.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", "London")));
 
-    Assert.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, null)));
-    Assert.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, "Lyon")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", null)));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", null)));
-    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("Tokyo", null)));
-    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", null)));
+    Assertions.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, null)));
+    Assertions.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, "Lyon")));
+    Assertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", null)));
+    Assertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", null)));
+    Assertions.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("Tokyo", null)));
+    Assertions.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", null)));
   }
 
   @Test
@@ -540,6 +543,42 @@ public class DimensionRangeShardSpecTest
         universalSet
     );
     assertTrue(shard.possibleInDomain(domain));
+  }
+
+  @Test
+  public void testEqualVirtualColumnsShareInstance()
+  {
+    setDimensions("v0");
+
+    final DimensionRangeShardSpec shard0 = new DimensionRangeShardSpec(
+        dimensions,
+        createVirtualColumns(),
+        null,
+        StringTuple.create("m"),
+        0,
+        2
+    );
+    final DimensionRangeShardSpec shard1 = new DimensionRangeShardSpec(
+        dimensions,
+        createVirtualColumns(),
+        StringTuple.create("m"),
+        null,
+        1,
+        2
+    );
+
+    Assertions.assertSame(shard0.getVirtualColumns(), shard1.getVirtualColumns());
+    Assertions.assertSame(
+        shard0.getVirtualColumns().getVirtualColumns()[0],
+        shard1.getVirtualColumns().getVirtualColumns()[0]
+    );
+  }
+
+  private static VirtualColumns createVirtualColumns()
+  {
+    return VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(\"dim\")", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
   }
 
   private RangeSet<String> getRangeSet(Range range)

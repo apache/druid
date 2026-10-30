@@ -19,13 +19,28 @@
 
 package org.apache.druid.sql.calcite.view;
 
+import org.apache.druid.query.policy.Policy;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.schema.ViewSchema;
 
 import java.util.Map;
 
 /**
- * View managers allow {@link org.apache.druid.sql.calcite.schema.DruidSchema} to support views. They must be
- * thread-safe.
+ * View managers appear in the {@link ViewSchema}. They are not currently exposed via user-facing API, but may
+ * be exposed in the future. View managers must be thread-safe.
+ *
+ * <p>Access to views is authorized using {@link ResourceType#VIEW}. Views are expanded by {@link DruidViewMacro}
+ * using escalated privileges, not the privileges of the user running the query. This means that views are a
+ * security boundary: it is possible for a user to have access to a view {@code aview} that references
+ * a table {@code atable} that the user does *not* have access to.
+ *
+ * <p>Views are treated as owned by the superuser (superuser privileges are used for view expansion). Therefore,
+ * users must not be allowed to create their own views, as this would enable them to access tables that they may
+ * not otherwise have had access to.
+ *
+ * <p>Note that for tables reached entirely through views, policies ({@link Policy}) are not attached. This is
+ * consistent with the idea that views are expanded as the superuser.
  */
 public interface ViewManager
 {

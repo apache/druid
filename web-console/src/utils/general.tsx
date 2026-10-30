@@ -41,6 +41,31 @@ export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }
 
+/**
+ * Query results and API responses are parsed with JSONBig, so any integer with 16+ digits arrives
+ * as a BigInt. Charting libraries can not do arithmetic on those, so flatten them back to numbers.
+ *
+ * Only the named (measure) columns are converted. Dimension values are left alone because a BigInt
+ * above Number.MAX_SAFE_INTEGER would round, merging distinct categories into one bucket and making
+ * click-to-filter target a value that is not in the data.
+ */
+export function bigIntsToNumbers<T extends Record<string, any>>(
+  rows: T[],
+  measureKeys: string[],
+): T[] {
+  return rows.map(row => {
+    let changed = false;
+    const res: Record<string, any> = { ...row };
+    for (const k of measureKeys) {
+      if (typeof res[k] === 'bigint') {
+        res[k] = Number(res[k]);
+        changed = true;
+      }
+    }
+    return changed ? (res as T) : row;
+  });
+}
+
 export function nonEmptyString(s: unknown): s is string {
   return typeof s === 'string' && s !== '';
 }
@@ -459,7 +484,7 @@ export function partition<T>(xs: T[], predicate: (x: T, i: number) => boolean): 
 }
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
-  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
+  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined');
 }
 
 export function filterMapOrReturn<T>(
@@ -559,8 +584,12 @@ export function arrangeWithPrefixSuffix(
 
 // ----------------------------
 
+export function copyToClipboard(text: string): void {
+  void copy(text, { format: 'text/plain', fallbackToPrompt: true });
+}
+
 export function copyAndAlert(copyString: string, alertMessage: string): void {
-  copy(copyString, { format: 'text/plain' });
+  copyToClipboard(copyString);
   AppToaster.show({
     message: alertMessage,
     intent: Intent.SUCCESS,
@@ -704,26 +733,29 @@ export function generate8HexId(): string {
   return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
 }
 
-export interface RowColumn {
-  row: number;
+/**
+ * A position in a text, both 1-based, the way Druid and Hjson errors report them (and the way CodeMirror counts lines)
+ */
+export interface LineColumn {
+  line: number;
   column: number;
 }
 
-export function offsetToRowColumn(str: string, offset: number): RowColumn | undefined {
+export function offsetToLineColumn(str: string, offset: number): LineColumn | undefined {
   // Ensure offset is within the string length
   if (offset < 0 || offset > str.length) return;
 
   const lines = str.split('\n');
-  for (let row = 0; row < lines.length; row++) {
-    const line = lines[row];
-    if (offset <= line.length) {
+  for (let i = 0; i < lines.length; i++) {
+    const lineText = lines[i];
+    if (offset <= lineText.length) {
       return {
-        row,
-        column: offset,
+        line: i + 1,
+        column: offset + 1,
       };
     }
 
-    offset -= line.length + 1;
+    offset -= lineText.length + 1;
   }
 
   return;

@@ -30,9 +30,9 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -66,7 +66,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   private GoogleInputDataConfig inputDataConfig;
   private CurrentTimeMillisSupplier timeSupplier;
 
-  @Before
+  @BeforeEach
   public void before()
   {
     storage = createMock(GoogleStorage.class);
@@ -153,7 +153,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
-    Assert.assertEquals(writer.toString(), testLog);
+    Assertions.assertEquals(writer.toString(), testLog);
 
     verifyAll();
   }
@@ -176,7 +176,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
-    Assert.assertEquals(writer.toString(), expectedLog);
+    Assertions.assertEquals(writer.toString(), expectedLog);
 
     verifyAll();
   }
@@ -200,7 +200,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
-    Assert.assertEquals(writer.toString(), expectedLog);
+    Assertions.assertEquals(writer.toString(), expectedLog);
 
     verifyAll();
   }
@@ -221,7 +221,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
-    Assert.assertEquals(writer.toString(), taskStatus);
+    Assertions.assertEquals(writer.toString(), taskStatus);
 
     verifyAll();
   }
@@ -301,7 +301,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assertions.assertTrue(ioExceptionThrown);
 
     EasyMock.verify(inputDataConfig, storage, timeSupplier);
   }
@@ -374,7 +374,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assertions.assertTrue(ioExceptionThrown);
 
     EasyMock.verify(inputDataConfig, storage);
   }

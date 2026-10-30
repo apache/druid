@@ -16,17 +16,18 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { EXECUTION_INGEST_COMPLETE } from '../../../druid-models/mocks';
-import { shallow } from '../../../utils/shallow-renderer';
 
 import { ExecutionProgressBarPane } from './execution-progress-bar-pane';
 
 describe('ExecutionProgressBarPane', () => {
   it('matches snapshot', () => {
-    const comp = shallow(
+    const { container } = render(
       <ExecutionProgressBarPane execution={EXECUTION_INGEST_COMPLETE} onCancel={() => {}} />,
     );
 
-    expect(comp).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

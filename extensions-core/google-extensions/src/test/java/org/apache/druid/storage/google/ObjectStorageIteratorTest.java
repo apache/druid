@@ -21,8 +21,8 @@ package org.apache.druid.storage.google;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -175,10 +175,10 @@ public class ObjectStorageIteratorTest
         )
     );
 
-    Assert.assertEquals(
-        prefixes.toString(),
+    Assertions.assertEquals(
         expectedObjects.stream().map(GoogleUtils::objectToUri).collect(Collectors.toList()),
-        actualObjects.stream().map(GoogleUtils::objectToUri).collect(Collectors.toList())
+        actualObjects.stream().map(GoogleUtils::objectToUri).collect(Collectors.toList()),
+        prefixes.toString()
     );
   }
 
