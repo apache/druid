@@ -21,10 +21,7 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.HttpServerInventoryView;
@@ -39,10 +36,10 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.loading.HttpLoadQueuePeon;
+import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.annotation.Nullable;
-import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -54,7 +51,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -111,7 +107,6 @@ public class SegmentListerResource
    * @param timeout after which response is sent even if there are no new segment updates.
    * @param req
    * @return null to avoid "MUST return a non-void type" warning.
-   * @throws IOException
    */
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
@@ -121,7 +116,7 @@ public class SegmentListerResource
       @QueryParam("hash") long hash,
       @QueryParam("timeout") long timeout,
       @Context final HttpServletRequest req
-  ) throws IOException
+  )
   {
     if (announcer == null) {
       sendErrorResponse(req, HttpServletResponse.SC_NOT_FOUND, "announcer is not available.");
@@ -141,56 +136,20 @@ public class SegmentListerResource
         )
     );
 
-    final AsyncContext asyncContext = req.startAsync();
-
-    asyncContext.addListener(
-        ServletResourceUtils.createAsyncTimeoutListener(event -> {
-          // HTTP 204 NO_CONTENT is sent to the client.
-          future.cancel(true);
-          event.getAsyncContext().complete();
-        })
-    );
-
-    Futures.addCallback(
-        future,
-        new FutureCallback<>()
-        {
-          @Override
-          public void onSuccess(ChangeRequestsSnapshot<DataSegmentChangeRequest> result)
-          {
-            try {
-              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-              response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writerFor(HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF)
-                                 .writeValue(asyncContext.getResponse().getOutputStream(), result);
-              asyncContext.complete();
-            }
-            catch (Exception ex) {
-              log.debug(ex, "Request timed out or closed already.");
-            }
-          }
-
-          @Override
-          public void onFailure(Throwable th)
-          {
-            try {
-              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-              if (th instanceof IllegalArgumentException) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, th.getMessage());
-              } else {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage());
-              }
-              asyncContext.complete();
-            }
-            catch (Exception ex) {
-              log.debug(ex, "Request timed out or closed already.");
-            }
-          }
-        },
-        MoreExecutors.directExecutor()
-    );
-
-    asyncContext.setTimeout(timeout);
+    AsyncRequest.create(req, future, timeout)
+                .contentType(context.inputMapper, context.contentType)
+                .onTimeout(HttpServletResponse.SC_NO_CONTENT)
+                .onSuccess(
+                    result -> AsyncResponse.of(
+                        HttpServletResponse.SC_OK,
+                        result,
+                        HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF
+                    )
+                )
+                .onFailure(th -> th instanceof IllegalArgumentException
+                                  ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
+                                  : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))
+                .start();
     return null;
   }
 
@@ -213,7 +172,7 @@ public class SegmentListerResource
       @QueryParam("loadingMode") @Nullable SegmentLoadingMode loadingMode,
       List<DataSegmentChangeRequest> changeRequestList,
       @Context final HttpServletRequest req
-  ) throws IOException
+  )
   {
     if (loadDropRequestHandler == null) {
       sendErrorResponse(req, HttpServletResponse.SC_NOT_FOUND, "load/drop handler is not available.");
@@ -234,56 +193,20 @@ public class SegmentListerResource
     final ListenableFuture<List<DataSegmentChangeResponse>> future =
         loadDropRequestHandler.processBatch(changeRequestList, loadingMode == null ? SegmentLoadingMode.NORMAL : loadingMode);
 
-    final AsyncContext asyncContext = req.startAsync();
-
-    asyncContext.addListener(
-        ServletResourceUtils.createAsyncTimeoutListener(event -> {
-          // HTTP 204 NO_CONTENT is sent to the client.
-          future.cancel(true);
-          event.getAsyncContext().complete();
-        })
-    );
-
-    Futures.addCallback(
-        future,
-        new FutureCallback<>()
-        {
-          @Override
-          public void onSuccess(List<DataSegmentChangeResponse> result)
-          {
-            try {
-              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-              response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writerFor(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
-                                 .writeValue(asyncContext.getResponse().getOutputStream(), result);
-              asyncContext.complete();
-            }
-            catch (Exception ex) {
-              log.debug(ex, "Request timed out or closed already.");
-            }
-          }
-
-          @Override
-          public void onFailure(Throwable th)
-          {
-            try {
-              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-              if (th instanceof IllegalArgumentException) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, th.getMessage());
-              } else {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage());
-              }
-              asyncContext.complete();
-            }
-            catch (Exception ex) {
-              log.debug(ex, "Request timed out or closed already.");
-            }
-          }
-        },
-        MoreExecutors.directExecutor()
-    );
-
-    asyncContext.setTimeout(timeout);
+    AsyncRequest.create(req, future, timeout)
+                .contentType(context.inputMapper, context.contentType)
+                .onTimeout(HttpServletResponse.SC_NO_CONTENT)
+                .onSuccess(
+                    result -> AsyncResponse.of(
+                        HttpServletResponse.SC_OK,
+                        result,
+                        HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF
+                    )
+                )
+                .onFailure(th -> th instanceof IllegalArgumentException
+                                  ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
+                                  : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))
+                .start();
   }
 
   @GET
@@ -304,27 +227,28 @@ public class SegmentListerResource
     return Response.status(Response.Status.OK).entity(capabilitiesResponse).build();
   }
 
-  private void sendErrorResponse(HttpServletRequest req, int code, String error) throws IOException
+  private void sendErrorResponse(HttpServletRequest req, int code, String error)
   {
-    AsyncContext asyncContext = req.startAsync();
-    HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-    response.sendError(code, error);
-    asyncContext.complete();
+    AsyncRequest.completed(req, jsonMapper, AsyncResponse.error(code, error));
   }
 
   private ResponseContext createContext(String requestType)
   {
     boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType);
-    return new ResponseContext(isSmile ? smileMapper : jsonMapper);
+    return isSmile
+           ? new ResponseContext(smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+           : new ResponseContext(jsonMapper, MediaType.APPLICATION_JSON);
   }
 
   private static class ResponseContext
   {
     private final ObjectMapper inputMapper;
+    private final String contentType;
 
-    ResponseContext(ObjectMapper inputMapper)
+    ResponseContext(ObjectMapper inputMapper, String contentType)
     {
       this.inputMapper = inputMapper;
+      this.contentType = contentType;
     }
   }
 }
