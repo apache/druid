@@ -244,6 +244,13 @@
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <!-- Needed by the MSQ test framework that MSQ benchmarks run on -->
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-compressed-bigdecimal</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <properties>
