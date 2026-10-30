@@ -1073,7 +1073,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
                                                             "foo",
                                                             Intervals.of("2012/2013"),
                                                             "version1",
-                                                            null
+                                                            2
                                                         ))
                                                         .shardSpec(new NumberedShardSpec(2, 3))
                                                         .dimensions(ImmutableList.of("dim1", "dim2"))
@@ -1140,7 +1140,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
                                                             "foo",
                                                             Intervals.of("2012/2013"),
                                                             "version1",
-                                                            null
+                                                            2
                                                         ))
                                                         .shardSpec(new NumberedShardSpec(2, 3))
                                                         .dimensions(ImmutableList.of("dim1", "dim2"))

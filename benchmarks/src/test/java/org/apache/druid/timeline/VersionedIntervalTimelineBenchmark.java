@@ -277,7 +277,7 @@ public class VersionedIntervalTimelineBenchmark
 
   private static DataSegment newSegment(Interval interval, String version, ShardSpec shardSpec)
   {
-    return DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, version, 0))
+    return DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, version, shardSpec))
                       .shardSpec(shardSpec)
                       .binaryVersion(9)
                       .size(10)

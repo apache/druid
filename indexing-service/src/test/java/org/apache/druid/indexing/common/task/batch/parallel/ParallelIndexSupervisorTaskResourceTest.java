@@ -53,7 +53,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -646,7 +645,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           false
       );
 
-      final DataSegment segment = DataSegment.builder(SegmentId.of(segmentIdentifier.getDataSource(), segmentIdentifier.getInterval(), segmentIdentifier.getVersion(), 0))
+      final DataSegment segment = DataSegment.builder(segmentIdentifier.asSegmentId())
                                              .shardSpec(segmentIdentifier.getShardSpec())
                                              .binaryVersion(0)
                                              .size(1L)

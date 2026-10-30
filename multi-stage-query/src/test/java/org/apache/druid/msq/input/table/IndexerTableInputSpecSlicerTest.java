@@ -69,7 +69,7 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
                                                          .size(BYTES_PER_SEGMENT)
                                                          .build();
 
-  private static final DataSegment SEGMENT2 = DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2000/2001"), "1", 0))
+  private static final DataSegment SEGMENT2 = DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2000/2001"), "1", 1))
                                                          .loadSpec(Collections.emptyMap())
                                                          .dimensions(Collections.emptyList())
                                                          .metrics(Collections.emptyList())

@@ -140,7 +140,7 @@ public class LocalIntermediaryDataManagerConcurrencyTest
 
   private DataSegment newSegment(Interval interval, int bucketId)
   {
-    return DataSegment.builder(SegmentId.of("dataSource", interval, "version", 0))
+    return DataSegment.builder(SegmentId.of("dataSource", interval, "version", bucketId))
                       .shardSpec(new TestShardSpec(bucketId))
                       .binaryVersion(9)
                       .size(10)

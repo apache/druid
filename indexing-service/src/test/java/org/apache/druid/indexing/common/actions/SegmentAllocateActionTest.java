@@ -944,7 +944,7 @@ public class SegmentAllocateActionTest
                        )
                        .size(0)
                        .build(),
-            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 0))
+            DataSegment.builder(SegmentId.of(DATA_SOURCE, Granularities.HOUR.bucket(PARTY_TIME), PARTY_TIME.toString(), 1))
                        .shardSpec(
                            new HashBasedNumberedShardSpec(1, 2, 1, 2, ImmutableList.of("dim1"), null, objectMapper)
                        )
@@ -1236,7 +1236,7 @@ public class SegmentAllocateActionTest
 
   private DataSegment getSegmentForIdentifier(SegmentIdWithShardSpec identifier)
   {
-    return DataSegment.builder(SegmentId.of(identifier.getDataSource(), identifier.getInterval(), identifier.getVersion(), 0))
+    return DataSegment.builder(identifier.asSegmentId())
                       .shardSpec(identifier.getShardSpec())
                       .size(100)
                       .build();

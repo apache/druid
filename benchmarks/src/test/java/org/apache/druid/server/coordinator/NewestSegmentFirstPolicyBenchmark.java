@@ -114,7 +114,7 @@ public class NewestSegmentFirstPolicyBenchmark
       for (int j = 0; j < numDayIntervalsPerDataSource; j++, date = date.plusDays(1)) {
         for (int k = 0; k < numPartitionsPerDayInterval; k++) {
           final ShardSpec shardSpec = new NumberedShardSpec(numPartitionsPerDayInterval, k);
-          final DataSegment segment = DataSegment.builder(SegmentId.of(dataSource, new Interval(date, date.plusDays(1)), "version", 0))
+          final DataSegment segment = DataSegment.builder(SegmentId.of(dataSource, new Interval(date, date.plusDays(1)), "version", shardSpec))
                                                  .dimensions(ImmutableList.of())
                                                  .metrics(ImmutableList.of())
                                                  .shardSpec(shardSpec)
