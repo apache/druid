@@ -307,7 +307,7 @@ public class InputSourceSampler
       reader = new TimedShutoffInputSourceReader(reader, DateTimes.nowUtc().plusMillis(samplerConfig.getTimeoutMs()));
     }
 
-    return dataSchema.getTransformSpec().decorate(reader);
+    return dataSchema.getTransformSpec().decorate(reader, dataSchema.getDimensionsSpec().getDimensionExclusions());
   }
 
   private IncrementalIndex buildIncrementalIndex(SamplerConfig samplerConfig, DataSchema dataSchema)
