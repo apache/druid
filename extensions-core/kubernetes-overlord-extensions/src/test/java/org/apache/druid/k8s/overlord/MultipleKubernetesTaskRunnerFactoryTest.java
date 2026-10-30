@@ -38,7 +38,6 @@ import org.apache.druid.k8s.overlord.taskadapter.K8sTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.easymock.EasyMock;
@@ -210,7 +209,6 @@ public class MultipleKubernetesTaskRunnerFactoryTest
         () -> null,
         configManager,
         new TaskConfig(null, null, false, null, null, null, false, null, false, null, false, null),
-        new StartupLoggingConfig(),
         new DruidNode("test-overlord", "localhost", false, 8080, null, true, false),
         new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig(), objectMapper)
     );
@@ -231,7 +229,6 @@ public class MultipleKubernetesTaskRunnerFactoryTest
         com.google.common.base.Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigSupplier,
         ConfigManager configManager,
         TaskConfig taskConfig,
-        StartupLoggingConfig startupLoggingConfig,
         DruidNode druidNode,
         DruidKubernetesVertxHttpClientFactory httpClientFactory
     )
@@ -246,7 +243,6 @@ public class MultipleKubernetesTaskRunnerFactoryTest
           dynamicConfigSupplier,
           configManager,
           taskConfig,
-          startupLoggingConfig,
           druidNode,
           httpClientFactory
       );
