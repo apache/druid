@@ -135,6 +135,9 @@ public class CommonCacheNotifier
                 }
               }
               catch (Exception e) {
+                if (e instanceof InterruptedException) {
+                  Thread.currentThread().interrupt();
+                }
                 LOG.makeAlert(e, callerName + ":Failed to get response for cache notification.").emit();
               }
 

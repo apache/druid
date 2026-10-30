@@ -348,12 +348,12 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
       }
     }
     catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
       // may happen if interrupted while BlockingQueue.offer() is waiting
       log.warn(
           e,
           "Interrupted while waiting to add record to buffer");
       stopBackgroundFetch();
+      Thread.currentThread().interrupt();
     }
 
   }
