@@ -493,4 +493,75 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testQuantileWithNonNumericStringLiteral()
+  {
+    // verify invalid queries return 400 (user error)
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE('m1', 0.99) FROM foo",
+        invalidSqlContains(
+            "Function [APPROX_QUANTILE] argument [column] must be numeric, got string literal ['m1']."
+            + " If you meant to refer to a column, use double quotes."
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileWithNonNumericInputTypes()
+  {
+    // verify invalid queries return 400 (user error)
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE(m1 > 1, 0.99) FROM foo",
+        invalidSqlContains("Cannot apply 'APPROX_QUANTILE'")
+    );
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE(ARRAY[1.0, 2.0], 0.99) FROM foo",
+        invalidSqlContains("Cannot apply 'APPROX_QUANTILE'")
+    );
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE(PARSE_JSON('1'), 0.99) FROM foo",
+        invalidSqlContains("Cannot apply 'APPROX_QUANTILE'")
+    );
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE(NULL, 0.99) FROM foo",
+        invalidSqlContains("Illegal use of 'NULL'")
+    );
+  }
+
+  @Test
+  public void testQuantileOnStringColumnWithConstantFilter()
+  {
+    // dim1 is known to be 'abc' at planning time, but it is a column, so it must not be rejected like a string literal
+    testBuilder()
+        .sql("SELECT APPROX_QUANTILE(dim1, 0.5) FROM foo WHERE dim1 = 'abc'")
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newTimeseriesQueryBuilder()
+                      .dataSource(CalciteTests.DATASOURCE1)
+                      .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                      .granularity(Granularities.ALL)
+                      .virtualColumns(
+                          new ExpressionVirtualColumn("v0", "null", ColumnType.FLOAT, ExprMacroTable.nil())
+                      )
+                      .filters(equality("dim1", "abc", ColumnType.STRING))
+                      .aggregators(
+                          new ApproximateHistogramAggregatorFactory(
+                              "a0:agg",
+                              "v0",
+                              50,
+                              7,
+                              Float.NEGATIVE_INFINITY,
+                              Float.POSITIVE_INFINITY,
+                              false
+                          )
+                      )
+                      .postAggregators(new QuantilePostAggregator("a0", "a0:agg", 0.5f))
+                      .context(QUERY_CONTEXT_DEFAULT)
+                      .build()
+            )
+        )
+        .expectedResults(ImmutableList.of(new Object[]{Double.NaN}))
+        .run();
+  }
 }

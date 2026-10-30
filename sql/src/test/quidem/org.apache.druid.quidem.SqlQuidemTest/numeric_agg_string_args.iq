@@ -1,0 +1,167 @@
+!use druidtest:///
+!set outputformat mysql
+
+# Numeric aggregators on STRING columns and string literals.
+# A STRING column is implicitly cast to a number for SUM, AVG and COUNT; MIN and MAX reject it.
+
+# Case 1: SUM(dim1), STRING column.
+SELECT SUM(dim1) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|   13.1 |
++--------+
+(1 row)
+
+!ok
+
+# Case 2: MIN(dim1), STRING column.
+SELECT MIN(dim1) FROM foo;
+Aggregation [MIN] does not support type [STRING], column [v0]
+!error
+
+# Case 3: MAX(dim1), STRING column.
+SELECT MAX(dim1) FROM foo;
+Aggregation [MAX] does not support type [STRING], column [v0]
+!error
+
+# Case 4: AVG(dim1), STRING column.
+SELECT AVG(dim1) FROM foo;
++-------------------+
+| EXPR$0            |
++-------------------+
+| 4.366666666666666 |
++-------------------+
+(1 row)
+
+!ok
+
+# Case 5: COUNT(dim1), STRING column.
+SELECT COUNT(dim1) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      6 |
++--------+
+(1 row)
+
+!ok
+
+# Case 6: COUNT(DISTINCT dim1), STRING column.
+SELECT COUNT(DISTINCT dim1) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      6 |
++--------+
+(1 row)
+
+!ok
+
+# Case 7: SUM('1.5'), numeric string literal.
+SELECT SUM('1.5') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|    9.0 |
++--------+
+(1 row)
+
+!ok
+
+# Case 8: MIN('1.5'), numeric string literal.
+SELECT MIN('1.5') FROM foo;
+Aggregation [MIN] does not support type [STRING], column [v0]
+!error
+
+# Case 9: MAX('1.5'), numeric string literal.
+SELECT MAX('1.5') FROM foo;
+Aggregation [MAX] does not support type [STRING], column [v0]
+!error
+
+# Case 10: AVG('1.5'), numeric string literal.
+SELECT AVG('1.5') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|    1.5 |
++--------+
+(1 row)
+
+!ok
+
+# Case 11: COUNT('1.5'), numeric string literal.
+SELECT COUNT('1.5') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      6 |
++--------+
+(1 row)
+
+!ok
+
+# Case 12: COUNT(DISTINCT '1.5'), numeric string literal.
+SELECT COUNT(DISTINCT '1.5') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      1 |
++--------+
+(1 row)
+
+!ok
+
+# Case 13: SUM('abc'), non-numeric string literal.
+SELECT SUM('abc') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 14: MIN('abc'), non-numeric string literal.
+SELECT MIN('abc') FROM foo;
+Aggregation [MIN] does not support type [STRING], column [v0]
+!error
+
+# Case 15: MAX('abc'), non-numeric string literal.
+SELECT MAX('abc') FROM foo;
+Aggregation [MAX] does not support type [STRING], column [v0]
+!error
+
+# Case 16: AVG('abc'), non-numeric string literal.
+SELECT AVG('abc') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 17: COUNT('abc'), non-numeric string literal.
+SELECT COUNT('abc') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      6 |
++--------+
+(1 row)
+
+!ok
+
+# Case 18: COUNT(DISTINCT 'abc'), non-numeric string literal.
+SELECT COUNT(DISTINCT 'abc') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      1 |
++--------+
+(1 row)
+
+!ok

@@ -23,10 +23,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.type.SqlTypeCoercionRule;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.implicit.TypeCoercion;
 import org.apache.calcite.sql.validate.implicit.TypeCoercionImpl;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -75,6 +77,23 @@ public class DruidTypeCoercion extends TypeCoercionImpl
     }
 
     return super.commonTypeForBinaryComparison(type1, type2);
+  }
+
+  /**
+   * Casts the operand at the given index of a call to the target type, if a cast is needed. Exposes
+   * {@link #coerceOperandType(SqlValidatorScope, SqlCall, int, RelDataType)} to operand type checkers, such as
+   * {@link org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker}.
+   *
+   * @return true if the operand was cast
+   */
+  public boolean coerceOperand(
+      @Nullable SqlValidatorScope scope,
+      SqlCall call,
+      int index,
+      RelDataType targetType
+  )
+  {
+    return coerceOperandType(scope, call, index, targetType);
   }
 
   /**

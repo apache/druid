@@ -686,4 +686,40 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
         )
     );
   }
+
+  @Test
+  public void testQuantileWithNonNumericStringLiteral()
+  {
+    // verify invalid queries return 400 (user error)
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_FIXED_BUCKETS('m1', 0.99, 20, 0.0, 10.0) FROM foo",
+        invalidSqlContains(
+            "Function [APPROX_QUANTILE_FIXED_BUCKETS] argument [column] must be numeric, got string literal ['m1']."
+            + " If you meant to refer to a column, use double quotes."
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileWithNonNumericInputTypes()
+  {
+    // verify invalid queries return 400 (user error)
+    final String expectedMessage = "Cannot apply 'APPROX_QUANTILE_FIXED_BUCKETS'";
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_FIXED_BUCKETS(m1 > 1, 0.99, 20, 0.0, 10.0) FROM foo",
+        invalidSqlContains(expectedMessage)
+    );
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_FIXED_BUCKETS(ARRAY[1.0, 2.0], 0.99, 20, 0.0, 10.0) FROM foo",
+        invalidSqlContains(expectedMessage)
+    );
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_FIXED_BUCKETS(PARSE_JSON('1'), 0.99, 20, 0.0, 10.0) FROM foo",
+        invalidSqlContains(expectedMessage)
+    );
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_FIXED_BUCKETS(NULL, 0.99, 20, 0.0, 10.0) FROM foo",
+        invalidSqlContains("Illegal use of 'NULL'")
+    );
+  }
 }
