@@ -989,4 +989,47 @@ public class CompressionUtilsTest
     zipOutputStream.closeEntry();
     zipOutputStream.close();
   }
+
+  @Test
+  public void testFormatFromString()
+  {
+    Assertions.assertEquals(CompressionUtils.Format.NONE, CompressionUtils.Format.fromString("none"));
+    Assertions.assertEquals(CompressionUtils.Format.NONE, CompressionUtils.Format.fromString("NONE"));
+    Assertions.assertEquals(CompressionUtils.Format.ZIP, CompressionUtils.Format.fromString("zip"));
+    Assertions.assertEquals(CompressionUtils.Format.ZIP, CompressionUtils.Format.fromString("ZIP"));
+    Assertions.assertEquals(CompressionUtils.Format.LZ4, CompressionUtils.Format.fromString("lz4"));
+    Assertions.assertEquals(CompressionUtils.Format.LZ4, CompressionUtils.Format.fromString("LZ4"));
+    Assertions.assertNull(CompressionUtils.Format.fromString(null));
+    Assertions.assertNull(CompressionUtils.Format.fromString(""));
+  }
+
+  @Test
+  public void testFormatFromFileName()
+  {
+    Assertions.assertEquals(CompressionUtils.Format.ZIP, CompressionUtils.Format.fromFileName("segment.zip"));
+    Assertions.assertEquals(CompressionUtils.Format.LZ4, CompressionUtils.Format.fromFileName("segment.lz4"));
+    Assertions.assertNull(CompressionUtils.Format.fromFileName("segment.none"));
+    Assertions.assertNull(CompressionUtils.Format.fromFileName("segment"));
+    Assertions.assertNull(CompressionUtils.Format.fromFileName("0_index"));
+    Assertions.assertNull(CompressionUtils.Format.fromFileName(null));
+  }
+
+  @Test
+  public void testFormatNoneProperties()
+  {
+    final CompressionUtils.Format format = CompressionUtils.Format.NONE;
+    Assertions.assertEquals("", format.getSuffix());
+    Assertions.assertEquals("", format.getExtension());
+
+    final File dummyDir = new File("/tmp/dummy");
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> format.compressDirectory(dummyDir, null)
+    );
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> format.decompressDirectory(null, dummyDir)
+    );
+  }
 }
+

@@ -49,7 +49,8 @@ The following configurations in `common.runtime.properties` apply to local stora
 |--------|---------------|-----------|-------|
 |`druid.storage.type`|`local`||Must be set.|
 |`druid.storage.storageDirectory`|any local directory|Directory for storing segments. Must be different from `druid.segmentCache.locations` and `druid.segmentCache.infoDir`.|`/tmp/druid/localStorage`|
-|`druid.storage.zip`|`true`, `false`|Whether segments in `druid.storage.storageDirectory` are written as directories (`false`) or zip files (`true`).|`false`|
+|`druid.storage.compressionFormat`|`none`, `zip`|The compression format applied to segments in `druid.storage.storageDirectory`. Supported values for local storage are `none` (store segment files directly as a directory without creating an archive) and `zip` (ZIP-compressed segment archive).|`none`|
+|`druid.storage.zip`|`true`, `false`|Deprecated. Use `druid.storage.compressionFormat` instead. Whether segments in `druid.storage.storageDirectory` are written as directories (`false`) or zip files (`true`).|`false`|
 
 For example:
 

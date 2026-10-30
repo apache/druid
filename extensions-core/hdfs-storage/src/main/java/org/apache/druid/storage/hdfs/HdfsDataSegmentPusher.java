@@ -24,9 +24,11 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.guice.Hdfs;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,7 +37,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,7 +49,9 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 
@@ -56,10 +62,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(HdfsDataSegmentPusher.class);
 
+  private static final CompressionUtils.Format DEFAULT_COMPRESSION_FORMAT = CompressionUtils.Format.ZIP;
+
   private final HdfsDataSegmentPusherConfig config;
   private final Configuration hadoopConfig;
   @Nullable
   private final ServiceEmitter emitter;
+  private final CompressionUtils.Format compressionFormat;
 
   // We lazily initialize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
   // Please see https://github.com/apache/druid/pull/5684
@@ -70,19 +79,43 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       @Hdfs Configuration hadoopConfig
   )
   {
-    this(config, hadoopConfig, null);
+    this(config, hadoopConfig, null, new DeepStorageSegmentConfig());
+  }
+
+  public HdfsDataSegmentPusher(
+      HdfsDataSegmentPusherConfig config,
+      @Hdfs Configuration hadoopConfig,
+      DeepStorageSegmentConfig deepStorageConfig
+  )
+  {
+    this(config, hadoopConfig, null, deepStorageConfig);
+  }
+
+  public HdfsDataSegmentPusher(
+      HdfsDataSegmentPusherConfig config,
+      @Hdfs Configuration hadoopConfig,
+      @Nullable ServiceEmitter emitter
+  )
+  {
+    this(config, hadoopConfig, emitter, new DeepStorageSegmentConfig());
   }
 
   @Inject
   public HdfsDataSegmentPusher(
       HdfsDataSegmentPusherConfig config,
       @Hdfs Configuration hadoopConfig,
-      ServiceEmitter emitter
+      @Nullable ServiceEmitter emitter,
+      DeepStorageSegmentConfig deepStorageConfig
   )
   {
     this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.emitter = emitter;
+    final CompressionUtils.Format format = deepStorageConfig.getEffectiveCompressionFormat(DEFAULT_COMPRESSION_FORMAT);
+    if (format != CompressionUtils.Format.ZIP && format != CompressionUtils.Format.LZ4 && format != CompressionUtils.Format.NONE) {
+      throw new IAE("HDFS deep storage does not support compressionFormat [%s]. Supported: zip, lz4, none.", format);
+    }
+    this.compressionFormat = format;
     Path storageDir = new Path(config.getStorageDirectory());
     this.fullyQualifiedStorageDirectory = Suppliers.memoize(
         () -> {
@@ -113,7 +146,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         storageDir,
         segment.getShardSpec().getPartitionNum(),
         uniquePrefix,
-        config.getCompressionFormat().getSuffix()
+        compressionFormat.getSuffix()
     );
 
     return pushToFilePathWithRetry(inDir, segment, outIndexFilePath);
@@ -123,7 +156,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   public DataSegment pushToPath(File inDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
     final String outIndexFilePath;
-    if (storageDirSuffix.endsWith("index.zip") || storageDirSuffix.endsWith("index.lz4")) {
+    if (storageDirSuffix.endsWith("index.zip") || storageDirSuffix.endsWith("index.lz4")
+        || (compressionFormat == CompressionUtils.Format.NONE && storageDirSuffix.endsWith("index"))) {
       outIndexFilePath = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
     } else {
       outIndexFilePath = StringUtils.format(
@@ -131,7 +165,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
           fullyQualifiedStorageDirectory.get(),
           storageDirSuffix.replace(':', '_'),
           segment.getShardSpec().getPartitionNum(),
-          config.getCompressionFormat().getSuffix()
+          compressionFormat.getSuffix()
       );
     }
 
@@ -169,13 +203,16 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     }
 
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-    metricBuilder.setDimension("format", config.getCompressionFormat());
+    metricBuilder.setDimension("format", compressionFormat);
     emitter.emit(metricBuilder.setMetric("hdfs/push/size", size));
     emitter.emit(metricBuilder.setMetric("hdfs/push/duration", duration));
   }
 
   private DataSegment pushToFilePath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
   {
+    if (compressionFormat == CompressionUtils.Format.NONE) {
+      return pushToFilePathNone(inDir, segment, outIndexFilePath);
+    }
     log.debug(
         "Copying segment[%s] to HDFS at location[%s]",
         segment.getId(),
@@ -187,7 +224,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         segment.getDataSource(),
         UUIDUtils.generateUuid(),
         segment.getShardSpec().getPartitionNum(),
-        config.getCompressionFormat().getSuffix()
+        compressionFormat.getSuffix()
     ));
     FileSystem fs = tmpIndexFile.getFileSystem(hadoopConfig);
 
@@ -198,7 +235,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try {
       try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
-        size = config.getCompressionFormat().compressDirectory(inDir, out);
+        size = compressionFormat.compressDirectory(inDir, out);
       }
       final Path outIndexFile = new Path(outIndexFilePath);
       dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
@@ -225,6 +262,81 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     }
 
     return dataSegment;
+  }
+
+  private DataSegment pushToFilePathNone(File inDir, DataSegment segment, String outIndexDirPath) throws IOException
+  {
+    log.debug(
+        "Copying segment[%s] files to HDFS at location[%s]",
+        segment.getId(),
+        outIndexDirPath
+    );
+    final Path tmpIndexDir = new Path(StringUtils.format(
+        "%s/%s/%s/%s_index",
+        fullyQualifiedStorageDirectory.get(),
+        segment.getDataSource(),
+        UUIDUtils.generateUuid(),
+        segment.getShardSpec().getPartitionNum()
+    ));
+    final FileSystem fs = tmpIndexDir.getFileSystem(hadoopConfig);
+
+    fs.mkdirs(tmpIndexDir);
+    log.debug("Copying flat segment files from[%s] to [%s]", inDir, tmpIndexDir);
+
+    final File[] files = inDir.listFiles();
+    if (files == null) {
+      throw new IOE("Cannot list directory [%s]", inDir);
+    }
+
+    final DataSegment dataSegment;
+    try {
+      long size = 0;
+      for (final File file : files) {
+        if (file.isFile()) {
+          size += file.length();
+          final Path targetPath = new Path(tmpIndexDir, file.getName());
+          try (
+              final InputStream in = new FileInputStream(file);
+              final FSDataOutputStream out = fs.create(targetPath)
+          ) {
+            ByteStreams.copy(in, out);
+          }
+        } else {
+          // Segment directories are expected to be flat.
+          throw new IOE("Unexpected subdirectory [%s]", file.getName());
+        }
+      }
+
+      final Path outIndexDir = new Path(outIndexDirPath);
+      dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexDir.toUri()))
+                           .withSize(size)
+                           .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
+
+      // Create parent if it does not exist, recreation is not an error
+      fs.mkdirs(outIndexDir.getParent());
+      copyFilesWithChecks(fs, tmpIndexDir, outIndexDir);
+    }
+    catch (IOException e) {
+      log.error(e, "Failed to push segment[%s] to HDFS at location[%s]", segment.getId(), outIndexDirPath);
+      throw e;
+    }
+    finally {
+      try {
+        if (fs.exists(tmpIndexDir.getParent()) && !fs.delete(tmpIndexDir.getParent(), true)) {
+          log.error("Failed to delete temp directory[%s]", tmpIndexDir.getParent());
+        }
+      }
+      catch (IOException ex) {
+        log.error(ex, "Failed to delete temp directory[%s]", tmpIndexDir.getParent());
+      }
+    }
+
+    return dataSegment;
+  }
+
+  public CompressionUtils.Format getCompressionFormat()
+  {
+    return compressionFormat;
   }
 
   private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException

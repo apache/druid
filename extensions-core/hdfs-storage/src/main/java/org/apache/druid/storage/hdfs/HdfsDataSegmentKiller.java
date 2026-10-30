@@ -65,6 +65,18 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     return new Path(String.valueOf(segment.getLoadSpec().get(PATH_KEY)));
   }
 
+  private static boolean isUncompressedDirectorySegment(final String filename)
+  {
+    if ("index".equals(filename)) {
+      return true;
+    }
+    final String[] segmentParts = filename.split("_");
+    return segmentParts.length >= 2
+           && segmentParts.length <= 3
+           && StringUtils.isNumeric(segmentParts[0])
+           && "index".equals(segmentParts[segmentParts.length - 1]);
+  }
+
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
@@ -74,52 +86,59 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     try (final FileSystem fs = segmentPath.getFileSystem(config)) {
       final String filename = segmentPath.getName();
       final CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(filename);
-      if (compressionFormat != CompressionUtils.Format.ZIP && compressionFormat != CompressionUtils.Format.LZ4) {
+      final boolean isUncompressed = compressionFormat == null && isUncompressedDirectorySegment(filename);
+
+      if (!isUncompressed
+          && compressionFormat != CompressionUtils.Format.ZIP
+          && compressionFormat != CompressionUtils.Format.LZ4) {
         throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
-      } else {
-
-        if (!fs.exists(segmentPath)) {
-          log.warn("Segment path [%s] does not exist", segmentPath);
-          return;
-        }
-
-        // There are 3 supported path formats for each segment compression format:
-        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
-        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
-        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_UUID_index.zip
-        // The same formats with an index.lz4 suffix are also supported.
-        final String[] segmentParts = filename.split("_");
-
-        Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
-        if (segmentParts.length > 1) {
-          Preconditions.checkState(segmentParts.length <= 3 &&
-                                   StringUtils.isNumeric(segmentParts[0]) &&
-                                   ("index" + compressionFormat.getSuffix()).equals(
-                                       segmentParts[segmentParts.length - 1]
-                                   ),
-                                   "Unexpected segmentPath format [%s]", segmentPath
-          );
-
-          descriptorPath = new Path(
-              segmentPath.getParent(),
-              org.apache.druid.java.util.common.StringUtils.format(
-                  "%s_%sdescriptor.json",
-                  segmentParts[0],
-                  segmentParts.length == 2 ? "" : segmentParts[1] + "_"
-              )
-          );
-        }
-
-        if (!fs.delete(segmentPath, false)) {
-          throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
-        }
-
-        // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
-        // anymore, but we still delete them if exists.
-        fs.delete(descriptorPath, false);
-
-        removeEmptyParentDirectories(fs, segmentPath, segmentParts.length > 1 ? 2 : 3);
       }
+
+      if (!fs.exists(segmentPath)) {
+        log.warn("Segment path [%s] does not exist", segmentPath);
+        return;
+      }
+
+      if (isUncompressed && !fs.isDirectory(segmentPath)) {
+        throw new SegmentLoadingException("Segment path [%s] is not a directory", segmentPath);
+      }
+
+      // There are 3 supported path formats for each segment compression format:
+      //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
+      //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
+      //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_UUID_index.zip
+      // The same formats with an index.lz4 suffix or without suffix (uncompressed directory) are also supported.
+      final String[] segmentParts = filename.split("_");
+      final String expectedSuffix = isUncompressed ? "" : compressionFormat.getSuffix();
+
+      Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
+      if (segmentParts.length > 1) {
+        Preconditions.checkState(
+            segmentParts.length <= 3 &&
+            StringUtils.isNumeric(segmentParts[0]) &&
+            ("index" + expectedSuffix).equals(segmentParts[segmentParts.length - 1]),
+            "Unexpected segmentPath format [%s]", segmentPath
+        );
+
+        descriptorPath = new Path(
+            segmentPath.getParent(),
+            org.apache.druid.java.util.common.StringUtils.format(
+                "%s_%sdescriptor.json",
+                segmentParts[0],
+                segmentParts.length == 2 ? "" : segmentParts[1] + "_"
+            )
+        );
+      }
+
+      if (!fs.delete(segmentPath, isUncompressed)) {
+        throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
+      }
+
+      // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
+      // anymore, but we still delete them if exists.
+      fs.delete(descriptorPath, false);
+
+      removeEmptyParentDirectories(fs, segmentPath, segmentParts.length > 1 ? 2 : 3);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Unable to kill segment");

@@ -20,7 +20,6 @@
 package org.apache.druid.storage.hdfs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.utils.CompressionUtils;
 
 /**
  */
@@ -28,9 +27,6 @@ public class HdfsDataSegmentPusherConfig
 {
   @JsonProperty
   private String storageDirectory = "";
-
-  @JsonProperty
-  private CompressionUtils.Format compressionFormat = CompressionUtils.Format.ZIP;
 
   public void setStorageDirectory(String storageDirectory)
   {
@@ -40,15 +36,5 @@ public class HdfsDataSegmentPusherConfig
   public String getStorageDirectory()
   {
     return storageDirectory;
-  }
-
-  public void setCompressionFormat(CompressionUtils.Format compressionFormat)
-  {
-    this.compressionFormat = compressionFormat;
-  }
-
-  public CompressionUtils.Format getCompressionFormat()
-  {
-    return compressionFormat;
   }
 }

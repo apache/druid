@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.TemporaryFolderExtension;
@@ -264,5 +265,77 @@ public class LocalDataSegmentPusherTest
         () -> localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false)
     );
     Assertions.assertTrue(exception.getMessage().contains("Cannot create directory"));
+  }
+
+  @Test
+  public void testDefaultCompressionFormatIsNone() throws IOException
+  {
+    final LocalDataSegmentPusherConfig defaultConfig = new LocalDataSegmentPusherConfig();
+    defaultConfig.storageDirectory = temporaryFolder.newFolder();
+    final LocalDataSegmentPusher pusher = new LocalDataSegmentPusher(defaultConfig, new DeepStorageSegmentConfig());
+
+    final DataSegment returnSegment = pusher.push(dataSegmentFiles, dataSegment, false);
+    Assertions.assertNotNull(returnSegment);
+    final File outDir = new File(
+        defaultConfig.getStorageDirectory(),
+        pusher.getStorageDir(returnSegment, false)
+    );
+    Assertions.assertTrue(new File(outDir, "index").isDirectory());
+    Assertions.assertFalse(new File(outDir, "index.zip").exists());
+  }
+
+  @Test
+  public void testPushExplicitZip() throws IOException
+  {
+    final LocalDataSegmentPusherConfig explicitZipConfig = new LocalDataSegmentPusherConfig();
+    explicitZipConfig.storageDirectory = temporaryFolder.newFolder();
+    final LocalDataSegmentPusher pusher = new LocalDataSegmentPusher(
+        explicitZipConfig,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
+    );
+
+    final DataSegment returnSegment = pusher.push(dataSegmentFiles, dataSegment, false);
+    Assertions.assertNotNull(returnSegment);
+    final File outDir = new File(
+        explicitZipConfig.getStorageDirectory(),
+        pusher.getStorageDir(returnSegment, false)
+    );
+    Assertions.assertTrue(new File(outDir, "index.zip").exists());
+    Assertions.assertFalse(new File(outDir, "index").exists());
+  }
+
+  @Test
+  public void testPushExplicitNone() throws IOException
+  {
+    final LocalDataSegmentPusherConfig explicitNoneConfig = new LocalDataSegmentPusherConfig();
+    explicitNoneConfig.storageDirectory = temporaryFolder.newFolder();
+    final LocalDataSegmentPusher pusher = new LocalDataSegmentPusher(
+        explicitNoneConfig,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+
+    final DataSegment returnSegment = pusher.push(dataSegmentFiles, dataSegment, false);
+    Assertions.assertNotNull(returnSegment);
+    final File outDir = new File(
+        explicitNoneConfig.getStorageDirectory(),
+        pusher.getStorageDir(returnSegment, false)
+    );
+    Assertions.assertTrue(new File(outDir, "index").isDirectory());
+    Assertions.assertFalse(new File(outDir, "index.zip").exists());
+  }
+
+  @Test
+  public void testUnsupportedFormatThrows() throws IOException
+  {
+    final LocalDataSegmentPusherConfig badConfig = new LocalDataSegmentPusherConfig();
+    badConfig.storageDirectory = temporaryFolder.newFolder();
+
+    Assertions.assertThrows(
+        IAE.class,
+        () -> new LocalDataSegmentPusher(
+            badConfig,
+            new DeepStorageSegmentConfig(null, CompressionUtils.Format.LZ4)
+        )
+    );
   }
 }

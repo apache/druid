@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -50,10 +51,9 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   static final String INDEX_ZIP_FILE_NAME = "index.zip";
 
   /**
-   * Originally Google deep storage always wrote segments zipped, so that is what {@code druid.storage.zip} falls back
-   * to.
+   * Originally Google deep storage always wrote segments zipped, so that is the default when neither property is set.
    */
-  private static final boolean DEFAULT_ZIP = true;
+  private static final CompressionUtils.Format DEFAULT_FORMAT = CompressionUtils.Format.ZIP;
 
   private final GoogleStorage storage;
   private final GoogleAccountConfig config;
@@ -71,7 +71,14 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     this.storage = storage;
     this.config = config;
     this.inputDataConfig = inputDataConfig;
-    this.zip = deepStorageConfig.isZip(DEFAULT_ZIP);
+    final CompressionUtils.Format format = deepStorageConfig.getEffectiveCompressionFormat(DEFAULT_FORMAT);
+    if (format != CompressionUtils.Format.ZIP && format != CompressionUtils.Format.NONE) {
+      throw new IAE(
+          "Google deep storage does not support compressionFormat [%s]. Supported formats: zip, none.",
+          format
+      );
+    }
+    this.zip = format == CompressionUtils.Format.ZIP;
   }
 
   public void insert(final File file, final String contentType, final String path)

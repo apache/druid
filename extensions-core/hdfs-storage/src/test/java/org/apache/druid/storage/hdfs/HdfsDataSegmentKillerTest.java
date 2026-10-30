@@ -405,6 +405,210 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
+  public void testKillDirectorySegment() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path dataSourceDir = new Path(testRoot.getAbsolutePath(), "dataSource");
+    final Path interval1Dir = new Path(dataSourceDir, "interval1");
+    final Path version11Dir = new Path(interval1Dir, "v1");
+    final Path partition0 = new Path(version11Dir, "0_index");
+    final Path partition1 = new Path(version11Dir, "1_index");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(partition0));
+      fs.createNewFile(new Path(partition0, "version.bin"));
+      fs.createNewFile(new Path(partition0, "index.smoosh"));
+
+      Assertions.assertTrue(fs.mkdirs(partition1));
+      fs.createNewFile(new Path(partition1, "version.bin"));
+
+      killer.kill(getSegmentWithPath(partition0.toString()));
+
+      Assertions.assertFalse(fs.exists(partition0));
+      Assertions.assertTrue(fs.exists(partition1));
+
+      killer.kill(getSegmentWithPath(partition1.toString()));
+
+      Assertions.assertFalse(fs.exists(partition1));
+      Assertions.assertFalse(fs.exists(version11Dir));
+      Assertions.assertFalse(fs.exists(interval1Dir));
+      Assertions.assertTrue(fs.exists(dataSourceDir));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillDirectorySegmentWithUniquePath() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path dataSourceDir = new Path(testRoot.getAbsolutePath(), "dataSource");
+    final Path interval1Dir = new Path(dataSourceDir, "interval1");
+    final Path version11Dir = new Path(interval1Dir, "v1");
+    final String uuid = UUID.randomUUID().toString();
+    final Path partition0 = new Path(version11Dir, StringUtils.format("0_%s_index", uuid));
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(partition0));
+      fs.createNewFile(new Path(partition0, "version.bin"));
+
+      killer.kill(getSegmentWithPath(partition0.toString()));
+
+      Assertions.assertFalse(fs.exists(partition0));
+      Assertions.assertFalse(fs.exists(version11Dir));
+      Assertions.assertFalse(fs.exists(interval1Dir));
+      Assertions.assertTrue(fs.exists(dataSourceDir));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillDirectorySegmentLegacyPath() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path dataSourceDir = new Path(testRoot.getAbsolutePath(), "dataSource");
+    final Path interval1Dir = new Path(dataSourceDir, "interval1");
+    final Path version11Dir = new Path(interval1Dir, "v1");
+    final Path partition0Dir = new Path(version11Dir, "0");
+    final Path indexDir = new Path(partition0Dir, "index");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(indexDir));
+      fs.createNewFile(new Path(indexDir, "version.bin"));
+
+      killer.kill(getSegmentWithPath(indexDir.toString()));
+
+      Assertions.assertFalse(fs.exists(indexDir));
+      Assertions.assertFalse(fs.exists(partition0Dir));
+      Assertions.assertFalse(fs.exists(version11Dir));
+      Assertions.assertFalse(fs.exists(interval1Dir));
+      Assertions.assertTrue(fs.exists(dataSourceDir));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillDirectorySegment_fileInsteadOfDirectoryThrows() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path segmentPath = new Path(testRoot.getAbsolutePath(), "0_index");
+    try {
+      fs.createNewFile(segmentPath);
+
+      final Throwable exception = assertThrows(SegmentLoadingException.class, () -> {
+        killer.kill(getSegmentWithPath(segmentPath.toString()));
+      });
+      assertTrue(exception.getMessage().contains("is not a directory"));
+      Assertions.assertTrue(fs.exists(segmentPath));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillDirectorySegment_nonExistingIsNoOp() throws Exception
+  {
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return "/tmp";
+          }
+        }
+    );
+
+    // Non-existing directory segment should do nothing
+    killer.kill(getSegmentWithPath("/non_existing_dir/0_index"));
+  }
+
+  @Test
+  public void testKillUnknownDirectoryNameThrows()
+  {
+    final Throwable exception = assertThrows(SegmentLoadingException.class, () -> {
+      final Configuration config = new Configuration();
+      final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+          config,
+          new HdfsDataSegmentPusherConfig()
+          {
+            @Override
+            public String getStorageDirectory()
+            {
+              return "/tmp";
+            }
+          }
+      );
+      killer.kill(getSegmentWithPath("/tmp/dataSource/interval/v1/unknown_segment_folder"));
+    });
+    assertTrue(exception.getMessage().contains("Unknown file type"));
+  }
+
+  @Test
   public void testKillNonZipSegment()
   {
     Throwable exception = assertThrows(SegmentLoadingException.class, () -> {
