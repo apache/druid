@@ -1127,11 +1127,25 @@ public class DruidCoordinatorTest
       listener.becomeLeader();
     }
 
+    /**
+     * Calls {@link Listener#stopBeingLeader()} from another thread and waits for it, as K8sDruidLeaderSelector
+     * does, so callers that hold a lock needed by stopBeingLeader() fail here instead of deadlocking.
+     */
     @Override
     public void unregisterListener()
     {
       leader = null;
-      listener.stopBeingLeader();
+
+      final Thread thread = new Thread(listener::stopBeingLeader);
+      thread.start();
+      try {
+        thread.join(10_000);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+      Assertions.assertFalse(thread.isAlive(), "stopBeingLeader() did not finish");
     }
   }
 

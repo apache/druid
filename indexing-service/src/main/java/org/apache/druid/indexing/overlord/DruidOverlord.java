@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -69,6 +70,12 @@ public class DruidOverlord
    */
   private volatile boolean initialized;
 
+  /**
+   * Whether {@link #stop()} has been called.
+   */
+  @GuardedBy("giant")
+  private boolean stopped;
+
   @Inject
   public DruidOverlord(
       final TaskMaster taskMaster,
@@ -102,10 +109,15 @@ public class DruidOverlord
       {
         giant.lock();
 
-        // I AM THE MASTER OF THE UNIVERSE.
-        log.info("By the power of Grayskull, I have the power. I am the leader");
-
         try {
+          if (stopped) {
+            log.info("Not becoming leader, since this Overlord is stopped.");
+            return;
+          }
+
+          // I AM THE MASTER OF THE UNIVERSE.
+          log.info("By the power of Grayskull, I have the power. I am the leader");
+
           final TaskRunner taskRunner = runnerFactory.build();
           final TaskQueue taskQueue = new TaskQueue(
               taskLockConfig,
@@ -234,8 +246,20 @@ public class DruidOverlord
     giant.lock();
 
     try {
+      stopped = true;
       gracefulStopLeaderLifecycle();
-      overlordLeaderSelector.unregisterListener();
+    }
+    finally {
+      giant.unlock();
+    }
+
+    // Unregister without holding the giant lock. When using K8sDruidLeaderSelector, it will call
+    // stopBeingLeader() from another thread and wait for it, which needs the same lock.
+    overlordLeaderSelector.unregisterListener();
+
+    giant.lock();
+
+    try {
       if (isStandalone()) {
         segmentMetadataCache.stop();
       }
