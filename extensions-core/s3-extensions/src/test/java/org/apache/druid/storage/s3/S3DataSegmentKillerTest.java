@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockExtension;
@@ -70,53 +71,33 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   private static final Exception RECOVERABLE_EXCEPTION = SdkClientException.builder().cause(new IOException()).build();
   private static final Exception NON_RECOVERABLE_EXCEPTION = SdkClientException.builder().cause(new NullPointerException()).build();
 
-  private static final DataSegment DATA_SEGMENT_1 = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1_PATH),
-      null,
-      null,
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
+  private static final DataSegment DATA_SEGMENT_1 = DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                                                               .loadSpec(ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1_PATH))
+                                                               .shardSpec(NoneShardSpec.instance())
+                                                               .binaryVersion(0)
+                                                               .size(1)
+                                                               .build();
 
-  private static final DataSegment DATA_SEGMENT_2 = new DataSegment(
-      "test",
-      Intervals.of("2015-04-13/2015-04-14"),
-      "1",
-      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_2_PATH),
-      null,
-      null,
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
+  private static final DataSegment DATA_SEGMENT_2 = DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-13/2015-04-14"), "1", 0))
+                                                               .loadSpec(ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_2_PATH))
+                                                               .shardSpec(NoneShardSpec.instance())
+                                                               .binaryVersion(0)
+                                                               .size(1)
+                                                               .build();
 
-  private static final DataSegment DATA_SEGMENT_1_NO_ZIP = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1 + "/"),
-      null,
-      null,
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
+  private static final DataSegment DATA_SEGMENT_1_NO_ZIP = DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                                                                      .loadSpec(ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1 + "/"))
+                                                                      .shardSpec(NoneShardSpec.instance())
+                                                                      .binaryVersion(0)
+                                                                      .size(1)
+                                                                      .build();
 
-  private static final DataSegment DATA_SEGMENT_2_NO_ZIP = new DataSegment(
-      "test",
-      Intervals.of("2015-04-13/2015-04-14"),
-      "1",
-      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_2 + "/"),
-      null,
-      null,
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
+  private static final DataSegment DATA_SEGMENT_2_NO_ZIP = DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-13/2015-04-14"), "1", 0))
+                                                                      .loadSpec(ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_2 + "/"))
+                                                                      .shardSpec(NoneShardSpec.instance())
+                                                                      .binaryVersion(0)
+                                                                      .size(1)
+                                                                      .build();
 
   @Mock
   private ServerSideEncryptingAmazonS3 s3Client;
