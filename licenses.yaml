@@ -1759,7 +1759,6 @@ license_name: Apache License version 2.0
 version: 8.5.19
 libraries:
   - it.unimi.dsi: fastutil
-  - it.unimi.dsi: fastutil-extra
 
 ---
 
