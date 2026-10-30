@@ -74,8 +74,8 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   @GuardedBy("clientMap")
   private boolean closed;
 
-  private final Set<ListenableFuture<?>> activeRequests = ConcurrentHashMap.newKeySet();
-  private final Set<ListenableFuture<Void>> activeWorkOrders = ConcurrentHashMap.newKeySet();
+  protected final Set<ListenableFuture<?>> activeRequests = ConcurrentHashMap.newKeySet();
+  protected final Set<ListenableFuture<Void>> activeWorkOrders = ConcurrentHashMap.newKeySet();
   private volatile boolean isStopping = false;
 
   /**
@@ -222,7 +222,7 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
     }
   }
 
-  private static class RequestTrackingClient implements ServiceClient
+  public static class RequestTrackingClient implements ServiceClient
   {
     private final ServiceClient delegate;
     private final Set<ListenableFuture<?>> activeRequests;
