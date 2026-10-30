@@ -74,7 +74,7 @@ public class DruidBindableTableScanRuleTest
   public void testMatchesNativeSystemTableOnly()
   {
     final Bindables.BindableTableScan nativeScan = createScan(
-        new SystemServerPropertiesTable(null, null, null, null, null),
+        new SystemServerPropertiesTable(null, null, null, null, null, true),
         List.of(),
         identityProjects()
     );
@@ -83,11 +83,17 @@ public class DruidBindableTableScanRuleTest
         List.of(),
         identityProjects()
     );
+    final Bindables.BindableTableScan disabledScan = createScan(
+        new SystemServerPropertiesTable(null, null, null, null, null, false),
+        List.of(),
+        identityProjects()
+    );
     final RelOptRuleCall call = Mockito.mock(RelOptRuleCall.class);
 
-    Mockito.when(call.<Bindables.BindableTableScan>rel(0)).thenReturn(nativeScan, nonNativeScan);
+    Mockito.when(call.<Bindables.BindableTableScan>rel(0)).thenReturn(nativeScan, nonNativeScan, disabledScan);
 
     Assertions.assertTrue(rule.matches(call));
+    Assertions.assertFalse(rule.matches(call));
     Assertions.assertFalse(rule.matches(call));
   }
 
@@ -96,7 +102,7 @@ public class DruidBindableTableScanRuleTest
   {
     final RexNode filter = equalsLiteral(3, "some.property");
     final Bindables.BindableTableScan bindableScan = createScan(
-        new SystemServerPropertiesTable(null, null, null, null, null),
+        new SystemServerPropertiesTable(null, null, null, null, null, true),
         List.of(filter),
         identityProjects()
     );
@@ -111,7 +117,7 @@ public class DruidBindableTableScanRuleTest
   {
     final RexNode filter = equalsLiteral(3, "some.property");
     final Bindables.BindableTableScan bindableScan = createScan(
-        new SystemServerPropertiesTable(null, null, null, null, null),
+        new SystemServerPropertiesTable(null, null, null, null, null, true),
         List.of(filter),
         List.of(3, 1)
     );

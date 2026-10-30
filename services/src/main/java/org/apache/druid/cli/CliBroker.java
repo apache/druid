@@ -116,6 +116,7 @@ public class CliBroker extends ServerRunnable
     return ImmutableList.of(
         new BrokerProcessingModule(),
         NativeQueryEngineModule.builder()
+                               .enableSystemTableQuery(getProperties())
                                .withOverrideModule(
                                    overrideBinder -> overrideBinder.bind(QueryConfigProvider.class)
                                                                    .to(BrokerViewOfBrokerConfig.class)

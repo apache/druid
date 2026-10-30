@@ -52,6 +52,7 @@ import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.server.router.TieredBrokerHostSelector;
 import org.apache.druid.server.router.TieredBrokerSelectorStrategiesProvider;
 import org.apache.druid.server.router.TieredBrokerSelectorStrategy;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.eclipse.jetty.server.Server;
 
@@ -84,10 +85,12 @@ public class CliRouter extends ServerRunnable
   @Override
   protected List<? extends Module> getModules()
   {
+    final boolean enableDruidEngineForSystemTables = SystemTableModule.isEnabled(getProperties());
     return ImmutableList.of(
         new RouterProcessingModule(),
         NativeQueryEngineModule.builder()
-                               .withQueryResourceModule(new RouterQueryResourceModule())
+                               .enableSystemTableQuery(enableDruidEngineForSystemTables)
+                               .withQueryResourceModule(new RouterQueryResourceModule(enableDruidEngineForSystemTables))
                                .build(),
         new JettyHttpClientModule("druid.router.http", Router.class),
         JettyHttpClientModule.global(),

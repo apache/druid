@@ -81,6 +81,7 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
@@ -117,7 +118,9 @@ public class CliMiddleManager extends ServerRunnable
   {
     return ImmutableList.of(
         new MiddleManagerServiceModule(),
-        NativeQueryEngineModule.builder().scanOnly().build(),
+        SystemTableModule.isEnabled(getProperties())
+        ? NativeQueryEngineModule.builder().scanOnly().enableSystemTableQuery(true).build()
+        : binder -> {},
         new Module()
         {
           @Override

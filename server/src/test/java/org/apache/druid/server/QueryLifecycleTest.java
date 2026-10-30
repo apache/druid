@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
@@ -398,6 +399,41 @@ public class QueryLifecycleTest
                                       .eternityInterval()
                                       .build();
     assertWrappedSystemTableUsesHandler(new QueryDataSource(innerQuery));
+  }
+
+  /**
+   * Without a handler, which is bound only when {@code druid.query.enableDruidEngineForSystemTables} is set, system
+   * tables are rejected, including below the query root.
+   */
+  @Test
+  public void testSystemTableIsRejectedWithoutHandler()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
+    emitter.emit(EasyMock.<ServiceEventBuilder<?>>anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    replayAll();
+
+    final Query<?> innerQuery = Druids.newScanQueryBuilder()
+                                      .dataSource(new SystemTableDataSource("server_properties"))
+                                      .eternityInterval()
+                                      .build();
+    final TimeseriesQuery wrappedQuery = Druids.newTimeseriesQueryBuilder()
+                                               .dataSource(new QueryDataSource(innerQuery))
+                                               .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                               .aggregators(new CountAggregatorFactory("count"))
+                                               .build();
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> createLifecycle().runSimple(wrappedQuery, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION)
+    );
+    Assertions.assertEquals(
+        "System table[server_properties] can't be queried with native queries unless "
+        + "[druid.query.enableDruidEngineForSystemTables] is set on all services",
+        e.getMessage()
+    );
   }
 
   @Test

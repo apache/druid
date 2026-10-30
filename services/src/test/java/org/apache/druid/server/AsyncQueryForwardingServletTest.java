@@ -88,6 +88,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
@@ -258,14 +259,21 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testLocalNativeQueryRouteDispatchesDeleteLocally() throws Exception
   {
-    assertNativeQueryRouteForDelete(QueryResource.NATIVE_QUERY_ROUTE_LOCAL, true);
+    assertNativeQueryRouteForDelete(QueryResource.NATIVE_QUERY_ROUTE_LOCAL, true, true);
+  }
+
+  /** The local route is ignored, and the cancellation forwarded, unless the Druid engine is enabled for system tables. */
+  @Test
+  public void testLocalNativeQueryRouteIsIgnoredWhenDruidEngineForSystemTablesIsDisabled() throws Exception
+  {
+    assertNativeQueryRouteForDelete(QueryResource.NATIVE_QUERY_ROUTE_LOCAL, false, false);
   }
 
   /** A non-exact native-query route value follows the normal cancellation forwarding path. */
   @Test
   public void testNonExactNativeQueryRouteDoesNotDispatchDeleteLocally() throws Exception
   {
-    assertNativeQueryRouteForDelete("LOCAL", false);
+    assertNativeQueryRouteForDelete("LOCAL", true, false);
   }
 
   /**
@@ -321,7 +329,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         NoopRequestLogger.instance(),
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
-        new Properties(),
+        enableDruidEngineForSystemTablesProperties(true),
         new ServerConfig()
     );
     final GuiceContainer localQueryContainer = Mockito.mock(GuiceContainer.class);
@@ -373,7 +381,18 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
            .setAttribute(Mockito.eq(AuthConfig.DRUID_AUTHORIZATION_CHECKED), Mockito.any());
   }
 
-  private void assertNativeQueryRouteForDelete(final String route, final boolean expectedLocal) throws Exception
+  private static Properties enableDruidEngineForSystemTablesProperties(final boolean enabled)
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, String.valueOf(enabled));
+    return properties;
+  }
+
+  private void assertNativeQueryRouteForDelete(
+      final String route,
+      final boolean enableDruidEngineForSystemTables,
+      final boolean expectedLocal
+  ) throws Exception
   {
     final QueryHostFinder hostFinder = Mockito.mock(QueryHostFinder.class);
     final org.apache.druid.client.selector.Server defaultServer =
@@ -393,7 +412,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         NoopRequestLogger.instance(),
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
-        new Properties(),
+        enableDruidEngineForSystemTablesProperties(enableDruidEngineForSystemTables),
         new ServerConfig()
     )
     {

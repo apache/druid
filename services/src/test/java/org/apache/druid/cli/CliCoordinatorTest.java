@@ -19,6 +19,7 @@
 
 package org.apache.druid.cli;
 
+import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -41,6 +42,8 @@ import org.apache.druid.server.NoopQuerySegmentWalker;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.system.handler.SystemTableQueryResource;
+import org.apache.druid.server.system.module.SystemTableModule;
+import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -109,6 +112,7 @@ public class CliCoordinatorTest
     properties.setProperty("druid.coordinator.asOverlord.enabled", "true");
     properties.setProperty("druid.centralizedDatasourceSchema.enabled", "true");
     properties.setProperty("druid.coordinator.query.default.context.testKey", "testValue");
+    properties.setProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, "true");
 
     final Injector injector = makeCoordinatorInjector(properties);
 
@@ -127,12 +131,42 @@ public class CliCoordinatorTest
   @Test
   public void testCoordinatorUsesRestrictedQueryResourceWithoutCentralizedDatasourceSchema()
   {
-    final Injector injector = makeCoordinatorInjector(new Properties());
+    final Properties properties = new Properties();
+    properties.setProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, "true");
+    final Injector injector = makeCoordinatorInjector(properties);
 
     Assertions.assertNotNull(injector.getInstance(SystemTableQueryResource.class));
     Assertions.assertInstanceOf(NoopQuerySegmentWalker.class, injector.getInstance(QuerySegmentWalker.class));
     Assertions.assertTrue(queryRunnerFactories(injector).containsKey(ScanQuery.class));
     Assertions.assertFalse(queryRunnerFactories(injector).containsKey(SegmentMetadataQuery.class));
+  }
+
+  /** Without the Druid engine for system tables, the Coordinator serves no {@code /druid/v2/}. */
+  @Test
+  public void testCoordinatorWithoutDruidEngineForSystemTables()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.centralizedDatasourceSchema.enabled", "true");
+    final Injector injector = makeCoordinatorInjector(properties);
+
+    Assertions.assertFalse(jerseyResources(injector).contains(SystemTableQueryResource.class));
+    Assertions.assertFalse(jerseyResources(injector).contains(QueryResource.class));
+    Assertions.assertTrue(systemTableDataProviders(injector).isEmpty());
+    Assertions.assertInstanceOf(
+        SegmentMetadataQuerySegmentWalker.class,
+        injector.getInstance(QuerySegmentWalker.class)
+    );
+
+    final Injector withoutSchemaCache = makeCoordinatorInjector(new Properties());
+    Assertions.assertFalse(jerseyResources(withoutSchemaCache).contains(SystemTableQueryResource.class));
+    Assertions.assertTrue(systemTableDataProviders(withoutSchemaCache).isEmpty());
+  }
+
+  private static Map<String, SystemTableDataProvider> systemTableDataProviders(final Injector injector)
+  {
+    final Binding<Map<String, SystemTableDataProvider>> binding =
+        injector.getExistingBinding(Key.get(new TypeLiteral<>() {}));
+    return binding == null ? Map.of() : binding.getProvider().get();
   }
 
   private static Map<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactories(final Injector injector)

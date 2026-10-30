@@ -120,7 +120,9 @@ public class CliIndexer extends ServerRunnable
   {
     return ImmutableList.of(
         new DruidProcessingModule(),
-        NativeQueryEngineModule.builder().build(),
+        NativeQueryEngineModule.builder()
+                               .enableSystemTableQuery(getProperties())
+                               .build(),
         new IndexerServiceModule(),
         new Module()
         {

@@ -76,6 +76,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
@@ -141,16 +142,16 @@ public class SystemSchema extends AbstractTableSchema
 
   /**
    * Whether a system table is planned as a {@code SystemTableDataSource} instead of on the Bindable path. The native
-   * engine does so when {@code useQueryEngineForSystemTables} is set.
+   * engine does so when {@code useDruidEngineForSystemTables} is set, if the table offers a datasource representation.
    */
   public static boolean canUseSystemTableDataSource(
       final RelOptTable table,
       final PlannerContext plannerContext
   )
   {
-    return plannerContext.useQueryEngineForSystemTables()
+    return plannerContext.useDruidEngineForSystemTables()
            && NativeSqlEngine.NAME.equals(plannerContext.getEngine().name())
-           && table.unwrap(SystemTableDataSourceTable.class) != null;
+           && getSystemTableDataSourceTable(table) != null;
   }
 
   /**
@@ -368,7 +369,8 @@ public class SystemSchema extends AbstractTableSchema
           authorizerMapper,
           httpClient,
           jsonMapper,
-          authenticationResult
+          authenticationResult,
+          SystemTableModule.isEnabled(properties)
       );
       case SystemQueryContextParametersTable.TABLE_NAME -> new SystemQueryContextParametersTable(
           jsonMapper,

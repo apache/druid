@@ -81,6 +81,7 @@ import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.system.handler.SystemTableQueryResource;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
@@ -118,7 +119,9 @@ public class CliPeonTest
   @Test
   public void testPeonNativeServerPropertiesInjection() throws IOException
   {
-    final Injector peonInjector = makePeonInjector(NoopTask.create(), new Properties());
+    final Properties properties = new Properties();
+    properties.setProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, "true");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
     final Map<String, SystemTableDataProvider> dataProviders = peonInjector.getInstance(
         Key.get(new TypeLiteral<>() {})
     );
@@ -127,6 +130,17 @@ public class CliPeonTest
     // Peons use the normal query resource to serve native queries over both segments and system tables.
     Assertions.assertNull(peonInjector.getExistingBinding(Key.get(SystemTableQueryResource.class)));
     Assertions.assertTrue(dataProviders.containsKey(ServerPropertiesTableDescriptor.TABLE_NAME));
+  }
+
+  @Test
+  public void testPeonWithoutDruidEngineForSystemTables() throws IOException
+  {
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), new Properties());
+
+    Assertions.assertNotNull(peonInjector.getInstance(QueryResource.class));
+    Assertions.assertNull(
+        peonInjector.getExistingBinding(Key.get(new TypeLiteral<Map<String, SystemTableDataProvider>>() {}))
+    );
   }
 
   @Test

@@ -63,6 +63,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.eclipse.jetty.client.BytesRequestContent;
@@ -158,6 +159,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private GuiceContainer localQueryContainer;
 
   private final boolean routeSqlByStrategy;
+  private final boolean enableDruidEngineForSystemTables;
 
   private HttpClient broadcastClient;
 
@@ -191,6 +193,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.routeSqlByStrategy = Boolean.parseBoolean(
         properties.getProperty(PROPERTY_SQL_ENABLE, PROPERTY_SQL_ENABLE_DEFAULT)
     );
+    this.enableDruidEngineForSystemTables = SystemTableModule.isEnabled(properties);
     this.serverConfig = serverConfig;
   }
 
@@ -359,15 +362,19 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     localQueryContainer.service(new NodeLocalRequest(request), response);
   }
 
-  private static boolean isLocalSystemTableQuery(final HttpServletRequest request, final Query<?> query)
+  private boolean isLocalSystemTableQuery(final HttpServletRequest request, final Query<?> query)
   {
     return query.getDataSource() instanceof SystemTableDataSource
            && isLocalNativeQueryRoute(request);
   }
 
-  private static boolean isLocalNativeQueryRoute(final HttpServletRequest request)
+  /**
+   * Whether the request asks the Router to run the query itself. The header is ignored, and the request forwarded to a
+   * Broker, unless {@link SystemTableModule#ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY} is set.
+   */
+  private boolean isLocalNativeQueryRoute(final HttpServletRequest request)
   {
-    return QueryResource.NATIVE_QUERY_ROUTE_LOCAL.equals(
+    return enableDruidEngineForSystemTables && QueryResource.NATIVE_QUERY_ROUTE_LOCAL.equals(
         request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE)
     );
   }

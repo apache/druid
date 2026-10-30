@@ -92,6 +92,7 @@ public class NativeSysServerPropertiesQueryTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
                                .addCommonProperty("druid.centralizedDatasourceSchema.enabled", "true")
+                               .addCommonProperty("druid.query.enableDruidEngineForSystemTables", "true")
                                .addServer(coordinator)
                                .addServer(overlord)
                                .addServer(broker)
@@ -293,7 +294,7 @@ public class NativeSysServerPropertiesQueryTest extends EmbeddedClusterTestBase
     return QueryContext.ofMap(
         QueryContextParameters.ENGINE,
         NativeSqlEngine.NAME,
-        QueryContextParameters.USE_QUERY_ENGINE_FOR_SYSTEM_TABLES,
+        QueryContextParameters.USE_DRUID_ENGINE_FOR_SYSTEM_TABLES,
         true,
         QueryContextParameters.PLANNER_STRATEGY,
         plannerStrategy

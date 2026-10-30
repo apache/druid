@@ -24,6 +24,7 @@ import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.server.system.handler.SystemTableQueryResource;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.junit.jupiter.api.Assertions;
@@ -62,19 +63,26 @@ public class MainTest
   @Test
   public void testMiddleManagerNativeServerPropertiesInjection()
   {
-    final CliMiddleManager middleManager = new CliMiddleManager();
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    injector.injectMembers(middleManager);
+    // The startup injector reads system properties.
+    System.setProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, "true");
+    try {
+      final CliMiddleManager middleManager = new CliMiddleManager();
+      final Injector injector = GuiceInjectors.makeStartupInjector();
+      injector.injectMembers(middleManager);
 
-    final Injector middleManagerInjector = middleManager.makeInjector(
-        middleManager.getNodeRoles(new Properties())
-    );
+      final Injector middleManagerInjector = middleManager.makeInjector(
+          middleManager.getNodeRoles(new Properties())
+      );
 
-    // Middle Managers expose /druid/v2 through the resource restricted to internal system-table scans.
-    Assertions.assertNotNull(middleManagerInjector.getInstance(SystemTableQueryResource.class));
-    Assertions.assertTrue(
-        systemTableDataProviders(middleManagerInjector).containsKey(ServerPropertiesTableDescriptor.TABLE_NAME)
-    );
+      // Middle Managers expose /druid/v2 through the resource restricted to internal system-table scans.
+      Assertions.assertNotNull(middleManagerInjector.getInstance(SystemTableQueryResource.class));
+      Assertions.assertTrue(
+          systemTableDataProviders(middleManagerInjector).containsKey(ServerPropertiesTableDescriptor.TABLE_NAME)
+      );
+    }
+    finally {
+      System.clearProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY);
+    }
   }
 
   private static Map<String, SystemTableDataProvider> systemTableDataProviders(final Injector injector)

@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite.schema;
 
 import org.apache.druid.sql.calcite.table.DruidTable;
 
+import javax.annotation.Nullable;
+
 /**
  * Capability implemented by a traditional system table that can also be represented as a Druid
  * {@link org.apache.druid.query.SystemTableDataSource}. The capability is discovered from the table resolved through
@@ -32,6 +34,9 @@ interface SystemTableDataSourceTable
    * Returns the representation used after the SQL engine selects system-table datasource planning. The returned table
    * supplies the {@code DataSource} and row signature needed to translate the Calcite relational plan. It does not read
    * rows itself; the selected query engine obtains them from the corresponding system-table data provider.
+   *
+   * <p>Returns null if the server doesn't enable the Druid engine for system tables.</p>
    */
+  @Nullable
   DruidTable asDataSourceTable();
 }

@@ -146,14 +146,19 @@ The "sys" schema provides visibility into Druid segments, servers and tasks.
 Native query execution for system tables is an experimental, opt-in feature. Its behavior and interfaces may change.
 :::
 
+To use native query execution, first set `druid.query.enableDruidEngineForSystemTables=true` in the common runtime
+properties of all services. For more information, see
+[System tables on the Druid engine](../configuration/index.md#system-tables-on-the-druid-engine-experimental). When
+this property isn't set, the query context parameter below has no effect.
+
 The native SQL engine can plan supported system tables as native datasources. To enable this behavior for a query, set
-`useQueryEngineForSystemTables` to `true` in the SQL query context:
+`useDruidEngineForSystemTables` to `true` in the SQL query context:
 
 ```json
 {
   "query": "SELECT COUNT(DISTINCT server) FROM sys.server_properties",
   "context": {
-    "useQueryEngineForSystemTables": true
+    "useDruidEngineForSystemTables": true
   }
 }
 ```
@@ -162,7 +167,7 @@ For clients that support setting query context parameters with SQL statements, y
 execution with `SET`:
 
 ```sql
-SET useQueryEngineForSystemTables = 'true';
+SET useDruidEngineForSystemTables = 'true';
 SELECT COUNT(DISTINCT server) FROM sys.server_properties;
 ```
 
@@ -176,11 +181,11 @@ execution:
 
 After Druid retrieves the system-table rows, the native engine applies the remaining filters, expressions,
 aggregations, sorting, and result processing. A system table that doesn't advertise native query support continues to
-use the Broker's SQL interpreter, even when `useQueryEngineForSystemTables` is `true`.
+use the Broker's SQL interpreter, even when `useDruidEngineForSystemTables` is `true`.
 
-The parameter defaults to `false`. During a rolling upgrade, leave it disabled until the Broker and all nodes
-that serve the native system tables have been upgraded. After the upgrade, you can enable it by query or set
-`druid.query.default.context.useQueryEngineForSystemTables=true` on Brokers as the cluster-wide default. For more
+The parameter defaults to `false`. During a rolling upgrade, leave the server property and the parameter disabled
+until all services have been upgraded. After the upgrade, you can enable it by query or set
+`druid.query.default.context.useDruidEngineForSystemTables=true` on Brokers as the cluster-wide default. For more
 information, see [SQL query context](sql-query-context.md).
 
 ### SEGMENTS table

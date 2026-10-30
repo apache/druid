@@ -30,6 +30,8 @@ import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.apache.druid.server.system.table.SystemTableDescriptor;
 
+import java.util.Properties;
+
 /**
  * Registers native system-table routing and the node-local server-properties supplier.
  *
@@ -37,6 +39,19 @@ import org.apache.druid.server.system.table.SystemTableDescriptor;
  */
 public class SystemTableModule implements Module
 {
+  /**
+   * Server property that enables running system-table queries on the Druid query engine. When it is off, servers don't
+   * bind system-table handlers or the endpoints that serve them, and the {@code useDruidEngineForSystemTables} query
+   * context parameter has no effect.
+   */
+  public static final String ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY =
+      "druid.query.enableDruidEngineForSystemTables";
+
+  public static boolean isEnabled(final Properties properties)
+  {
+    return Boolean.parseBoolean(properties.getProperty(ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, "false"));
+  }
+
   @Override
   public void configure(final Binder binder)
   {

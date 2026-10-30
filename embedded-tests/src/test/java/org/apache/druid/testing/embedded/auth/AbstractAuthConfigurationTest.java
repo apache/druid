@@ -268,6 +268,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         .addCommonProperty("druid.auth.authorizeQueryContextParams", "true")
         .addCommonProperty("druid.msq.dart.enabled", "true")
         .addCommonProperty("druid.auth.authorizeSystemTablesDirectly", "true")
+        .addCommonProperty("druid.query.enableDruidEngineForSystemTables", "true")
         .addCommonProperty("druid.server.http.allowedHttpMethods", "[\"OPTIONS\"]")
         .addServer(coordinator)
         .addServer(overlord)

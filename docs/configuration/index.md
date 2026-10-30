@@ -467,6 +467,14 @@ If you enable this feature, you can query datasources that are only stored in de
 
 For stale schema cleanup configs, refer to properties with the prefix `druid.coordinator.kill.segmentSchema` in [Metadata Management](#metadata-management). 
 
+### System tables on the Druid engine (Experimental)
+
+This is an [experimental feature](../development/experimental.md) that lets queries on supported system tables run on the Druid query engine instead of the Broker's built-in SQL interpreter. For more information, see [Native query execution](../querying/sql-metadata-tables.md#native-query-execution).
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|`druid.query.enableDruidEngineForSystemTables`|Boolean flag for enabling the Druid engine for system tables. Specify it in the common runtime properties so that all services have the same value. When it's `false`, services don't serve native queries on system tables, Coordinators, Overlords and Middle Managers don't serve the `/druid/v2/` endpoint, and the `useDruidEngineForSystemTables` query context parameter has no effect.|false|No.|
+
 ### Ingestion security configuration
 
 #### HDFS input source

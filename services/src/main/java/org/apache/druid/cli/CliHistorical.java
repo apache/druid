@@ -86,7 +86,9 @@ public class CliHistorical extends ServerRunnable
   {
     return ImmutableList.of(
         new DruidProcessingModule(),
-        NativeQueryEngineModule.builder().build(),
+        NativeQueryEngineModule.builder()
+                               .enableSystemTableQuery(getProperties())
+                               .build(),
         new HistoricalServiceModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");

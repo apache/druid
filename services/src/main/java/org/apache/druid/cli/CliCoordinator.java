@@ -117,6 +117,7 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.router.TieredBrokerConfig;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
@@ -184,6 +185,7 @@ public class CliCoordinator extends ServerRunnable
       modules.add(
           NativeQueryEngineModule.builder()
                                  .scanOnly()
+                                 .enableSystemTableQuery(properties)
                                  // Segment metadata queries historically use Coordinator-specific scheduler and
                                  // default-query configuration prefixes. Override the generic native-engine bindings
                                  // here to preserve that behavior without coupling it to SegmentSchemaCacheModule.
@@ -211,8 +213,8 @@ public class CliCoordinator extends ServerRunnable
                                  .build()
       );
       modules.add(new SegmentSchemaCacheModule());
-    } else {
-      modules.add(NativeQueryEngineModule.builder().scanOnly().build());
+    } else if (SystemTableModule.isEnabled(properties)) {
+      modules.add(NativeQueryEngineModule.builder().scanOnly().enableSystemTableQuery(true).build());
     }
 
     modules.add(

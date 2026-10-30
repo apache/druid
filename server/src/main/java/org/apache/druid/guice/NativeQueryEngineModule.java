@@ -33,6 +33,7 @@ import org.apache.druid.server.system.module.SystemTableQueryResourceModule;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * Facade for the modules that provide native query execution infrastructure.
@@ -41,14 +42,17 @@ public class NativeQueryEngineModule implements DruidModule
 {
   private final Module executionModule;
   private final Module queryResourceModule;
+  private final boolean systemTableQueryEnabled;
 
   private NativeQueryEngineModule(
       final Module executionModule,
-      final Module queryResourceModule
+      final Module queryResourceModule,
+      final boolean systemTableQueryEnabled
   )
   {
     this.executionModule = executionModule;
     this.queryResourceModule = queryResourceModule;
+    this.systemTableQueryEnabled = systemTableQueryEnabled;
   }
 
   public static Builder builder()
@@ -58,10 +62,11 @@ public class NativeQueryEngineModule implements DruidModule
 
   public static final class Builder
   {
-    private Module overrideModule = binder -> {};
+    private Module overrideModule = _ -> {};
     @Nullable
     private Module queryResourceModule;
     private boolean scanOnly;
+    private boolean systemTableQueryEnabled;
 
     private Builder()
     {
@@ -74,6 +79,22 @@ public class NativeQueryEngineModule implements DruidModule
     public Builder scanOnly()
     {
       scanOnly = true;
+      return this;
+    }
+
+    /**
+     * Binds the system-table query handlers, and on scan-only servers the native query endpoint, if
+     * {@link SystemTableModule#ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY} is set in the given properties.
+     */
+    public Builder enableSystemTableQuery(final Properties properties)
+    {
+      return enableSystemTableQuery(SystemTableModule.isEnabled(properties));
+    }
+
+    /** As {@link #enableSystemTableQuery(Properties)}, for callers that have already read the property. */
+    public Builder enableSystemTableQuery(final boolean enable)
+    {
+      systemTableQueryEnabled = enable;
       return this;
     }
 
@@ -105,7 +126,19 @@ public class NativeQueryEngineModule implements DruidModule
                                                            .in(LazySingleton.class);
       } else {
         queryRunnerFactoryModule = new QueryRunnerFactoryModule();
-        querySegmentWalkerModule = binder -> {};
+        querySegmentWalkerModule = _ -> {};
+      }
+
+      final Module resolvedQueryResourceModule;
+      if (queryResourceModule != null) {
+        resolvedQueryResourceModule = queryResourceModule;
+      } else if (!scanOnly) {
+        resolvedQueryResourceModule = new QueryResourceModule();
+      } else if (systemTableQueryEnabled) {
+        resolvedQueryResourceModule = new SystemTableQueryResourceModule();
+      } else {
+        // Without the Druid engine for system tables, scan-only servers don't serve native queries.
+        resolvedQueryResourceModule = _ -> {};
       }
 
       return new NativeQueryEngineModule(
@@ -116,9 +149,8 @@ public class NativeQueryEngineModule implements DruidModule
                   querySegmentWalkerModule
               )
           ).with(overrideModule),
-          queryResourceModule == null
-          ? scanOnly ? new SystemTableQueryResourceModule() : new QueryResourceModule()
-          : queryResourceModule
+          resolvedQueryResourceModule,
+          systemTableQueryEnabled
       );
     }
   }
@@ -129,7 +161,9 @@ public class NativeQueryEngineModule implements DruidModule
     binder.install(executionModule);
     binder.install(new SegmentWranglerModule());
     binder.install(new JoinableFactoryModule());
-    binder.install(new SystemTableModule());
+    if (systemTableQueryEnabled) {
+      binder.install(new SystemTableModule());
+    }
     binder.install(queryResourceModule);
   }
 

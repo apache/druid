@@ -46,6 +46,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -61,6 +62,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
@@ -481,6 +483,20 @@ public class QueryLifecycle
     @SuppressWarnings("unchecked")
     final Query<T> originalQuery = (Query<T>) baseQuery;
     final DataSourceQueryHandler dataSourceQueryHandler = findDataSourceQueryHandler(originalQuery.getDataSource());
+    if (dataSourceQueryHandler == null) {
+      final SystemTableDataSource systemTable = findSystemTable(originalQuery.getDataSource());
+      if (systemTable != null) {
+        // System-table handlers are bound only when the Druid engine is enabled for system tables.
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build(
+                                "System table[%s] can't be queried with native queries unless [%s] is set on all services",
+                                systemTable.getTable(),
+                                SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY
+                            );
+      }
+    }
+
     // Handlers can start fanout or provider work before reaching a segment walker, or bypass it entirely.
     // Apply the same server guardrails first, and pass the normalized query to both runner creation and execution.
     final Query<T> query = dataSourceQueryHandler == null
@@ -529,6 +545,21 @@ public class QueryLifecycle
       descendantHandler = childHandler;
     }
     return descendantHandler;
+  }
+
+  @Nullable
+  private static SystemTableDataSource findSystemTable(final DataSource dataSource)
+  {
+    if (dataSource instanceof SystemTableDataSource systemTableDataSource) {
+      return systemTableDataSource;
+    }
+    for (final DataSource child : dataSource.getChildren()) {
+      final SystemTableDataSource systemTable = findSystemTable(child);
+      if (systemTable != null) {
+        return systemTable;
+      }
+    }
+    return null;
   }
 
   /**

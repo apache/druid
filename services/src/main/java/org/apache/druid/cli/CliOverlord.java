@@ -143,6 +143,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -207,8 +208,8 @@ public class CliOverlord extends ServerRunnable
     final ImmutableList.Builder<Module> modules = ImmutableList.builder();
     modules.add(new DerbyTaskStorageModule());
     modules.add(standalone ? new MetadataManagerModule() : binder -> {});
-    if (standalone) {
-      modules.add(NativeQueryEngineModule.builder().scanOnly().build());
+    if (standalone && SystemTableModule.isEnabled(properties)) {
+      modules.add(NativeQueryEngineModule.builder().scanOnly().enableSystemTableQuery(true).build());
     }
     modules.add(
         new Module()

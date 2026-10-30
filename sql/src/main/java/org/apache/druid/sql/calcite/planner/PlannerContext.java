@@ -474,9 +474,9 @@ public class PlannerContext
     return QueryContext.of(queryContext);
   }
 
-  public boolean useQueryEngineForSystemTables()
+  public boolean useDruidEngineForSystemTables()
   {
-    return queryContext().getOrDefault(QueryContextParameters.USE_QUERY_ENGINE_FOR_SYSTEM_TABLES);
+    return queryContext().getOrDefault(QueryContextParameters.USE_DRUID_ENGINE_FOR_SYSTEM_TABLES);
   }
 
   public boolean isStringifyArrays()

@@ -43,7 +43,7 @@ public class SystemTableDataProviderTest
     final PlannerContext context = EasyMock.partialMockBuilder(PlannerContext.class)
                                           .addMockedMethod("queryContext")
                                           .createMock();
-    final String key = QueryContextParameters.USE_QUERY_ENGINE_FOR_SYSTEM_TABLES.getName();
+    final String key = QueryContextParameters.USE_DRUID_ENGINE_FOR_SYSTEM_TABLES.getName();
     EasyMock.expect(context.queryContext()).andReturn(QueryContext.empty());
     EasyMock.expect(context.queryContext()).andReturn(QueryContext.of(Map.of(key, true)));
     EasyMock.expect(context.queryContext()).andReturn(QueryContext.of(Map.of(key, "true")));
@@ -51,11 +51,11 @@ public class SystemTableDataProviderTest
     EasyMock.expect(context.queryContext()).andReturn(QueryContext.of(Map.of(key, 1)));
     EasyMock.replay(context);
 
-    Assertions.assertFalse(context.useQueryEngineForSystemTables());
-    Assertions.assertTrue(context.useQueryEngineForSystemTables());
-    Assertions.assertTrue(context.useQueryEngineForSystemTables());
-    Assertions.assertFalse(context.useQueryEngineForSystemTables());
-    Assertions.assertThrows(BadQueryContextException.class, context::useQueryEngineForSystemTables);
+    Assertions.assertFalse(context.useDruidEngineForSystemTables());
+    Assertions.assertTrue(context.useDruidEngineForSystemTables());
+    Assertions.assertTrue(context.useDruidEngineForSystemTables());
+    Assertions.assertFalse(context.useDruidEngineForSystemTables());
+    Assertions.assertThrows(BadQueryContextException.class, context::useDruidEngineForSystemTables);
     EasyMock.verify(context);
   }
 
@@ -83,10 +83,10 @@ public class SystemTableDataProviderTest
     final PlannerContext enabledContext = EasyMock.createMock(PlannerContext.class);
     EasyMock.expect(nativeEngine.name()).andReturn(NativeSqlEngine.NAME).anyTimes();
     EasyMock.expect(bindableEngine.name()).andReturn("bindable").anyTimes();
-    EasyMock.expect(disabledContext.useQueryEngineForSystemTables()).andReturn(false).once();
-    EasyMock.expect(bindableContext.useQueryEngineForSystemTables()).andReturn(true).once();
+    EasyMock.expect(disabledContext.useDruidEngineForSystemTables()).andReturn(false).once();
+    EasyMock.expect(bindableContext.useDruidEngineForSystemTables()).andReturn(true).once();
     EasyMock.expect(bindableContext.getEngine()).andReturn(bindableEngine).once();
-    EasyMock.expect(enabledContext.useQueryEngineForSystemTables()).andReturn(true).once();
+    EasyMock.expect(enabledContext.useDruidEngineForSystemTables()).andReturn(true).once();
     EasyMock.expect(enabledContext.getEngine()).andReturn(nativeEngine).once();
     EasyMock.expect(table.unwrap(SystemTableDataSourceTable.class)).andReturn(ServerPropertiesDataSourceTable::new).once();
     EasyMock.replay(table, nativeEngine, bindableEngine, disabledContext, bindableContext, enabledContext);

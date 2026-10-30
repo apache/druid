@@ -29,12 +29,22 @@ import org.apache.druid.server.metrics.QueryCountStatsProvider;
 /** Registers the Router's local native query resource and forwarding-servlet query metrics. */
 public class RouterQueryResourceModule implements DruidModule
 {
+  private final boolean enableDruidEngineForSystemTables;
+
+  public RouterQueryResourceModule(final boolean enableDruidEngineForSystemTables)
+  {
+    this.enableDruidEngineForSystemTables = enableDruidEngineForSystemTables;
+  }
+
   @Override
   public void configure(final Binder binder)
   {
-    binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
     binder.bind(QueryCountStatsProvider.class).to(AsyncQueryForwardingServlet.class).in(LazySingleton.class);
-    Jerseys.addResource(binder, QueryResource.class);
-    LifecycleModule.register(binder, QueryResource.class);
+    if (enableDruidEngineForSystemTables) {
+      // Serves system-table queries that the Router runs locally.
+      binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
+      Jerseys.addResource(binder, QueryResource.class);
+      LifecycleModule.register(binder, QueryResource.class);
+    }
   }
 }

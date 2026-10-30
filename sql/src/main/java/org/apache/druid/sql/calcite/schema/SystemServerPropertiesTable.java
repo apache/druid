@@ -86,13 +86,15 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
   private final AuthenticationResult authenticationResult;
+  private final boolean enableDruidEngineForSystemTables;
 
   public SystemServerPropertiesTable(
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       AuthorizerMapper authorizerMapper,
       HttpClient httpClient,
       ObjectMapper jsonMapper,
-      AuthenticationResult authenticationResult
+      AuthenticationResult authenticationResult,
+      boolean enableDruidEngineForSystemTables
   )
   {
     this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
@@ -100,6 +102,7 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
     this.httpClient = httpClient;
     this.jsonMapper = jsonMapper;
     this.authenticationResult = authenticationResult;
+    this.enableDruidEngineForSystemTables = enableDruidEngineForSystemTables;
   }
 
   @Override
@@ -114,10 +117,11 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
     return Schema.TableType.SYSTEM_TABLE;
   }
 
+  @Nullable
   @Override
   public ServerPropertiesDataSourceTable asDataSourceTable()
   {
-    return new ServerPropertiesDataSourceTable();
+    return enableDruidEngineForSystemTables ? new ServerPropertiesDataSourceTable() : null;
   }
 
   @Override

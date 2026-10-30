@@ -209,7 +209,9 @@ public class CliPeon extends GuiceRunnable
   {
     return ImmutableList.of(
         new PeonProcessingModule(),
-        NativeQueryEngineModule.builder().build(),
+        NativeQueryEngineModule.builder()
+                               .enableSystemTableQuery(properties)
+                               .build(),
         new IndexingServiceTaskLogsModule(properties),
         new RegexEngineModule(),
         new Module()
