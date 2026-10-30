@@ -20,20 +20,15 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Lists;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
-import it.unimi.dsi.fastutil.objects.Object2IntSortedMap;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 /**
- * {@link Comparator} based {@link SortedDimensionDictionary}
- *
- * There are a number of unused methods, because nested columns don't merge bitmap indexes during
- * the merge phase, rather they are created when serializing the column, but leaving for now for
- * compatibility with the other implementation
+ * Creates a sorted dictionary given some existing dictionary and a {@link Comparator}, storing a mapping of both
+ * sorted id to unsorted id and unsorted id to sorted id. {@link SortedDimensionDictionary} uses natural ordering.
  */
 public class ComparatorSortedDimensionDictionary<T>
 {
@@ -41,26 +36,40 @@ public class ComparatorSortedDimensionDictionary<T>
   private final int[] idToIndex;
   private final int[] indexToId;
 
+  /**
+   * @param idToValue  unsorted dictionary values, which must be unique. The sort looks up values by id many
+   *                   times, so this should be a {@link java.util.RandomAccess} list such as {@link ArrayList}.
+   * @param comparator ordering of the values, which must handle null
+   * @param length     number of ids, from the start of {@code idToValue}, to include
+   */
   public ComparatorSortedDimensionDictionary(List<T> idToValue, Comparator<T> comparator, int length)
   {
-    Object2IntSortedMap<T> sortedMap = new Object2IntRBTreeMap<>(comparator);
+    final int[] sortedIds = new int[length];
     for (int id = 0; id < length; id++) {
-      T value = idToValue.get(id);
-      sortedMap.put(value, id);
+      sortedIds[id] = id;
     }
-    this.sortedVals = Lists.newArrayList(sortedMap.keySet());
+    IntArrays.quickSort(sortedIds, (id1, id2) -> comparator.compare(idToValue.get(id1), idToValue.get(id2)));
+
+    this.sortedVals = new ArrayList<>(length);
     this.idToIndex = new int[length];
-    this.indexToId = new int[length];
-    int index = 0;
-    for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext(); ) {
-      int id = iterator.nextInt();
+    this.indexToId = sortedIds;
+    for (int index = 0; index < length; index++) {
+      final int id = sortedIds[index];
+      sortedVals.add(idToValue.get(id));
       idToIndex[id] = index;
-      indexToId[index] = id;
-      index++;
     }
   }
 
-  @SuppressWarnings("unused")
+  /**
+   * Number of ids in this sorted view, captured at {@link DimensionDictionary#sort()} time. Both the sorted-id and
+   * unsorted-id spaces cover {@code [0, size())}. Useful when iterating a snapshot taken concurrently with a still-
+   * growing source dictionary, where re-reading the source size would be inconsistent with this view.
+   */
+  public int size()
+  {
+    return sortedVals.size();
+  }
+
   public int getUnsortedIdFromSortedId(int index)
   {
     return indexToId[index];
