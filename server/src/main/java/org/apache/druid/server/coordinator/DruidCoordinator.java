@@ -401,9 +401,15 @@ public class DruidCoordinator
         return;
       }
 
-      coordLeaderSelector.unregisterListener();
-      metadataManager.stopCache();
       started = false;
+    }
+
+    // Unregister without holding the lock. When using K8sDruidLeaderSelector, it will call
+    // stopBeingLeader() from another thread and wait for it, which needs the same lock.
+    coordLeaderSelector.unregisterListener();
+
+    synchronized (lock) {
+      metadataManager.stopCache();
       stopAllDutyGroups();
     }
   }
