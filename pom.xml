@@ -85,6 +85,7 @@
         <avatica.version>1.29.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
+        <tsfile.version>2.5.0</tsfile.version>
         <bytebuddy.version>1.18.15</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
@@ -270,6 +271,7 @@
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
         <module>extensions-contrib/druid-ranger-security</module>
+        <module>extensions-contrib/tsfile-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- more test stuff -->
@@ -592,6 +594,11 @@
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper-jute</artifactId>
                 <version>${zookeeper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tsfile</groupId>
+                <artifactId>tsfile</artifactId>
+                <version>${tsfile.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -2350,6 +2357,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/*.tsfile</exclude>
                                 <exclude>**/*.pmd</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/*.pmdruleset.xml</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/docker/schema-registry/*</exclude>

@@ -2711,3 +2711,13 @@ getters
 savepoints
 Scrollable
 updatable
+
+- ../docs/development/extensions-contrib/tsfile.md
+TsFile
+IoTDB
+INT32
+INT64
+
+- ../docs/configuration/extensions.md
+druid-tsfile-extensions
+TsFile
