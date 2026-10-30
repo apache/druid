@@ -1,8 +1,23 @@
-# note: documentation can be found here https://cwiki.apache.org/confluence/display/INFRA/Git+-+.asf.yaml+features
+# note: documentation can be found here https://github.com/apache/infrastructure-asfyaml/blob/main/README.md
 
 github:
   description: 'Apache Druid: a high performance real-time analytics database.'
   homepage: https://druid.apache.org/
+
+  rulesets:
+    - name: "Default Branch Protection"
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+          # release branches, such as 39.0.0
+          - "[0-9]*.[0-9]*.*"
+      bypass_teams:
+        - root
+    - name: "Require review"
+      bypass_teams:
+        - druid-committers
+      required_pull_request_reviews:
+        required_approving_review_count: 1
 
   # Attempt to make the auto-generated github emails more easily readable in email clients.
   # Configuration adapted from https://github.com/apache/plc4x/blob/develop/.asf.yaml.
