@@ -863,6 +863,20 @@ notices:
 
 ---
 
+name: Apache Commons Numbers
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - org.apache.commons: commons-numbers-arrays
+notices:
+  - commons-numbers-arrays: |
+      Apache Commons Numbers
+      Copyright 2001-2023 The Apache Software Foundation
+
+---
+
 name: Apache Commons Pool
 license_category: binary
 module: java-core

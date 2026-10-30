@@ -30,6 +30,7 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.msq.querykit.InputPruner;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
@@ -42,29 +43,25 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 
-import javax.annotation.Nullable;
-import java.util.concurrent.atomic.AtomicLong;
-
 @JsonTypeName("scan")
 public class ScanQueryStageProcessor extends BaseLeafStageProcessor
 {
   private final ScanQuery query;
 
   /**
-   * Instantiated and passed to all the {@link ScanQueryFrameProcessor}s created from this factory to keep a track
-   * of the number of rows processed so far in case the query is limited (without any order by) because one doesn't need
-   * to scan through all the rows in that case.
-   * This is not ideal because nothing really guarantees this factory is used for a single makeWorkers call
+   * Shared by all the {@link ScanQueryFrameProcessor}s created from this factory, so a limited scan stops reading once
+   * rows can no longer contribute to the result. Holds the state of one execution: each work order deserializes its
+   * own instance, but nothing prevents calling {@link #execute} twice on one instance. Doing so would produce buggy
+   * behavior, and must be avoided by the caller.
    */
-  @Nullable
-  private final AtomicLong runningCountForLimit;
+  private final ScanLimitTracker limitTracker;
 
   @JsonCreator
   public ScanQueryStageProcessor(@JsonProperty("query") ScanQuery query)
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
-    this.runningCountForLimit = query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
+    this.limitTracker = ScanLimitTracker.create(query);
   }
 
   public static ScanQueryStageProcessor makeScanStageProcessor(
@@ -114,7 +111,7 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
   {
     return new ScanQueryFrameProcessor(
         query,
-        runningCountForLimit,
+        limitTracker,
         frameContext.jsonMapper(),
         baseInput,
         segmentMapFn,
@@ -124,10 +121,9 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
   }
 
   @Override
-  protected boolean canSkipRemainingInputs()
+  protected InputPruner getInputPruner()
   {
-    return runningCountForLimit != null
-           && runningCountForLimit.get() >= ScanQueryFrameProcessor.getOffsetPlusLimit(query);
+    return limitTracker;
   }
 
   @Override

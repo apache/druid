@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -35,9 +36,12 @@ import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,7 +52,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 /**
  * Tests for {@link ReadableInputQueue}'s segment-load lifecycle: close-while-loading must promptly fail the futures
@@ -95,7 +99,9 @@ class ReadableInputQueueTest
     private final AcquireSegmentAction action;
     private final Optional<Segment> cached;
     private final boolean throwOnDescriptor;
+    private final SegmentDescriptor descriptor;
     final AtomicInteger countDeliveredCalls = new AtomicInteger();
+    final AtomicInteger countAcquires = new AtomicInteger();
 
     TestLoadableSegment(AcquireSegmentAction action)
     {
@@ -109,20 +115,31 @@ class ReadableInputQueueTest
 
     TestLoadableSegment(AcquireSegmentAction action, Optional<Segment> cached, boolean throwOnDescriptor)
     {
+      this(action, cached, throwOnDescriptor, DESCRIPTOR);
+    }
+
+    TestLoadableSegment(
+        AcquireSegmentAction action,
+        Optional<Segment> cached,
+        boolean throwOnDescriptor,
+        SegmentDescriptor descriptor
+    )
+    {
       this.action = action;
       this.cached = cached;
       this.throwOnDescriptor = throwOnDescriptor;
+      this.descriptor = descriptor;
     }
 
     @Override
     public SegmentDescriptor descriptor()
     {
       // Simulates a post-release failure in the queue's delivery path: onSegmentReady calls descriptor() after
-      // release() has already transferred ownership of the result.
-      if (throwOnDescriptor) {
+      // release() has already transferred ownership of the result. Calls before then, such as for pruning, succeed.
+      if (throwOnDescriptor && countDeliveredCalls.get() > 0) {
         throw new IllegalStateException("descriptor blew up");
       }
-      return DESCRIPTOR;
+      return descriptor;
     }
 
     @Nullable
@@ -135,6 +152,9 @@ class ReadableInputQueueTest
     @Override
     public Optional<Segment> acquireIfCached(AcquireMode acquireMode)
     {
+      if (cached.isPresent()) {
+        countAcquires.incrementAndGet();
+      }
       return cached;
     }
 
@@ -142,6 +162,7 @@ class ReadableInputQueueTest
     public AcquireSegmentAction acquire(AcquireMode acquireMode)
     {
       // install delivery accounting the same way real implementations do: a successful release counts exactly once
+      countAcquires.incrementAndGet();
       action.setOnRelease(result -> countDeliveredCalls.incrementAndGet());
       return action;
     }
@@ -155,12 +176,12 @@ class ReadableInputQueueTest
 
   private static ReadableInputQueue makeQueue(int loadahead, LoadableSegment... segments)
   {
-    return makeQueue(loadahead, () -> false, segments);
+    return makeQueue(loadahead, InputPruner.NEVER, segments);
   }
 
   private static ReadableInputQueue makeQueue(
       int loadahead,
-      BooleanSupplier canSkipRemaining,
+      InputPruner inputPruner,
       LoadableSegment... segments
   )
   {
@@ -170,7 +191,7 @@ class ReadableInputQueueTest
         List.of(new PhysicalInputSlice(ReadablePartitions.empty(), List.of(segments), List.of())),
         loadahead,
         AcquireMode.FULL,
-        canSkipRemaining
+        inputPruner
     );
   }
 
@@ -429,7 +450,7 @@ class ReadableInputQueueTest
     final TestLoadableSegment loadable = new TestLoadableSegment(new AcquireSegmentAction(), Optional.of(cachedSegment));
     final AtomicBoolean canSkipRemaining = new AtomicBoolean(false);
 
-    final ReadableInputQueue queue = makeQueue(0, canSkipRemaining::get, loadable);
+    final ReadableInputQueue queue = makeQueue(0, interval -> canSkipRemaining.get(), loadable);
     queue.start();
     Assertions.assertEquals(1, queue.remaining());
 
@@ -446,7 +467,7 @@ class ReadableInputQueueTest
     final AtomicInteger cancels = new AtomicInteger();
     final TestLoadableSegment loadable = new TestLoadableSegment(new AcquireSegmentAction(cancels::incrementAndGet));
 
-    final ReadableInputQueue queue = makeQueue(1, () -> true, loadable);
+    final ReadableInputQueue queue = makeQueue(1, interval -> true, loadable);
     queue.start();
     Assertions.assertNull(queue.nextInput());
 
@@ -465,5 +486,134 @@ class ReadableInputQueueTest
     Assertions.assertEquals(0, queue.remaining());
     Assertions.assertNull(queue.nextInput());
     queue.close();
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = Order.class, names = {"ASCENDING", "DESCENDING"})
+  void testTimeOrderHandsOutSegmentsInTimeOrder(final Order order)
+  {
+    final ReadableInputQueue queue =
+        makeQueue(0, timeOrderedPruner(order, interval -> false), cachedSegmentOnDay(2), cachedSegmentOnDay(1),
+                  cachedSegmentOnDay(3));
+    queue.start();
+
+    final List<Interval> expected = order == Order.DESCENDING ? List.of(day(3), day(2), day(1))
+                                                              : List.of(day(1), day(2), day(3));
+    Assertions.assertEquals(expected, handOutAll(queue));
+    queue.close();
+  }
+
+  @Test
+  void testTimeOrderDoesNotAcquirePrunedSegments()
+  {
+    final TestLoadableSegment pruned = cachedSegmentOnDay(1);
+    final ReadableInputQueue queue = makeQueue(
+        1,
+        timeOrderedPruner(Order.DESCENDING, interval -> interval.equals(day(1))),
+        pruned,
+        cachedSegmentOnDay(3),
+        cachedSegmentOnDay(2)
+    );
+    queue.start();
+
+    Assertions.assertEquals(List.of(day(3), day(2)), handOutAll(queue));
+    Assertions.assertEquals(0, pruned.countAcquires.get(), "a pruned segment must never be acquired");
+    queue.close();
+  }
+
+  @Test
+  void testTimeOrderLoadedSegmentJumpsAheadOnlyWithinItsInterval()
+  {
+    // Loadahead acquires all three in time order: a loading segment, then a loaded one with the same interval, then a
+    // loaded one with an older interval.
+    final TestLoadableSegment loading = new TestLoadableSegment(
+        new AcquireSegmentAction(() -> {}),
+        Optional.empty(),
+        false,
+        descriptorOnDay(3, 0)
+    );
+    final TestLoadableSegment loadedSameDay = new TestLoadableSegment(
+        new AcquireSegmentAction(),
+        Optional.of(new CountingSegment()),
+        false,
+        descriptorOnDay(3, 1)
+    );
+    final TestLoadableSegment loadedOlderDay = cachedSegmentOnDay(2);
+
+    final ReadableInputQueue queue =
+        makeQueue(3, timeOrderedPruner(Order.DESCENDING, interval -> false), loading, loadedSameDay, loadedOlderDay);
+    queue.start();
+
+    // The loaded segment level with the loading one goes first; the older one must wait for the loading one.
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> first = queue.nextInput();
+    Assertions.assertEquals(descriptorOnDay(3, 1), Futures.getUnchecked(first).input().getSegment().getDescriptor());
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> second = queue.nextInput();
+    Assertions.assertFalse(second.isDone(), "the loading segment must go before a loaded segment from an older day");
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> third = queue.nextInput();
+    Assertions.assertEquals(descriptorOnDay(2, 0), Futures.getUnchecked(third).input().getSegment().getDescriptor());
+
+    closeHandedOut(first);
+    closeHandedOut(third);
+    queue.close();
+  }
+
+  private static Interval day(final int day)
+  {
+    return Intervals.of("2026-01-%02d/2026-01-%02d", day, day + 1);
+  }
+
+  private static SegmentDescriptor descriptorOnDay(final int day, final int partition)
+  {
+    return new SegmentDescriptor(day(day), "v1", partition);
+  }
+
+  private static TestLoadableSegment cachedSegmentOnDay(final int day)
+  {
+    return new TestLoadableSegment(
+        new AcquireSegmentAction(),
+        Optional.of(new CountingSegment()),
+        false,
+        descriptorOnDay(day, 0)
+    );
+  }
+
+  private static InputPruner timeOrderedPruner(final Order order, final Predicate<Interval> canSkip)
+  {
+    return new InputPruner()
+    {
+      @Override
+      public boolean canSkip(final Interval interval)
+      {
+        return canSkip.test(interval);
+      }
+
+      @Override
+      public Order getTimeOrder()
+      {
+        return order;
+      }
+    };
+  }
+
+  /**
+   * Hands out every input, all of which must be ready, and returns their intervals in order. Closes each one.
+   */
+  private static List<Interval> handOutAll(final ReadableInputQueue queue)
+  {
+    final List<Interval> intervals = new ArrayList<>();
+    ListenableFuture<ReadableInputQueue.NumberedReadableInput> future;
+    while ((future = queue.nextInput()) != null) {
+      Assertions.assertTrue(future.isDone(), "cached segments must be ready");
+      intervals.add(Futures.getUnchecked(future).input().getSegment().getDescriptor().getInterval());
+      closeHandedOut(future);
+    }
+    return intervals;
+  }
+
+  private static void closeHandedOut(final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future)
+  {
+    CloseableUtils.closeAndWrapExceptions(
+        Futures.getUnchecked(future).input().getSegment().getSegmentReferenceOnce()
+    );
   }
 }
