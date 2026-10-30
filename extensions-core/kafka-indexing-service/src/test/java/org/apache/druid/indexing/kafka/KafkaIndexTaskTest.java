@@ -139,8 +139,12 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.OffsetSpec;
+import org.apache.kafka.clients.admin.RecordsToDelete;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -2463,6 +2467,109 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRunWithOffsetOutOfRangeExceptionBelowEarliestOffsetFailsTask() throws Exception
+  {
+    insertData();
+    // Remove the records the task is going to read, as the retention of the topic would do
+    deleteRecords(0, 5L);
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 10L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null,
+            Duration.standardHours(2).getStandardMinutes(),
+            null
+        )
+    );
+
+    final TaskStatus status = runTask(task).get();
+
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assertions.assertTrue(
+        status.getErrorMsg().contains("are no longer available in the stream"),
+        status.getErrorMsg()
+    );
+    Assertions.assertEquals(ImmutableList.of(), publishedDescriptors());
+    Assertions.assertNull(newDataSchemaMetadata());
+
+    final IngestionStatsAndErrors reportData = getTaskReportData();
+    Assertions.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assertions.assertEquals(status.getErrorMsg(), reportData.getErrorMsg());
+  }
+
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRunWithOffsetOutOfRangeExceptionBelowEarliestOffsetPublishesReadData() throws Exception
+  {
+    insertData();
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 100L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null,
+            Duration.standardHours(2).getStandardMinutes(),
+            null
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    final KafkaTopicPartition partition = new KafkaTopicPartition(false, topic, 0);
+    while (!Long.valueOf(13L).equals(task.getRunner().getCurrentOffsets().get(partition))) {
+      Thread.sleep(25);
+    }
+
+    // While the task is paused, write more records and remove all of them, so that the next offset the task reads
+    // is below the earliest available offset when it resumes.
+    task.getRunner().pause();
+    Assertions.assertEquals(Status.PAUSED, task.getRunner().getStatus());
+    // Let the fetch the consumer may have sent before pausing complete, so it does not pick up the records below
+    Thread.sleep(1000);
+    insertData();
+    deleteRecords(0, getLatestOffset(0));
+    task.getRunner().resume();
+
+    final TaskStatus status = future.get();
+
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assertions.assertTrue(
+        status.getErrorMsg().contains("are no longer available in the stream"),
+        status.getErrorMsg()
+    );
+
+    // The records read before the offsets became unavailable are published
+    assertEqualsExceptVersion(
+        ImmutableList.of(sdd("2010/P1D", 0), sdd("2011/P1D", 0), sdd("2013/P1D", 0), sdd("2049/P1D", 0)),
+        publishedDescriptors()
+    );
+    Assertions.assertEquals(
+        new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(partition, 13L))),
+        newDataSchemaMetadata()
+    );
+  }
+
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunContextSequenceAheadOfStartingOffsets() throws Exception
   {
     // Insert data
@@ -2909,6 +3016,26 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     return records.subList(startIndexInclusive, endIndexExclusive).stream()
                   .mapToLong(this::getRecordSize)
                   .sum();
+  }
+
+  private void deleteRecords(int partition, long beforeOffset) throws ExecutionException, InterruptedException
+  {
+    try (Admin admin = kafkaServer.newAdminClient()) {
+      admin.deleteRecords(
+          Map.of(new TopicPartition(topic, partition), RecordsToDelete.beforeOffset(beforeOffset))
+      ).all().get();
+    }
+  }
+
+  private long getLatestOffset(int partition) throws ExecutionException, InterruptedException
+  {
+    final TopicPartition topicPartition = new TopicPartition(topic, partition);
+    try (Admin admin = kafkaServer.newAdminClient()) {
+      return admin.listOffsets(Map.of(topicPartition, OffsetSpec.latest()))
+                  .partitionResult(topicPartition)
+                  .get()
+                  .offset();
+    }
   }
 
   private void insertData() throws ExecutionException, InterruptedException

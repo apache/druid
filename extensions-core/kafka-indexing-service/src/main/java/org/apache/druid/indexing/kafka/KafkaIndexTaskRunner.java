@@ -31,12 +31,14 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SequenceMetadata;
+import org.apache.druid.indexing.seekablestream.UnrecoverableStreamReadException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
@@ -88,9 +90,10 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
     }
     catch (OffsetOutOfRangeException e) {
       //
-      // Handles OffsetOutOfRangeException, which is thrown if the seeked-to
-      // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
-      // that has not been written yet (which is totally legitimate). So let's wait for it to show up
+      // Handles OffsetOutOfRangeException, which is thrown if the seeked-to offset is not present in the
+      // topic-partition. This happens either when the offset has been removed from the partition, e.g. due to the
+      // retention configuration, or when we're asking a task to read from data that has not been written yet (which
+      // is totally legitimate). See possiblyResetOffsetsOrWait for how each case is handled.
       //
       log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
       possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), recordSupplier, toolbox);
@@ -112,46 +115,65 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
     ));
   }
 
+  /**
+   * Handles partitions whose next offset is out of range:
+   * <ul>
+   *   <li>If the next offset is below the earliest available offset of the partition, the data has been removed from
+   *   the partition. If {@code resetOffsetAutomatically} is set, ask the supervisor to reset the offsets. Otherwise,
+   *   throw {@link UnrecoverableStreamReadException} so that the task publishes what it has read and fails, instead
+   *   of retrying an offset that will never become available again.</li>
+   *   <li>Otherwise, the next offset has not been written yet, so wait for it to show up.</li>
+   * </ul>
+   */
   private void possiblyResetOffsetsOrWait(
       Map<TopicPartition, Long> outOfRangePartitions,
       RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier,
       TaskToolbox taskToolbox
-  ) throws InterruptedException, IOException
+  ) throws InterruptedException, IOException, UnrecoverableStreamReadException
   {
     final String stream = task.getIOConfig().getStartSequenceNumbers().getStream();
     final boolean isMultiTopic = task.getIOConfig().isMultiTopic();
-    final Map<TopicPartition, Long> resetPartitions = new HashMap<>();
-    boolean doReset = false;
-    if (task.getTuningConfig().isResetOffsetAutomatically()) {
-      for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
-        final TopicPartition topicPartition = outOfRangePartition.getKey();
-        final long nextOffset = outOfRangePartition.getValue();
-        // seek to the beginning to get the least available offset
-        StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(
-            stream,
-            new KafkaTopicPartition(isMultiTopic, topicPartition.topic(), topicPartition.partition())
+    final Map<TopicPartition, Long> unavailablePartitions = new HashMap<>();
+    final Map<TopicPartition, Long> earliestOffsets = new HashMap<>();
+    for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
+      final TopicPartition topicPartition = outOfRangePartition.getKey();
+      final long nextOffset = outOfRangePartition.getValue();
+      // seek to the beginning to get the least available offset
+      final StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(
+          stream,
+          new KafkaTopicPartition(isMultiTopic, topicPartition.topic(), topicPartition.partition())
+      );
+      final Long leastAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
+      if (leastAvailableOffset == null) {
+        throw new ISE(
+            "got null sequence number for partition[%s] when fetching from kafka!",
+            topicPartition.partition()
         );
-        final Long leastAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
-        if (leastAvailableOffset == null) {
-          throw new ISE(
-              "got null sequence number for partition[%s] when fetching from kafka!",
-              topicPartition.partition()
-          );
-        }
-        // reset the seek
-        recordSupplier.seek(streamPartition, nextOffset);
-        // Reset consumer offset if resetOffsetAutomatically is set to true
-        // and the current message offset in the kafka partition is more than the
-        // next message offset that we are trying to fetch
-        if (leastAvailableOffset > nextOffset) {
-          doReset = true;
-          resetPartitions.put(topicPartition, nextOffset);
-        }
+      }
+      // reset the seek
+      recordSupplier.seek(streamPartition, nextOffset);
+      // The next message offset that we are trying to fetch is no longer available
+      if (leastAvailableOffset > nextOffset) {
+        unavailablePartitions.put(topicPartition, nextOffset);
+        earliestOffsets.put(topicPartition, leastAvailableOffset);
       }
     }
 
-    if (doReset) {
-      sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, topicPartition -> StreamPartition.of(
+    if (!unavailablePartitions.isEmpty() && !task.getTuningConfig().isResetOffsetAutomatically()) {
+      throw new UnrecoverableStreamReadException(
+          StringUtils.format(
+              "Offsets[%s] are no longer available in the stream, the earliest available offsets are [%s]. "
+              + "This may happen when the offsets have been deleted by the retention configuration of the topic. "
+              + "Use the supervisor's reset API to resume reading from a valid offset, "
+              + "or set 'resetOffsetAutomatically' to true in the supervisor's tuningConfig.",
+              unavailablePartitions,
+              earliestOffsets
+          )
+      );
+    }
+
+    if (!unavailablePartitions.isEmpty()) {
+      sendResetRequestAndWait(CollectionUtils.mapKeys(unavailablePartitions, topicPartition -> StreamPartition.of(
           stream,
           new KafkaTopicPartition(isMultiTopic, topicPartition.topic(), topicPartition.partition())
       )), taskToolbox);
