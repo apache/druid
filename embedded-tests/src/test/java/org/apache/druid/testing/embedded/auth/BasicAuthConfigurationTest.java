@@ -25,9 +25,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +52,9 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
 
   private HttpClient druid99;
+  private HttpClient sysTableUser;
+  private HttpClient sysTableWithStateUser;
+  private HttpClient stateWithoutSysTableUser;
 
   @Override
   protected EmbeddedResource getAuthResource()
@@ -59,6 +66,18 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   public void test_druid99User_hasNodeAccess()
   {
     checkNodeAccess(druid99);
+  }
+
+  /**
+   * With {@code druid.auth.authorizeSystemTablesDirectly}, a native {@code sys.server_properties} query needs both
+   * SYSTEM_TABLE READ on the table and STATE READ, which the table's row authorizer requires, on every route.
+   */
+  @Test
+  public void test_nativeSystemTableQuery_requiresSystemTableAndStateRead()
+  {
+    assertNativeSystemTableQueryStatus(sysTableWithStateUser, HttpResponseStatus.OK);
+    assertNativeSystemTableQueryStatus(sysTableUser, HttpResponseStatus.FORBIDDEN);
+    assertNativeSystemTableQueryStatus(stateWithoutSysTableUser, HttpResponseStatus.FORBIDDEN);
   }
 
   @Override
@@ -145,6 +164,19 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
         new BasicCredentials("druid99", "helloworld"),
         httpClient
     );
+
+    final ResourceAction readServerPropertiesTable =
+        new ResourceAction(new Resource("server_properties", ResourceType.SYSTEM_TABLE), Action.READ);
+    final ResourceAction readState = new ResourceAction(new Resource(".*", ResourceType.STATE), Action.READ);
+    // The Router sets queryId on native queries it forwards, and this cluster authorizes query context keys.
+    final ResourceAction writeQueryId =
+        new ResourceAction(new Resource(QueryContextParameters.QUERY_ID.getName(), ResourceType.QUERY_CONTEXT), Action.WRITE);
+    sysTableUser = createUserWithClient("sysTableUser", List.of(readServerPropertiesTable, writeQueryId));
+    sysTableWithStateUser = createUserWithClient(
+        "sysTableWithStateUser",
+        List.of(readServerPropertiesTable, readState, writeQueryId)
+    );
+    stateWithoutSysTableUser = createUserWithClient("stateWithoutSysTableUser", List.of(readState, writeQueryId));
   }
 
   @Override
@@ -187,6 +219,12 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
     connectionProperties.setProperty("user", user.getName());
     connectionProperties.setProperty("password", user.getPassword());
     return connectionProperties;
+  }
+
+  private HttpClient createUserWithClient(final String user, final List<ResourceAction> permissions)
+  {
+    createUserAndRoleWithPermissions(user, "helloworld", user + "Role", permissions);
+    return new CredentialedHttpClient(new BasicCredentials(user, "helloworld"), httpClient);
   }
 
   private void createUserAndRoleWithPermissions(

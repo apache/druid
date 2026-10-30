@@ -24,8 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import com.google.inject.TypeLiteral;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.apache.commons.io.FileUtils;
@@ -74,9 +76,14 @@ import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.system.handler.SystemTableQueryResource;
+import org.apache.druid.server.system.module.SystemTableModule;
+import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
+import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.Duration;
@@ -108,6 +115,33 @@ public class CliPeonTest
       new CompactionTask.Builder("test_ds", SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, mapper))
       .id("compact_test_taskid")
       .inputSpec(new CompactionIntervalSpec(Intervals.of("2020/2021"), null));
+
+  @Test
+  public void testPeonNativeServerPropertiesInjection() throws IOException
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, "true");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    final Map<String, SystemTableDataProvider> dataProviders = peonInjector.getInstance(
+        Key.get(new TypeLiteral<>() {})
+    );
+
+    Assertions.assertNotNull(peonInjector.getInstance(QueryResource.class));
+    // Peons use the normal query resource to serve native queries over both segments and system tables.
+    Assertions.assertNull(peonInjector.getExistingBinding(Key.get(SystemTableQueryResource.class)));
+    Assertions.assertTrue(dataProviders.containsKey(ServerPropertiesTableDescriptor.TABLE_NAME));
+  }
+
+  @Test
+  public void testPeonWithoutDruidEngineForSystemTables() throws IOException
+  {
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), new Properties());
+
+    Assertions.assertNotNull(peonInjector.getInstance(QueryResource.class));
+    Assertions.assertNull(
+        peonInjector.getExistingBinding(Key.get(new TypeLiteral<Map<String, SystemTableDataProvider>>() {}))
+    );
+  }
 
   @Test
   public void testCliPeonK8sMode() throws IOException

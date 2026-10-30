@@ -19,14 +19,55 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
+import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+@SqlTestFrameworkConfig.ComponentSupplier(CalciteSysQueryTest.BindableComponentSupplier.class)
 public class CalciteSysQueryTest extends BaseCalciteQueryTest
 {
+  public static class BindableComponentSupplier extends StandardComponentSupplier
+  {
+    public BindableComponentSupplier(final TempDirProducer tempDirProducer)
+    {
+      super(tempDirProducer);
+    }
+
+    @Override
+    public Class<? extends SqlEngine> getSqlEngineClass()
+    {
+      return BindableTestSqlEngine.class;
+    }
+  }
+
+  public static class BindableTestSqlEngine extends NativeSqlEngine
+  {
+    @Inject
+    public BindableTestSqlEngine(
+        final QueryLifecycleFactory queryLifecycleFactory,
+        final ObjectMapper jsonMapper,
+        final SqlToolbox toolbox
+    )
+    {
+      super(queryLifecycleFactory, jsonMapper, toolbox);
+    }
+
+    @Override
+    public String name()
+    {
+      return "bindable-test";
+    }
+  }
+
   @RegisterExtension
   NotYetSupportedProcessor notYetSupportedProcessor = new NotYetSupportedProcessor(NotYetSupported.Scope.BINDABLE);
 

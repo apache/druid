@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
@@ -117,5 +118,35 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
     new RowsAndColumnsHelper()
         .expectColumn("array", expectedArr, ColumnType.STRING_ARRAY)
         .validate(ras);
+  }
+
+  @Test
+  public void testMaterializationFailsInsteadOfReturningPartialRowsWhenFrameIsFull()
+  {
+    final Object[][] vals = new Object[][] {{0L, "x".repeat(64 * 1024)}};
+    final RowSignature signature = RowSignature.builder()
+                                               .add("__time", ColumnType.LONG)
+                                               .add("value", ColumnType.STRING)
+                                               .build();
+    final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromRowObjects(vals, signature));
+
+    Assumptions.assumeTrue(base.as(CursorFactory.class) != null, "skipping: CursorFactory not supported");
+
+    final LazilyDecoratedRowsAndColumns rowsAndColumns = new LazilyDecoratedRowsAndColumns(
+        base,
+        null,
+        null,
+        null,
+        OffsetLimit.limit(1),
+        null,
+        null,
+        1024L
+    );
+
+    final ResourceLimitExceededException exception = Assertions.assertThrows(
+        ResourceLimitExceededException.class,
+        rowsAndColumns::numRows
+    );
+    Assertions.assertTrue(exception.getMessage().contains("configured frame capacity"));
   }
 }

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.ProvisionException;
@@ -53,6 +54,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -68,6 +70,8 @@ import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.WeightedQueryLaningStrategy;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceType;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterEach;
@@ -98,6 +102,28 @@ public class QuerySchedulerTest
 
   private ListeningExecutorService executorService;
   private ObservableQueryScheduler scheduler;
+
+  /** System-table queries are cancelled with a SYSTEM_TABLE resource, not a datasource named after the table. */
+  @Test
+  public void testSystemTableCancellationHasAuthorizationResource()
+  {
+    final Query<?> query = GroupByQuery.builder()
+                                       .setDataSource(new SystemTableDataSource("tasks"))
+                                       .setInterval("2000/2001")
+                                       .setGranularity(Granularities.ALL)
+                                       .setContext(Map.of("queryId", "system-query"))
+                                       .build();
+    final SettableFuture<Object> future = SettableFuture.create();
+
+    scheduler.registerQueryFuture(query, future);
+
+    Assertions.assertEquals(
+        Set.of(new Resource("tasks", ResourceType.SYSTEM_TABLE)),
+        scheduler.getQueryResources(query.getId())
+    );
+    scheduler.cancelQuery(query.getId());
+    Assertions.assertTrue(future.isCancelled());
+  }
 
   @BeforeEach
   public void setup()

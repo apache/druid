@@ -696,6 +696,26 @@ public final class QueryContextParameters
   //
   // The descriptors below are read by the SQL planner: PlannerContext, PlannerConfig, the planner rules and the SQL
   // validator. Descriptors that apply only to SQL are documented in sql-query-context.md.
+  public static final QueryContextParameter<Boolean> USE_DRUID_ENGINE_FOR_SYSTEM_TABLES =
+      booleanParameter("useDruidEngineForSystemTables")
+          .defaultValue(false)
+          .description(
+              """
+              Experimental. Runs queries on supported [system tables](sql-metadata-tables.md#native-query-execution)
+              on the query engine instead of the Broker's built-in SQL interpreter (Calcite `Bindable` execution),
+              when the resolved SQL engine is `native`. System tables without this support continue to use the SQL
+              interpreter. Has no effect unless `druid.query.enableDruidEngineForSystemTables` is set on all
+              services.<br /><br />
+              During a rolling upgrade, leave this parameter disabled until all services have been upgraded. You can
+              set a cluster-wide default on Brokers with
+              `druid.query.default.context.useDruidEngineForSystemTables`.
+              """
+          )
+          .since("39.0.0")
+          .query(Query.SQL)
+          .engine(Engine.NATIVE)
+          .build();
+
   public static final QueryContextParameter<String> SQL_QUERY_ID =
       stringParameter("sqlQueryId")
           .since("0.14.0-incubating").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)

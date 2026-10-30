@@ -481,6 +481,11 @@ public class PlannerContext
     return QueryContext.of(queryContext);
   }
 
+  public boolean useDruidEngineForSystemTables()
+  {
+    return queryContext().getOrDefault(QueryContextParameters.USE_DRUID_ENGINE_FOR_SYSTEM_TABLES);
+  }
+
   public boolean isStringifyArrays()
   {
     return stringifyArrays;

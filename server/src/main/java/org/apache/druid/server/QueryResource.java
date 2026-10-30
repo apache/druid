@@ -44,10 +44,13 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -66,8 +69,8 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 @LazySingleton
@@ -86,6 +89,9 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String QUERY_ID_RESPONSE_HEADER = "X-Druid-Query-Id";
+  /** Selects where a native query sent through a forwarding service should execute. */
+  public static final String HEADER_NATIVE_QUERY_ROUTE = "X-Druid-Native-Query-Route";
+  public static final String NATIVE_QUERY_ROUTE_LOCAL = "local";
   public static final String ERROR_MESSAGE_TRAILER_HEADER = "X-Error-Message";
   public static final String RESPONSE_COMPLETE_TRAILER_HEADER = "X-Druid-Response-Complete";
   public static final String HEADER_ETAG = "ETag";
@@ -134,15 +140,15 @@ public class QueryResource implements QueryCountStatsProvider
     if (log.isDebugEnabled()) {
       log.debug("Received cancel request for query [%s]", queryId);
     }
-    Set<String> datasources = queryScheduler.getQueryDatasources(queryId);
-    if (datasources == null) {
+    Set<Resource> resources = queryScheduler.getQueryResources(queryId);
+    if (resources == null) {
       log.warn("QueryId [%s] not registered with QueryScheduler, cannot cancel", queryId);
-      datasources = new TreeSet<>();
+      resources = Collections.emptySet();
     }
 
     AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
-        Iterables.transform(datasources, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
+        Iterables.transform(resources, resource -> new ResourceAction(resource, Action.WRITE)),
         authorizerMapper
     );
 
@@ -287,7 +293,7 @@ public class QueryResource implements QueryCountStatsProvider
     void incrementTimedOut();
   }
 
-  private Query<?> readQuery(
+  protected Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
       final ResourceIOReaderWriterFactory.ResourceIOReaderWriter ioReaderWriter

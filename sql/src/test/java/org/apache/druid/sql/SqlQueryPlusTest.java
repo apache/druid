@@ -21,6 +21,8 @@ package org.apache.druid.sql;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
@@ -31,6 +33,38 @@ import java.util.Map;
 
 public class SqlQueryPlusTest
 {
+  /// SET useDruidEngineForSystemTables = 'true' uses the registered boolean parameter.
+  @Test
+  public void testSetAllowsNativeFunctionsForSystemTables()
+  {
+    final SqlQueryPlus query = SqlQueryPlus
+        .builder("SET useDruidEngineForSystemTables = 'true'; SELECT COUNT(DISTINCT server) FROM sys.server_properties")
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    Assertions.assertTrue(
+        QueryContext.of(query.context()).getOrDefault(QueryContextParameters.USE_DRUID_ENGINE_FOR_SYSTEM_TABLES)
+    );
+  }
+
+  /// SET useDruidEngineForSystemTables = 1 rejects a non-boolean value before planning.
+  @Test
+  public void testSetRejectsInvalidNativeFunctionsFlag()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET useDruidEngineForSystemTables = 1; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher.invalidSqlInput()
+                             .expectMessageContains("Query context parameter [useDruidEngineForSystemTables] should be a boolean")
+    );
+  }
+
   @Test
   public void testSetAcceptsUnmigratedParameters()
   {
