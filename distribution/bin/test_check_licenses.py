@@ -15,9 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import importlib.util
 import io
 import os
+import tempfile
 import unittest
 
 spec = importlib.util.spec_from_file_location(
@@ -56,6 +58,77 @@ class FindMissingLicensesTest(unittest.TestCase):
 
     def test_skipped_dependency_is_not_missing(self):
         self.assertEqual([], find_missing([AZURE], [], skipping={GAV: {}}))
+
+
+class SplitStaleVersionsTest(unittest.TestCase):
+    MIT = "MIT License"
+    NEW = check_licenses.get_dep_key("org.example", "a", "1.1")
+
+    def split(self, registered, reporting_modules=(AZURE,), reported_license=APACHE, also_reported=()):
+        # registered: (version, license, modules) of each org.example:a registration;
+        # also_reported: "g:a:v" and module pairs reported next to org.example:a:1.1.
+        registered_dep_to_licenses = {}
+        registered_modules = {}
+        for version, license, modules in registered:
+            key = check_licenses.get_dep_key("org.example", "a", version)
+            registered_dep_to_licenses[key] = license
+            registered_modules[key] = set(modules)
+        reported_modules = reports(*also_reported)
+        reported_modules[self.NEW] = set(reporting_modules)
+        missing = [(", ".join(reporting_modules),) + self.NEW + (reported_license,)]
+        return check_licenses.split_stale_versions(
+            missing, reported_modules, registered_dep_to_licenses, registered_modules, EXCLUDED
+        )
+
+    def assertStale(self, registered_versions, split, module=AZURE):
+        self.assertEqual(([(module,) + self.NEW + (APACHE, registered_versions)], []), split)
+
+    def assertMissing(self, split, reported_license=APACHE):
+        self.assertEqual(([], [(AZURE,) + self.NEW + (reported_license,)]), split)
+
+    def test_registered_under_another_version_with_the_same_license_is_stale(self):
+        self.assertStale("1.0", self.split([("1.0", APACHE, [AZURE])]))
+
+    def test_registered_under_another_version_of_another_module_is_stale(self):
+        self.assertStale("1.0", self.split([("1.0", APACHE, ["java-core"])]))
+
+    def test_unregistered_is_missing(self):
+        self.assertMissing(self.split([]))
+
+    def test_registered_under_another_version_with_another_license_is_missing(self):
+        self.assertMissing(self.split([("1.0", self.MIT, [AZURE])]))
+
+    def test_registered_under_versions_with_different_licenses_is_missing(self):
+        self.assertMissing(self.split([("1.0", APACHE, [AZURE]), ("0.9", self.MIT, ["java-core"])]))
+
+    def test_registered_under_several_versions_with_the_same_license_is_stale(self):
+        self.assertStale("0.9, 1.0", self.split([("1.0", APACHE, [AZURE]), ("0.9", APACHE, ["java-core"])]))
+
+    def test_registered_only_under_excluded_module_is_missing_when_shipped(self):
+        self.assertMissing(self.split([("1.0", APACHE, [RANGER])]))
+
+    def test_current_version_registered_only_under_excluded_module_is_missing_when_shipped(self):
+        self.assertMissing(self.split([("1.1", APACHE, [RANGER]), ("1.0", APACHE, ["java-core"])]))
+
+    def test_registrations_under_excluded_modules_are_ignored_when_shipped(self):
+        self.assertStale("1.0", self.split([("1.0", APACHE, [AZURE]), ("0.9", self.MIT, [RANGER])]))
+
+    def test_registered_under_excluded_module_is_stale_when_not_shipped(self):
+        self.assertStale(
+            "1.0", self.split([("1.0", APACHE, [TESTCONTAINERS])], reporting_modules=(TESTCONTAINERS,)), module=TESTCONTAINERS
+        )
+
+    def test_registered_version_still_reported_is_missing(self):
+        # A module that starts bundling another version of a library is not a version bump.
+        self.assertMissing(self.split([("1.0", APACHE, ["java-core"])], also_reported=[("org.example:a:1.0", "java-core")]))
+
+    def test_one_registered_version_no_longer_reported_is_stale(self):
+        self.assertStale("0.9, 1.0", self.split(
+            [("1.0", APACHE, [AZURE]), ("0.9", APACHE, ["java-core"])], also_reported=[("org.example:a:0.9", "java-core")]
+        ))
+
+    def test_unknown_reported_license_is_missing(self):
+        self.assertMissing(self.split([("1.0", APACHE, [AZURE])], reported_license=None), reported_license=None)
 
 
 def find_unknown(license, reporting_modules, skipping=None):
@@ -238,16 +311,19 @@ class RefreshVersionsTest(unittest.TestCase):
         self.assertEqual((text, [], []), self.refresh(text, reports(("org.s:a:1.1", "java-core"), ("org.c:a:1.1", "java-core"))))
 
 
-def parse_report(*licenses):
+def report_html(*licenses):
     row = ", ".join("<a>{}</a>".format(license) for license in licenses)
-    report = (
+    return (
         '<a id="Project_Dependencies_compile"></a><table>'
         "<tr><th>GroupId</th><th>ArtifactId</th><th>Version</th><th>Type</th><th>Licenses</th></tr>"
         "<tr><td>org.tukaani</td><td>xz</td><td>1.10</td><td>jar</td><td>{}</td></tr>"
         "</table>".format(row)
     )
+
+
+def parse_report(*licenses):
     parser = check_licenses.DependencyReportParser("java-core", check_licenses.build_compatible_license_names())
-    dep_to_license = parser.parse(io.StringIO(report))
+    dep_to_license = parser.parse(io.StringIO(report_html(*licenses)))
     return dep_to_license, parser.dep_to_license_names
 
 
@@ -289,6 +365,49 @@ class CompatibleLicenseNamesTest(unittest.TestCase):
     def test_every_normalized_name_is_a_name(self):
         compatible_license_names = check_licenses.build_compatible_license_names()
         self.assertEqual([], sorted(set(compatible_license_names.values()) - set(compatible_license_names)))
+
+
+class CheckLicensesTest(unittest.TestCase):
+    # The report lists org.tukaani:xz:1.10 under the Apache license.
+
+    def check(self, registered_entry, stale_versions):
+        # Returns the stderr output and the exit code, None when the check passes.
+        with tempfile.TemporaryDirectory() as root:
+            os.makedirs(os.path.join(root, "licenses", "bin"))
+            os.makedirs(os.path.join(root, "reports", "core"))
+            with open(os.path.join(root, "licenses.yaml"), "w", encoding="utf-8") as f:
+                f.write(licenses_yaml(registered_entry))
+            with open(os.path.join(root, "reports", "core", "dependencies.html"), "w", encoding="utf-8") as f:
+                f.write(report_html("Apache-2.0"))
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                try:
+                    check_licenses.check_licenses(
+                        os.path.join(root, "licenses.yaml"), os.path.join(root, "reports"), EXCLUDED, stale_versions
+                    )
+                except SystemExit as e:
+                    return stderr.getvalue(), e.code
+            return stderr.getvalue(), None
+
+    def assertMissing(self, registered_entry, stale_versions):
+        output, code = self.check(registered_entry, stale_versions)
+        self.assertEqual(1, code)
+        self.assertIn("Error: found 1 missing licenses", output)
+
+    def test_stale_version_fails_in_fail_mode(self):
+        output, code = self.check(entry("XZ", "java-core", "1.9", ["org.tukaani: xz"]), "fail")
+        self.assertEqual(1, code)
+        self.assertIn("Error: found 1 dependencies whose previous versions are registered", output)
+        self.assertIn("refresh-license-versions.py licenses.yaml target/license-reports", output)
+
+    def test_stale_version_only_warns_in_warn_mode(self):
+        output, code = self.check(entry("XZ", "java-core", "1.9", ["org.tukaani: xz"]), "warn")
+        self.assertIsNone(code)
+        self.assertIn("version: 1.10, license: Apache License version 2.0, registered_versions: 1.9", output)
+        self.assertIn("refresh-license-versions.py licenses.yaml target/license-reports", output)
+
+    def test_unregistered_dependency_fails_in_warn_mode(self):
+        self.assertMissing(entry("Other", "java-core", "1.9", ["org.example: other"]), "warn")
 
 
 class LoadLicensesYamlTest(unittest.TestCase):
