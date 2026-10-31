@@ -79,7 +79,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -220,7 +219,11 @@ public class PlannerContext
   private final DruidSchemaCatalog rootSchema;
   private final AuthenticationResult authenticationResult;
   private final Set<String> authContextKeys;
-  private final Map<String, Object> queryContext;
+  /**
+   * Immutable; replaced, never modified in place, when planning records a value with
+   * {@link #setQueryContextParameter}.
+   */
+  private volatile QueryContext queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
@@ -289,9 +292,8 @@ public class PlannerContext
     this.rootSchema = rootSchema;
     this.authenticationResult = authenticationResult;
     this.authContextKeys = authContextKeys;
-    this.queryContext = new LinkedHashMap<>(queryContext);
+    this.queryContext = initializeContextFieldsAndPlannerConfig(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
-    initializeContextFieldsAndPlannerConfig();
   }
 
   public static PlannerContext create(
@@ -456,12 +458,12 @@ public class PlannerContext
   }
 
   /**
-   * Return the query context as a mutable map. Use this form when
-   * modifying the context during planning.
+   * Return the query context as an immutable map. The map is a snapshot: it does not reflect values recorded later
+   * with {@link #setQueryContextParameter}. Use that method to modify the context during planning.
    */
   public Map<String, Object> queryContextMap()
   {
-    return queryContext;
+    return queryContext.asMap();
   }
 
   /**
@@ -478,7 +480,19 @@ public class PlannerContext
    */
   public QueryContext queryContext()
   {
-    return QueryContext.of(queryContext);
+    return queryContext;
+  }
+
+  /**
+   * Record a value computed during planning, such as the segment granularity of an INSERT, so that later planning
+   * steps and the generated query or task see it. A null value removes the parameter.
+   *
+   * Fields derived from the context when this object is created, such as the time zone or {@link PlannerConfig},
+   * are not recomputed, so do not use this method for parameters that feed them.
+   */
+  public <T> void setQueryContextParameter(final QueryContextParameter<T> parameter, @Nullable final T value)
+  {
+    queryContext = queryContext.override(parameter, value);
   }
 
   public boolean isStringifyArrays()
@@ -564,7 +578,7 @@ public class PlannerContext
 
   public JoinAlgorithm getJoinAlgorithm()
   {
-    return QueryContext.of(queryContext).getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
+    return queryContext.getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
   }
 
   public String getSql()
@@ -621,21 +635,15 @@ public class PlannerContext
   {
     class DruidDataContext implements DataContext
     {
-      private final Map<String, Object> base_context = ImmutableMap.of(
-          DataContext.Variable.UTC_TIMESTAMP.camelName, localNow.getMillis(),
-          DataContext.Variable.CURRENT_TIMESTAMP.camelName, localNow.getMillis(),
-          DataContext.Variable.LOCAL_TIMESTAMP.camelName, new Interval(
-              new DateTime("1970-01-01T00:00:00.000", localNow.getZone()),
-              localNow
-          ).toDurationMillis(),
-          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone()
-      );
       private final Map<String, Object> context;
 
       DruidDataContext()
       {
-        ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        builder.putAll(base_context);
+        ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
+            .put(Variable.UTC_TIMESTAMP.camelName, localNow.getMillis())
+            .put(Variable.CURRENT_TIMESTAMP.camelName, localNow.getMillis())
+            .put(Variable.LOCAL_TIMESTAMP.camelName, new Interval(new DateTime("1970-01-01T00:00:00.000", localNow.getZone()), localNow).toDurationMillis())
+            .put(Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone());
         int i = 0;
         for (TypedValue parameter : parameters) {
           builder.put("?" + i, parameter.value);
@@ -721,15 +729,6 @@ public class PlannerContext
     this.queryMaker = Preconditions.checkNotNull(queryMaker, "queryMaker");
   }
 
-  /**
-   * Add additional query context parameters, overriding any existing values.
-   */
-  public void addAllToQueryContext(Map<String, Object> toAdd)
-  {
-    this.queryContext.putAll(toAdd);
-    initializeContextFieldsAndPlannerConfig();
-  }
-
   public SqlEngine getEngine()
   {
     return engine;
@@ -804,11 +803,9 @@ public class PlannerContext
     plannerToolbox.getHookDispatcher().dispatch(key, object);
   }
 
-
-
-  private void initializeContextFieldsAndPlannerConfig()
+  private QueryContext initializeContextFieldsAndPlannerConfig(final Map<String, Object> queryContext)
   {
-    final QueryContext context = QueryContext.of(queryContext);
+    QueryContext context = QueryContext.of(queryContext);
     final String tsParam = context.get(QueryContextParameters.SQL_CURRENT_TIMESTAMP);
     final DateTime utcNow = tsParam != null ? DateTimes.of(tsParam) : DateTimes.nowUtc();
 
@@ -835,14 +832,16 @@ public class PlannerContext
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
-      QueryContextParameters.SQL_QUERY_ID.set(this.queryContext, sqlQueryId);
+      context = context.override(QueryContextParameters.SQL_QUERY_ID, sqlQueryId);
     }
 
     if (plannerConfig != null) {
-      plannerConfig = plannerConfig.withOverrides(queryContext);
+      plannerConfig = plannerConfig.withOverrides(context.asMap());
     } else {
-      plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(queryContext);
+      plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(context.asMap());
     }
+
+    return context;
   }
 
   /**

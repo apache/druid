@@ -126,6 +126,67 @@ public class QueryContextTest
   }
 
   @Test
+  public void testOverrideTypedParameter()
+  {
+    final QueryContext original = QueryContext.of(
+        ImmutableMap.of(
+            "k", "v",
+            QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 10
+        )
+    );
+
+    assertEquals(
+        ImmutableMap.of(
+            "k", "v",
+            QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 20,
+            QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName(), false
+        ),
+        original.override(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 20)
+                .override(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
+                .asMap()
+    );
+    assertEquals(
+        ImmutableMap.of("k", "v"),
+        original.override(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, null).asMap()
+    );
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> original.override(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false).asMap().put("k", "v2")
+    );
+    assertThrows(
+        BadQueryContextException.class,
+        () -> original.override(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
+    );
+
+    // The original context is unchanged.
+    assertEquals(
+        ImmutableMap.of("k", "v", QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 10),
+        original.asMap()
+    );
+  }
+
+  @Test
+  public void testOverrideKeepsKeysSorted()
+  {
+    // A HashMap iterates these keys out of order, so the assertions fail unless the result is sorted.
+    final QueryContext original = QueryContext.of(ImmutableMap.of("sqlQueryId", 1, "priority", 2, "lane", 3));
+    final Map<String, Object> overrides = new HashMap<>();
+    overrides.put("timeout", 4);
+    overrides.put("finalize", 5);
+    overrides.put("vectorize", 6);
+    overrides.put("lane", null);
+
+    assertEquals(
+        List.of("finalize", "priority", "sqlQueryId", "timeout", "vectorize"),
+        List.copyOf(original.override(overrides).asMap().keySet())
+    );
+    assertEquals(
+        List.of("lane", "priority", "queryId", "sqlQueryId"),
+        List.copyOf(original.override(QueryContext.of(ImmutableMap.of("queryId", 7))).asMap().keySet())
+    );
+  }
+
+  @Test
   public void testIsEmpty()
   {
     assertTrue(QueryContext.empty().isEmpty());

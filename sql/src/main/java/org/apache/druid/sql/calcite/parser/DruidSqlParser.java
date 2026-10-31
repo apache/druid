@@ -88,9 +88,8 @@ public class DruidSqlParser
 
   /**
    * If an {@link SqlNode} is a {@link SqlNodeList}, it must consist of 0 or more {@link SqlSetOption} followed by a
-   * single {@link SqlNode} which is NOT a {@link SqlSetOption}. All {@link SqlSetOption} will be converted into a
-   * context parameters {@link Map} and added to the {@link PlannerContext} with
-   * {@link PlannerContext#addAllToQueryContext(Map)}. The final {@link SqlNode} of the {@link SqlNodeList} is returned
+   * single {@link SqlNode} which is NOT a {@link SqlSetOption}. All {@link SqlSetOption} will be converted into a context parameters {@link Map}.
+   * The final {@link SqlNode} of the {@link SqlNodeList} is returned
    * by this method as the {@link SqlNode} which should actually be validated and executed, and will have access to the
    * modified query context through the {@link PlannerContext}. {@link SqlSetOption} override any existing query
    * context parameter values.
@@ -100,9 +99,8 @@ public class DruidSqlParser
       final boolean allowSetStatements
   )
   {
-    if (root instanceof SqlNodeList) {
+    if (root instanceof SqlNodeList nodeList) {
       final Map<String, Object> setContext = new LinkedHashMap<>();
-      final SqlNodeList nodeList = (SqlNodeList) root;
       if (!allowSetStatements && nodeList.size() > 1) {
         throw InvalidSqlInput.exception("SQL query string must contain only a single statement");
       }
@@ -110,8 +108,7 @@ public class DruidSqlParser
       // convert 0 or more SET statements into a Map of stuff to add to the query context
       for (int i = 0; i < nodeList.size(); i++) {
         SqlNode sqlNode = nodeList.get(i);
-        if (sqlNode instanceof SqlSetOption) {
-          final SqlSetOption sqlSetOption = (SqlSetOption) sqlNode;
+        if (sqlNode instanceof SqlSetOption sqlSetOption) {
           if (!(sqlSetOption.getValue() instanceof SqlLiteral)) {
             throw InvalidSqlInput.exception(
                 "Assigned value must be a literal for SET statement[%s]",
