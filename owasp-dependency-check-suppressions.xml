@@ -137,7 +137,7 @@
     <cve>CVE-2023-33546</cve>
   </suppress>
 
-  <suppress>
+  <suppress until="2027-01-31Z">
     <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
     <notes><![CDATA[
      file name: hadoop-client-runtime-3.3.6.jar
@@ -432,7 +432,7 @@
      <vulnerabilityName>1084765</vulnerabilityName>
    </suppress>
 
-  <suppress>
+  <suppress until="2027-01-31Z">
     <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
     <notes><![CDATA[
      file name: hadoop-client-runtime-3.3.6.jar
