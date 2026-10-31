@@ -47,16 +47,27 @@ export type EditorCompletionBuilder = (
   word: CompletionWord,
 ) => readonly EditorCompletion[];
 
+export interface CompletionSourceOptions {
+  /**
+   * Whether to complete before any word is typed, without the completion being asked for explicitly. For example right
+   * after a keyword that is always followed by a word that can be completed.
+   */
+  completeEmptyWord?: (context: CompletionContext) => boolean;
+}
+
 /**
- * The word before the cursor, or undefined when there is nothing to complete (no word typed and the completion was not
- * asked for explicitly). What is a word is up to the language: letters, digits and _, plus the language's `wordChars`
- * (language data).
+ * The word before the cursor, or undefined when there is nothing to complete (no word typed, the completion was not
+ * asked for explicitly and completeEmptyWord does not allow it). What is a word is up to the language: letters, digits
+ * and _, plus the language's `wordChars` (language data).
  */
-export function matchCompletionWord(context: CompletionContext): CompletionWord | undefined {
+export function matchCompletionWord(
+  context: CompletionContext,
+  completeEmptyWord?: (context: CompletionContext) => boolean,
+): CompletionWord | undefined {
   const { state, pos } = context;
   const word = state.wordAt(pos);
   const from = word && word.from < pos ? word.from : pos;
-  if (from === pos && !context.explicit) return;
+  if (from === pos && !context.explicit && !completeEmptyWord?.(context)) return;
   return { from, text: state.sliceDoc(from, pos) };
 }
 
@@ -87,10 +98,13 @@ function toCompletion({ doc, ...completion }: EditorCompletion): Completion {
 /**
  * Makes a CodeMirror completion source out of a completion builder (like getSqlCompletions)
  */
-export function makeCompletionSource(build: EditorCompletionBuilder): CompletionSource {
+export function makeCompletionSource(
+  build: EditorCompletionBuilder,
+  { completeEmptyWord }: CompletionSourceOptions = {},
+): CompletionSource {
   return (context): CompletionResult | null => {
     if (context.state.readOnly) return null;
-    const word = matchCompletionWord(context);
+    const word = matchCompletionWord(context, completeEmptyWord);
     if (!word) return null;
 
     const options = build(context, word).map(toCompletion);

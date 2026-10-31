@@ -21,6 +21,7 @@ import type { Column } from 'druid-query-toolkit';
 import React from 'react';
 
 import { CodeEditor } from '../../../../components';
+import { useQueryContextParameters } from '../../../../contexts/query-context-parameters-context';
 import { useAvailableSqlFunctions } from '../../../../contexts/sql-functions-context';
 import { dsql } from '../../../../editor-languages/dsql';
 
@@ -54,14 +55,16 @@ export function SqlInput(props: SqlInputProps) {
   } = props;
 
   const availableSqlFunctions = useAvailableSqlFunctions();
+  const queryContextParameters = useQueryContextParameters();
   const language = React.useMemo(
     () =>
       dsql({
         columns: columns?.map(column => column.name),
         availableSqlFunctions,
+        queryContextParameters,
         skipAggregates: !includeAggregates,
       }),
-    [columns, availableSqlFunctions, includeAggregates],
+    [columns, availableSqlFunctions, queryContextParameters, includeAggregates],
   );
 
   return (

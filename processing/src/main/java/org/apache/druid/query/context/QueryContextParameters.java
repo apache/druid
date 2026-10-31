@@ -503,7 +503,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> SET_PROCESSING_THREAD_NAMES =
       booleanParameter("setProcessingThreadNames")
-          .since("24.0.0").query(Query.JSON).engine(Engine.NATIVE)
+          .since("24.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .defaultValue(false)
           .description(
               """
@@ -1528,7 +1528,7 @@ public final class QueryContextParameters
   // Public ones are documented in scan-query.md and searchquery.md.
   public static final QueryContextParameter<Integer> MAX_SEGMENT_PARTITIONS_ORDERED_IN_MEMORY =
       integerParameter("maxSegmentPartitionsOrderedInMemory")
-          .since("0.15.0-incubating").query(Query.JSON).engine(Engine.NATIVE)
+          .since("0.15.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .constraint(Range.closedRange(1, Integer.MAX_VALUE))
           .description(
               """
@@ -2428,7 +2428,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Integer> MAX_ROWS_QUEUED_FOR_ORDERING =
       integerParameter("maxRowsQueuedForOrdering")
-          .since("0.15.0-incubating").query(Query.JSON).engine(Engine.NATIVE)
+          .since("0.15.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .constraint(Range.closedRange(1, Integer.MAX_VALUE))
           .description(
               """

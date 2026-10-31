@@ -31,6 +31,7 @@ import type { JSX } from 'react';
 import React, { useMemo, useState } from 'react';
 
 import { CenterMessage, CodeEditor } from '../../../components';
+import { useQueryContextParameters } from '../../../contexts/query-context-parameters-context';
 import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import type { WorkbenchQuery } from '../../../druid-models';
 import { dsql } from '../../../editor-languages/dsql';
@@ -53,7 +54,11 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
   const [activeTab, setActiveTab] = useState(0);
   const [queryRecords] = useState(() => WorkbenchHistory.getHistory());
   const availableSqlFunctions = useAvailableSqlFunctions();
-  const sqlLanguage = useMemo(() => dsql({ availableSqlFunctions }), [availableSqlFunctions]);
+  const queryContextParameters = useQueryContextParameters();
+  const sqlLanguage = useMemo(
+    () => dsql({ availableSqlFunctions, queryContextParameters }),
+    [availableSqlFunctions, queryContextParameters],
+  );
 
   function handleSelect() {
     const queryRecord = queryRecords[activeTab];

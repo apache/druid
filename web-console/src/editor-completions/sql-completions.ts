@@ -23,7 +23,7 @@ import { C, filterMap, N, T } from 'druid-query-toolkit';
 
 import type { CompletionWord } from '../components/code-editor/completion-source';
 import { completeSyntaxTree, tokenBefore } from '../components/code-editor/completion-source';
-import { DEFAULT_SERVER_QUERY_CONTEXT } from '../druid-models';
+import type { QueryContextParameterMetadata } from '../druid-models';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../editor-languages/dsql-docs';
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../editor-languages/dsql-keywords';
 import type { AvailableFunctions } from '../helpers';
@@ -31,6 +31,7 @@ import type { ColumnMetadata } from '../utils';
 import { lookupBy, uniq } from '../utils';
 
 import type { EditorCompletion } from './editor-completion';
+import { getQueryContextCompletions } from './query-context-parameter-completions';
 
 const SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_FUNCTION = [
   'AS',
@@ -222,6 +223,8 @@ function tokenEndingBefore(state: EditorState, pos: number): SyntaxNode | undefi
 
 export interface SqlCompletionOptions {
   columnMetadata?: readonly ColumnMetadata[];
+  /** The query context parameters to suggest after SET, from sys.query_context_parameters */
+  queryContextParameters?: readonly QueryContextParameterMetadata[];
   columns?: readonly string[];
   availableSqlFunctions?: AvailableFunctions;
   skipAggregates?: boolean;
@@ -233,7 +236,13 @@ export interface SqlCompletionOptions {
 export function getSqlCompletions(
   { state, pos }: CompletionContext,
   { from, text: prefix }: CompletionWord,
-  { columnMetadata, columns, availableSqlFunctions, skipAggregates }: SqlCompletionOptions = {},
+  {
+    columnMetadata,
+    columns,
+    availableSqlFunctions,
+    skipAggregates,
+    queryContextParameters,
+  }: SqlCompletionOptions = {},
 ): EditorCompletion[] {
   const token = tokenBefore(state, pos);
 
@@ -275,6 +284,11 @@ export function getSqlCompletions(
   // Other than literals, do not autocomplete numbers
   if (/^\d+$/.test(prefix)) {
     return []; // Don't start completing if the user is typing a number
+  }
+
+  // After SET only a query context parameter name can follow
+  if (keywordBeforePrefix === 'SET') {
+    return getQueryContextCompletions(quote, queryContextParameters);
   }
 
   const possibleReferences = getPossibleSqlReferences(state, 100, prefix);
@@ -399,16 +413,6 @@ export function getSqlCompletions(
         })),
       );
     }
-  }
-
-  if (keywordBeforePrefix === 'SET') {
-    completions = completions.concat(
-      Object.keys(DEFAULT_SERVER_QUERY_CONTEXT).map(key => ({
-        label: quote ? key : String(C(key)),
-        boost: 50,
-        detail: 'context',
-      })),
-    );
   }
 
   return completions;
