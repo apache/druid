@@ -5124,6 +5124,125 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testInfixCastToInterval()
+  {
+    // Numbers cast to intervals are in units of the interval's field.
+    testQuery(
+        "SELECT __time + CAST(cnt AS INTERVAL DAY), __time + cnt::INTERVAL HOUR, __time + (cnt * 2)::INTERVAL MONTH,"
+        + " __time - m1::BIGINT::INTERVAL SECOND, __time + (cnt - 3)::INTERVAL YEAR FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "(\"__time\" + (\"cnt\" * 86400000))", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "(\"__time\" + (\"cnt\" * 3600000))", ColumnType.LONG),
+                    expressionVirtualColumn(
+                        "v2",
+                        "timestamp_shift(\"__time\",concat('P', (\"cnt\" * 2), 'M'),1,'UTC')",
+                        ColumnType.LONG
+                    ),
+                    expressionVirtualColumn("v3", "(\"__time\" - (CAST(\"m1\", 'LONG') * 1000))", ColumnType.LONG),
+                    expressionVirtualColumn(
+                        "v4",
+                        "timestamp_shift(\"__time\",concat('P', ((\"cnt\" - 3) * 12), 'M'),1,'UTC')",
+                        ColumnType.LONG
+                    )
+                )
+                .columns("v0", "v1", "v2", "v3", "v4")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                timestamp("2000-01-02"),
+                timestamp("2000-01-01T01"),
+                timestamp("2000-03-01"),
+                timestamp("1999-12-31T23:59:59"),
+                timestamp("1998-01-01")
+            },
+            new Object[]{
+                timestamp("2000-01-03"),
+                timestamp("2000-01-02T01"),
+                timestamp("2000-03-02"),
+                timestamp("2000-01-01T23:59:58"),
+                timestamp("1998-01-02")
+            },
+            new Object[]{
+                timestamp("2000-01-04"),
+                timestamp("2000-01-03T01"),
+                timestamp("2000-03-03"),
+                timestamp("2000-01-02T23:59:57"),
+                timestamp("1998-01-03")
+            },
+            new Object[]{
+                timestamp("2001-01-02"),
+                timestamp("2001-01-01T01"),
+                timestamp("2001-03-01"),
+                timestamp("2000-12-31T23:59:56"),
+                timestamp("1999-01-01")
+            },
+            new Object[]{
+                timestamp("2001-01-03"),
+                timestamp("2001-01-02T01"),
+                timestamp("2001-03-02"),
+                timestamp("2001-01-01T23:59:55"),
+                timestamp("1999-01-02")
+            },
+            new Object[]{
+                timestamp("2001-01-04"),
+                timestamp("2001-01-03T01"),
+                timestamp("2001-03-03"),
+                timestamp("2001-01-02T23:59:54"),
+                timestamp("1999-01-03")
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testInfixCastDecimalToInterval()
+  {
+    // Fractions are kept down to the millisecond for day-time intervals, rather than truncated to the field.
+    testQuery(
+        "SELECT __time + (m1 / 2)::DECIMAL(5, 1)::INTERVAL DAY, __time + (m1 - 3.5)::DECIMAL(5, 1)::INTERVAL SECOND"
+        + " FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "(\"__time\" + CAST(((\"m1\" / 2) * 86400000), 'LONG'))",
+                        ColumnType.LONG
+                    ),
+                    expressionVirtualColumn(
+                        "v1",
+                        "(\"__time\" + CAST(((\"m1\" - 3.5) * 1000), 'LONG'))",
+                        ColumnType.LONG
+                    )
+                )
+                .columns("v0", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{timestamp("2000-01-01T12"), timestamp("1999-12-31T23:59:57.500")},
+            new Object[]{timestamp("2000-01-03"), timestamp("2000-01-01T23:59:58.500")},
+            new Object[]{timestamp("2000-01-04T12"), timestamp("2000-01-02T23:59:59.500")},
+            new Object[]{timestamp("2001-01-03"), timestamp("2001-01-01T00:00:00.500")},
+            new Object[]{timestamp("2001-01-04T12"), timestamp("2001-01-02T00:00:01.500")},
+            new Object[]{timestamp("2001-01-06"), timestamp("2001-01-03T00:00:02.500")}
+        )
+    );
+  }
+
+  @Test
   public void testInfixCastMixedWithCastInGroupBy()
   {
     // "x::TYPE" and CAST(x AS TYPE) are the same expression for the purposes of GROUP BY.
