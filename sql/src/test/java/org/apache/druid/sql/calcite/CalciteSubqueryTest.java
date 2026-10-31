@@ -80,6 +80,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -1701,10 +1702,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
 
       super.addSegmentsToWalker(walker, jsonMapper);
       walker.add(
-          DataSegment.builder()
-              .dataSource(datasource1)
-              .interval(Intervals.ETERNITY)
-              .version("1")
+          DataSegment.builder(SegmentId.of(datasource1, Intervals.ETERNITY, "1", 0))
               .shardSpec(new LinearShardSpec(0))
               .size(0)
               .build(),
@@ -1712,10 +1710,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
       );
 
       walker.add(
-          DataSegment.builder()
-                     .dataSource(datasource1)
-                     .interval(Intervals.ETERNITY)
-                     .version("1")
+          DataSegment.builder(SegmentId.of(datasource1, Intervals.ETERNITY, "1", 1))
                      .shardSpec(new LinearShardSpec(1))
                      .size(0)
                      .build(),

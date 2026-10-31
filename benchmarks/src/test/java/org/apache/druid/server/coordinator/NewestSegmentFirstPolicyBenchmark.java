@@ -30,6 +30,7 @@ import org.apache.druid.server.compaction.CompactionSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.compaction.PriorityBasedCompactionSegmentIterator;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -113,17 +114,13 @@ public class NewestSegmentFirstPolicyBenchmark
       for (int j = 0; j < numDayIntervalsPerDataSource; j++, date = date.plusDays(1)) {
         for (int k = 0; k < numPartitionsPerDayInterval; k++) {
           final ShardSpec shardSpec = new NumberedShardSpec(numPartitionsPerDayInterval, k);
-          final DataSegment segment = new DataSegment(
-              dataSource,
-              new Interval(date, date.plusDays(1)),
-              "version",
-              null,
-              ImmutableList.of(),
-              ImmutableList.of(),
-              shardSpec,
-              0,
-              segmentSizeBytes
-          );
+          final DataSegment segment = DataSegment.builder(SegmentId.of(dataSource, new Interval(date, date.plusDays(1)), "version", shardSpec))
+                                                 .dimensions(ImmutableList.of())
+                                                 .metrics(ImmutableList.of())
+                                                 .shardSpec(shardSpec)
+                                                 .binaryVersion(0)
+                                                 .size(segmentSizeBytes)
+                                                 .build();
           segments.add(segment);
         }
       }

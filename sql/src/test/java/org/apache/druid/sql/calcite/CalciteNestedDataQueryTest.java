@@ -81,6 +81,7 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -357,73 +358,49 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .buildIncrementalIndex();
 
       walker.add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE)
-                     .interval(index.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(DATA_SOURCE, index.getDataInterval(), "1", 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(0)
                      .build(),
           index
       ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_MIXED)
-                     .interval(indexMix11.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(DATA_SOURCE_MIXED, indexMix11.getDataInterval(), "1", 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(0)
                      .build(),
           indexMix11
       ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_MIXED)
-                     .interval(indexMix12.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(DATA_SOURCE_MIXED, indexMix12.getDataInterval(), "1", 1))
                      .shardSpec(new LinearShardSpec(1))
                      .size(0)
                      .build(),
           indexMix12
       ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_MIXED_2)
-                     .interval(indexMix21.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(DATA_SOURCE_MIXED_2, indexMix21.getDataInterval(), "1", 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(0)
                      .build(),
           indexMix21
       ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_MIXED_2)
-                     .interval(index.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(DATA_SOURCE_MIXED_2, index.getDataInterval(), "1", 1))
                      .shardSpec(new LinearShardSpec(1))
                      .size(0)
                      .build(),
           indexMix22
       ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_ARRAYS)
-                     .version("1")
-                     .interval(indexArrays.getDataInterval())
+          DataSegment.builder(SegmentId.of(DATA_SOURCE_ARRAYS, indexArrays.getDataInterval(), "1", 1))
                      .shardSpec(new LinearShardSpec(1))
                      .size(0)
                      .build(),
           indexArrays
       ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_ALL)
-                     .version("1")
-                     .interval(indexAllTypesAuto.getDataInterval())
+          DataSegment.builder(SegmentId.of(DATA_SOURCE_ALL, indexAllTypesAuto.getDataInterval(), "1", 1))
                      .shardSpec(new LinearShardSpec(1))
                      .size(0)
                      .build(),
           indexAllTypesAuto
       ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_ALL_REALTIME)
-                     .version("1")
-                     .interval(indexAllTypesAutoRealtime.getInterval())
+          DataSegment.builder(SegmentId.of(DATA_SOURCE_ALL_REALTIME, indexAllTypesAutoRealtime.getInterval(), "1", 1))
                      .shardSpec(new LinearShardSpec(1))
                      .size(0)
                      .build(),

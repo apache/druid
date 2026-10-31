@@ -152,17 +152,10 @@ public class CostBalancerStrategyBenchmark
 
   private static DataSegment createSegment(DateTime t)
   {
-    return new DataSegment(
-        "test",
-        new Interval(t, t.plusHours(1)),
-        "v1",
-        null,
-        null,
-        null,
-        null,
-        0,
-        0
-    );
+    return DataSegment.builder(SegmentId.of("test", new Interval(t, t.plusHours(1)), "v1", 0))
+                      .binaryVersion(0)
+                      .size(0)
+                      .build();
   }
 
   @Benchmark

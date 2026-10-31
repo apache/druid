@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -51,16 +52,9 @@ public class SpecificSegmentsSpecTest
 
   private static DataSegment newSegment(Interval interval)
   {
-    return new DataSegment(
-        "datasource",
-        interval,
-        "version",
-        null,
-        null,
-        null,
-        null,
-        9,
-        10
-    );
+    return DataSegment.builder(SegmentId.of("datasource", interval, "version", 0))
+                      .binaryVersion(9)
+                      .size(10)
+                      .build();
   }
 }

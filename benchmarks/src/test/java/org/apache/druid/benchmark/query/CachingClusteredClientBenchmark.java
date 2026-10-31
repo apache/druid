@@ -208,10 +208,7 @@ public class CachingClusteredClientBenchmark
 
     for (int i = 0; i < numServers; i++) {
 
-      final DataSegment dataSegment = DataSegment.builder()
-                                                 .dataSource(DATA_SOURCE)
-                                                 .interval(schemaInfo.getDataInterval())
-                                                 .version("1")
+      final DataSegment dataSegment = DataSegment.builder(SegmentId.of(DATA_SOURCE, schemaInfo.getDataInterval(), "1", i))
                                                  .shardSpec(new LinearShardSpec(i))
                                                  .size(0)
                                                  .build();

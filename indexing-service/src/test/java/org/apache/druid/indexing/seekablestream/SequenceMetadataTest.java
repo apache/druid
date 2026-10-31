@@ -33,6 +33,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -82,11 +83,8 @@ public class SequenceMetadataTest
   @Test
   public void testPublishAnnotatedSegmentsThrowExceptionIfOverwriteSegmentsNotNullAndNotEmpty()
   {
-    DataSegment dataSegment = DataSegment.builder()
-                                         .dataSource("foo")
-                                         .interval(Intervals.of("2001/P1D"))
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001/P1D"), "b", 1))
                                          .shardSpec(new LinearShardSpec(1))
-                                         .version("b")
                                          .size(0)
                                          .build();
 
@@ -132,11 +130,8 @@ public class SequenceMetadataTest
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getStream()).thenReturn("stream");
     Mockito.when(mockTaskToolbox.getTaskActionClient()).thenReturn(mockTaskActionClient);
-    DataSegment dataSegment = DataSegment.builder()
-                                         .dataSource("foo")
-                                         .interval(Intervals.of("2001/P1D"))
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001/P1D"), "b", 1))
                                          .shardSpec(new LinearShardSpec(1))
-                                         .version("b")
                                          .size(0)
                                          .build();
 
