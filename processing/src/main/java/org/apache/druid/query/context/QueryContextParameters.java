@@ -305,7 +305,7 @@ public final class QueryContextParameters
           .description(
               """
               Upper limit on the number of bytes a subquery can generate.
-              Accepts `auto`, `disabled`, or a non-negative number of bytes.
+              Accepts `auto`, `disabled`, or a non-negative number of bytes, which can be a [human-readable number](../configuration/human-readable-byte.md) such as `256 MiB`.
               See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
               """
           )
@@ -1206,9 +1206,10 @@ public final class QueryContextParameters
   // region GroupBy query parameters
   //
   // These descriptors are read by the groupBy engine. Public ones are documented in groupbyquery.md.
-  public static final QueryContextParameter<HumanReadableBytes> MAX_ON_DISK_STORAGE =
-      humanReadableBytesParameter("maxOnDiskStorage")
+  public static final QueryContextParameter<Long> MAX_ON_DISK_STORAGE =
+      longParameter("maxOnDiskStorage")
           .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .constraint(Range.closedRange(0L, Long.MAX_VALUE))
           .description("Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.")
           .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.defaultOnDiskStorage"))
           .queryType(QueryType.GROUP_BY)
@@ -1222,9 +1223,10 @@ public final class QueryContextParameters
           .queryType(QueryType.GROUP_BY)
           .build();
 
-  public static final QueryContextParameter<HumanReadableBytes> MIN_SPILL_FILE_SIZE =
-      humanReadableBytesParameter("minSpillFileSize")
+  public static final QueryContextParameter<Long> MIN_SPILL_FILE_SIZE =
+      longParameter("minSpillFileSize")
           .since("38.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .constraint(Range.closedRange(0L, Long.MAX_VALUE))
           .description("Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.")
           .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.minSpillFileSize"))
           .queryType(QueryType.GROUP_BY)
@@ -1278,17 +1280,19 @@ public final class QueryContextParameters
           .queryType(QueryType.GROUP_BY)
           .build();
 
-  public static final QueryContextParameter<HumanReadableBytes> MAX_SELECTOR_DICTIONARY_SIZE =
-      humanReadableBytesParameter("maxSelectorDictionarySize")
+  public static final QueryContextParameter<Long> MAX_SELECTOR_DICTIONARY_SIZE =
+      longParameter("maxSelectorDictionarySize")
           .since("0.23.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .constraint(Range.closedRange(0L, Long.MAX_VALUE))
           .description("Overrides the value of `druid.query.groupBy.maxSelectorDictionarySize`.")
           .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.maxSelectorDictionarySize"))
           .queryType(QueryType.GROUP_BY)
           .build();
 
-  public static final QueryContextParameter<HumanReadableBytes> MAX_MERGING_DICTIONARY_SIZE =
-      humanReadableBytesParameter("maxMergingDictionarySize")
+  public static final QueryContextParameter<Long> MAX_MERGING_DICTIONARY_SIZE =
+      longParameter("maxMergingDictionarySize")
           .since("0.9.2").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
+          .constraint(Range.closedRange(0L, Long.MAX_VALUE))
           .description("Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`.")
           .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.maxMergingDictionarySize"))
           .queryType(QueryType.GROUP_BY)
@@ -2596,27 +2600,6 @@ public final class QueryContextParameters
    * Creates a parameter whose values are numbers of bytes, or strings with a unit suffix such as {@code "1GiB"}, as
    * parsed by {@link HumanReadableBytes#parse(String)}.
    */
-  static QueryContextParameter.Builder<HumanReadableBytes> humanReadableBytesParameter(final String name)
-  {
-    return QueryContextParameter.builder(
-        name,
-        HumanReadableBytes.class,
-        value -> {
-          if (value instanceof Number) {
-            return HumanReadableBytes.valueOf(((Number) value).longValue());
-          } else if (value instanceof String) {
-            try {
-              return HumanReadableBytes.valueOf(HumanReadableBytes.parse((String) value));
-            }
-            catch (IAE _) {
-              // Fall through to the invalid-value error below.
-            }
-          }
-          throw invalidValueException(name, "a human readable number", value);
-        }
-    );
-  }
-
   static QueryContextParameter.Builder<String> stringParameter(final String name)
   {
     return QueryContextParameter.builder(
@@ -2674,7 +2657,8 @@ public final class QueryContextParameters
     return QueryContextParameter.builder(name, Object.class, value -> value);
   }
 
-  private static final String MAX_SUBQUERY_BYTES_FORMAT = "'auto', 'disabled' or a non-negative number of bytes";
+  private static final String MAX_SUBQUERY_BYTES_FORMAT =
+      "'auto', 'disabled' or a non-negative number of bytes, such as '10 K' or '256 MiB'";
 
   private static String parseMaxSubqueryBytes(final Object value)
   {
@@ -2737,14 +2721,11 @@ public final class QueryContextParameters
       return;
     }
     try {
-      if (Long.parseLong(value) >= 0) {
-        return;
-      }
+      HumanReadableBytes.parse(value);
     }
-    catch (NumberFormatException _) {
-      // Reported below.
+    catch (IAE _) {
+      throw invalidValueException(name, MAX_SUBQUERY_BYTES_FORMAT, value);
     }
-    throw invalidValueException(name, MAX_SUBQUERY_BYTES_FORMAT, value);
   }
 
   /**
