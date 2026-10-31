@@ -723,8 +723,8 @@ public final class QueryContextParameters
           .defaultValue(1000)
           .description(
               """
-              Calcite parameter which controls whether to merge two Project operators when inlining expressions causes complexity to increase.
-              Implemented as a workaround to exception `There are not enough rules to produce a node with desired properties: convention=DRUID, sort=[]` thrown after rejecting the merge of two projects.
+              Calcite parameter which controls whether to merge two Project operators, or push a Filter below a Project, when inlining expressions causes complexity to increase.
+              Implemented as a workaround to exception `There are not enough rules to produce a node with desired properties: convention=DRUID, sort=[]` thrown after rejecting such a merge or push.
               """
           )
           .build();

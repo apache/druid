@@ -123,16 +123,14 @@ public class CalciteRulesManager
    * and {@link CoreRules#FILTER_INTO_JOIN}, which are part of {@link #FANCY_JOIN_RULES}.
    * 4) {@link CoreRules#PROJECT_FILTER_TRANSPOSE} because PartialDruidQuery would like to have the Project on top of the Filter -
    * this rule could create a lot of non-useful plans.
-   * 5) {@link CoreRules#PROJECT_MERGE} added later with bloat parameter configured from query context as a workaround for Calcite exception
-   * (there are not enough rules to produce a node with desired properties) thrown while running complex sql-queries with
-   * big amount of subqueries.
+   * 5) {@link CoreRules#PROJECT_MERGE} and {@link CoreRules#FILTER_PROJECT_TRANSPOSE} added later with bloat parameter
+   * configured from query context.
    */
   private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
           CoreRules.AGGREGATE_STAR_TABLE,
           CoreRules.AGGREGATE_PROJECT_STAR_TABLE,
           CoreRules.FILTER_SCAN,
-          CoreRules.FILTER_PROJECT_TRANSPOSE,
           CoreRules.JOIN_PUSH_EXPRESSIONS,
           CoreRules.AGGREGATE_EXPAND_WITHIN_DISTINCT,
           CoreRules.FILTER_AGGREGATE_TRANSPOSE,
@@ -298,18 +296,18 @@ public class CalciteRulesManager
     builder.addRuleCollection(baseRuleSet(plannerContext, false));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
-    builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
+    builder.addRuleInstance(filterProjectTransposeRule(plannerContext));
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
-    builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
+    builder.addRuleInstance(filterProjectTransposeRule(plannerContext));
     builder.addRuleInstance(new LogicalUnnestRule());
     builder.addRuleInstance(new UnnestInputCleanupRule());
-    builder.addRuleInstance(ProjectMergeRule.Config.DEFAULT.toRule());
+    builder.addRuleInstance(projectMergeRule(plannerContext));
     builder.addRuleInstance(ProjectRemoveRule.Config.DEFAULT.toRule());
 
     final HepProgramBuilder cleanupRules = HepProgram.builder();
-    cleanupRules.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
-    cleanupRules.addRuleInstance(CoreRules.PROJECT_MERGE);
+    cleanupRules.addRuleInstance(filterProjectTransposeRule(plannerContext));
+    cleanupRules.addRuleInstance(projectMergeRule(plannerContext));
     cleanupRules.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
     return Programs.sequence(
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
@@ -500,9 +498,20 @@ public class CalciteRulesManager
                         .build();
   }
 
-  public List<RelOptRule> configurableRuleSet(PlannerContext plannerContext)
+  /**
+   * Returns a {@link ProjectMergeRule} that uses the bloat from the query context.
+   */
+  private ProjectMergeRule projectMergeRule(PlannerContext plannerContext)
   {
-    return ImmutableList.of(ProjectMergeRule.Config.DEFAULT.withBloat(getBloatProperty(plannerContext)).toRule());
+    return ProjectMergeRule.Config.DEFAULT.withBloat(getBloatProperty(plannerContext)).toRule();
+  }
+
+  /**
+   * Returns a {@link FilterProjectTransposeRule} that uses the bloat from the query context.
+   */
+  private FilterProjectTransposeRule filterProjectTransposeRule(PlannerContext plannerContext)
+  {
+    return FilterProjectTransposeRule.Config.DEFAULT.withBloat(getBloatProperty(plannerContext)).toRule();
   }
 
   private int getBloatProperty(PlannerContext plannerContext)
@@ -520,7 +529,8 @@ public class CalciteRulesManager
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
     rules.add(new DruidAggregateCaseToFilterRule(plannerContext.queryContext().isExtendedFilteredSumRewrite()));
-    rules.addAll(configurableRuleSet(plannerContext));
+    rules.add(projectMergeRule(plannerContext));
+    rules.add(filterProjectTransposeRule(plannerContext));
 
     if (withJoinRules) {
       rules.addAll(FANCY_JOIN_RULES);
