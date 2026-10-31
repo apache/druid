@@ -40,6 +40,7 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -248,10 +249,7 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
           schema.isWithRollup()
       );
       for (int partition = 0; partition < numPartitionsPerTimeChunk; partition++) {
-        final DataSegment dataSegment = DataSegment.builder()
-                                                   .dataSource(DATASOURCE)
-                                                   .interval(day)
-                                                   .version("1")
+        final DataSegment dataSegment = DataSegment.builder(SegmentId.of(DATASOURCE, day, "1", partition))
                                                    .shardSpec(new LinearShardSpec(partition))
                                                    .size(0)
                                                    .build();

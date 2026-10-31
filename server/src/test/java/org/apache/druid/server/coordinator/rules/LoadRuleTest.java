@@ -47,6 +47,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -475,17 +476,14 @@ public class LoadRuleTest
 
   private DataSegment createDataSegment(String dataSource)
   {
-    return new DataSegment(
-        dataSource,
-        Intervals.of("0/3000"),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        0,
-        0
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, Intervals.of("0/3000"), DateTimes.nowUtc().toString(), 0))
+                      .loadSpec(Collections.emptyMap())
+                      .dimensions(Collections.emptyList())
+                      .metrics(Collections.emptyList())
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(0)
+                      .size(0)
+                      .build();
   }
 
   private static LoadRule loadForever(final Map<String, Integer> tieredReplicants)
