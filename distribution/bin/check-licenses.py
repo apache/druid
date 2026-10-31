@@ -414,9 +414,9 @@ def find_missing_licenses(reported_dep_to_licenses, reported_modules, registered
     return missing_licenses
 
 def split_stale_versions(missing_licenses, reported_modules, registered_dep_to_licenses, registered_modules, exclude_module_prefixes):
-    # A missing dependency only has a stale version when its groupId and artifactId are registered under other versions,
-    # all with the reported license, and one of those versions is no longer reported. If it ships in the release, only
-    # registrations outside the excluded modules count.
+    # A missing dependency only has a stale version when its own version is in no licenses.yaml entry, its groupId and
+    # artifactId are registered under other versions, all with the reported license, and one of those versions is no
+    # longer reported. If it ships in the release, only registrations outside the excluded modules count.
     # Returns the stale ones, each with its registered versions appended, and the rest.
     stale_licenses = []
     remaining_licenses = []
@@ -426,7 +426,8 @@ def split_stale_versions(missing_licenses, reported_modules, registered_dep_to_l
         if any(not is_excluded_module(m, exclude_module_prefixes) for m in reported_modules[key]):
             others = [k for k in others if any(not is_excluded_module(m, exclude_module_prefixes) for m in registered_modules[k])]
         if (
-            others
+            key not in registered_dep_to_licenses
+            and others
             and all(registered_dep_to_licenses[k] == reported_license for k in others)
             and any(k not in reported_modules for k in others)
         ):

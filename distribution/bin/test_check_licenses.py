@@ -107,6 +107,9 @@ class SplitStaleVersionsTest(unittest.TestCase):
     def test_registered_only_under_excluded_module_is_missing_when_shipped(self):
         self.assertMissing(self.split([("1.0", APACHE, [RANGER])]))
 
+    def test_current_version_registered_only_under_excluded_module_is_missing_when_shipped(self):
+        self.assertMissing(self.split([("1.1", APACHE, [RANGER]), ("1.0", APACHE, ["java-core"])]))
+
     def test_registrations_under_excluded_modules_are_ignored_when_shipped(self):
         self.assertStale("1.0", self.split([("1.0", APACHE, [AZURE]), ("0.9", self.MIT, [RANGER])]))
 
