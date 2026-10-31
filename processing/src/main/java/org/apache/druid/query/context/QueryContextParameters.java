@@ -251,6 +251,7 @@ public final class QueryContextParameters
               Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and query types that support vectorization will fail if they cannot be vectorized).
               The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail).
               This will override `druid.query.default.context.vectorize` if it's set.
+              See [Vectorization](../querying/vectorization.md) for the requirements a query must meet to run vectorized.
               """
           )
           .build();
@@ -286,7 +287,7 @@ public final class QueryContextParameters
           .description(
               """
               Upper limit on the number of rows a subquery can generate.
-              See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
+              See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#guardrails-for-materialization-of-subqueries) for more details.
               """
           )
           .defaultValue(DefaultValue.fromProperty("druid.server.http.maxSubqueryRows"))
@@ -306,7 +307,7 @@ public final class QueryContextParameters
               """
               Upper limit on the number of bytes a subquery can generate.
               Accepts `auto`, `disabled`, or a non-negative number of bytes.
-              See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.
+              See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#guardrails-for-materialization-of-subqueries) for more details.
               """
           )
           .defaultValue(DefaultValue.fromProperty("druid.server.http.maxSubqueryBytes"))
@@ -615,7 +616,7 @@ public final class QueryContextParameters
       .description(
           """
           SQL engine that runs the query through the `/druid/v2/sql` endpoint.
-          Set to `msq-dart` to run the query with [Dart](dart.md).
+          Set to `msq-dart` to run the query with [Dart](../querying/dart.md).
           Druid ignores this parameter for JDBC connections.
           """
       )
@@ -652,7 +653,7 @@ public final class QueryContextParameters
       booleanParameter("noProjections")
           .since("32.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .defaultValue(false)
-          .description("If `true`, the query engine doesn't use any [projections](projections.md).")
+          .description("If `true`, the query engine doesn't use any [projections](../querying/projections.md).")
           .build();
 
   public static final QueryContextParameter<Boolean> FORCE_PROJECTIONS =
@@ -661,7 +662,7 @@ public final class QueryContextParameters
           .defaultValue(false)
           .description(
               """
-              If `true`, the query engine must use a [projection](projections.md), and the query fails if no projection matches it.
+              If `true`, the query engine must use a [projection](../querying/projections.md), and the query fails if no projection matches it.
               If `false`, Druid uses a matching projection when one exists and otherwise processes the query as usual.
               """
           )
@@ -672,7 +673,7 @@ public final class QueryContextParameters
           .since("32.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .description(
               """
-              Name of a [projection](projections.md) that the query engine must use.
+              Name of a [projection](../querying/projections.md) that the query engine must use.
               If the projection doesn't match the query, the query fails.
               """
           )
@@ -702,7 +703,7 @@ public final class QueryContextParameters
           .description(
               """
               SQL query ID.
-              For HTTP client, Druid returns it in the `X-Druid-SQL-Query-Id` header.<br/><br/>To specify a SQL query ID, use `sqlQueryId` instead of [`queryId`](query-context-reference.md).
+              For HTTP client, Druid returns it in the `X-Druid-SQL-Query-Id` header.<br/><br/>To specify a SQL query ID, use `sqlQueryId` instead of [`queryId`](../querying/query-context-reference.md).
               Setting `queryId` for a SQL request has no effect.
               All native queries underlying SQL use an auto-generated `queryId`.
               """
@@ -764,8 +765,8 @@ public final class QueryContextParameters
           .since("0.10.0").query(Query.SQL).engine(Engine.NATIVE)
           .description(
               """
-              If `true`, Druid converts SQL queries to approximate [TopN queries](topnquery.md) wherever possible.
-              If `false`, Druid uses exact [GroupBy queries](groupbyquery.md) instead.
+              If `true`, Druid converts SQL queries to approximate [TopN queries](../querying/topnquery.md) wherever possible.
+              If `false`, Druid uses exact [GroupBy queries](../querying/groupbyquery.md) instead.
               """
           )
           .defaultValue(DefaultValue.fromProperty("druid.sql.planner.useApproximateTopN"))
@@ -776,8 +777,8 @@ public final class QueryContextParameters
           .since("35.0.1").query(Query.SQL).engine(Engine.NATIVE)
           .description(
               """
-              If `true`, Druid can use [TopN queries](topnquery.md) with lexicographic dimension ordering.
-              If `false`, Druid uses [GroupBy queries](groupbyquery.md) instead for lexicographic ordering.
+              If `true`, Druid can use [TopN queries](../querying/topnquery.md) with lexicographic dimension ordering.
+              If `false`, Druid uses [GroupBy queries](../querying/groupbyquery.md) instead for lexicographic ordering.
               When both `useLexicographicTopN` and `useApproximateTopN` are `false`, TopN queries are never used.
               """
           )
@@ -819,9 +820,9 @@ public final class QueryContextParameters
           .defaultValue(false)
           .description(
               """
-              If `false` (default behavior in Druid 27.0.0 and later), the SQL planner uses [equality](./filters.md#equality-filter),
-              [null](./filters.md#null-filter), and [range](./filters.md#range-filter) filters instead of [selector](./filters.md#selector-filter)
-              and [bounds](./filters.md#bound-filter).
+              If `false` (default behavior in Druid 27.0.0 and later), the SQL planner uses [equality](../querying/filters.md#equality-filter),
+              [null](../querying/filters.md#null-filter), and [range](../querying/filters.md#range-filter) filters instead of [selector](../querying/filters.md#selector-filter)
+              and [bounds](../querying/filters.md#bound-filter).
               For filtering `ARRAY` typed values, `sqlUseBoundAndSelectors` must be `false`.
               """
           )
@@ -833,7 +834,7 @@ public final class QueryContextParameters
           .defaultValue(false)
           .description(
               """
-              If false, the SQL planner avoids using [`extractionFn`](dimensionspecs.md#extraction-functions) in favor of using other constructs such as [virtual columns](virtual-columns.md).
+              If false, the SQL planner avoids using [`extractionFn`](../querying/dimensionspecs.md#extraction-functions) in favor of using other constructs such as [virtual columns](../querying/virtual-columns.md).
               This parameter is provided for compatibility with prior behavior, and may be removed in a future release.
               """
           )
@@ -845,7 +846,7 @@ public final class QueryContextParameters
           .defaultValue(true)
           .description(
               """
-              Whether to consider the [reverse-lookup rewrite](lookups.md#reverse-lookup) of the `LOOKUP` function during SQL planning.\
+              Whether to consider the [reverse-lookup rewrite](../querying/lookups.md#reverse-lookup) of the `LOOKUP` function during SQL planning.\
               <br /><br />Druid reverses calls to `LOOKUP` only when the number of matching keys is lower than both `inSubQueryThreshold` and `sqlReverseLookupThreshold`.
               """
           )
@@ -857,7 +858,7 @@ public final class QueryContextParameters
           .defaultValue(10000)
           .description(
               """
-              Maximum size of `IN` filter to create when applying a [reverse-lookup rewrite](lookups.md#reverse-lookup).
+              Maximum size of `IN` filter to create when applying a [reverse-lookup rewrite](../querying/lookups.md#reverse-lookup).
               If a `LOOKUP` call matches more keys than the specified threshold, it remains unchanged.\
               <br /><br />If `inSubQueryThreshold` is lower than `sqlReverseLookupThreshold`, Druid uses `inSubQueryThreshold` threshold instead.
               """
@@ -868,7 +869,7 @@ public final class QueryContextParameters
       booleanParameter("sqlPullUpLookup")
           .since("30.0.1").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .defaultValue(true)
-          .description("Whether to consider the [pull-up rewrite](lookups.md#pull-up) of the `LOOKUP` function during SQL planning.")
+          .description("Whether to consider the [pull-up rewrite](../querying/lookups.md#pull-up) of the `LOOKUP` function during SQL planning.")
           .build();
 
   public static final QueryContextParameter<String> SQL_TIME_CONDITION =
@@ -997,7 +998,7 @@ public final class QueryContextParameters
           .description(
               """
               At or beyond this threshold number of values, Druid converts SQL `IN` to `JOIN` on an inline table.
-              `inFunctionThreshold` takes priority over this setting.
+              The `inFunctionThreshold` setting takes priority over this one.
               A threshold of 0 forces usage of an inline table in all cases where the size of a SQL `IN` is larger than `inFunctionThreshold`.
               A threshold of `2147483647` disables the rewrite of SQL `IN` to `JOIN`.
               """
@@ -1025,7 +1026,7 @@ public final class QueryContextParameters
           .defaultValue(100)
           .description(
               """
-              At or beyond this threshold number of values, Druid converts SQL `IN` to [`SCALAR_IN_ARRAY`](sql-functions.md#scalar_in_array).
+              At or beyond this threshold number of values, Druid converts SQL `IN` to [`SCALAR_IN_ARRAY`](../querying/sql-functions.md#scalar_in_array).
               A threshold of 0 forces this conversion in all cases.
               A threshold of `Integer.MAX_VALUE` disables this conversion.
               The converted function is eligible for fewer planning-time optimizations, which speeds up planning, but may prevent certain planning-time optimizations.
@@ -1040,8 +1041,8 @@ public final class QueryContextParameters
           .description(
               """
               At or beyond this threshold number of values, SQL `IN` is eligible for execution using the native function `scalar_in_array` rather than an <code>&#124;&#124;</code> of `==`, even if the number of values is below `inFunctionThreshold`.
-              This property only affects translation of SQL `IN` to a [native expression](math-expr.md).
-              It doesn't affect translation of SQL `IN` to a [native filter](filters.md).
+              This property only affects translation of SQL `IN` to a [native expression](../querying/math-expr.md).
+              It doesn't affect translation of SQL `IN` to a [native filter](../querying/filters.md).
               This property is provided for backwards compatibility purposes, and may be removed in a future release.
               """
           )
@@ -1053,7 +1054,7 @@ public final class QueryContextParameters
           .defaultValue(false)
           .description(
               """
-              If `true`, Druid converts SQL queries to [time boundary queries](timeboundaryquery.md) wherever possible.
+              If `true`, Druid converts SQL queries to [time boundary queries](../querying/timeboundaryquery.md) wherever possible.
               Time boundary queries are very efficient for min-max calculation on the `__time` column in a datasource.
               """
           )
@@ -1069,6 +1070,7 @@ public final class QueryContextParameters
               tables defined in the Druid catalog.
               """
           )
+          .statement(StatementType.INSERT, StatementType.REPLACE)
           .build();
 
   public static final QueryContextParameter<Boolean> EXTENDED_FILTERED_SUM_REWRITE =
@@ -1349,8 +1351,8 @@ public final class QueryContextParameters
           .description(
               """
               Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key.
-              'true' indicates multi-value grouping keys are unnested.
-              'false' returns an error if a multi value column is found as part of the grouping key.
+              If `true`, multi-value grouping keys are unnested.
+              If `false`, Druid returns an error if a multi value column is found as part of the grouping key.
               """
           )
           .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.enableMultiValueUnnesting"))
@@ -1714,7 +1716,7 @@ public final class QueryContextParameters
           .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
           .description(
               """
-              Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause.
+              Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](../multi-stage-query/reference.md#clustered-by) clause.
               When you set `segmentSortOrder`, Druid uses the order from this context parameter instead.
               Provide the column list as comma-separated values or as a JSON array in string form.<br /><br />For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`.
               Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`.
@@ -1730,8 +1732,8 @@ public final class QueryContextParameters
           .defaultValue(DimensionsSpec.DEFAULT_FORCE_TIME_SORT)
           .description(
               """
-              When set to `true` (the default), Druid prepends `__time` to [CLUSTERED BY](#clustered-by) when determining the sort order for individual segments.
-              Druid also requires that `segmentSortOrder`, if provided, starts with `__time`.<br /><br />When set to `false`, Druid uses the [CLUSTERED BY](#clustered-by) alone to determine the sort order for individual segments, and does not require that `segmentSortOrder` begin with `__time`.
+              When set to `true` (the default), Druid prepends `__time` to [CLUSTERED BY](../multi-stage-query/reference.md#clustered-by) when determining the sort order for individual segments.
+              Druid also requires that `segmentSortOrder`, if provided, starts with `__time`.<br /><br />When set to `false`, Druid uses the [CLUSTERED BY](../multi-stage-query/reference.md#clustered-by) alone to determine the sort order for individual segments, and does not require that `segmentSortOrder` begin with `__time`.
               Setting this parameter to `false` is an experimental feature; see [Sorting](../ingestion/partitioning.md#sorting) for details.
               """
           )
@@ -1788,7 +1790,7 @@ public final class QueryContextParameters
           .description(
               """
               Whether to turn on fault tolerance mode or not.
-              Failed workers are retried based on [Limits](#limits).
+              Failed workers are retried based on [Limits](../multi-stage-query/reference.md#limits).
               Cannot be used when `durableShuffleStorage` is explicitly set to false.
               """
           )
@@ -1805,7 +1807,7 @@ public final class QueryContextParameters
               <br />Use `taskReport`(the default) to write select results to the task report.
               <b> This is not scalable since task reports size explodes for large results </b> <br/>Use `durableStorage` to write results to durable storage location.
               <b>For large results sets, its recommended to use `durableStorage` </b>.
-              To configure durable storage see [`this`](#durable-storage) section.
+              To configure durable storage see [`this`](../multi-stage-query/reference.md#durable-storage) section.
               """
           )
           .statement(StatementType.SELECT)
@@ -1973,7 +1975,7 @@ public final class QueryContextParameters
           .defaultValue(true)
           .description(
               """
-              Controls how workers read cloud storage files (e.g. `s3`, `gs`, `azure`) referenced by [`EXTERN`](#extern-function).
+              Controls how workers read cloud storage files (e.g. `s3`, `gs`, `azure`) referenced by [`EXTERN`](../multi-stage-query/reference.md#extern-function).
               When `true` (the default), each worker fetches its input files asynchronously when possible before reading them.
               This overlaps downloading with processing, which generally improves throughput when reading larger numbers of files.
               Otherwise, workers stream each file directly from cloud storage while processing it.<br /><br />This setting has no effect for input sources that use `prefix`, or input sources that request [system fields](../ingestion/input-sources.md).
@@ -2367,7 +2369,7 @@ public final class QueryContextParameters
       .defaultValue(false)
       .description(
           """
-          If true, a [Dart](dart.md) query returns a single `fullReport` column that contains the full query report,
+          If true, a [Dart](../querying/dart.md) query returns a single `fullReport` column that contains the full query report,
           including the results, instead of the query results.
           The report size is limited by `druid.msq.dart.controller.maxQueryReportSize`.
           """

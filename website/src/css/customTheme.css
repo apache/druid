@@ -27,3 +27,9 @@
     --ifm-color-primary-darkest: #00619A;
   }
   
+
+  /* Markdown requires a header row, so tables that only need a body, such as the per-parameter tables of the
+     query context reference, use an empty one. Hide it instead of rendering an empty bordered row. */
+  .markdown table thead:not(:has(th:not(:empty))) {
+    display: none;
+  }
