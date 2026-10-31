@@ -99,7 +99,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
         return;
       }
 
-      if (isUncompressed && !fs.isDirectory(segmentPath)) {
+      if (isUncompressed && !fs.getFileStatus(segmentPath).isDirectory()) {
         throw new SegmentLoadingException("Segment path [%s] is not a directory", segmentPath);
       }
 

@@ -141,7 +141,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
     final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
     final String outIndexFilePath = StringUtils.format(
-        "%s/%s/%d_%sindex%s",
+      "%s/%s/%s_%sindex%s",
         fullyQualifiedStorageDirectory.get(),
         storageDir,
         segment.getShardSpec().getPartitionNum(),
@@ -156,16 +156,18 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   public DataSegment pushToPath(File inDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
     final String outIndexFilePath;
-    if (storageDirSuffix.endsWith("index.zip") || storageDirSuffix.endsWith("index.lz4")
-        || (compressionFormat == CompressionUtils.Format.NONE && storageDirSuffix.endsWith("index"))) {
+
+    if (storageDirSuffix.endsWith("index.zip") || storageDirSuffix.endsWith("index.lz4")) {
       outIndexFilePath = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
     } else {
+      final String suffix = compressionFormat == CompressionUtils.Format.NONE ? "" : compressionFormat.getSuffix();
+
       outIndexFilePath = StringUtils.format(
-          "%s/%s/%d_index%s",
-          fullyQualifiedStorageDirectory.get(),
-          storageDirSuffix.replace(':', '_'),
-          segment.getShardSpec().getPartitionNum(),
-          compressionFormat.getSuffix()
+        "%s/%s/%s_index%s",
+        fullyQualifiedStorageDirectory.get(),
+        storageDirSuffix.replace(':', '_'),
+        segment.getShardSpec().getPartitionNum(),
+        suffix
       );
     }
 
@@ -280,16 +282,17 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     ));
     final FileSystem fs = tmpIndexDir.getFileSystem(hadoopConfig);
 
-    fs.mkdirs(tmpIndexDir);
-    log.debug("Copying flat segment files from[%s] to [%s]", inDir, tmpIndexDir);
-
-    final File[] files = inDir.listFiles();
-    if (files == null) {
-      throw new IOE("Cannot list directory [%s]", inDir);
-    }
-
     final DataSegment dataSegment;
+
     try {
+      fs.mkdirs(tmpIndexDir);
+      log.debug("Copying flat segment files from[%s] to [%s]", inDir, tmpIndexDir);
+
+      final File[] files = inDir.listFiles();
+      if (files == null) {
+        throw new IOE("Cannot list directory [%s]", inDir);
+      }
+
       long size = 0;
       for (final File file : files) {
         if (file.isFile()) {

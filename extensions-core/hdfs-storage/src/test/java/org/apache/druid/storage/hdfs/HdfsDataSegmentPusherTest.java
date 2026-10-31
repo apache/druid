@@ -55,9 +55,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -551,5 +553,82 @@ public class HdfsDataSegmentPusherTest
             new DeepStorageSegmentConfig(null, CompressionUtils.Format.SNAPPY)
         )
     );
+  }
+
+  @Test
+  public void testPushToPathWithNoneAndDirectorySuffixEndingInIndex() throws Exception
+  {
+    final Configuration conf = new Configuration(true);
+    final File segmentDir = tempFolder.newFolder();
+    Files.write(new byte[]{0x0, 0x0, 0x0, 0x9}, new File(segmentDir, "version.bin"));
+
+    final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    final File storageDirectory = tempFolder.newFolder();
+    config.setStorageDirectory(storageDirectory.getAbsolutePath());
+
+    final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
+      config,
+      conf,
+      new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+
+    final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+      .loadSpec(new HashMap<>())
+      .dimensions(new ArrayList<>())
+      .metrics(new ArrayList<>())
+      .shardSpec(new NumberedShardSpec(0, 0))
+      .binaryVersion(0)
+      .size(3)
+      .build();
+
+    final String suffix = "some-directory/index";
+    final DataSegment pushed = pusher.pushToPath(segmentDir, segment, suffix);
+
+    final String path = Objects.requireNonNull(pushed.getLoadSpec()).get("path").toString();
+    Assertions.assertTrue(path.endsWith("some-directory/index/0_index"), path);
+    Assertions.assertTrue(new File(URI.create(path).getPath()).isDirectory());
+  }
+
+  @Test
+  public void testPushNoneCleansUpTempDirectoryWhenInputListingFails() throws Exception
+  {
+    final Configuration conf = new Configuration(true);
+    final File invalidSegmentDir = tempFolder.newFile();
+
+    final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    final File storageDirectory = tempFolder.newFolder();
+    config.setStorageDirectory(storageDirectory.getAbsolutePath());
+
+    final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
+      config,
+      conf,
+      new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+
+    final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+      .loadSpec(new HashMap<>())
+      .dimensions(new ArrayList<>())
+      .metrics(new ArrayList<>())
+      .shardSpec(new NumberedShardSpec(0, 0))
+      .binaryVersion(0)
+      .size(0)
+      .build();
+
+    final FileSystem fs = FileSystem.getLocal(conf);
+    final Path storagePath = fs.makeQualified(new Path(storageDirectory.getAbsolutePath()));
+
+    assertThrows(
+      IOException.class,
+      () -> pusher.push(invalidSegmentDir, segment, false)
+    );
+
+    final Path dataSourcePath = new Path(storagePath, segment.getDataSource());
+    if (fs.exists(dataSourcePath)) {
+      Assertions.assertEquals(
+        0,
+        fs.listStatus(dataSourcePath).length,
+        "Temporary HDFS directory (UUID folder) should be cleaned up"
+      );
+    }
   }
 }
