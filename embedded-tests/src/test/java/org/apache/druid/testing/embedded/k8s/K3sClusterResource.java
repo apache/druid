@@ -25,7 +25,15 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.ContainerState;
+import io.fabric8.kubernetes.api.model.ContainerStatus;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectReferenceBuilder;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodCondition;
+import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
@@ -55,12 +63,14 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 
 /**
  * {@link TestcontainerResource} to run a K3s cluster which can launch Druid pods.
@@ -83,6 +93,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   private final List<File> manifestFiles = new ArrayList<>();
   private final List<K3sDruidService> services = new ArrayList<>();
 
+  private EmbeddedDruidCluster cluster;
   private KubernetesClient client;
   private String druidImageName;
   private String druidManifestTemplate = DEFAULT_SERVICE_MANIFEST;
@@ -158,6 +169,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
+    this.cluster = cluster;
     initKubernetesClient();
     loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
     manifestFiles.forEach(this::applyManifest);
@@ -180,7 +192,13 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   protected void waitUntilServicesAreHealthy()
   {
-    services.forEach(this::waitUntilServiceIsHealthy);
+    try {
+      services.forEach(this::waitUntilServiceIsHealthy);
+    }
+    catch (Exception e) {
+      dumpPodLogs(DRUID_NAMESPACE);
+      throw e;
+    }
   }
 
   protected List<K3sDruidService> getServices()
@@ -208,6 +226,20 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   protected void waitUntilPodsAreReady(String namespace)
   {
+    if (DRUID_NAMESPACE.equals(namespace) && !services.isEmpty()) {
+      try {
+        ITRetryUtil.retryUntil(
+            () -> client.pods().inNamespace(namespace).list().getItems().size() >= services.size(),
+            true,
+            1_000L,
+            60,
+            StringUtils.format("All [%d] service pods created in namespace [%s]", services.size(), namespace)
+        );
+      }
+      catch (Exception e) {
+        log.warn(e, "Did not observe [%d] pods in namespace [%s]", services.size(), namespace);
+      }
+    }
     client.pods().inNamespace(namespace).resources().forEach(this::waitUntilPodIsReady);
   }
 
@@ -355,7 +387,218 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
       );
     }
     catch (KubernetesClientTimeoutException e) {
-      throw new ISE("Timed out waiting for pod[%s] to be ready", pod.get().getMetadata().getName());
+      dumpPodLogs(DRUID_NAMESPACE);
+      final String diagnostics = buildPodDiagnosticsOnTimeout(pod);
+      throw new ISE("%s", diagnostics);
+    }
+  }
+
+  private String buildPodDiagnosticsOnTimeout(final PodResource podResource)
+  {
+    Pod pod = null;
+    try {
+      pod = podResource.get();
+    }
+    catch (Exception e) {
+      log.warn(e, "Could not get pod resource");
+    }
+
+    final String podName = pod != null && pod.getMetadata() != null
+                           ? pod.getMetadata().getName()
+                           : null;
+    final String namespace = pod != null && pod.getMetadata() != null
+                             ? pod.getMetadata().getNamespace()
+                             : DRUID_NAMESPACE;
+
+    List<Event> events = null;
+    if (podName != null && client != null) {
+      try {
+        final ObjectReference objectRef = new ObjectReferenceBuilder()
+            .withApiVersion("v1")
+            .withKind("Pod")
+            .withName(podName)
+            .withNamespace(namespace)
+            .build();
+        events = client.v1()
+                       .events()
+                       .inNamespace(namespace)
+                       .withInvolvedObject(objectRef)
+                       .list()
+                       .getItems();
+      }
+      catch (Exception e) {
+        log.warn(e, "Could not fetch events for pod [%s]", podName);
+      }
+    }
+
+    String logTail = null;
+    try {
+      logTail = podResource.tailingLines(100).getLog();
+    }
+    catch (Exception e) {
+      log.warn(e, "Could not fetch log tail for pod [%s]", podName);
+    }
+
+    return formatPodDiagnostics(pod, events, logTail);
+  }
+
+  public static String formatPodDiagnostics(
+      @Nullable final Pod pod,
+      @Nullable final List<Event> events,
+      @Nullable final String logTail
+  )
+  {
+    final StringBuilder diagnostics = new StringBuilder();
+    if (pod == null || pod.getMetadata() == null) {
+      diagnostics.append("Timed out waiting for pod to be ready: Pod metadata is unavailable (pod may have been deleted).");
+      if (events != null && !events.isEmpty()) {
+        appendEvents(diagnostics, events);
+      }
+      return diagnostics.toString();
+    }
+
+    final String podName = pod.getMetadata().getName();
+    final String namespace = pod.getMetadata().getNamespace();
+
+    diagnostics.append(StringUtils.format(
+        "Timed out waiting for pod [%s] in namespace [%s] to be ready.",
+        podName,
+        namespace
+    ));
+
+    final PodStatus status = pod.getStatus();
+    if (status != null) {
+      diagnostics.append(StringUtils.format("\nPhase: [%s]", status.getPhase()));
+      if (status.getReason() != null || status.getMessage() != null) {
+        diagnostics.append(StringUtils.format(
+            ", Reason: [%s], Message: [%s]",
+            status.getReason(),
+            status.getMessage()
+        ));
+      }
+
+      final List<PodCondition> conditions = status.getConditions();
+      if (conditions != null && !conditions.isEmpty()) {
+        diagnostics.append("\nConditions:");
+        for (final PodCondition condition : conditions) {
+          diagnostics.append(StringUtils.format(
+              "\n  - Type: [%s], Status: [%s], Reason: [%s], Message: [%s]",
+              condition.getType(),
+              condition.getStatus(),
+              condition.getReason(),
+              condition.getMessage()
+          ));
+        }
+      }
+
+      final List<ContainerStatus> containerStatuses = status.getContainerStatuses();
+      if (containerStatuses != null && !containerStatuses.isEmpty()) {
+        diagnostics.append("\nContainer Statuses:");
+        for (final ContainerStatus containerStatus : containerStatuses) {
+          diagnostics.append(StringUtils.format(
+              "\n  - Container: [%s], Ready: [%s], RestartCount: [%d]",
+              containerStatus.getName(),
+              containerStatus.getReady(),
+              containerStatus.getRestartCount()
+          ));
+          final ContainerState state = containerStatus.getState();
+          if (state != null) {
+            if (state.getWaiting() != null) {
+              diagnostics.append(StringUtils.format(
+                  ", State: Waiting(reason=[%s], message=[%s])",
+                  state.getWaiting().getReason(),
+                  state.getWaiting().getMessage()
+              ));
+            } else if (state.getTerminated() != null) {
+              diagnostics.append(StringUtils.format(
+                  ", State: Terminated(exitCode=[%d], reason=[%s], message=[%s])",
+                  state.getTerminated().getExitCode(),
+                  state.getTerminated().getReason(),
+                  state.getTerminated().getMessage()
+              ));
+            } else if (state.getRunning() != null) {
+              diagnostics.append(StringUtils.format(
+                  ", State: Running(startedAt=[%s])",
+                  state.getRunning().getStartedAt()
+              ));
+            }
+          }
+          final ContainerState lastState = containerStatus.getLastState();
+          if (lastState != null && lastState.getTerminated() != null) {
+            diagnostics.append(StringUtils.format(
+                ", LastState: Terminated(exitCode=[%d], reason=[%s], message=[%s])",
+                lastState.getTerminated().getExitCode(),
+                lastState.getTerminated().getReason(),
+                lastState.getTerminated().getMessage()
+            ));
+          }
+        }
+      }
+    }
+
+    if (events != null && !events.isEmpty()) {
+      appendEvents(diagnostics, events);
+    }
+
+    if (logTail != null && !logTail.isBlank()) {
+      diagnostics.append("\nLog Tail (last lines):\n").append(logTail);
+    }
+
+    return diagnostics.toString();
+  }
+
+  private static void appendEvents(final StringBuilder diagnostics, final List<Event> events)
+  {
+    diagnostics.append("\nEvents:");
+    for (final Event event : events) {
+      diagnostics.append(StringUtils.format(
+          "\n  - [%s] %s: %s (count: [%d], lastObserved: [%s])",
+          event.getType(),
+          event.getReason(),
+          event.getMessage(),
+          event.getCount() != null ? event.getCount() : 1,
+          event.getLastTimestamp()
+      ));
+    }
+  }
+
+  public void dumpPodLogs(final String namespace)
+  {
+    if (client == null) {
+      return;
+    }
+    final String testClassName = cluster != null && cluster.getTestClassName() != null
+                                 ? cluster.getTestClassName()
+                                 : "k3s";
+    final File logDir = new File(new File("druid-container-logs", testClassName), "k3s-pods");
+    try {
+      FileUtils.mkdirp(logDir);
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to create pod log directory [%s]", logDir.getAbsolutePath());
+    }
+
+    try {
+      for (final Pod pod : client.pods().inNamespace(namespace).list().getItems()) {
+        if (pod.getMetadata() == null || pod.getMetadata().getName() == null) {
+          continue;
+        }
+        final String podName = pod.getMetadata().getName();
+        final File podLogFile = new File(logDir, podName + ".log");
+        try {
+          final String podLogs = client.pods().inNamespace(namespace).withName(podName).getLog();
+          if (podLogs != null) {
+            Files.writeString(podLogFile.toPath(), podLogs, StandardCharsets.UTF_8);
+            log.info("Dumped pod [%s] logs to [%s]", podName, podLogFile.getAbsolutePath());
+          }
+        }
+        catch (Exception e) {
+          log.warn(e, "Could not dump logs for pod [%s]", podName);
+        }
+      }
+    }
+    catch (Exception e) {
+      log.warn(e, "Could not list pods in namespace [%s] for dumping logs", namespace);
     }
   }
 
