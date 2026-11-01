@@ -708,7 +708,6 @@ public class HdfsDataSegmentKillerTest
         .size(0)
         .build();
 
-      // The extension-bearing suffix is treated as a complete path by pushToPath().
       final DataSegment pushedSegment = pusher.pushToPath(
         segmentDir,
         segment,
@@ -723,8 +722,6 @@ public class HdfsDataSegmentKillerTest
         "NONE-compressed segment should be stored as a directory"
       );
 
-      // This previously failed because the killer inferred ZIP from the filename
-      // and attempted a non-recursive delete.
       killer.kill(pushedSegment);
 
       Assertions.assertFalse(
