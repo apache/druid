@@ -37,6 +37,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
@@ -404,6 +405,97 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
   }
 
+  @Test
+  public void testDifferentIntervalsShareOneEntryByDefault()
+  {
+    prepareCluster(10);
+    final Query<Result<TimeseriesResultValue>> query1 = timeseriesQuery(Intervals.of("2000-01-01T00/PT2H"));
+    final Query<Result<TimeseriesResultValue>> query2 = timeseriesQuery(Intervals.of("2000-01-01T01/PT2H"));
+    final CacheConfig config = newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE);
+
+    createQueryRunner(config, query1).run(QueryPlus.wrap(query1), responseContext()).toList();
+    createQueryRunner(config, query2).run(QueryPlus.wrap(query2), responseContext()).toList();
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    emitter.flush();
+
+    createQueryRunner(config, query1).run(QueryPlus.wrap(query1), responseContext()).toList();
+
+    // query2 overwrote query1's entry, so the last run finds an entry (a hit for the cache) but can't use it.
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(2, cache.getStats().getNumHits());
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
+  }
+
+  @Test
+  public void testDifferentIntervalsUseSeparateEntriesWhenFlagEnabled()
+  {
+    prepareCluster(10);
+    final Query<Result<TimeseriesResultValue>> query1 = timeseriesQuery(Intervals.of("2000-01-01T00/PT2H"));
+    final Query<Result<TimeseriesResultValue>> query2 = timeseriesQuery(Intervals.of("2000-01-01T01/PT2H"));
+    final CacheConfig config = newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE, true);
+
+    final List<Result<TimeseriesResultValue>> results1 =
+        createQueryRunner(config, query1).run(QueryPlus.wrap(query1), responseContext()).toList();
+    final List<Result<TimeseriesResultValue>> results2 =
+        createQueryRunner(config, query2).run(QueryPlus.wrap(query2), responseContext()).toList();
+    Assertions.assertEquals(2, cache.getStats().getNumEntries());
+    emitter.flush();
+
+    Assertions.assertEquals(
+        results1,
+        createQueryRunner(config, query1).run(QueryPlus.wrap(query1), responseContext()).toList()
+    );
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.flush();
+
+    Assertions.assertEquals(
+        results2,
+        createQueryRunner(config, query2).run(QueryPlus.wrap(query2), responseContext()).toList()
+    );
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    Assertions.assertEquals(2, cache.getStats().getNumEntries());
+  }
+
+  @Test
+  public void testDatasourceAndIntervalsInCacheKeyOnlyWhenFlagEnabled()
+  {
+    cache = Mockito.spy(cache);
+    prepareCluster(10);
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(Intervals.of("2000-01-01T00/PT2H"));
+    final Query<Result<TimeseriesResultValue>> sameQuery = timeseriesQuery(Intervals.of("2000-01-01T00/PT2H"));
+    final Query<Result<TimeseriesResultValue>> otherInterval = timeseriesQuery(Intervals.of("2000-01-01T01/PT2H"));
+    final Query<Result<TimeseriesResultValue>> otherDatasource = query.withDataSource(TableDataSource.create("other"));
+
+    final Cache.NamedKey key = resultLevelCacheKey(query, false);
+    Assertions.assertEquals(key, resultLevelCacheKey(otherInterval, false));
+    Assertions.assertEquals(key, resultLevelCacheKey(otherDatasource, false));
+
+    final Cache.NamedKey keyWithFlag = resultLevelCacheKey(query, true);
+    Assertions.assertNotEquals(key, keyWithFlag);
+    Assertions.assertEquals(keyWithFlag, resultLevelCacheKey(sameQuery, true));
+    Assertions.assertNotEquals(keyWithFlag, resultLevelCacheKey(otherInterval, true));
+    Assertions.assertNotEquals(keyWithFlag, resultLevelCacheKey(otherDatasource, true));
+  }
+
+  /**
+   * Runs the query with the result-level cache in use-only mode and returns the key it looked up. Requires
+   * {@link #cache} to be a Mockito spy.
+   */
+  private <T> Cache.NamedKey resultLevelCacheKey(Query<T> query, boolean includeDatasourceAndIntervals)
+  {
+    Mockito.clearInvocations(cache);
+    createQueryRunner(
+        newCacheConfig(false, true, DEFAULT_CACHE_ENTRY_MAX_SIZE, includeDatasourceAndIntervals),
+        query
+    ).run(QueryPlus.wrap(query), responseContext()).toList();
+    final ArgumentCaptor<Cache.NamedKey> captor = ArgumentCaptor.forClass(Cache.NamedKey.class);
+    Mockito.verify(cache).get(captor.capture());
+    return captor.getValue();
+  }
+
   private <T> ResultLevelCachingQueryRunner<T> createQueryRunner(
       CacheConfig cacheConfig,
       Query<T> query
@@ -432,8 +524,24 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
       int resultLevelCacheLimit
   )
   {
+    return newCacheConfig(populateResultLevelCache, useResultLevelCache, resultLevelCacheLimit, false);
+  }
+
+  private CacheConfig newCacheConfig(
+      boolean populateResultLevelCache,
+      boolean useResultLevelCache,
+      int resultLevelCacheLimit,
+      boolean includeDatasourceAndIntervals
+  )
+  {
     return new CacheConfig()
     {
+      @Override
+      public boolean isIncludeDatasourceAndIntervalsInResultLevelCacheKey()
+      {
+        return includeDatasourceAndIntervals;
+      }
+
       @Override
       public boolean isPopulateResultLevelCache()
       {
