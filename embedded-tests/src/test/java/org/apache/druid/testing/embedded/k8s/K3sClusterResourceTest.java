@@ -192,3 +192,4 @@ public class K3sClusterResourceTest
     Assertions.assertTrue(yaml.contains("value: \"256m\""));
   }
 }
+
