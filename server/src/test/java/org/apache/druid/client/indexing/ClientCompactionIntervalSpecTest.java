@@ -31,6 +31,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -42,39 +43,30 @@ import java.util.List;
 
 public class ClientCompactionIntervalSpecTest
 {
-  private final DataSegment dataSegment1 = new DataSegment(
-      "test",
-      Intervals.of("2015-04-11/2015-04-12"),
-      DateTimes.nowUtc().toString(),
-      new HashMap<>(),
-      new ArrayList<>(),
-      new ArrayList<>(),
-      NoneShardSpec.instance(),
-      IndexIO.CURRENT_VERSION_ID,
-      11
-  );
-  private final DataSegment dataSegment2 = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-14"),
-      DateTimes.nowUtc().toString(),
-      new HashMap<>(),
-      new ArrayList<>(),
-      new ArrayList<>(),
-      NoneShardSpec.instance(),
-      IndexIO.CURRENT_VERSION_ID,
-      11
-  );
-  private final DataSegment dataSegment3 = new DataSegment(
-      "test",
-      Intervals.of("2015-02-12/2015-03-13"),
-      DateTimes.nowUtc().toString(),
-      new HashMap<>(),
-      new ArrayList<>(),
-      new ArrayList<>(),
-      NoneShardSpec.instance(),
-      IndexIO.CURRENT_VERSION_ID,
-      11
-  );
+  private final DataSegment dataSegment1 = DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-11/2015-04-12"), DateTimes.nowUtc().toString(), 0))
+                                                      .loadSpec(new HashMap<>())
+                                                      .dimensions(new ArrayList<>())
+                                                      .metrics(new ArrayList<>())
+                                                      .shardSpec(NoneShardSpec.instance())
+                                                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                                      .size(11)
+                                                      .build();
+  private final DataSegment dataSegment2 = DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-12/2015-04-14"), DateTimes.nowUtc().toString(), 0))
+                                                      .loadSpec(new HashMap<>())
+                                                      .dimensions(new ArrayList<>())
+                                                      .metrics(new ArrayList<>())
+                                                      .shardSpec(NoneShardSpec.instance())
+                                                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                                      .size(11)
+                                                      .build();
+  private final DataSegment dataSegment3 = DataSegment.builder(SegmentId.of("test", Intervals.of("2015-02-12/2015-03-13"), DateTimes.nowUtc().toString(), 0))
+                                                      .loadSpec(new HashMap<>())
+                                                      .dimensions(new ArrayList<>())
+                                                      .metrics(new ArrayList<>())
+                                                      .shardSpec(NoneShardSpec.instance())
+                                                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                                      .size(11)
+                                                      .build();
 
   @Test
   public void testFromSegmentWithNoSegmentGranularity()

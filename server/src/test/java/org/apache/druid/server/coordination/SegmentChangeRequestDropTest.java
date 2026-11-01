@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -46,17 +47,14 @@ public class SegmentChangeRequestDropTest
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 
-    DataSegment segment = new DataSegment(
-        "something",
-        interval,
-        "1",
-        loadSpec,
-        Arrays.asList("dim1", "dim2"),
-        Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
-    );
+    DataSegment segment = DataSegment.builder(SegmentId.of("something", interval, "1", 0))
+                                     .loadSpec(loadSpec)
+                                     .dimensions(Arrays.asList("dim1", "dim2"))
+                                     .metrics(Arrays.asList("met1", "met2"))
+                                     .shardSpec(NoneShardSpec.instance())
+                                     .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                     .size(1)
+                                     .build();
 
     final SegmentChangeRequestDrop segmentDrop = new SegmentChangeRequestDrop(segment);
 

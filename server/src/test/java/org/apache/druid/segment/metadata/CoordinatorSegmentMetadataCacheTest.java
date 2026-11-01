@@ -404,10 +404,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     // we will add a segment to another datasource and
     // check if columns in this segment is reflected in the datasource schema
     DataSegment newSegment =
-        DataSegment.builder()
-                   .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("2002/P1Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(DATASOURCE1, Intervals.of("2002/P1Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
@@ -1847,20 +1844,14 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     final String fingerprint1 = "fingerprint-1";
     final String fingerprint2 = "fingerprint-2";
     DataSegment coldSegment =
-        DataSegment.builder()
-                   .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("1998/P2Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(DATASOURCE1, Intervals.of("1998/P2Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
 
     // cold has only cold segments
     DataSegment singleColdSegment =
-        DataSegment.builder()
-                   .dataSource("cold")
-                   .interval(Intervals.of("2000/P2Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("cold", Intervals.of("2000/P2Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
@@ -2049,37 +2040,25 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   public void testColdDatasourceSchema_verifyStaleDatasourceRemoved()
   {
     DataSegment coldSegmentAlpha =
-        DataSegment.builder()
-                   .dataSource("alpha")
-                   .interval(Intervals.of("2000/P2Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("alpha", Intervals.of("2000/P2Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
 
     DataSegment coldSegmentBeta =
-        DataSegment.builder()
-                   .dataSource("beta")
-                   .interval(Intervals.of("2000/P2Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("beta", Intervals.of("2000/P2Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
 
     DataSegment coldSegmentGamma =
-        DataSegment.builder()
-            .dataSource("gamma")
-            .interval(Intervals.of("2000/P1Y"))
-            .version("1")
+        DataSegment.builder(SegmentId.of("gamma", Intervals.of("2000/P1Y"), "1", 0))
             .shardSpec(new LinearShardSpec(0))
             .size(0)
             .build();
 
     DataSegment hotSegmentGamma =
-        DataSegment.builder()
-                   .dataSource("gamma")
-                   .interval(Intervals.of("2001/P2Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("gamma", Intervals.of("2001/P2Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
@@ -2242,10 +2221,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
 
     DataSegment segment = newSegment("test", 0);
-    DataSegment tombstone = DataSegment.builder()
-                                       .dataSource("test")
-                                       .interval(Intervals.of("2012-01-01/2012-01-02"))
-                                       .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+    DataSegment tombstone = DataSegment.builder(SegmentId.of("test", Intervals.of("2012-01-01/2012-01-02"), DateTimes.of("2012-01-01T11:22:33.444Z").toString(), 0))
                                        .shardSpec(new TombstoneShardSpec())
                                        .loadSpec(Collections.singletonMap(
                                            "type",
