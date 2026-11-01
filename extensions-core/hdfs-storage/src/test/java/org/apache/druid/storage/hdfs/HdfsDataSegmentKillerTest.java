@@ -28,7 +28,6 @@ import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -560,9 +560,7 @@ public class HdfsDataSegmentKillerTest
     try {
       fs.createNewFile(segmentPath);
 
-      final Throwable exception = assertThrows(SegmentLoadingException.class, () -> {
-        killer.kill(getSegmentWithPath(segmentPath.toString()));
-      });
+      final Throwable exception = assertThrows(SegmentLoadingException.class, () -> killer.kill(getSegmentWithPath(segmentPath.toString())));
       assertTrue(exception.getMessage().contains("is not a directory"));
       Assertions.assertTrue(fs.exists(segmentPath));
     }
@@ -714,7 +712,7 @@ public class HdfsDataSegmentKillerTest
         "dataSource/interval/v1/0_index.zip"
       );
 
-      final Path segmentPath = new Path(pushedSegment.getLoadSpec().get("path").toString());
+      final Path segmentPath = new Path(Objects.requireNonNull(pushedSegment.getLoadSpec()).get("path").toString());
 
       Assertions.assertTrue(fs.exists(segmentPath));
       Assertions.assertTrue(
@@ -728,6 +726,115 @@ public class HdfsDataSegmentKillerTest
         fs.exists(segmentPath),
         "Extension-bearing NONE segment directory should be deleted"
       );
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillDirectoryWithUnsupportedGzExtensionThrows() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+      config,
+      new HdfsDataSegmentPusherConfig()
+      {
+        @Override
+        public String getStorageDirectory()
+        {
+          return testRoot.getAbsolutePath();
+        }
+      }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path segmentPath = new Path(testRoot.getAbsolutePath(), "0_index.gz");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(segmentPath));
+      fs.createNewFile(new Path(segmentPath, "version.bin"));
+
+      final Throwable exception = assertThrows(
+        SegmentLoadingException.class,
+        () -> killer.kill(getSegmentWithPath(segmentPath.toString()))
+      );
+
+      assertTrue(exception.getMessage().contains("Unknown file type"));
+      assertTrue(fs.exists(segmentPath), "Unsupported-extension directory must not be deleted");
+      assertTrue(fs.exists(new Path(segmentPath, "version.bin")));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillDirectoryWithUnsupportedTarExtensionThrows() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+      config,
+      new HdfsDataSegmentPusherConfig()
+      {
+        @Override
+        public String getStorageDirectory()
+        {
+          return testRoot.getAbsolutePath();
+        }
+      }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path segmentPath = new Path(testRoot.getAbsolutePath(), "0_index.tar");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(segmentPath));
+      fs.createNewFile(new Path(segmentPath, "version.bin"));
+
+      assertThrows(
+        SegmentLoadingException.class,
+        () -> killer.kill(getSegmentWithPath(segmentPath.toString()))
+      );
+
+      assertTrue(fs.exists(segmentPath), "Unsupported-extension directory must not be deleted");
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillFileWithUnsupportedGzExtensionThrows() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+      config,
+      new HdfsDataSegmentPusherConfig()
+      {
+        @Override
+        public String getStorageDirectory()
+        {
+          return testRoot.getAbsolutePath();
+        }
+      }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path segmentPath = new Path(testRoot.getAbsolutePath(), "0_index.gz");
+
+    try {
+      Assertions.assertTrue(fs.createNewFile(segmentPath));
+
+      assertThrows(
+        SegmentLoadingException.class,
+        () -> killer.kill(getSegmentWithPath(segmentPath.toString()))
+      );
+
+      assertTrue(fs.exists(segmentPath), "Unsupported-extension file must not be deleted");
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
@@ -749,7 +856,7 @@ public class HdfsDataSegmentKillerTest
                           ))
                       .dimensions(ImmutableList.of("product"))
                       .metrics(ImmutableList.of("visited_sum", "unique_hosts"))
-                      .shardSpec(NoneShardSpec.instance())
+                      .shardSpec(new NumberedShardSpec(0, 0))
                       .binaryVersion(9)
                       .size(12334)
                       .build();

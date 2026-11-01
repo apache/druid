@@ -91,12 +91,17 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
         ? filename
         : filename.substring(0, filename.length() - compressionFormat.getSuffix().length());
 
-      // Validate the file name format before checking if it exists.
-      // This ensures we throw SegmentLoadingException for invalid names
-      // even if they do not exist on the filesystem, satisfying tests.
-      if (!isUncompressedDirectorySegment(nameWithoutExtension)
-          && compressionFormat != CompressionUtils.Format.ZIP
-          && compressionFormat != CompressionUtils.Format.LZ4) {
+      final boolean hasSupportedCompressionFormat =
+        compressionFormat == CompressionUtils.Format.ZIP
+          || compressionFormat == CompressionUtils.Format.LZ4;
+
+      final boolean hasNoExtension = compressionFormat == null;
+
+      if (!hasNoExtension && !hasSupportedCompressionFormat) {
+        throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
+      }
+
+      if (hasNoExtension && !isUncompressedDirectorySegment(filename)) {
         throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
       }
 
