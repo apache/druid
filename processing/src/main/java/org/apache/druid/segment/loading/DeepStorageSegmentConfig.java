@@ -67,16 +67,6 @@ public class DeepStorageSegmentConfig
     }
   }
 
-  public DeepStorageSegmentConfig(@Nullable Boolean zip)
-  {
-    this(zip, null);
-  }
-
-  public DeepStorageSegmentConfig(@Nullable CompressionUtils.Format compressionFormat)
-  {
-    this(null, compressionFormat);
-  }
-
   public DeepStorageSegmentConfig()
   {
     this(null, null);

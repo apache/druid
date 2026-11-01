@@ -53,8 +53,8 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
   private static final String BUCKET = "bucket";
   private static final String PREFIX = "prefix";
   private static final GoogleInputDataConfig INPUT_DATA_CONFIG = new GoogleInputDataConfig();
-  private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true);
-  private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false);
+  private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true, null);
+  private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false, null);
 
   private GoogleStorage storage;
   private GoogleAccountConfig googleAccountConfig;

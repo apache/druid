@@ -77,11 +77,11 @@ public class LocalDataSegmentPusherTest
   {
     config = new LocalDataSegmentPusherConfig();
     config.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusher = new LocalDataSegmentPusher(config, new DeepStorageSegmentConfig(false));
+    localDataSegmentPusher = new LocalDataSegmentPusher(config, new DeepStorageSegmentConfig(false, null));
 
     configZip = new LocalDataSegmentPusherConfig();
     configZip.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusherZip = new LocalDataSegmentPusher(configZip, new DeepStorageSegmentConfig(true));
+    localDataSegmentPusherZip = new LocalDataSegmentPusher(configZip, new DeepStorageSegmentConfig(true, null));
 
     dataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));

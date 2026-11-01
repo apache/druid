@@ -65,7 +65,7 @@ public class DeepStorageSegmentConfigTest
   @Test
   public void testLegacyZipTrueResolvesToZip()
   {
-    final DeepStorageSegmentConfig config = new DeepStorageSegmentConfig(true);
+    final DeepStorageSegmentConfig config = new DeepStorageSegmentConfig(true, null);
     assertEquals(CompressionUtils.Format.ZIP, config.getCompressionFormat());
     assertEquals(CompressionUtils.Format.ZIP, config.getEffectiveCompressionFormat(CompressionUtils.Format.NONE));
 
@@ -79,7 +79,7 @@ public class DeepStorageSegmentConfigTest
   @Test
   public void testLegacyZipFalseResolvesToNone()
   {
-    final DeepStorageSegmentConfig config = new DeepStorageSegmentConfig(false);
+    final DeepStorageSegmentConfig config = new DeepStorageSegmentConfig(false, null);
     assertEquals(CompressionUtils.Format.NONE, config.getCompressionFormat());
     assertEquals(CompressionUtils.Format.NONE, config.getEffectiveCompressionFormat(CompressionUtils.Format.ZIP));
 
@@ -221,7 +221,7 @@ public class DeepStorageSegmentConfigTest
   @Test
   public void testSerializationExposesOnlyCompressionFormatNotZip() throws IOException
   {
-    final DeepStorageSegmentConfig configLegacy = new DeepStorageSegmentConfig(true);
+    final DeepStorageSegmentConfig configLegacy = new DeepStorageSegmentConfig(true, null);
     final String jsonLegacy = jsonMapper.writeValueAsString(configLegacy);
     assertTrue(jsonLegacy.contains("\"compressionFormat\""));
     assertFalse(jsonLegacy.contains("\"zip\""));

@@ -428,7 +428,7 @@ public class S3DataSegmentPusherTest
       long size
   ) throws IOException
   {
-    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(zip));
+    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(zip, null));
 
     DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
                                            .loadSpec(new HashMap<>())
