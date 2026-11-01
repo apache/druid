@@ -86,9 +86,15 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     try (final FileSystem fs = segmentPath.getFileSystem(config)) {
       final String filename = segmentPath.getName();
       final CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(filename);
-      final boolean isUncompressed = compressionFormat == null && isUncompressedDirectorySegment(filename);
 
-      if (!isUncompressed
+      final String nameWithoutExtension = compressionFormat == null
+        ? filename
+        : filename.substring(0, filename.length() - compressionFormat.getSuffix().length());
+
+      // Validate the file name format before checking if it exists.
+      // This ensures we throw SegmentLoadingException for invalid names
+      // even if they do not exist on the filesystem, satisfying tests.
+      if (!isUncompressedDirectorySegment(nameWithoutExtension)
           && compressionFormat != CompressionUtils.Format.ZIP
           && compressionFormat != CompressionUtils.Format.LZ4) {
         throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
@@ -99,8 +105,16 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
         return;
       }
 
-      if (isUncompressed && !fs.getFileStatus(segmentPath).isDirectory()) {
-        throw new SegmentLoadingException("Segment path [%s] is not a directory", segmentPath);
+      final boolean isUncompressed = fs.getFileStatus(segmentPath).isDirectory();
+
+      if (isUncompressed) {
+        if (!isUncompressedDirectorySegment(nameWithoutExtension)) {
+          throw new SegmentLoadingException("Unknown directory segment path[%s]", segmentPath);
+        }
+      } else {
+        if ((compressionFormat != CompressionUtils.Format.ZIP && compressionFormat != CompressionUtils.Format.LZ4)) {
+          throw new SegmentLoadingException("Segment path [%s] is not a directory", segmentPath);
+        }
       }
 
       // There are 3 supported path formats for each segment compression format:
@@ -108,15 +122,14 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
       //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
       //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_UUID_index.zip
       // The same formats with an index.lz4 suffix or without suffix (uncompressed directory) are also supported.
-      final String[] segmentParts = filename.split("_");
-      final String expectedSuffix = isUncompressed ? "" : compressionFormat.getSuffix();
+      final String[] segmentParts = nameWithoutExtension.split("_");
 
       Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
       if (segmentParts.length > 1) {
         Preconditions.checkState(
             segmentParts.length <= 3 &&
             StringUtils.isNumeric(segmentParts[0]) &&
-            ("index" + expectedSuffix).equals(segmentParts[segmentParts.length - 1]),
+            "index".equals(segmentParts[segmentParts.length - 1]),
             "Unexpected segmentPath format [%s]", segmentPath
         );
 

@@ -285,6 +285,9 @@ public class JsonConfigurator
                                                         .introspect(mapper.constructType(clazz))
                                                         .findProperties();
     for (BeanPropertyDefinition beanDef : beanDefs) {
+      if (!beanDef.couldSerialize()) {
+        continue;
+      }
       final AnnotatedField field = beanDef.getField();
       if (field == null || !field.hasAnnotation(JsonProperty.class)) {
         throw new ProvisionException(

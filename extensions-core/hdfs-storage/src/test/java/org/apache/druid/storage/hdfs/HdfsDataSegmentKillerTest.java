@@ -24,10 +24,13 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +39,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -668,6 +672,69 @@ public class HdfsDataSegmentKillerTest
 
     Throwable exception = assertThrows(IllegalStateException.class, killer::killAll);
     assertTrue(exception.getMessage().contains("Cannot delete all segment files since druid.storage.storageDirectory is not set"));
+  }
+
+  @Test
+  public void testKillNoneSegmentWithExtensionBearingPath() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration(true);
+    final FileSystem fs = FileSystem.get(config);
+
+    try {
+      final HdfsDataSegmentPusherConfig pusherConfig = new HdfsDataSegmentPusherConfig();
+      pusherConfig.setStorageDirectory(testRoot.getAbsolutePath());
+
+      final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
+        pusherConfig,
+        config,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+      );
+
+      final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(config, pusherConfig);
+
+      final File segmentDir = new File(testRoot, "segment");
+      Assertions.assertTrue(segmentDir.mkdir());
+      Files.write(new File(segmentDir, "version.bin").toPath(), new byte[]{0, 0, 0, 9});
+
+      final DataSegment segment = DataSegment.builder(
+          SegmentId.of("dataSource", Intervals.of("2000/3000"), "ver", 0)
+        )
+        .loadSpec(ImmutableMap.of("type", "hdfs", "path", ""))
+        .dimensions(ImmutableList.of("product"))
+        .metrics(ImmutableList.of("visited_sum"))
+        .shardSpec(new NumberedShardSpec(0, 0))
+        .binaryVersion(9)
+        .size(0)
+        .build();
+
+      // The extension-bearing suffix is treated as a complete path by pushToPath().
+      final DataSegment pushedSegment = pusher.pushToPath(
+        segmentDir,
+        segment,
+        "dataSource/interval/v1/0_index.zip"
+      );
+
+      final Path segmentPath = new Path(pushedSegment.getLoadSpec().get("path").toString());
+
+      Assertions.assertTrue(fs.exists(segmentPath));
+      Assertions.assertTrue(
+        fs.getFileStatus(segmentPath).isDirectory(),
+        "NONE-compressed segment should be stored as a directory"
+      );
+
+      // This previously failed because the killer inferred ZIP from the filename
+      // and attempted a non-recursive delete.
+      killer.kill(pushedSegment);
+
+      Assertions.assertFalse(
+        fs.exists(segmentPath),
+        "Extension-bearing NONE segment directory should be deleted"
+      );
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
   }
 
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException

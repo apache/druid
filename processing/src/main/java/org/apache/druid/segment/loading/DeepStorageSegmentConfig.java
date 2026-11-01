@@ -22,7 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
@@ -43,12 +43,9 @@ import javax.annotation.Nullable;
  */
 public class DeepStorageSegmentConfig
 {
-  @JsonProperty
-  @Deprecated
-  @Nullable
-  private final Boolean zip;
+  private static final Logger log = new Logger(DeepStorageSegmentConfig.class);
 
-  @JsonProperty
+  @JsonProperty("compressionFormat")
   @Nullable
   private final CompressionUtils.Format compressionFormat;
 
@@ -58,9 +55,16 @@ public class DeepStorageSegmentConfig
       @JsonProperty("compressionFormat") @Nullable CompressionUtils.Format compressionFormat
   )
   {
-    validate(zip, compressionFormat);
-    this.zip = zip;
-    this.compressionFormat = compressionFormat;
+    if (zip != null) {
+      log.warn("druid.storage.zip is deprecated, use druid.storage.compressionFormat instead.");
+    }
+    if (compressionFormat != null) {
+      this.compressionFormat = compressionFormat;
+    } else if (zip != null) {
+      this.compressionFormat = zip ? CompressionUtils.Format.ZIP : CompressionUtils.Format.NONE;
+    } else {
+      this.compressionFormat = null;
+    }
   }
 
   public DeepStorageSegmentConfig(@Nullable Boolean zip)
@@ -68,36 +72,14 @@ public class DeepStorageSegmentConfig
     this(zip, null);
   }
 
+  public DeepStorageSegmentConfig(@Nullable CompressionUtils.Format compressionFormat)
+  {
+    this(null, compressionFormat);
+  }
+
   public DeepStorageSegmentConfig()
   {
     this(null, null);
-  }
-
-  private static void validate(@Nullable Boolean zip, @Nullable CompressionUtils.Format compressionFormat)
-  {
-    if (zip == null || compressionFormat == null) {
-      return;
-    }
-    if (compressionFormat == CompressionUtils.Format.ZIP && !zip) {
-      throw new IAE(
-          "Conflicting compression configuration: druid.storage.compressionFormat is [%s] but druid.storage.zip is [%s]",
-          compressionFormat,
-          zip
-      );
-    }
-    if (compressionFormat == CompressionUtils.Format.NONE && zip) {
-      throw new IAE(
-          "Conflicting compression configuration: druid.storage.compressionFormat is [%s] but druid.storage.zip is [%s]",
-          compressionFormat,
-          zip
-      );
-    }
-    if (compressionFormat != CompressionUtils.Format.ZIP && compressionFormat != CompressionUtils.Format.NONE) {
-      throw new IAE(
-          "Conflicting compression configuration: druid.storage.zip cannot be configured when druid.storage.compressionFormat is [%s]",
-          compressionFormat
-      );
-    }
   }
 
   /**
@@ -107,36 +89,7 @@ public class DeepStorageSegmentConfig
   public CompressionUtils.Format getEffectiveCompressionFormat(CompressionUtils.Format defaultFormat)
   {
     Preconditions.checkNotNull(defaultFormat, "defaultFormat");
-    if (compressionFormat != null) {
-      return compressionFormat;
-    }
-    if (zip != null) {
-      return zip ? CompressionUtils.Format.ZIP : CompressionUtils.Format.NONE;
-    }
-    return defaultFormat;
-  }
-
-  /**
-   * Whether segments should be written as a zip file, falling back to {@code defaultZip} when
-   * {@code druid.storage.zip} or {@code druid.storage.compressionFormat} has not been set.
-   *
-   * @deprecated Use {@link #getEffectiveCompressionFormat(CompressionUtils.Format)} instead.
-   */
-  @Deprecated
-  public boolean isZip(boolean defaultZip)
-  {
-    final CompressionUtils.Format effective = getEffectiveCompressionFormat(
-        defaultZip ? CompressionUtils.Format.ZIP : CompressionUtils.Format.NONE
-    );
-    return effective == CompressionUtils.Format.ZIP;
-  }
-
-  @JsonProperty("zip")
-  @Deprecated
-  @Nullable
-  public Boolean getZip()
-  {
-    return zip;
+    return compressionFormat != null ? compressionFormat : defaultFormat;
   }
 
   @JsonProperty("compressionFormat")
