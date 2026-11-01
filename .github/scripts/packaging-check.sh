@@ -23,6 +23,8 @@ CODE_CHECKS_SKIP="-Dcheckstyle.skip -Dpmd.skip -Dforbiddenapis.skip -Danimal.sni
 ./mvnw -B install -Papache-release -Prat --fail-at-end \
   -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false \
   -Dgpg.skip -Ddependency-check.skip $CODE_CHECKS_SKIP
+# Stale licenses.yaml versions only warn here; release builds fail on them.
 ./mvnw -B install -Papache-release -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
   -pl 'distribution' -P skip-tests -Dweb.console.skip=false \
-  -Dgpg.skip -Ddependency-check.skip $CODE_CHECKS_SKIP
+  -Dgpg.skip -Ddependency-check.skip $CODE_CHECKS_SKIP \
+  -Ddruid.distribution.licenses.staleVersions=warn

@@ -50,6 +50,8 @@
     <properties>
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
+        <!-- PR CI sets this to warn; release builds must fail on stale licenses.yaml versions -->
+        <druid.distribution.licenses.staleVersions>fail</druid.distribution.licenses.staleVersions>
     </properties>
 
     <build>
@@ -343,6 +345,7 @@
                                              LICENSE, which leaves out contrib entries. -->
                                         <argument>--exclude-module-prefix=extensions-contrib/</argument>
                                         <argument>--exclude-module-prefix=extensions/druid-testcontainers</argument>
+                                        <argument>--stale-versions=${druid.distribution.licenses.staleVersions}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
