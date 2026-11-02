@@ -136,7 +136,8 @@ public class ReadableInputQueue implements Closeable
 
   /**
    * Decides which inputs can be skipped. Once {@link #canSkipRemaining()} is true, {@link #nextInput()} returns null
-   * and no new segment loads start; inputs that were already acquired are released by {@link #close()}.
+   * and no new segment loads start. Loads behind pending inputs that turn out to be skippable are canceled as they are
+   * reached, see {@link #cancelSkippedLoads}; inputs that were already loaded are released by {@link #close()}.
    */
   private final InputPruner inputPruner;
 
@@ -267,6 +268,12 @@ public class ReadableInputQueue implements Closeable
     }
 
     if (canSkipRemaining()) {
+      final List<ListenableFuture<NumberedReadableInput>> skippedFutures;
+      synchronized (this) {
+        skippedFutures = new ArrayList<>(pendingNextInputs.keySet());
+        pendingNextInputs.clear();
+      }
+      cancelSkippedLoads(skippedFutures);
       return null;
     }
 
@@ -352,6 +359,9 @@ public class ReadableInputQueue implements Closeable
   @Nullable
   private ListenableFuture<NumberedReadableInput> nextSegmentInput()
   {
+    final List<ListenableFuture<NumberedReadableInput>> skippedFutures = new ArrayList<>();
+    ListenableFuture<NumberedReadableInput> unskippedFuture = null;
+
     synchronized (this) {
       while (!pendingNextInputs.isEmpty()) {
         final ListenableFuture<NumberedReadableInput> selectedFuture = selectPendingInput();
@@ -361,10 +371,18 @@ public class ReadableInputQueue implements Closeable
         }
         // The selected segment may have been pruned since its load was started, check if it can be skipped once more
         // before handing it out.
-        if (!canSkipSegment(selectedSegment)) {
-          return selectedFuture;
+        if (canSkipSegment(selectedSegment)) {
+          skippedFutures.add(selectedFuture);
+        } else {
+          unskippedFuture = selectedFuture;
+          break;
         }
       }
+    }
+
+    cancelSkippedLoads(skippedFutures);
+    if (unskippedFuture != null) {
+      return unskippedFuture;
     }
 
     // Acquires on demand when loadahead is 0. With loadahead, no unpruned segments remain here.
@@ -596,6 +614,44 @@ public class ReadableInputQueue implements Closeable
       pendingNextInputs.put(nextFuture, nextItem.item());
     }
     return true;
+  }
+
+  /**
+   * Cancels the loads behind pending inputs that will never be handed out, rather than leaving them for
+   * {@link #close()}. Inputs that are already loaded, or mid-delivery are not canceled here.
+   * <p>
+   * Called outside the queue monitor, because canceling a load can run its canceler.
+   */
+  private void cancelSkippedLoads(final List<ListenableFuture<NumberedReadableInput>> skippedFutures)
+  {
+    if (skippedFutures.isEmpty()) {
+      return;
+    }
+
+    final Set<ListenableFuture<NumberedReadableInput>> skipped = Sets.newIdentityHashSet();
+    skipped.addAll(skippedFutures);
+    final Map<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> loadsToCancel = new LinkedHashMap<>();
+
+    synchronized (this) {
+      // Claiming a load's entry means onSegmentReady finds none and returns without delivering, as with close().
+      final Iterator<Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>>> iterator =
+          loadingSegments.entrySet().iterator();
+      while (iterator.hasNext()) {
+        final Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> entry = iterator.next();
+        if (skipped.contains(entry.getValue())) {
+          loadsToCancel.put(entry.getKey(), entry.getValue());
+          iterator.remove();
+        }
+      }
+    }
+
+    for (final Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> entry : loadsToCancel.entrySet()) {
+      CloseableUtils.closeAndSuppressExceptions(
+          entry.getKey(),
+          e -> log.warn(e, "Failed to close skipped loadingSegment[%s]", entry.getKey())
+      );
+      entry.getValue().setException(DruidException.defensive("Segment load canceled because its input was skipped"));
+    }
   }
 
   /**

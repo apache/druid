@@ -456,9 +456,109 @@ class ReadableInputQueueTest
 
     canSkipRemaining.set(true);
     Assertions.assertNull(queue.nextInput(), "no inputs may be handed out once remaining inputs can be skipped");
+    Assertions.assertEquals(0, cachedSegment.closes.get(), "skipped cached segment is left for close");
 
     queue.close();
     Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be closed on close");
+  }
+
+  @Test
+  void testCanSkipRemainingCancelsPendingLoadsBeforeClose()
+  {
+    final CountingSegment cachedSegment = new CountingSegment();
+    final TestLoadableSegment cached = new TestLoadableSegment(new AcquireSegmentAction(), Optional.of(cachedSegment));
+    final AtomicInteger cancels = new AtomicInteger();
+    final TestLoadableSegment loading = new TestLoadableSegment(new AcquireSegmentAction(cancels::incrementAndGet));
+    final AtomicBoolean canSkipRemaining = new AtomicBoolean(false);
+
+    // loadahead=1: start() parks the cached segment, then starts loading the other one.
+    final ReadableInputQueue queue = makeQueue(1, interval -> canSkipRemaining.get(), cached, loading);
+    queue.start();
+    Assertions.assertEquals(1, loading.countAcquires.get());
+
+    canSkipRemaining.set(true);
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(1, cancels.get(), "skipped load must be canceled before close");
+    Assertions.assertEquals(0, cachedSegment.closes.get(), "skipped cached segment is left for close");
+    Assertions.assertEquals(0, queue.remaining());
+
+    queue.close();
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be closed on close");
+    Assertions.assertEquals(1, cancels.get(), "skipped load must not be canceled twice");
+    Assertions.assertEquals(0, loading.countDeliveredCalls.get(), "canceled loads must not be counted");
+  }
+
+  @Test
+  void testTimeOrderSkippedLoadedSegmentReleasedOnClose()
+  {
+    final CountingSegment day2Segment = new CountingSegment();
+    final TestLoadableSegment day2 = new TestLoadableSegment(
+        AcquireSegmentAction.completed(AcquireSegmentResult.of(Optional.of(day2Segment))),
+        Optional.empty(),
+        false,
+        descriptorOnDay(2, 0)
+    );
+    final AtomicBoolean skipDay2 = new AtomicBoolean(false);
+
+    // loadahead=2: start() loads both segments before day 2 becomes skippable.
+    final ReadableInputQueue queue = makeQueue(
+        2,
+        timeOrderedPruner(Order.DESCENDING, interval -> skipDay2.get() && interval.equals(day(2))),
+        cachedSegmentOnDay(3),
+        day2
+    );
+    queue.start();
+    Assertions.assertEquals(1, day2.countDeliveredCalls.get(), "day 2 must be loaded before it becomes skippable");
+
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> day3Future = queue.nextInput();
+    Assertions.assertEquals(day(3), Futures.getUnchecked(day3Future).input().getSegment().getDescriptor().getInterval());
+
+    skipDay2.set(true);
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(0, day2Segment.closes.get(), "skipped loaded segment is left for close");
+
+    closeHandedOut(day3Future);
+    queue.close();
+    Assertions.assertEquals(1, day2Segment.closes.get(), "skipped loaded segment must be closed on close");
+  }
+
+  @Test
+  void testTimeOrderSkippedLoadCanceledBeforeClose()
+  {
+    final AtomicInteger cancels = new AtomicInteger();
+    final AcquireSegmentAction day2Action = new AcquireSegmentAction(cancels::incrementAndGet);
+    final TestLoadableSegment day2 =
+        new TestLoadableSegment(day2Action, Optional.empty(), false, descriptorOnDay(2, 0));
+    final AtomicBoolean skipDay2 = new AtomicBoolean(false);
+
+    // loadahead=2: start() starts loading day 2 before it becomes skippable.
+    final ReadableInputQueue queue = makeQueue(
+        2,
+        timeOrderedPruner(Order.DESCENDING, interval -> skipDay2.get() && interval.equals(day(2))),
+        cachedSegmentOnDay(3),
+        day2
+    );
+    queue.start();
+    Assertions.assertEquals(1, day2.countAcquires.get());
+
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> day3Future = queue.nextInput();
+    Assertions.assertEquals(day(3), Futures.getUnchecked(day3Future).input().getSegment().getDescriptor().getInterval());
+
+    skipDay2.set(true);
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(1, cancels.get(), "skipped load must be canceled before close");
+
+    // A delivery arriving after the cancel loses, so the producer keeps ownership of its result.
+    final CountingSegment lateSegment = new CountingSegment();
+    final AcquireSegmentResult lateResult = AcquireSegmentResult.of(Optional.of(lateSegment));
+    Assertions.assertFalse(day2Action.set(lateResult));
+    lateResult.close();
+
+    closeHandedOut(day3Future);
+    queue.close();
+    Assertions.assertEquals(1, cancels.get(), "skipped load must not be canceled twice");
+    Assertions.assertEquals(1, lateSegment.closes.get());
+    Assertions.assertEquals(0, day2.countDeliveredCalls.get(), "canceled loads must not be counted");
   }
 
   @Test
