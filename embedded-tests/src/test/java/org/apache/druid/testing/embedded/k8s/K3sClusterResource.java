@@ -224,7 +224,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     closer.register(client);
   }
 
-  protected void waitUntilPodsAreReady(String namespace)
+  protected void waitUntilPodsAreReady(final String namespace)
   {
     if (DRUID_NAMESPACE.equals(namespace) && !services.isEmpty()) {
       try {
@@ -240,7 +240,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
         log.warn(e, "Did not observe [%d] pods in namespace [%s]", services.size(), namespace);
       }
     }
-    client.pods().inNamespace(namespace).resources().forEach(this::waitUntilPodIsReady);
+    client.pods().inNamespace(namespace).resources().forEach(pod -> waitUntilPodIsReady(pod, namespace));
   }
 
   /**
@@ -371,9 +371,17 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   }
 
   /**
-   * Waits for the given pod to be ready.
+   * Waits for the given pod to be ready in the {@link #DRUID_NAMESPACE}.
    */
-  private void waitUntilPodIsReady(PodResource pod)
+  private void waitUntilPodIsReady(final PodResource pod)
+  {
+    waitUntilPodIsReady(pod, DRUID_NAMESPACE);
+  }
+
+  /**
+   * Waits for the given pod to be ready in the given namespace.
+   */
+  private void waitUntilPodIsReady(final PodResource pod, @Nullable final String defaultNamespace)
   {
     try {
       pod.waitUntilCondition(
@@ -387,13 +395,28 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
       );
     }
     catch (KubernetesClientTimeoutException e) {
-      dumpPodLogs(DRUID_NAMESPACE);
-      final String diagnostics = buildPodDiagnosticsOnTimeout(pod);
+      final String resolvedNamespace = resolveNamespace(pod, defaultNamespace);
+      dumpPodLogs(resolvedNamespace);
+      final String diagnostics = buildPodDiagnosticsOnTimeout(pod, resolvedNamespace);
       throw new ISE("%s", diagnostics);
     }
   }
 
-  private String buildPodDiagnosticsOnTimeout(final PodResource podResource)
+  static String resolveNamespace(final PodResource podResource, @Nullable final String fallbackNamespace)
+  {
+    try {
+      final Pod pod = podResource.get();
+      if (pod != null && pod.getMetadata() != null && pod.getMetadata().getNamespace() != null) {
+        return pod.getMetadata().getNamespace();
+      }
+    }
+    catch (Exception ignored) {
+      // ignore
+    }
+    return fallbackNamespace != null ? fallbackNamespace : DRUID_NAMESPACE;
+  }
+
+  private String buildPodDiagnosticsOnTimeout(final PodResource podResource, @Nullable final String defaultNamespace)
   {
     Pod pod = null;
     try {
@@ -406,9 +429,9 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     final String podName = pod != null && pod.getMetadata() != null
                            ? pod.getMetadata().getName()
                            : null;
-    final String namespace = pod != null && pod.getMetadata() != null
+    final String namespace = pod != null && pod.getMetadata() != null && pod.getMetadata().getNamespace() != null
                              ? pod.getMetadata().getNamespace()
-                             : DRUID_NAMESPACE;
+                             : (defaultNamespace != null ? defaultNamespace : DRUID_NAMESPACE);
 
     List<Event> events = null;
     if (podName != null && client != null) {
@@ -427,7 +450,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
                        .getItems();
       }
       catch (Exception e) {
-        log.warn(e, "Could not fetch events for pod [%s]", podName);
+        log.warn(e, "Could not fetch events for pod [%s] in namespace [%s]", podName, namespace);
       }
     }
 

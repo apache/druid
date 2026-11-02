@@ -33,9 +33,11 @@ import io.fabric8.kubernetes.api.model.PodCondition;
 import io.fabric8.kubernetes.api.model.PodConditionBuilder;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.PodStatusBuilder;
+import io.fabric8.kubernetes.client.dsl.PodResource;
 import org.apache.druid.testing.DruidCommand;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.Collections;
 import java.util.List;
@@ -179,6 +181,57 @@ public class K3sClusterResourceTest
   }
 
   @Test
+  public final void testFormatPodDiagnosticsWithCustomNamespace()
+  {
+    final Pod pod = new PodBuilder()
+        .withMetadata(new ObjectMetaBuilder().withName("druid-operator-1").withNamespace("druid-operator-system").build())
+        .withStatus(new PodStatusBuilder().withPhase("Pending").build())
+        .build();
+
+    final String diagnostics = K3sClusterResource.formatPodDiagnostics(pod, null, null);
+    Assertions.assertTrue(diagnostics.contains("pod [druid-operator-1] in namespace [druid-operator-system]"));
+    Assertions.assertTrue(diagnostics.contains("Phase: [Pending]"));
+  }
+
+  @Test
+  public final void testResolveNamespaceFromPodMetadata()
+  {
+    final PodResource podResource = Mockito.mock(PodResource.class);
+    final Pod pod = new PodBuilder()
+        .withMetadata(new ObjectMetaBuilder().withName("operator").withNamespace("druid-operator-system").build())
+        .build();
+    Mockito.when(podResource.get()).thenReturn(pod);
+
+    Assertions.assertEquals("druid-operator-system", K3sClusterResource.resolveNamespace(podResource, "druid"));
+  }
+
+  @Test
+  public final void testResolveNamespaceFallback()
+  {
+    final PodResource podResourceWithoutNamespace = Mockito.mock(PodResource.class);
+    final Pod podWithoutNamespace = new PodBuilder()
+        .withMetadata(new ObjectMetaBuilder().withName("operator").build())
+        .build();
+    Mockito.when(podResourceWithoutNamespace.get()).thenReturn(podWithoutNamespace);
+
+    Assertions.assertEquals(
+        "druid-operator-system",
+        K3sClusterResource.resolveNamespace(podResourceWithoutNamespace, "druid-operator-system")
+    );
+    Assertions.assertEquals(
+        K3sClusterResource.DRUID_NAMESPACE,
+        K3sClusterResource.resolveNamespace(podResourceWithoutNamespace, null)
+    );
+
+    final PodResource brokenPodResource = Mockito.mock(PodResource.class);
+    Mockito.when(brokenPodResource.get()).thenThrow(new RuntimeException("API error"));
+    Assertions.assertEquals(
+        "fallback-ns",
+        K3sClusterResource.resolveNamespace(brokenPodResource, "fallback-ns")
+    );
+  }
+
+  @Test
   public final void testDruidServiceManifestHasReadinessProbe()
   {
     final K3sDruidService coordinatorService = new K3sDruidService(DruidCommand.Server.COORDINATOR);
@@ -192,4 +245,3 @@ public class K3sClusterResourceTest
     Assertions.assertTrue(yaml.contains("value: \"256m\""));
   }
 }
-
