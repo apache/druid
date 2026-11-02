@@ -88,7 +88,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.LongStream;
 
 public class SuperSorterTest
 {
@@ -101,6 +103,15 @@ public class SuperSorterTest
   {
     private static final int NUM_THREADS = 1;
     private static final int FRAME_SIZE = 1_000_000;
+    private static final int SMALL_FRAME_SIZE = 1_000;
+    private static final RowSignature LONG_SIGNATURE = RowSignature.builder().add("x", ColumnType.LONG).build();
+    private static final List<KeyColumn> LONG_SORT_KEY = ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING));
+    private static final RowSignature LONG_SORTABLE_SIGNATURE =
+        FrameWriters.sortableSignature(LONG_SIGNATURE, LONG_SORT_KEY);
+    private static final RowSignature STRING_SIGNATURE = RowSignature.builder().add("s", ColumnType.STRING).build();
+    private static final List<KeyColumn> STRING_SORT_KEY = ImmutableList.of(new KeyColumn("s", KeyOrder.ASCENDING));
+    private static final RowSignature STRING_SORTABLE_SIGNATURE =
+        FrameWriters.sortableSignature(STRING_SIGNATURE, STRING_SORT_KEY);
 
     @RegisterExtension
     public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
@@ -169,6 +180,7 @@ public class SuperSorterTest
           FrameType.latestRowBased(),
           2,
           2,
+          FRAME_SIZE,
           SuperSorter.UNLIMITED,
           null,
           superSorterProgressTracker,
@@ -213,6 +225,7 @@ public class SuperSorterTest
           FrameType.latestRowBased(),
           2,
           2,
+          FRAME_SIZE,
           -1,
           null,
           superSorterProgressTracker,
@@ -253,6 +266,7 @@ public class SuperSorterTest
           FrameType.latestRowBased(),
           2,
           2,
+          FRAME_SIZE,
           3,
           null,
           superSorterProgressTracker,
@@ -267,6 +281,399 @@ public class SuperSorterTest
       Assertions.assertTrue(channel.isFinished());
       Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
       channel.close();
+    }
+
+    @Test
+    public void testLimitHint_inputExceedsBuffer_sortsInMemory() throws Exception
+    {
+      // maxActiveProcessors = 1 and maxChannelsPerMerger = 4 give an input buffer of 4 frames, smaller than the 10
+      // input frames. The 3-row limit fits in one small frame, so truncating merges keep the sort in memory. Without
+      // truncation, the retained run would outgrow its one-frame cap and spill.
+      final SortResult result = sortLongs(
+          makeLongChannels(shuffledLongs(100), 10, 1),
+          ClusterByPartitions.oneUniversalPartition(),
+          false,
+          exec,
+          1,
+          4,
+          SMALL_FRAME_SIZE,
+          3
+      );
+
+      Assertions.assertEquals(List.of(List.of(0L, 1L, 2L)), result.partitions());
+      Assertions.assertEquals(0, result.intermediateChannelsOpened(), "low-limit sort must not spill to disk");
+      MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+    }
+
+    @Test
+    public void testLimitHint_limitTooLargeForMemory_spills() throws Exception
+    {
+      // The 95-row limit needs more than its cap of one small frame (a quarter of the 4-frame buffer), so the sorter
+      // skips in-memory top-K mode and spills.
+      final SortResult result = sortLongs(
+          makeLongChannels(shuffledLongs(100), 10, 1),
+          ClusterByPartitions.oneUniversalPartition(),
+          false,
+          exec,
+          1,
+          4,
+          SMALL_FRAME_SIZE,
+          95
+      );
+
+      Assertions.assertEquals(List.of(longRange(0, 95)), result.partitions());
+      MatcherAssert.assertThat(result.intermediateChannelsOpened(), Matchers.greaterThan(0));
+      Assertions.assertEquals(0, result.truncatingMerges(), "estimate must skip truncating merges up front");
+    }
+
+    @Test
+    public void testLimitHint_truncatingMergeOverflows_spills() throws Exception
+    {
+      // 20 frames of 10 rows, read in order. Short rows come first, so the estimate passes and truncating merges keep
+      // a retained run holding "a00" and "a01". Frame 6 brings 3 long rows that also sort into the top 5. They need two
+      // small frames, so that truncating merge overflows. The retained run and the merge's input go back into the
+      // buffer, and enough input remains that the sorter finishes in external mode, accounting for the frames dropped
+      // by earlier truncating merges.
+      final String padding = "x".repeat(400);
+      final List<String> values = new ArrayList<>();
+      values.add("a00");
+      values.add("a01");
+      for (int i = 0; values.size() < 50; i++) {
+        values.add(StringUtils.format("b%02d", i));
+      }
+      for (int i = 1; i <= 3; i++) {
+        values.add("a" + i + padding);
+      }
+      for (int i = 50; values.size() < 200; i++) {
+        values.add(StringUtils.format("b%02d", i));
+      }
+
+      final SortResult result = sortRows(
+          makeStringChannels(values, 10),
+          STRING_SORTABLE_SIGNATURE,
+          STRING_SORT_KEY,
+          ClusterByPartitions.oneUniversalPartition(),
+          false,
+          exec,
+          1,
+          4,
+          SMALL_FRAME_SIZE,
+          5
+      );
+
+      Assertions.assertEquals(
+          List.of(List.of("a00", "a01", "a1" + padding, "a2" + padding, "a3" + padding)),
+          result.partitions()
+      );
+      MatcherAssert.assertThat(result.intermediateChannelsOpened(), Matchers.greaterThan(0));
+      MatcherAssert.assertThat(
+          "at least one truncating merge succeeds before the one that overflows",
+          result.truncatingMerges(),
+          Matchers.greaterThanOrEqualTo(2)
+      );
+    }
+
+    @Test
+    public void testLimitHint_tiesAtLimit_sortsInMemory() throws Exception
+    {
+      final List<Long> values = new ArrayList<>();
+      for (final long value : shuffledLongs(100)) {
+        values.add(value % 10);
+      }
+
+      final SortResult result = sortLongs(
+          makeLongChannels(values, 10, 1),
+          ClusterByPartitions.oneUniversalPartition(),
+          false,
+          exec,
+          1,
+          4,
+          SMALL_FRAME_SIZE,
+          15
+      );
+
+      final List<Long> expected = new ArrayList<>(Collections.nCopies(10, 0L));
+      expected.addAll(Collections.nCopies(5, 1L));
+      Assertions.assertEquals(List.of(expected), result.partitions());
+      Assertions.assertEquals(0, result.intermediateChannelsOpened());
+      MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+    }
+
+    @Test
+    public void testLimitHint_twoPartitions_limitAppliesAcrossPartitions() throws Exception
+    {
+      // Partitions are [null, 2) and [2, null), so the 3-row limit takes two rows from the first, one from the second.
+      final RowKey boundary = KeyTestUtils.createKey(
+          KeyTestUtils.createKeySignature(LONG_SORT_KEY, LONG_SORTABLE_SIGNATURE),
+          FrameType.latestRowBased(),
+          2L
+      );
+      final ClusterByPartitions partitions = new ClusterByPartitions(
+          ImmutableList.of(new ClusterByPartition(null, boundary), new ClusterByPartition(boundary, null))
+      );
+
+      final SortResult result = sortLongs(
+          makeLongChannels(shuffledLongs(100), 10, 1),
+          partitions,
+          false,
+          exec,
+          1,
+          4,
+          SMALL_FRAME_SIZE,
+          3
+      );
+
+      Assertions.assertEquals(List.of(List.of(0L, 1L), List.of(2L)), result.partitions());
+      Assertions.assertEquals(0, result.intermediateChannelsOpened());
+      MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+    }
+
+    @Test
+    public void testLimitHint_partitionsDeferred_sortsInMemory() throws Exception
+    {
+      final SortResult result = sortLongs(
+          makeLongChannels(shuffledLongs(100), 10, 1),
+          ClusterByPartitions.oneUniversalPartition(),
+          true,
+          exec,
+          1,
+          4,
+          SMALL_FRAME_SIZE,
+          3
+      );
+
+      Assertions.assertEquals(List.of(List.of(0L, 1L, 2L)), result.partitions());
+      Assertions.assertEquals(0, result.intermediateChannelsOpened());
+      MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+    }
+
+    @Test
+    public void testLimitHint_concurrentProcessors_sortsInMemory() throws Exception
+    {
+      final FrameProcessorExecutor multiThreadedExec = new FrameProcessorExecutor(
+          MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "super-sorter-test-concurrent-%d"))
+      );
+
+      try {
+        for (int i = 0; i < 20; i++) {
+          // 2 processors, 8-frame buffer, 4 input channels on a multithreaded executor, so batcher and truncating merge
+          // callbacks complete on different threads. Repeated to catch races in the handoff between them.
+          final SortResult result = sortLongs(
+              makeLongChannels(shuffledLongs(1000), 10, 4),
+              ClusterByPartitions.oneUniversalPartition(),
+              false,
+              multiThreadedExec,
+              2,
+              4,
+              SMALL_FRAME_SIZE,
+              7
+          );
+
+          Assertions.assertEquals(List.of(longRange(0, 7)), result.partitions());
+          Assertions.assertEquals(0, result.intermediateChannelsOpened());
+          MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+        }
+      }
+      finally {
+        multiThreadedExec.getExecutorService().shutdownNow();
+      }
+    }
+
+    /**
+     * Output values of a {@link #sortRows} call, one list per partition, the number of intermediate (spill) channels
+     * the sort opened, and the number of truncating merges it launched, including any that overflowed.
+     */
+    private record SortResult(List<List<Object>> partitions, int intermediateChannelsOpened, int truncatingMerges)
+    {
+    }
+
+    /**
+     * Sorts the single-column {@link #LONG_SIGNATURE} rows in {@code inputChannels} by {@link #LONG_SORT_KEY}.
+     */
+    private SortResult sortLongs(
+        final List<ReadableFrameChannel> inputChannels,
+        final ClusterByPartitions partitions,
+        final boolean deferPartitions,
+        final FrameProcessorExecutor executor,
+        final int maxActiveProcessors,
+        final int maxChannelsPerMerger,
+        final int frameSize,
+        final long rowLimit
+    ) throws Exception
+    {
+      return sortRows(
+          inputChannels,
+          LONG_SORTABLE_SIGNATURE,
+          LONG_SORT_KEY,
+          partitions,
+          deferPartitions,
+          executor,
+          maxActiveProcessors,
+          maxChannelsPerMerger,
+          frameSize,
+          rowLimit
+      );
+    }
+
+    /**
+     * Sorts the single-column rows in {@code inputChannels} by {@code sortKey}. If {@code deferPartitions}, the sorter
+     * learns {@code partitions} only once it has no other work.
+     */
+    private SortResult sortRows(
+        final List<ReadableFrameChannel> inputChannels,
+        final RowSignature sortableSignature,
+        final List<KeyColumn> sortKey,
+        final ClusterByPartitions partitions,
+        final boolean deferPartitions,
+        final FrameProcessorExecutor executor,
+        final int maxActiveProcessors,
+        final int maxChannelsPerMerger,
+        final int frameSize,
+        final long rowLimit
+    ) throws Exception
+    {
+      final SettableFuture<ClusterByPartitions> partitionsFuture = SettableFuture.create();
+      if (!deferPartitions) {
+        partitionsFuture.set(partitions);
+      }
+
+      final AtomicInteger intermediateChannelsOpened = new AtomicInteger();
+      final OutputChannelFactory intermediateOutputChannelFactory = new FileOutputChannelFactory(
+          temporaryFolder.newFolder(),
+          FRAME_SIZE,
+          null,
+          FrameTestUtil.WT_CONTEXT_LEGACY
+      )
+      {
+        @Override
+        public PartitionedOutputChannel openPartitionedChannel(final String name, final boolean deleteAfterRead)
+            throws IOException
+        {
+          intermediateChannelsOpened.incrementAndGet();
+          return super.openPartitionedChannel(name, deleteAfterRead);
+        }
+      };
+
+      // Truncating merges are the only workers that write to a ListWritableFrameChannel.
+      final AtomicInteger truncatingMerges = new AtomicInteger();
+      final FrameProcessorDecorator truncatingMergeCounter = new FrameProcessorDecorator()
+      {
+        @Override
+        public <T> FrameProcessor<T> decorate(final FrameProcessor<T> processor)
+        {
+          if (processor.outputChannels().stream().anyMatch(channel -> channel instanceof ListWritableFrameChannel)) {
+            truncatingMerges.incrementAndGet();
+          }
+          return processor;
+        }
+      };
+
+      final FrameReader frameReader = FrameReader.create(sortableSignature);
+      final SuperSorter superSorter = new SuperSorter(
+          inputChannels,
+          frameReader,
+          sortKey,
+          partitionsFuture,
+          executor,
+          truncatingMergeCounter,
+          new FileOutputChannelFactory(temporaryFolder.newFolder(), FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          intermediateOutputChannelFactory,
+          FrameType.latestRowBased(),
+          maxActiveProcessors,
+          maxChannelsPerMerger,
+          frameSize,
+          rowLimit,
+          null,
+          new SuperSorterProgressTracker(),
+          false,
+          null
+      );
+
+      if (deferPartitions) {
+        superSorter.setNoWorkRunnable(() -> partitionsFuture.set(partitions));
+      }
+
+      final List<List<Object>> outputRows = new ArrayList<>();
+      for (final OutputChannel channel : superSorter.run().get(1, TimeUnit.MINUTES).getAllChannels()) {
+        final List<Object> rows = new ArrayList<>();
+        FrameTestUtil.readRowsFromFrameChannel(channel.getReadableChannel(), frameReader)
+                     .forEach(row -> rows.add(row.get(0)));
+        outputRows.add(rows);
+      }
+
+      return new SortResult(outputRows, intermediateChannelsOpened.get(), truncatingMerges.get());
+    }
+
+    /**
+     * Writes {@code values} as {@link #LONG_SIGNATURE} frames of {@code rowsPerFrame} rows each, each frame sorted
+     * within itself, distributed round-robin across {@code numChannels} channels.
+     */
+    private static List<ReadableFrameChannel> makeLongChannels(
+        final List<Long> values,
+        final int rowsPerFrame,
+        final int numChannels
+    ) throws IOException
+    {
+      final List<Row> rows = new ArrayList<>();
+      for (final long value : values) {
+        rows.add(new MapBasedRow(0L, Map.of("x", value)));
+      }
+
+      final RowBasedCursorFactory<Row> cursorFactory =
+          new RowBasedCursorFactory<>(Sequences.simple(rows), RowAdapters.standardRow(), LONG_SIGNATURE);
+
+      return makeRoundRobinChannels(
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                              .maxRowsPerFrame(rowsPerFrame)
+                              .sortBy(LONG_SORT_KEY)
+                              .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(FRAME_SIZE)))
+                              .frameType(FrameType.latestRowBased())
+                              .frames(),
+          numChannels
+      );
+    }
+
+    /**
+     * Writes {@code values} in order as {@link #STRING_SIGNATURE} frames of {@code rowsPerFrame} rows each, each frame
+     * sorted within itself, in a single channel.
+     */
+    private static List<ReadableFrameChannel> makeStringChannels(final List<String> values, final int rowsPerFrame)
+        throws IOException
+    {
+      final List<Row> rows = new ArrayList<>();
+      for (final String value : values) {
+        rows.add(new MapBasedRow(0L, Map.of("s", value)));
+      }
+
+      final RowBasedCursorFactory<Row> cursorFactory =
+          new RowBasedCursorFactory<>(Sequences.simple(rows), RowAdapters.standardRow(), STRING_SIGNATURE);
+
+      return makeRoundRobinChannels(
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                              .maxRowsPerFrame(rowsPerFrame)
+                              .sortBy(STRING_SORT_KEY)
+                              .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(FRAME_SIZE)))
+                              .frameType(FrameType.latestRowBased())
+                              .frames(),
+          1
+      );
+    }
+
+    /**
+     * Returns the values {@code [0, n)} in a fixed shuffled order. Requires {@code n} coprime with 37.
+     */
+    private static List<Long> shuffledLongs(final int n)
+    {
+      final List<Long> values = new ArrayList<>(n);
+      for (int i = 0; i < n; i++) {
+        values.add((long) i * 37 % n);
+      }
+      return values;
+    }
+
+    private static List<Long> longRange(final long start, final long end)
+    {
+      return LongStream.range(start, end).boxed().toList();
     }
   }
 
@@ -477,6 +884,7 @@ public class SuperSorterTest
           sortCase.outputFrameType(),
           sortCase.maxActiveProcessors(),
           sortCase.maxChannelsPerProcessor(),
+          sortCase.maxBytesPerFrame(),
           sortCase.limitHint(),
           null,
           superSorterProgressTracker,
@@ -1083,6 +1491,37 @@ public class SuperSorterTest
     }
 
     /**
+     * Test combining with a row limit when input exceeds the buffer, so the sorter runs in in-memory top-K mode. Each
+     * key's rows arrive across several truncating merges, and every one must be combined into the output.
+     */
+    @Test
+    public void testCombineWithRowLimit_inputExceedsBuffer() throws Exception
+    {
+      final List<Object[][]> channelData = new ArrayList<>();
+      for (int i = 0; i < 10; i++) {
+        channelData.add(new Object[][]{{"a", 1L}, {"b", 1L}, {"c", 1L}});
+      }
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          2,
+          2
+      );
+
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("a", 10L),
+              ImmutableList.of("b", 10L)
+          ),
+          rows
+      );
+    }
+
+    /**
      * Test combining with rowLimit = 1 and all-same-key input: single combined row.
      */
     @Test
@@ -1241,6 +1680,7 @@ public class SuperSorterTest
           FrameType.latestRowBased(),
           maxActiveProcessors,
           maxChannelsPerMerger,
+          FRAME_SIZE,
           rowLimit,
           null,
           new SuperSorterProgressTracker(),
