@@ -456,10 +456,10 @@ class ReadableInputQueueTest
 
     canSkipRemaining.set(true);
     Assertions.assertNull(queue.nextInput(), "no inputs may be handed out once remaining inputs can be skipped");
-    Assertions.assertEquals(0, cachedSegment.closes.get(), "skipped cached segment is left for close");
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be released before close");
 
     queue.close();
-    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be closed on close");
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must not be closed twice");
   }
 
   @Test
@@ -479,17 +479,17 @@ class ReadableInputQueueTest
     canSkipRemaining.set(true);
     Assertions.assertNull(queue.nextInput());
     Assertions.assertEquals(1, cancels.get(), "skipped load must be canceled before close");
-    Assertions.assertEquals(0, cachedSegment.closes.get(), "skipped cached segment is left for close");
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be released before close");
     Assertions.assertEquals(0, queue.remaining());
 
     queue.close();
-    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be closed on close");
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must not be closed twice");
     Assertions.assertEquals(1, cancels.get(), "skipped load must not be canceled twice");
     Assertions.assertEquals(0, loading.countDeliveredCalls.get(), "canceled loads must not be counted");
   }
 
   @Test
-  void testTimeOrderSkippedLoadedSegmentReleasedOnClose()
+  void testTimeOrderSkippedLoadedSegmentReleasedBeforeClose()
   {
     final CountingSegment day2Segment = new CountingSegment();
     final TestLoadableSegment day2 = new TestLoadableSegment(
@@ -515,11 +515,11 @@ class ReadableInputQueueTest
 
     skipDay2.set(true);
     Assertions.assertNull(queue.nextInput());
-    Assertions.assertEquals(0, day2Segment.closes.get(), "skipped loaded segment is left for close");
+    Assertions.assertEquals(1, day2Segment.closes.get(), "skipped loaded segment must be released before close");
 
     closeHandedOut(day3Future);
     queue.close();
-    Assertions.assertEquals(1, day2Segment.closes.get(), "skipped loaded segment must be closed on close");
+    Assertions.assertEquals(1, day2Segment.closes.get(), "skipped loaded segment must not be closed twice");
   }
 
   @Test
@@ -559,6 +559,39 @@ class ReadableInputQueueTest
     Assertions.assertEquals(1, cancels.get(), "skipped load must not be canceled twice");
     Assertions.assertEquals(1, lateSegment.closes.get());
     Assertions.assertEquals(0, day2.countDeliveredCalls.get(), "canceled loads must not be counted");
+  }
+
+  @Test
+  void testTimeOrderSkippedFailedLoadHasNothingToRelease()
+  {
+    final AtomicInteger cancels = new AtomicInteger();
+    final AcquireSegmentAction day2Action = new AcquireSegmentAction(cancels::incrementAndGet);
+    final TestLoadableSegment day2 =
+        new TestLoadableSegment(day2Action, Optional.empty(), false, descriptorOnDay(2, 0));
+    final AtomicBoolean skipDay2 = new AtomicBoolean(false);
+
+    final ReadableInputQueue queue = makeQueue(
+        2,
+        timeOrderedPruner(Order.DESCENDING, interval -> skipDay2.get() && interval.equals(day(2))),
+        cachedSegmentOnDay(3),
+        day2
+    );
+    queue.start();
+
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> day3Future = queue.nextInput();
+    Assertions.assertEquals(day(3), Futures.getUnchecked(day3Future).input().getSegment().getDescriptor().getInterval());
+
+    // The load fails before day 2 becomes skippable, so its pending future is already failed when it is skipped.
+    day2Action.setException(DruidException.defensive("load failed"));
+
+    skipDay2.set(true);
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(0, cancels.get(), "a failed load must not be canceled");
+    Assertions.assertEquals(0, day2.countDeliveredCalls.get(), "a failed load must not be counted");
+
+    closeHandedOut(day3Future);
+    queue.close();
+    Assertions.assertEquals(0, cancels.get());
   }
 
   @Test

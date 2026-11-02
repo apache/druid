@@ -59,6 +59,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -136,8 +138,8 @@ public class ReadableInputQueue implements Closeable
 
   /**
    * Decides which inputs can be skipped. Once {@link #canSkipRemaining()} is true, {@link #nextInput()} returns null
-   * and no new segment loads start. Loads behind pending inputs that turn out to be skippable are canceled as they are
-   * reached, see {@link #cancelSkippedLoads}; inputs that were already loaded are released by {@link #close()}.
+   * and no new segment loads start. Pending inputs that turn out to be skippable are released as they are reached, see
+   * {@link #releaseSkippedInputs}.
    */
   private final InputPruner inputPruner;
 
@@ -273,7 +275,7 @@ public class ReadableInputQueue implements Closeable
         skippedFutures = new ArrayList<>(pendingNextInputs.keySet());
         pendingNextInputs.clear();
       }
-      cancelSkippedLoads(skippedFutures);
+      releaseSkippedInputs(skippedFutures);
       return null;
     }
 
@@ -380,7 +382,7 @@ public class ReadableInputQueue implements Closeable
       }
     }
 
-    cancelSkippedLoads(skippedFutures);
+    releaseSkippedInputs(skippedFutures);
     if (unskippedFuture != null) {
       return unskippedFuture;
     }
@@ -617,40 +619,78 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Cancels the loads behind pending inputs that will never be handed out, rather than leaving them for
-   * {@link #close()}. Inputs that are already loaded, or mid-delivery are not canceled here.
+   * Releases pending inputs that will never be handed out for processing. Loads still in progress are canceled, and
+   * loaded inputs are released. An input that is mid-delivery (claimed from {@link #loadingSegments} by
+   * {@link #onSegmentReady} but not yet completed) is left for {@link #close()}; This is a consious decision to
+   * avoid complexity for what is a sliver of a race.
    * <p>
-   * Called outside the queue monitor, because canceling a load can run its canceler.
+   * Called outside the queue monitor, because canceling a load can run its canceler and releasing a segment can take
+   * cache locks.
    */
-  private void cancelSkippedLoads(final List<ListenableFuture<NumberedReadableInput>> skippedFutures)
+  private void releaseSkippedInputs(final List<ListenableFuture<NumberedReadableInput>> skippedFutures)
   {
     if (skippedFutures.isEmpty()) {
       return;
     }
 
-    final Set<ListenableFuture<NumberedReadableInput>> skipped = Sets.newIdentityHashSet();
-    skipped.addAll(skippedFutures);
+    final Set<ListenableFuture<NumberedReadableInput>> pendingSkips = Sets.newIdentityHashSet();
+    pendingSkips.addAll(skippedFutures);
     final Map<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> loadsToCancel = new LinkedHashMap<>();
 
     synchronized (this) {
-      // Claiming a load's entry means onSegmentReady finds none and returns without delivering, as with close().
       final Iterator<Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>>> iterator =
           loadingSegments.entrySet().iterator();
       while (iterator.hasNext()) {
         final Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> entry = iterator.next();
-        if (skipped.contains(entry.getValue())) {
+        if (pendingSkips.remove(entry.getValue())) {
           loadsToCancel.put(entry.getKey(), entry.getValue());
           iterator.remove();
         }
       }
     }
 
+    // Cancel all pending segment loads in segments that have been skipped.
     for (final Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> entry : loadsToCancel.entrySet()) {
       CloseableUtils.closeAndSuppressExceptions(
           entry.getKey(),
           e -> log.warn(e, "Failed to close skipped loadingSegment[%s]", entry.getKey())
       );
       entry.getValue().setException(DruidException.defensive("Segment load canceled because its input was skipped"));
+    }
+
+    // Lastly, release completed loads that were skipped if their future is done.
+    for (final ListenableFuture<NumberedReadableInput> future : pendingSkips) {
+      if (future.isDone()) {
+        final NumberedReadableInput input;
+        try {
+          input = Futures.getDone(future);
+        }
+        catch (ExecutionException | CancellationException e) {
+          // A failed load has already closed its handle in onSegmentReady, so there is nothing to release.
+          continue;
+        }
+        releaseLoadedSegment(input.input().getSegment());
+      }
+    }
+  }
+
+  /**
+   * Removes {@code holder} from {@link #loadedSegments} and closes its segment, unless {@link #close()} claimed it
+   * first.
+   */
+  private void releaseLoadedSegment(final SegmentReferenceHolder holder)
+  {
+    synchronized (this) {
+      loadedSegments.remove(holder);
+    }
+    // Attempt to claim ownership of the segment reference and close it. Only closed once, either here or by close()
+    // draining loadedSegments.
+    final SegmentReference ref = holder.getSegmentReferenceOnce();
+    if (ref != null) {
+      CloseableUtils.closeAndSuppressExceptions(
+          ref,
+          e -> log.warn(e, "Failed to close skipped loadedSegment[%s]", ref.getSegmentDescriptor())
+      );
     }
   }
 
