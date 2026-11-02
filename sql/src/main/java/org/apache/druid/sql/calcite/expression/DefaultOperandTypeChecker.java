@@ -151,7 +151,7 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
         // Operand was a character string, and is now cast to a number.
       } else if (operandType.getSqlTypeName() == SqlTypeName.NULL || SqlUtil.isNullLiteral(operand, true)) {
         // Null came in, check if operand is a nullable type.
-        if (!nullableOperands.contains(i)) {
+        if (!nullableOperands.contains(i) && !expectedType.isNullable()) {
           return OperatorConversions.throwOrReturn(
               throwOnFailure,
               callBinding,

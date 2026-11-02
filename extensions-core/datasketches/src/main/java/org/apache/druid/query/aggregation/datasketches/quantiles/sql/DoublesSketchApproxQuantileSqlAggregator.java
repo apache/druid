@@ -64,7 +64,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
       OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "probability", "k")
                          .operandTypes(
-                             OperandType.numeric().orComplex(DoublesSketchModule.TYPE).coerceStrings(),
+                             OperandType.numeric().orComplex(DoublesSketchModule.TYPE).coerceStrings().nullable(),
                              OperandType.of(SqlTypeFamily.NUMERIC),
                              OperandType.of(SqlTypeFamily.EXACT_NUMERIC)
                          )

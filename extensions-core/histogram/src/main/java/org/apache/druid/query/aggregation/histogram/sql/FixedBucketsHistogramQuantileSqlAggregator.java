@@ -245,7 +245,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
                   "outlierHandlingMode"
               )
               .operandTypes(
-                  OperandType.numeric().orComplex(FixedBucketsHistogramAggregator.TYPE).coerceStrings(),
+                  OperandType.numeric().orComplex(FixedBucketsHistogramAggregator.TYPE).coerceStrings().nullable(),
                   OperandType.of(SqlTypeFamily.NUMERIC),
                   OperandType.of(SqlTypeFamily.NUMERIC),
                   OperandType.of(SqlTypeFamily.NUMERIC),

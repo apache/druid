@@ -40,8 +40,24 @@ public class OperandTypeTest
     final OperandType type = OperandType.of(SqlTypeFamily.STRING);
     Assertions.assertEquals(SqlTypeFamily.STRING, type.getFamily());
     Assertions.assertFalse(type.isCoerceStrings());
+    Assertions.assertFalse(type.isNullable());
     Assertions.assertFalse(type.isAllowedComplexType(RowSignatures.makeComplexType(TYPE_FACTORY, COMPLEX_TYPE, false)));
     Assertions.assertEquals("STRING", type.toString());
+  }
+
+  @Test
+  public void testNullable()
+  {
+    final OperandType numeric = OperandType.numeric().orComplex(COMPLEX_TYPE).coerceStrings();
+    final OperandType type = numeric.nullable();
+
+    Assertions.assertTrue(type.isNullable());
+    Assertions.assertFalse(numeric.isNullable());
+    Assertions.assertTrue(type.isCoerceStrings());
+    Assertions.assertTrue(type.isAllowedComplexType(RowSignatures.makeComplexType(TYPE_FACTORY, COMPLEX_TYPE, false)));
+
+    // nullable() is kept by the other methods.
+    Assertions.assertTrue(OperandType.numeric().nullable().orComplex(COMPLEX_TYPE).coerceStrings().isNullable());
   }
 
   @Test

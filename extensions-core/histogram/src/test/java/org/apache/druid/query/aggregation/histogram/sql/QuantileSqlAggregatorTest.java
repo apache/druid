@@ -508,6 +508,48 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testQuantileOnNull()
+  {
+    // NULL inputs are accepted, the same as before the first operand was type checked
+    testQuery(
+        "SELECT APPROX_QUANTILE(NULL, 0.5), APPROX_QUANTILE(CAST(NULL AS DOUBLE), 0.5) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "null",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      ),
+                      new ExpressionVirtualColumn(
+                          "v1",
+                          "null",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new ApproximateHistogramAggregatorFactory("a0:agg", "v0", null, null, null, null, false),
+                      new ApproximateHistogramAggregatorFactory("a1:agg", "v1", null, null, null, null, false)
+                  ))
+                  .postAggregators(
+                      new QuantilePostAggregator("a0", "a0:agg", 0.5f),
+                      new QuantilePostAggregator("a1", "a1:agg", 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{Double.NaN, Double.NaN}
+        )
+    );
+  }
+
+  @Test
   public void testQuantileWithNonNumericInputTypes()
   {
     // verify invalid queries return 400 (user error)
@@ -522,10 +564,6 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT APPROX_QUANTILE(PARSE_JSON('1'), 0.99) FROM foo",
         invalidSqlContains("Cannot apply 'APPROX_QUANTILE'")
-    );
-    testQueryThrows(
-        "SELECT APPROX_QUANTILE(NULL, 0.99) FROM foo",
-        invalidSqlContains("Illegal use of 'NULL'")
     );
   }
 

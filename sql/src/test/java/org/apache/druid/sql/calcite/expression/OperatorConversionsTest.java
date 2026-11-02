@@ -395,6 +395,42 @@ public class OperatorConversionsTest
     }
 
     @Test
+    public void testNullLiteralForNullableRequiredOperand()
+    {
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testNullLiteralForNullableRequiredOperand")
+          .operandTypes(OperandType.of(SqlTypeFamily.CHARACTER).nullable(), OperandType.of(SqlTypeFamily.CHARACTER))
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      Assertions.assertTrue(
+          typeChecker.checkOperandTypes(
+              mockCallBinding(
+                  function,
+                  ImmutableList.of(
+                      new OperandSpec(SqlTypeName.NULL, true),
+                      new OperandSpec(SqlTypeName.CHAR, false)
+                  )
+              ),
+              true
+          )
+      );
+      assertThrowsWithMessage(
+          () -> typeChecker.checkOperandTypes(
+              mockCallBinding(
+                  function,
+                  ImmutableList.of(
+                      new OperandSpec(SqlTypeName.CHAR, false),
+                      new OperandSpec(SqlTypeName.NULL, true)
+                  )
+              ),
+              true
+          ),
+          "Exception in test for operator[testNullLiteralForNullableRequiredOperand]: Illegal use of 'NULL'"
+      );
+    }
+
+    @Test
     public void testNonCastableType()
     {
       SqlFunction function = OperatorConversions

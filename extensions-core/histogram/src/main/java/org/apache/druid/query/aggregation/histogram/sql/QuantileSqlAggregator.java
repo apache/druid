@@ -213,7 +213,10 @@ public class QuantileSqlAggregator implements SqlAggregator
               .builder()
               .operandNames("column", "probability", "resolution")
               .operandTypes(
-                  OperandType.numeric().orComplex(ApproximateHistogramAggregatorFactory.TYPE).coerceStrings(),
+                  OperandType.numeric()
+                             .orComplex(ApproximateHistogramAggregatorFactory.TYPE)
+                             .coerceStrings()
+                             .nullable(),
                   OperandType.of(SqlTypeFamily.NUMERIC),
                   OperandType.of(SqlTypeFamily.EXACT_NUMERIC)
               )

@@ -605,6 +605,13 @@ public class OperatorConversions
       final IntSet nullableOperands = requiredOperandCount == null
           ? new IntArraySet()
           : DefaultOperandTypeChecker.buildNullableOperands(requiredOperandCount, operandTypes.size(), new IntArraySet());
+      if (operandTypes != null) {
+        for (int i = 0; i < operandTypes.size(); i++) {
+          if (operandTypes.get(i).isNullable()) {
+            nullableOperands.add(i);
+          }
+        }
+      }
       if (operandTypeInference == null) {
         SqlOperandTypeInference defaultInference = new DefaultOperandTypeInference(operandTypes, nullableOperands);
         return (callBinding, returnType, types) -> {

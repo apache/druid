@@ -655,6 +655,88 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testQuantileOnNull()
+  {
+    // NULL inputs are accepted, the same as before the first operand was type checked
+    cannotVectorize();
+    testQuery(
+        "SELECT TDIGEST_QUANTILE(NULL, 0.5), TDIGEST_QUANTILE(CAST(NULL AS DOUBLE), 0.5) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "null",
+                          ColumnType.FLOAT,
+                          ExprMacroTable.nil()
+                      ),
+                      new ExpressionVirtualColumn(
+                          "v1",
+                          "null",
+                          ColumnType.FLOAT,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new TDigestSketchAggregatorFactory("a0:agg", "v0", null, TDigestConfig.builder().build()),
+                      new TDigestSketchAggregatorFactory("a1:agg", "v1", null, TDigestConfig.builder().build())
+                  ))
+                  .postAggregators(
+                      new TDigestSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5f),
+                      new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{Double.NaN, Double.NaN}
+        )
+    );
+  }
+
+  @Test
+  public void testGenerateSketchOnNull()
+  {
+    // NULL inputs are accepted, the same as before the first operand was type checked
+    cannotVectorize();
+    testQuery(
+        "SELECT TDIGEST_GENERATE_SKETCH(NULL), TDIGEST_GENERATE_SKETCH(CAST(NULL AS DOUBLE)) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "null",
+                          ColumnType.FLOAT,
+                          ExprMacroTable.nil()
+                      ),
+                      new ExpressionVirtualColumn(
+                          "v1",
+                          "null",
+                          ColumnType.FLOAT,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new TDigestSketchAggregatorFactory("a0", "v0", null, TDigestConfig.builder().build()),
+                      new TDigestSketchAggregatorFactory("a1", "v1", null, TDigestConfig.builder().build())
+                  ))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"\"AAAAAX/wAAAAAAAA//AAAAAAAABAWQAAAAAAAAAAAAA=\"", "\"AAAAAX/wAAAAAAAA//AAAAAAAABAWQAAAAAAAAAAAAA=\""}
+        )
+    );
+  }
+
+  @Test
   public void testQuantileWithNonNumericInputTypes()
   {
     // verify invalid queries return 400 (user error)
@@ -669,10 +751,6 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT TDIGEST_QUANTILE(PARSE_JSON('1'), 0.5) FROM foo",
         invalidSqlContains("Cannot apply 'TDIGEST_QUANTILE'")
-    );
-    testQueryThrows(
-        "SELECT TDIGEST_QUANTILE(NULL, 0.5) FROM foo",
-        invalidSqlContains("Illegal use of 'NULL'")
     );
   }
 

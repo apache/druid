@@ -53,7 +53,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
       OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "k")
                          .operandTypes(
-                             OperandType.numeric().orComplex(DoublesSketchModule.TYPE).coerceStrings(),
+                             OperandType.numeric().orComplex(DoublesSketchModule.TYPE).coerceStrings().nullable(),
                              OperandType.of(SqlTypeFamily.EXACT_NUMERIC)
                          )
                          .returnTypeInference(

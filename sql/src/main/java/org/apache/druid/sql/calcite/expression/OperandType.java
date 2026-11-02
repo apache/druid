@@ -29,29 +29,32 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 /**
  * Type of one operand of a {@link DefaultOperandTypeChecker}: a {@link SqlTypeFamily}, optionally with complex types
- * that are accepted too, and for {@link SqlTypeFamily#NUMERIC} operands, whether character strings are accepted by
- * casting them to numbers. Instances are immutable.
+ * that are accepted too, whether NULL literals are accepted, and for {@link SqlTypeFamily#NUMERIC} operands, whether
+ * character strings are accepted by casting them to numbers. Instances are immutable.
  */
 public final class OperandType
 {
   private final SqlTypeFamily family;
   private final ImmutableSet<ColumnType> complexTypes;
   private final boolean coerceStrings;
+  private final boolean nullable;
 
   private OperandType(
       final SqlTypeFamily family,
       final ImmutableSet<ColumnType> complexTypes,
-      final boolean coerceStrings
+      final boolean coerceStrings,
+      final boolean nullable
   )
   {
     this.family = Preconditions.checkNotNull(family, "family");
     this.complexTypes = complexTypes;
     this.coerceStrings = coerceStrings;
+    this.nullable = nullable;
   }
 
   public static OperandType of(final SqlTypeFamily family)
   {
-    return new OperandType(family, ImmutableSet.of(), false);
+    return new OperandType(family, ImmutableSet.of(), false, false);
   }
 
   public static OperandType numeric()
@@ -72,7 +75,8 @@ public final class OperandType
     return new OperandType(
         family,
         ImmutableSet.<ColumnType>builder().addAll(complexTypes).add(types).build(),
-        coerceStrings
+        coerceStrings,
+        nullable
     );
   }
 
@@ -91,7 +95,16 @@ public final class OperandType
           family
       );
     }
-    return new OperandType(family, complexTypes, true);
+    return new OperandType(family, complexTypes, true, nullable);
+  }
+
+  /**
+   * Returns an operand type that also accepts NULL literals, even if the operand is required. Optional operands
+   * accept NULL literals already.
+   */
+  public OperandType nullable()
+  {
+    return new OperandType(family, complexTypes, coerceStrings, true);
   }
 
   public SqlTypeFamily getFamily()
@@ -102,6 +115,11 @@ public final class OperandType
   public boolean isCoerceStrings()
   {
     return coerceStrings;
+  }
+
+  public boolean isNullable()
+  {
+    return nullable;
   }
 
   /**

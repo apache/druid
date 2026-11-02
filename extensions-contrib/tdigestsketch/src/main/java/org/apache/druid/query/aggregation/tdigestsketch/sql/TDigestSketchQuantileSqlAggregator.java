@@ -183,7 +183,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
               .builder()
               .operandNames("column", "quantile", "compression")
               .operandTypes(
-                  OperandType.numeric().orComplex(TDigestSketchAggregatorFactory.TYPE).coerceStrings(),
+                  OperandType.numeric().orComplex(TDigestSketchAggregatorFactory.TYPE).coerceStrings().nullable(),
                   OperandType.of(SqlTypeFamily.NUMERIC),
                   OperandType.of(SqlTypeFamily.NUMERIC)
               )

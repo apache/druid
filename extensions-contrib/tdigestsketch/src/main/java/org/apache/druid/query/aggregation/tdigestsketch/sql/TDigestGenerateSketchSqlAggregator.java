@@ -156,7 +156,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
               .builder()
               .operandNames("column", "compression")
               .operandTypes(
-                  OperandType.numeric().orComplex(TDigestSketchAggregatorFactory.TYPE).coerceStrings(),
+                  OperandType.numeric().orComplex(TDigestSketchAggregatorFactory.TYPE).coerceStrings().nullable(),
                   OperandType.of(SqlTypeFamily.NUMERIC)
               )
               .requiredOperandCount(1)

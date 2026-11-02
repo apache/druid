@@ -819,6 +819,64 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
   }
 
   @Test
+  public void testQuantileOnNull()
+  {
+    // NULL inputs are accepted, the same as before the first operand was type checked
+    testQuery(
+        "SELECT APPROX_QUANTILE_FIXED_BUCKETS(NULL, 0.5, 20, 0.0, 10.0), APPROX_QUANTILE_FIXED_BUCKETS(CAST(NULL AS DOUBLE), 0.5, 20, 0.0, 10.0) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "null",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      ),
+                      new ExpressionVirtualColumn(
+                          "v1",
+                          "null",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new FixedBucketsHistogramAggregatorFactory(
+                          "a0:agg",
+                          "v0",
+                          20,
+                          0.0d,
+                          10.0d,
+                          FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                          false
+                      ),
+                      new FixedBucketsHistogramAggregatorFactory(
+                          "a1:agg",
+                          "v1",
+                          20,
+                          0.0d,
+                          10.0d,
+                          FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                          false
+                      )
+                  ))
+                  .postAggregators(
+                      new QuantilePostAggregator("a0", "a0:agg", 0.5f),
+                      new QuantilePostAggregator("a1", "a1:agg", 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0.0, 0.0}
+        )
+    );
+  }
+
+  @Test
   public void testQuantileWithNonNumericInputTypes()
   {
     // verify invalid queries return 400 (user error)
@@ -834,10 +892,6 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
     testQueryThrows(
         "SELECT APPROX_QUANTILE_FIXED_BUCKETS(PARSE_JSON('1'), 0.99, 20, 0.0, 10.0) FROM foo",
         invalidSqlContains(expectedMessage)
-    );
-    testQueryThrows(
-        "SELECT APPROX_QUANTILE_FIXED_BUCKETS(NULL, 0.99, 20, 0.0, 10.0) FROM foo",
-        invalidSqlContains("Illegal use of 'NULL'")
     );
   }
 }
