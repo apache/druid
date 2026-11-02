@@ -92,6 +92,7 @@ import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
@@ -243,17 +244,10 @@ public class DruidCoordinatorTest
     DruidDataSource[] dataSources = {
         new DruidDataSource(dataSource, Collections.emptyMap())
     };
-    final DataSegment dataSegment = new DataSegment(
-        dataSource,
-        Intervals.of("2010-01-01/P1D"),
-        "v1",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        0
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2010-01-01/P1D"), "v1", 0))
+                                               .binaryVersion(0x9)
+                                               .size(0)
+                                               .build();
     dataSources[0].addSegment(dataSegment);
 
     setupSegmentsMetadataMock(dataSources[0]);
@@ -345,9 +339,18 @@ public class DruidCoordinatorTest
     final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, null, ServerType.HISTORICAL, coldTierName, 0);
 
     final Set<DataSegment> dataSegments = Set.of(
-        new DataSegment(dataSource, Intervals.of("2018-01-02/P1D"), "v1", null, null, null, null, 0x9, 0),
-        new DataSegment(dataSource, Intervals.of("2018-01-03/P1D"), "v1", null, null, null, null, 0x9, 0),
-        new DataSegment(dataSource, Intervals.of("2017-01-01/P1D"), "v1", null, null, null, null, 0x9, 0)
+        DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2018-01-02/P1D"), "v1", 0))
+                   .binaryVersion(0x9)
+                   .size(0)
+                   .build(),
+        DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2018-01-03/P1D"), "v1", 0))
+                   .binaryVersion(0x9)
+                   .size(0)
+                   .build(),
+        DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2017-01-01/P1D"), "v1", 0))
+                   .binaryVersion(0x9)
+                   .size(0)
+                   .build()
     );
 
     final LoadQueuePeon loadQueuePeonHot = createImmediateLoadPeonFor(hotServer);
@@ -415,9 +418,18 @@ public class DruidCoordinatorTest
     final DruidServer peonServer = new DruidServer("peon", "peon", null, 5L, null, ServerType.INDEXER_EXECUTOR, tierName2, 0);
 
     final Set<DataSegment> dataSegments = Set.of(
-        new DataSegment(dataSource, Intervals.of("2018-01-02/P1D"), "v1", null, null, null, null, 0x9, 0),
-        new DataSegment(dataSource, Intervals.of("2018-01-03/P1D"), "v1", null, null, null, null, 0x9, 0),
-        new DataSegment(dataSource, Intervals.of("2017-01-01/P1D"), "v1", null, null, null, null, 0x9, 0)
+        DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2018-01-02/P1D"), "v1", 0))
+                   .binaryVersion(0x9)
+                   .size(0)
+                   .build(),
+        DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2018-01-03/P1D"), "v1", 0))
+                   .binaryVersion(0x9)
+                   .size(0)
+                   .build(),
+        DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2017-01-01/P1D"), "v1", 0))
+                   .binaryVersion(0x9)
+                   .size(0)
+                   .build()
     );
 
     final LoadQueuePeon loadQueuePeonHot = createImmediateLoadPeonFor(hotServer);
@@ -664,17 +676,10 @@ public class DruidCoordinatorTest
         )
     ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
-    DataSegment dataSegment = new DataSegment(
-        "dataSource1",
-        Intervals.of("2010-01-01/P1D"),
-        "v1",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        0
-    );
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource1", Intervals.of("2010-01-01/P1D"), "v1", 0))
+                                         .binaryVersion(0x9)
+                                         .size(0)
+                                         .build();
     DataSourcesSnapshot dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Collections.singleton(dataSegment)
     );
@@ -765,28 +770,14 @@ public class DruidCoordinatorTest
     DruidDataSource[] dataSources = {
         new DruidDataSource(dataSource, Collections.emptyMap())
     };
-    final DataSegment dataSegment = new DataSegment(
-        dataSource,
-        Intervals.of("2010-01-01/P1D"),
-        "v1",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        0
-    );
-    final DataSegment dataSegmentHot = new DataSegment(
-        dataSource,
-        Intervals.of("2010-02-01/P1D"),
-        "v1",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        0
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2010-01-01/P1D"), "v1", 0))
+                                               .binaryVersion(0x9)
+                                               .size(0)
+                                               .build();
+    final DataSegment dataSegmentHot = DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2010-02-01/P1D"), "v1", 0))
+                                                  .binaryVersion(0x9)
+                                                  .size(0)
+                                                  .build();
     dataSources[0].addSegment(dataSegment).addSegment(dataSegmentHot);
 
     setupSegmentsMetadataMock(dataSources[0]);
@@ -948,7 +939,10 @@ public class DruidCoordinatorTest
     EasyMock.replay(metadataRuleManager);
 
     final DruidDataSource dataSource = new DruidDataSource("ds", Collections.emptyMap());
-    dataSource.addSegment(new DataSegment("ds", Intervals.of("2010-01-01/P1D"), "v1", null, null, null, null, 0x9, 0));
+    dataSource.addSegment(DataSegment.builder(SegmentId.of("ds", Intervals.of("2010-01-01/P1D"), "v1", 0))
+                                     .binaryVersion(0x9)
+                                     .size(0)
+                                     .build());
     setupSegmentsMetadataMock(dataSource);
 
     // A cluster of healthy historicals plus a single unhealthy one that 503s on the
@@ -1127,11 +1121,25 @@ public class DruidCoordinatorTest
       listener.becomeLeader();
     }
 
+    /**
+     * Calls {@link Listener#stopBeingLeader()} from another thread and waits for it, as K8sDruidLeaderSelector
+     * does, so callers that hold a lock needed by stopBeingLeader() fail here instead of deadlocking.
+     */
     @Override
     public void unregisterListener()
     {
       leader = null;
-      listener.stopBeingLeader();
+
+      final Thread thread = new Thread(listener::stopBeingLeader);
+      thread.start();
+      try {
+        thread.join(10_000);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+      Assertions.assertFalse(thread.isAlive(), "stopBeingLeader() did not finish");
     }
   }
 

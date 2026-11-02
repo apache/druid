@@ -135,3 +135,6 @@ appear in no report while the rest of their entry ships at the entry's version, 
 distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
 distribution/bin/refresh-license-versions.py licenses.yaml target/license-reports
 ```
+
+If you leave a version as it is, PR CI only prints a warning, provided the version it replaced is registered with the
+same license. Release builds still fail on these. A dependency that is new, or whose license changed, fails PR CI too.

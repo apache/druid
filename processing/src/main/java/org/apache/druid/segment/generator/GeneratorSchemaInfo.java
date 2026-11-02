@@ -19,10 +19,12 @@
 
 package org.apache.druid.segment.generator;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
 
@@ -102,11 +104,10 @@ public class GeneratorSchemaInfo
 
   public DataSegment makeSegmentDescriptor(final String dataSource)
   {
-    return DataSegment.builder()
-                      .dataSource(dataSource)
-                      .interval(getDataInterval())
-                      .version("1")
+    return DataSegment.builder(SegmentId.of(dataSource, getDataInterval(), "1", 0))
+                      .loadSpec(ImmutableMap.of())
                       .shardSpec(new LinearShardSpec(0))
+                      .binaryVersion(null)
                       .size(0)
                       .build();
   }

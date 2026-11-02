@@ -45,6 +45,7 @@ import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.OverlordMode;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
@@ -76,7 +77,6 @@ import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -123,7 +123,7 @@ public class OverlordCompactionSchedulerTest
   private static final DateTime JAN_20 = DateTimes.of("2025-01-20");
 
   private AtomicReference<ClusterCompactionConfig> compactionConfig;
-  private CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
+  private OverlordMode overlordMode;
 
   private TaskMaster taskMaster;
   private TaskQueue taskQueue;
@@ -178,7 +178,7 @@ public class OverlordCompactionSchedulerTest
     segmentsMetadataManager = segmentStorage.getManager();
 
     compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(1.0, 100, null, true, null, null));
-    coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
+    overlordMode = OverlordMode.STANDALONE;
 
     taskActionClientFactory = task -> new TaskActionClient()
     {
@@ -224,7 +224,7 @@ public class OverlordCompactionSchedulerTest
         new SegmentsMetadataManagerConfig(null, null, null),
         () -> DruidCompactionConfig.empty().withClusterConfig(compactionConfig.get()),
         new CompactionStatusTracker(),
-        coordinatorOverlordServiceConfig,
+        overlordMode,
         taskActionClientFactory,
         new DruidInputSourceFactory(
             TestIndex.INDEX_IO,
@@ -333,7 +333,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void test_enableSupervisors_inStandaloneMode_enablesSegmentPolling()
   {
-    coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
+    overlordMode = OverlordMode.STANDALONE;
     initScheduler();
 
     verifySegmentPolling(true);
@@ -342,7 +342,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void test_enableSupervisors_inCoordinatorMode_disablesSegmentPolling()
   {
-    coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(true, "overlord");
+    overlordMode = OverlordMode.EMBEDDED_IN_COORDINATOR;
     initScheduler();
 
     verifySegmentPolling(false);

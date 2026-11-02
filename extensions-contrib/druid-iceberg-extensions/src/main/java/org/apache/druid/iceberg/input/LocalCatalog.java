@@ -60,8 +60,6 @@ public class LocalCatalog extends IcebergCatalog
     this.warehousePath = warehousePath;
     this.catalogProperties = catalogProperties;
     this.caseSensitive = caseSensitive == null ? true : caseSensitive;
-    this.catalog = retrieveCatalog();
-
   }
 
   @JsonProperty

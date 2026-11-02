@@ -53,6 +53,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
@@ -603,11 +604,8 @@ public class MSQFaultsTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     // Create a datasegment which lies partially outside the generated segment
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.of("2001-01-01T/2003-01-04T"))
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.of("2001-01-01T/2003-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -647,11 +645,8 @@ public class MSQFaultsTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     // Create a datasegment which lies partially outside the generated segment
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.of("2000-01-01T/2003-01-04T"))
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.of("2000-01-01T/2003-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))

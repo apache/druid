@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.apache.druid.annotations.SuppressFBWarnings;
@@ -4254,7 +4253,7 @@ public interface Function extends NamedFunction
             }
           };
         }
-        final Set<Object> set = new ObjectAVLTreeSet<>(lhsArrayType.getElementType().getNullableStrategy());
+        final Set<Object> set = new TreeSet<>(lhsArrayType.getElementType().getNullableStrategy());
         set.addAll(Arrays.asList(rhsArray));
         return new OverlapConstantArray(set);
       }

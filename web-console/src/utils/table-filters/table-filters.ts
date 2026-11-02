@@ -40,7 +40,7 @@ export class TableFilters {
 
   static eq(keyValue: Record<string, string>): TableFilters {
     const filters = Object.entries(keyValue).map(
-      ([key, value]) => new TableFilter(key, '=', value),
+      ([key, value]) => new TableFilter(key, '=', [value]),
     );
     return new TableFilters(filters);
   }
@@ -62,12 +62,11 @@ export class TableFilters {
   }
 
   toString(): string {
+    // Encodes what would end the filter (&), the hash route's param (/) or the hash route (# and ?)
     return this.filters
       .map(
         filter =>
-          `${filter.key}${filter.mode}${filter.values
-            .join('|')
-            .replace(/[&%/]/g, encodeURIComponent)}`,
+          `${filter.key}${filter.mode}${filter.value.replace(/[#%&/?]/g, encodeURIComponent)}`,
       )
       .join('&');
   }

@@ -60,6 +60,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -1832,17 +1833,14 @@ public class NewestSegmentFirstPolicyTest
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            Intervals.ETERNITY,
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.ETERNITY, "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
@@ -1856,17 +1854,14 @@ public class NewestSegmentFirstPolicyTest
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")),
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")), "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
@@ -1880,17 +1875,14 @@ public class NewestSegmentFirstPolicyTest
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX),
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX), "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
@@ -1906,17 +1898,14 @@ public class NewestSegmentFirstPolicyTest
             new UserCompactionTaskGranularityConfig(Granularities.ALL, null, null)
         ).build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            Intervals.ETERNITY,
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.ETERNITY, "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
@@ -1932,17 +1921,14 @@ public class NewestSegmentFirstPolicyTest
             new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
         ).build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            Intervals.ETERNITY,
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.ETERNITY, "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
@@ -1953,39 +1939,30 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testSkipCompactionForIntervalsContainingSingleTombstone()
   {
-    final DataSegment tombstone2023 = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2023/2024"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
-    final DataSegment dataSegment2023 = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2023/2024"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        new NumberedShardSpec(1, 0),
-        0,
-        100
-    );
-    final DataSegment tombstone2024 = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2024/2025"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
+    final DataSegment tombstone2023 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2023/2024"), "0", 0))
+                                                 .loadSpec(new HashMap<>())
+                                                 .dimensions(new ArrayList<>())
+                                                 .metrics(new ArrayList<>())
+                                                 .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                 .binaryVersion(0)
+                                                 .size(1)
+                                                 .build();
+    final DataSegment dataSegment2023 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2023/2024"), "0", 1))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(1, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build();
+    final DataSegment tombstone2024 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2024/2025"), "0", 0))
+                                                 .loadSpec(new HashMap<>())
+                                                 .dimensions(new ArrayList<>())
+                                                 .metrics(new ArrayList<>())
+                                                 .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                 .binaryVersion(0)
+                                                 .size(1)
+                                                 .build();
 
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().withGranularitySpec(
@@ -2001,39 +1978,30 @@ public class NewestSegmentFirstPolicyTest
         iterator.next().getSegments()
     );
 
-    final DataSegment tombstone2025Jan = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2025-01-01/2025-02-01"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
-    final DataSegment tombstone2025Feb = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2025-02-01/2025-03-01"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
-    final DataSegment tombstone2025Mar = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2025-03-01/2025-04-01"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
+    final DataSegment tombstone2025Jan = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2025-01-01/2025-02-01"), "0", 0))
+                                                    .loadSpec(new HashMap<>())
+                                                    .dimensions(new ArrayList<>())
+                                                    .metrics(new ArrayList<>())
+                                                    .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                    .binaryVersion(0)
+                                                    .size(1)
+                                                    .build();
+    final DataSegment tombstone2025Feb = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2025-02-01/2025-03-01"), "0", 0))
+                                                    .loadSpec(new HashMap<>())
+                                                    .dimensions(new ArrayList<>())
+                                                    .metrics(new ArrayList<>())
+                                                    .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                    .binaryVersion(0)
+                                                    .size(1)
+                                                    .build();
+    final DataSegment tombstone2025Mar = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2025-03-01/2025-04-01"), "0", 0))
+                                                    .loadSpec(new HashMap<>())
+                                                    .dimensions(new ArrayList<>())
+                                                    .metrics(new ArrayList<>())
+                                                    .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                    .binaryVersion(0)
+                                                    .size(1)
+                                                    .build();
     iterator = createIterator(
         configBuilder().withGranularitySpec(
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)

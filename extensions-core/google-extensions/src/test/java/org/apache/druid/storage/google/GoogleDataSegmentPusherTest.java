@@ -76,17 +76,14 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
     Files.write(data, tmp);
     final long size = data.length;
 
-    DataSegment segmentToPush = new DataSegment(
-        "foo",
-        Intervals.of("2015/2016"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        size
-    );
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
 
     GoogleDataSegmentPusher pusher = createMockBuilder(GoogleDataSegmentPusher.class)
         .withConstructor(storage, googleAccountConfig, INPUT_DATA_CONFIG, ZIP_CONFIG)

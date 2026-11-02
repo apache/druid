@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -76,6 +78,11 @@ public class K8sDruidLeaderSelectorTest
                 catch (InterruptedException ex) {
                   stopLeadingHook.run();
                 }
+              }
+
+              @Override
+              public void close()
+              {
               }
             };
           }
@@ -150,6 +157,11 @@ public class K8sDruidLeaderSelectorTest
                   }
                 }
               }
+
+              @Override
+              public void close()
+              {
+              }
             };
           }
         }
@@ -180,5 +192,75 @@ public class K8sDruidLeaderSelectorTest
     becomeLeaderLatch.await();
     leaderSelector.unregisterListener();
     stopBeingLeaderLatch.await();
+  }
+
+  @Test
+  @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
+  public void testLeaderElection_unregisterReleasesLockAfterStoppingLeadership() throws Exception
+  {
+    final List<String> events = new CopyOnWriteArrayList<>();
+
+    K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(
+        testNode1.getDruidNode(),
+        lockResourceName,
+        discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(),
+        discoveryConfig,
+        new K8sLeaderElectorFactory()
+        {
+          @Override
+          public K8sLeaderElector create(String candidateId, String namespace, String lockResourceName)
+          {
+            return new K8sLeaderElector()
+            {
+              @Override
+              public String getCurrentLeader()
+              {
+                return testNode1.getDruidNode().getHostAndPortToUse();
+              }
+
+              @Override
+              public void run(Runnable startLeadingHook, Runnable stopLeadingHook)
+              {
+                startLeadingHook.run();
+                try {
+                  Thread.sleep(Long.MAX_VALUE);
+                }
+                catch (InterruptedException ex) {
+                  stopLeadingHook.run();
+                }
+              }
+
+              @Override
+              public void close()
+              {
+                events.add("close");
+              }
+            };
+          }
+        }
+    );
+
+    CountDownLatch becomeLeaderLatch = new CountDownLatch(1);
+
+    leaderSelector.registerListener(
+        new DruidLeaderSelector.Listener()
+        {
+          @Override
+          public void becomeLeader()
+          {
+            becomeLeaderLatch.countDown();
+          }
+
+          @Override
+          public void stopBeingLeader()
+          {
+            events.add("stopBeingLeader");
+          }
+        }
+    );
+
+    becomeLeaderLatch.await();
+    leaderSelector.unregisterListener();
+    Assertions.assertEquals(List.of("stopBeingLeader", "close"), events);
   }
 }

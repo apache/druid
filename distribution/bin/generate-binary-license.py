@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import yaml
+import licenses_yaml
 import os
 import re
 import sys
@@ -156,7 +156,7 @@ def print_license_name_underbar(license_name):
 
 def load_licenses(license_yaml, exclude_module_prefixes):
     with open(license_yaml, encoding='utf-8') as registry_file:
-        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.Loader))
+        licenses_list = licenses_yaml.load_all(registry_file)
 
     # Filter out entries whose module matches any of the excluded prefixes. Used by the release build
     # to skip contrib extension entries (module: extensions-contrib/*) since contrib extensions are not

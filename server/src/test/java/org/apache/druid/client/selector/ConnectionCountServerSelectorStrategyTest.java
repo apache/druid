@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
@@ -95,17 +96,14 @@ public class ConnectionCountServerSelectorStrategyTest
   {
     TierSelectorStrategy strategy = new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy());
     ServerSelector selector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2025-01-01/2025-01-02"),
-            DateTimes.of("2025-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            new NumberedShardSpec(0, 0),
-            0,
-            0L
-        ), strategy,
+        DataSegment.builder(SegmentId.of("test", Intervals.of("2025-01-01/2025-01-02"), DateTimes.of("2025-01-01").toString(), 0))
+                   .loadSpec(new HashMap<>())
+                   .dimensions(new ArrayList<>())
+                   .metrics(new ArrayList<>())
+                   .shardSpec(new NumberedShardSpec(0, 0))
+                   .binaryVersion(0)
+                   .size(0L)
+                   .build(), strategy,
         HistoricalFilter.IDENTITY_FILTER
     );
     List<QueryableDruidServer> serverList = new ArrayList<>(Arrays.asList(servers));

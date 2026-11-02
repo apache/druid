@@ -153,8 +153,8 @@ export function suggestibleFilterInput(suggestions: string[]) {
                       TableFilter.combineModeAndNeedle(
                         '=',
                         valuesFilteredOn
-                          ? toggle(valuesFilteredOn, suggestion).join('|')
-                          : suggestion,
+                          ? TableFilter.joinNeedle(toggle(valuesFilteredOn, suggestion))
+                          : TableFilter.joinNeedle([suggestion]),
                         true,
                       ),
                     )
