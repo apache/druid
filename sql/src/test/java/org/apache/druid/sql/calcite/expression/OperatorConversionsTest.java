@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.Resources.ExInst;
@@ -391,6 +392,28 @@ public class OperatorConversionsTest
               true
           ),
           "Exception in test for operator[testNullLiteralForNonNullableOperand]: Illegal use of 'NULL'"
+      );
+    }
+
+    @Test
+    public void testBuildNullableOperands()
+    {
+      final List<OperandType> operandTypes = ImmutableList.of(
+          OperandType.of(SqlTypeFamily.CHARACTER),
+          OperandType.of(SqlTypeFamily.CHARACTER).nullable(),
+          OperandType.of(SqlTypeFamily.CHARACTER),
+          OperandType.of(SqlTypeFamily.CHARACTER)
+      );
+      Assertions.assertEquals(
+          new IntArraySet(new int[]{1, 3}),
+          DefaultOperandTypeChecker.buildNullableOperands(3, operandTypes, new IntArraySet())
+      );
+      Assertions.assertEquals(
+          new IntArraySet(new int[]{1, 2, 3}),
+          DefaultOperandTypeChecker.buildNullableOperands(2, operandTypes, new IntArraySet())
+      );
+      Assertions.assertTrue(
+          DefaultOperandTypeChecker.buildNullableOperands(3, operandTypes, new IntArraySet(new int[]{1, 3})).isEmpty()
       );
     }
 

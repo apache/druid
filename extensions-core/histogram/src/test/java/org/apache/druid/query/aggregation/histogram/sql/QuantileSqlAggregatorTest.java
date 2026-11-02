@@ -508,6 +508,66 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testQuantileOnNumericStringLiteral()
+  {
+    // string literals that can be parsed as numbers are accepted
+    testQuery(
+        "SELECT APPROX_QUANTILE('1.5', 0.5) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "1.5",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new ApproximateHistogramAggregatorFactory("a0:agg", "v0", null, null, null, null, false)
+                  ))
+                  .postAggregators(
+                      new QuantilePostAggregator("a0", "a0:agg", 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.5}
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileOnTimeColumn()
+  {
+    // timestamps are used as numbers of milliseconds
+    testQuery(
+        "SELECT APPROX_QUANTILE(__time, 0.5) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(ImmutableList.of(
+                      new ApproximateHistogramAggregatorFactory("a0:agg", "__time", null, null, null, null, false)
+                  ))
+                  .postAggregators(
+                      new QuantilePostAggregator("a0", "a0:agg", 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946857574400.0}
+        )
+    );
+  }
+
+  @Test
   public void testQuantileOnNull()
   {
     // NULL inputs are accepted, the same as before the first operand was type checked

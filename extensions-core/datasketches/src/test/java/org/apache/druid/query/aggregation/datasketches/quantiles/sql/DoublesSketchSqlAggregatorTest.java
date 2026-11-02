@@ -1199,7 +1199,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxQuantileWithNonNumericInputTypes()
+  public void testQuantileAndSketchWithNonNumericInputTypes()
   {
     // verify invalid queries return 400 (user error)
     testQueryThrows(
@@ -1213,6 +1213,18 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT APPROX_QUANTILE_DS(PARSE_JSON('1'), 0.99) FROM foo",
         invalidSqlContains("Cannot apply 'APPROX_QUANTILE_DS'")
+    );
+    testQueryThrows(
+        "SELECT DS_QUANTILES_SKETCH(m1 > 1) FROM foo",
+        invalidSqlContains("Cannot apply 'DS_QUANTILES_SKETCH'")
+    );
+    testQueryThrows(
+        "SELECT DS_QUANTILES_SKETCH(ARRAY[1.0, 2.0]) FROM foo",
+        invalidSqlContains("Cannot apply 'DS_QUANTILES_SKETCH'")
+    );
+    testQueryThrows(
+        "SELECT DS_QUANTILES_SKETCH(PARSE_JSON('1')) FROM foo",
+        invalidSqlContains("Cannot apply 'DS_QUANTILES_SKETCH'")
     );
   }
 
@@ -1256,14 +1268,15 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     // timestamps are used as numbers of milliseconds
     testQuery(
-        "SELECT APPROX_QUANTILE_DS(__time, 0.5) FROM foo",
+        "SELECT APPROX_QUANTILE_DS(__time, 0.5), DS_QUANTILES_SKETCH(__time) FROM foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new DoublesSketchAggregatorFactory("a0:agg", "__time", 128)
+                      new DoublesSketchAggregatorFactory("a0:agg", "__time", 128),
+                      new DoublesSketchAggregatorFactory("a1", "__time", null, null, false)
                   ))
                   .postAggregators(
                       new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5f)
@@ -1272,7 +1285,10 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{946857600000.0}
+            new Object[]{
+                946857600000.0,
+                "\"AgMIGoAAAAAGAAAAAAAAAAAAgPVZjWtCAACAfT56bEIAAID1WY1rQgAAAMH+jWtCAACAjKOOa0IAAIDm9HhsQgAAALKZeWxCAACAfT56bEI=\""
+            }
         )
     );
   }
@@ -1282,7 +1298,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     // string literals that can be parsed as numbers are accepted
     testQuery(
-        "SELECT APPROX_QUANTILE_DS('1.5', 0.5) FROM foo",
+        "SELECT APPROX_QUANTILE_DS('1.5', 0.5), DS_QUANTILES_SKETCH('1.5') FROM foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1297,7 +1313,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(ImmutableList.of(
-                      new DoublesSketchAggregatorFactory("a0:agg", "v0", 128)
+                      new DoublesSketchAggregatorFactory("a0:agg", "v0", 128),
+                      new DoublesSketchAggregatorFactory("a1", "v0", null, null, false)
                   ))
                   .postAggregators(
                       new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5f)
@@ -1306,7 +1323,10 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1.5}
+            new Object[]{
+                1.5,
+                "\"AgMIGoAAAAAGAAAAAAAAAAAAAAAAAPg/AAAAAAAA+D8AAAAAAAD4PwAAAAAAAPg/AAAAAAAA+D8AAAAAAAD4PwAAAAAAAPg/AAAAAAAA+D8=\""
+            }
         )
     );
   }

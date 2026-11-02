@@ -635,6 +635,94 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testQuantileAndSketchOnNumericStringLiteral()
+  {
+    // string literals that can be parsed as numbers are accepted
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "  TDIGEST_QUANTILE('1.5', 0.5),\n"
+        + "  TDIGEST_GENERATE_SKETCH('1.5', 200)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "1.5",
+                          ColumnType.FLOAT,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .aggregators(
+                      new TDigestSketchAggregatorFactory("a0:agg", "v0", 100, TDigestConfig.builder().build()),
+                      new TDigestSketchAggregatorFactory("a1", "v0", 200, TDigestConfig.builder().build())
+                  )
+                  .postAggregators(
+                      new TDigestSketchToQuantilePostAggregator(
+                          "a0",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          0.5
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ResultMatchMode.EQUALS_EPS,
+        ImmutableList.of(
+            new Object[]{
+                1.5,
+                "\"AAAAAT/4AAAAAAAAP/gAAAAAAABAaQAAAAAAAAAAAAY/8AAAAAAAAD/4AAAAAAAAP/AAAAAAAAA/+AAAAAAAAD/wAAAAAAAAP/gAAAAAAAA/8AAAAAAAAD/4AAAAAAAAP/AAAAAAAAA/+AAAAAAAAD/wAAAAAAAAP/gAAAAAAAA=\""
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileAndSketchOnTimeColumn()
+  {
+    // timestamps are used as numbers of milliseconds
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "  TDIGEST_QUANTILE(__time, 0.5),\n"
+        + "  TDIGEST_GENERATE_SKETCH(__time, 200)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      new TDigestSketchAggregatorFactory("a0:agg", "__time", 100, TDigestConfig.builder().build()),
+                      new TDigestSketchAggregatorFactory("a1", "__time", 200, TDigestConfig.builder().build())
+                  )
+                  .postAggregators(
+                      new TDigestSketchToQuantilePostAggregator(
+                          "a0",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          0.5
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ResultMatchMode.EQUALS_EPS,
+        ImmutableList.of(
+            new Object[]{
+                962582400000.0,
+                "\"AAAAAUJrjVn1gAAAQmx6Pn2AAABAaQAAAAAAAAAAAAY/8AAAAAAAAEJrjVn1gAAAP/AAAAAAAABCa43+wQAAAD/wAAAAAAAAQmuOo4yAAAA/8AAAAAAAAEJsePTmgAAAP/AAAAAAAABCbHmZsgAAAD/wAAAAAAAAQmx6Pn2AAAA=\""
+            }
+        )
+    );
+  }
+
+  @Test
   public void testQuantileAndSketchWithNonNumericStringLiteral()
   {
     // verify invalid queries return 400 (user error)
@@ -737,7 +825,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileWithNonNumericInputTypes()
+  public void testQuantileAndSketchWithNonNumericInputTypes()
   {
     // verify invalid queries return 400 (user error)
     testQueryThrows(
@@ -751,6 +839,18 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT TDIGEST_QUANTILE(PARSE_JSON('1'), 0.5) FROM foo",
         invalidSqlContains("Cannot apply 'TDIGEST_QUANTILE'")
+    );
+    testQueryThrows(
+        "SELECT TDIGEST_GENERATE_SKETCH(m1 > 1) FROM foo",
+        invalidSqlContains("Cannot apply 'TDIGEST_GENERATE_SKETCH'")
+    );
+    testQueryThrows(
+        "SELECT TDIGEST_GENERATE_SKETCH(ARRAY[1.0, 2.0]) FROM foo",
+        invalidSqlContains("Cannot apply 'TDIGEST_GENERATE_SKETCH'")
+    );
+    testQueryThrows(
+        "SELECT TDIGEST_GENERATE_SKETCH(PARSE_JSON('1')) FROM foo",
+        invalidSqlContains("Cannot apply 'TDIGEST_GENERATE_SKETCH'")
     );
   }
 

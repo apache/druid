@@ -151,7 +151,7 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
         // Operand was a character string, and is now cast to a number.
       } else if (operandType.getSqlTypeName() == SqlTypeName.NULL || SqlUtil.isNullLiteral(operand, true)) {
         // Null came in, check if operand is a nullable type.
-        if (!nullableOperands.contains(i) && !expectedType.isNullable()) {
+        if (!nullableOperands.contains(i)) {
           return OperatorConversions.throwOrReturn(
               throwOnFailure,
               callBinding,
@@ -314,16 +314,30 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
           operandNames,
           operandTypes,
           computedRequiredOperandCount,
-          DefaultOperandTypeChecker.buildNullableOperands(computedRequiredOperandCount, operandTypes.size(), notNullOperands),
+          DefaultOperandTypeChecker.buildNullableOperands(computedRequiredOperandCount, operandTypes, notNullOperands),
           literalOperands
       );
     }
   }
 
-  public static IntSet buildNullableOperands(int requiredOperandCount, int totalOperandCount, IntSet notNullOperands)
+  /**
+   * Returns the indexes of operands that accept NULL literals: optional operands, and operands declared with
+   * {@link OperandType#nullable()}. Operands in notNullOperands are always excluded, even if they are optional or
+   * nullable.
+   *
+   * @param requiredOperandCount number of required operands, at most the number of operand types
+   * @param operandTypes         types of all operands
+   * @param notNullOperands      indexes of operands that never accept NULL literals
+   */
+  public static IntSet buildNullableOperands(
+      int requiredOperandCount,
+      List<OperandType> operandTypes,
+      IntSet notNullOperands
+  )
   {
     final IntSet nullableOperands = new IntArraySet();
-    IntStream.range(requiredOperandCount, totalOperandCount)
+    IntStream.range(0, operandTypes.size())
+             .filter(i -> i >= requiredOperandCount || operandTypes.get(i).isNullable())
              .filter(i -> !notNullOperands.contains(i))
              .forEach(nullableOperands::add);
     return nullableOperands;

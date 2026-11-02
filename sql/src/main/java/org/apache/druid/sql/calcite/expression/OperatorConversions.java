@@ -584,7 +584,7 @@ public class OperatorConversions
             .builder()
             .operandNames(operandNames)
             .operandTypes(operandTypes.toArray(new OperandType[0]))
-            .requiredOperandCount(requiredOperandCount == null ? operandTypes.size() : requiredOperandCount)
+            .requiredOperandCount(getRequiredOperandCount())
             .literalOperands(literalOperands)
             .build();
       } else if (operandNames.isEmpty()
@@ -600,18 +600,17 @@ public class OperatorConversions
       }
     }
 
+    private int getRequiredOperandCount()
+    {
+      return requiredOperandCount == null ? operandTypes.size() : requiredOperandCount;
+    }
+
     protected SqlOperandTypeInference buildOperandTypeInference()
     {
-      final IntSet nullableOperands = requiredOperandCount == null
+      // operandTypes is null if an operandTypeChecker was passed in instead, e.g. GREATEST and LEAST.
+      final IntSet nullableOperands = operandTypes == null
           ? new IntArraySet()
-          : DefaultOperandTypeChecker.buildNullableOperands(requiredOperandCount, operandTypes.size(), new IntArraySet());
-      if (operandTypes != null) {
-        for (int i = 0; i < operandTypes.size(); i++) {
-          if (operandTypes.get(i).isNullable()) {
-            nullableOperands.add(i);
-          }
-        }
-      }
+          : DefaultOperandTypeChecker.buildNullableOperands(getRequiredOperandCount(), operandTypes, new IntArraySet());
       if (operandTypeInference == null) {
         SqlOperandTypeInference defaultInference = new DefaultOperandTypeInference(operandTypes, nullableOperands);
         return (callBinding, returnType, types) -> {
