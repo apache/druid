@@ -608,6 +608,8 @@ public class IcebergInputSourceTest
     // withSplit must return IcebergFileTaskInputSource
     InputSource splitSource = inputSource.withSplit(splits.get(0));
     Assertions.assertTrue(splitSource instanceof IcebergFileTaskInputSource, "withSplit on a v2 split must return IcebergFileTaskInputSource");
+    // Split workers only receive the configured InputFormat if the source asks for it.
+    Assertions.assertTrue(splitSource.needsFormat(), "V2 split source must request the configured InputFormat");
 
     // A V1 split (no marker) should return a non-IcebergFileTaskInputSource.
     // Not possible to force with the current table, so just verify the encoding roundtrip:

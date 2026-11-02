@@ -48,6 +48,7 @@ import org.apache.iceberg.parquet.Parquet;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -167,7 +168,10 @@ public class IcebergNativeRecordReader implements InputSourceReader
       }
     }
     try {
-      return Boolean.TRUE.equals(inputFormat.getClass().getMethod("getBinaryAsString").invoke(inputFormat));
+      final Method getter = inputFormat.getClass().getMethod("getBinaryAsString");
+      // The declaring class may not be public (e.g. a nested class), which would fail the access check on invoke.
+      getter.setAccessible(true);
+      return Boolean.TRUE.equals(getter.invoke(inputFormat));
     }
     catch (NoSuchMethodException e) {
       return false;

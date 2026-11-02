@@ -55,7 +55,9 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -313,30 +315,23 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         retrieveIcebergDatafiles();
       }
       if (hasDeleteFiles) {
-        // V2 path: create a combined reader across all file-scan tasks.
+        // V2 path: create a combined reader across all file-scan tasks. Task readers are opened lazily, one at a
+        // time, so that a table with many data files does not hold a file handle per data file.
         final List<IcebergNativeRecordReader> taskReaders = v2Tasks.stream()
                                                                    .map(task -> taskToNativeReader(task, inputRowSchema, inputFormat))
                                                                    .collect(Collectors.toList());
         return new InputSourceReader()
         {
           @Override
-          public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
+          public CloseableIterator<InputRow> read(InputStats inputStats)
           {
-            List<CloseableIterator<InputRow>> iters = new ArrayList<>();
-            for (IcebergNativeRecordReader r : taskReaders) {
-              iters.add(r.read(inputStats));
-            }
-            return CloseableIterators.concat(iters);
+            return new LazyConcatIterator<>(taskReaders, r -> r.read(inputStats));
           }
 
           @Override
-          public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
+          public CloseableIterator<InputRowListPlusRawValues> sample()
           {
-            List<CloseableIterator<InputRowListPlusRawValues>> iters = new ArrayList<>();
-            for (IcebergNativeRecordReader r : taskReaders) {
-              iters.add(r.sample());
-            }
-            return CloseableIterators.concat(iters);
+            return new LazyConcatIterator<>(taskReaders, IcebergNativeRecordReader::sample);
           }
         };
       }
@@ -692,6 +687,70 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   }
 
   // ---- inner empty source ----
+
+  @FunctionalInterface
+  private interface IteratorOpener<T, R>
+  {
+    CloseableIterator<R> open(T source) throws IOException;
+  }
+
+  /**
+   * Concatenates iterators, opening each source only when the previous iterator is exhausted and closing it before
+   * moving on.
+   */
+  private static class LazyConcatIterator<T, R> implements CloseableIterator<R>
+  {
+    private final Iterator<T> sources;
+    private final IteratorOpener<T, R> opener;
+    @Nullable
+    private CloseableIterator<R> current;
+
+    LazyConcatIterator(final List<T> sources, final IteratorOpener<T, R> opener)
+    {
+      this.sources = sources.iterator();
+      this.opener = opener;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      try {
+        while (current == null || !current.hasNext()) {
+          if (current != null) {
+            current.close();
+            current = null;
+          }
+          if (!sources.hasNext()) {
+            return false;
+          }
+          current = opener.open(sources.next());
+        }
+        return true;
+      }
+      catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+
+    @Override
+    public R next()
+    {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      return current.next();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      if (current != null) {
+        final CloseableIterator<R> toClose = current;
+        current = null;
+        toClose.close();
+      }
+    }
+  }
 
   /**
    * This input source is used in place of a delegate input source if there are no input file paths.

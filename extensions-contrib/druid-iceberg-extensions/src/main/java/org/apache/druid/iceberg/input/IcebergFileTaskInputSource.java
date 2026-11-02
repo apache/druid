@@ -118,8 +118,9 @@ public class IcebergFileTaskInputSource implements InputSource
   @Override
   public boolean needsFormat()
   {
-    // Handles its own reading through Iceberg's native Parquet/ORC reader
-    return false;
+    // Reads through Iceberg's native reader, but still needs the configured InputFormat so that Druid passes it to
+    // split workers; the reader honors its binaryAsString and rejects unsupported flattenSpec fields.
+    return true;
   }
 
   @Override
