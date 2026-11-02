@@ -21,10 +21,11 @@ package org.apache.druid.testing.embedded.query;
 
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.HttpResponseException;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -33,16 +34,27 @@ import java.util.Map;
 
 /**
  * End-to-end coverage for the {@code requireTimeCondition} planner guard. The guard is enabled
- * via the SQL query context key {@link PlannerConfig#CTX_REQUIRE_TIME_CONDITION} (which takes
- * precedence over the broker-level default), the test ingests a datasource and submits SQL
- * through the Broker's HTTP endpoint — the same path a client would take.
+ * cluster-wide via the Broker property {@code druid.sql.planner.requireTimeCondition=true} so
+ * the default property-driven path is exercised, and the per-query override via
+ * {@link QueryContextParameters#REQUIRE_TIME_CONDITION} (which takes precedence over the
+ * Broker-level default) is covered by {@link #testQueryContextOverrideCanDisableGuardPerQuery}.
+ * SQL is submitted through the Broker's HTTP endpoint — the same path a client would take.
  */
 public class EmbeddedRequireTimeConditionTest extends QueryTestBase
 {
-  private static final Map<String, Object> REQUIRE_TIME_CONDITION_CONTEXT =
-      Map.of(PlannerConfig.CTX_REQUIRE_TIME_CONDITION, true);
+  private static final Map<String, Object> DISABLE_GUARD_CONTEXT = Map.of(
+      QueryContextParameters.REQUIRE_TIME_CONDITION.getName(),
+      false
+  );
 
   private String dataSourceName;
+
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    broker.addProperty("druid.sql.planner.requireTimeCondition", "true");
+    return super.createCluster();
+  }
 
   @Override
   protected void beforeAll()
@@ -55,7 +67,8 @@ public class EmbeddedRequireTimeConditionTest extends QueryTestBase
   {
     final String result = cluster.callApi().onAnyBroker(
         b -> b.submitSqlQuery(buildQuery(
-            "SELECT COUNT(*) FROM %s WHERE __time >= '2025-06-01' AND __time < '2025-06-11'"
+            "SELECT COUNT(*) FROM %s WHERE __time >= '2025-06-01' AND __time < '2025-06-11'",
+            null
         ))
     );
     Assertions.assertEquals("10", result.trim());
@@ -67,7 +80,7 @@ public class EmbeddedRequireTimeConditionTest extends QueryTestBase
     final Throwable thrown = Assertions.assertThrows(
         Exception.class,
         () -> cluster.callApi().onAnyBroker(
-            b -> b.submitSqlQuery(buildQuery("SELECT COUNT(*) FROM %s"))
+            b -> b.submitSqlQuery(buildQuery("SELECT COUNT(*) FROM %s", null))
         )
     );
     ExceptionMatcher.of(HttpResponseException.class)
@@ -75,7 +88,16 @@ public class EmbeddedRequireTimeConditionTest extends QueryTestBase
                     .assertThat(thrown);
   }
 
-  private ClientSqlQuery buildQuery(String sqlFormat)
+  @Test
+  public void testQueryContextOverrideCanDisableGuardPerQuery()
+  {
+    final String result = cluster.callApi().onAnyBroker(
+        b -> b.submitSqlQuery(buildQuery("SELECT COUNT(*) FROM %s", DISABLE_GUARD_CONTEXT))
+    );
+    Assertions.assertEquals("10", result.trim());
+  }
+
+  private ClientSqlQuery buildQuery(String sqlFormat, Map<String, Object> context)
   {
     return new ClientSqlQuery(
         StringUtils.format(sqlFormat, dataSourceName),
@@ -83,7 +105,7 @@ public class EmbeddedRequireTimeConditionTest extends QueryTestBase
         false,
         false,
         false,
-        REQUIRE_TIME_CONDITION_CONTEXT,
+        context,
         List.of()
     );
   }
