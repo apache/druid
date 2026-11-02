@@ -715,7 +715,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             new Object[]{
-                962582400000.0,
+                978307200000.0,
                 "\"AAAAAUJrjVn1gAAAQmx6Pn2AAABAaQAAAAAAAAAAAAY/8AAAAAAAAEJrjVn1gAAAP/AAAAAAAABCa43+wQAAAD/wAAAAAAAAQmuOo4yAAAA/8AAAAAAAAEJsePTmgAAAP/AAAAAAAABCbHmZsgAAAD/wAAAAAAAAQmx6Pn2AAAA=\""
             }
         )
