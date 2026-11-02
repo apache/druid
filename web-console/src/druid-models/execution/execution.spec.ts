@@ -29,7 +29,7 @@ describe('Execution', () => {
           asyncResultId: 'multi-stage-query-sql-1392d806-c17f-4937-94ee-8fa0a3ce1566',
           error: null,
         } as any),
-      ).toThrowError('Invalid payload');
+      ).toThrow('Invalid payload');
     });
 
     it('works in a general case', () => {
@@ -641,7 +641,7 @@ describe('Execution', () => {
           "id": "query-45f1dafd-8a52-4eb7-9a6c-77840cddd349",
           "nativeQuery": undefined,
           "queryContext": undefined,
-          "result": _QueryResult {
+          "result": QueryResult {
             "header": [
               Column {
                 "name": "channel",

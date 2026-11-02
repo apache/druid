@@ -173,6 +173,7 @@ class MergingClusterGroupCursorTest
         List.of(new Object[0], new Object[0]),
         false,
         VirtualColumns.EMPTY,
+        column -> null,
         Map.of("aliased", "v")
     );
     final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -197,6 +198,7 @@ class MergingClusterGroupCursorTest
         Collections.nCopies(suppliers.size(), new Object[0]),
         descending,
         VirtualColumns.EMPTY,
+        column -> null,
         Map.of()
     );
   }

@@ -140,7 +140,7 @@ The following query context parameters apply:
 
 |Property|Description|
 |--------|-----------|
-|`searchStrategy`|Overrides the value of `druid.query.search.searchStrategy` for this query.|
+|`searchStrategy`|Overrides the value of `druid.query.search.searchStrategy` for this query.| <!-- GENERATED QUERY CONTEXT PARAMETER: searchStrategy -->
 
 ## SearchQuerySpec
 

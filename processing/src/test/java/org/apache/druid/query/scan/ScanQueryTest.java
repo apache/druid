@@ -22,6 +22,7 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
@@ -30,11 +31,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -255,6 +258,29 @@ public class ScanQueryTest extends InitializedNullHandlingTest
             .intervals(intervalSpec)
             .build();
     }
+  }
+
+  @Test
+  public void testMaxRowsQueuedForOrderingMustBeGreaterThanZero()
+  {
+    // Use a raw context so that ScanQuery itself validates the value.
+    Assertions.assertThrows(
+        BadQueryContextException.class,
+        () -> Druids.newScanQueryBuilder()
+                    .dataSource("source")
+                    .intervals(intervalSpec)
+                    .context(ImmutableMap.of(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 0))
+                    .build()
+    );
+    Assertions.assertEquals(
+        1,
+        Druids.newScanQueryBuilder()
+              .dataSource("source")
+              .intervals(intervalSpec)
+              .context(ImmutableMap.of(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 1))
+              .build()
+              .getMaxRowsQueuedForOrdering()
+    );
   }
 
   // Validates that getResultOrdering will work for the broker n-way merge

@@ -299,7 +299,7 @@ public abstract class ResponseContext
    *        EXTENSION_KEY_2
    *     });
    *   }
-   * }</pre>
+   * }}</pre>
    * Make sure all extension keys are added with the {@link #registerKey(Key)} or
    * {@link #registerKeys(Key[])} methods.
    * <p>

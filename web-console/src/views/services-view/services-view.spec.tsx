@@ -16,12 +16,21 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { Capabilities } from '../../helpers';
 import { QueryState } from '../../utils';
-import { shallow } from '../../utils/shallow-renderer';
 import { TableFilters } from '../../utils/table-filters';
 
 import { ServicesView } from './services-view';
+
+// Snapshot the table props and columns, not every rendered cell
+jest.mock(
+  '../../components/console-table/console-table',
+  () => jest.requireActual('../../test-utils/stub-component').consoleTableStub,
+);
+
+jest.useFakeTimers().setSystemTime(Date.parse('2024-06-08T12:34:56Z'));
 
 jest.mock('../../utils', () => {
   const originalUtils = jest.requireActual('../../utils');
@@ -96,7 +105,7 @@ describe('ServicesView', () => {
       />
     );
 
-    const servicesView = shallow(comp);
-    expect(servicesView).toMatchSnapshot();
+    const { container } = render(comp);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

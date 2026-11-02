@@ -82,9 +82,8 @@ export const MeasureDialog = React.memo(function MeasureDialog(props: MeasureDia
               }}
               columns={querySource.baseColumns}
               placeholder="SQL expression"
-              editorHeight={400}
+              height={400}
               autoFocus
-              showGutter={false}
               includeAggregates
             />
           </FormGroup>

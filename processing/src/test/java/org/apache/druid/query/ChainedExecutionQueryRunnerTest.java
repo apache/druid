@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -271,7 +272,12 @@ public class ChainedExecutionQueryRunnerTest
                                   .dataSource("test")
                                   .intervals("2014/2015")
                                   .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
-                                  .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
+                                  .context(
+                                      QueryContext.builder()
+                                          .put(QueryContextParameters.TIMEOUT, 100L)
+                                          .put(QueryContextParameters.QUERY_ID, "test")
+                                          .toMap()
+                                  )
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
@@ -340,7 +346,12 @@ public class ChainedExecutionQueryRunnerTest
         .dataSource("test")
         .intervals("2014/2015")
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
+        .context(
+            QueryContext.builder()
+                .put(QueryContextParameters.TIMEOUT, 100L)
+                .put(QueryContextParameters.QUERY_ID, "test")
+                .toMap()
+        )
         .build();
     List<QueryRunner<Result<TimeseriesResultValue>>> runners = Arrays.asList(
         Mockito.mock(QueryRunner.class),
@@ -393,9 +404,11 @@ public class ChainedExecutionQueryRunnerTest
                                   .intervals("2014/2015")
                                   .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .context(
-                                      ImmutableMap.of(
-                                          QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 100L,
-                                          QueryContexts.TIMEOUT_KEY, 5_000L
+                                      QueryContext.ofMap(
+                                          QueryContextParameters.PER_SEGMENT_TIMEOUT,
+                                          100L,
+                                          QueryContextParameters.TIMEOUT,
+                                          5_000L
                                       )
                                   )
                                   .queryId("test")
@@ -451,9 +464,11 @@ public class ChainedExecutionQueryRunnerTest
                                       .dataSource("test")
                                       .intervals("2014/2015")
                                       .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
-                                      .context(ImmutableMap.of(
-                                          QueryContexts.TIMEOUT_KEY, 300_000L,
-                                          QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 1_000L
+                                      .context(QueryContext.ofMap(
+                                          QueryContextParameters.TIMEOUT,
+                                          300_000L,
+                                          QueryContextParameters.PER_SEGMENT_TIMEOUT,
+                                          1_000L
                                       ))
                                       .queryId("slow")
                                       .build();
@@ -462,9 +477,11 @@ public class ChainedExecutionQueryRunnerTest
                                       .dataSource("test")
                                       .intervals("2014/2015")
                                       .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
-                                      .context(ImmutableMap.of(
-                                          QueryContexts.TIMEOUT_KEY, 5_000L,
-                                          QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 3_000L
+                                      .context(QueryContext.ofMap(
+                                          QueryContextParameters.TIMEOUT,
+                                          5_000L,
+                                          QueryContextParameters.PER_SEGMENT_TIMEOUT,
+                                          3_000L
                                       ))
                                       .queryId("fast")
                                       .build();

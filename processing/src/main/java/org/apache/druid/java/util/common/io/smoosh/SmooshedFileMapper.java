@@ -36,10 +36,14 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
@@ -53,6 +57,14 @@ public class SmooshedFileMapper implements SegmentFileMapper
    * associated with it
    */
   public static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
+
+  /**
+   * Number of ints per file in {@link #internalFileLocations}, and the slot of each value within those ints.
+   */
+  private static final int INTS_PER_LOCATION = 3;
+  private static final int FILE_NUM_SLOT = 0;
+  private static final int START_OFFSET_SLOT = 1;
+  private static final int END_OFFSET_SLOT = 2;
 
   public static SmooshedFileMapper load(File baseDir) throws IOException
   {
@@ -81,7 +93,7 @@ public class SmooshedFileMapper implements SegmentFileMapper
         outFiles.add(FileSmoosher.makeChunkFile(baseDir, i));
       }
 
-      Map<String, Metadata> internalFiles = new TreeMap<>();
+      SortedMap<String, Metadata> internalFiles = new TreeMap<>();
       while ((line = in.readLine()) != null) {
         splits = line.split(",");
 
@@ -102,33 +114,74 @@ public class SmooshedFileMapper implements SegmentFileMapper
   }
 
   private final List<File> outFiles;
-  private final Map<String, Metadata> internalFiles;
+
+  /**
+   * Names of internal files, sorted. This is used instead of a map to reduce the footprint of each loaded segment.
+   */
+  private final String[] internalFileNames;
+
+  /**
+   * Location of each file in {@link #internalFileNames}, as a group of {@link #INTS_PER_LOCATION} ints: chunk number,
+   * start offset, and end offset. Read with {@link #getFileNum}, {@link #getStartOffset}, and {@link #getEndOffset}.
+   */
+  private final int[] internalFileLocations;
+
   private final List<MappedByteBuffer> buffersList = new ArrayList<>();
 
   private SmooshedFileMapper(
       List<File> outFiles,
-      Map<String, Metadata> internalFiles
+      SortedMap<String, Metadata> internalFiles
   )
   {
     this.outFiles = outFiles;
-    this.internalFiles = internalFiles;
+    this.internalFileNames = new String[internalFiles.size()];
+    this.internalFileLocations = new int[internalFiles.size() * INTS_PER_LOCATION];
+
+    int i = 0;
+    for (Map.Entry<String, Metadata> entry : internalFiles.entrySet()) {
+      internalFileNames[i] = entry.getKey();
+      final int location = i * INTS_PER_LOCATION;
+      internalFileLocations[location + FILE_NUM_SLOT] = entry.getValue().getFileNum();
+      internalFileLocations[location + START_OFFSET_SLOT] = entry.getValue().getStartOffset();
+      internalFileLocations[location + END_OFFSET_SLOT] = entry.getValue().getEndOffset();
+      i++;
+    }
   }
 
   @Override
   public Set<String> getInternalFilenames()
   {
-    return internalFiles.keySet();
+    return new AbstractSet<>()
+    {
+      @Override
+      public Iterator<String> iterator()
+      {
+        return Arrays.asList(internalFileNames).iterator();
+      }
+
+      @Override
+      public int size()
+      {
+        return internalFileNames.length;
+      }
+
+      @Override
+      public boolean contains(Object o)
+      {
+        return o instanceof String && Arrays.binarySearch(internalFileNames, o) >= 0;
+      }
+    };
   }
 
   @Override
   public ByteBuffer mapFile(String name) throws IOException
   {
-    final Metadata metadata = internalFiles.get(name);
-    if (metadata == null) {
+    final int index = Arrays.binarySearch(internalFileNames, name);
+    if (index < 0) {
       return null;
     }
 
-    final int fileNum = metadata.getFileNum();
+    final int fileNum = getFileNum(index);
     while (buffersList.size() <= fileNum) {
       buffersList.add(null);
     }
@@ -140,8 +193,32 @@ public class SmooshedFileMapper implements SegmentFileMapper
     }
 
     ByteBuffer retVal = mappedBuffer.duplicate();
-    retVal.position(metadata.getStartOffset()).limit(metadata.getEndOffset());
+    retVal.position(getStartOffset(index)).limit(getEndOffset(index));
     return retVal.slice();
+  }
+
+  /**
+   * Returns the chunk number of the file at the given position of {@link #internalFileNames}.
+   */
+  private int getFileNum(int index)
+  {
+    return internalFileLocations[index * INTS_PER_LOCATION + FILE_NUM_SLOT];
+  }
+
+  /**
+   * Returns the start offset, within its chunk, of the file at the given position of {@link #internalFileNames}.
+   */
+  private int getStartOffset(int index)
+  {
+    return internalFileLocations[index * INTS_PER_LOCATION + START_OFFSET_SLOT];
+  }
+
+  /**
+   * Returns the end offset, within its chunk, of the file at the given position of {@link #internalFileNames}.
+   */
+  private int getEndOffset(int index)
+  {
+    return internalFileLocations[index * INTS_PER_LOCATION + END_OFFSET_SLOT];
   }
 
   @Override

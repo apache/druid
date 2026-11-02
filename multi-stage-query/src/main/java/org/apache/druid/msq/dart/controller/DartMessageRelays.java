@@ -24,6 +24,9 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.messages.client.MessageRelayFactory;
 import org.apache.druid.messages.client.MessageRelays;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.dart.worker.DartWorkerService;
+
+import java.util.Set;
 
 /**
  * Specialized {@link MessageRelays} for Dart controllers.
@@ -35,6 +38,11 @@ public class DartMessageRelays extends MessageRelays<ControllerMessage>
       final MessageRelayFactory<ControllerMessage> messageRelayFactory
   )
   {
-    super(() -> discoveryProvider.getForNodeRole(NodeRole.HISTORICAL), messageRelayFactory);
+    // Only relay with Historicals that run a Dart worker (advertise DartWorkerService); Dart-disabled Historicals
+    // expose no outbox. This is the same discovery handle the controller uses to enroll workers.
+    super(
+        () -> discoveryProvider.getForServiceAndRoles(DartWorkerService.NAME, Set.of(NodeRole.HISTORICAL)),
+        messageRelayFactory
+    );
   }
 }

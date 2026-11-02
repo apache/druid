@@ -37,7 +37,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Action;
@@ -106,7 +106,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
           Action.READ
       ),
       new ResourceAction(
-          new Resource(QueryContexts.ENGINE, ResourceType.QUERY_CONTEXT),
+          new Resource(QueryContextParameters.ENGINE.getName(), ResourceType.QUERY_CONTEXT),
           Action.WRITE
       ),
       new ResourceAction(
@@ -808,7 +808,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   )
   {
     final Map<String, Object> dartContext = new HashMap<>(context);
-    dartContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
+    dartContext.put(QueryContextParameters.ENGINE.getName(), DartSqlEngine.NAME);
     return makeSQLQueryRequest(httpClient, query, "/druid/v2/sql", dartContext, expectedStatus);
   }
 

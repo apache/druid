@@ -32,8 +32,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -91,15 +93,17 @@ public class JoinableClauses
   }
 
   /**
-   * Retrieve subset of virtual columns which require inputs which are only present on the join table
+   * Retrieve subset of virtual columns which require inputs which are only present on the join table, either
+   * directly or through other virtual columns.
    */
   public Set<VirtualColumn> getPostJoinVirtualColumns(
       final VirtualColumns virtualColumns
   )
   {
     final Set<VirtualColumn> postJoinVirtualColumns = new HashSet<>();
+    final Map<String, Boolean> postJoinByName = new HashMap<>();
     for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
-      if (areSomeColumnsFromJoin(virtualColumn.requiredColumns())) {
+      if (isPostJoinVirtualColumn(virtualColumn, virtualColumns, postJoinByName)) {
         postJoinVirtualColumns.add(virtualColumn);
       }
     }
@@ -130,6 +134,37 @@ public class JoinableClauses
     }
 
     return null;
+  }
+
+  /**
+   * Whether a virtual column requires a join table column, directly or through other virtual columns in
+   * {@code virtualColumns}. Memoizes results in {@code postJoinByName}. Recursion terminates because
+   * {@link VirtualColumns} rejects dependency cycles.
+   */
+  private boolean isPostJoinVirtualColumn(
+      final VirtualColumn virtualColumn,
+      final VirtualColumns virtualColumns,
+      final Map<String, Boolean> postJoinByName
+  )
+  {
+    final Boolean memoized = postJoinByName.get(virtualColumn.getOutputName());
+    if (memoized != null) {
+      return memoized;
+    }
+
+    boolean postJoin = areSomeColumnsFromJoin(virtualColumn.requiredColumns());
+    if (!postJoin) {
+      for (String column : virtualColumn.requiredColumns()) {
+        final VirtualColumn dependency = virtualColumns.getVirtualColumn(column);
+        if (dependency != null && isPostJoinVirtualColumn(dependency, virtualColumns, postJoinByName)) {
+          postJoin = true;
+          break;
+        }
+      }
+    }
+
+    postJoinByName.put(virtualColumn.getOutputName(), postJoin);
+    return postJoin;
   }
 
   private static void checkPreJoinableClausesForDuplicatesAndShadowing(

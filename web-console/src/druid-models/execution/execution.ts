@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from 'druid-query-toolkit';
+import { Column, QueryResult, SqlExpression, SqlQueryBase } from 'druid-query-toolkit';
 
 import { maybeGetClusterCapacity } from '../../helpers';
 import {
@@ -52,13 +52,11 @@ const IGNORE_CONTEXT_KEYS = [
   'sqlReplaceTimeChunks',
 ];
 
-// Hack around the concept that we might get back a SqlWithQuery and will need to unpack it
-function parseSqlQuery(queryString: string): SqlQuery | undefined {
+// Parse any query form, flattening a WITH query so that its select expressions line up with the result columns
+function parseSqlQuery(queryString: string): SqlQueryBase | undefined {
   const q = SqlExpression.maybeParse(queryString);
-  if (!q) return;
-  if (q instanceof SqlWithQuery) return q.flattenWith();
-  if (q instanceof SqlQuery) return q;
-  return;
+  if (!(q instanceof SqlQueryBase)) return;
+  return q.flattenWith();
 }
 
 export interface ExecutionError {
@@ -574,8 +572,8 @@ export class Execution {
     const { status, stages } = this;
     return Boolean(
       status === 'RUNNING' &&
-        stages &&
-        stages.getTotalInputForStage(stages.getStage(0), 'rows') > 0,
+      stages &&
+      stages.getTotalInputForStage(stages.getStage(0), 'rows') > 0,
     );
   }
 
@@ -648,10 +646,10 @@ export class Execution {
   public hasPotentiallyStuckStage(): boolean {
     return Boolean(
       this.status === 'RUNNING' &&
-        this.stages &&
-        this.stages.getPotentiallyStuckStageIndex() >= 0 &&
-        this.usageInfo &&
-        this.usageInfo.pendingTasks > 0,
+      this.stages &&
+      this.stages.getPotentiallyStuckStageIndex() >= 0 &&
+      this.usageInfo &&
+      this.usageInfo.pendingTasks > 0,
     );
   }
 }

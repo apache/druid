@@ -68,7 +68,6 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
 
   private final List<IncrementalIndex.DimensionDesc> dimensions;
   private final Map<String, IncrementalIndex.DimensionDesc> dimensionsMap;
-  private final Map<String, ColumnFormat> columnFormats;
   private final FactsHolder factsHolder;
   private final AtomicInteger rowCounter = new AtomicInteger(0);
   private final AtomicInteger numEntries = new AtomicInteger(0);
@@ -94,7 +93,6 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
 
     this.dimensions = new ArrayList<>(nonClusteringDimensions.size());
     this.dimensionsMap = new LinkedHashMap<>();
-    this.columnFormats = new LinkedHashMap<>();
     initializeDimensions(nonClusteringDimensions);
 
     final int clusteringCount = clusteringValues.length;
@@ -192,7 +190,9 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       return new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG));
     }
-    return columnFormats.get(columnName);
+    // Read the format from the dimension indexer, so it reflects the data added so far.
+    final IncrementalIndex.DimensionDesc dim = dimensionsMap.get(columnName);
+    return dim == null ? null : dim.getIndexer().getFormat();
   }
 
   @Override
@@ -362,7 +362,6 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
       );
       dimensions.add(desc);
       dimensionsMap.put(schema.getName(), desc);
-      columnFormats.put(schema.getName(), desc.getIndexer().getFormat());
     }
   }
 }

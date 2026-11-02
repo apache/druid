@@ -52,7 +52,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
@@ -60,6 +60,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -222,6 +223,26 @@ public class DirectDruidClientTest
   }
 
   @Test
+  public void testCancelUrlEncodesQueryId()
+  {
+    final QueryPlus queryPlus = QueryPlus.wrap(getQueryPlus().getQuery().withId("some query/id#needing?encoding"));
+    final QueuedTestHttpClient queuedHttpClient = new QueuedTestHttpClient();
+    queuedHttpClient.enqueue(Futures.immediateCancelledFuture());
+
+    // Canceled query future causes the client to submit a cancel task, which issues the DELETE request.
+    makeDirectDruidClient(queuedHttpClient).run(queryPlus, responseContext);
+    blockingExecutorService.finishNextPendingTask();
+
+    final List<Request> requests = queuedHttpClient.getRequests();
+    Assertions.assertEquals(2, requests.size());
+    Assertions.assertEquals(HttpMethod.DELETE, requests.get(1).getMethod());
+    Assertions.assertEquals(
+        "http://" + hostName + "/druid/v2/some%20query%2Fid%23needing%3Fencoding",
+        requests.get(1).getUrl().toString()
+    );
+  }
+
+  @Test
   public void testQueryInterruptionExceptionLogMessage()
   {
     SettableFuture<Object> interruptionFuture = SettableFuture.create();
@@ -250,7 +271,7 @@ public class DirectDruidClientTest
     SettableFuture<Object> timeoutFuture = SettableFuture.create();
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
 
-    QueryPlus queryPlus = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 250));
+    QueryPlus queryPlus = getQueryPlus(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 250));
     Sequence results = client.run(queryPlus, responseContext);
 
     // Incomplete result set delivered via a pipe to simulate slow stream
@@ -279,7 +300,7 @@ public class DirectDruidClientTest
     final SettableFuture<Object> timeoutFuture = SettableFuture.create();
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
 
-    QueryPlus query = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 500));
+    QueryPlus query = getQueryPlus(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 500));
     Sequence results = client.run(query, responseContext);
     QueryTimeoutException actualException = Assertions.assertThrows(QueryTimeoutException.class, results::toList);
     Assertions.assertEquals("Query timeout", actualException.getErrorCode());
@@ -293,7 +314,7 @@ public class DirectDruidClientTest
     SettableFuture<Object> timeoutFuture = SettableFuture.create();
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
 
-    QueryPlus queryPlus = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis()));
+    QueryPlus queryPlus = getQueryPlus(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis()));
     QueryTimeoutException actualException = Assertions.assertThrows(
         QueryTimeoutException.class,
         () -> client.run(queryPlus, responseContext)
@@ -314,10 +335,12 @@ public class DirectDruidClientTest
     final TestHttpClient testHttpClient = new TestHttpClient(objectMapper, 110);
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(testHttpClient, false));
 
-    final QueryPlus queryPlus = getQueryPlus(Map.of(
-        QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 100,
-        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 100
-    ));
+    final QueryPlus queryPlus = getQueryPlus(
+        QueryContext.builder()
+            .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 100L)
+            .put(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 100)
+            .toMap()
+    );
 
     QueryTimeoutException actualException = Assertions.assertThrows(
         QueryTimeoutException.class,
@@ -361,9 +384,9 @@ public class DirectDruidClientTest
     final TestHttpClient testHttpClient = new TestHttpClient(objectMapper, 110);
     DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(testHttpClient, false), stubEmitter);
 
-    final QueryPlus queryPlus = getQueryPlus(Map.of(
-        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 50
-    ));
+    final QueryPlus queryPlus = getQueryPlus(
+        QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 50)
+    );
 
     Assertions.assertThrows(QueryTimeoutException.class, () -> client.run(queryPlus, responseContext));
 
@@ -382,9 +405,9 @@ public class DirectDruidClientTest
 
     // Timeout far enough in the future that handleResponse + done() complete during run(), but we sleep
     // past it before consuming the sequence so that checkQueryTimeout() fires during toList().
-    final QueryPlus queryPlus = getQueryPlus(Map.of(
-        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 500
-    ));
+    final QueryPlus queryPlus = getQueryPlus(
+        QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, System.currentTimeMillis() + 500)
+    );
 
     Sequence results = client.run(queryPlus, responseContext);
     Thread.sleep(600);
@@ -400,10 +423,12 @@ public class DirectDruidClientTest
   {
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientWithSuccessfulQuery());
 
-    final QueryPlus queryPlus = getQueryPlus(Map.of(
-        QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 100,
-        DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE
-    ));
+    final QueryPlus queryPlus = getQueryPlus(
+        QueryContext.builder()
+            .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 100L)
+            .put(QueryContextParameters.QUERY_FAIL_TIME, Long.MAX_VALUE)
+            .toMap()
+    );
 
     ResourceLimitExceededException actualException = Assertions.assertThrows(
         ResourceLimitExceededException.class,
@@ -1035,7 +1060,7 @@ public class DirectDruidClientTest
 
   private static QueryPlus getQueryPlus()
   {
-    return getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
+    return getQueryPlus(QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, Long.MAX_VALUE));
   }
 
   private static QueryPlus getQueryPlus(Map<String, Object> context)

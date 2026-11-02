@@ -116,15 +116,21 @@ public class ReferenceCountingResourceHolderTest
 
   private void verifyCleanerRun(AtomicBoolean released, long initialLeakedResources) throws InterruptedException
   {
-    // Wait until Closer runs
-    for (int i = 0; i < 6000 && ReferenceCountingResourceHolder.leakedResources() == initialLeakedResources; i++) {
+    // Wait until the Cleaner has run the closer of the holder leaked by this test. The leaked resource counter is
+    // global to the JVM and is incremented before the closer runs, so it cannot be used to detect completion: holders
+    // leaked by other tests sharing this JVM may be collected by the forced GC as well.
+    for (int i = 0; i < 6000 && !released.get(); i++) {
       System.gc();
       @SuppressWarnings("unused")
       byte[] garbage = new byte[10_000_000];
       Thread.sleep(10);
     }
-    Assertions.assertEquals(initialLeakedResources + 1, ReferenceCountingResourceHolder.leakedResources());
-    // Cleaner also runs the closer
+    // Cleaner runs the closer
     Assertions.assertTrue(released.get());
+    // At least the holder leaked by this test must have been counted; other leaked holders may have been counted too.
+    Assertions.assertTrue(
+        ReferenceCountingResourceHolder.leakedResources() >= initialLeakedResources + 1,
+        "leakedResources should have been incremented at least once"
+    );
   }
 }

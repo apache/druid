@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.segment;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Intervals;
@@ -27,8 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.extraction.UpperExtractionFn;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -170,9 +169,7 @@ public class FrameCursorFactoryTest
     private CursorFactory queryableCursorFactory;
     private FrameSegment frameSegment;
     private CursorFactory frameCursorFactory;
-    private final QueryContext queryContext = QueryContext.of(
-        ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, VECTOR_SIZE)
-    );
+    private final QueryContext queryContext = QueryContext.of(QueryContextParameters.VECTOR_SIZE, VECTOR_SIZE);
 
     public CursorTests(
         FrameType frameType,

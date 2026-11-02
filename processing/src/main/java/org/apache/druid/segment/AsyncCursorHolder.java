@@ -23,8 +23,10 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.asyncresource.SettableAsyncResource;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.util.function.Function;
 
 /**
  * Closeable wrapper around an asynchronously-loaded {@link CursorHolder}, returned by
@@ -81,6 +83,49 @@ public class AsyncCursorHolder extends SettableAsyncResource<CursorHolder>
   public synchronized CursorHolder release()
   {
     return super.release();
+  }
+
+  /**
+   * Returns an {@link AsyncCursorHolder} transformed according to a given function.
+   *
+   * <p>The provided function receives an underlying {@link CursorHolder} that is released from this holder.
+   * The provided function should return a {@link CursorHolder} that, when closed, also closes its input
+   * {@link CursorHolder}. The provided function should, however, not close the input {@link CursorHolder}
+   * if the provided function itself throws an exception. (That will be handled by the callback registered by
+   * the "transform" method itself.)
+   *
+   * <p>Once this method returns, the returned holder is the caller's to close, and the caller must not close
+   * this instance.
+   */
+  public AsyncCursorHolder transform(final Function<CursorHolder, CursorHolder> function)
+  {
+    final AsyncCursorHolder retVal = new AsyncCursorHolder(this::close);
+    addReadyCallback(() -> {
+      final CursorHolder baseHolder;
+      try {
+        baseHolder = release();
+      }
+      catch (Throwable t) {
+        retVal.setException(t);
+        return;
+      }
+
+      final CursorHolder newHolder;
+      try {
+        newHolder = function.apply(baseHolder);
+      }
+      catch (Throwable t) {
+        CloseableUtils.closeAndSuppressExceptions(baseHolder, t::addSuppressed);
+        retVal.setException(t);
+        return;
+      }
+
+      if (!retVal.set(newHolder)) {
+        // The caller closed the returned holder while we were making this one, so close it here instead.
+        newHolder.close();
+      }
+    });
+    return retVal;
   }
 
   /**

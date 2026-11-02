@@ -58,6 +58,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterEach;
@@ -787,17 +788,14 @@ public class RunRulesTest
     Assertions.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
-    DataSegment overFlowSegment = new DataSegment(
-        "test",
-        Intervals.of("2012-02-01/2012-02-02"),
-        DateTimes.nowUtc().toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        1,
-        0
-    );
+    DataSegment overFlowSegment = DataSegment.builder(SegmentId.of("test", Intervals.of("2012-02-01/2012-02-02"), DateTimes.nowUtc().toString(), 0))
+                                             .loadSpec(new HashMap<>())
+                                             .dimensions(new ArrayList<>())
+                                             .metrics(new ArrayList<>())
+                                             .shardSpec(NoneShardSpec.instance())
+                                             .binaryVersion(1)
+                                             .size(0)
+                                             .build();
 
     stats = runDutyAndGetStats(
         createCoordinatorRuntimeParams(druidCluster)
@@ -875,17 +873,14 @@ public class RunRulesTest
         new IntervalLoadRule(Intervals.of("2012-01-01/2013-01-02"), ImmutableMap.of("normal", 1), null)
     );
 
-    DataSegment overFlowSegment = new DataSegment(
-        "test",
-        Intervals.of("2012-02-01/2012-02-02"),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        1,
-        0
-    );
+    DataSegment overFlowSegment = DataSegment.builder(SegmentId.of("test", Intervals.of("2012-02-01/2012-02-02"), DateTimes.nowUtc().toString(), 0))
+                                             .loadSpec(Collections.emptyMap())
+                                             .dimensions(Collections.emptyList())
+                                             .metrics(Collections.emptyList())
+                                             .shardSpec(NoneShardSpec.instance())
+                                             .binaryVersion(1)
+                                             .size(0)
+                                             .build();
     List<DataSegment> longerUsedSegments = Lists.newArrayList(usedSegments);
     longerUsedSegments.add(overFlowSegment);
 
@@ -921,28 +916,22 @@ public class RunRulesTest
   public void testRulesRunOnNonOvershadowedSegmentsOnly()
   {
     Set<DataSegment> usedSegments = new HashSet<>();
-    DataSegment v1 = new DataSegment(
-        "test",
-        Intervals.of("2012-01-01/2012-01-02"),
-        "1",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
-    );
-    DataSegment v2 = new DataSegment(
-        "test",
-        Intervals.of("2012-01-01/2012-01-02"),
-        "2",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
-    );
+    DataSegment v1 = DataSegment.builder(SegmentId.of("test", Intervals.of("2012-01-01/2012-01-02"), "1", 0))
+                                .loadSpec(Collections.emptyMap())
+                                .dimensions(Collections.emptyList())
+                                .metrics(Collections.emptyList())
+                                .shardSpec(NoneShardSpec.instance())
+                                .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                .size(1)
+                                .build();
+    DataSegment v2 = DataSegment.builder(SegmentId.of("test", Intervals.of("2012-01-01/2012-01-02"), "2", 0))
+                                .loadSpec(Collections.emptyMap())
+                                .dimensions(Collections.emptyList())
+                                .metrics(Collections.emptyList())
+                                .shardSpec(NoneShardSpec.instance())
+                                .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                .size(1)
+                                .build();
     usedSegments.add(v1);
     usedSegments.add(v2);
 
@@ -987,17 +976,14 @@ public class RunRulesTest
 
     setRetentionRules(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 3), null));
 
-    DataSegment dataSegment = new DataSegment(
-        "test",
-        Intervals.utc(0, 1),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
-    );
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("test", Intervals.utc(0, 1), DateTimes.nowUtc().toString(), 0))
+                                         .loadSpec(Collections.emptyMap())
+                                         .dimensions(Collections.emptyList())
+                                         .metrics(Collections.emptyList())
+                                         .shardSpec(NoneShardSpec.instance())
+                                         .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                         .size(1)
+                                         .build();
 
     DruidCluster druidCluster = DruidCluster.builder().addTier(
         DruidServer.DEFAULT_TIER,
@@ -1046,17 +1032,14 @@ public class RunRulesTest
 
     setRetentionRules(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1), null));
 
-    DataSegment dataSegment = new DataSegment(
-        "test",
-        Intervals.utc(0, 1),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
-    );
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("test", Intervals.utc(0, 1), DateTimes.nowUtc().toString(), 0))
+                                         .loadSpec(Collections.emptyMap())
+                                         .dimensions(Collections.emptyList())
+                                         .metrics(Collections.emptyList())
+                                         .shardSpec(NoneShardSpec.instance())
+                                         .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                         .size(1)
+                                         .build();
 
     DruidCluster druidCluster = DruidCluster.builder().addTier(
         DruidServer.DEFAULT_TIER,
@@ -1094,17 +1077,14 @@ public class RunRulesTest
     int numReplicants = 1;
     setRetentionRules(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants), null));
 
-    final DataSegment dataSegment = new DataSegment(
-        "test",
-        Intervals.utc(0, 1),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        11
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("test", Intervals.utc(0, 1), DateTimes.nowUtc().toString(), 0))
+                                               .loadSpec(Collections.emptyMap())
+                                               .dimensions(Collections.emptyList())
+                                               .metrics(Collections.emptyList())
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                               .size(11)
+                                               .build();
 
     DruidCluster druidCluster = DruidCluster.builder().addTier(
         DruidServer.DEFAULT_TIER,
@@ -1149,17 +1129,14 @@ public class RunRulesTest
     int numReplicants = 1;
     setRetentionRules(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants), null));
 
-    DataSegment dataSegment = new DataSegment(
-        "test",
-        Intervals.utc(0, 1),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        11
-    );
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("test", Intervals.utc(0, 1), DateTimes.nowUtc().toString(), 0))
+                                         .loadSpec(Collections.emptyMap())
+                                         .dimensions(Collections.emptyList())
+                                         .metrics(Collections.emptyList())
+                                         .shardSpec(NoneShardSpec.instance())
+                                         .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                         .size(11)
+                                         .build();
 
     DruidCluster druidCluster = DruidCluster.builder().addTier(
         DruidServer.DEFAULT_TIER,

@@ -22,10 +22,12 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexing.common.task.Task;
 
-import java.util.concurrent.Future;
-
+/**
+ * An action performed on behalf of a Task by the Overlord.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = TaskAction.TYPE_FIELD)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "lockAcquire", value = TimeChunkLockAcquireAction.class),
@@ -66,7 +68,7 @@ public interface TaskAction<RetType>
     return false;
   }
 
-  default Future<RetType> performAsync(Task task, TaskActionToolbox toolbox)
+  default ListenableFuture<RetType> performAsync(Task task, TaskActionToolbox toolbox)
   {
     throw new UnsupportedOperationException();
   }

@@ -48,7 +48,7 @@ import java.util.Objects;
  *   "olderThan": "P30D",
  *   "queryGranularity": "HOUR",
  *   "rollup": true
- * }</pre>
+ * }}</pre>
  */
 public class ReindexingDataSchemaRule extends AbstractReindexingRule
 {

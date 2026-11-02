@@ -3,33 +3,85 @@ updates:
   - package-ecosystem: "maven"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     open-pull-requests-limit: 20
     cooldown:
       # Protect against not-yet-discovered regressions or security issues in new releases of dependencies
       # https://github.blog/changelog/2025-07-01-dependabot-supports-configuration-of-a-minimum-package-age/
       default-days: 14
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    # Major version updates match no group, so each one still gets its own PR.
+    groups:
+      maven-minor-patch:
+        update-types: ["minor", "patch"]
+        patterns:
+          - "*"
+        # These build tools often need code or rule changes even in minor releases, so each update gets its own PR
+        # that can be reviewed, fixed or closed without holding up the group.
+        exclude-patterns:
+          - "com.github.spotbugs:spotbugs-maven-plugin"
+          - "com.puppycrawl.tools:checkstyle"
+          - "org.codehaus.mojo:javacc-maven-plugin"
+      # Security updates skip the schedule and cooldown; batch them so an advisory burst opens one PR.
+      maven-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
     ignore:
-      # pin ZooKeeper dependencies to 3.5.x
-      - dependency-name: "org.apache.zookeeper"
-        versions: "[3.6,)"
-      # pin Jetty dependencies to 9.4.x
-      - dependency-name: "org.eclipse.jetty"
-        versions: "[9.5,)"
-      # pin Testng dependencies to 7.3.0
-      - dependency-name: "org.testng"
-        versions: "[7.4.0,)"
+      # skip AWS SDK v2 patch releases, which ship almost daily; minor bumps still come through
+      - dependency-name: "software.amazon.awssdk:*"
+        update-types: ["version-update:semver-patch"]
+      # Major upgrades of the following dependencies need code or build changes, so they are done by hand.
+      # Dependabot still proposes their minor and patch updates.
+      # Vert.x must stay on the major version used by the Fabric8 Kubernetes client
+      - dependency-name: "io.vertx:*"
+        update-types: ["version-update:semver-major"]
+      # pac4j 6 breaks source compatibility and changes session serialization
+      - dependency-name: "org.pac4j:*"
+        update-types: ["version-update:semver-major"]
+      # javacc-maven-plugin 3 generates a Druid SQL parser that does not compile
+      - dependency-name: "org.codehaus.mojo:javacc-maven-plugin"
+        update-types: ["version-update:semver-major"]
+      # Guice 7 requires migrating from javax to jakarta packages
+      - dependency-name: "com.google.inject:*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "com.google.inject.extensions:*"
+        update-types: ["version-update:semver-major"]
 
-  # Don't run dependabot on website
+  # Security updates only for website and web-console: every version update is ignored.
   - package-ecosystem: "npm"
-    directory: "/website/"
+    directories:
+      - "/website/"
+      - "/web-console/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
-  # Don't run dependabot on web-console
-  - package-ecosystem: "npm"
-    directory: "/web-console/"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"

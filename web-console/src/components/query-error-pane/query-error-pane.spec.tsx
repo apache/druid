@@ -16,19 +16,19 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { QueryErrorPane } from './query-error-pane';
 
 describe('QueryErrorPane', () => {
   it('matches snapshot', () => {
-    const queryError = shallow(
+    const { container } = render(
       <QueryErrorPane
         error={new Error('something went wrong in line 7, column 8.')}
         moveCursorTo={() => {}}
       />,
     );
 
-    expect(queryError).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

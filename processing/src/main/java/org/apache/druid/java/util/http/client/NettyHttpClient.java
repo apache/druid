@@ -87,6 +87,11 @@ public class NettyHttpClient extends AbstractHttpClient
     this.compressionCodec = Preconditions.checkNotNull(compressionCodec);
   }
 
+  public ResourcePool<String, ChannelFuture> getPool()
+  {
+    return pool;
+  }
+
   @LifecycleStart
   public void start()
   {
@@ -235,6 +240,7 @@ public class NettyHttpClient extends AbstractHttpClient
           private final Object watermarkLock = new Object();
           private long suspendWatermark = -1;
           private long resumeWatermark = -1;
+          private boolean returnedToPool = false;
 
           @Override
           protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg)
@@ -269,6 +275,9 @@ public class NettyHttpClient extends AbstractHttpClient
                   public long resume(long resumeChunkNum)
                   {
                     synchronized (watermarkLock) {
+                      if (returnedToPool) {
+                        return 0;
+                      }
                       resumeWatermark = Math.max(resumeWatermark, resumeChunkNum);
 
                       if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
@@ -287,8 +296,12 @@ public class NettyHttpClient extends AbstractHttpClient
                   @Override
                   public void abort()
                   {
-                    log.debug("[%s] Aborted connection at caller's request.", requestDesc);
-                    channel.close();
+                    // On the event loop, so that it is ordered against finishRequest handing the channel back.
+                    if (channel.eventLoop().inEventLoop()) {
+                      closeUnlessReturnedToPool();
+                    } else {
+                      channel.eventLoop().execute(() -> closeUnlessReturnedToPool());
+                    }
                   }
                 };
 
@@ -383,7 +396,20 @@ public class NettyHttpClient extends AbstractHttpClient
             }
             removeHandlers();
             channel.config().setAutoRead(true);
+            synchronized (watermarkLock) {
+              returnedToPool = true;
+            }
             channelResourceContainer.returnResource();
+          }
+
+          private void closeUnlessReturnedToPool()
+          {
+            synchronized (watermarkLock) {
+              if (!returnedToPool) {
+                log.debug("[%s] Aborted connection at caller's request.", requestDesc);
+                channel.close();
+              }
+            }
           }
 
           @Override

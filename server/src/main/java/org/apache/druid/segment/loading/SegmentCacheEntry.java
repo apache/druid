@@ -42,7 +42,8 @@ public interface SegmentCacheEntry extends CacheEntry
 
   /**
    * Acquire a closeable {@link Segment} reference, if one is available. Returns {@link Optional#empty()} when the
-   * entry is not mounted.
+   * entry is not mounted. A concurrent drop racing an earlier {@code isMounted()} check is likewise reported as
+   * empty rather than an error.
    * <p>
    * The returned {@link Segment} must be closed by the caller. The entry tracks its own outstanding references and
    * defers any cleanup work until they're all released.

@@ -16,22 +16,19 @@
  * limitations under the License.
  */
 
-import type { ToasterInstance } from '@blueprintjs/core';
+import type { Toaster } from '@blueprintjs/core';
 import { OverlayToaster, Position } from '@blueprintjs/core';
 
-let toaster: ToasterInstance | undefined;
+let toasterPromise: Promise<Toaster> | undefined;
 
-export const AppToaster: { show: ToasterInstance['show'] } = {
-  show: (...args) => {
-    if (!toaster) {
-      // Using lazy initialization avoids the following deprecation notice for "ReactDOM.render",
-      // both on initial load and in every unit test:
-      //
-      // Warning: ReactDOM.render is no longer supported in React 18. Use createRoot instead. Until
-      // you switch to the new API, your app will behave as if it's running React 17.
-      // Learn more: https://reactjs.org/link/switch-to-createroot
-      toaster = OverlayToaster.create({ className: 'recipe-toaster', position: Position.TOP });
-    }
-    return toaster.show(...args);
+export const AppToaster = {
+  show(...args: Parameters<Toaster['show']>): void {
+    // The toaster is created on first use so that pages and unit tests that never show a toast
+    // don't create its React root
+    toasterPromise ??= OverlayToaster.create({
+      className: 'recipe-toaster',
+      position: Position.TOP,
+    });
+    void toasterPromise.then(toaster => toaster.show(...args));
   },
 };

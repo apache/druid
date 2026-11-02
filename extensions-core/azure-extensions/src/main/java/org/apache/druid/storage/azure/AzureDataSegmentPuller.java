@@ -56,6 +56,20 @@ public class AzureDataSegmentPuller
     this.azureAccountConfig = azureAccountConfig;
   }
 
+  /**
+   * The storage client this puller reads through, so that {@link AzureLoadSpec} can hand it to an
+   * {@link AzureSegmentRangeReader} rather than having the deep storage client injected into the load spec itself.
+   */
+  AzureStorage getAzureStorage()
+  {
+    return azureStorage;
+  }
+
+  AzureAccountConfig getAccountConfig()
+  {
+    return azureAccountConfig;
+  }
+
   FileUtils.FileCopyResult getSegmentFiles(
       final String containerName,
       final String blobPath,

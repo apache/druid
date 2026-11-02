@@ -331,6 +331,139 @@ public class WorkerMemoryParametersTest
   }
 
   @Test
+  public void test_1WorkerInJvm_alone_withBroadcast_40Threads()
+  {
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeBroadcastInputSlices(numThreads);
+    final IntSet broadcastInputs = IntSets.singleton(1);
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    final MSQException e = Assertions.assertThrows(
+        MSQException.class,
+        () -> WorkerMemoryParameters.createInstance(
+            memoryIntrospector,
+            frameSize,
+            slices,
+            broadcastInputs,
+            shuffleSpec,
+            1,
+            1
+        )
+    );
+
+    // From the class-level formula with S = 1, P = 40, M = 1, o = 1: a bundle of (40 * 27 MB + 13 MB) / 0.7, rounded
+    // up to 1_561_428_572 bytes. The heap is that divided by the usable memory fraction of 0.8.
+    Assertions.assertEquals(
+        new NotEnoughMemoryFault(1_951_785_715, 1_250_000_000, 1_000_000_000, 1, 40, 1, 1),
+        e.getFault()
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_withBroadcast_40Threads_lessMemoryThanError()
+  {
+    // Test with 1 MB less than the amount of memory recommended in the error message for
+    // test_1WorkerInJvm_alone_withBroadcast_40Threads. The recommendation does not depend on the current heap size.
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_950_785_715, 1, numThreads);
+    final List<InputSlice> slices = makeBroadcastInputSlices(numThreads);
+    final IntSet broadcastInputs = IntSets.singleton(1);
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    final MSQException e = Assertions.assertThrows(
+        MSQException.class,
+        () -> WorkerMemoryParameters.createInstance(
+            memoryIntrospector,
+            frameSize,
+            slices,
+            broadcastInputs,
+            shuffleSpec,
+            1,
+            1
+        )
+    );
+
+    Assertions.assertEquals(
+        new NotEnoughMemoryFault(1_951_785_715, 1_950_785_715, 1_560_628_572, 1, 40, 1, 1),
+        e.getFault()
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_withBroadcast_40Threads_memoryFromError()
+  {
+    // Test with the amount of memory recommended in the error message for
+    // test_1WorkerInJvm_alone_withBroadcast_40Threads.
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_951_785_715, 1, numThreads);
+    final List<InputSlice> slices = makeBroadcastInputSlices(numThreads);
+    final IntSet broadcastInputs = IntSets.singleton(1);
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assertions.assertEquals(
+        new WorkerMemoryParameters(13_000_001, frameSize, 1, 2, 10_000_000, 312_285_714),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_withBroadcast_40Threads_2ConcurrentStages()
+  {
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeBroadcastInputSlices(numThreads);
+    final IntSet broadcastInputs = IntSets.singleton(1);
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    final MSQException e = Assertions.assertThrows(
+        MSQException.class,
+        () -> WorkerMemoryParameters.createInstance(
+            memoryIntrospector,
+            frameSize,
+            slices,
+            broadcastInputs,
+            shuffleSpec,
+            2,
+            1
+        )
+    );
+
+    // Twice the memory from test_1WorkerInJvm_alone_withBroadcast_40Threads, since there are two bundles.
+    Assertions.assertEquals(
+        new NotEnoughMemoryFault(3_903_571_430L, 1_250_000_000, 1_000_000_000, 1, 40, 1, 2),
+        e.getFault()
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_withBroadcast_40Threads_2ConcurrentStages_memoryFromError()
+  {
+    // Test with the amount of memory recommended in the error message from
+    // test_1WorkerInJvm_alone_withBroadcast_40Threads_2ConcurrentStages.
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(3_903_571_430L, 1, numThreads);
+    final List<InputSlice> slices = makeBroadcastInputSlices(numThreads);
+    final IntSet broadcastInputs = IntSets.singleton(1);
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assertions.assertEquals(
+        new WorkerMemoryParameters(13_000_001, frameSize, 1, 2, 10_000_000, 312_285_714),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
+    );
+  }
+
+  @Test
   public void test_1WorkerInJvm_200WorkersInCluster_4Threads()
   {
     final int numThreads = 4;
@@ -471,6 +604,18 @@ public class WorkerMemoryParametersTest
     return Arrays.stream(partitionss)
                  .map(partitions -> new StageInputSlice(0, partitions, OutputChannelMode.LOCAL_STORAGE))
                  .collect(Collectors.toList());
+  }
+
+  /**
+   * Returns a non-broadcast input with {@code numPartitions} partitions, plus a broadcast input with one partition,
+   * both written by a single worker.
+   */
+  private static List<InputSlice> makeBroadcastInputSlices(final int numPartitions)
+  {
+    return makeInputSlices(
+        ReadablePartitions.striped(0, 1, numPartitions),
+        ReadablePartitions.striped(0, 1, 1)
+    );
   }
 
   private static ShuffleSpec makeSortShuffleSpec()

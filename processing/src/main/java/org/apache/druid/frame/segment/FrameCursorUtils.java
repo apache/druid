@@ -27,7 +27,7 @@ import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.ordering.StringComparators;
@@ -61,7 +61,7 @@ public class FrameCursorUtils
               "Subquery's row size exceeds the frame size and therefore cannot write the subquery's "
               + "row to the frame. Either modify the subqueries to materialize smaller rows by removing wide columns, "
               + "or disable byte based limiting by setting '%s' to 'disabled'",
-              QueryContexts.MAX_SUBQUERY_BYTES_KEY
+              QueryContextParameters.MAX_SUBQUERY_BYTES
           );
 
   private FrameCursorUtils()

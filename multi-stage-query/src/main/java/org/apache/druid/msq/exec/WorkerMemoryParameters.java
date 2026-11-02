@@ -42,6 +42,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.BroadcastJoinSegmentMapFnProcessor;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 
 import javax.annotation.Nullable;
@@ -62,6 +63,22 @@ import java.util.Objects;
  * The remainder is called "bundle free memory", a pool of memory that can be used for {@link SuperSorter} or
  * {@link SegmentGeneratorStageProcessor}. The amounts overlap, because the same {@link WorkOrder} never
  * does both.
+ *
+ * <p>Workers need enough memory to store {@link QueryContextParameters#MAX_CONCURRENT_STAGES} bundles at once.
+ * Each bundle for a {@link WorkOrder} with broadcast inputs must be at least (in MB):
+ *
+ * <pre>
+ *   (P * (25 + (W + 1) * f) + 10 + (2 + o) * f) / 0.7
+ * </pre>
+ *
+ * where:
+ *
+ * <ul>
+ *   <li>P is the smaller of numProcessingThreads and {@link #computeNumInputPartitions}</li>
+ *   <li>f is the frame size in MB, by default 1</li>
+ *   <li>o is {@link #computeFramesPerOutputChannel}</li>
+ *   <li>W is the total number of workers</li>
+ * </ul>
  */
 public class WorkerMemoryParameters
 {
@@ -212,7 +229,12 @@ public class WorkerMemoryParameters
 
     final long minimumBundleFreeMemory = computeMinimumBundleFreeMemory(frameSize, numFramesPerOutputChannel);
     if (bundleFreeMemory < minimumBundleFreeMemory) {
-      final long requiredTaskMemory = (bundleMemory - bundleFreeMemory + minimumBundleFreeMemory) * maxConcurrentStages;
+      final long requiredBundleMemory = computeRequiredBundleMemory(
+          maxSimultaneousWorkProcessors * processorMemory,
+          hasBroadcastInputs,
+          minimumBundleFreeMemory
+      );
+      final long requiredTaskMemory = requiredBundleMemory * maxConcurrentStages;
       throw new MSQException(
           new NotEnoughMemoryFault(
               memoryIntrospector.computeJvmMemoryRequiredForTaskMemory(requiredTaskMemory),
@@ -429,6 +451,36 @@ public class WorkerMemoryParameters
   static long computeBroadcastBufferMemoryIncludingOverhead(final long bundleMemory)
   {
     return (long) (computeBroadcastBufferMemory(bundleMemory) * BROADCAST_BUFFER_OVERHEAD_RATIO);
+  }
+
+  /**
+   * Returns a bundle size large enough that its bundle free memory is at least {@code minimumBundleFreeMemory}.
+   *
+   * @param processorsMemory        memory for all simultaneously-running processors in the bundle
+   * @param hasBroadcastInputs      whether the bundle reserves memory for broadcast inputs
+   * @param minimumBundleFreeMemory figure from {@link #computeMinimumBundleFreeMemory}
+   */
+  static long computeRequiredBundleMemory(
+      final long processorsMemory,
+      final boolean hasBroadcastInputs,
+      final long minimumBundleFreeMemory
+  )
+  {
+    final long requiredMemoryExcludingBroadcast = processorsMemory + minimumBundleFreeMemory;
+    if (!hasBroadcastInputs) {
+      return requiredMemoryExcludingBroadcast;
+    }
+
+    final double broadcastFraction = BROADCAST_BUFFER_TOTAL_MEMORY_FRACTION * BROADCAST_BUFFER_OVERHEAD_RATIO;
+    long bundleMemory = (long) Math.ceil(requiredMemoryExcludingBroadcast / (1 - broadcastFraction));
+
+    // Guard against floating-point error in the estimate.
+    while (bundleMemory - computeBroadcastBufferMemoryIncludingOverhead(bundleMemory)
+           < requiredMemoryExcludingBroadcast) {
+      bundleMemory++;
+    }
+
+    return bundleMemory;
   }
 
   /**

@@ -25,12 +25,12 @@ git remote set-branches --add origin ${GITHUB_BASE_REF}
 git fetch
 
 # Compile the project. jacoco:report needs class files along with jacoco.exec files to generate the report.
-mvn -B install -DskipTests -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
+./mvnw -B install -DskipTests -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
 
 # If there are multiple jacoco.exec files present in any module, merge them into a single jacoco.exec file for that module.
-mvn jacoco:merge
+./mvnw jacoco:merge
 
-mvn jacoco:report
+./mvnw jacoco:report
 
 changed_files="$(git diff --name-only origin/${GITHUB_BASE_REF}...HEAD '**/*.java' || [[ $? == 1 ]])"
 
@@ -40,7 +40,7 @@ do
   echo $f
 done
 
-mvn com.github.eirslett:frontend-maven-plugin:install-node-and-npm@install-node-and-npm -pl web-console/
+./mvnw com.github.eirslett:frontend-maven-plugin:install-node-and-npm@install-node-and-npm -pl web-console/
 PATH+=:web-console/target/node/
 npm install @connectis/diff-test-coverage@1.5.3
 

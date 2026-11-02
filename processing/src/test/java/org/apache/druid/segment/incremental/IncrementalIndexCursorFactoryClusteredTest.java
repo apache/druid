@@ -26,17 +26,21 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -246,6 +250,28 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
   }
 
   @Test
+  void testReportedOrderingEndsAtQueryVirtualColumn()
+  {
+    // The query's "tenant" := upper(region) is equivalent to the materialized region_upper, so it is remapped to that
+    // column and dropped from each group's spec. It still shadows the stored "tenant", so the ordering must end
+    // before it.
+    try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      final List<OrderBy> segmentOrdering = index.getClusteredBaseTable().toMetadataSchema().getOrdering();
+      Assertions.assertEquals("tenant", segmentOrdering.get(1).getColumnName());
+
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("tenant", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+        Assertions.assertEquals(segmentOrdering.subList(0, 1), holder.getOrdering());
+      }
+    }
+  }
+
+  @Test
   void testQueryVirtualColumnEquivalentToNonClusteringMaterializedColumnReadsMaterializedColumn()
   {
     // Query VC v1 := upper(region) is equivalent to the non-clustering materialized column region_upper. The remap
@@ -312,6 +338,56 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
           ColumnType.LONG,
           sig.getColumnType(ColumnHolder.TIME_COLUMN_NAME).orElseThrow()
       );
+    }
+  }
+
+  @Test
+  void testCursorCapabilitiesCombineAllGroups()
+  {
+    // A cursor over several groups must answer for all of them, not just the group it is reading; tags is
+    // multi-valued only in the second group (globex), and so is tags_upper, which the cluster spec computes from tags.
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("tags_upper", "upper(tags)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time"),
+            new StringDimensionSchema("tags"),
+            new StringDimensionSchema("tags_upper")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+        .withMinTimestamp(T0)
+        .withTimestampSpec(TIMESTAMP_SPEC)
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(spec.getDimensionsSpec())
+        .withRollup(false)
+        .withClusterSpec(spec)
+        .build();
+    try (OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(10_000)
+        .build()) {
+      final List<String> dims = List.of("tenant", "tags");
+      index.add(new MapBasedInputRow(T0, dims, Map.of("tenant", "acme", "tags", "a")));
+      index.add(new MapBasedInputRow(T0 + 1, dims, Map.of("tenant", "globex", "tags", List.of("b", "c"))));
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+
+      // time-ordered reads merge the groups instead of concatenating them
+      final CursorBuildSpec timeOrdered =
+          CursorBuildSpec.builder().setPreferredOrdering(Cursors.ascendingTimeOrder()).build();
+      for (CursorBuildSpec cursorBuildSpec : List.of(CursorBuildSpec.FULL_SCAN, timeOrdered)) {
+        try (CursorHolder holder = factory.makeCursorHolder(cursorBuildSpec)) {
+          final ColumnSelectorFactory selectorFactory = holder.asCursor().getColumnSelectorFactory();
+          for (String column : List.of("tags", "tags_upper")) {
+            final ColumnCapabilities caps = selectorFactory.getColumnCapabilities(column);
+            Assertions.assertTrue(caps.hasMultipleValues().isTrue(), column);
+            Assertions.assertTrue(caps.isDictionaryEncoded().isFalse(), column);
+          }
+        }
+      }
     }
   }
 

@@ -23,15 +23,40 @@
 
 name: "Pull Request Labeler"
 on:
-- pull_request_target
+  workflow_run:
+    workflows: ["Pull Request Labeler Signal"]
+    types: [completed]
+
+permissions: {}
 
 jobs:
   triage:
+    if: github.event.workflow_run.event == 'pull_request'
     permissions:
       contents: read
       pull-requests: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/labeler@v6
+    - name: Find the pull request
+      id: pr
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      run: |
+        [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::bad head sha"; exit 1; }
+        PR_NUMBER=$(gh pr list -R "$GITHUB_REPOSITORY" --state open --search "$HEAD_SHA" \
+          --json number,headRefOid \
+          --jq "first(.[] | select(.headRefOid == \"$HEAD_SHA\") | .number)")
+        echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+    - if: steps.pr.outputs.number != ''
+      uses: actions/labeler@v7
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        pr-number: ${{ steps.pr.outputs.number }}
+    # actions/labeler reads head-branch from the pull_request event payload, which workflow_run lacks
+    - name: Label backport branches
+      if: steps.pr.outputs.number != '' && startsWith(github.event.workflow_run.head_branch, 'backport')
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_NUMBER: ${{ steps.pr.outputs.number }}
+      run: gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels" -f "labels[]=Backport"

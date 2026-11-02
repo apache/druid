@@ -74,8 +74,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[1]' RETURNING bigint array) c
    FROM test_array);
-SQL requires union
-!error
++--------------+
+| c            |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A6_B1
@@ -86,8 +99,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) c
    FROM test_array);
-SQL requires union
-!error
++--------------+
+| c            |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A7_B1
@@ -123,8 +149,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[2]' RETURNING decimal array) c
    FROM test_array);
-SQL requires union
-!error
++------------------+
+| c                |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A9_B1
@@ -135,8 +174,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) c
    FROM test_array);
-SQL requires union
-!error
++------------------+
+| c                |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A10_B1
@@ -172,8 +224,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A12_B1
@@ -184,8 +249,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A13_B1
@@ -221,8 +299,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A15_B1
@@ -233,8 +324,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A16_B1
@@ -270,8 +374,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A18_B1
@@ -282,8 +399,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A19_B1
@@ -319,8 +449,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[6]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++--------------------------+
+| c                        |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A21_B1
@@ -331,8 +474,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++--------------------------+
+| c                        |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A22_B1
@@ -368,8 +524,21 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[7]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_union_all TEST_ID: A24_B1
@@ -380,6 +549,19 @@ FROM
    FROM test_array
    UNION ALL SELECT json_value(a_nested, '$[7][7]' RETURNING varchar array) c
    FROM test_array);
-SQL requires union
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(8 rows)
+
+!ok
 

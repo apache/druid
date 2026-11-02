@@ -43,6 +43,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectorsTest;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -106,10 +107,7 @@ public class ExpressionVectorSelectorBenchmark
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", schemaInfo.getDataInterval(), "1", 0))
                                                .shardSpec(new LinearShardSpec(0))
                                                .size(0)
                                                .build();

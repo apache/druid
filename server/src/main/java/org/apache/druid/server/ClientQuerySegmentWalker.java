@@ -22,7 +22,6 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
@@ -50,7 +49,6 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryLogicCompatToolChest;
@@ -61,11 +59,11 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultLevelCachingQueryRunner;
-import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -197,10 +195,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
       query = query.withOverriddenContext(
-          ImmutableMap.of(
-              QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
-              useNestedForUnknownTypeInSubquery
-          )
+          QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
+          useNestedForUnknownTypeInSubquery
       );
       return (QueryRunner<T>) queryExecutor.entryPoint(query, this);
     }
@@ -217,7 +213,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query.getDataSource(),
         query.getId(),
         query.getSqlQueryId(),
-        query.context().getString(QueryContexts.QUERY_RESOURCE_ID)
+        query.context().get(QueryContextParameters.QUERY_RESOURCE_ID)
     ));
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
@@ -388,12 +384,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           queryResults = Sequences.empty();
         } else {
           Query subQueryWithSerialization = subQuery.withOverriddenContext(
-              Collections.singletonMap(
-                  ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-                  ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
-                      .serializationMode()
-                      .toString()
-              )
+              QueryContextParameters.SERIALIZATION,
+              ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
+                  .serializationMode()
           );
           queryResults = subQueryLogic
               .entryPoint(subQueryWithSerialization, this)
@@ -478,12 +471,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           queryResults = Sequences.empty();
         } else {
           Query subQueryWithSerialization = subQuery.withOverriddenContext(
-              Collections.singletonMap(
-                  ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-                  ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
-                                               .serializationMode()
-                                               .toString()
-              )
+              QueryContextParameters.SERIALIZATION,
+              ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
+                                           .serializationMode()
           );
 
           queryResults = subQueryWithSerialization
@@ -589,7 +579,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .emitCPUTimeMetric(emitter)
         .postProcess(
             objectMapper.convertValue(
-                query.context().getString("postProcessing"),
+                query.context().get(QueryContextParameters.POST_PROCESSING),
                 new TypeReference<>() {}
             )
         )
@@ -693,10 +683,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query = query.withSqlQueryId(parentSqlQueryId);
       }
 
-      query.withOverriddenContext(Collections.singletonMap(
-          QueryContexts.QUERY_RESOURCE_ID,
-          parentQueryResourceId
-      ));
+      query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.QUERY_RESOURCE_ID, parentQueryResourceId));
 
       currentDataSource = new QueryDataSource(query);
     }
@@ -954,7 +941,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     + "JVM's memory or set the '%s' in the query context to increase the space allocated for subqueries to "
     + "materialize their results. Manually alter the value carefully as it can cause the broker to go out of memory.",
         memoryLimit,
-        QueryContexts.MAX_SUBQUERY_BYTES_KEY
+        QueryContextParameters.MAX_SUBQUERY_BYTES
     );
   }
 
@@ -966,10 +953,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         + "memory size and result's heap usage or manually configure the values of either '%s' or '%s' in the query "
         + "context. Manually alter the value carefully as it can cause the broker to go out of memory.",
         rowLimitUsed,
-        QueryContexts.MAX_SUBQUERY_BYTES_KEY,
+        QueryContextParameters.MAX_SUBQUERY_BYTES,
         SubqueryGuardrailHelper.AUTO_LIMIT_VALUE,
-        QueryContexts.MAX_SUBQUERY_BYTES_KEY,
-        QueryContexts.MAX_SUBQUERY_ROWS_KEY
+        QueryContextParameters.MAX_SUBQUERY_BYTES,
+        QueryContextParameters.MAX_SUBQUERY_ROWS
     );
   }
 }

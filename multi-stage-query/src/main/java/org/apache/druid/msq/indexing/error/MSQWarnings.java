@@ -26,7 +26,9 @@ public class MSQWarnings
 {
   /**
    * Query context key for limiting the maximum number of parse exceptions that a multi-stage query can generate
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#MAX_PARSE_EXCEPTIONS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_PARSE_EXCEPTIONS_ALLOWED = "maxParseExceptions";
 
   /**

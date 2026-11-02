@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -68,4 +69,21 @@ public interface SegmentPruner
    * {@link CompositeSegmentPruner}
    */
   SegmentPruner combine(SegmentPruner other);
+
+  /**
+   * Returns a pruner that includes only segments that are accepted by both of the given pruners. Either pruner
+   * may be null, which indicates that it accepts all segments (i.e. does not do any pruning). Returns null if
+   * both provided pruners are null.
+   */
+  @Nullable
+  static SegmentPruner combine(@Nullable SegmentPruner first, @Nullable SegmentPruner second)
+  {
+    if (first == null) {
+      return second;
+    } else if (second == null) {
+      return first;
+    } else {
+      return first.combine(second);
+    }
+  }
 }

@@ -26,7 +26,9 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -51,18 +53,18 @@ public class TaskRunnerUtils
 
   public static void notifyLocationChanged(
       final Iterable<Pair<TaskRunnerListener, Executor>> listeners,
-      final String taskId,
+      final Task task,
       final TaskLocation location
   )
   {
-    log.debug("Task [%s] location changed to [%s].", taskId, location);
+    log.debug("Task [%s] location changed to [%s].", task.getId(), location);
     for (final Pair<TaskRunnerListener, Executor> listener : listeners) {
       try {
-        listener.rhs.execute(() -> listener.lhs.locationChanged(taskId, location));
+        listener.rhs.execute(() -> listener.lhs.locationChanged(task, location));
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to notify task listener")
-           .addData("taskId", taskId)
+           .addData("taskId", task.getId())
            .addData("taskLocation", location)
            .addData("listener", listener.toString())
            .emit();
@@ -72,18 +74,18 @@ public class TaskRunnerUtils
 
   public static void notifyStatusChanged(
       final Iterable<Pair<TaskRunnerListener, Executor>> listeners,
-      final String taskId,
+      final Task task,
       final TaskStatus status
   )
   {
-    log.debug("Task [%s] status changed to [%s].", taskId, status.getStatusCode());
+    log.debug("Task [%s] status changed to [%s].", task.getId(), status.getStatusCode());
     for (final Pair<TaskRunnerListener, Executor> listener : listeners) {
       try {
-        listener.rhs.execute(() -> listener.lhs.statusChanged(taskId, status));
+        listener.rhs.execute(() -> listener.lhs.statusChanged(task, status));
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to notify task listener")
-           .addData("taskId", taskId)
+           .addData("taskId", task.getId())
            .addData("taskStatus", status.getStatusCode())
            .addData("listener", listener.toString())
            .emit();
@@ -141,8 +143,9 @@ public class TaskRunnerUtils
                  || HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)) {
         return Optional.absent();
       } else {
-        throw new IOException(
-            StringUtils.format("Failed to stream task reports from [%s]. Response status [%s].", url, responseStatus)
+        throw new IOE(
+            "Failed to stream task reports from url[%s]. Response status[%s].",
+            url, responseStatus
         );
       }
     }

@@ -1,0 +1,311 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`ConsoleTable matches snapshot 1`] = `
+<div
+  class="console-table -striped -highlight padded-header"
+>
+  <div
+    class="ct-table"
+    role="grid"
+  >
+    <div
+      class="ct-thead -headerGroups"
+      style="min-width: 260px;"
+    >
+      <div
+        class="ct-tr"
+        role="row"
+      >
+        <div
+          class="ct-th"
+          role="columnheader"
+          style="flex: 0 0 auto; width: 100px; max-width: 100px;"
+          tabindex="-1"
+        />
+        <div
+          class="ct-th details"
+          role="columnheader"
+          style="flex: 160 0 auto; width: 160px;"
+          tabindex="-1"
+        >
+          Details
+        </div>
+      </div>
+    </div>
+    <div
+      class="ct-thead -header"
+      style="min-width: 260px;"
+    >
+      <div
+        class="ct-tr"
+        role="row"
+      >
+        <div
+          class="ct-th ct-resizable-header -cursor-pointer"
+          role="columnheader"
+          style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+          tabindex="-1"
+        >
+          <div
+            class="ct-resizable-header-content"
+          >
+            Name
+          </div>
+          <div
+            class="ct-resizer"
+          />
+        </div>
+        <div
+          class="ct-th ct-resizable-header -cursor-pointer"
+          role="columnheader"
+          style="flex: 60 0 auto; width: 60px; max-width: 200px;"
+          tabindex="-1"
+        >
+          <div
+            class="ct-resizable-header-content"
+          >
+            Kind
+          </div>
+          <div
+            class="ct-resizer"
+          />
+        </div>
+        <div
+          class="ct-th -cursor-pointer"
+          role="columnheader"
+          style="flex: 100 0 auto; width: 100px;"
+          tabindex="-1"
+        >
+          <div
+            class=""
+          >
+            Age
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="ct-thead -filters"
+      style="min-width: 260px;"
+    >
+      <div
+        class="ct-tr"
+        role="row"
+      >
+        <div
+          class="ct-th"
+          role="columnheader"
+          style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+          tabindex="-1"
+        >
+          <div
+            class="bp6-input-group generic-filter-input hide-icon"
+          >
+            <span
+              class="bp6-input-left-container"
+            >
+              <span
+                class="bp6-popover-target"
+              >
+                <button
+                  aria-expanded="false"
+                  aria-haspopup="menu"
+                  class="bp6-button bp6-minimal filter-mode-button"
+                  type="button"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="bp6-icon bp6-icon-search"
+                  >
+                    <svg
+                      data-icon="search"
+                    />
+                  </span>
+                </button>
+              </span>
+            </span>
+            <input
+              class="bp6-input"
+              style="padding-left: 0px;"
+              type="text"
+              value=""
+            />
+          </div>
+        </div>
+        <div
+          class="ct-th"
+          role="columnheader"
+          style="flex: 60 0 auto; width: 60px; max-width: 200px;"
+          tabindex="-1"
+        >
+          <div
+            class="bp6-input-group generic-filter-input hide-icon"
+          >
+            <span
+              class="bp6-input-left-container"
+            >
+              <span
+                class="bp6-popover-target"
+              >
+                <button
+                  aria-expanded="false"
+                  aria-haspopup="menu"
+                  class="bp6-button bp6-minimal filter-mode-button"
+                  type="button"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="bp6-icon bp6-icon-search"
+                  >
+                    <svg
+                      data-icon="search"
+                    />
+                  </span>
+                </button>
+              </span>
+            </span>
+            <input
+              class="bp6-input"
+              style="padding-left: 0px;"
+              type="text"
+              value=""
+            />
+          </div>
+        </div>
+        <div
+          class="ct-th"
+          role="columnheader"
+          style="flex: 100 0 auto; width: 100px;"
+          tabindex="-1"
+        />
+      </div>
+    </div>
+    <div
+      class="ct-tbody"
+      style="min-width: 260px;"
+    >
+      <div
+        class="ct-tr-group"
+        role="rowgroup"
+      >
+        <div
+          class="ct-tr -odd"
+          role="row"
+        >
+          <div
+            class="ct-td"
+            role="gridcell"
+            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+          >
+            Rex
+          </div>
+          <div
+            class="ct-td"
+            role="gridcell"
+            style="flex: 60 0 auto; width: 60px; max-width: 200px;"
+          >
+            dog
+          </div>
+          <div
+            class="ct-td"
+            role="gridcell"
+            style="flex: 100 0 auto; width: 100px;"
+          >
+            3
+          </div>
+        </div>
+      </div>
+      <div
+        class="ct-tr-group"
+        role="rowgroup"
+      >
+        <div
+          class="ct-tr -even"
+          role="row"
+        >
+          <div
+            class="ct-td"
+            role="gridcell"
+            style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+          >
+            Tom
+          </div>
+          <div
+            class="ct-td"
+            role="gridcell"
+            style="flex: 60 0 auto; width: 60px; max-width: 200px;"
+          >
+            cat
+          </div>
+          <div
+            class="ct-td"
+            role="gridcell"
+            style="flex: 100 0 auto; width: 100px;"
+          >
+            5
+          </div>
+        </div>
+      </div>
+      <!-- 1 empty rows -->
+    </div>
+  </div>
+  <div
+    class="pagination-bottom"
+  >
+    <div
+      class="console-table-pagination"
+    >
+      <div
+        class="bp6-button-group"
+      >
+        <button
+          class="bp6-button bp6-disabled bp6-minimal"
+          disabled=""
+          tabindex="-1"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="bp6-icon bp6-icon-chevron-left"
+          >
+            <svg
+              data-icon="chevron-left"
+            />
+          </span>
+        </button>
+        <button
+          class="bp6-button bp6-disabled bp6-minimal"
+          disabled=""
+          tabindex="-1"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="bp6-icon bp6-icon-chevron-right"
+          >
+            <svg
+              data-icon="chevron-right"
+            />
+          </span>
+        </button>
+        <span
+          class="bp6-popover-target"
+        >
+          <button
+            aria-expanded="false"
+            aria-haspopup="menu"
+            class="bp6-button bp6-minimal"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Showing 1-2 of 2
+            </span>
+          </button>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+`;

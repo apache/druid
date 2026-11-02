@@ -262,7 +262,7 @@ public class FileUtils
    */
   public static <T> T writeAtomically(final File file, final File tmpDir, OutputStreamConsumer<T> f) throws IOException
   {
-    final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
+    final File tmpFile = new File(tmpDir, "." + UUID.randomUUID());
 
     //noinspection unused
     try (final Closeable ignoredDeleter = () -> Files.deleteIfExists(tmpFile.toPath())) {

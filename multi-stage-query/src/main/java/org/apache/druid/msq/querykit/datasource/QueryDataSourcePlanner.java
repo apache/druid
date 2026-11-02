@@ -30,8 +30,8 @@ import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,13 +43,13 @@ import java.util.Map;
 public class QueryDataSourcePlanner implements DataSourcePlanner<QueryDataSource>
 {
   /**
-   * A map with {@link DruidSqlInsert#SQL_INSERT_SEGMENT_GRANULARITY} set to null, so we can clear it from the context
-   * of subqueries.
+   * A map with {@link QueryContextParameters#SQL_INSERT_SEGMENT_GRANULARITY} set to null, so we can clear it from the
+   * context of subqueries.
    */
   private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
 
   static {
-    CONTEXT_MAP_NO_SEGMENT_GRANULARITY.put(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, null);
+    CONTEXT_MAP_NO_SEGMENT_GRANULARITY.put(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY.getName(), null);
   }
 
   @Override

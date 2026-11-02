@@ -25,7 +25,6 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.SupervisorModule;
@@ -46,6 +45,7 @@ import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.OverlordMode;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
@@ -62,6 +62,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
@@ -76,7 +77,6 @@ import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -123,7 +123,7 @@ public class OverlordCompactionSchedulerTest
   private static final DateTime JAN_20 = DateTimes.of("2025-01-20");
 
   private AtomicReference<ClusterCompactionConfig> compactionConfig;
-  private CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
+  private OverlordMode overlordMode;
 
   private TaskMaster taskMaster;
   private TaskQueue taskQueue;
@@ -178,7 +178,7 @@ public class OverlordCompactionSchedulerTest
     segmentsMetadataManager = segmentStorage.getManager();
 
     compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(1.0, 100, null, true, null, null));
-    coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
+    overlordMode = OverlordMode.STANDALONE;
 
     taskActionClientFactory = task -> new TaskActionClient()
     {
@@ -224,7 +224,7 @@ public class OverlordCompactionSchedulerTest
         new SegmentsMetadataManagerConfig(null, null, null),
         () -> DruidCompactionConfig.empty().withClusterConfig(compactionConfig.get()),
         new CompactionStatusTracker(),
-        coordinatorOverlordServiceConfig,
+        overlordMode,
         taskActionClientFactory,
         new DruidInputSourceFactory(
             TestIndex.INDEX_IO,
@@ -333,7 +333,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void test_enableSupervisors_inStandaloneMode_enablesSegmentPolling()
   {
-    coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
+    overlordMode = OverlordMode.STANDALONE;
     initScheduler();
 
     verifySegmentPolling(true);
@@ -342,7 +342,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void test_enableSupervisors_inCoordinatorMode_disablesSegmentPolling()
   {
-    coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(true, "overlord");
+    overlordMode = OverlordMode.EMBEDDED_IN_COORDINATOR;
     initScheduler();
 
     verifySegmentPolling(false);
@@ -374,7 +374,7 @@ public class OverlordCompactionSchedulerTest
         .builder()
         .forDataSource(dataSource)
         .withEngine(CompactionEngine.MSQ)
-        .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
+        .withTaskContext(Map.of(QueryContextParameters.MAX_NUM_TASKS.getName(), 1))
         .build();
 
     final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(datasourceConfig);

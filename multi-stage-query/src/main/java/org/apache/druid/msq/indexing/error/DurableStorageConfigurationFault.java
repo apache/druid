@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import java.util.Objects;
 
@@ -45,7 +45,7 @@ public class DurableStorageConfigurationFault extends BaseMSQFault
         + "Check the documentation on how to enable durable storage mode. "
         + "If you want to still query without durable storage mode, set %s to false in the query context. Got error %s",
         MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_ENABLED,
-        MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
+        QueryContextParameters.DURABLE_SHUFFLE_STORAGE,
         errorMessage
     );
     this.errorMessage = errorMessage;

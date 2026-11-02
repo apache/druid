@@ -19,17 +19,15 @@
 
 package org.apache.druid.server;
 
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.initialization.ServerConfig;
-
-import java.util.Map;
 
 /**
  * Use this QueryRunner to set and verify Query contexts.
@@ -69,10 +67,10 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
     newQuery.context().verifyMaxQueryTimeout(
         serverConfig.getMaxQueryTimeout()
     );
-    // DirectDruidClient.QUERY_FAIL_TIME is used by DirectDruidClient and JsonParserIterator to determine when to
+    // queryFailTime is used by DirectDruidClient and JsonParserIterator to determine when to
     // fail with a timeout exception
     final QueryContext context = newQuery.context();
-    final long existingFailTime = context.getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+    final long existingFailTime = context.getOrDefault(QueryContextParameters.QUERY_FAIL_TIME, -1L);
     long computedFailTime;
     if (context.hasTimeout()) {
       computedFailTime = this.startTimeMillis + context.getTimeout();
@@ -89,7 +87,7 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
         ? Math.min(existingFailTime, computedFailTime)
         : computedFailTime;
     return newQuery.withOverriddenContext(
-        Map.of(DirectDruidClient.QUERY_FAIL_TIME, failTime)
+        QueryContext.ofMap(QueryContextParameters.QUERY_FAIL_TIME, failTime)
     );
   }
 }

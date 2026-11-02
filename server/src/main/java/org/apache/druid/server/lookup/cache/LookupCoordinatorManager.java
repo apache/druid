@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StreamUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -724,22 +725,21 @@ public class LookupCoordinatorManager
 
   static URL getLookupsURL(HostAndPortWithScheme druidNode) throws MalformedURLException
   {
-    return new URL(
-        druidNode.getScheme(),
-        druidNode.getHostText(),
-        druidNode.getPortOrDefault(-1),
-        LOOKUP_BASE_REQUEST_PATH
-    );
+    return lookupsURL(druidNode, LOOKUP_BASE_REQUEST_PATH);
   }
 
   static URL getLookupsUpdateURL(HostAndPortWithScheme druidNode) throws MalformedURLException
   {
-    return new URL(
-        druidNode.getScheme(),
-        druidNode.getHostText(),
-        druidNode.getPortOrDefault(-1),
-        LOOKUP_UPDATE_REQUEST_PATH
-    );
+    return lookupsURL(druidNode, LOOKUP_UPDATE_REQUEST_PATH);
+  }
+
+  private static URL lookupsURL(HostAndPortWithScheme druidNode, String path) throws MalformedURLException
+  {
+    final int port = druidNode.getPortOrDefault(-1);
+    final String hostAndPort = port < 0
+                               ? HostAndPort.fromHost(druidNode.getHostText()).toString()
+                               : HostAndPort.fromParts(druidNode.getHostText(), port).toString();
+    return URIs.toURL(druidNode.getScheme() + "://" + hostAndPort + path);
   }
 
   private static boolean httpStatusIsSuccess(int statusCode)

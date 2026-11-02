@@ -34,6 +34,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.assertj.core.util.Sets;
 import org.joda.time.Interval;
@@ -58,17 +59,14 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
       String version
   )
   {
-    return new DataSegment(
-        dataSource,
-        Intervals.of(interval),
-        version,
-        ImmutableMap.of(),
-        ImmutableList.of(),
-        ImmutableList.of(),
-        NoneShardSpec.instance(),
-        9,
-        1234L
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, Intervals.of(interval), version, 0))
+                      .loadSpec(ImmutableMap.of())
+                      .dimensions(ImmutableList.of())
+                      .metrics(ImmutableList.of())
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(1234L)
+                      .build();
   }
 
   @RegisterExtension

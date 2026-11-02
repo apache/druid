@@ -32,6 +32,8 @@ import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -58,11 +60,13 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -71,6 +75,9 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class FriendlyServersTest
 {
+  private static final String CHUNKED_OK = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n";
+  private static final String LAST_CHUNK = "0\r\n\r\n";
+
   @Test
   public void testFriendlyHttpServer() throws Exception
   {
@@ -751,6 +758,200 @@ public class FriendlyServersTest
       exec.shutdownNow();
       serverSocket.close();
       lifecycle.stop();
+    }
+  }
+
+  /**
+   * An abort that arrives once the response is complete must not close the channel: it is back in the pool, and the
+   * next request may already be on it.
+   */
+  @Test
+  public void testAbortAfterCompletionLeavesThePooledChannelOpen() throws Exception
+  {
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    final BlockingQueue<String> wire = new LinkedBlockingQueue<>();
+    serveChunkedFromWire(exec, serverSocket, wire);
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(
+          HttpClientConfig.builder().withNumConnections(1).build(),
+          lifecycle
+      );
+      final Request request = new Request(
+          HttpMethod.GET,
+          new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
+      );
+
+      final CapturingTrafficCop<StringFullResponseHolder, StringFullResponseHolder> first =
+          new CapturingTrafficCop<>(new StringFullResponseHandler(StandardCharsets.UTF_8));
+      final ListenableFuture<StringFullResponseHolder> firstResponse = client.go(request, first);
+      wire.put(CHUNKED_OK + chunk("a") + LAST_CHUNK);
+      Assertions.assertEquals("a", firstResponse.get(30, TimeUnit.SECONDS).getContent());
+
+      first.trafficCop.get().abort();
+
+      // The server answers on its only connection, so the second request succeeds only if it reuses the first's.
+      final ListenableFuture<StringFullResponseHolder> secondResponse =
+          client.go(request, new StringFullResponseHandler(StandardCharsets.UTF_8));
+      wire.put(CHUNKED_OK + chunk("b") + LAST_CHUNK);
+      Assertions.assertEquals("b", secondResponse.get(30, TimeUnit.SECONDS).getContent());
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  /**
+   * A resume that arrives once the response is complete must not touch the channel: it is back in the pool, and the
+   * next request on it may have suspended reads.
+   */
+  @Test
+  public void testResumeAfterCompletionLeavesTheNextRequestSuspended() throws Exception
+  {
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    final BlockingQueue<String> wire = new LinkedBlockingQueue<>();
+    serveChunkedFromWire(exec, serverSocket, wire);
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(
+          HttpClientConfig.builder().withNumConnections(1).build(),
+          lifecycle
+      );
+      final Request request = new Request(
+          HttpMethod.GET,
+          new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
+      );
+
+      // The first request suspends too: only then does its late resume pass its own watermark and reach the channel.
+      final SuspendAfterFirstChunk<StringFullResponseHolder, StringFullResponseHolder> first =
+          new SuspendAfterFirstChunk<>(new StringFullResponseHandler(StandardCharsets.UTF_8));
+      final ListenableFuture<StringFullResponseHolder> firstResponse = client.go(request, first);
+      wire.put(CHUNKED_OK + chunk("a") + LAST_CHUNK);
+      Assertions.assertEquals("a", firstResponse.get(30, TimeUnit.SECONDS).getContent());
+
+      final SuspendAfterFirstChunk<StringFullResponseHolder, StringFullResponseHolder> second =
+          new SuspendAfterFirstChunk<>(new StringFullResponseHandler(StandardCharsets.UTF_8));
+      final ListenableFuture<StringFullResponseHolder> secondResponse = client.go(request, second);
+      wire.put(CHUNKED_OK + chunk("b"));
+      Assertions.assertTrue(second.suspended.await(30, TimeUnit.SECONDS));
+
+      first.trafficCop.get().resume(1);
+      wire.put(chunk("c") + LAST_CHUNK);
+      Assertions.assertThrows(TimeoutException.class, () -> secondResponse.get(1, TimeUnit.SECONDS));
+
+      second.trafficCop.get().resume(1);
+      Assertions.assertEquals("bc", secondResponse.get(30, TimeUnit.SECONDS).getContent());
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  private static String chunk(String data)
+  {
+    return StringUtils.format("%x\r\n%s\r\n", data.length(), data);
+  }
+
+  /**
+   * Serves one keep-alive connection. Each request is answered with the segments taken from {@code wire}, up to the
+   * one that ends the chunked body, so the test decides when each part of a response goes out.
+   */
+  private static void serveChunkedFromWire(ExecutorService exec, ServerSocket serverSocket, BlockingQueue<String> wire)
+  {
+    exec.submit(
+        () -> {
+          try (
+              Socket s = serverSocket.accept();
+              BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+              OutputStream out = s.getOutputStream()
+          ) {
+            String line;
+            while ((line = in.readLine()) != null) {
+              if (line.isEmpty()) {
+                String segment;
+                do {
+                  segment = wire.take();
+                  out.write(StringUtils.toUtf8(segment));
+                  out.flush();
+                } while (!segment.endsWith(LAST_CHUNK));
+              }
+            }
+          }
+          catch (Exception ignored) {
+            // suppress
+          }
+        }
+    );
+  }
+
+  /**
+   * Exposes the {@link HttpResponseHandler.TrafficCop} of the response it handles.
+   */
+  private static class CapturingTrafficCop<I, F> implements HttpResponseHandler<I, F>
+  {
+    final HttpResponseHandler<I, F> delegate;
+    final AtomicReference<TrafficCop> trafficCop = new AtomicReference<>();
+
+    CapturingTrafficCop(HttpResponseHandler<I, F> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public ClientResponse<I> handleResponse(HttpResponse response, TrafficCop trafficCop)
+    {
+      this.trafficCop.set(trafficCop);
+      return delegate.handleResponse(response, trafficCop);
+    }
+
+    @Override
+    public ClientResponse<I> handleChunk(ClientResponse<I> clientResponse, HttpContent chunk, long chunkNum)
+    {
+      return delegate.handleChunk(clientResponse, chunk, chunkNum);
+    }
+
+    @Override
+    public ClientResponse<F> done(ClientResponse<I> clientResponse)
+    {
+      return delegate.done(clientResponse);
+    }
+
+    @Override
+    public void exceptionCaught(ClientResponse<I> clientResponse, Throwable e)
+    {
+      delegate.exceptionCaught(clientResponse, e);
+    }
+  }
+
+  /**
+   * Suspends reads after the first chunk; resume them through {@link #trafficCop}.
+   */
+  private static class SuspendAfterFirstChunk<I, F> extends CapturingTrafficCop<I, F>
+  {
+    final CountDownLatch suspended = new CountDownLatch(1);
+
+    SuspendAfterFirstChunk(HttpResponseHandler<I, F> delegate)
+    {
+      super(delegate);
+    }
+
+    @Override
+    public ClientResponse<I> handleChunk(ClientResponse<I> clientResponse, HttpContent chunk, long chunkNum)
+    {
+      final ClientResponse<I> next = super.handleChunk(clientResponse, chunk, chunkNum);
+      if (chunkNum != 1) {
+        return next;
+      }
+      suspended.countDown();
+      return new ClientResponse<>(next.isFinished(), false, next.getObj());
     }
   }
 }

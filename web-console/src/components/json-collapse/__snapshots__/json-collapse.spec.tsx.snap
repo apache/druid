@@ -1,35 +1,31 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`JsonCollapse matches snapshot 1`] = `
 <div
-  className="json-collapse"
+  class="json-collapse"
 >
   <div
-    className="collapse-buttons"
+    class="collapse-buttons"
   >
-    <Blueprint5.Button
-      active={false}
-      minimal={true}
-      onClick={[Function]}
-      text="test"
+    <button
+      class="bp6-button bp6-minimal"
+      type="button"
+    >
+      <span
+        class="bp6-button-text"
+      >
+        test
+      </span>
+    </button>
+  </div>
+  <div
+    class="bp6-collapse"
+  >
+    <div
+      aria-hidden="true"
+      class="bp6-collapse-body"
+      style="transform: translateY(-undefinedpx);"
     />
   </div>
-  <Blueprint5.Collapse
-    component="div"
-    isOpen={false}
-    keepChildrenMounted={false}
-    transitionDuration={200}
-  >
-    <Blueprint5.TextArea
-      autoResize={false}
-      fill={false}
-      large={false}
-      readOnly={true}
-      small={false}
-      value="{
-  "name": "test"
-}"
-    />
-  </Blueprint5.Collapse>
 </div>
 `;

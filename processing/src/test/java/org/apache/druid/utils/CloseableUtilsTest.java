@@ -62,8 +62,8 @@ public class CloseableUtilsTest
   @Test
   public void test_closeAll_array_loud()
   {
-    final Exception e = Assertions.assertThrows(
-        Exception.class,
+    final IOException e = Assertions.assertThrows(
+        IOException.class,
         () -> CloseableUtils.closeAll(
             quietCloseable,
             null,
@@ -75,9 +75,6 @@ public class CloseableUtilsTest
 
     assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
 
-    // First exception
-    Assertions.assertInstanceOf(IOException.class, e);
-
     // Second exception
     Assertions.assertEquals(1, e.getSuppressed().length);
     Assertions.assertInstanceOf(IllegalArgumentException.class, e.getSuppressed()[0]);
@@ -86,8 +83,8 @@ public class CloseableUtilsTest
   @Test
   public void test_closeAll_list_loud()
   {
-    final Exception e = Assertions.assertThrows(
-        Exception.class,
+    final IOException e = Assertions.assertThrows(
+        IOException.class,
         () -> CloseableUtils.closeAll(
             Arrays.asList(
                 quietCloseable,
@@ -100,9 +97,6 @@ public class CloseableUtilsTest
     );
 
     assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
-
-    // First exception
-    Assertions.assertInstanceOf(IOException.class, e);
 
     // Second exception
     Assertions.assertEquals(1, e.getSuppressed().length);

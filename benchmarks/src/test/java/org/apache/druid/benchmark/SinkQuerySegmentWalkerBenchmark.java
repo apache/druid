@@ -49,6 +49,7 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -56,6 +57,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -136,8 +138,6 @@ public class SinkQuerySegmentWalkerBenchmark
   private static final List<String> QUERY_COLUMNS = ImmutableList.of("__time", "dim", "count", "met");
   private static final MultipleIntervalSegmentSpec QUERY_INTERVALS =
       new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/2001")));
-  private static final String SET_PROCESSING_THREAD_NAMES = "setProcessingThreadNames";
-
   @Param({"timeseries", "scan", "segmentMetadata", "groupBy"})
   private String queryType;
 
@@ -378,7 +378,7 @@ public class SinkQuerySegmentWalkerBenchmark
 
   private Map<String, Object> makeQueryContext()
   {
-    return ImmutableMap.of(SET_PROCESSING_THREAD_NAMES, setProcessingThreadNames);
+    return QueryContext.ofMap(QueryContextParameters.SET_PROCESSING_THREAD_NAMES, setProcessingThreadNames);
   }
 
   private static ObjectMapper makeObjectMapper()

@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
@@ -187,8 +188,11 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
     deleteStaleBlobs(azureDirPath, pushedBlobs);
 
+    // V10 unzipped is rangeable: a single druid.segment with a range-readable header. V9 unzipped is a directory of
+    // separate smoosh files the range-read path can't consume.
+    final boolean rangeable = binaryVersion == IndexIO.V10_VERSION;
     return segment.withSize(size)
-                  .withLoadSpec(makeLoadSpec(azureDirPath))
+                  .withLoadSpec(makeLoadSpec(azureDirPath, rangeable))
                   .withBinaryVersion(binaryVersion);
   }
 
@@ -278,6 +282,24 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         segmentConfig.getContainer(),
         "blobPath",
         prefix
+    );
+  }
+
+  /**
+   * Variant that stamps {@link AzureLoadSpec#RANGEABLE} so {@link AzureLoadSpec#openRangeReader()} can decide
+   * range-read eligibility. Used by the unzipped push path where the binary version is known at write time.
+   */
+  private Map<String, Object> makeLoadSpec(String prefix, boolean rangeable)
+  {
+    return ImmutableMap.of(
+        "type",
+        AzureStorageDruidModule.SCHEME,
+        "containerName",
+        segmentConfig.getContainer(),
+        "blobPath",
+        prefix,
+        AzureLoadSpec.RANGEABLE,
+        rangeable
     );
   }
 }

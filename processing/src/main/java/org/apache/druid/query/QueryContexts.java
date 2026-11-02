@@ -28,6 +28,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -41,69 +43,268 @@ import java.util.stream.Collectors;
 @PublicApi
 public class QueryContexts
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#FINALIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String FINALIZE_KEY = "finalize";
+  /**
+   * @deprecated Use {@link QueryContextParameters#PRIORITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String PRIORITY_KEY = "priority";
+  /**
+   * @deprecated Use {@link QueryContextParameters#LANE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String LANE_KEY = "lane";
+  /**
+   * @deprecated Use {@link QueryContextParameters#TIMEOUT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String TIMEOUT_KEY = "timeout";
+  /**
+   * @deprecated Use {@link QueryContextParameters#PER_SEGMENT_TIMEOUT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String PER_SEGMENT_TIMEOUT_KEY = "perSegmentTimeout";
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_SCATTER_GATHER_BYTES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_QUEUED_BYTES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
+  /**
+   * @deprecated Use {@link QueryContextParameters#DEFAULT_TIMEOUT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
+  /**
+   * @deprecated Use {@link QueryContextParameters#ENABLE_PARALLEL_MERGE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
+  /**
+   * @deprecated Use {@link QueryContextParameters#PARALLEL_MERGE_INITIAL_YIELD_ROWS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
+  /**
+   * @deprecated Use {@link QueryContextParameters#PARALLEL_MERGE_SMALL_BATCH_ROWS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
+  /**
+   * @deprecated Use {@link QueryContextParameters#PARALLEL_MERGE_PARALLELISM} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
+  /**
+   * @deprecated Use {@link QueryContextParameters#VECTORIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String VECTORIZE_KEY = "vectorize";
+  /**
+   * @deprecated Use {@link QueryContextParameters#VECTORIZE_VIRTUAL_COLUMNS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String VECTORIZE_VIRTUAL_COLUMNS_KEY = "vectorizeVirtualColumns";
+  /**
+   * @deprecated Use {@link QueryContextParameters#VECTOR_SIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String VECTOR_SIZE_KEY = "vectorSize";
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_SUBQUERY_ROWS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_SUBQUERY_BYTES} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_SUBQUERY_BYTES_KEY = "maxSubqueryBytes";
+  /**
+   * @deprecated Use {@link QueryContextParameters#USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = "useNestedForUnknownTypeInSubquery";
+  /**
+   * @deprecated Use {@link QueryContextParameters#ENABLE_JOIN_FILTER_PUSH_DOWN} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
+  /**
+   * @deprecated Use {@link QueryContextParameters#ENABLE_JOIN_FILTER_REWRITE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
+  /**
+   * @deprecated Use {@link QueryContextParameters#ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
+  /**
+   * @deprecated Use {@link QueryContextParameters#ENABLE_REWRITE_JOIN_TO_FILTER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
+  /**
+   * @deprecated Use {@link QueryContextParameters#JOIN_FILTER_REWRITE_MAX_SIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_NUMERIC_IN_FILTERS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  /**
+   * @deprecated Use {@link QueryContextParameters#CURSOR_AUTO_ARRANGE_FILTERS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
+  /**
+   * @deprecated Use {@link QueryContextParameters#CLONE_QUERY_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CLONE_QUERY_MODE = "cloneQueryMode";
   /**
    * This flag controls whether {@link AggregatorFactory#optimizeForSegment(PerSegmentQueryOptimizationContext)}
    * is used. It is undocumented because its main purpose is to help developers debug issues with the optimizations.
+   *
+   * @deprecated Use {@link QueryContextParameters#OPTIMIZE_AGGREGATORS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String OPTIMIZE_AGGREGATORS_KEY = "optimizeAggregators";
   /**
    * This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
    * instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
    * data servers.
+   *
+   * @deprecated Use {@link QueryContextParameters#ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
+  /**
+   * @deprecated Use {@link QueryContextParameters#USE_FILTER_CNF} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
+  /**
+   * @deprecated Use {@link QueryContextParameters#NUM_RETRIES_ON_MISSING_SEGMENTS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
+  /**
+   * @deprecated Use {@link QueryContextParameters#RETURN_PARTIAL_RESULTS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
+  /**
+   * @deprecated Use {@link QueryContextParameters#USE_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_CACHE_KEY = "useCache";
+  /**
+   * @deprecated Use {@link QueryContextParameters#SECONDARY_PARTITION_PRUNING} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
+  /**
+   * @deprecated Use {@link QueryContextParameters#DEBUG} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String ENABLE_DEBUG = "debug";
+  /**
+   * @deprecated Use {@link QueryContextParameters#BY_SEGMENT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BY_SEGMENT_KEY = "bySegment";
+  /**
+   * @deprecated Use {@link QueryContextParameters#BROKER_SERVICE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String BROKER_SERVICE_NAME = "brokerService";
+  /**
+   * @deprecated Use {@link QueryContextParameters#IN_SUB_QUERY_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
+  /**
+   * @deprecated Use {@link QueryContextParameters#IN_FUNCTION_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String IN_FUNCTION_THRESHOLD = "inFunctionThreshold";
+  /**
+   * @deprecated Use {@link QueryContextParameters#IN_FUNCTION_EXPR_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String IN_FUNCTION_EXPR_THRESHOLD = "inFunctionExprThreshold";
+  /**
+   * @deprecated Use {@link QueryContextParameters#ENABLE_TIME_BOUNDARY_PLANNING} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
+  /**
+   * @deprecated Use {@link QueryContextParameters#POPULATE_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String POPULATE_CACHE_KEY = "populateCache";
+  /**
+   * @deprecated Use {@link QueryContextParameters#POPULATE_RESULT_LEVEL_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
+  /**
+   * @deprecated Use {@link QueryContextParameters#USE_RESULT_LEVEL_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
+  /**
+   * @deprecated Use {@link QueryContextParameters#SERIALIZE_DATE_TIME_AS_LONG} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
+  /**
+   * @deprecated Use {@link QueryContextParameters#SERIALIZE_DATE_TIME_AS_LONG_INNER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
+  /**
+   * @deprecated Use {@link QueryContextParameters#UNCOVERED_INTERVALS_LIMIT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
+  /**
+   * @deprecated Use {@link QueryContextParameters#MIN_TOP_N_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
+  /**
+   * @deprecated Use {@link QueryContextParameters#CATALOG_VALIDATION_ENABLED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  /**
+   * @deprecated Use {@link QueryContextParameters#ENGINE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String ENGINE = "engine";
-  // this flag controls whether the topN engine can use the 'pooled' algorithm when query granularity is set to
-  // anything other than 'ALL' and the cardinality + number of aggregators would require more size than is available
-  // in the buffers and so must reset the cursor to use multiple passes. This is likely slower than the default
-  // behavior of falling back to heap memory, but less dangerous since too large of a query can cause the heap to run
-  // out of memory
+  /**
+   * This flag controls whether the topN engine can use the 'pooled' algorithm when query granularity is set to
+   * anything other than 'ALL' and the cardinality + number of aggregators would require more size than is available
+   * in the buffers and so must reset the cursor to use multiple passes. This is likely slower than the default
+   * behavior of falling back to heap memory, but less dangerous since too large of a query can cause the heap to run
+   * out of memory.
+   *
+   * @deprecated Use {@link QueryContextParameters#USE_TOPN_MULTI_PASS_POOLED_QUERY_GRANULARITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY = "useTopNMultiPassPooledQueryGranularity";
   /**
    * Context parameter to enable/disable the extended filtered sum rewrite logic.
@@ -118,86 +319,310 @@ public class QueryContexts
    * but may produce incorrect results when the condition never matches (expected 0).
    * This is for testing and can be removed once a correct and high-performance rewrite
    * is implemented.
+   *
+   * @deprecated Use {@link QueryContextParameters#EXTENDED_FILTERED_SUM_REWRITE} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String EXTENDED_FILTERED_SUM_REWRITE_ENABLED = "extendedFilteredSumRewrite";
 
 
   // projection context keys
+  /**
+   * @deprecated Use {@link QueryContextParameters#NO_PROJECTIONS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String NO_PROJECTIONS = "noProjections";
+  /**
+   * @deprecated Use {@link QueryContextParameters#FORCE_PROJECTIONS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String FORCE_PROJECTION = "forceProjections";
+  /**
+   * @deprecated Use {@link QueryContextParameters#USE_PROJECTION} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USE_PROJECTION = "useProjection";
+
+  /**
+   * Overrides the {@link org.apache.druid.segment.loading.AcquireMode} an engine uses to acquire segments from the
+   * segment cache; see {@link QueryContext#getSegmentAcquireMode}. Intended for testing, debugging, and performance
+   * comparison.
+   *
+   * @deprecated Use {@link QueryContextParameters#SEGMENT_ACQUIRE_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String SEGMENT_ACQUIRE_MODE = "segmentAcquireMode";
 
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
+  /**
+   * @deprecated Use {@link QueryContextParameters#QUERY_RESOURCE_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String QUERY_RESOURCE_ID = "queryResourceId";
 
   // SQL query context keys
-  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_QUERY_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String CTX_SQL_QUERY_ID = "sqlQueryId";
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_STRINGIFY_ARRAYS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // Dart
+  /**
+   * @deprecated Use {@link QueryContextParameters#DART_QUERY_ID} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_DART_QUERY_ID = "dartQueryId";
+  /**
+   * @deprecated Use {@link QueryContextParameters#FULL_REPORT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_FULL_REPORT = "fullReport";
 
   // SQL statement resource specific keys
+  /**
+   * @deprecated Use {@link QueryContextParameters#EXECUTION_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_EXECUTION_MODE = "executionMode";
 
+  /**
+   * @deprecated Use {@link QueryContextParameters#PLANNER_STRATEGY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
+  /**
+   * @deprecated Use {@link PlannerStrategy#COUPLED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
+  /**
+   * @deprecated Use {@link PlannerStrategy#DECOUPLED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   /**
-   * @deprecated Use {@link #REALTIME_SEGMENTS_MODE} instead.
+   * @deprecated Use {@link QueryContextParameters#REALTIME_SEGMENTS_MODE} instead.
    */
-  @Deprecated
+  @Deprecated(since = "38.0.0", forRemoval = true)
   public static final String REALTIME_SEGMENTS_ONLY = "realtimeSegmentsOnly";
   /**
-   * @deprecated Use {@link #DEFAULT_REALTIME_SEGMENTS_MODE} instead.
+   * @deprecated Use the declared default of {@link QueryContextParameters#REALTIME_SEGMENTS_MODE} instead.
    */
-  @Deprecated
+  @Deprecated(since = "38.0.0", forRemoval = true)
   public static final boolean DEFAULT_REALTIME_SEGMENTS_ONLY = false;
 
+  /**
+   * @deprecated Use {@link QueryContextParameters#REALTIME_SEGMENTS_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String REALTIME_SEGMENTS_MODE = "realtimeSegmentsMode";
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#REALTIME_SEGMENTS_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final RealtimeSegmentsMode DEFAULT_REALTIME_SEGMENTS_MODE = RealtimeSegmentsMode.INCLUDE;
 
+  /**
+   * @deprecated Use {@link QueryContextParameters#PREPLANNED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_PREPLANNED = "prePlanned";
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#PREPLANNED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_PREPLANNED = true;
 
   // Defaults
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#BY_SEGMENT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_BY_SEGMENT = false;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#POPULATE_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_POPULATE_CACHE = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#USE_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_USE_CACHE = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#POPULATE_RESULT_LEVEL_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
+  /**
+   * @deprecated Use the declared default of
+   * {@link QueryContextParameters#USE_RESULT_LEVEL_CACHE} instead, for example
+   * {@link QueryContext#getOrDefault(QueryContextParameter)}.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#VECTORIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#VECTORIZE_VIRTUAL_COLUMNS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.TRUE;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#VECTOR_SIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_VECTOR_SIZE = 512;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#PRIORITY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_PRIORITY = 0;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#UNCOVERED_INTERVALS_LIMIT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#DEFAULT_TIMEOUT}
+   * instead, for example {@link QueryContext#getOrDefault(QueryContextParameter)}.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#ENABLE_PARALLEL_MERGE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#ENABLE_JOIN_FILTER_PUSH_DOWN} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#ENABLE_JOIN_FILTER_REWRITE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#CLONE_QUERY_MODE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final CloneQueryMode DEFAULT_CLONE_QUERY_MODE = CloneQueryMode.EXCLUDECLONES;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#ENGINE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String DEFAULT_ENGINE = "native";
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#ENABLE_REWRITE_JOIN_TO_FILTER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#JOIN_FILTER_REWRITE_MAX_SIZE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#ENABLE_JOIN_LEFT_TABLE_SCAN_DIRECT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#USE_FILTER_CNF} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SECONDARY_PARTITION_PRUNING} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#DEBUG} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#IN_SUB_QUERY_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#IN_FUNCTION_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_IN_FUNCTION_THRESHOLD = 100;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#IN_FUNCTION_EXPR_THRESHOLD} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#ENABLE_TIME_BOUNDARY_PLANNING} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#CATALOG_VALIDATION_ENABLED} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
+  /**
+   * @deprecated The default of {@link QueryContextParameters#USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY} is the value of the
+   * {@code druid.server.http.useNestedForUnknownTypeInSubquery} runtime property.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#EXTENDED_FILTERED_SUM_REWRITE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#OPTIMIZE_AGGREGATORS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_OPTIMIZE_AGGREGATORS = true;
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#FULL_REPORT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final boolean DEFAULT_CTX_FULL_REPORT = false;
 
+
+  /**
+   * Values of {@link QueryContextParameters#PLANNER_STRATEGY}.
+   */
+  public enum PlannerStrategy
+  {
+    COUPLED,
+    DECOUPLED;
+
+    @JsonCreator
+    public static PlannerStrategy fromString(String str)
+    {
+      return PlannerStrategy.valueOf(StringUtils.toUpperCase(str));
+    }
+  }
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -517,6 +942,23 @@ public class QueryContexts
   }
 
   /**
+   * Insert, update or remove a typed parameter to produce an overridden context. A {@code null} value removes the
+   * parameter. Leaves the original context unchanged.
+   *
+   * @throws BadQueryContextException if the value is invalid
+   */
+  public static <V> Map<String, Object> override(
+      @Nullable final Map<String, Object> context,
+      final QueryContextParameter<V> parameter,
+      @Nullable final V value
+  )
+  {
+    final Map<String, Object> overridden = context == null ? new HashMap<>() : new HashMap<>(context);
+    parameter.set(overridden, value);
+    return overridden;
+  }
+
+  /**
    * Insert or replace multiple keys to produce an overridden context.
    * Leaves the original context unchanged.
    *
@@ -534,10 +976,41 @@ public class QueryContexts
       overridden.putAll(context);
     }
     if (overrides != null) {
-      overridden.putAll(overrides);
+      // A null override unsets the key, like override(Map, String, Object).
+      overrides.forEach((key, value) -> {
+        if (value == null) {
+          overridden.remove(key);
+        } else {
+          overridden.put(key, value);
+        }
+      });
     }
 
     return overridden;
+  }
+
+  /**
+   * Merges a user-provided context over default values, such as the defaults an operator configures with
+   * {@code druid.query.default.context}. A {@code null} user value means the user did not set the key, so the default
+   * applies. Unlike {@link #override(Map, Map)}, a {@code null} never removes a default.
+   */
+  public static Map<String, Object> withDefaults(
+      @Nullable final Map<String, Object> defaults,
+      @Nullable final Map<String, Object> userContext
+  )
+  {
+    final Map<String, Object> merged = new HashMap<>();
+    if (defaults != null) {
+      merged.putAll(defaults);
+    }
+    if (userContext != null) {
+      userContext.forEach((key, value) -> {
+        if (value != null) {
+          merged.put(key, value);
+        }
+      });
+    }
+    return merged;
   }
 
   public static <E extends Enum<E>> E getAsEnum(String key, Object value, Class<E> clazz, E defaultValue)
@@ -559,7 +1032,9 @@ public class QueryContexts
     }
 
     try {
-      if (value instanceof String) {
+      if (clazz.isInstance(value)) {
+        return clazz.cast(value);
+      } else if (value instanceof String) {
         return Enum.valueOf(clazz, StringUtils.toUpperCase((String) value));
       } else if (value instanceof Boolean) {
         return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(value)));

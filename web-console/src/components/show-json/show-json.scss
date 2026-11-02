@@ -41,6 +41,10 @@
       resize: none;
     }
 
+    & > .code-editor {
+      height: 100%;
+    }
+
     .loader {
       position: relative;
     }

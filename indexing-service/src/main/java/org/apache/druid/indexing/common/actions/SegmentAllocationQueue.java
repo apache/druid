@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -54,9 +56,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -211,7 +211,7 @@ public class SegmentAllocationQueue
    * Queues a SegmentAllocateRequest. The returned future may complete successfully
    * with a non-null value or with a non-null value.
    */
-  public Future<SegmentIdWithShardSpec> add(SegmentAllocateRequest request)
+  public ListenableFuture<SegmentIdWithShardSpec> add(SegmentAllocateRequest request)
   {
     if (!isLeader.get()) {
       throw new ISE("Cannot allocate segment if not leader.");
@@ -220,7 +220,7 @@ public class SegmentAllocationQueue
     }
 
     final AllocateRequestKey requestKey = new AllocateRequestKey(request);
-    final AtomicReference<Future<SegmentIdWithShardSpec>> futureReference = new AtomicReference<>();
+    final AtomicReference<ListenableFuture<SegmentIdWithShardSpec>> futureReference = new AtomicReference<>();
 
     // Possible race condition:
     // t1 -> new batch is added to queue or batch already exists in queue
@@ -644,7 +644,7 @@ public class SegmentAllocationQueue
      * Map from allocate requests (represents a single SegmentAllocateAction)
      * to the future of allocated segment id.
      */
-    private final Map<SegmentAllocateRequest, CompletableFuture<SegmentIdWithShardSpec>>
+    private final Map<SegmentAllocateRequest, SettableFuture<SegmentIdWithShardSpec>>
         requestToFuture = new HashMap<>();
 
     AllocateRequestBatch(AllocateRequestKey key)
@@ -692,10 +692,10 @@ public class SegmentAllocationQueue
       return size() >= MAX_BATCH_SIZE;
     }
 
-    Future<SegmentIdWithShardSpec> add(SegmentAllocateRequest request)
+    ListenableFuture<SegmentIdWithShardSpec> add(SegmentAllocateRequest request)
     {
       log.debug("Adding request to batch [%s]: %s", key, request.getAction());
-      return requestToFuture.computeIfAbsent(request, req -> new CompletableFuture<>());
+      return requestToFuture.computeIfAbsent(request, req -> SettableFuture.create());
     }
 
     void transferRequestsFrom(AllocateRequestBatch batch)
@@ -718,7 +718,7 @@ public class SegmentAllocationQueue
     {
       if (!requestToFuture.isEmpty()) {
         log.warn("Failing [%d] requests in batch[%s], reason[%s].", size(), key, cause.getMessage());
-        requestToFuture.values().forEach(future -> future.completeExceptionally(cause));
+        requestToFuture.values().forEach(future -> future.setException(cause));
         requestToFuture.keySet().forEach(
             request -> emitTaskMetric("task/action/failed/count", 1L, request)
         );
@@ -732,7 +732,7 @@ public class SegmentAllocationQueue
         return;
       }
 
-      requestToFuture.values().forEach(future -> future.complete(null));
+      requestToFuture.values().forEach(future -> future.set(null));
       requestToFuture.keySet().forEach(
           request -> emitTaskMetric("task/action/failed/count", 1L, request)
       );
@@ -746,7 +746,7 @@ public class SegmentAllocationQueue
       if (result.isSuccess()) {
         emitTaskMetric("task/action/success/count", 1L, request);
         IndexTaskUtils.emitSegmentAllocateMetric(result.getSegmentId(), request.getTask(), emitter);
-        requestToFuture.remove(request).complete(result.getSegmentId());
+        requestToFuture.remove(request).set(result.getSegmentId());
       } else if (request.canRetry()) {
         log.debug(
             "Allocation failed on attempt [%d] due to error[%s]. Can still retry action[%s].",
@@ -759,7 +759,7 @@ public class SegmentAllocationQueue
             + " Completing action[%s] with a null value.",
             request.getAttempts(), result.getErrorMessage(), request.getAction()
         );
-        requestToFuture.remove(request).complete(null);
+        requestToFuture.remove(request).set(null);
       }
     }
 

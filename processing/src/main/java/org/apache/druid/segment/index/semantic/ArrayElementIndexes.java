@@ -41,7 +41,7 @@ public interface ArrayElementIndexes
    * @param valueType   type of the value to match, used to assist conversion from the match value type to the column
    *                    value type
    * @return            {@link ImmutableBitmap} corresponding to the rows with array elements which match the value, or
-   *                    null if an index connot be computed for the supplied value type
+   *                    null if an index cannot be computed for the supplied value type
    */
   @Nullable
   BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> valueType);

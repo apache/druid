@@ -52,7 +52,7 @@ import org.apache.druid.catalog.model.TableDefnRegistry;
  * sources were not designed for this use case, we can't do a simple mapping: some creativity
  * is required in each case.
  *
- * @see {@link ExternalTableDefn} for a detailed explanation.
+ * @see ExternalTableDefn for a detailed explanation.
  */
 public interface InputSourceDefn
 {

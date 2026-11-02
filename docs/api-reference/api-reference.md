@@ -57,4 +57,5 @@ Druid version. Only enable it when clients are authorized to receive this inform
 * [Legacy metadata](./legacy-metadata-api.md) to retrieve datasource metadata.
 
 ## Java APIs
-* [SQL JDBC driver](./sql-jdbc.md) to connect to Druid and make Druid SQL queries using the Avatica JDBC driver.
+* [Druid JDBC driver](../querying/sql-jdbc.md) to connect to Druid and make Druid SQL queries over JDBC. This is the recommended JDBC driver.
+* [Avatica JDBC driver](../querying/sql-jdbc-avatica.md) to make Druid SQL queries using the Apache Calcite Avatica driver instead.

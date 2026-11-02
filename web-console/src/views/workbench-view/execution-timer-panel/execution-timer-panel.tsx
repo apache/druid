@@ -61,9 +61,9 @@ export const ExecutionTimerPanel = React.memo(function ExecutionTimerPanel(
         className="timer"
         icon={IconNames.STOPWATCH}
         text={formatDurationHybrid(elapsed)}
-        minimal
+        variant="minimal"
       />
-      <Button icon={IconNames.CROSS} minimal onClick={cancelMaybeConfirm} />
+      <Button icon={IconNames.CROSS} variant="minimal" onClick={cancelMaybeConfirm} />
       {showCancelConfirm && (
         <CancelQueryDialog onCancel={onCancel} onDismiss={() => setShowCancelConfirm(false)} />
       )}

@@ -37,7 +37,6 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.eclipse.jetty.http.UriCompliance;
@@ -113,7 +112,8 @@ public class ServerConfig
         enableHSTS,
         false,
         uriCompliance,
-        enforceStrictSNIHostChecking
+        enforceStrictSNIHostChecking,
+        true
     );
   }
 
@@ -141,7 +141,8 @@ public class ServerConfig
       boolean enableHSTS,
       boolean enableResponseIdentityHeaders,
       @Nullable UriCompliance uriCompliance,
-      boolean enforceStrictSNIHostChecking
+      boolean enforceStrictSNIHostChecking,
+      boolean enableQueryRequestsQueuing
   )
   {
     this.numThreads = numThreads;
@@ -168,6 +169,7 @@ public class ServerConfig
     this.enableResponseIdentityHeaders = enableResponseIdentityHeaders;
     this.uriCompliance = uriCompliance != null ? uriCompliance : UriCompliance.LEGACY;
     this.enforceStrictSNIHostChecking = enforceStrictSNIHostChecking;
+    this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
   }
 
   public ServerConfig()
@@ -219,7 +221,7 @@ public class ServerConfig
   private String maxSubqueryBytes = SubqueryGuardrailHelper.LIMIT_DISABLED_VALUE;
 
   @JsonProperty
-  private boolean useNestedForUnknownTypeInSubquery = QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
+  private boolean useNestedForUnknownTypeInSubquery = false;
 
   @JsonProperty
   @Min(1)
@@ -346,6 +348,40 @@ public class ServerConfig
   public Period getUnannouncePropagationDelay()
   {
     return unannouncePropagationDelay;
+  }
+
+  /**
+   * Returns a copy of this config with {@link #getUnannouncePropagationDelay()} replaced by the given value.
+   */
+  public ServerConfig withUnannouncePropagationDelay(final Period newUnannouncePropagationDelay)
+  {
+    return new ServerConfig(
+        numThreads,
+        queueSize,
+        enableRequestLimit,
+        maxIdleTime,
+        defaultQueryTimeout,
+        maxScatterGatherBytes.getBytes(),
+        maxSubqueryRows,
+        maxSubqueryBytes,
+        useNestedForUnknownTypeInSubquery,
+        maxQueryTimeout,
+        maxRequestHeaderSize,
+        gracefulShutdownTimeout,
+        newUnannouncePropagationDelay,
+        inflateBufferSize,
+        compressionLevel,
+        enableForwardedRequestCustomizer,
+        allowedHttpMethods,
+        showDetailedJettyErrors,
+        errorResponseTransformStrategy,
+        contentSecurityPolicy,
+        enableHSTS,
+        enableResponseIdentityHeaders,
+        uriCompliance,
+        enforceStrictSNIHostChecking,
+        enableQueryRequestsQueuing
+    );
   }
 
   public int getInflateBufferSize()

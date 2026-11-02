@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -55,6 +56,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.hamcrest.CoreMatchers;
@@ -101,10 +103,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
     CLOSER = Closer.create();
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", schemaInfo.getDataInterval(), "1", 0))
                                                .shardSpec(new LinearShardSpec(0))
                                                .size(0)
                                                .build();
@@ -252,6 +251,28 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
           Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "10", "11", "12", "13", "14", "15", "8", "9"),
           rows
       );
+    }
+  }
+
+  @Test
+  public void test_unnest_factory_ordering_ends_at_query_virtual_column() throws IOException
+  {
+    // The query's virtual columns apply on top of the unnest, where the base cannot see them, so the unnest must end
+    // the ordering at any that shadows a base column.
+    try (final QueryableIndex index = SmallSegmentTestHelper.makeIndex(SHARED_TEMPORARY_FOLDER.newFolder("ordering"))) {
+      final UnnestCursorFactory factory = new UnnestCursorFactory(
+          new QueryableIndexCursorFactory(index),
+          new ExpressionVirtualColumn("u", "\"mv\"", null, ExprMacroTable.nil()),
+          null
+      );
+      final List<OrderBy> baseOrdering = index.getOrdering();
+      Assertions.assertEquals("dim2", baseOrdering.get(2).getColumnName());
+
+      final VirtualColumn dim2 = new ExpressionVirtualColumn("dim2", "'q'", null, ExprMacroTable.nil());
+      final CursorBuildSpec spec = CursorBuildSpec.builder().setVirtualColumns(VirtualColumns.create(dim2)).build();
+      try (final CursorHolder holder = factory.makeCursorHolder(spec)) {
+        Assertions.assertEquals(baseOrdering.subList(0, 2), holder.getOrdering());
+      }
     }
   }
 
@@ -854,10 +875,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
     final String inputColumn = "multi-string5";
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", schemaInfo.getDataInterval(), "1", 0))
                                                .shardSpec(new LinearShardSpec(0))
                                                .size(0)
                                                .build();

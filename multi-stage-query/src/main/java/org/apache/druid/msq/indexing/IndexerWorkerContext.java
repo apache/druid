@@ -53,6 +53,7 @@ import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -79,7 +80,7 @@ import java.util.Set;
 public class IndexerWorkerContext implements WorkerContext
 {
   /**
-   * Default for {@link MultiStageQueryContext#CTX_LIVE_REPORT_COUNTERS}. On by default for tasks.
+   * Default for {@link QueryContextParameters#LIVE_REPORT_COUNTERS}. On by default for tasks.
    */
   public static final boolean DEFAULT_LIVE_REPORT_COUNTERS = true;
 

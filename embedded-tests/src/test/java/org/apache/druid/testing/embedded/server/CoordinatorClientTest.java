@@ -21,11 +21,11 @@ package org.apache.druid.testing.embedded.server;
 
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -44,9 +44,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -154,13 +154,14 @@ public class CoordinatorClientTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(20)
-  public void test_fetchAllUsedSegmentsWithOvershadowedStatus() throws IOException
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus()
   {
     runIndexTask();
 
-    try (CloseableIterator<SegmentStatusInCluster> iterator = cluster.callApi().onLeaderCoordinator(
+    try (ResourceHolder<Iterator<SegmentStatusInCluster>> segments = cluster.callApi().onLeaderCoordinator(
         c -> c.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of(dataSource), true))
     ) {
+      final Iterator<SegmentStatusInCluster> iterator = segments.get();
       Assertions.assertTrue(iterator.hasNext());
       SegmentStatusInCluster segmentStatus = iterator.next();
       Assertions.assertEquals(dataSource, segmentStatus.getDataSegment().getDataSource());

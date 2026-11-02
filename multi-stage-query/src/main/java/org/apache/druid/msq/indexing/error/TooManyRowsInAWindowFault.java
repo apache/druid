@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import java.util.Objects;
 
@@ -50,7 +50,7 @@ public class TooManyRowsInAWindowFault extends BaseMSQFault
         + " Use it carefully as a higher value can lead to OutOfMemory errors. ",
         numRows,
         maxRows,
-        MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW
+        QueryContextParameters.MAX_ROWS_MATERIALIZED_IN_WINDOW
     );
     this.numRows = numRows;
     this.maxRows = maxRows;

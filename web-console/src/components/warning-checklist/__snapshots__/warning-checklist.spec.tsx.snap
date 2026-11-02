@@ -1,39 +1,42 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`WarningChecklist matches snapshot 1`] = `
 <div
   class="warning-checklist"
 >
   <label
-    class="bp5-control bp5-switch danger-switch"
+    class="bp6-control bp6-switch danger-switch"
   >
     <input
+      class="bp6-control-input"
       type="checkbox"
     />
     <span
-      class="bp5-control-indicator"
+      class="bp6-control-indicator"
     />
     Check A
   </label>
   <label
-    class="bp5-control bp5-switch danger-switch"
+    class="bp6-control bp6-switch danger-switch"
   >
     <input
+      class="bp6-control-input"
       type="checkbox"
     />
     <span
-      class="bp5-control-indicator"
+      class="bp6-control-indicator"
     />
     Check B
   </label>
   <label
-    class="bp5-control bp5-switch danger-switch"
+    class="bp6-control bp6-switch danger-switch"
   >
     <input
+      class="bp6-control-input"
       type="checkbox"
     />
     <span
-      class="bp5-control-indicator"
+      class="bp6-control-indicator"
     />
     I am totes sure
   </label>

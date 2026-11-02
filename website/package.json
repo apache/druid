@@ -14,10 +14,6 @@
   "engines": {
     "node": ">=22.0"
   },
-  "volta": {
-    "node": ">=22.0",
-    "npm": "10.8.2"
-  },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.10.1",
     "@docusaurus/types": "3.10.1",

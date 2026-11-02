@@ -288,6 +288,10 @@ SOURCE/JAVA-CORE
     This product contains the class copied from https://github.com/FasterXML/jackson-databind
       * extensions-core/s3-extensions/src/main/java/com/fasterxml/jackson/databind/PropertyNamingStrategies.java
 
+    This product contains the Maven Wrapper scripts from Apache Maven Wrapper.
+      * mvnw
+      * mvnw.cmd
+
 
 
 MIT License

@@ -12,6 +12,7 @@
     "groupBy/spilledQueries": [],
     "ingest/count": [],
     "ingest/events/duplicate": [],
+    "ingest/events/filtered": [],
     "ingest/events/messageGap": [],
     "ingest/events/processed": [],
     "ingest/events/processedWithError": [],

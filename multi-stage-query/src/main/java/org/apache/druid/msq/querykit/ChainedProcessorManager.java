@@ -28,7 +28,6 @@ import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.utils.CloseableUtils;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -43,10 +42,13 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
 {
   /**
    * First processor manager. FrameProcessors created by this runs before all the others.
-   * The reference is set to null once all the processors have been returned by the channel.
    */
-  @Nullable
-  private ProcessorManager<A, List<A>> first;
+  private final ProcessorManager<A, List<A>> first;
+
+  /**
+   * Whether {@link #first} has returned all its processors.
+   */
+  private boolean firstExhausted;
 
   /**
    * Produces {@link #restFuture}.
@@ -90,7 +92,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   {
     if (closed) {
       throw new IllegalStateException();
-    } else if (first != null) {
+    } else if (!firstExhausted) {
       Optional<ProcessorAndCallback<A>> processorAndCallbackOptional = Futures.getUnchecked(first.next());
       if (processorAndCallbackOptional.isPresent()) {
         // More processors left to run.
@@ -99,7 +101,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
         //noinspection unchecked
         return Futures.immediateFuture(Optional.of((ProcessorAndCallback<Object>) aProcessorAndCallback));
       } else {
-        first = null;
+        firstExhausted = true;
         checkFirstProcessorComplete();
       }
     }
@@ -113,7 +115,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
 
   private void checkFirstProcessorComplete()
   {
-    if (first == null && (firstProcessorResult.size() == firstProcessorCount.get())) {
+    if (firstExhausted && (firstProcessorResult.size() == firstProcessorCount.get())) {
       restFuture.set(restFactory.apply(firstProcessorResult));
     }
   }
@@ -130,7 +132,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
     if (!closed) {
       closed = true;
       CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(
-          first != null ? first : null,
+          first,
           restFuture.isDone() ? FutureUtils.getUnchecked(restFuture, false) : null
       ));
     }

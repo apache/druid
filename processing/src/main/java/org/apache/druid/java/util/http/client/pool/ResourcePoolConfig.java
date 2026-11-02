@@ -25,14 +25,25 @@ public class ResourcePoolConfig
 {
   private final int maxPerKey;
   private final long unusedConnectionTimeoutMillis;
+  private final ResourcePool.Implementation poolImplementation;
 
   public ResourcePoolConfig(
       int maxPerKey,
       long unusedConnectionTimeoutMillis
   )
   {
+    this(maxPerKey, unusedConnectionTimeoutMillis, ResourcePool.Implementation.ADAPTIVE);
+  }
+
+  public ResourcePoolConfig(
+      int maxPerKey,
+      long unusedConnectionTimeoutMillis,
+      ResourcePool.Implementation poolImplementation
+  )
+  {
     this.maxPerKey = maxPerKey;
     this.unusedConnectionTimeoutMillis = unusedConnectionTimeoutMillis;
+    this.poolImplementation = poolImplementation;
   }
 
   @Deprecated
@@ -60,5 +71,10 @@ public class ResourcePoolConfig
   public long getUnusedConnectionTimeoutMillis()
   {
     return unusedConnectionTimeoutMillis;
+  }
+
+  public ResourcePool.Implementation getPoolImplementation()
+  {
+    return poolImplementation;
   }
 }

@@ -20,7 +20,7 @@
 package org.apache.druid.segment.vector;
 
 import org.apache.druid.collections.bitmap.WrappedRoaringBitmap;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,7 @@ public class NilVectorSelectorTest extends InitializedNullHandlingTest
   @Test
   public void testDefaultSizedVector()
   {
-    testVectorSize(QueryContexts.DEFAULT_VECTOR_SIZE);
+    testVectorSize(QueryContextParameters.VECTOR_SIZE.getLiteralDefault());
   }
 
   @Test

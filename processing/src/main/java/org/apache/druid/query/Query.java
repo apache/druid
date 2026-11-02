@@ -22,12 +22,13 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -51,6 +52,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -132,7 +134,7 @@ public interface Query<T>
    * {@link QueryContext#getString(String)} <br/>
    * {@link QueryContext#getInt(String)} <br/>
    * {@link QueryContext#getLong(String)} <br/>
-   * {@link QueryContext#getFloat(String)} <br/>
+   * {@link QueryContext#getFloat(String, float)} <br/>
    * {@link QueryContext#getEnum(String, Class, Enum)} <br/>
    * {@link QueryContext#getHumanReadableBytes(String, HumanReadableBytes)}
    *
@@ -187,6 +189,21 @@ public interface Query<T>
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
   /**
+   * Returns a new query with the given typed context parameter overridden. A {@code null} value removes the parameter.
+   *
+   * @throws BadQueryContextException if the value is invalid
+   */
+  default <V> Query<T> withOverriddenContext(
+      final QueryContextParameter<V> parameter,
+      @Nullable final V value
+  )
+  {
+    return withOverriddenContext(
+        Collections.singletonMap(parameter.getName(), parameter.validate(value))
+    );
+  }
+
+  /**
    * Returns a new query, identical to this one, but with a different associated {@link QuerySegmentSpec}.
    * <p>
    * This often changes the behavior of {@link #getRunner(QuerySegmentWalker)}, since most queries inherit that method
@@ -225,7 +242,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return context().getString(BaseQuery.SQL_QUERY_ID);
+    return context().get(QueryContextParameters.SQL_QUERY_ID);
   }
 
   /**
@@ -248,12 +265,12 @@ public interface Query<T>
 
   default Query<T> withPriority(int priority)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+    return withOverriddenContext(QueryContextParameters.PRIORITY, priority);
   }
 
   default Query<T> withLane(String lane)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
+    return withOverriddenContext(QueryContextParameters.LANE, lane);
   }
 
   default VirtualColumns getVirtualColumns()

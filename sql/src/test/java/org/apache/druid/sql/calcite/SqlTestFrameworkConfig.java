@@ -302,7 +302,7 @@ public class SqlTestFrameworkConfig
   }
 
   /**
-   * @see {@link SqlTestFrameworkConfig}
+   * @see SqlTestFrameworkConfig
    */
   public static class Rule implements AfterAllCallback, BeforeEachCallback
   {

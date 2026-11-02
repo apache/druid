@@ -25,6 +25,7 @@ import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Builder for {@link KafkaSupervisorIOConfig}.
@@ -33,14 +34,22 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
 {
   private String topic;
   private String topicPattern;
+  private Set<Integer> partitionIds;
   private Map<String, Object> consumerProperties;
   private Long pollTimeout;
   private KafkaConfigOverrides configOverrides;
   private Boolean emitTimeLagMetrics;
+  private KafkaHeaderBasedFilterConfig headerBasedFilterConfig;
 
   public KafkaIOConfigBuilder withTopic(String topic)
   {
     this.topic = topic;
+    return this;
+  }
+
+  public KafkaIOConfigBuilder withPartitionIds(Set<Integer> partitionIds)
+  {
+    this.partitionIds = partitionIds;
     return this;
   }
 
@@ -74,6 +83,12 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
     return this;
   }
 
+  public KafkaIOConfigBuilder withHeaderBasedFilterConfig(KafkaHeaderBasedFilterConfig headerBasedFilterConfig)
+  {
+    this.headerBasedFilterConfig = headerBasedFilterConfig;
+    return this;
+  }
+
   public KafkaIOConfigBuilder withKafkaInputFormat(InputFormat valueFormat)
   {
     this.inputFormat = new KafkaInputFormat(
@@ -98,10 +113,12 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
     copyFromBase(io);
     this.topic = io.getTopic();
     this.topicPattern = io.getTopicPattern();
+    this.partitionIds = io.getPartitionIds();
     this.consumerProperties = io.getConsumerProperties();
     this.pollTimeout = io.getPollTimeout();
     this.configOverrides = io.getConfigOverrides();
     this.emitTimeLagMetrics = io.isEmitTimeLagMetrics();
+    this.headerBasedFilterConfig = io.getHeaderBasedFilterConfig();
     return this;
   }
 
@@ -127,11 +144,13 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
         earlyMessageRejectionPeriod,
         lateMessageRejectionStartDateTime,
         configOverrides,
+        headerBasedFilterConfig,
         idleConfig,
         stopTaskCount,
         emitTimeLagMetrics,
         serverPriorityToReplicas,
-        boundedStreamConfig
+        boundedStreamConfig,
+        partitionIds
     );
   }
 }

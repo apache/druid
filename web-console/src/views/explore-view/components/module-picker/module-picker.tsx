@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
+import { Button, ButtonGroup, Menu, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -40,11 +40,12 @@ export const ModulePicker = React.memo(function ModulePicker(props: ModulePicker
 
   return (
     <ButtonGroup className="module-picker" fill={fill}>
-      <Popover
+      <PopoverNext
         className="picker-button"
-        minimal
+        animation="minimal"
+        arrow={false}
         fill={fill}
-        position={Position.BOTTOM_LEFT}
+        placement="bottom-start"
         content={
           <Menu>
             {modules.map((module, i) => (
@@ -57,15 +58,17 @@ export const ModulePicker = React.memo(function ModulePicker(props: ModulePicker
             ))}
           </Menu>
         }
+        lazy
+        shouldReturnFocusOnClose={false}
       >
         <Button
           icon={selectedModule ? selectedModule.icon : IconNames.BOX}
           text={selectedModule ? selectedModule.title : 'Select module'}
           fill={fill}
-          minimal
-          rightIcon={IconNames.CARET_DOWN}
+          variant="minimal"
+          endIcon={IconNames.CARET_DOWN}
         />
-      </Popover>
+      </PopoverNext>
     </ButtonGroup>
   );
 });

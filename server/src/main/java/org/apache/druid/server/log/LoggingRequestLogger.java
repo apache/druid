@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.RequestLogLine;
 import org.slf4j.MDC;
 
@@ -61,7 +61,7 @@ public class LoggingRequestLogger implements RequestLogger
         try {
           final Query query = requestLogLine.getQuery();
           MDC.put("queryId", query.getId());
-          MDC.put(BaseQuery.SQL_QUERY_ID, StringUtils.nullToEmptyNonDruidDataString(query.getSqlQueryId()));
+          MDC.put(QueryContextParameters.SQL_QUERY_ID.getName(), StringUtils.nullToEmptyNonDruidDataString(query.getSqlQueryId()));
           MDC.put("dataSource", String.join(",", query.getDataSource().getTableNames()));
           MDC.put("queryType", query.getType());
           MDC.put("isNested", String.valueOf(!(query.getDataSource() instanceof TableDataSource)));

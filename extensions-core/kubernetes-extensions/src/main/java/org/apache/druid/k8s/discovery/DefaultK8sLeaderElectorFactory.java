@@ -76,6 +76,12 @@ public class DefaultK8sLeaderElectorFactory implements K8sLeaderElectorFactory
       {
         leaderElector.run(startLeadingHook, stopLeadingHook);
       }
+
+      @Override
+      public void close()
+      {
+        leaderElector.close();
+      }
     };
   }
 

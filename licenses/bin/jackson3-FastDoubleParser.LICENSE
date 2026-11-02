@@ -1,0 +1,61 @@
+MIT License
+
+Copyright (c) 2024 Werner Randelshofer, Switzerland.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+------
+This is a Java port of Daniel Lemire's fast_float project.
+This project provides parsers for double, float, BigDecimal and BigInteger values.
+
+## Copyright
+
+Copyright © 2024 Werner Randelshofer, Switzerland.
+
+## Licensing
+
+This code is licensed under MIT License.
+https://github.com/wrandelshofer/FastDoubleParser/blob/522be16e145f43308c43b23094e31d5efcaa580e/LICENSE
+(The file 'LICENSE' is included in the sources and classes Jar files that are released by this project
+- as is required by that license - see FastDoubleParser-LICENSE.)
+
+Some portions of the code have been derived from other projects.
+All these projects require that we include a copyright notice, and some require that we also include some text of their
+license file.
+
+fast_double_parser, Copyright (c) 2022 Daniel Lemire. Boost Software License.
+https://github.com/lemire/fast_double_parser
+https://github.com/lemire/fast_double_parser/blob/07d9189a8fb815fe800cb15ca022e7a07093236e/LICENSE.BSL
+(The file 'LICENSE.BSL' is included in the sources and classes Jar files that are released by this project
+- as is required by that license - see FastDoubleParser-ThirdParty-LICENSE.)
+
+fast_float, Copyright (c) 2021 The fast_float authors. MIT License.
+https://github.com/fastfloat/fast_float
+https://github.com/fastfloat/fast_float/blob/cc1e01e9eee74128e48d51488a6b1df4a767a810/LICENSE-MIT
+(The file 'LICENSE-MIT' is included in the sources and classes Jar files that are released by this project
+- as is required by that license - see FastDoubleParser-ThirdParty-LICENSE.)
+
+bigint, Copyright 2020 Tim Buktu. 2-clause BSD License.
+https://github.com/tbuktu/bigint/tree/floatfft
+https://github.com/tbuktu/bigint/blob/617c8cd8a7c5e4fb4d919c6a4d11e2586107f029/LICENSE
+https://github.com/wrandelshofer/FastDoubleParser/blob/39e123b15b71f29a38a087d16a0bc620fc879aa6/bigint-LICENSE
+(We only use those portions of the bigint project that can be licensed under 2-clause BSD License.)
+(The file 'bigint-LICENSE' is included in the sources and classes Jar files that are released by this project
+- as is required by that license - see FastDoubleParser-ThirdParty-LICENSE.)
+

@@ -25,10 +25,10 @@ sidebar_label: JDBC connector tutorial
 
 import BrowserOnly from '@docusaurus/BrowserOnly';
 
-Redirecting you to the JDBC driver API...
+Redirecting you to the Druid JDBC driver documentation...
 <BrowserOnly>
       {() => {
-        window.location.replace("https://druid.apache.org/docs/latest/api-reference/sql-jdbc.html");
+        window.location.replace("https://druid.apache.org/docs/latest/querying/sql-jdbc");
         return null;
       }}
     </BrowserOnly>

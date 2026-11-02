@@ -32,9 +32,11 @@ import java.lang.annotation.Target;
  *
  * For example, write this in a body of {@link com.google.inject.Module#configure} of your extension module):
  *
+ * <pre>{@code
  * MapBinder<String, String> extraDims =
  *     MapBinder.newMapBinder(binder, String.class, String.class, ExtraServiceDimensions.class);
  * extraDims.addBinding("foo").toInstance("bar");
+ * }</pre>
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)

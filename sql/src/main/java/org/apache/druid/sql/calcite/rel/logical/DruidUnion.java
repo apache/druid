@@ -29,7 +29,6 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -54,7 +53,8 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
   {
     super(cluster, traits, hints, inputs, all);
     if (!all) {
-      throw InvalidSqlInput.exception("SQL requires 'UNION' but only 'UNION ALL' is supported.");
+      // UNION is expected to be rewritten into UNION ALL with an aggregate before this rel is created.
+      throw DruidException.defensive("Expected UNION ALL, but got UNION");
     }
   }
 
@@ -77,29 +77,14 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
         sources.get(0).rowSignature.getColumnNames(),
         getRowType()
     );
-    UnionDataSource unionDataSource = buildUnionDataSource(sources);
-    if (unionDataSource != null) {
-      return new SourceDesc(unionDataSource, signature);
-
-    }
-    // all other cases are handled via UnionQuery
     UnionQuery unionQuery = makeUnionQuery(sources);
     return new SourceDesc(new QueryDataSource(unionQuery), signature);
   }
 
-  private UnionDataSource buildUnionDataSource(List<SourceDesc> sources)
-  {
-    List<DataSource> dataSources = new ArrayList<>();
-    for (SourceDesc sourceDesc : sources) {
-      DataSource dataSource = sourceDesc.dataSource;
-      if (!UnionDataSource.isCompatibleDataSource(dataSource)) {
-        return null;
-      }
-      dataSources.add(dataSource);
-    }
-    return new UnionDataSource(dataSources);
-  }
-
+  /**
+   * Builds the {@link UnionQuery} used when the inputs cannot be arms of a {@link UnionDataSource}. Every source is a
+   * subquery here, since {@code DruidQueryGenerator} builds the {@link UnionDataSource} itself when they can.
+   */
   private UnionQuery makeUnionQuery(List<SourceDesc> sources)
   {
     List<Query<?>> queries = new ArrayList<>();

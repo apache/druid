@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.DataSourcePlanner;
+import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -49,7 +50,7 @@ public class ExternalDataSourcePlanner implements DataSourcePlanner<ExternalData
     DataSourcePlannerUtils.checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
 
     return new DataSourcePlan(
-        dataSource,
+        broadcast ? dataSource : new InputNumberDataSource(0),
         Collections.singletonList(
             new ExternalInputSpec(
                 dataSource.getInputSource(),

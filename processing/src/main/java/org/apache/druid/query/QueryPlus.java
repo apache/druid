@@ -20,10 +20,10 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 
 import javax.annotation.Nullable;
@@ -134,12 +134,12 @@ public final class QueryPlus<T>
   }
 
   /**
-   * Equivalent of withQuery(getQuery().withOverriddenContext(ImmutableMap.of(MAX_QUEUED_BYTES_KEY, maxQueuedBytes))).
+   * Equivalent of withQuery(getQuery().withOverriddenContext(QueryContextParameters.MAX_QUEUED_BYTES, maxQueuedBytes)).
    */
   public QueryPlus<T> withMaxQueuedBytes(long maxQueuedBytes)
   {
     return new QueryPlus<>(
-        query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_QUEUED_BYTES_KEY, maxQueuedBytes)),
+        query.withOverriddenContext(QueryContextParameters.MAX_QUEUED_BYTES, maxQueuedBytes),
         queryMetrics,
         identity
     );

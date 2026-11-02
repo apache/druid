@@ -56,7 +56,7 @@ function functionRowsToMap(functionRows: FunctionRow[]): AvailableFunctions {
       });
       if (!args.length) return;
       return [
-        ROUTINE_NAME,
+        ROUTINE_NAME.toUpperCase(),
         {
           args,
           isAggregate: IS_AGGREGATOR === 'YES',

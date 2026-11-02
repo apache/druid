@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -70,12 +71,21 @@ import java.util.function.Supplier;
  * <b>Parallelism.</b> Every planned range read is its own task on the download executor, so a bundle's independent
  * deep-storage requests proceed concurrently rather than paying their round trips sequentially. Once every run is
  * resident, the ready callback materializes each bundle's required columns and the cursor holder is constructed.
+ * <p>
+ * <b>Restricted serving.</b> When constructed with a {@code servableBundles} predicate (see
+ * {@link org.apache.druid.segment.loading.AcquireMode#PARTIAL_RULE_HELD}), both paths plan only over the bundles it
+ * accepts, and a spec that nothing servable can answer gets an {@link EmptyCursorHolder}. Accepted bundles that are not
+ * resident are still downloaded by the async path as usual.
  */
 public class PartialQueryableIndexCursorFactory implements CursorFactory
 {
   private final PartialQueryableIndex index;
   private final QueryableIndexCursorFactory delegate;
   private final PartialBundleAcquirer bundleAcquirer;
+  // when non-null, only the bundles this accepts are served, as if they were the whole segment; see
+  // PartialQueryableIndex#planCursorPrefetch(CursorBuildSpec, Predicate)
+  @Nullable
+  private final Predicate<String> servableBundles;
 
   public PartialQueryableIndexCursorFactory(
       PartialQueryableIndex index,
@@ -83,9 +93,20 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
       PartialBundleAcquirer bundleAcquirer
   )
   {
+    this(index, timeBoundaryInspector, bundleAcquirer, null);
+  }
+
+  public PartialQueryableIndexCursorFactory(
+      PartialQueryableIndex index,
+      TimeBoundaryInspector timeBoundaryInspector,
+      PartialBundleAcquirer bundleAcquirer,
+      @Nullable Predicate<String> servableBundles
+  )
+  {
     this.index = index;
     this.delegate = new QueryableIndexCursorFactory(index, timeBoundaryInspector);
     this.bundleAcquirer = bundleAcquirer;
+    this.servableBundles = servableBundles;
   }
 
   @Override
@@ -98,7 +119,18 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
           + "on-demand loading, or acquire the segment via the eager path so all files are loaded up front."
       );
     }
-    return delegate.makeCursorHolder(spec);
+    if (servableBundles == null) {
+      return delegate.makeCursorHolder(spec);
+    }
+    // restricted: dispatch from the restricted plan rather than letting the delegate match over the whole segment
+    final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(spec, servableBundles);
+    if (plan.bundles().isEmpty()) {
+      return EmptyCursorHolder.forSpec(spec);
+    }
+    if (plan.clusterGroupPlan() != null) {
+      return delegate.makeClusteredCursorHolder(spec, plan.clusterGroupPlan());
+    }
+    return delegate.makeCursorHolderForProjection(spec, plan.matchedProjection());
   }
 
   @Override
@@ -106,12 +138,13 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   {
     // The index resolves what the spec needs (projection match / surviving cluster groups / base table, required
     // columns, planned range reads); this factory purely orchestrates the downloads and cursor wiring.
-    final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(spec);
+    final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(spec, servableBundles);
+    if (plan.bundles().isEmpty()) {
+      // Filter rules out every cluster group, or nothing servable can answer the spec: no bundle to acquire, nothing
+      // to download.
+      return AsyncCursorHolder.completed(EmptyCursorHolder.forSpec(spec));
+    }
     if (plan.clusterGroupPlan() != null) {
-      if (plan.bundles().isEmpty()) {
-        // Filter rules out every cluster group: no bundle to acquire, nothing to download.
-        return AsyncCursorHolder.completed(EmptyCursorHolder.forSpec(spec));
-      }
       // reuse the plan's cluster resolution
       return buildAsyncCursorHolder(
           plan.bundles(),

@@ -84,6 +84,7 @@ data: {
       "PROPERTIES"
       "PROJECTION"
       "SEALED"
+      "LONG"
     ]
 
     nonReservedKeywordsToAdd: [
@@ -94,6 +95,7 @@ data: {
       "PROPERTIES"
       "PROJECTION"
       "SEALED"
+      "LONG"
     ]
 
     # List of methods for parsing custom SQL statements.
@@ -118,6 +120,18 @@ data: {
     # Example: SqlParseTimeStampZ().
     dataTypeParserMethods: [
       "DruidType()"
+    ]
+
+    # Binary operators tokens.
+    # Example: "< INFIX_CAST: \"::\" >".
+    binaryOperatorsTokens: [
+      "< INFIX_CAST: \"::\" >"
+    ]
+
+    # Binary operators initialization.
+    # Example: "InfixCast".
+    extraBinaryExpressions: [
+      "InfixCast"
     ]
 
     # List of files in @includes directory that have parser method

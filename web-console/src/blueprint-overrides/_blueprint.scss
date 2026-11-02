@@ -1,0 +1,76 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@use 'sass:map';
+@use 'sass:meta';
+@use 'common/colors';
+@use 'common/color-aliases';
+@use 'common/variables';
+@use 'components/button/common' as button;
+@use 'components/forms/common' as forms;
+@use 'components/navbar/navbar';
+@use 'components/card/card';
+
+// Override variables that Blueprint does not declare with !default (or does not have at all), passing
+// them as configuration would be an error
+$not-configurable: (
+  'ns',
+  'bp-ns',
+  'dark-gray3-half',
+  'cobalt1',
+  'cobalt2',
+  'cobalt3',
+  'cobalt4',
+  'cobalt5',
+  'button-gradient',
+  'button-intent-gradient',
+  'dark-button-gradient',
+  'button-intent-box-shadow',
+  'button-intent-box-shadow-active',
+  'button-box-shadow-overlay',
+  'button-box-shadow-overlay-active',
+  'dark-button-intent-box-shadow',
+  'dark-button-intent-box-shadow-active',
+  'button-intent-color-disabled',
+  'dark-button-intent-color-disabled',
+  'input-transition',
+  'input-shadow-color-focus',
+  'dark-input-shadow-color-focus'
+);
+
+@function configuration($modules...) {
+  $variables: ();
+  @each $module in $modules {
+    $variables: map.merge($variables, meta.module-variables($module));
+  }
+  @return map.remove($variables, $not-configurable...);
+}
+
+// Blueprint's Sass sources still use @import, so they are loaded as CSS configured with the overrides
+@include meta.load-css(
+  '@blueprintjs/core/src/blueprint',
+  $with: configuration('colors', 'color-aliases', 'variables', 'button', 'forms', 'navbar', 'card')
+);
+@include meta.load-css(
+  '@blueprintjs/datetime/src/blueprint-datetime',
+  $with: configuration('colors', 'color-aliases', 'variables', 'button', 'forms')
+);
+@include meta.load-css(
+  '@blueprintjs/select/src/blueprint-select',
+  $with: configuration('colors', 'color-aliases', 'variables')
+);

@@ -118,6 +118,9 @@ public class AsyncResources
   /**
    * Returns an {@link AsyncResource} that collects a list of underlying resources into a single lifecycle.
    *
+   * <p>The returned resource becomes ready once every resource in {@code asyncResources} has succeeded, or as soon as
+   * any of them fails.
+   *
    * <p>Once this method returns, the returned {@link AsyncResource} is the caller's to close, and closing it also
    * closes every resource in {@code asyncResources}, so the caller must not close them itself. If this method throws,
    * nothing has been taken over and the caller still owns all of them.

@@ -26,6 +26,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -95,17 +96,12 @@ public class SegmentUtilsTest
 
   private static DataSegment newSegment(Interval interval, int partitionId)
   {
-    return new DataSegment(
-        "datasource",
-        interval,
-        "version",
-        null,
-        ImmutableList.of("dim"),
-        ImmutableList.of("met"),
-        new NumberedShardSpec(partitionId, 0),
-        null,
-        9,
-        10L
-    );
+    return DataSegment.builder(SegmentId.of("datasource", interval, "version", partitionId))
+                      .dimensions(ImmutableList.of("dim"))
+                      .metrics(ImmutableList.of("met"))
+                      .shardSpec(new NumberedShardSpec(partitionId, 0))
+                      .binaryVersion(9)
+                      .size(10L)
+                      .build();
   }
 }

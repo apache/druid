@@ -19,8 +19,8 @@
 
 package org.apache.druid.benchmark.query;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -39,9 +39,11 @@ public class SqlBasePlanBenchmark extends SqlBaseBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void planSql(Blackhole blackhole)
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    final Map<String, Object> context = QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        vectorizeContext,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorizeContext
     );
     final String sql = getQuery();
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {

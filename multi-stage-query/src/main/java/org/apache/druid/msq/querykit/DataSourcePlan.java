@@ -113,7 +113,7 @@ public class DataSourcePlan
   /**
    * Possibly remapped datasource that should be used when processing. Will be either the original datasource, or the
    * original datasource with itself or some children replaced by {@link InputNumberDataSource}. Any added
-   * {@link InputNumberDataSource} refer to {@link StageInputSpec} in {@link #getInputSpecs()}.
+   * {@link InputNumberDataSource} refer to entries of {@link #getInputSpecs()}.
    */
   public DataSource getNewDataSource()
   {

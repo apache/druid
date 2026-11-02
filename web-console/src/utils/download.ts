@@ -17,7 +17,7 @@
  */
 
 import type { QueryResult } from 'druid-query-toolkit';
-import FileSaver from 'file-saver';
+import { saveAs } from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
 import { Align, getMarkdownTable } from 'markdown-table-ts';
 
@@ -76,7 +76,7 @@ function queryResultToDsv(
 }
 
 export function downloadFile(text: string, fileFormat: FileFormat, filename: string): void {
-  FileSaver.saveAs(
+  saveAs(
     new Blob([text], {
       type: FILE_FORMAT_TO_MIME_TYPE[fileFormat],
     }),

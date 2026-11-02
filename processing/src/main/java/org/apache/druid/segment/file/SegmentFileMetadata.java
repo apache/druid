@@ -22,6 +22,9 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Maps;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnDescriptor;
@@ -30,9 +33,9 @@ import org.apache.druid.segment.projections.ProjectionMetadata;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 
 /**
  * Consolidated metadata for a V10 segment format container file. This is built by {@link SegmentFileBuilderV10}, and
@@ -61,13 +64,16 @@ import java.util.Map;
 public class SegmentFileMetadata
 {
   private final List<SegmentFileContainerMetadata> containers;
-  private final Map<String, SegmentInternalFileMetadata> files;
+  private final SegmentInternalFileMap files;
   private final String interval;
-  private final Map<String, ColumnDescriptor> columnDescriptors;
-  private final Map<String, List<String>> columnFiles;
+  private final SortedMap<String, ColumnDescriptor> columnDescriptors;
+  private final SortedMap<String, List<String>> columnFiles;
   private final List<ProjectionMetadata> projections;
   private final BitmapSerdeFactory bitmapEncoding;
 
+  /**
+   * Creates metadata. Maps are copied into immutable maps sorted by key, so that written headers are deterministic.
+   */
   @JsonCreator
   public SegmentFileMetadata(
       @JsonProperty("containers") List<SegmentFileContainerMetadata> containers,
@@ -80,7 +86,7 @@ public class SegmentFileMetadata
   )
   {
     this.containers = containers;
-    this.files = internKeys(files);
+    this.files = files == null ? null : SegmentInternalFileMap.copyOf(files);
     this.interval = interval;
     this.columnDescriptors = internKeys(columnDescriptors);
     this.columnFiles = internColumnFiles(columnFiles);
@@ -104,34 +110,63 @@ public class SegmentFileMetadata
     }
   }
 
-  @Nullable
-  private static <V> Map<String, V> internKeys(@Nullable Map<String, V> map)
+  /**
+   * Copies the given metadata with different column descriptors, which must have the same keys.
+   */
+  private SegmentFileMetadata(SegmentFileMetadata other, SortedMap<String, ColumnDescriptor> columnDescriptors)
   {
-    if (map == null) {
-      return null;
+    this.containers = other.containers;
+    this.files = other.files;
+    this.interval = other.interval;
+    this.columnDescriptors = columnDescriptors;
+    this.columnFiles = other.columnFiles;
+    this.projections = other.projections;
+    this.bitmapEncoding = other.bitmapEncoding;
+  }
+
+  /**
+   * Returns a copy of this metadata in which each column descriptor is replaced by its canonical instance from the
+   * given interner.
+   */
+  SegmentFileMetadata withInternedColumnDescriptors(Interner<ColumnDescriptor> interner)
+  {
+    if (columnDescriptors == null) {
+      return this;
     }
-    final Map<String, V> interned = new HashMap<>();
-    for (Map.Entry<String, V> entry : map.entrySet()) {
-      interned.put(SmooshedFileMapper.STRING_INTERNER.intern(entry.getKey()), entry.getValue());
-    }
-    return interned;
+    return new SegmentFileMetadata(
+        this,
+        ImmutableSortedMap.copyOfSorted(Maps.transformValues(columnDescriptors, interner::intern))
+    );
   }
 
   @Nullable
-  private static Map<String, List<String>> internColumnFiles(@Nullable Map<String, List<String>> map)
+  private static <V> SortedMap<String, V> internKeys(@Nullable Map<String, V> map)
   {
     if (map == null) {
       return null;
     }
-    final Map<String, List<String>> interned = new HashMap<>();
+    final ImmutableSortedMap.Builder<String, V> interned = ImmutableSortedMap.naturalOrder();
+    for (Map.Entry<String, V> entry : map.entrySet()) {
+      interned.put(SmooshedFileMapper.STRING_INTERNER.intern(entry.getKey()), entry.getValue());
+    }
+    return interned.build();
+  }
+
+  @Nullable
+  private static SortedMap<String, List<String>> internColumnFiles(@Nullable Map<String, List<String>> map)
+  {
+    if (map == null) {
+      return null;
+    }
+    final ImmutableSortedMap.Builder<String, List<String>> interned = ImmutableSortedMap.naturalOrder();
     for (Map.Entry<String, List<String>> entry : map.entrySet()) {
       final List<String> internedFiles = new ArrayList<>(entry.getValue().size());
       for (String file : entry.getValue()) {
         internedFiles.add(SmooshedFileMapper.STRING_INTERNER.intern(file));
       }
-      interned.put(SmooshedFileMapper.STRING_INTERNER.intern(entry.getKey()), internedFiles);
+      interned.put(SmooshedFileMapper.STRING_INTERNER.intern(entry.getKey()), List.copyOf(internedFiles));
     }
-    return interned;
+    return interned.build();
   }
 
   @JsonProperty
@@ -141,7 +176,7 @@ public class SegmentFileMetadata
   }
 
   @JsonProperty
-  public Map<String, SegmentInternalFileMetadata> getFiles()
+  public SegmentInternalFileMap getFiles()
   {
     return files;
   }

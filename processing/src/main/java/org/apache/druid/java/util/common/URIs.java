@@ -21,7 +21,9 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.base.Preconditions;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 
 public final class URIs
 {
@@ -34,6 +36,27 @@ public final class URIs
       return URI.create(StringUtils.format("%s://%s", defaultScheme, strUri));
     } else {
       return URI.create(strUri);
+    }
+  }
+
+  /**
+   * Converts a string to a {@link URL}. This is the replacement for the deprecated {@code new URL(String)}
+   * constructor: it reports every malformed input as a {@link MalformedURLException}, whereas
+   * {@code URI.create(value).toURL()} throws an unchecked {@link IllegalArgumentException} for a string that is
+   * not a valid URI.
+   *
+   * @throws MalformedURLException if the string is not a valid URI or cannot be converted to a URL. The cause is an
+   *                               {@link IllegalArgumentException} when the string is not a valid URI.
+   */
+  public static URL toURL(final String value) throws MalformedURLException
+  {
+    try {
+      return URI.create(value).toURL();
+    }
+    catch (IllegalArgumentException e) {
+      final MalformedURLException exception = new MalformedURLException("Invalid URL [" + value + "]");
+      exception.initCause(e);
+      throw exception;
     }
   }
 

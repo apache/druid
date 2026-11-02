@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -37,7 +36,6 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.QueryKitSpec;
-import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
 import org.apache.druid.msq.querykit.results.ExportResultsStageProcessor;
@@ -48,6 +46,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -56,7 +55,6 @@ import org.apache.druid.storage.ExportStorageProvider;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
 {
@@ -108,8 +106,8 @@ public class QueryKitBasedMSQPlanner
         // We know there's a single time column, because we've checked columnMappings.hasUniqueOutputColumnNames().
         final int timeColumn = columnMappings.getOutputColumnsByName(ColumnHolder.TIME_COLUMN_NAME).getInt(0);
         queryToPlan = query.withOverriddenContext(
-            ImmutableMap.of(
-                QueryKitUtils.CTX_TIME_COLUMN_NAME,
+            QueryContext.ofMap(
+                QueryContextParameters.TIME_COLUMN,
                 columnMappings.getQueryColumnName(timeColumn)
             )
         );
@@ -237,7 +235,7 @@ public class QueryKitBasedMSQPlanner
   }
 
   /**
-   * Propagates {@link MultiStageQueryContext#WINDOW_FUNCTION_OPERATOR_TRANSFORMATION} from the outer query to
+   * Propagates {@link QueryContextParameters#WINDOW_FUNCTION_OPERATOR_TRANSFORMATION} from the outer query to
    * any inner {@link WindowOperatorQuery}, so {@link WindowOperatorQueryKit} can see it. The original change
    * in https://github.com/apache/druid/pull/17443 only added it to the outer query at the Broker, and since
    * QueryKit became injectable via Guice, {@link WindowOperatorQueryKit} can no longer "see" parameters that
@@ -246,8 +244,8 @@ public class QueryKitBasedMSQPlanner
    */
   private static Query<?> propagateWindowOperatorTransformationContext(final Query<?> query)
   {
-    final Boolean val = query.context().getBoolean(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION);
-    if (val != null) {
+    if (query.context().has(QueryContextParameters.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION)) {
+      final boolean val = query.context().getOrDefault(QueryContextParameters.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION);
       // Update inner queries.
       return query.withDataSource(setWindowOperatorTransformationContext(query.getDataSource(), val));
     } else {
@@ -256,7 +254,7 @@ public class QueryKitBasedMSQPlanner
   }
 
   /**
-   * Sets {@link MultiStageQueryContext#WINDOW_FUNCTION_OPERATOR_TRANSFORMATION} on all {@link QueryDataSource}
+   * Sets {@link QueryContextParameters#WINDOW_FUNCTION_OPERATOR_TRANSFORMATION} on all {@link QueryDataSource}
    * found within the provided {@link DataSource}.
    */
   private static DataSource setWindowOperatorTransformationContext(final DataSource dataSource, final boolean val)
@@ -272,8 +270,8 @@ public class QueryKitBasedMSQPlanner
           ((QueryDataSource) dataSource)
               .getQuery()
               .withOverriddenContext(
-                  Map.of(
-                      MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
+                  QueryContext.ofMap(
+                      QueryContextParameters.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
                       val
                   )
               )

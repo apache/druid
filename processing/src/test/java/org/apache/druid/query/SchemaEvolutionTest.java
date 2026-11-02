@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
@@ -229,7 +230,10 @@ public class SchemaEvolutionTest
                 new HyperUniquesAggregatorFactory("uniques", "uniques")
             )
         )
-        .context(Map.of(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .context(QueryContext.ofMap(
+            QueryContextParameters.VECTORIZE,
+            doVectorize ? QueryContexts.Vectorize.TRUE : QueryContexts.Vectorize.FALSE
+        ))
         .build();
 
     // index1 has no "uniques" column
@@ -265,7 +269,10 @@ public class SchemaEvolutionTest
                 new DoubleSumAggregatorFactory("d", null, "c1 * 1", TestExprMacroTable.INSTANCE)
             )
         )
-        .context(Map.of(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .context(QueryContext.ofMap(
+            QueryContextParameters.VECTORIZE,
+            doVectorize ? QueryContexts.Vectorize.TRUE : QueryContexts.Vectorize.FALSE
+        ))
         .build();
 
     // Only string(1)
@@ -344,7 +351,10 @@ public class SchemaEvolutionTest
                 new CountAggregatorFactory("c")
             )
         )
-        .context(Map.of(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .context(QueryContext.ofMap(
+            QueryContextParameters.VECTORIZE,
+            doVectorize ? QueryContexts.Vectorize.TRUE : QueryContexts.Vectorize.FALSE
+        ))
         .build();
 
     // Only string(1) -- which we can filter but not aggregate

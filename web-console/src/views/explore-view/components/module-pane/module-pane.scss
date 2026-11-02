@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../../../variables';
+@use '../../../../variables' as *;
 
 $filter-bar-height: 34px;
 $control-bar-height: 34px;

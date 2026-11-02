@@ -30,9 +30,9 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.projections.Projections;
@@ -128,6 +129,15 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     }
     if (!handlerContext.plannerContext().getParameters().isEmpty()) {
       throw InvalidSqlInput.exception("Dynamic parameters are not supported for [%s]", operationName());
+    }
+    // Fail if sqlTimeCondition is specified, since projection bodies are planned with the statement's context,
+    // so the condition would be stored in the catalog as part of their filters.
+    if (handlerContext.queryContext().has(QueryContextParameters.SQL_TIME_CONDITION)) {
+      throw InvalidSqlInput.exception(
+          "Context parameter [%s] cannot be provided on operator [%s]",
+          QueryContextParameters.SQL_TIME_CONDITION,
+          operationName()
+      );
     }
     tableId = TableId.datasource(resolveTableName());
     final Resource resource = new Resource(tableId.name(), ResourceType.DATASOURCE);
@@ -275,7 +285,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
    * Translate the reserved {@code __base} projection, which describes the physical layout of the table rather than an
    * additional aggregate, and so becomes the {@code baseTable} property instead of one of the projections.
    */
-  protected static ClusteredValueGroupsBaseTableMetadata translateBaseTable(
+  protected static DatasourceBaseTableMetadata translateBaseTable(
       final SqlStatementHandler.HandlerContext handlerContext,
       final String tableName,
       final List<ColumnSpec> columns,
