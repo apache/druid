@@ -51,7 +51,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
-import java.net.URL;
+import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -129,7 +129,7 @@ public class AsyncRequestJettyTest
       );
 
       final StatusResponseHolder first = client.go(
-          new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/race", port))),
+          new Request(HttpMethod.GET, URI.create(StringUtils.format("http://localhost:%d/race", port)).toURL()),
           StatusResponseHandler.getInstance(),
           READ_TIMEOUT
       ).get();
@@ -137,7 +137,7 @@ public class AsyncRequestJettyTest
       Assertions.assertEquals("\"the-result\"", first.getContent());
 
       final StatusResponseHolder second = client.go(
-          new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/ping", port))),
+          new Request(HttpMethod.GET, URI.create(StringUtils.format("http://localhost:%d/ping", port)).toURL()),
           StatusResponseHandler.getInstance(),
           READ_TIMEOUT
       ).get();
