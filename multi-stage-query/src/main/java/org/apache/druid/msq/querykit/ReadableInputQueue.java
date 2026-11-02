@@ -621,7 +621,7 @@ public class ReadableInputQueue implements Closeable
   /**
    * Releases pending inputs that will never be handed out for processing. Loads still in progress are canceled, and
    * loaded inputs are released. An input that is mid-delivery (claimed from {@link #loadingSegments} by
-   * {@link #onSegmentReady} but not yet completed) is left for {@link #close()}; This is a consious decision to
+   * {@link #onSegmentReady} but not yet completed) is left for {@link #close()}; this is a conscious decision to
    * avoid complexity for what is a sliver of a race.
    * <p>
    * Called outside the queue monitor, because canceling a load can run its canceler and releasing a segment can take
@@ -651,10 +651,7 @@ public class ReadableInputQueue implements Closeable
 
     // Cancel all pending segment loads in segments that have been skipped.
     for (final Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> entry : loadsToCancel.entrySet()) {
-      CloseableUtils.closeAndSuppressExceptions(
-          entry.getKey(),
-          e -> log.warn(e, "Failed to close skipped loadingSegment[%s]", entry.getKey())
-      );
+      closeLoadingSegment(entry.getKey());
       entry.getValue().setException(DruidException.defensive("Segment load canceled because its input was skipped"));
     }
 
@@ -683,13 +680,38 @@ public class ReadableInputQueue implements Closeable
     synchronized (this) {
       loadedSegments.remove(holder);
     }
-    // Attempt to claim ownership of the segment reference and close it. Only closed once, either here or by close()
-    // draining loadedSegments.
+    closeLoadedSegment(holder);
+  }
+
+  /**
+   * Closes a load that has not been delivered: closing a NEW handle runs its canceler (aborting the load), and closing
+   * a ready but unclaimed handle (its ready callback hasn't reached the queue monitor yet) closes the delivered result.
+   * The caller must have claimed the handle's entry from {@link #loadingSegments}, and is responsible for failing its
+   * future. Called outside the queue monitor.
+   */
+  private static void closeLoadingSegment(final AcquireSegmentAction acquireSegmentAction)
+  {
+    CloseableUtils.closeAndSuppressExceptions(
+        acquireSegmentAction,
+        // AcquireSegmentAction currently doesn't have a meaningful toString method, so if this message
+        // ever actually gets logged, it won't mention the specific segment that had a problem. Perhaps
+        // one day this will change.
+        e -> log.warn(e, "Failed to close loadingSegment[%s]", acquireSegmentAction)
+    );
+  }
+
+  /**
+   * Claims the segment reference from {@code holder} and closes it. Does nothing if the reference was already claimed,
+   * by a caller it was handed out to or by another release path, so the segment is closed exactly once. Called outside
+   * the queue monitor.
+   */
+  private static void closeLoadedSegment(final SegmentReferenceHolder holder)
+  {
     final SegmentReference ref = holder.getSegmentReferenceOnce();
     if (ref != null) {
       CloseableUtils.closeAndSuppressExceptions(
           ref,
-          e -> log.warn(e, "Failed to close skipped loadedSegment[%s]", ref.getSegmentDescriptor())
+          e -> log.warn(e, "Failed to close loadedSegment[%s]", ref.getSegmentDescriptor())
       );
     }
   }
@@ -742,29 +764,15 @@ public class ReadableInputQueue implements Closeable
       pendingNextInputs.clear();
     }
 
-    // Cancel all pending segment loads: closing a NEW handle runs its canceler (aborting the load); closing a
-    // ready but unclaimed handle (its ready callback hasn't reached the queue monitor yet) closes the delivered
-    // result.
+    // Cancel all pending segment loads.
     for (final AcquireSegmentAction acquireSegmentAction : handlesToClose) {
-      CloseableUtils.closeAndSuppressExceptions(
-          acquireSegmentAction,
-          // AcquireSegmentAction currently doesn't have a meaningful toString method, so if this message
-          // ever actually gets logged, it won't mention the specific segment that had a problem. Perhaps
-          // one day this will change.
-          e -> log.warn(e, "Failed to close loadingSegment[%s]", acquireSegmentAction)
-      );
+      closeLoadingSegment(acquireSegmentAction);
     }
 
     // Close all segments that have been loaded and not yet transferred to callers. (Segments transferred to
     // callers must be closed by the callers.)
-    for (SegmentReferenceHolder referenceHolder : holdersToDrain) {
-      final SegmentReference ref = referenceHolder.getSegmentReferenceOnce();
-      if (ref != null) {
-        CloseableUtils.closeAndSuppressExceptions(
-            ref,
-            e -> log.warn(e, "Failed to close loadedSegment[%s]", ref.getSegmentDescriptor())
-        );
-      }
+    for (final SegmentReferenceHolder referenceHolder : holdersToDrain) {
+      closeLoadedSegment(referenceHolder);
     }
 
     // Explicitly fail the futures of the loads we just canceled. Closing a handle fires its pending ready callback,
