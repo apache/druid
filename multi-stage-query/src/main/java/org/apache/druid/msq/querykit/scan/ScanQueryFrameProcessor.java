@@ -461,6 +461,10 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     populateFrameWriterAndFlushIfNeededWithExceptionHandling();
 
     if (isCursorDone()) {
+      if (limitTracker.isSatisfied()) {
+        // The limit has been satisfied, eagerly stop reading from the input channel and return.
+        return ReturnOrAwait.returnObject(Unit.instance());
+      }
       return ReturnOrAwait.awaitAll(inputChannels().size());
     } else {
       return ReturnOrAwait.runAgain();

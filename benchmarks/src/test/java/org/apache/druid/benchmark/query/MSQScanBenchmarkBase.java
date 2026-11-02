@@ -162,9 +162,8 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
   private int maxNumTasks;
 
   /**
-   * Number of processors each worker runs at once, as a worker with that many processing threads would. Also sets the
-   * default segment load-ahead, which is twice this. The in-JVM workers share one processing pool, sized so that each
-   * worker can run this many processors.
+   * Number of processors each worker runs with. This also determines the default segment load-ahead, which is twice
+   * this. The in-JVM workers share one processing pool, sized so that each worker can run this many processors.
    */
   @Param({"1", "8"})
   private int threadsPerWorker;

@@ -337,7 +337,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
   }
 
   @Test
-  public void test_runWithInputChannel_sharedLimitReachedMidFrame_flushesBeforeAwaitingInput() throws Exception
+  public void test_runWithInputChannel_sharedLimitReachedMidFrame_finishesWithoutAwaitingInput() throws Exception
   {
     final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
     final FrameSequenceBuilder frameSequenceBuilder =
@@ -387,13 +387,13 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     );
     final ListenableFuture<Object> retVal = exec.runFully(processor, null);
 
-    // The stopped rows must be flushed without waiting for more input.
+    // The stopped rows must be flushed, and the processor must finish, without waiting for more input.
     outputChannel.readable().readabilityFuture().get(30, TimeUnit.SECONDS);
     Assertions.assertEquals(3, outputChannel.readable().readFrame().numRows());
-
-    writableInputChannel.close();
     Assertions.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
     Assertions.assertTrue(limitTracker.isSatisfied());
+
+    writableInputChannel.close();
   }
 
   /**
