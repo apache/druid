@@ -686,6 +686,7 @@ public class HdfsDataSegmentKillerTest
       final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
         pusherConfig,
         config,
+        null,
         new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
       );
 

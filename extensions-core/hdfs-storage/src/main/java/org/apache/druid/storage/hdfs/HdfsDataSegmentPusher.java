@@ -85,15 +85,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   public HdfsDataSegmentPusher(
       HdfsDataSegmentPusherConfig config,
       @Hdfs Configuration hadoopConfig,
-      DeepStorageSegmentConfig deepStorageConfig
-  )
-  {
-    this(config, hadoopConfig, null, deepStorageConfig);
-  }
-
-  public HdfsDataSegmentPusher(
-      HdfsDataSegmentPusherConfig config,
-      @Hdfs Configuration hadoopConfig,
       @Nullable ServiceEmitter emitter
   )
   {

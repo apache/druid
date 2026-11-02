@@ -223,6 +223,7 @@ public class HdfsDataSegmentPusherTest
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
         config,
         conf,
+        null,
         new DeepStorageSegmentConfig(null, format)
     );
 
@@ -456,6 +457,7 @@ public class HdfsDataSegmentPusherTest
     final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
         config,
         conf,
+        null,
         new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
     );
 
@@ -516,6 +518,7 @@ public class HdfsDataSegmentPusherTest
     final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
         config,
         conf,
+        null,
         new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
     );
 
@@ -550,6 +553,7 @@ public class HdfsDataSegmentPusherTest
         () -> new HdfsDataSegmentPusher(
             config,
             conf,
+            null,
             new DeepStorageSegmentConfig(null, CompressionUtils.Format.SNAPPY)
         )
     );
@@ -569,6 +573,7 @@ public class HdfsDataSegmentPusherTest
     final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
       config,
       conf,
+      null,
       new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
     );
 
@@ -602,6 +607,7 @@ public class HdfsDataSegmentPusherTest
     final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
       config,
       conf,
+      null,
       new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
     );
 
