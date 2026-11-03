@@ -68,7 +68,6 @@ import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -389,28 +388,6 @@ public class OverlordResource
         taskQueue -> {
           taskQueue.shutdown(taskid, "Shutdown request from user");
           return Response.ok(ImmutableMap.of("task", taskid)).build();
-        }
-    );
-  }
-
-  @POST
-  @Path("/datasources/{dataSource}/shutdownAllTasks")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(DatasourceResourceFilter.class)
-  public Response shutdownTasksForDataSource(@PathParam("dataSource") final String dataSource)
-  {
-    return asLeaderWith(
-        taskMaster.getTaskQueue(),
-        taskQueue -> {
-          final List<TaskInfo> tasks = taskQueryTool.getActiveTaskInfo(dataSource);
-          if (tasks.isEmpty()) {
-            return Response.status(Status.NOT_FOUND).build();
-          } else {
-            for (final TaskInfo task : tasks) {
-              taskQueue.shutdown(task.getId(), "Shutdown request from user");
-            }
-            return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
-          }
         }
     );
   }
