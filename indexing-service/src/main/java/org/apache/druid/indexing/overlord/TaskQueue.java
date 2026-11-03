@@ -927,36 +927,19 @@ public class TaskQueue
     }
   }
 
-  private Map<String, RowKey> getCurrentTaskDatasources()
-  {
-    return activeTasks.values().stream()
-                      .filter(entry -> !entry.isComplete)
-                      .map(TaskEntry::getTask)
-                      .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
-  }
-
   public Map<RowKey, Long> getRunningTaskCount()
   {
-    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
-    return taskRunner.getRunningTasks()
-                     .stream()
-                     .collect(Collectors.toMap(
-                         e -> taskDatasources.getOrDefault(e.getTaskId(), RowKey.empty()),
-                         e -> 1L,
-                         Long::sum
-                     ));
+    return getTaskCountByMetricKey(taskRunner.getRunningTasks());
   }
 
   public Map<RowKey, Long> getPendingTaskCount()
   {
-    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
-    return taskRunner.getPendingTasks()
-                     .stream()
-                     .collect(Collectors.toMap(
-                         e -> taskDatasources.getOrDefault(e.getTaskId(), RowKey.empty()),
-                         e -> 1L,
-                         Long::sum
-                     ));
+    return getTaskCountByMetricKey(taskRunner.getPendingTasks());
+  }
+
+  private Map<RowKey, Long> getTaskCountByMetricKey(final Collection<? extends TaskRunnerWorkItem> workItems)
+  {
+    return workItems.stream().collect(Collectors.groupingBy(this::getWorkItemMetricKey, Collectors.counting()));
   }
 
   public Map<RowKey, Long> getWaitingTaskCount()
@@ -1235,5 +1218,14 @@ public class TaskQueue
       builder.with(Dimension.SUPERVISOR_ID, supervisorId);
     }
     return builder.build();
+  }
+
+  /**
+   * Returns the key of the task in {@link #activeTasks} or on the work item, or an empty key if neither has it.
+   */
+  private RowKey getWorkItemMetricKey(final TaskRunnerWorkItem workItem)
+  {
+    final TaskEntry entry = activeTasks.get(workItem.getTaskId());
+    return getMetricKey(entry != null ? entry.getTask() : workItem.getTask());
   }
 }

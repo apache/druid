@@ -23,6 +23,7 @@ import re
 import sys
 import types
 
+import licenses_yaml
 import yaml
 
 spec = importlib.util.spec_from_file_location(
@@ -59,9 +60,7 @@ def unquote(raw):
 
 
 def format_version(version, quote):
-    # Quote when the old value was quoted, or when YAML would not read the new value back as a string (2.22 is a float).
-    if quote is None and not isinstance(yaml.safe_load(version), str):
-        quote = '"'
+    # Keep the old quotes. Unquoted versions need none: licenses_yaml reads 2.10 as the string "2.10".
     return version if quote is None else quote + version + quote
 
 
@@ -86,7 +85,7 @@ def refresh_versions(text, reported_modules):
     # A reported version that another entry already registers belongs to that entry, not to a stale one.
     registered = {}
     for lines in documents:
-        parsed = yaml.safe_load("".join(lines))
+        parsed = yaml.load("".join(lines), Loader=licenses_yaml.LicensesYamlLoader)
         line_index, match = find_version_line(lines)
         if not isinstance(parsed, dict) or "libraries" not in parsed or match is None or not match.group(1):
             continue
@@ -178,7 +177,7 @@ def main():
 
     # The report parser prints notes about multi-licensed libraries; keep stdout for the changes below.
     with contextlib.redirect_stdout(sys.stderr):
-        _, reported_modules = check_licenses.read_dependency_reports(
+        _, reported_modules, _ = check_licenses.read_dependency_reports(
             args.dependency_reports_root, check_licenses.build_compatible_license_names()
         )
 

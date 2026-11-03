@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -177,10 +178,7 @@ public class PartitionHolderCompletenessTest
   @Test
   public void testHasNoData()
   {
-    final DataSegment tombstone = DataSegment.builder()
-                                             .dataSource("foo")
-                                             .version("1")
-                                             .interval(Intervals.of("2021-01-01/P1D"))
+    final DataSegment tombstone = DataSegment.builder(SegmentId.of("foo", Intervals.of("2021-01-01/P1D"), "1", 0))
                                              .shardSpec(new TombstoneShardSpec())
                                              .size(1)
                                              .build();

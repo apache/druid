@@ -55,7 +55,27 @@ public class HiveIcebergCatalogTest
         new Configuration()
     );
     Assertions.assertEquals("hive", hiveCatalog.retrieveCatalog().name());
+    Assertions.assertEquals(0, hiveCatalogNullProps.getCatalogProperties().size());
+    hiveCatalogNullProps.retrieveCatalog();
     Assertions.assertEquals(2, hiveCatalogNullProps.getCatalogProperties().size());
+  }
+
+  @Test
+  public void testCatalogPropertiesDoNotLeakIntoSharedConfiguration()
+  {
+    final Configuration sharedConf = new Configuration();
+    HashMap<String, Object> catalogMap = new HashMap<>();
+    catalogMap.put("fs.defaultFS", "hdfs://leaked");
+    final HiveIcebergCatalog hiveCatalog = new HiveIcebergCatalog(
+        FileUtils.createTempDir().getPath(),
+        "hdfs://testuri",
+        catalogMap,
+        null,
+        mapper,
+        sharedConf
+    );
+    hiveCatalog.retrieveCatalog();
+    Assertions.assertNotEquals("hdfs://leaked", sharedConf.get("fs.defaultFS"));
   }
 
   @Test

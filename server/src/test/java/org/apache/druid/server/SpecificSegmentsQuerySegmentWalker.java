@@ -255,10 +255,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   {
     QueryableIndex indexNumericDims = dataset.makeIndex(jsonMapper, tmpDir);
     return add(
-        DataSegment.builder()
-            .dataSource(dataset.getName())
-            .interval(indexNumericDims.getDataInterval())
-            .version("1")
+        DataSegment.builder(SegmentId.of(dataset.getName(), indexNumericDims.getDataInterval(), "1", 0))
             .shardSpec(new LinearShardSpec(0))
             .size(0)
             .build(),

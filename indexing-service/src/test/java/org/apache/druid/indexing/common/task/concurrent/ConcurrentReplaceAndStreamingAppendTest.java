@@ -738,10 +738,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
   private DataSegment createSegment(Interval interval, String version)
   {
     SegmentId id = SegmentId.of(TestDataSource.WIKI, interval, version, null);
-    return DataSegment.builder()
-                      .dataSource(TestDataSource.WIKI)
-                      .interval(interval)
-                      .version(version)
+    return DataSegment.builder(SegmentId.of(TestDataSource.WIKI, interval, version, 0))
                       .loadSpec(Collections.singletonMap(id.toString(), id.toString()))
                       .size(100)
                       .build();

@@ -36,6 +36,7 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -366,16 +367,13 @@ public class BalanceSegmentsTest
 
   private DataSegment createHourlySegment(String datasource, DateTime start, String version)
   {
-    return new DataSegment(
-        datasource,
-        new Interval(start, start.plusHours(1)),
-        version,
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        0,
-        8L
-    );
+    return DataSegment.builder(SegmentId.of(datasource, new Interval(start, start.plusHours(1)), version, 0))
+                      .loadSpec(Collections.emptyMap())
+                      .dimensions(Collections.emptyList())
+                      .metrics(Collections.emptyList())
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(0)
+                      .size(8L)
+                      .build();
   }
 }

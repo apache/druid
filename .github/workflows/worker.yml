@@ -137,4 +137,5 @@ jobs:
             **/TEST-*.xml
             **/target/jacoco*.exec
             **/target/ci-debug/**
-            distribution/target/apache-druid-*/log/**
+            embedded-tests/target/failsafe-reports/**
+            web-console/test-results/**

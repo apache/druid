@@ -20,11 +20,13 @@
 package org.apache.druid.testing.embedded.msq;
 
 import org.apache.druid.guice.ClusterTestingModule;
+import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.testing.cluster.task.FaultyOverlordClient;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -50,6 +52,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 {
+  private static final long CONTROLLER_RETRY_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(60);
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
@@ -137,7 +141,17 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
       faultyIndexer.stop();
     }
 
-    // Verify that the controller task eventually succeeds
+    // The controller must detect the failed worker and relaunch it on the functional Indexer,
+    // which can take much longer than the default 10s wait on a busy machine
+    final LatchableEmitter.EventMatcher controllerFinished = new LatchableEmitter.EventMatcher()
+        .hasMetricName(TaskMetrics.RUN_DURATION)
+        .hasDimension(DruidMetrics.TASK_ID, taskStatus.getTaskId());
+    overlord.latchableEmitter().waitForEvent(
+        event -> event instanceof ServiceMetricEvent && controllerFinished.test((ServiceMetricEvent) event),
+        CONTROLLER_RETRY_TIMEOUT_MILLIS
+    );
+
+    // Verify that the controller task succeeds
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 

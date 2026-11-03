@@ -18,6 +18,12 @@ updates:
         update-types: ["minor", "patch"]
         patterns:
           - "*"
+        # These build tools often need code or rule changes even in minor releases, so each update gets its own PR
+        # that can be reviewed, fixed or closed without holding up the group.
+        exclude-patterns:
+          - "com.github.spotbugs:spotbugs-maven-plugin"
+          - "com.puppycrawl.tools:checkstyle"
+          - "org.codehaus.mojo:javacc-maven-plugin"
       # Security updates skip the schedule and cooldown; batch them so an advisory burst opens one PR.
       maven-security:
         applies-to: security-updates

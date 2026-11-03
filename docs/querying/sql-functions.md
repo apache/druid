@@ -3451,6 +3451,7 @@ Extracts a primitive value from an expression at a specified path.
 If you include `RETURNING` and specify a SQL type (such as `VARCHAR`, `BIGINT`, `DOUBLE`) the function plans the query using the suggested type.
 If `RETURNING` isn't included, the function attempts to infer the type based on the context.
 If the function can't infer the type, it defaults to `VARCHAR`.  Primitive arrays can also be returned, but only if `RETURNING` is specified as an `ARRAY` type, e.g. `RETURNING VARCHAR ARRAY`.
+You can also write `expr:path` as shorthand for `JSON_VALUE(expr, '$.path')`, such as `geo_ip:city`.
 
 * **Syntax:** `JSON_VALUE(expr, path [RETURNING sqlType])`
 * **Function type:** JSON

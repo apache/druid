@@ -32,6 +32,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -439,9 +440,7 @@ public class CoordinatorServerViewTest
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
   {
-    return DataSegment.builder()
-                      .dataSource("test_overlord_server_view")
-                      .interval(Intervals.of(intervalStr))
+    return DataSegment.builder(SegmentId.of("test_overlord_server_view", Intervals.of(intervalStr), version, 0))
                       .loadSpec(
                           ImmutableMap.of(
                               "type",
@@ -450,7 +449,6 @@ public class CoordinatorServerViewTest
                               "somewhere"
                           )
                       )
-                      .version(version)
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
                       .shardSpec(NoneShardSpec.instance())

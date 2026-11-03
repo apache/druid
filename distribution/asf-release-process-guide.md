@@ -26,6 +26,7 @@
   - [ ] [Maven credentials](#maven-credentials)
 - [ ] [Announce intention to release](#announce-intention-to-release)
 - [ ] [Security vulnerabilities](#security-vulnerabilities)
+- [ ] [Refresh licenses.yaml versions](#refresh-licensesyaml-versions)
 - [ ] [Create a release branch](#create-a-release-branch)
   - [ ] [Preparing the release branch](#preparing-the-release-branch)
   - [ ] [Preparing the master branch for the next version after branching](#preparing-the-master-branch-for-the-next-version-after-branching)
@@ -129,6 +130,40 @@ First up in performing an official release of Apache Druid is to announce in the
 
 ## Security vulnerabilities
 The release manager should also keep an eye-out for `Cron Job ITS` failures: https://github.com/apache/druid/actions/workflows/cron-job-its.yml. If there are security vulnerabilities, we need to fix them before creating an RC.
+
+## Refresh licenses.yaml versions
+
+Check the `licenses.yaml` versions before you create the release branch, and again on the release branch before you tag. CI only warns when a version in `licenses.yaml` no longer matches the dependency the build uses, but the [release build](#build-artifacts) fails on it. The license scripts need Python 3 with PyYAML.
+
+From the repository root, install the branch, because the dependency reports resolve Druid modules from your local Maven repository:
+
+```bash
+mvn clean install -Pskip-static-checks,skip-tests -Dweb.console.skip=true -T1C
+```
+
+Generate the dependency reports:
+
+```bash
+mvn -Papache-release -pl distribution exec:exec@generate-licenses-report
+```
+
+Search the output for `Encountered error`. The report script keeps going when a module fails, and neither the check nor the refresh covers a module without a report.
+
+Run the release build's check. If it passes, skip the rest of this section:
+
+```bash
+mvn -Papache-release -pl distribution exec:exec@check-licenses
+```
+
+If it fails, refresh the versions:
+
+```bash
+distribution/bin/refresh-license-versions.py licenses.yaml distribution/target/license-reports
+```
+
+Edit the entries marked `needs a manual edit`. Most of these lines say what to change, and [dev/license.md](../dev/license.md#when-you-add-a-new-library-dependency-into-druid) describes the entry format. Run the check again until it passes.
+
+Open a PR with the `licenses.yaml` changes against the same branch, and merge it before you branch or tag. On a release branch, this direct PR is an exception to [Release branch hygiene](#release-branch-hygiene).
 
 ## Create a release branch
 
@@ -293,7 +328,7 @@ These additional tools were largely used to bootstrap the initial `LICENSE`, `LI
 | tool | description |
 | --- | --- |
 | [generate-license-dependency-reports](bin/generate-license-dependency-reports.py) | Point this to the Druid source root, and give it the location of a temp scratch directory, and it will output Maven dependency reports for Druid. |
-| [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by travis and `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`, and that every `license_file_path` exists and every file in `licenses/bin` is referenced. |
+| [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`, and that every `license_file_path` exists and every file in `licenses/bin` is referenced. |
 | [refresh-license-versions](bin/refresh-license-versions.py) | Updates the `version` of each `licenses.yaml` entry whose libraries moved to a new version in the output of `generate-license-dependency-reports.py`, and lists the entries that need a manual edit, such as an entry whose libraries moved to different versions. Use `--dry-run` to only print the changes. |
 | [jar-notice-lister](bin/jar-notice-lister.py) | Point this to an extracted Druid binary distribution, and give it a temp scratch directory, and it will output NOTICE information for all the Druid JAR files. |
 
@@ -332,6 +367,8 @@ tag them properly. See the above [Release notes](#release-notes) section for mor
 In this case, the commit must be backported to the release branch. The [find-missing-backports](bin/find-missing-backports.py) script can be used to
 find such commits that have not been backported. Note that this script relies on the milestone tagged in the PR, so PRs
 must be tagged properly to make this script working. See the above [Release notes](#release-notes) section for more details about the script.
+
+Before you tag, [check the `licenses.yaml` versions](#refresh-licensesyaml-versions) on the release branch, starting with the install.
 
 ### Set version and make a tag
 

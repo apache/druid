@@ -44,8 +44,7 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
 
     Preconditions.checkNotNull(descriptorString);
     this.descriptorString = descriptorString;
-
-    initializeDescriptor();
+    // Descriptor is loaded lazily on first use, not during deserialization.
   }
 
   @JsonProperty

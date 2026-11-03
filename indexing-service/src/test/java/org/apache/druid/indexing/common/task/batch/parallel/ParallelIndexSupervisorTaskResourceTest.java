@@ -645,17 +645,11 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           false
       );
 
-      final DataSegment segment = new DataSegment(
-          segmentIdentifier.getDataSource(),
-          segmentIdentifier.getInterval(),
-          segmentIdentifier.getVersion(),
-          null,
-          null,
-          null,
-          segmentIdentifier.getShardSpec(),
-          0,
-          1L
-      );
+      final DataSegment segment = DataSegment.builder(segmentIdentifier.asSegmentId())
+                                             .shardSpec(segmentIdentifier.getShardSpec())
+                                             .binaryVersion(0)
+                                             .size(1L)
+                                             .build();
 
       taskClient.report(
           new PushedSegmentsReport(

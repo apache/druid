@@ -128,13 +128,9 @@ public class HdfsInputSource
 
   public static void verifyProtocol(Configuration conf, HdfsInputSourceConfig config, String pathString)
   {
-    Path path = new Path(pathString);
-    try {
-      throwIfInvalidProtocol(config, path.getFileSystem(conf).getScheme());
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    // Resolve the scheme without creating a FileSystem, so a disallowed path never touches the network.
+    final String scheme = new Path(pathString).toUri().getScheme();
+    throwIfInvalidProtocol(config, scheme != null ? scheme : FileSystem.getDefaultUri(conf).getScheme());
   }
 
   private static void throwIfInvalidProtocol(HdfsInputSourceConfig config, String scheme)

@@ -27,10 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -66,6 +63,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.server.http.AsyncRequest;
+import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -85,9 +84,7 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -109,7 +106,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -523,54 +519,37 @@ public class OverlordResource
       @Context HttpServletRequest request
   )
   {
-    final AsyncRequest asyncRequest = new AsyncRequest(request);
     final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
     if (!taskActionClient.isPresent()) {
       // Encourage client to try again soon, when we'll likely have a redirect set up
-      asyncRequest.complete(Status.SERVICE_UNAVAILABLE.getStatusCode(), null);
+      AsyncRequest.completed(request, jsonMapper, AsyncResponse.status(Status.SERVICE_UNAVAILABLE.getStatusCode()));
       return;
     }
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
-    asyncRequest.context.addListener(
-        ServletResourceUtils.createAsyncTimeoutListener(_ -> {
-          asyncRequest.complete(HttpResponseStatus.GATEWAY_TIMEOUT.code(), null);
-          future.cancel(true);
-        })
-    );
-
     // Use a default timeout of 15 minutes
-    asyncRequest.context.setTimeout(15 * 60_000);
-
-    Futures.addCallback(
-        future,
-        new FutureCallback<Object>()
-        {
-          @Override
-          public void onSuccess(Object result)
-          {
-            // Use null-safe map since some task actions may return null result
-            final Map<String, Object> payload = new HashMap<>();
-            payload.put("result", result);
-
-            asyncRequest.complete(Status.OK.getStatusCode(), payload);
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            log.warn(t, "Failed to perform task action");
-            if (t instanceof DruidException druidException) {
-              asyncRequest.complete(druidException.getStatusCode(), druidException.toErrorResponse());
-            } else {
-              final Map<String, String> payload = new HashMap<>();
-              payload.put("error", t.getMessage());
-              asyncRequest.complete(Status.INTERNAL_SERVER_ERROR.getStatusCode(), payload);
-            }
-          }
-        },
-        MoreExecutors.directExecutor()
-    );
+    AsyncRequest.create(request, future, 15 * 60_000)
+                .contentType(jsonMapper, MediaType.APPLICATION_JSON)
+                .onTimeout(HttpResponseStatus.GATEWAY_TIMEOUT.code())
+                .onSuccess(
+                    result -> {
+                      // Use null-safe map since some task actions may return null result
+                      final Map<String, Object> payload = new HashMap<>();
+                      payload.put("result", result);
+                      return AsyncResponse.of(Status.OK.getStatusCode(), payload);
+                    }
+                )
+                .onFailure(t -> {
+                  log.warn(t, "Failed to perform task action");
+                  if (t instanceof DruidException druidException) {
+                    return AsyncResponse.of(druidException.getStatusCode(), druidException.toErrorResponse());
+                  } else {
+                    final Map<String, String> payload = new HashMap<>();
+                    payload.put("error", t.getMessage());
+                    return AsyncResponse.of(Status.INTERNAL_SERVER_ERROR.getStatusCode(), payload);
+                  }
+                })
+                .start();
   }
 
   @GET
@@ -919,37 +898,5 @@ public class OverlordResource
             authorizerMapper
         )
     );
-  }
-
-  private class AsyncRequest
-  {
-    final AtomicBoolean completed = new AtomicBoolean(false);
-    final AsyncContext context;
-
-    AsyncRequest(HttpServletRequest request)
-    {
-      this.context = request.startAsync();
-    }
-
-    void complete(int statusCode, @Nullable Object result)
-    {
-      if (!completed.compareAndSet(false, true)) {
-        log.warn("Request has already been completed");
-        return;
-      }
-
-      try {
-        final HttpServletResponse response = (HttpServletResponse) context.getResponse();
-        response.setStatus(statusCode);
-        if (result != null) {
-          response.setContentType(MediaType.APPLICATION_JSON);
-          jsonMapper.writeValue(response.getOutputStream(), result);
-        }
-        context.complete();
-      }
-      catch (Exception e) {
-        log.noStackTrace().warn(e, "Request timed out or is closed already");
-      }
-    }
   }
 }

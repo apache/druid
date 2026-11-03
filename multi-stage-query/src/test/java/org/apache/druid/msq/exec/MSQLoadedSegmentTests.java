@@ -59,6 +59,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,10 +83,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                   .put(QueryContextParameters.INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.name())
                   .toMap();
   public static final DataSegment LOADED_SEGMENT_1 =
-      DataSegment.builder()
-                 .dataSource(CalciteTests.DATASOURCE1)
-                 .interval(Intervals.of("2003-01-01T00:00:00.000Z/2004-01-01T00:00:00.000Z"))
-                 .version("1")
+      DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE1, Intervals.of("2003-01-01T00:00:00.000Z/2004-01-01T00:00:00.000Z"), "1", 0))
                  .shardSpec(new LinearShardSpec(0))
                  .size(0)
                  .build();

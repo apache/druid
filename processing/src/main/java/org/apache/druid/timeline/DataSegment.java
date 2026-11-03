@@ -176,77 +176,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   @Nullable
   private final String indexingStateFingerprint;
 
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      Map<String, Object> loadSpec,
-      List<String> dimensions,
-      List<String> metrics,
-      ShardSpec shardSpec,
-      Integer binaryVersion,
-      long size
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        null,
-        null,
-        shardSpec,
-        null,
-        binaryVersion,
-        size,
-        null,
-        null,
-        PruneSpecsHolder.DEFAULT
-    );
-  }
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      Map<String, Object> loadSpec,
-      List<String> dimensions,
-      List<String> metrics,
-      ShardSpec shardSpec,
-      @Nullable CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        null,
-        null,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        null,
-        null,
-        PruneSpecsHolder.DEFAULT
-    );
-  }
-
   @JsonCreator
   private DataSegment(
       @JsonProperty("dataSource") String dataSource,
@@ -674,15 +603,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
                                .collect(ImmutableList.toImmutableList()));
   }
 
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public static Builder builder()
-  {
-    return new Builder();
-  }
-
   public static Builder builder(SegmentId segmentId)
   {
     return new Builder(segmentId);
@@ -715,22 +635,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private long size;
     private Integer totalRows;
     private String indexingStateFingerprint;
-
-    /**
-     * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
-     */
-    @Deprecated
-    private Builder()
-    {
-      this.loadSpec = ImmutableMap.of();
-      this.dimensions = ImmutableList.of();
-      this.metrics = ImmutableList.of();
-      // By default, segment is not projection-aware.
-      this.projections = null;
-      this.shardSpec = new NumberedShardSpec(0, 1);
-      this.size = -1;
-      this.totalRows = null;
-    }
 
     private Builder(SegmentId segmentId)
     {

@@ -129,18 +129,12 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Mockito.doCallRealMethod()
@@ -224,18 +218,12 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Mockito.doCallRealMethod()
@@ -308,18 +296,12 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Mockito.doCallRealMethod()
@@ -402,18 +384,12 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Map<String, Object> queryContext = new HashMap<>(context);
@@ -492,18 +468,12 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Map<String, Object> queryContext = new HashMap<>(context);
@@ -622,18 +592,12 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Map<String, Object> queryContext = new HashMap<>(context);
@@ -1157,17 +1121,11 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Mockito.doCallRealMethod()
@@ -1251,11 +1209,8 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment0))
@@ -1335,18 +1290,12 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
@@ -1524,10 +1473,7 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    final DataSegment existingDataSegment = DataSegment.builder()
-                                                       .dataSource("foo")
-                                                       .interval(Intervals.of("2000-01-01/2000-01-04"))
-                                                       .version(MSQTestTaskActionClient.VERSION)
+    final DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01/2000-01-04"), MSQTestTaskActionClient.VERSION, 0))
                                                        .size(1)
                                                        .build();
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -1632,17 +1578,11 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
@@ -1698,11 +1638,8 @@ public class MSQReplaceTest extends MSQTestBase
                                             .build();
 
     // Create a datasegment which lies partially outside the generated segment
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.ETERNITY)
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo", Intervals.ETERNITY, MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -2121,17 +2058,11 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("d", ColumnType.STRING)
                                             .build();
 
-    DataSegment existingDataSegment0 = DataSegment.builder()
-                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+    DataSegment existingDataSegment0 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T/2000-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
-    DataSegment existingDataSegment1 = DataSegment.builder()
-                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+    DataSegment existingDataSegment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001-01-01T/2001-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                   .size(50)
-                                                  .version(MSQTestTaskActionClient.VERSION)
-                                                  .dataSource("foo")
                                                   .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
@@ -2207,11 +2138,8 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     // Create a datasegment which lies partially outside the generated segment
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.of("2001-01-01T/2003-01-04T"))
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.of("2001-01-01T/2003-01-04T"), MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -2309,11 +2237,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceAllOverExistingSegment(String contextName, Map<String, Object> context)
   {
     Interval existingSegmentInterval = Intervals.of("2001-01-01T/2001-01-02T");
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(existingSegmentInterval)
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", existingSegmentInterval, MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -2352,11 +2277,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceIntervalOverPartiallyOverlappingSegment(String contextName, Map<String, Object> context)
   {
     // Create a data segment which lies partially outside the generated segment
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.of("2016-06-27T/2016-06-28T"))
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.of("2016-06-27T/2016-06-28T"), MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -2399,11 +2321,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceIntervalOverPartiallyOverlappingStart(String contextName, Map<String, Object> context)
   {
     // Create a data segment whose start partially lies outside the query's replace interval
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.of("2016-06-01T/2016-07-01T"))
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.of("2016-06-01T/2016-07-01T"), MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -2448,11 +2367,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceIntervalOverPartiallyOverlappingEnd(String contextName, Map<String, Object> context)
   {
     // Create a data segment whose end partially lies outside the query's replace interval
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.of("2016-06-01T/2016-07-01T"))
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.of("2016-06-01T/2016-07-01T"), MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -2497,11 +2413,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceAllOverEternitySegment(String contextName, Map<String, Object> context)
   {
     // Create a data segment spanning eternity
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.ETERNITY)
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.ETERNITY, MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -2547,11 +2460,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceAllWithAllGrainOverFiniteIntervalSegment(String contextName, Map<String, Object> context)
   {
     // Create a finite-interval segment
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.of("2016-06-01T/2016-09-01T"))
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.of("2016-06-01T/2016-09-01T"), MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
@@ -2593,11 +2503,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceAllWithAllGrainOverEternitySegment(String contextName, Map<String, Object> context)
   {
     // Create a segment spanning eternity
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.ETERNITY)
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.ETERNITY, MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
@@ -2640,11 +2547,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceAllWithAllGrainOverHalfEternitySegment(String contextName, Map<String, Object> context)
   {
     // Create a segment spanning half-eternity
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(new Interval(DateTimes.of("2000"), DateTimes.MAX))
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", new Interval(DateTimes.of("2000"), DateTimes.MAX), MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
@@ -2699,11 +2603,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testEmptyReplaceIntervalOverEternitySegment(String contextName, Map<String, Object> context)
   {
     // Create a data segment spanning eternity
-    DataSegment existingDataSegment = DataSegment.builder()
-                                                 .interval(Intervals.ETERNITY)
+    DataSegment existingDataSegment = DataSegment.builder(SegmentId.of("foo1", Intervals.ETERNITY, MSQTestTaskActionClient.VERSION, 0))
                                                  .size(50)
-                                                 .version(MSQTestTaskActionClient.VERSION)
-                                                 .dataSource("foo1")
                                                  .build();
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
