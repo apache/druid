@@ -31,6 +31,7 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -43,7 +44,6 @@ import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.dart.worker.http.SyncWorkersRequest;
-import org.apache.druid.msq.dart.worker.http.SyncWorkersResponse;
 import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.rpc.FixedServiceLocator;
 import org.apache.druid.rpc.RequestBuilder;
@@ -67,8 +67,7 @@ import java.util.concurrent.ScheduledExecutorService;
 /**
  * Sends periodic syncs from the Broker to the servers that run Dart workers. Each sync sends a
  * {@link SyncWorkersRequest} with the list of queries the Broker believes are running on that worker. The worker
- * replies with a {@link SyncWorkersResponse} indicating what queries the worker is currently running. This allows
- * discrepancies to be resolved.
+ * cancels queries that are missing from syncs, which allows discrepancies to be resolved.
  *
  * @see DartWorkerRunner#syncController the worker side
  */
@@ -87,6 +86,7 @@ public class DartWorkerSyncer
   private final ObjectMapper jsonMapper;
   private final String selfHost;
   private final Duration syncPeriod;
+  private final ScheduledExecutorFactory execFactory;
 
   /**
    * Worker host:port -> state of syncs to that server.
@@ -103,7 +103,8 @@ public class DartWorkerSyncer
       final ServiceClientFactory clientFactory,
       final ObjectMapper jsonMapper,
       final String selfHost,
-      final DartControllerConfig config
+      final DartControllerConfig config,
+      final ScheduledExecutorFactory execFactory
   )
   {
     this.controllerRegistry = controllerRegistry;
@@ -111,6 +112,7 @@ public class DartWorkerSyncer
     this.clientFactory = clientFactory;
     this.jsonMapper = jsonMapper;
     this.selfHost = selfHost;
+    this.execFactory = execFactory;
     this.syncPeriod = config.getSyncPeriod().toStandardDuration();
     if (syncPeriod.getMillis() <= 0) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
@@ -122,7 +124,7 @@ public class DartWorkerSyncer
   @LifecycleStart
   public void start()
   {
-    exec = Execs.scheduledSingleThreaded("dart-worker-syncer-%s");
+    exec = execFactory.create(1, "dart-worker-syncer-%s");
     ScheduledExecutors.scheduleWithFixedDelay(exec, syncPeriod, syncPeriod, this::sync);
   }
 

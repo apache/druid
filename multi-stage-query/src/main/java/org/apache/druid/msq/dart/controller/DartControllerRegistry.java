@@ -133,12 +133,18 @@ public class DartControllerRegistry implements ControllerRegistry
       cleanupExec.shutdown();
     }
 
+    // Cancel any queries that are still running. This registry is stopped in the NORMAL stage, after
+    // ANNOUNCEMENTS and SERVER, so by this point the Broker has been removed from discovery and the
+    // druid.server.http.gracefulShutdownTimeout has already elapsed.
     final List<ControllerHolder> holders = new ArrayList<>(controllerMap.values());
     if (!holders.isEmpty()) {
       log.info("Canceling [%d] queries that are still running.", holders.size());
 
+      // Cancel all controllers in sequence. It would be nicer to do this in parallel, since it involves sending
+      // stopWorker calls to active workers. This would require some restructuring of the code to return Futures,
+      // or an executor here used only for cancellation.
       for (final ControllerHolder holder : holders) {
-        holder.cancel(CancellationReason.TASK_SHUTDOWN, null);
+        holder.cancel(CancellationReason.CONTROLLER_SHUTDOWN, null);
       }
 
       // Wait for the controllers to exit, so they tell their workers to stop before this server shuts down.

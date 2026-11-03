@@ -41,6 +41,7 @@ import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
@@ -155,7 +156,8 @@ public class DartControllerModule implements DruidModule
         @EscalatedGlobal final ServiceClientFactory clientFactory,
         @Json final ObjectMapper jsonMapper,
         @Self final DruidNode selfNode,
-        final DartControllerConfig config
+        final DartControllerConfig config,
+        final ScheduledExecutorFactory execFactory
     )
     {
       return new DartWorkerSyncer(
@@ -164,7 +166,8 @@ public class DartControllerModule implements DruidModule
           clientFactory,
           jsonMapper,
           selfNode.getHostAndPortToUse(),
-          config
+          config,
+          execFactory
       );
     }
 

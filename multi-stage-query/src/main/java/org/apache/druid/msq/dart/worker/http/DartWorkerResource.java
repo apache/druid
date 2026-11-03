@@ -23,12 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.messages.server.MessageRelayResource;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
+import org.apache.druid.msq.dart.controller.DartWorkerSyncer;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.kernel.WorkOrder;
@@ -49,7 +51,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Set;
 
 /**
  * Subclass of {@link WorkerResource} suitable for usage on a Historical.
@@ -129,7 +130,7 @@ public class DartWorkerResource
   }
 
   /**
-   * Process a {@link SyncWorkersRequest} from {@link DartWorkerRunner#syncController}.
+   * Process a {@link SyncWorkersRequest} from {@link DartWorkerSyncer}.
    */
   @POST
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
@@ -141,10 +142,11 @@ public class DartWorkerResource
   )
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
-    return workerRunner.syncController(
-        getControllerHost(req),
-        request != null ? request : new SyncWorkersRequest(Set.of())
-    );
+    if (request == null) {
+      throw InvalidInput.exception("Expected non-null request payload");
+    } else {
+      return workerRunner.syncController(getControllerHost(req), request);
+    }
   }
 
   /**

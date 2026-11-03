@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
 public class EmbeddedDartLivenessTest extends BaseDartQueryTest
 {
   private static final long SYNC_PERIOD_MILLIS = 100;
-  private static final long SYNC_GRACE_MILLIS = 1_000;
+  private static final long SYNC_TIMEOUT_MILLIS = 1_000;
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -56,10 +56,10 @@ public class EmbeddedDartLivenessTest extends BaseDartQueryTest
     // Must be positive for in-flight queries to finish after shutdown starts, since zero disables graceful stop.
     broker2.addProperty("druid.server.http.gracefulShutdownTimeout", "PT30S");
 
-    // Shorten syncs and the grace period, so a sync that wrongly leaves a query out cancels it quickly.
+    // Shorten syncs and the sync timeout, so a sync that wrongly leaves a query out cancels it quickly.
     broker1.addProperty("druid.msq.dart.controller.syncPeriod", new Period(SYNC_PERIOD_MILLIS).toString());
     broker2.addProperty("druid.msq.dart.controller.syncPeriod", new Period(SYNC_PERIOD_MILLIS).toString());
-    historical.addProperty("druid.msq.dart.worker.syncGracePeriod", new Period(SYNC_GRACE_MILLIS).toString());
+    historical.addProperty("druid.msq.dart.worker.syncTimeout", new Period(SYNC_TIMEOUT_MILLIS).toString());
 
     return super.createCluster();
   }
@@ -80,9 +80,9 @@ public class EmbeddedDartLivenessTest extends BaseDartQueryTest
         msqApis.submitDartSqlAsync(sql, Map.of(), broker1).get(30, TimeUnit.SECONDS).trim()
     );
 
-    // The query must outlast a sync period plus the grace period, with margin, for a sync that wrongly left it out
+    // The query must outlast a sync period plus the sync timeout, with margin, for a sync that wrongly left it out
     // to have canceled it.
-    final long minDurationMillis = 2 * (SYNC_PERIOD_MILLIS + SYNC_GRACE_MILLIS);
+    final long minDurationMillis = 2 * (SYNC_PERIOD_MILLIS + SYNC_TIMEOUT_MILLIS);
     Assertions.assertTrue(
         stopwatch.millisElapsed() >= minDurationMillis,
         StringUtils.format("Query took[%,d] ms, less than[%,d] ms", stopwatch.millisElapsed(), minDurationMillis)

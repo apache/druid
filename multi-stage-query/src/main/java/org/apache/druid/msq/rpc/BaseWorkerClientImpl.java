@@ -84,7 +84,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   public ListenableFuture<Void> postWorkOrder(String workerId, WorkOrder workOrder)
   {
     return getClient(workerId).asyncRequest(
-        new RequestBuilder(HttpMethod.POST, "/workOrder")
+        newRequest(HttpMethod.POST, "/workOrder")
             .objectContent(objectMapper, contentType, workOrder),
         IgnoreHttpResponseHandler.INSTANCE
     );
@@ -105,7 +105,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
     );
 
     return getClient(workerId).asyncRequest(
-        new RequestBuilder(HttpMethod.POST, path),
+        newRequest(HttpMethod.POST, path),
         new SketchResponseHandler(objectMapper)
     );
   }
@@ -127,7 +127,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
     );
 
     return getClient(workerId).asyncRequest(
-        new RequestBuilder(HttpMethod.POST, path),
+        newRequest(HttpMethod.POST, path),
         new SketchResponseHandler(objectMapper)
     );
   }
@@ -146,7 +146,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
     );
 
     return getClient(workerId).asyncRequest(
-        new RequestBuilder(HttpMethod.POST, path)
+        newRequest(HttpMethod.POST, path)
             .objectContent(objectMapper, contentType, partitionBoundaries),
         IgnoreHttpResponseHandler.INSTANCE
     );
@@ -168,7 +168,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
     );
 
     return getClient(workerId).asyncRequest(
-        new RequestBuilder(HttpMethod.POST, path),
+        newRequest(HttpMethod.POST, path),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }
@@ -177,7 +177,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   public ListenableFuture<Void> postFinish(String workerId)
   {
     return getClient(workerId).asyncRequest(
-        new RequestBuilder(HttpMethod.POST, "/finish"),
+        newRequest(HttpMethod.POST, "/finish"),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }
@@ -187,7 +187,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   {
     return FutureUtils.transform(
         getClient(workerId).asyncRequest(
-            new RequestBuilder(HttpMethod.GET, "/counters").header(HttpHeaders.ACCEPT, contentType),
+            newRequest(HttpMethod.GET, "/counters").header(HttpHeaders.ACCEPT, contentType),
             new BytesFullResponseHandler()
         ),
         holder -> deserialize(holder, new TypeReference<>() {})
@@ -209,7 +209,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
     final SettableFuture<Boolean> retVal = SettableFuture.create();
     final ListenableFuture<FrameFilePartialFetch> clientFuture =
         client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, StringUtils.format("%s?offset=%d", path, offset))
+            newRequest(HttpMethod.GET, StringUtils.format("%s?offset=%d", path, offset))
                 .header(HttpHeaders.ACCEPT_ENCODING, "identity"), // Data is compressed at app level
             new FrameFileHttpResponseHandler(channel)
         );
@@ -259,6 +259,15 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
    * Create a client to communicate with a given worker ID.
    */
   protected abstract ServiceClient getClient(String workerId);
+
+  /**
+   * Creates a {@link RequestBuilder} for a request to a worker. Subclasses can override this to customize all
+   * requests, such as by setting a timeout.
+   */
+  protected RequestBuilder newRequest(final HttpMethod method, final String encodedPathAndQueryString)
+  {
+    return new RequestBuilder(method, encodedPathAndQueryString);
+  }
 
   /**
    * Deserialize a {@link BytesFullResponseHolder} as JSON.

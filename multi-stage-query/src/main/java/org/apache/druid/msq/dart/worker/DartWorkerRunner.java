@@ -22,7 +22,6 @@ package org.apache.druid.msq.dart.worker;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -87,12 +86,6 @@ public class DartWorkerRunner
   private static final long REAPER_SHUTDOWN_TIMEOUT_MILLIS = 30_000;
 
   /**
-   * Minimum value for {@link DartWorkerConfig#getControllerTimeout()}. Any shorter and we might end up reaping
-   * controllers in between heartbeats.
-   */
-  private static final long MIN_CONTROLLER_TIMEOUT_MILLIS = 60_000;
-
-  /**
    * Controller host -> {@link #clock} time of the most recent contact from that controller.
    */
   @GuardedBy("this")
@@ -119,7 +112,7 @@ public class DartWorkerRunner
    * Cancel workers after they have been missing from {@link #syncController} for this long. A grace period is
    * necessary because in-flight syncs may not include a worker that has just started.
    */
-  private final long syncGraceMillis;
+  private final long syncTimeoutMillis;
 
   private final File baseTempDir;
   private final Clock clock;
@@ -143,24 +136,7 @@ public class DartWorkerRunner
     this.permissionMapper = permissionMapper;
     this.authorizerMapper = authorizerMapper;
     this.controllerTimeoutMillis = workerConfig.getControllerTimeout().toStandardDuration().getMillis();
-    if (controllerTimeoutMillis < MIN_CONTROLLER_TIMEOUT_MILLIS) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "druid.msq.dart.worker.controllerTimeout[%s] must be at least [%,d] ms",
-                              workerConfig.getControllerTimeout(),
-                              MIN_CONTROLLER_TIMEOUT_MILLIS
-                          );
-    }
-    this.syncGraceMillis = workerConfig.getSyncGracePeriod().toStandardDuration().getMillis();
-    if (syncGraceMillis <= 0) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "druid.msq.dart.worker.syncGracePeriod[%s] must be positive",
-                              workerConfig.getSyncGracePeriod()
-                          );
-    }
+    this.syncTimeoutMillis = workerConfig.getSyncTimeout().toStandardDuration().getMillis();
     this.baseTempDir = baseTempDir;
     this.clock = clock;
     this.controllerReaperExec = controllerReaperExec;
@@ -266,7 +242,7 @@ public class DartWorkerRunner
           final Long missingFromSyncSince = holder.missingFromSyncSince;
           if (missingFromSyncSince == null) {
             holder.missingFromSyncSince = now;
-          } else if (now - missingFromSyncSince >= syncGraceMillis) {
+          } else if (now - missingFromSyncSince >= syncTimeoutMillis) {
             holdersToCancel.add(holder);
           }
         }

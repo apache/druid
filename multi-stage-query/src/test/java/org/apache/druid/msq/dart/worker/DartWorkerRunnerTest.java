@@ -22,7 +22,6 @@ package org.apache.druid.msq.dart.worker;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -79,7 +78,7 @@ public class DartWorkerRunnerTest
   private static final String CONTROLLER_SERVER_HOST = "localhost:8081";
   private static final String OTHER_CONTROLLER_SERVER_HOST = "localhost:9081";
   private static final Duration CONTROLLER_TIMEOUT = Duration.ofMinutes(3);
-  private static final Duration SYNC_GRACE = Duration.ofSeconds(10);
+  private static final Duration SYNC_TIMEOUT = Duration.ofSeconds(10);
 
   private ListeningExecutorService workerExec;
   private DartWorkerRunner workerRunner;
@@ -113,7 +112,7 @@ public class DartWorkerRunnerTest
     mockCloser = MockitoAnnotations.openMocks(this);
     clock = new TestClock();
     workerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(MAX_WORKERS, "worker-exec-%s"));
-    workerRunner = makeWorkerRunner(CONTROLLER_TIMEOUT, SYNC_GRACE);
+    workerRunner = makeWorkerRunner(CONTROLLER_TIMEOUT, SYNC_TIMEOUT);
 
     // "workerFactory" builds "workerContext".
     Mockito.when(
@@ -191,24 +190,6 @@ public class DartWorkerRunnerTest
     // Run "createAndCleanTempDirectory", which will delete it.
     workerRunner.createAndCleanTempDirectory();
     Assertions.assertArrayEquals(new File[]{}, temporaryFolder.getRoot().listFiles());
-  }
-
-  @Test
-  public void test_constructor_controllerTimeoutTooLow()
-  {
-    final DruidException e =
-        Assertions.assertThrows(DruidException.class, () -> makeWorkerRunner(Duration.ofSeconds(30), SYNC_GRACE));
-
-    Assertions.assertTrue(e.getMessage().contains("controllerTimeout"), e.getMessage());
-  }
-
-  @Test
-  public void test_constructor_syncGracePeriodNotPositive()
-  {
-    final DruidException e =
-        Assertions.assertThrows(DruidException.class, () -> makeWorkerRunner(CONTROLLER_TIMEOUT, Duration.ZERO));
-
-    Assertions.assertTrue(e.getMessage().contains("syncGracePeriod"), e.getMessage());
   }
 
   @Test
@@ -301,7 +282,7 @@ public class DartWorkerRunnerTest
 
   @Test
   @Timeout(value = 1, unit = TimeUnit.MINUTES)
-  public void test_syncController_cancelsAfterGrace() throws InterruptedException
+  public void test_syncController_cancelsAfterSyncTimeout() throws InterruptedException
   {
     workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
 
@@ -313,14 +294,14 @@ public class DartWorkerRunnerTest
     );
     workerRunner.syncController(CONTROLLER_SERVER_HOST, new SyncWorkersRequest(Set.of(QUERY_ID)));
 
-    // Grace period starts over with the next sync that leaves the query out.
-    clock.advance(SYNC_GRACE);
+    // Sync timeout starts over with the next sync that leaves the query out.
+    clock.advance(SYNC_TIMEOUT);
     workerRunner.syncController(CONTROLLER_SERVER_HOST, new SyncWorkersRequest(Set.of()));
-    clock.advance(SYNC_GRACE.minusMillis(1));
+    clock.advance(SYNC_TIMEOUT.minusMillis(1));
     workerRunner.syncController(CONTROLLER_SERVER_HOST, new SyncWorkersRequest(Set.of()));
     assertWorkerNotCanceled();
 
-    // Sync after the grace period cancels the worker.
+    // Sync after the sync timeout cancels the worker.
     clock.advance(Duration.ofMillis(1));
     workerRunner.syncController(CONTROLLER_SERVER_HOST, new SyncWorkersRequest(Set.of()));
     Assertions.assertEquals(1, logCapture.getLogEvents().size());
@@ -336,7 +317,7 @@ public class DartWorkerRunnerTest
         new SyncWorkersResponse(Set.of()),
         workerRunner.syncController(OTHER_CONTROLLER_SERVER_HOST, new SyncWorkersRequest(Set.of()))
     );
-    clock.advance(SYNC_GRACE.multipliedBy(2));
+    clock.advance(SYNC_TIMEOUT.multipliedBy(2));
     workerRunner.syncController(OTHER_CONTROLLER_SERVER_HOST, new SyncWorkersRequest(Set.of()));
     assertWorkerNotCanceled();
   }
@@ -386,7 +367,7 @@ public class DartWorkerRunnerTest
     Assertions.assertEquals(List.of(), logCapture.getLogEvents());
   }
 
-  private DartWorkerRunner makeWorkerRunner(final Duration controllerTimeout, final Duration syncGracePeriod)
+  private DartWorkerRunner makeWorkerRunner(final Duration controllerTimeout, final Duration syncTimeout)
   {
     return new DartWorkerRunner(
         workerFactory,
@@ -394,20 +375,13 @@ public class DartWorkerRunnerTest
         outbox,
         new DartResourcePermissionMapper(),
         authorizerMapper,
-        new DartWorkerConfig()
-        {
-          @Override
-          public Period getControllerTimeout()
-          {
-            return Period.millis((int) controllerTimeout.toMillis());
-          }
-
-          @Override
-          public Period getSyncGracePeriod()
-          {
-            return Period.millis((int) syncGracePeriod.toMillis());
-          }
-        },
+        new DartWorkerConfig(
+            null,
+            null,
+            null,
+            Period.millis((int) controllerTimeout.toMillis()),
+            Period.millis((int) syncTimeout.toMillis())
+        ),
         temporaryFolder.getRoot(),
         clock,
         reaperExec

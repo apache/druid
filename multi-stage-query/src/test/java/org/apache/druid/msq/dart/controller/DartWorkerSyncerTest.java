@@ -33,6 +33,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.dart.worker.WorkerId;
@@ -125,7 +126,15 @@ public class DartWorkerSyncerTest
 
     final DartControllerConfig config = new DartControllerConfig();
     registry = new DartControllerRegistry(config);
-    syncer = new DartWorkerSyncer(registry, () -> discovery, clientFactory, jsonMapper, SELF_HOST, config);
+    syncer = new DartWorkerSyncer(
+        registry,
+        () -> discovery,
+        clientFactory,
+        jsonMapper,
+        SELF_HOST,
+        config,
+        ScheduledExecutors::fixed
+    );
   }
 
   @AfterEach
@@ -154,7 +163,8 @@ public class DartWorkerSyncerTest
             Mockito.mock(ServiceClientFactory.class),
             jsonMapper,
             SELF_HOST,
-            config
+            config,
+            ScheduledExecutors::fixed
         )
     );
   }
