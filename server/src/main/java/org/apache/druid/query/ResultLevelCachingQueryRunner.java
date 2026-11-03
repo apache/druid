@@ -217,12 +217,14 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     }
     // The cached value still starts with the ETag, which is checked before the entry is used. Adding the datasource
     // and intervals to the key gives queries that differ only by interval or datasource their own entries, instead of
-    // one shared entry that each of them overwrites.
+    // one shared entry that each of them overwrites. The byte arrays are length-prefixed so that where one ends and the
+    // next begins is unambiguous.
     final CacheKeyBuilder builder = new CacheKeyBuilder(RESULT_LEVEL_CACHE_KEY_WITH_DATASOURCE_AND_INTERVALS)
+        .appendInt(queryCacheKey.length)
         .appendByteArray(queryCacheKey);
     final byte[] dataSourceCacheKey = query.getDataSource().getCacheKey();
     if (dataSourceCacheKey != null) {
-      builder.appendByteArray(dataSourceCacheKey);
+      builder.appendInt(dataSourceCacheKey.length).appendByteArray(dataSourceCacheKey);
     }
     for (Interval interval : query.getIntervals()) {
       builder.appendLong(interval.getStartMillis()).appendLong(interval.getEndMillis());
