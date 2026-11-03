@@ -34,6 +34,16 @@
         <hive-storage-api.version>4.2.0</hive-storage-api.version>
         <orc.version>2.3.1</orc.version>
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <!-- override the transitive dependency from orc-core 2.3.1 to address CVE-2026-111497 -->
+            <dependency>
+                <groupId>com.aayushatharva.brotli4j</groupId>
+                <artifactId>brotli4j</artifactId>
+                <version>1.24.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
