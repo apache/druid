@@ -41,6 +41,7 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -100,13 +101,12 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
     this.controllerHost = controllerHost;
 
     if (controllerHost == null) {
-      // worker -> worker client. Retry HTTP 503 in case worker A starts up before worker B, and needs to
-      // contact it immediately.
-      this.retryPolicy = new DartWorkerRetryPolicy(true);
+      // worker -> worker client, which retries as long as the query is running.
+      this.retryPolicy = new DartWorkerRetryPolicy();
     } else {
-      // controller -> worker client. Do not retry any HTTP error codes. If we retry HTTP 503 for controller -> worker,
-      // we can get stuck trying to contact workers that have exited.
-      this.retryPolicy = new DartWorkerRetryPolicy(false);
+      // controller -> worker client, which does not retry. Lost workers fail the query either way, and retries would
+      // only delay the failure.
+      this.retryPolicy = StandardRetryPolicy.noRetries();
     }
   }
 

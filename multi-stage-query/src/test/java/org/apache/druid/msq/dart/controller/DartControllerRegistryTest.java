@@ -20,15 +20,21 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerHolder;
+import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.test.NoopQueryListener;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.joda.time.Period;
@@ -36,11 +42,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class DartControllerRegistryTest
 {
@@ -260,6 +272,59 @@ public class DartControllerRegistryTest
 
     registry.deregister(holder1, null);
     registry.deregister(holder2, null);
+  }
+
+  @Test
+  @Timeout(value = 1, unit = TimeUnit.MINUTES)
+  public void test_stop_cancelsControllersAndWaitsForExit() throws Exception
+  {
+    final DartControllerRegistry registry = new DartControllerRegistry(makeConfig(0, Period.ZERO));
+    final ControllerHolder holder = makeControllerHolder("dart1", "sql1", "user1");
+    final Controller controller = holder.getController();
+    final CountDownLatch controllerStarted = new CountDownLatch(1);
+    final CountDownLatch controllerStopped = new CountDownLatch(1);
+    final CountDownLatch allowExit = new CountDownLatch(1);
+
+    // The controller runs until stopped, then exits once allowed, as if it were waiting for workers to acknowledge
+    // stop commands.
+    Mockito.when(controller.getQueryContext()).thenReturn(QueryContext.empty());
+    Mockito.doAnswer(invocation -> {
+      controllerStarted.countDown();
+      Uninterruptibles.awaitUninterruptibly(controllerStopped);
+      Uninterruptibles.awaitUninterruptibly(allowExit);
+      invocation.<QueryListener>getArgument(0).onQueryComplete(reportPayload);
+      return null;
+    }).when(controller).run(ArgumentMatchers.any());
+    Mockito.doAnswer(invocation -> {
+      controllerStopped.countDown();
+      return null;
+    }).when(controller).stop(ArgumentMatchers.any(), ArgumentMatchers.any());
+
+    final ControllerThreadPool threadPool = new ControllerThreadPool(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DartControllerRegistryTest-controller-%s")),
+        Execs.scheduledSingleThreaded("DartControllerRegistryTest-timeout-%s")
+    );
+    final ExecutorService stopExec = Execs.singleThreaded("DartControllerRegistryTest-stop-%s");
+
+    try {
+      holder.runAsync(new NoopQueryListener(), registry, threadPool);
+      controllerStarted.await();
+
+      // stop() cancels the controller, then waits for it to exit.
+      final Future<?> stopFuture = stopExec.submit(registry::stop);
+      controllerStopped.await();
+      Assertions.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
+      Assertions.assertFalse(stopFuture.isDone());
+
+      allowExit.countDown();
+      stopFuture.get();
+      Assertions.assertTrue(registry.getAllControllers().isEmpty());
+    }
+    finally {
+      allowExit.countDown();
+      stopExec.shutdownNow();
+      threadPool.stop();
+    }
   }
 
   private ControllerHolder makeControllerHolder(

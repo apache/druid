@@ -20,8 +20,10 @@
 package org.apache.druid.msq.dart.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.querykit.ReadableInputQueue;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 
@@ -59,6 +61,18 @@ public class DartWorkerConfig
   @Nullable
   private Integer segmentLoadAheadCount = null;
 
+  /**
+   * How long a controller can go without contacting this worker before {@link DartWorkerRunner} considers it gone.
+   */
+  @JsonProperty("controllerTimeout")
+  private Period controllerTimeout = Period.minutes(3);
+
+  /**
+   * How long a query can be missing from a controller's syncs before {@link DartWorkerRunner} cancels it.
+   */
+  @JsonProperty("syncGracePeriod")
+  private Period syncGracePeriod = Period.seconds(30);
+
   public int getConcurrentQueries()
   {
     return concurrentQueries;
@@ -73,5 +87,15 @@ public class DartWorkerConfig
   public Integer getSegmentLoadAheadCount()
   {
     return segmentLoadAheadCount;
+  }
+
+  public Period getControllerTimeout()
+  {
+    return controllerTimeout;
+  }
+
+  public Period getSyncGracePeriod()
+  {
+    return syncGracePeriod;
   }
 }

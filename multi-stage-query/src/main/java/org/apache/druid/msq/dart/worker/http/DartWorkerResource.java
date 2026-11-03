@@ -49,6 +49,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Set;
 
 /**
  * Subclass of {@link WorkerResource} suitable for usage on a Historical.
@@ -90,7 +91,8 @@ public class DartWorkerResource
     this.messageRelayResource = new MessageRelayResource<>(
         outbox,
         smileMapper,
-        ControllerMessage.class
+        ControllerMessage.class,
+        workerRunner::controllerHeartbeat
     );
   }
 
@@ -120,17 +122,29 @@ public class DartWorkerResource
   )
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
-    final String controllerHost = req.getHeader(HEADER_CONTROLLER_HOST);
-    if (controllerHost == null) {
-      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Missing controllerId[%s]", HEADER_CONTROLLER_HOST);
-    }
-
-    workerRunner.startWorker(queryId, controllerHost, workOrder.getWorkerContext())
+    workerRunner.startWorker(queryId, getControllerHost(req), workOrder.getWorkerContext())
                 .postWorkOrder(workOrder);
 
     return Response.status(Response.Status.ACCEPTED).build();
+  }
+
+  /**
+   * Process a {@link SyncWorkersRequest} from {@link DartWorkerRunner#syncController}.
+   */
+  @POST
+  @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Produces(MediaType.APPLICATION_JSON)
+  @Path("/sync")
+  public SyncWorkersResponse httpPostSync(
+      final SyncWorkersRequest request,
+      @Context final HttpServletRequest req
+  )
+  {
+    MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
+    return workerRunner.syncController(
+        getControllerHost(req),
+        request != null ? request : new SyncWorkersRequest(Set.of())
+    );
   }
 
   /**
@@ -177,5 +191,19 @@ public class DartWorkerResource
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
     return messageRelayResource;
+  }
+
+  /**
+   * Returns the value of {@link #HEADER_CONTROLLER_HOST}, or throws an error if it is missing.
+   */
+  private static String getControllerHost(final HttpServletRequest req)
+  {
+    final String controllerHost = req.getHeader(HEADER_CONTROLLER_HOST);
+    if (controllerHost == null) {
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Missing controllerId[%s]", HEADER_CONTROLLER_HOST);
+    }
+    return controllerHost;
   }
 }
