@@ -148,6 +148,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17232,6 +17233,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .build()
         )
+    ).expectedResults(
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    ).run();
+  }
+
+  @Test
+  public void testFilterWithManyReferencesToProjectedExpression()
+  {
+    // 30 references to a five-node expression bloat the filter by more than Calcite's default limit of 100 when it
+    // is pushed below the projection.
+    final String condition = IntStream.range(0, 30)
+                                      .mapToObj(i -> StringUtils.format("p LIKE '%%%d%%'", i))
+                                      .collect(Collectors.joining(" OR "));
+    testBuilder().sql(
+        "SELECT COUNT(*)\n"
+        + "FROM (SELECT LOWER(LOWER(LOWER(LOWER(dim1)))) AS p FROM druid.foo)\n"
+        + "WHERE " + condition
     ).expectedResults(
         ImmutableList.of(
             new Object[]{3L}
