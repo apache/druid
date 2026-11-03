@@ -127,7 +127,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
   public CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec, ClusterGroupQueryPlan plan)
   {
     if (plan.survivingGroups().isEmpty()) {
-      return EmptyCursorHolder.forSpec(spec);
+      return EmptyCursorHolder.forSpec(spec, this);
     }
 
     if (plan.survivingGroups().size() == 1) {

@@ -125,7 +125,7 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     // restricted: dispatch from the restricted plan rather than letting the delegate match over the whole segment
     final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(spec, servableBundles);
     if (plan.bundles().isEmpty()) {
-      return EmptyCursorHolder.forSpec(spec);
+      return EmptyCursorHolder.forSpec(spec, delegate);
     }
     if (plan.clusterGroupPlan() != null) {
       return delegate.makeClusteredCursorHolder(spec, plan.clusterGroupPlan());
@@ -142,7 +142,7 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     if (plan.bundles().isEmpty()) {
       // Filter rules out every cluster group, or nothing servable can answer the spec: no bundle to acquire, nothing
       // to download.
-      return AsyncCursorHolder.completed(EmptyCursorHolder.forSpec(spec));
+      return AsyncCursorHolder.completed(EmptyCursorHolder.forSpec(spec, delegate));
     }
     if (plan.clusterGroupPlan() != null) {
       // reuse the plan's cluster resolution

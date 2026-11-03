@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -109,7 +110,9 @@ public final class ConcatenatingCursor implements Cursor
     currentCursor = null;
     if (!delegateSet) {
       wrapperFactory.setDelegate(
-          EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN).asCursor().getColumnSelectorFactory(),
+          EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN, RowSignature.empty())
+                           .asCursor()
+                           .getColumnSelectorFactory(),
           clusteringValuesByGroup.get(holderSuppliers.size() - 1)
       );
       delegateSet = true;
