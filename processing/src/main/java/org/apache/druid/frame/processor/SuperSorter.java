@@ -81,17 +81,28 @@ import java.util.function.Consumer;
  * The most central point for SuperSorter logic is the {@link #runWorkersIfPossible} method, which determines what
  * needs to be done next based on the current state of the SuperSorter.
  *
- * First, input channels are read into {@link #inputBuffer} using {@link FrameChannelBatcher}, launched via
- * {@link #runNextBatcher()}.
+ * First, input channels are read into the {@link #inputBuffer}, which holds up to
+ * {@link #getMaxInputBufferFramesForDirectMerging()} frames, using {@link FrameChannelBatcher} launched via
+ * {@link #runNextBatcher()}. What happens when the buffer fills up determines which of three modes the sorter
+ * operates in.
  *
- * If the sorter finishes reading its input before reaching {@link #getMaxInputBufferFramesForDirectMerging()} number of
- * frames in the {@link #inputBuffer}, the sorter operates in "direct mode". In this mode, {@link #totalMergingLevels}
- * is 1. Mergers launched by {@link #runNextDirectMerger()} directly merge input frames into output channels, fully
- * in-memory. No temporary files are used. Each direct merger reads *all* frames, but only rows corresponding to a
- * single output partition.
+ * "Direct mode": the sorter reads all of its input without writing any scratch files, either because the input fits
+ * in the {@link #inputBuffer} or because in-memory top-K mode kept it there. In this mode, {@link #totalMergingLevels}
+ * is 1. Mergers launched by {@link #runNextDirectMerger()} directly merge input frames, and the {@link #retainedRun}
+ * if there is one, into output channels, fully in-memory. Each direct merger reads *all* frames, but only rows
+ * corresponding to a single output partition.
  *
- * Otherwise, the sorter operates in "external mode". In this mode, {@link #totalMergingLevels} is 2 or more. Logic
- * for external mode is:
+ * "In-memory top-K mode": when there is a row limit and the {@link #inputBuffer} fills up,
+ * {@link #runNextTruncatingMerge()} merges it with the {@link #retainedRun} in memory, keeping only the first rowLimit
+ * rows, and the output becomes the new {@link #retainedRun}. This repeats until all input is read, and then the sorter
+ * finishes in direct mode. Each truncating merge's output is capped at {@link #getMaxRetainedRunFrames()}, so that
+ * memory use stays within the buffer. The sorter leaves this mode for external mode if, before the first truncating
+ * merge, the row limit is unlikely to fit within the cap, or if a truncating merge's output exceeds the cap. In the
+ * latter case, the merge's output is discarded, and its input frames and the {@link #retainedRun} move back into the
+ * {@link #inputBuffer}. Rows dropped by earlier truncating merges stay dropped, since they cannot be in the result.
+ *
+ * "External mode": the {@link #inputBuffer} fills up and in-memory top-K mode does not apply. In this mode,
+ * {@link #totalMergingLevels} is 2 or more. Logic for external mode is:
  *
  * 1) Read inputs into {@link #inputBuffer} using {@link FrameChannelBatcher} (same as direct mode).
  *
@@ -111,24 +122,13 @@ import java.util.function.Consumer;
  * 4) Write the final level using {@link FrameChannelMerger} launched from {@link #runNextUltimateMerger()}.
  * Outputs for this level are written to channels provided by {@link #outputChannelFactory}, rather than scratch files.
  *
- * When there is a row limit, the sorter avoids external mode if possible by running in "in-memory top-K mode". When
- * the {@link #inputBuffer} fills up, {@link #runNextTruncatingMerge()} merges it with the {@link #retainedRun} in
- * memory, keeping only the first rowLimit rows, and the output becomes the new {@link #retainedRun}. Once all input
- * is read, the sorter finishes in direct mode, merging the {@link #retainedRun} with the rest of the
- * {@link #inputBuffer}. Each truncating merge's output is capped at {@link #getMaxRetainedRunFrames()}, so that
- * memory use stays within the buffer. Before the first truncating merge, if the row limit is unlikely to fit within
- * the cap, the sorter leaves in-memory top-K mode and continues in external mode. If a truncating merge's output
- * still exceeds the cap, it is discarded, its input frames and the {@link #retainedRun} move back into the
- * {@link #inputBuffer}, and the sorter continues in external mode.
- *
  * At all points, higher level processing is preferred over lower-level processing. Writing to final output files
- * is preferred over intermediate, and writing to intermediate files is preferred over reading inputs. These
- * preferences ensure that the amount of data buffered up in memory does not grow too large.
+ * is preferred over intermediate, and writing to intermediate files, or running a truncating merge, is preferred over
+ * reading inputs. These preferences ensure that the amount of data buffered up in memory does not grow too large.
  *
  * Potential future work (things we could optimize if necessary):
  *
  * - Identify sorted runs of frames in the {@link #inputBuffer}, group them into smaller sets of channels.
- * - Combine (for example: aggregate) while merging.
  */
 public class SuperSorter
 {
