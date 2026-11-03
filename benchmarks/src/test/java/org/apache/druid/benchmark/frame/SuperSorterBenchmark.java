@@ -235,9 +235,11 @@ public class SuperSorterBenchmark
   @TearDown(Level.Trial)
   public void tearDownTrial() throws Exception
   {
-    System.out.printf(
-        "%nintermediate channels opened per invocation: %.1f%n",
-        (double) intermediateChannelsOpened.get() / invocations
+    System.out.println(
+        StringUtils.format(
+            "%nintermediate channels opened per invocation: %.1f",
+            (double) intermediateChannelsOpened.get() / invocations
+        )
     );
 
     innerExec.shutdownNow();
