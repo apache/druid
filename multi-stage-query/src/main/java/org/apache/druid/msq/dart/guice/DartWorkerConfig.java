@@ -52,11 +52,20 @@ public class DartWorkerConfig
 
   public static final int AUTO = -1;
 
+  @JsonProperty("concurrentQueries")
   private final int concurrentQueries;
+
+  @JsonProperty("heapFraction")
   private final double heapFraction;
+
+  @JsonProperty("segmentLoadAheadCount")
   @Nullable
   private final Integer segmentLoadAheadCount;
+
+  @JsonProperty("controllerTimeout")
   private final Period controllerTimeout;
+
+  @JsonProperty("syncTimeout")
   private final Period syncTimeout;
 
   /**

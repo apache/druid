@@ -88,8 +88,12 @@ public class DartWorkerResourceTest
   @Test
   public void test_httpPostSync_nullBody()
   {
-    resource.httpPostSync(null, makeRequest(ADMIN, CONTROLLER_HOST));
-    Mockito.verify(workerRunner).syncController(CONTROLLER_HOST, new SyncWorkersRequest(Set.of()));
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> resource.httpPostSync(null, makeRequest(ADMIN, CONTROLLER_HOST))
+    );
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+    Mockito.verifyNoInteractions(workerRunner);
   }
 
   @Test

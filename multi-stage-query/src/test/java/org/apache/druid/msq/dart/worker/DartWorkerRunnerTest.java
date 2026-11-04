@@ -36,6 +36,7 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.DruidNode;
@@ -133,7 +134,7 @@ public class DartWorkerRunnerTest
 
     // Set up what WorkerImpl needs to start, so workers keep running until they are canceled.
     final Injector injector = Mockito.mock(Injector.class);
-    Mockito.when(injector.getInstance(QueryProcessingPool.class)).thenReturn(Mockito.mock(QueryProcessingPool.class));
+    Mockito.when(injector.getInstance(QueryProcessingPool.class)).thenReturn(DirectQueryProcessingPool.INSTANCE);
     Mockito.when(workerContext.injector()).thenReturn(injector);
     Mockito.when(workerContext.makeWorkerClient()).thenReturn(Mockito.mock(WorkerClient.class));
 

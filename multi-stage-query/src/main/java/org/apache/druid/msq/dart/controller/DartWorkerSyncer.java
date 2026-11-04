@@ -94,9 +94,6 @@ public class DartWorkerSyncer
   @GuardedBy("servers")
   private final Map<String, ServerHolder> servers = new HashMap<>();
 
-  @Nullable
-  private ScheduledExecutorService exec;
-
   public DartWorkerSyncer(
       final DartControllerRegistry controllerRegistry,
       final Supplier<DruidNodeDiscovery> workerDiscovery,
@@ -124,17 +121,13 @@ public class DartWorkerSyncer
   @LifecycleStart
   public void start()
   {
-    exec = execFactory.create(1, "dart-worker-syncer-%s");
+    final ScheduledExecutorService exec = execFactory.create(1, "dart-worker-syncer-%s");
     ScheduledExecutors.scheduleWithFixedDelay(exec, syncPeriod, syncPeriod, this::sync);
   }
 
   @LifecycleStop
   public void stop()
   {
-    if (exec != null) {
-      exec.shutdownNow();
-    }
-
     synchronized (servers) {
       for (final ServerHolder server : servers.values()) {
         server.close();

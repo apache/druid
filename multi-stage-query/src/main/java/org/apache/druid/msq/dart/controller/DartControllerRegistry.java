@@ -176,12 +176,13 @@ public class DartControllerRegistry implements ControllerRegistry
   {
     final String dartQueryId = holder.getController().queryId();
 
-    // Remove only if the current mapping for the queryId is this specific controller.
-    final boolean didRemove = controllerMap.remove(dartQueryId, holder);
+    final boolean didRemove;
+    synchronized (this) {
+      // Remove only if the current mapping for the queryId is this specific controller.
+      didRemove = controllerMap.remove(dartQueryId, holder);
 
-    if (didRemove) {
-      synchronized (this) {
-        // Wake up awaitDeregistration.
+      if (didRemove) {
+        // Wake up awaitControllerCompletion.
         notifyAll();
       }
     }

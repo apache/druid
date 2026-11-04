@@ -54,7 +54,7 @@ public class DartWorkerRetryPolicy implements ServiceRetryPolicy
   @Override
   public boolean retryHttpResponse(HttpResponse response)
   {
-    return HttpResponseStatus.SERVICE_UNAVAILABLE.equals(response.getStatus());
+    return HttpResponseStatus.SERVICE_UNAVAILABLE.equals(response.status());
   }
 
   @Override
