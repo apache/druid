@@ -26,6 +26,14 @@ on:
         required: true
         type: string
         description: "Script to execute"
+      summary:
+        required: false
+        type: string
+        description: "What the job runs, shown in its job summary"
+      skip_label:
+        required: false
+        type: string
+        description: "PR label that skips the script. Read from the PR's current labels, so a re-run after labeling takes effect"
       key:
         required: false
         type: string
@@ -57,10 +65,38 @@ env:
 
 jobs:
   execute:
-    name: "${{ inputs.key }}"
+    name: "jdk ${{ inputs.jdk }}"
     runs-on: ubuntu-24.04
     if: ${{ inputs.execute }}
     steps:
+      - name: 📝 job summary
+        if: ${{ inputs.summary != '' }}
+        env:
+          SUMMARY: ${{ inputs.summary }}
+          SCRIPT: ${{ inputs.script }}
+        run: |
+          {
+            echo "$SUMMARY"
+            echo
+            echo "Run it locally from the repository root:"
+            echo '```'
+            echo "$SCRIPT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 🏷️ skip label
+        id: skip
+        if: ${{ inputs.skip_label != '' && github.event.pull_request.number }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          LABEL: ${{ inputs.skip_label }}
+        run: |
+          if gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name' | grep -qxF "$LABEL"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipped: the PR has the \`$LABEL\` label." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: 📥 checkout
         uses: actions/checkout@v7
         with:
@@ -93,6 +129,7 @@ jobs:
           ./.github/scripts/collect_jvm_diagnostics &
 
       - name: '⚡ ${{ inputs.script }}'
+        if: ${{ steps.skip.outputs.skip != 'true' }}
         run: ${{ inputs.script }}
         timeout-minutes: 60
 
