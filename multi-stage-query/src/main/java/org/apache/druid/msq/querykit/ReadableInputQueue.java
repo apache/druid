@@ -360,11 +360,8 @@ public class ReadableInputQueue implements Closeable
     LoadableSegment unskippedSegment = null;
 
     synchronized (this) {
-      while (true) {
-        acquireCachedInNextGroup();
-        if (pendingNextInputs.isEmpty()) {
-          break;
-        }
+      acquireCachedInNextGroup();
+      while (unskippedFuture == null && !pendingNextInputs.isEmpty()) {
         final ListenableFuture<NumberedReadableInput> selectedFuture = selectPendingInput();
         final PendingInput selectedInput = pendingNextInputs.remove(selectedFuture);
         if (!selectedInput.cached()) {
@@ -374,10 +371,11 @@ public class ReadableInputQueue implements Closeable
         // before handing it out.
         if (canSkipSegment(selectedInput.segment())) {
           skippedFutures.add(selectedFuture);
+          // Skipping may have moved the next input to a new interval group.
+          acquireCachedInNextGroup();
         } else {
           unskippedFuture = selectedFuture;
           unskippedSegment = selectedInput.segment();
-          break;
         }
       }
     }
