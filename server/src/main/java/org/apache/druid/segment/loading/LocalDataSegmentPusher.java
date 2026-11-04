@@ -22,7 +22,6 @@ package org.apache.druid.segment.loading;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -57,14 +56,11 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   public LocalDataSegmentPusher(LocalDataSegmentPusherConfig config, DeepStorageSegmentConfig deepStorageConfig)
   {
     this.config = config;
-    final CompressionUtils.Format format = deepStorageConfig.getEffectiveCompressionFormat(DEFAULT_FORMAT);
-    if (format != CompressionUtils.Format.ZIP && format != CompressionUtils.Format.NONE) {
-      throw new IAE(
-          "Local deep storage does not support compressionFormat [%s]. Supported formats: zip, none.",
-          format
-      );
-    }
-    this.compressionFormat = format;
+    this.compressionFormat = deepStorageConfig.getEffectiveCompressionFormat(
+        DEFAULT_FORMAT,
+        CompressionUtils.Format.ZIP,
+        CompressionUtils.Format.NONE
+    );
   }
 
   @Override

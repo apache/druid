@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Global;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -74,14 +73,11 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     this.azureStorage = azureStorage;
     this.accountConfig = accountConfig;
     this.segmentConfig = segmentConfig;
-    final CompressionUtils.Format format = deepStorageConfig.getEffectiveCompressionFormat(DEFAULT_FORMAT);
-    if (format != CompressionUtils.Format.ZIP && format != CompressionUtils.Format.NONE) {
-      throw new IAE(
-          "Azure deep storage does not support compressionFormat [%s]. Supported formats: zip, none.",
-          format
-      );
-    }
-    this.zip = format == CompressionUtils.Format.ZIP;
+    this.zip = deepStorageConfig.getEffectiveCompressionFormat(
+        DEFAULT_FORMAT,
+        CompressionUtils.Format.ZIP,
+        CompressionUtils.Format.NONE
+    ) == CompressionUtils.Format.ZIP;
   }
 
   @Override

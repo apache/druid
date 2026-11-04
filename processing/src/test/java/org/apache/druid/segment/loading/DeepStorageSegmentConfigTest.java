@@ -24,6 +24,7 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.testing.junit.LoggerCaptureExtension;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.logging.log4j.Level;
@@ -36,6 +37,7 @@ import java.util.Properties;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DeepStorageSegmentConfigTest
@@ -241,6 +243,62 @@ public class DeepStorageSegmentConfigTest
     assertFalse(jsonLz4.contains("\"zip\""));
     final DeepStorageSegmentConfig deserializedLz4 = jsonMapper.readValue(jsonLz4, DeepStorageSegmentConfig.class);
     assertEquals(CompressionUtils.Format.LZ4, deserializedLz4.getCompressionFormat());
+  }
+
+  @Test
+  public void testGetEffectiveCompressionFormatWithSupportedFormats()
+  {
+    final DeepStorageSegmentConfig config = new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP);
+    assertEquals(
+        CompressionUtils.Format.ZIP,
+        config.getEffectiveCompressionFormat(
+            CompressionUtils.Format.NONE,
+            CompressionUtils.Format.ZIP,
+            CompressionUtils.Format.NONE
+        )
+    );
+  }
+
+  @Test
+  public void testGetEffectiveCompressionFormatUnsupportedThrowsIAE()
+  {
+    final DeepStorageSegmentConfig config = new DeepStorageSegmentConfig(null, CompressionUtils.Format.LZ4);
+    final IAE exception = assertThrows(
+        IAE.class,
+        () -> config.getEffectiveCompressionFormat(
+            CompressionUtils.Format.ZIP,
+            CompressionUtils.Format.ZIP,
+            CompressionUtils.Format.NONE
+        )
+    );
+    assertTrue(exception.getMessage().contains("Compression format [LZ4] is not supported"));
+    assertTrue(exception.getMessage().contains("[ZIP, NONE]"));
+  }
+
+  @Test
+  public void testGetEffectiveCompressionFormatDefaultUnsupportedThrowsIAE()
+  {
+    final DeepStorageSegmentConfig config = new DeepStorageSegmentConfig();
+    final IAE exception = assertThrows(
+        IAE.class,
+        () -> config.getEffectiveCompressionFormat(
+            CompressionUtils.Format.LZ4,
+            CompressionUtils.Format.ZIP,
+            CompressionUtils.Format.NONE
+        )
+    );
+    assertTrue(exception.getMessage().contains("Compression format [LZ4] is not supported"));
+    assertTrue(exception.getMessage().contains("[ZIP, NONE]"));
+  }
+
+  @Test
+  public void testGetEffectiveCompressionFormatNullDefaultThrowsNPE()
+  {
+    final DeepStorageSegmentConfig config = new DeepStorageSegmentConfig();
+    assertThrows(
+        NullPointerException.class,
+        () -> config.getEffectiveCompressionFormat(null, CompressionUtils.Format.ZIP)
+    );
   }
 
   private DeepStorageSegmentConfig configurate(Properties properties)

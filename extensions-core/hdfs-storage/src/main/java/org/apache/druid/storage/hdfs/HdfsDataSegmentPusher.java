@@ -24,11 +24,10 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.guice.Hdfs;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -49,9 +48,7 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 
@@ -102,11 +99,12 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.emitter = emitter;
-    final CompressionUtils.Format format = deepStorageConfig.getEffectiveCompressionFormat(DEFAULT_COMPRESSION_FORMAT);
-    if (format != CompressionUtils.Format.ZIP && format != CompressionUtils.Format.LZ4 && format != CompressionUtils.Format.NONE) {
-      throw new IAE("HDFS deep storage does not support compressionFormat [%s]. Supported: zip, lz4, none.", format);
-    }
-    this.compressionFormat = format;
+    this.compressionFormat = deepStorageConfig.getEffectiveCompressionFormat(
+        DEFAULT_COMPRESSION_FORMAT,
+        CompressionUtils.Format.ZIP,
+        CompressionUtils.Format.LZ4,
+        CompressionUtils.Format.NONE
+    );
     Path storageDir = new Path(config.getStorageDirectory());
     this.fullyQualifiedStorageDirectory = Suppliers.memoize(
         () -> {
@@ -203,41 +201,45 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
   private DataSegment pushToFilePath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
   {
-    if (compressionFormat == CompressionUtils.Format.NONE) {
-      return pushToFilePathNone(inDir, segment, outIndexFilePath);
-    }
     log.debug(
         "Copying segment[%s] to HDFS at location[%s]",
         segment.getId(),
         outIndexFilePath
     );
-    Path tmpIndexFile = new Path(StringUtils.format(
+    // For NONE, tmpPath is a directory; for ZIP/LZ4, tmpPath is a compressed file.
+    final Path tmpPath = new Path(StringUtils.format(
         "%s/%s/%s/%s_index%s",
         fullyQualifiedStorageDirectory.get(),
         segment.getDataSource(),
         UUIDUtils.generateUuid(),
         segment.getShardSpec().getPartitionNum(),
-        compressionFormat.getSuffix()
+        compressionFormat == CompressionUtils.Format.NONE ? "" : compressionFormat.getSuffix()
     ));
-    FileSystem fs = tmpIndexFile.getFileSystem(hadoopConfig);
+    final FileSystem fs = tmpPath.getFileSystem(hadoopConfig);
 
-    fs.mkdirs(tmpIndexFile.getParent());
-    log.debug("Compressing files from[%s] to [%s]", inDir, tmpIndexFile);
+    fs.mkdirs(tmpPath.getParent());
+    log.debug("Copying files from[%s] to [%s]", inDir, tmpPath);
 
     final long size;
     final DataSegment dataSegment;
     try {
-      try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
-        size = compressionFormat.compressDirectory(inDir, out);
+      if (compressionFormat == CompressionUtils.Format.NONE) {
+        fs.copyFromLocalFile(false, true, new Path(inDir.toURI()), tmpPath);
+        size = FileUtils.getFileSize(inDir);
+      } else {
+        try (FSDataOutputStream out = fs.create(tmpPath)) {
+          size = compressionFormat.compressDirectory(inDir, out);
+        }
       }
-      final Path outIndexFile = new Path(outIndexFilePath);
-      dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
+
+      final Path outIndexPath = new Path(outIndexFilePath);
+      dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexPath.toUri()))
                            .withSize(size)
                            .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
 
       // Create parent if it does not exist, recreation is not an error
-      fs.mkdirs(outIndexFile.getParent());
-      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile);
+      fs.mkdirs(outIndexPath.getParent());
+      copyFilesWithChecks(fs, tmpPath, outIndexPath);
     }
     catch (IOException e) {
       log.error(e, "Failed to push segment[%s] to HDFS at location[%s]", segment.getId(), outIndexFilePath);
@@ -245,83 +247,12 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     }
     finally {
       try {
-        if (fs.exists(tmpIndexFile.getParent()) && !fs.delete(tmpIndexFile.getParent(), true)) {
-          log.error("Failed to delete temp directory[%s]", tmpIndexFile.getParent());
+        if (fs.exists(tmpPath.getParent()) && !fs.delete(tmpPath.getParent(), true)) {
+          log.error("Failed to delete temp directory[%s]", tmpPath.getParent());
         }
       }
       catch (IOException ex) {
-        log.error(ex, "Failed to delete temp directory[%s]", tmpIndexFile.getParent());
-      }
-    }
-
-    return dataSegment;
-  }
-
-  private DataSegment pushToFilePathNone(File inDir, DataSegment segment, String outIndexDirPath) throws IOException
-  {
-    log.debug(
-        "Copying segment[%s] files to HDFS at location[%s]",
-        segment.getId(),
-        outIndexDirPath
-    );
-    final Path tmpIndexDir = new Path(StringUtils.format(
-        "%s/%s/%s/%s_index",
-        fullyQualifiedStorageDirectory.get(),
-        segment.getDataSource(),
-        UUIDUtils.generateUuid(),
-        segment.getShardSpec().getPartitionNum()
-    ));
-    final FileSystem fs = tmpIndexDir.getFileSystem(hadoopConfig);
-
-    final DataSegment dataSegment;
-
-    try {
-      fs.mkdirs(tmpIndexDir);
-      log.debug("Copying flat segment files from[%s] to [%s]", inDir, tmpIndexDir);
-
-      final File[] files = inDir.listFiles();
-      if (files == null) {
-        throw new IOE("Cannot list directory [%s]", inDir);
-      }
-
-      long size = 0;
-      for (final File file : files) {
-        if (file.isFile()) {
-          size += file.length();
-          final Path targetPath = new Path(tmpIndexDir, file.getName());
-          try (
-              final InputStream in = new FileInputStream(file);
-              final FSDataOutputStream out = fs.create(targetPath)
-          ) {
-            ByteStreams.copy(in, out);
-          }
-        } else {
-          // Segment directories are expected to be flat.
-          throw new IOE("Unexpected subdirectory [%s]", file.getName());
-        }
-      }
-
-      final Path outIndexDir = new Path(outIndexDirPath);
-      dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexDir.toUri()))
-                           .withSize(size)
-                           .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
-
-      // Create parent if it does not exist, recreation is not an error
-      fs.mkdirs(outIndexDir.getParent());
-      copyFilesWithChecks(fs, tmpIndexDir, outIndexDir);
-    }
-    catch (IOException e) {
-      log.error(e, "Failed to push segment[%s] to HDFS at location[%s]", segment.getId(), outIndexDirPath);
-      throw e;
-    }
-    finally {
-      try {
-        if (fs.exists(tmpIndexDir.getParent()) && !fs.delete(tmpIndexDir.getParent(), true)) {
-          log.error("Failed to delete temp directory[%s]", tmpIndexDir.getParent());
-        }
-      }
-      catch (IOException ex) {
-        log.error(ex, "Failed to delete temp directory[%s]", tmpIndexDir.getParent());
+        log.error(ex, "Failed to delete temp directory[%s]", tmpPath.getParent());
       }
     }
 

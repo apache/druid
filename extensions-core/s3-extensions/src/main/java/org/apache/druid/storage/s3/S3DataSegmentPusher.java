@@ -62,14 +62,11 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   {
     this.s3Client = s3Client;
     this.config = config;
-    final CompressionUtils.Format format = deepStorageConfig.getEffectiveCompressionFormat(DEFAULT_FORMAT);
-    if (format != CompressionUtils.Format.ZIP && format != CompressionUtils.Format.NONE) {
-      throw DruidException.defensive(
-          "S3 deep storage does not support compressionFormat [%s]. Supported formats: zip, none.",
-          format
-      );
-    }
-    this.zip = format == CompressionUtils.Format.ZIP;
+    this.zip = deepStorageConfig.getEffectiveCompressionFormat(
+        DEFAULT_FORMAT,
+        CompressionUtils.Format.ZIP,
+        CompressionUtils.Format.NONE
+    ) == CompressionUtils.Format.ZIP;
   }
 
   @Override

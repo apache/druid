@@ -22,10 +22,12 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 
 /**
  * The {@code druid.storage} properties that describe how segments are laid out in deep storage rather than how to
@@ -75,11 +77,24 @@ public class DeepStorageSegmentConfig
   /**
    * Resolves the effective compression format to use, falling back to {@code defaultFormat} when neither
    * {@code druid.storage.compressionFormat} nor {@code druid.storage.zip} has been set.
+   * <p>
+   * When {@code supportedFormats} is non-empty, throws {@link IAE} if the resolved format is not among them.
    */
-  public CompressionUtils.Format getEffectiveCompressionFormat(CompressionUtils.Format defaultFormat)
+  public CompressionUtils.Format getEffectiveCompressionFormat(
+      CompressionUtils.Format defaultFormat,
+      CompressionUtils.Format... supportedFormats
+  )
   {
     Preconditions.checkNotNull(defaultFormat, "defaultFormat");
-    return compressionFormat != null ? compressionFormat : defaultFormat;
+    final CompressionUtils.Format resolved = compressionFormat != null ? compressionFormat : defaultFormat;
+    if (supportedFormats.length > 0 && !Arrays.asList(supportedFormats).contains(resolved)) {
+      throw new IAE(
+          "Compression format [%s] is not supported. Supported formats: %s",
+          resolved,
+          Arrays.toString(supportedFormats)
+      );
+    }
+    return resolved;
   }
 
   @JsonProperty("compressionFormat")

@@ -26,6 +26,7 @@ import com.google.common.io.Files;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexBuilder;
@@ -461,15 +462,15 @@ public class S3DataSegmentPusherTest
     config.setBucket("bucket");
     config.setBaseKey("key");
 
-    final DruidException e = Assertions.assertThrows(
-        DruidException.class,
+    final IAE e = Assertions.assertThrows(
+        IAE.class,
         () -> new S3DataSegmentPusher(
             s3Client,
             config,
             new DeepStorageSegmentConfig(null, CompressionUtils.Format.LZ4)
         )
     );
-    Assertions.assertTrue(e.getMessage().contains("S3 deep storage does not support compressionFormat"));
+    Assertions.assertTrue(e.getMessage().contains("Compression format [LZ4] is not supported"));
   }
 
   @Test
