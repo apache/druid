@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -37,6 +38,7 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.processor.test.ChompingFrameProcessor;
 import org.apache.druid.frame.processor.test.FailingFrameProcessor;
+import org.apache.druid.frame.processor.test.SimpleReturningFrameProcessor;
 import org.apache.druid.frame.processor.test.SleepyFrameProcessor;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ISE;
@@ -59,8 +61,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -258,6 +263,39 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
         e.getCause().getCause(),
         Matchers.hasProperty("message", CoreMatchers.equalTo("failure!"))
     );
+  }
+
+  @Test
+  @SuppressWarnings("BusyWait")
+  public void test_runAllFully_failing_cleansUpProcessorsNotLaunched() throws InterruptedException
+  {
+    final List<CleanupCountingFrameProcessor<Long>> processors = new ArrayList<>();
+    processors.add(
+        new CleanupCountingFrameProcessor<>(
+            new FailingFrameProcessor(ReadableNilFrameChannel.INSTANCE, BlockingQueueFrameChannel.minimal().writable(), 0)
+        )
+    );
+    for (int i = 0; i < 20; i++) {
+      processors.add(new CleanupCountingFrameProcessor<>(new SimpleReturningFrameProcessor<>(1L)));
+    }
+
+    final RecordingProcessorManager<Long, Long> processorManager = new RecordingProcessorManager<>(
+        possiblyDelay(ensureClose(ProcessorManagers.of(processors)))
+    );
+
+    final ListenableFuture<Long> future = exec.runAllFully(processorManager, maxOutstandingProcessors, bouncer, null);
+    Assertions.assertThrows(ExecutionException.class, future::get);
+
+    // Processors that were never launched may be cleaned up asynchronously, if they arrived after the failure.
+    final long deadline = System.currentTimeMillis() + 10_000;
+    while (System.currentTimeMillis() < deadline
+           && processorManager.getHandedOut().stream().anyMatch(processor -> processor.getCleanupCount() == 0)) {
+      Thread.sleep(10);
+    }
+
+    for (final CleanupCountingFrameProcessor<Long> processor : processorManager.getHandedOut()) {
+      Assertions.assertEquals(1, processor.getCleanupCount(), "cleanup count for processor handed out by manager");
+    }
   }
 
   @Test
@@ -594,6 +632,96 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     {
       closed.getAndIncrement();
       delegate.close();
+    }
+  }
+
+  /**
+   * Processor manager that records each processor it hands out through {@link #next()}.
+   */
+  private static class RecordingProcessorManager<T, R> implements ProcessorManager<T, R>
+  {
+    private final ProcessorManager<T, R> delegate;
+    private final Set<CleanupCountingFrameProcessor<T>> handedOut = ConcurrentHashMap.newKeySet();
+
+    public RecordingProcessorManager(final ProcessorManager<T, R> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
+    {
+      return FutureUtils.transform(
+          delegate.next(),
+          processorAndCallback -> {
+            processorAndCallback.ifPresent(
+                pc -> handedOut.add((CleanupCountingFrameProcessor<T>) pc.processor())
+            );
+            return processorAndCallback;
+          }
+      );
+    }
+
+    @Override
+    public R result()
+    {
+      return delegate.result();
+    }
+
+    @Override
+    public void close()
+    {
+      delegate.close();
+    }
+
+    public Set<CleanupCountingFrameProcessor<T>> getHandedOut()
+    {
+      return handedOut;
+    }
+  }
+
+  /**
+   * Processor wrapper that counts calls to {@link #cleanup()}.
+   */
+  private static class CleanupCountingFrameProcessor<T> implements FrameProcessor<T>
+  {
+    private final FrameProcessor<T> delegate;
+    private final AtomicInteger cleanupCount = new AtomicInteger();
+
+    public CleanupCountingFrameProcessor(final FrameProcessor<T> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public List<ReadableFrameChannel> inputChannels()
+    {
+      return delegate.inputChannels();
+    }
+
+    @Override
+    public List<WritableFrameChannel> outputChannels()
+    {
+      return delegate.outputChannels();
+    }
+
+    @Override
+    public ReturnOrAwait<T> runIncrementally(final IntSet readableInputs) throws InterruptedException, IOException
+    {
+      return delegate.runIncrementally(readableInputs);
+    }
+
+    @Override
+    public void cleanup() throws IOException
+    {
+      cleanupCount.incrementAndGet();
+      delegate.cleanup();
+    }
+
+    public int getCleanupCount()
+    {
+      return cleanupCount.get();
     }
   }
 

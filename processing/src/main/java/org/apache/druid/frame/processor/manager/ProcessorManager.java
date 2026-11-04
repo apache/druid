@@ -20,6 +20,7 @@
 package org.apache.druid.frame.processor.manager;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.java.util.common.guava.Sequence;
 
@@ -37,7 +38,7 @@ import java.util.function.BiFunction;
  *
  * Implementations do not need to be thread-safe.
  *
- * @param <T> return type of {@link org.apache.druid.frame.processor.FrameProcessor} created by this manager
+ * @param <T> return type of {@link FrameProcessor} created by this manager
  * @param <R> result type of this manager; see {@link #result()}
  */
 public interface ProcessorManager<T, R> extends Closeable
@@ -46,17 +47,18 @@ public interface ProcessorManager<T, R> extends Closeable
    * Returns the next processor that should be run, along with a callback. The callback is called when the processor
    * completes successfully, along with the result of the processor. If the processor fails, the callback is not called.
    *
-   * The callback is called in a thread-safe manner: it will never be called concurrently with another callback, or
+   * <p>The callback is called in a thread-safe manner: it will never be called concurrently with another callback, or
    * concurrently with a call to "next" or {@link #close()}. To ensure this, {@link FrameProcessorExecutor#runAllFully}
    * synchronizes executions of callbacks for the same processor manager. Therefore, it is important that the callbacks
    * executed quickly.
    *
-   * This method returns a future, so it allows for logic where the construction of later processors depends on the
+   * <p>This method returns a future, so it allows for logic where the construction of later processors depends on the
    * results of earlier processors.
    *
-   * Returns an empty Optional if there are no more processors to run.
+   * <p>Returns an empty Optional if there are no more processors to run.
    *
-   * Behavior of this method is undefined if called after {@link #close()}.
+   * <p>The caller owns any processor returned through these futures, and must either run it or call
+   * {@link FrameProcessor#cleanup()}.
    *
    * @throws java.util.NoSuchElementException if a prior call to this method had returned an empty Optional
    */
@@ -65,16 +67,18 @@ public interface ProcessorManager<T, R> extends Closeable
   /**
    * Called after all procesors are done, prior to {@link #close()}, to retrieve the result of this computation.
    *
-   * Behavior of this method is undefined if called after {@link #close()}, or if called prior to {@link #next()}
+   * <p>Behavior of this method is undefined if called after {@link #close()}, or if called prior to {@link #next()}
    * returning an empty {@link Optional}, or if called prior to all callbacks from {@link #next()} having been called.
    */
   R result();
 
   /**
-   * Called when all processors are done, or when one has failed.
-   *
-   * This method releases all resources associated with this manager. After calling this method, callers must call no
+   * Called when all processors are done, or when one has failed. After calling this method, callers must call no
    * other methods.
+   *
+   * <p>This method releases all resources associated with this manager, except for {@link FrameProcessor} associated
+   * with futures previously returned from {@link #next()}. The caller must close those individually either by
+   * running them through {@link FrameProcessorExecutor}, or by calling {@link FrameProcessor#cleanup()}.
    */
   @Override
   void close();
