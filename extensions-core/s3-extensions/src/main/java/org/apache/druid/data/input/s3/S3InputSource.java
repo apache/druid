@@ -129,7 +129,9 @@ public class S3InputSource extends CloudObjectInputSource
           awsEndpointConfig,
           awsClientConfig,
           s3InputSourceConfig,
-          null
+          null,
+          s3ClientBuilder.getIntermediateRoleConfig(),
+          s3ClientBuilder.getIntermediateRoleEndpointConfig()
       ).build();
     });
     this.maxRetries = RetryUtils.DEFAULT_MAX_TRIES;

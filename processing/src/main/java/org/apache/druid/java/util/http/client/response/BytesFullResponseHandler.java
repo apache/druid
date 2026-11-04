@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 
 /**
  * {@link HttpResponseHandler} for stream data of byte array type.
@@ -32,19 +32,13 @@ public class BytesFullResponseHandler implements HttpResponseHandler<BytesFullRe
   @Override
   public ClientResponse<BytesFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    BytesFullResponseHolder holder = new BytesFullResponseHolder(response);
-
-    holder.addChunk(getContentBytes(response.getContent()));
-
-    return ClientResponse.unfinished(
-        holder
-    );
+    return ClientResponse.unfinished(new BytesFullResponseHolder(response));
   }
 
   @Override
   public ClientResponse<BytesFullResponseHolder> handleChunk(
       ClientResponse<BytesFullResponseHolder> response,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
@@ -54,7 +48,7 @@ public class BytesFullResponseHandler implements HttpResponseHandler<BytesFullRe
       return ClientResponse.finished(null);
     }
 
-    holder.addChunk(getContentBytes(chunk.getContent()));
+    holder.addChunk(getContentBytes(chunk.content()));
     return response;
   }
 
@@ -70,7 +64,7 @@ public class BytesFullResponseHandler implements HttpResponseHandler<BytesFullRe
     // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
   }
 
-  private byte[] getContentBytes(ChannelBuffer content)
+  private byte[] getContentBytes(ByteBuf content)
   {
     byte[] contentBytes = new byte[content.readableBytes()];
     content.readBytes(contentBytes);

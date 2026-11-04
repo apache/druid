@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +32,8 @@ import java.util.Objects;
 
 public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigProvider<String>
 {
+  private static final Logger log = new Logger(EnvironmentVariableDynamicConfigProvider.class);
+
   private final ImmutableMap<String, String> variables;
 
   @JsonCreator
@@ -52,7 +55,12 @@ public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigPr
   {
     HashMap<String, String> map = new HashMap<>();
     for (Map.Entry<String, String> entry : variables.entrySet()) {
-      map.put(entry.getKey(), getEnv(entry.getValue()));
+      final String value = getEnv(entry.getValue());
+      if (value == null) {
+        log.info("Environment variable [%s] for key [%s] is not set, skipping.", entry.getValue(), entry.getKey());
+        continue;
+      }
+      map.put(entry.getKey(), value);
     }
     return map;
   }
@@ -66,7 +74,7 @@ public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigPr
   @Override
   public String toString()
   {
-    return "EnvironmentVariablePasswordProvider{" +
+    return "EnvironmentVariableDynamicConfigProvider{" +
         "variable='" + variables + '\'' +
         '}';
   }

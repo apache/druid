@@ -19,9 +19,9 @@
 
 package org.apache.druid.msq.sql;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.indexing.error.MSQWarnings;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -35,16 +35,16 @@ public class MSQModeTest
   {
     Map<String, Object> originalQueryContext = new HashMap<>();
     MSQMode.populateDefaultQueryContext("strict", originalQueryContext);
-    Assertions.assertEquals(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0), originalQueryContext);
+    Assertions.assertEquals(QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 0L), originalQueryContext);
   }
 
   @Test
   public void testPopulateQueryContextWhenSupercedingValuePresent()
   {
     Map<String, Object> originalQueryContext = new HashMap<>();
-    originalQueryContext.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10);
+    QueryContextParameters.MAX_PARSE_EXCEPTIONS.set(originalQueryContext, 10L);
     MSQMode.populateDefaultQueryContext("strict", originalQueryContext);
-    Assertions.assertEquals(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10), originalQueryContext);
+    Assertions.assertEquals(QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 10L), originalQueryContext);
 
   }
 

@@ -21,14 +21,14 @@ package org.apache.druid.msq.indexing.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.serde.ClusterByStatisticsSnapshotSerde;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -58,15 +58,14 @@ public class SketchResponseHandler implements HttpResponseHandler<BytesFullRespo
       {
       });
     }
-    holder.addChunk(getContentBytes(response.getContent()));
-
+    // Netty 4: initial HttpResponse has no body content; body arrives via HttpContent chunks.
     return ClientResponse.unfinished(holder);
   }
 
   @Override
   public ClientResponse<BytesFullResponseHolder> handleChunk(
       ClientResponse<BytesFullResponseHolder> response,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
@@ -76,7 +75,7 @@ public class SketchResponseHandler implements HttpResponseHandler<BytesFullRespo
       return ClientResponse.finished(null);
     }
 
-    holder.addChunk(getContentBytes(chunk.getContent()));
+    holder.addChunk(getContentBytes(chunk.content()));
     return response;
   }
 
@@ -91,7 +90,7 @@ public class SketchResponseHandler implements HttpResponseHandler<BytesFullRespo
   {
   }
 
-  private byte[] getContentBytes(ChannelBuffer content)
+  private byte[] getContentBytes(ByteBuf content)
   {
     byte[] contentBytes = new byte[content.readableBytes()];
     content.readBytes(contentBytes);

@@ -1,826 +1,601 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
 <div
-  className="supervisor-statistics-table"
+  class="supervisor-statistics-table"
 >
   <div
-    className="top-actions"
+    class="top-actions"
   >
-    <Blueprint5.ButtonGroup
-      className="right-buttons"
+    <div
+      class="bp6-button-group right-buttons"
     >
-      <Blueprint5.Button
-        disabled={false}
-        minimal={true}
-        onClick={[Function]}
-        text="View raw"
-      />
-    </Blueprint5.ButtonGroup>
+      <button
+        class="bp6-button bp6-minimal"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          View raw
+        </span>
+      </button>
+    </div>
   </div>
   <div
-    className="main-area"
+    class="main-area"
   >
-    <ReactTable
-      AggregatedComponent={[Function]}
-      ExpanderComponent={[Function]}
-      FilterComponent={[Function]}
-      LoadingComponent={[Function]}
-      NoDataComponent={[Function]}
-      PadRowComponent={[Function]}
-      PaginationComponent={[Function]}
-      PivotValueComponent={[Function]}
-      ResizerComponent={[Function]}
-      TableComponent={[Function]}
-      TbodyComponent={[Function]}
-      TdComponent={[Function]}
-      TfootComponent={[Function]}
-      ThComponent={[Function]}
-      TheadComponent={[Function]}
-      TrComponent={[Function]}
-      TrGroupComponent={[Function]}
-      aggregatedKey="_aggregated"
-      className=""
-      collapseOnDataChange={true}
-      collapseOnPageChange={true}
-      collapseOnSortingChange={true}
-      column={
-        {
-          "Aggregated": undefined,
-          "Cell": undefined,
-          "Expander": undefined,
-          "Filter": undefined,
-          "Footer": undefined,
-          "Header": undefined,
-          "Pivot": undefined,
-          "PivotValue": undefined,
-          "Placeholder": undefined,
-          "aggregate": undefined,
-          "className": "",
-          "filterAll": false,
-          "filterMethod": undefined,
-          "filterable": undefined,
-          "footerClassName": "",
-          "footerStyle": {},
-          "getFooterProps": [Function],
-          "getHeaderProps": [Function],
-          "getProps": [Function],
-          "headerClassName": "",
-          "headerStyle": {},
-          "minResizeWidth": 11,
-          "minWidth": 100,
-          "resizable": undefined,
-          "show": true,
-          "sortMethod": undefined,
-          "sortable": undefined,
-          "style": {},
-        }
-      }
-      columns={
-        [
-          {
-            "Header": "Group ID",
-            "accessor": "groupId",
-            "className": "padded",
-            "width": 100,
-          },
-          {
-            "Header": "Task ID",
-            "accessor": "taskId",
-            "className": "padded",
-            "width": 400,
-          },
-          {
-            "Cell": [Function],
-            "Header": "Totals",
-            "accessor": "rowStats.totals.buildSegments",
-            "className": "padded",
-            "id": "total",
-            "width": 200,
-          },
-        ]
-      }
-      data={[]}
-      defaultExpanded={{}}
-      defaultFilterMethod={[Function]}
-      defaultFiltered={[]}
-      defaultPage={0}
-      defaultPageSize={25}
-      defaultResized={[]}
-      defaultSortDesc={false}
-      defaultSortMethod={[Function]}
-      defaultSorted={[]}
-      expanderDefaults={
-        {
-          "filterable": false,
-          "resizable": false,
-          "sortable": false,
-          "width": 35,
-        }
-      }
-      filterable={false}
-      freezeWhenExpanded={false}
-      getLoadingProps={[Function]}
-      getNoDataProps={[Function]}
-      getPaginationProps={[Function]}
-      getProps={[Function]}
-      getResizerProps={[Function]}
-      getTableProps={[Function]}
-      getTbodyProps={[Function]}
-      getTdProps={[Function]}
-      getTfootProps={[Function]}
-      getTfootTdProps={[Function]}
-      getTfootTrProps={[Function]}
-      getTheadFilterProps={[Function]}
-      getTheadFilterThProps={[Function]}
-      getTheadFilterTrProps={[Function]}
-      getTheadGroupProps={[Function]}
-      getTheadGroupThProps={[Function]}
-      getTheadGroupTrProps={[Function]}
-      getTheadProps={[Function]}
-      getTheadThProps={[Function]}
-      getTheadTrProps={[Function]}
-      getTrGroupProps={[Function]}
-      getTrProps={[Function]}
-      groupedByPivotKey="_groupedByPivot"
-      indexKey="_index"
-      loading={false}
-      loadingText="Loading..."
-      multiSort={true}
-      nestingLevelKey="_nestingLevel"
-      nextText="Next"
-      noDataText="test error"
-      ofText="of"
-      onFetchData={[Function]}
-      originalKey="_original"
-      pageJumpText="jump to page"
-      pageSizeOptions={
-        [
-          25,
-          50,
-          100,
-        ]
-      }
-      pageText="Page"
-      pivotDefaults={{}}
-      pivotIDKey="_pivotID"
-      pivotValKey="_pivotVal"
-      previousText="Previous"
-      resizable={true}
-      resolveData={[Function]}
-      rowsSelectorText="rows per page"
-      rowsText="rows"
-      showPageJump={true}
-      showPageSizeOptions={true}
-      showPagination={false}
-      showPaginationBottom={true}
-      showPaginationTop={false}
-      sortable={true}
-      style={{}}
-      subRowsKey="_subRows"
-    />
+    <div
+      class="console-table -striped -highlight padded-header"
+    >
+      <div
+        class="ct-table"
+        role="grid"
+      >
+        <div
+          class="ct-thead -header"
+          style="min-width: 700px;"
+        >
+          <div
+            class="ct-tr"
+            role="row"
+          >
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Group ID
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 400 0 auto; width: 400px; max-width: 400px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Task ID
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Totals
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          class="ct-tbody"
+          style="min-width: 700px;"
+        >
+          <!-- 25 empty rows -->
+        </div>
+      </div>
+      <div
+        class="ct-no-data"
+      >
+        test error
+      </div>
+    </div>
   </div>
 </div>
 `;
 
 exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
 <div
-  className="supervisor-statistics-table"
+  class="supervisor-statistics-table"
 >
   <div
-    className="top-actions"
+    class="top-actions"
   >
-    <Blueprint5.ButtonGroup
-      className="right-buttons"
+    <div
+      class="bp6-button-group right-buttons"
     >
-      <Blueprint5.Button
-        disabled={false}
-        minimal={true}
-        onClick={[Function]}
-        text="View raw"
-      />
-    </Blueprint5.ButtonGroup>
+      <button
+        class="bp6-button bp6-minimal"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          View raw
+        </span>
+      </button>
+    </div>
   </div>
   <div
-    className="main-area"
+    class="main-area"
   >
-    <ReactTable
-      AggregatedComponent={[Function]}
-      ExpanderComponent={[Function]}
-      FilterComponent={[Function]}
-      LoadingComponent={[Function]}
-      NoDataComponent={[Function]}
-      PadRowComponent={[Function]}
-      PaginationComponent={[Function]}
-      PivotValueComponent={[Function]}
-      ResizerComponent={[Function]}
-      TableComponent={[Function]}
-      TbodyComponent={[Function]}
-      TdComponent={[Function]}
-      TfootComponent={[Function]}
-      ThComponent={[Function]}
-      TheadComponent={[Function]}
-      TrComponent={[Function]}
-      TrGroupComponent={[Function]}
-      aggregatedKey="_aggregated"
-      className=""
-      collapseOnDataChange={true}
-      collapseOnPageChange={true}
-      collapseOnSortingChange={true}
-      column={
-        {
-          "Aggregated": undefined,
-          "Cell": undefined,
-          "Expander": undefined,
-          "Filter": undefined,
-          "Footer": undefined,
-          "Header": undefined,
-          "Pivot": undefined,
-          "PivotValue": undefined,
-          "Placeholder": undefined,
-          "aggregate": undefined,
-          "className": "",
-          "filterAll": false,
-          "filterMethod": undefined,
-          "filterable": undefined,
-          "footerClassName": "",
-          "footerStyle": {},
-          "getFooterProps": [Function],
-          "getHeaderProps": [Function],
-          "getProps": [Function],
-          "headerClassName": "",
-          "headerStyle": {},
-          "minResizeWidth": 11,
-          "minWidth": 100,
-          "resizable": undefined,
-          "show": true,
-          "sortMethod": undefined,
-          "sortable": undefined,
-          "style": {},
-        }
-      }
-      columns={
-        [
-          {
-            "Header": "Group ID",
-            "accessor": "groupId",
-            "className": "padded",
-            "width": 100,
-          },
-          {
-            "Header": "Task ID",
-            "accessor": "taskId",
-            "className": "padded",
-            "width": 400,
-          },
-          {
-            "Cell": [Function],
-            "Header": "Totals",
-            "accessor": "rowStats.totals.buildSegments",
-            "className": "padded",
-            "id": "total",
-            "width": 200,
-          },
-        ]
-      }
-      data={[]}
-      defaultExpanded={{}}
-      defaultFilterMethod={[Function]}
-      defaultFiltered={[]}
-      defaultPage={0}
-      defaultPageSize={25}
-      defaultResized={[]}
-      defaultSortDesc={false}
-      defaultSortMethod={[Function]}
-      defaultSorted={[]}
-      expanderDefaults={
-        {
-          "filterable": false,
-          "resizable": false,
-          "sortable": false,
-          "width": 35,
-        }
-      }
-      filterable={false}
-      freezeWhenExpanded={false}
-      getLoadingProps={[Function]}
-      getNoDataProps={[Function]}
-      getPaginationProps={[Function]}
-      getProps={[Function]}
-      getResizerProps={[Function]}
-      getTableProps={[Function]}
-      getTbodyProps={[Function]}
-      getTdProps={[Function]}
-      getTfootProps={[Function]}
-      getTfootTdProps={[Function]}
-      getTfootTrProps={[Function]}
-      getTheadFilterProps={[Function]}
-      getTheadFilterThProps={[Function]}
-      getTheadFilterTrProps={[Function]}
-      getTheadGroupProps={[Function]}
-      getTheadGroupThProps={[Function]}
-      getTheadGroupTrProps={[Function]}
-      getTheadProps={[Function]}
-      getTheadThProps={[Function]}
-      getTheadTrProps={[Function]}
-      getTrGroupProps={[Function]}
-      getTrProps={[Function]}
-      groupedByPivotKey="_groupedByPivot"
-      indexKey="_index"
-      loading={false}
-      loadingText="Loading..."
-      multiSort={true}
-      nestingLevelKey="_nestingLevel"
-      nextText="Next"
-      noDataText="No statistics data found"
-      ofText="of"
-      onFetchData={[Function]}
-      originalKey="_original"
-      pageJumpText="jump to page"
-      pageSizeOptions={
-        [
-          25,
-          50,
-          100,
-        ]
-      }
-      pageText="Page"
-      pivotDefaults={{}}
-      pivotIDKey="_pivotID"
-      pivotValKey="_pivotVal"
-      previousText="Previous"
-      resizable={true}
-      resolveData={[Function]}
-      rowsSelectorText="rows per page"
-      rowsText="rows"
-      showPageJump={true}
-      showPageSizeOptions={true}
-      showPagination={false}
-      showPaginationBottom={true}
-      showPaginationTop={false}
-      sortable={true}
-      style={{}}
-      subRowsKey="_subRows"
-    />
+    <div
+      class="console-table -striped -highlight padded-header"
+    >
+      <div
+        class="ct-table"
+        role="grid"
+      >
+        <div
+          class="ct-thead -header"
+          style="min-width: 700px;"
+        >
+          <div
+            class="ct-tr"
+            role="row"
+          >
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Group ID
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 400 0 auto; width: 400px; max-width: 400px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Task ID
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Totals
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          class="ct-tbody"
+          style="min-width: 700px;"
+        >
+          <!-- 25 empty rows -->
+        </div>
+      </div>
+      <div
+        class="ct-no-data"
+      >
+        No statistics data found
+      </div>
+    </div>
   </div>
 </div>
 `;
 
 exports[`SupervisorStatisticsTable matches snapshot on loading 1`] = `
 <div
-  className="supervisor-statistics-table"
+  class="supervisor-statistics-table"
 >
   <div
-    className="top-actions"
+    class="top-actions"
   >
-    <Blueprint5.ButtonGroup
-      className="right-buttons"
+    <div
+      class="bp6-button-group right-buttons"
     >
-      <Blueprint5.Button
-        disabled={true}
-        minimal={true}
-        onClick={[Function]}
-        text="View raw"
-      />
-    </Blueprint5.ButtonGroup>
+      <button
+        class="bp6-button bp6-disabled bp6-minimal"
+        disabled=""
+        tabindex="-1"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          View raw
+        </span>
+      </button>
+    </div>
   </div>
   <div
-    className="main-area"
+    class="main-area"
   >
-    <Memo(Loader) />
+    <div
+      class="loader"
+    >
+      <div
+        class="loader-logo"
+      >
+        <svg
+          viewBox="0 0 100 100"
+        >
+          <path
+            class="one"
+            d="M54.2,69.8h-2.7c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h2.7c11.5,0,23.8-7.4,23.8-23.7
+          c0-9.1-6.9-15.8-16.4-15.8H38c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h23.6c5.3,0,10.1,1.9,13.6,5.3c3.5,3.4,5.4,8,5.4,13.1
+          c0,6.6-2.3,13-6.3,17.7C69.5,66.8,62.5,69.8,54.2,69.8z"
+          />
+          <path
+            class="two"
+            d="M55.7,59.5h-26c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h26c7.5,0,11.5-5.8,11.5-11.5
+            c0-4.2-3.2-7.3-7.7-7.3h-26c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h26c5.9,0,10.3,4.3,10.3,9.9c0,3.7-1.3,7.2-3.7,9.8
+            C63.5,58,59.9,59.5,55.7,59.5z"
+          />
+          <path
+            class="three"
+            d="M27.2,38h-6.3c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h6.3c0.7,0,1.3,0.6,1.3,1.3S27.9,38,27.2,38z"
+          />
+          <path
+            class="four"
+            d="M45.1,69.8h-5.8c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h5.8c0.7,0,1.3,0.6,1.3,1.3
+            C46.4,69.2,45.8,69.8,45.1,69.8z"
+          />
+        </svg>
+      </div>
+    </div>
   </div>
 </div>
 `;
 
 exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
 <div
-  className="supervisor-statistics-table"
+  class="supervisor-statistics-table"
 >
   <div
-    className="top-actions"
+    class="top-actions"
   >
-    <Blueprint5.ButtonGroup
-      className="right-buttons"
+    <div
+      class="bp6-button-group right-buttons"
     >
-      <Blueprint5.Button
-        disabled={false}
-        minimal={true}
-        onClick={[Function]}
-        text="View raw"
-      />
-    </Blueprint5.ButtonGroup>
+      <button
+        class="bp6-button bp6-minimal"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          View raw
+        </span>
+      </button>
+    </div>
   </div>
   <div
-    className="main-area"
+    class="main-area"
   >
-    <ReactTable
-      AggregatedComponent={[Function]}
-      ExpanderComponent={[Function]}
-      FilterComponent={[Function]}
-      LoadingComponent={[Function]}
-      NoDataComponent={[Function]}
-      PadRowComponent={[Function]}
-      PaginationComponent={[Function]}
-      PivotValueComponent={[Function]}
-      ResizerComponent={[Function]}
-      TableComponent={[Function]}
-      TbodyComponent={[Function]}
-      TdComponent={[Function]}
-      TfootComponent={[Function]}
-      ThComponent={[Function]}
-      TheadComponent={[Function]}
-      TrComponent={[Function]}
-      TrGroupComponent={[Function]}
-      aggregatedKey="_aggregated"
-      className=""
-      collapseOnDataChange={true}
-      collapseOnPageChange={true}
-      collapseOnSortingChange={true}
-      column={
-        {
-          "Aggregated": undefined,
-          "Cell": undefined,
-          "Expander": undefined,
-          "Filter": undefined,
-          "Footer": undefined,
-          "Header": undefined,
-          "Pivot": undefined,
-          "PivotValue": undefined,
-          "Placeholder": undefined,
-          "aggregate": undefined,
-          "className": "",
-          "filterAll": false,
-          "filterMethod": undefined,
-          "filterable": undefined,
-          "footerClassName": "",
-          "footerStyle": {},
-          "getFooterProps": [Function],
-          "getHeaderProps": [Function],
-          "getProps": [Function],
-          "headerClassName": "",
-          "headerStyle": {},
-          "minResizeWidth": 11,
-          "minWidth": 100,
-          "resizable": undefined,
-          "show": true,
-          "sortMethod": undefined,
-          "sortable": undefined,
-          "style": {},
-        }
-      }
-      columns={
-        [
-          {
-            "Header": "Group ID",
-            "accessor": "groupId",
-            "className": "padded",
-            "width": 100,
-          },
-          {
-            "Header": "Task ID",
-            "accessor": "taskId",
-            "className": "padded",
-            "width": 400,
-          },
-          {
-            "Cell": [Function],
-            "Header": "Totals",
-            "accessor": "rowStats.totals.buildSegments",
-            "className": "padded",
-            "id": "total",
-            "width": 200,
-          },
-        ]
-      }
-      data={[]}
-      defaultExpanded={{}}
-      defaultFilterMethod={[Function]}
-      defaultFiltered={[]}
-      defaultPage={0}
-      defaultPageSize={25}
-      defaultResized={[]}
-      defaultSortDesc={false}
-      defaultSortMethod={[Function]}
-      defaultSorted={[]}
-      expanderDefaults={
-        {
-          "filterable": false,
-          "resizable": false,
-          "sortable": false,
-          "width": 35,
-        }
-      }
-      filterable={false}
-      freezeWhenExpanded={false}
-      getLoadingProps={[Function]}
-      getNoDataProps={[Function]}
-      getPaginationProps={[Function]}
-      getProps={[Function]}
-      getResizerProps={[Function]}
-      getTableProps={[Function]}
-      getTbodyProps={[Function]}
-      getTdProps={[Function]}
-      getTfootProps={[Function]}
-      getTfootTdProps={[Function]}
-      getTfootTrProps={[Function]}
-      getTheadFilterProps={[Function]}
-      getTheadFilterThProps={[Function]}
-      getTheadFilterTrProps={[Function]}
-      getTheadGroupProps={[Function]}
-      getTheadGroupThProps={[Function]}
-      getTheadGroupTrProps={[Function]}
-      getTheadProps={[Function]}
-      getTheadThProps={[Function]}
-      getTheadTrProps={[Function]}
-      getTrGroupProps={[Function]}
-      getTrProps={[Function]}
-      groupedByPivotKey="_groupedByPivot"
-      indexKey="_index"
-      loading={false}
-      loadingText="Loading..."
-      multiSort={true}
-      nestingLevelKey="_nestingLevel"
-      nextText="Next"
-      noDataText="No statistics data found"
-      ofText="of"
-      onFetchData={[Function]}
-      originalKey="_original"
-      pageJumpText="jump to page"
-      pageSizeOptions={
-        [
-          25,
-          50,
-          100,
-        ]
-      }
-      pageText="Page"
-      pivotDefaults={{}}
-      pivotIDKey="_pivotID"
-      pivotValKey="_pivotVal"
-      previousText="Previous"
-      resizable={true}
-      resolveData={[Function]}
-      rowsSelectorText="rows per page"
-      rowsText="rows"
-      showPageJump={true}
-      showPageSizeOptions={true}
-      showPagination={false}
-      showPaginationBottom={true}
-      showPaginationTop={false}
-      sortable={true}
-      style={{}}
-      subRowsKey="_subRows"
-    />
+    <div
+      class="console-table -striped -highlight padded-header"
+    >
+      <div
+        class="ct-table"
+        role="grid"
+      >
+        <div
+          class="ct-thead -header"
+          style="min-width: 700px;"
+        >
+          <div
+            class="ct-tr"
+            role="row"
+          >
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Group ID
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 400 0 auto; width: 400px; max-width: 400px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Task ID
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Totals
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          class="ct-tbody"
+          style="min-width: 700px;"
+        >
+          <!-- 25 empty rows -->
+        </div>
+      </div>
+      <div
+        class="ct-no-data"
+      >
+        No statistics data found
+      </div>
+    </div>
   </div>
 </div>
 `;
 
 exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
 <div
-  className="supervisor-statistics-table"
+  class="supervisor-statistics-table"
 >
   <div
-    className="top-actions"
+    class="top-actions"
   >
-    <Blueprint5.ButtonGroup
-      className="right-buttons"
+    <div
+      class="bp6-button-group right-buttons"
     >
-      <Blueprint5.Button
-        disabled={false}
-        minimal={true}
-        onClick={[Function]}
-        text="View raw"
-      />
-    </Blueprint5.ButtonGroup>
+      <button
+        class="bp6-button bp6-minimal"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          View raw
+        </span>
+      </button>
+    </div>
   </div>
   <div
-    className="main-area"
+    class="main-area"
   >
-    <ReactTable
-      AggregatedComponent={[Function]}
-      ExpanderComponent={[Function]}
-      FilterComponent={[Function]}
-      LoadingComponent={[Function]}
-      NoDataComponent={[Function]}
-      PadRowComponent={[Function]}
-      PaginationComponent={[Function]}
-      PivotValueComponent={[Function]}
-      ResizerComponent={[Function]}
-      TableComponent={[Function]}
-      TbodyComponent={[Function]}
-      TdComponent={[Function]}
-      TfootComponent={[Function]}
-      ThComponent={[Function]}
-      TheadComponent={[Function]}
-      TrComponent={[Function]}
-      TrGroupComponent={[Function]}
-      aggregatedKey="_aggregated"
-      className=""
-      collapseOnDataChange={true}
-      collapseOnPageChange={true}
-      collapseOnSortingChange={true}
-      column={
-        {
-          "Aggregated": undefined,
-          "Cell": undefined,
-          "Expander": undefined,
-          "Filter": undefined,
-          "Footer": undefined,
-          "Header": undefined,
-          "Pivot": undefined,
-          "PivotValue": undefined,
-          "Placeholder": undefined,
-          "aggregate": undefined,
-          "className": "",
-          "filterAll": false,
-          "filterMethod": undefined,
-          "filterable": undefined,
-          "footerClassName": "",
-          "footerStyle": {},
-          "getFooterProps": [Function],
-          "getHeaderProps": [Function],
-          "getProps": [Function],
-          "headerClassName": "",
-          "headerStyle": {},
-          "minResizeWidth": 11,
-          "minWidth": 100,
-          "resizable": undefined,
-          "show": true,
-          "sortMethod": undefined,
-          "sortable": undefined,
-          "style": {},
-        }
-      }
-      columns={
-        [
-          {
-            "Header": "Group ID",
-            "accessor": "groupId",
-            "className": "padded",
-            "width": 100,
-          },
-          {
-            "Header": "Task ID",
-            "accessor": "taskId",
-            "className": "padded",
-            "width": 400,
-          },
-          {
-            "Cell": [Function],
-            "Header": "Totals",
-            "accessor": "rowStats.totals.buildSegments",
-            "className": "padded",
-            "id": "total",
-            "width": 200,
-          },
-          {
-            "Cell": [Function],
-            "Header": "1m",
-            "accessor": "rowStats.movingAverages.buildSegments.1m",
-            "className": "padded",
-            "id": "1m",
-            "width": 200,
-          },
-          {
-            "Cell": [Function],
-            "Header": "5m",
-            "accessor": "rowStats.movingAverages.buildSegments.5m",
-            "className": "padded",
-            "id": "5m",
-            "width": 200,
-          },
-          {
-            "Cell": [Function],
-            "Header": "15m",
-            "accessor": "rowStats.movingAverages.buildSegments.15m",
-            "className": "padded",
-            "id": "15m",
-            "width": 200,
-          },
-        ]
-      }
-      data={
-        [
-          {
-            "groupId": "0",
-            "rowStats": {
-              "movingAverages": {
-                "buildSegments": {
-                  "15m": {
-                    "processed": 5.544749689510444,
-                    "processedBytes": 20,
-                    "processedWithError": 0,
-                    "thrownAway": 0,
-                    "unparseable": 0,
-                  },
-                  "1m": {
-                    "processed": 4.593670088770785,
-                    "processedBytes": 30,
-                    "processedWithError": 0,
-                    "thrownAway": 0,
-                    "unparseable": 0,
-                  },
-                  "5m": {
-                    "processed": 3.5455993615040584,
-                    "processedBytes": 10,
-                    "processedWithError": 0,
-                    "thrownAway": 0,
-                    "unparseable": 0,
-                  },
-                },
-              },
-              "totals": {
-                "buildSegments": {
-                  "processed": 7516,
-                  "processedBytes": 60,
-                  "processedWithError": 0,
-                  "thrownAway": 0,
-                  "unparseable": 0,
-                },
-              },
-            },
-            "taskId": "index_kafka_github_dfde87f265a8cc9_pnmcaldn",
-          },
-        ]
-      }
-      defaultExpanded={{}}
-      defaultFilterMethod={[Function]}
-      defaultFiltered={[]}
-      defaultPage={0}
-      defaultPageSize={25}
-      defaultResized={[]}
-      defaultSortDesc={false}
-      defaultSortMethod={[Function]}
-      defaultSorted={[]}
-      expanderDefaults={
-        {
-          "filterable": false,
-          "resizable": false,
-          "sortable": false,
-          "width": 35,
-        }
-      }
-      filterable={false}
-      freezeWhenExpanded={false}
-      getLoadingProps={[Function]}
-      getNoDataProps={[Function]}
-      getPaginationProps={[Function]}
-      getProps={[Function]}
-      getResizerProps={[Function]}
-      getTableProps={[Function]}
-      getTbodyProps={[Function]}
-      getTdProps={[Function]}
-      getTfootProps={[Function]}
-      getTfootTdProps={[Function]}
-      getTfootTrProps={[Function]}
-      getTheadFilterProps={[Function]}
-      getTheadFilterThProps={[Function]}
-      getTheadFilterTrProps={[Function]}
-      getTheadGroupProps={[Function]}
-      getTheadGroupThProps={[Function]}
-      getTheadGroupTrProps={[Function]}
-      getTheadProps={[Function]}
-      getTheadThProps={[Function]}
-      getTheadTrProps={[Function]}
-      getTrGroupProps={[Function]}
-      getTrProps={[Function]}
-      groupedByPivotKey="_groupedByPivot"
-      indexKey="_index"
-      loading={false}
-      loadingText="Loading..."
-      multiSort={true}
-      nestingLevelKey="_nestingLevel"
-      nextText="Next"
-      noDataText="No statistics data found"
-      ofText="of"
-      onFetchData={[Function]}
-      originalKey="_original"
-      pageJumpText="jump to page"
-      pageSizeOptions={
-        [
-          25,
-          50,
-          100,
-        ]
-      }
-      pageText="Page"
-      pivotDefaults={{}}
-      pivotIDKey="_pivotID"
-      pivotValKey="_pivotVal"
-      previousText="Previous"
-      resizable={true}
-      resolveData={[Function]}
-      rowsSelectorText="rows per page"
-      rowsText="rows"
-      showPageJump={true}
-      showPageSizeOptions={true}
-      showPagination={false}
-      showPaginationBottom={true}
-      showPaginationTop={false}
-      sortable={true}
-      style={{}}
-      subRowsKey="_subRows"
-    />
+    <div
+      class="console-table -striped -highlight padded-header"
+    >
+      <div
+        class="ct-table"
+        role="grid"
+      >
+        <div
+          class="ct-thead -header"
+          style="min-width: 1300px;"
+        >
+          <div
+            class="ct-tr"
+            role="row"
+          >
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Group ID
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 400 0 auto; width: 400px; max-width: 400px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Task ID
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                Totals
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                1m
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                5m
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+            <div
+              class="ct-th ct-resizable-header -cursor-pointer"
+              role="columnheader"
+              style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              tabindex="-1"
+            >
+              <div
+                class="ct-resizable-header-content"
+              >
+                15m
+              </div>
+              <div
+                class="ct-resizer"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          class="ct-tbody"
+          style="min-width: 1300px;"
+        >
+          <div
+            class="ct-tr-group"
+            role="rowgroup"
+          >
+            <div
+              class="ct-tr -odd"
+              role="row"
+            >
+              <div
+                class="ct-td padded"
+                role="gridcell"
+                style="flex: 100 0 auto; width: 100px; max-width: 100px;"
+              >
+                0
+              </div>
+              <div
+                class="ct-td padded"
+                role="gridcell"
+                style="flex: 400 0 auto; width: 400px; max-width: 400px;"
+              >
+                index_kafka_github_dfde87f265a8cc9_pnmcaldn
+              </div>
+              <div
+                class="ct-td padded"
+                role="gridcell"
+                style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              >
+                <div>
+                  <div>
+                    Input: 60.00 B
+                  </div>
+                  <div>
+                    Processed: 7,516
+                  </div>
+                </div>
+              </div>
+              <div
+                class="ct-td padded"
+                role="gridcell"
+                style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              >
+                <div>
+                  <div>
+                    Input: 30.00 B/s
+                  </div>
+                  <div>
+                    Processed: 4.6/s
+                  </div>
+                </div>
+              </div>
+              <div
+                class="ct-td padded"
+                role="gridcell"
+                style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              >
+                <div>
+                  <div>
+                    Input: 10.00 B/s
+                  </div>
+                  <div>
+                    Processed: 3.5/s
+                  </div>
+                </div>
+              </div>
+              <div
+                class="ct-td padded"
+                role="gridcell"
+                style="flex: 200 0 auto; width: 200px; max-width: 200px;"
+              >
+                <div>
+                  <div>
+                    Input: 20.00 B/s
+                  </div>
+                  <div>
+                    Processed: 5.5/s
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 24 empty rows -->
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 `;

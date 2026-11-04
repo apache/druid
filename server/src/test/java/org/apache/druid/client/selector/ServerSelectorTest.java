@@ -57,9 +57,7 @@ public class ServerSelectorTest
   public void testSegmentUpdate()
   {
     final ServerSelector selector = new ServerSelector(
-        DataSegment.builder()
-                   .dataSource("test_broker_server_view")
-                   .interval(Intervals.of("2012/2013"))
+        DataSegment.builder(SegmentId.of("test_broker_server_view", Intervals.of("2012/2013"), "v1", 0))
                    .loadSpec(
                        ImmutableMap.of(
                            "type",
@@ -68,7 +66,6 @@ public class ServerSelectorTest
                            "somewhere"
                        )
                    )
-                   .version("v1")
                    .dimensions(ImmutableList.of())
                    .metrics(ImmutableList.of())
                    .shardSpec(NoneShardSpec.instance())
@@ -84,10 +81,7 @@ public class ServerSelectorTest
             new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
             EasyMock.createMock(DirectDruidClient.class)
         ),
-        DataSegment.builder()
-                   .dataSource(
-                       "test_broker_server_view")
-                   .interval(Intervals.of("2012/2013"))
+        DataSegment.builder(SegmentId.of("test_broker_server_view", Intervals.of("2012/2013"), "v1", 0))
                    .loadSpec(
                        ImmutableMap.of(
                            "type",
@@ -96,7 +90,6 @@ public class ServerSelectorTest
                            "somewhere"
                        )
                    )
-                   .version("v1")
                    .dimensions(
                        ImmutableList.of(
                            "a",
@@ -130,16 +123,13 @@ public class ServerSelectorTest
   public void testSegmentWithNoData()
   {
     final ServerSelector selector = new ServerSelector(
-        DataSegment.builder()
-                   .dataSource("test_broker_server_view")
-                   .interval(Intervals.of("2012/2013"))
+        DataSegment.builder(SegmentId.of("test_broker_server_view", Intervals.of("2012/2013"), "v1", 0))
                    .loadSpec(
                        ImmutableMap.of(
                            "type",
                            "tombstone"
                        )
                    )
-                   .version("v1")
                    .dimensions(ImmutableList.of())
                    .metrics(ImmutableList.of())
                    .shardSpec(new TombstoneShardSpec())
@@ -156,9 +146,7 @@ public class ServerSelectorTest
   public void testSegmentWithData()
   {
     final ServerSelector selector = new ServerSelector(
-        DataSegment.builder()
-                   .dataSource("another segment") // fool the interner inside the selector
-                   .interval(Intervals.of("2012/2013"))
+        DataSegment.builder(SegmentId.of("another segment", Intervals.of("2012/2013"), "v1", 0)) // fool the interner inside the selector
                    .loadSpec(
                        ImmutableMap.of(
                            "type",
@@ -167,7 +155,6 @@ public class ServerSelectorTest
                            "somewhere"
                        )
                    )
-                   .version("v1")
                    .dimensions(ImmutableList.of())
                    .metrics(ImmutableList.of())
                    .shardSpec(NoneShardSpec.instance())

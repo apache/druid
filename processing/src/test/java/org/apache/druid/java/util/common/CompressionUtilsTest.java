@@ -644,7 +644,7 @@ public class CompressionUtilsTest
           )
       );
     }
-    Assertions.assertEquals((long) GZ_BYTES.length * 3, testFile.length());
+    Assertions.assertEquals(3L * GZ_BYTES.length, testFile.length());
     try (InputStream inputStream = new ZeroRemainingInputStream(new FileInputStream(testFile))) {
       for (int i = 0; i < 3; ++i) {
         final byte[] bytes = new byte[GZ_BYTES.length];
@@ -678,17 +678,17 @@ public class CompressionUtilsTest
       }
     };
 
-    Assertions.assertEquals((long) (EXPECTED.length * 3), CompressionUtils.gunzip(inputStreamFactory, testFile).size());
+    Assertions.assertEquals(3L * EXPECTED.length, CompressionUtils.gunzip(inputStreamFactory, testFile).size());
 
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
         Assertions.assertEquals(
-            EXPECTED.length * 3,
+            3L * EXPECTED.length,
             ByteStreams.copy(inputStream, outputStream),
             "Read terminated too soon"
         );
         final byte[] found = outputStream.toByteArray();
-        Assertions.assertEquals(EXPECTED.length * 3, found.length);
+        Assertions.assertEquals(3L * EXPECTED.length, found.length);
         Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
         Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
         Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
@@ -707,7 +707,7 @@ public class CompressionUtilsTest
 
     try (ByteArrayOutputStream bos = new ByteArrayOutputStream(EXPECTED.length * 3)) {
       Assertions.assertEquals(
-          EXPECTED.length * 3,
+          3L * EXPECTED.length,
           CompressionUtils.gunzip(
               new ZeroRemainingInputStream(
                   new ByteArrayInputStream(tripleGzByteStream.toByteArray())
@@ -715,7 +715,7 @@ public class CompressionUtilsTest
           )
       );
       final byte[] found = bos.toByteArray();
-      Assertions.assertEquals(EXPECTED.length * 3, found.length);
+      Assertions.assertEquals(3L * EXPECTED.length, found.length);
       Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
       Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
       Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));

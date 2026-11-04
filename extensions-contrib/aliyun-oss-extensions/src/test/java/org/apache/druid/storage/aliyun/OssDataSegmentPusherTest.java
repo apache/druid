@@ -24,6 +24,7 @@ import com.aliyun.oss.model.PutObjectResult;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
@@ -96,17 +97,14 @@ public class OssDataSegmentPusherTest
     Files.write(data, tmp);
     final long size = data.length;
 
-    DataSegment segmentToPush = new DataSegment(
-        "foo",
-        Intervals.of("2015/2016"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        size
-    );
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
 
     DataSegment segment = pusher.push(tempFolder, segmentToPush, useUniquePath);
 

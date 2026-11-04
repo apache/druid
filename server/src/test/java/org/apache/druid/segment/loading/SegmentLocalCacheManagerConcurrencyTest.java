@@ -326,7 +326,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   }
 
   @Test
-  public void testAcquireSegmentOnDemand() throws IOException
+  public void testAcquireSegmentOnDemand() throws IOException, InterruptedException
   {
     final int segmentCount = 100;
     final int iterations = 2000;
@@ -342,7 +342,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   }
 
   @Test
-  public void testAcquireSegmentOnDemandRandomSegment() throws IOException
+  public void testAcquireSegmentOnDemandRandomSegment() throws IOException, InterruptedException
   {
     // moderate number of segments compared to threads, expect to have a decent hit rate
     final int segmentCount = 24;
@@ -360,7 +360,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   }
 
   @Test
-  public void testAcquireSegmentOnDemandRandomSegmentHighHitRate() throws IOException
+  public void testAcquireSegmentOnDemandRandomSegmentHighHitRate() throws IOException, InterruptedException
   {
     // low number of total segments so expect many cache hits and few evictions
     final int segmentCount = 10;
@@ -378,7 +378,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   }
 
   @Test
-  public void testAcquireSegmentOnDemandRandomSegmentNoEvictions() throws IOException
+  public void testAcquireSegmentOnDemandRandomSegmentNoEvictions() throws IOException, InterruptedException
   {
     // low number of total segments so expect many cache hits and few evictions
     final int segmentCount = 8;
@@ -902,9 +902,7 @@ class SegmentLocalCacheManagerConcurrencyTest
 
   private DataSegment newSegment(Interval interval, int partitionId, long size)
   {
-    return DataSegment.builder()
-                      .dataSource(dataSource)
-                      .interval(interval)
+    return DataSegment.builder(SegmentId.of(dataSource, interval, segmentVersion, partitionId))
                       .loadSpec(
                           ImmutableMap.of(
                               "type",
@@ -913,7 +911,6 @@ class SegmentLocalCacheManagerConcurrencyTest
                               "somewhere"
                           )
                       )
-                      .version(segmentVersion)
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
                       .shardSpec(new NumberedShardSpec(partitionId, 0))
@@ -1052,12 +1049,9 @@ class SegmentLocalCacheManagerConcurrencyTest
           segmentManager.acquireSegment(segment, AcquireMode.FULL)
       );
       try {
-        final AcquireSegmentResult result =
-            action.getSegmentFuture().get(timeout, TimeUnit.MILLISECONDS);
-        if (result == null) {
-          Assertions.fail("this shouldn't happen");
-        }
-        final Optional<Segment> segment = result.getReferenceProvider().acquireReference().map(closer::register);
+        action.await(timeout);
+        final AcquireSegmentResult result = closer.register(action.release());
+        final Optional<Segment> segment = result.getSegment();
         if (segment.isPresent()) {
           RowCountInspector gadget = segment.get().as(RowCountInspector.class);
           if (delayMin >= 0 && delayMax > 0) {
@@ -1145,15 +1139,15 @@ class SegmentLocalCacheManagerConcurrencyTest
           segmentManager.acquireSegment(segment, AcquireMode.FULL)
       );
       try {
-        final Future<AcquireSegmentResult> result = action.getSegmentFuture();
         Thread.sleep(ThreadLocalRandom.current().nextInt(50));
-        result.cancel(true);
         Thread.currentThread().interrupt();
       }
       catch (Throwable t) {
         throw new RuntimeException(t);
       }
       finally {
+        // closing the un-released action cancels a still-queued load; a running load is left to finish and its
+        // orphaned result is closed when it loses the delivery race (cancel(false) — no interrupt)
         CloseableUtils.closeAndWrapExceptions(closer);
       }
       return null;

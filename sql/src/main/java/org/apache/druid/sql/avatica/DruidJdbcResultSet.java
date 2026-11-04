@@ -113,7 +113,7 @@ public class DruidJdbcResultSet implements Closeable
     }
 
     /**
-     * Fetch the next batch up to the batch size or EOF. Return
+     * Fetch the next batch up to the batch size, the row limit, or EOF. Return
      * the resulting frame. Exceptions are handled by the executor
      * framework.
      */
@@ -130,7 +130,10 @@ public class DruidJdbcResultSet implements Closeable
         rowCount++;
       }
 
-      final Meta.Frame result = new Meta.Frame(offset, yielder.isDone(), rows);
+      // The frame is complete once the row limit is reached, even if the query
+      // itself has more rows. Reporting only yielder.isDone() here would make
+      // every later fetch return an empty, not-done frame forever.
+      final Meta.Frame result = new Meta.Frame(offset, yielder.isDone() || offset + rowCount >= limit, rows);
       offset += rowCount;
       return result;
     }

@@ -33,11 +33,11 @@ import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -127,7 +127,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceMvdWithStringArray(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     testIngestQuery()
         .setSql(
@@ -154,7 +154,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceStringArrayWithMvdInArrayMode(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     testIngestQuery()
         .setSql(
@@ -182,7 +182,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceStringArrayWithMvdInMvdMode(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "mvd");
 
     testIngestQuery()
         .setSql(
@@ -210,8 +210,8 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceMvdWithStringArraySkipValidation(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
-    adjustedContext.put(MultiStageQueryContext.CTX_SKIP_TYPE_VERIFICATION, "dim3");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
+    QueryContextParameters.SKIP_TYPE_VERIFICATION.set(adjustedContext, "dim3");
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -250,7 +250,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceMvdWithMvd(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -342,7 +342,7 @@ public class MSQArraysTest extends MSQTestBase
                                             .build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_USE_AUTO_SCHEMAS, true);
+    QueryContextParameters.USE_AUTO_COLUMN_SCHEMAS.set(adjustedContext, true);
 
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
@@ -372,7 +372,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testInsertArraysWithStringArraysAsMVDs(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "mvd");
 
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
@@ -549,7 +549,7 @@ public class MSQArraysTest extends MSQTestBase
                                             .build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
@@ -746,7 +746,7 @@ public class MSQArraysTest extends MSQTestBase
                                              .build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, arrayIngestMode);
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, arrayIngestMode);
 
     Query<?> expectedQuery = newScanQueryBuilder()
         .dataSource(dataFileExternalDataSource)

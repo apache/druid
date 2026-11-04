@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { QueryState } from '../../../utils';
-import { shallow } from '../../../utils/shallow-renderer';
 
 import type { SupervisorStatisticsTableRow } from './supervisor-statistics-table';
 import {
@@ -38,19 +39,22 @@ describe('SupervisorStatisticsTable', () => {
   }
 
   it('matches snapshot on init', () => {
-    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+    const { container } = render(makeSupervisorStatisticsTable());
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot on loading', () => {
     supervisorStatisticsState = QueryState.LOADING;
 
-    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+    const { container } = render(makeSupervisorStatisticsTable());
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot on error', () => {
     supervisorStatisticsState = new QueryState({ error: new Error('test error') });
 
-    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+    const { container } = render(makeSupervisorStatisticsTable());
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot on no data', () => {
@@ -58,7 +62,8 @@ describe('SupervisorStatisticsTable', () => {
       data: normalizeSupervisorStatisticsResults({}),
     });
 
-    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+    const { container } = render(makeSupervisorStatisticsTable());
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot on some data', () => {
@@ -105,6 +110,7 @@ describe('SupervisorStatisticsTable', () => {
       }),
     });
 
-    expect(shallow(makeSupervisorStatisticsTable())).toMatchSnapshot();
+    const { container } = render(makeSupervisorStatisticsTable());
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

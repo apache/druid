@@ -63,6 +63,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.Objects;
 
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
@@ -471,5 +472,26 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   {
     // Flags that are not implied by version codes < COMPRESSED must be written. This includes MULTI_VALUE_V3.
     return flags != NO_FLAGS && flags != Feature.MULTI_VALUE.getMask();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final DictionaryEncodedColumnPartSerde that = (DictionaryEncodedColumnPartSerde) o;
+    return Objects.equals(byteOrder, that.byteOrder)
+           && Objects.equals(bitmapSerdeFactory, that.bitmapSerdeFactory)
+           && Objects.equals(columnFormatSpec, that.columnFormatSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(byteOrder, bitmapSerdeFactory, columnFormatSpec);
   }
 }

@@ -622,4 +622,122 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         result
     );
   }
+
+  @Test
+  @Timeout(60)
+  public void test_groupByUnionWithFilteredProjectedArms_task_withRealtime()
+  {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT \"channel\", COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT \"channel\" FROM \"%s\" WHERE \"countryName\" = 'Australia'\n"
+        + "  UNION ALL\n"
+        + "  SELECT UPPER(\"channel\") FROM \"%s\" WHERE \"countryName\" = 'Australia' AND \"channel\" = '#de.wikipedia'\n"
+        + ")\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 1 DESC",
+        dataSource,
+        dataSource
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"#en.wikipedia", 63},
+            new Object[]{"#de.wikipedia", 2},
+            new Object[]{"#DE.WIKIPEDIA", 2}
+        ),
+        payload.getResults().getResults()
+    );
+
+    // Verify that for the first stage, each arm issued its own realtime query and no files were read.
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(payload, 0);
+    Assertions.assertEquals(2, channelSums.queries());
+    Assertions.assertEquals(2, channelSums.totalQueries());
+    Assertions.assertEquals(0, channelSums.files());
+    Assertions.assertEquals(0, channelSums.totalFiles());
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_groupByUnionWithFilteredProjectedArms_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT \"channel\", COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT \"channel\" FROM \"%s\" WHERE \"countryName\" = 'Australia'\n"
+        + "  UNION ALL\n"
+        + "  SELECT UPPER(\"channel\") FROM \"%s\" WHERE \"countryName\" = 'Australia' AND \"channel\" = '#de.wikipedia'\n"
+        + ")\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 1 DESC",
+        dataSource,
+        dataSource
+    );
+
+    final String result = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals("#en.wikipedia,63\n#de.wikipedia,2\n#DE.WIKIPEDIA,2", result);
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_scanUnionWithFilteredProjectedArms_task_withRealtime()
+  {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT \"channel\", \"page\"\n"
+        + "FROM (\n"
+        + "  SELECT \"channel\", \"page\" FROM \"%s\" WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10\n"
+        + "  UNION ALL\n"
+        + "  SELECT UPPER(\"channel\"), \"user\" FROM \"%s\"\n"
+        + "  WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10 AND \"page\" = 'Coca-Cola formula'\n"
+        + ")\n"
+        + "ORDER BY 1, 2",
+        dataSource,
+        dataSource
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"#EN.WIKIPEDIA", "124.169.17.234"},
+            new Object[]{"#en.wikipedia", "Coca-Cola formula"},
+            new Object[]{"#en.wikipedia", "List of Harry Potter characters"}
+        ),
+        payload.getResults().getResults()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_scanUnionWithFilteredProjectedArms_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT \"channel\", \"page\"\n"
+        + "FROM (\n"
+        + "  SELECT \"channel\", \"page\" FROM \"%s\" WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10\n"
+        + "  UNION ALL\n"
+        + "  SELECT UPPER(\"channel\"), \"user\" FROM \"%s\"\n"
+        + "  WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10 AND \"page\" = 'Coca-Cola formula'\n"
+        + ")\n"
+        + "ORDER BY 1, 2",
+        dataSource,
+        dataSource
+    );
+
+    final String result = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals(
+        "#EN.WIKIPEDIA,124.169.17.234\n"
+        + "#en.wikipedia,Coca-Cola formula\n"
+        + "#en.wikipedia,List of Harry Potter characters",
+        result
+    );
+  }
 }

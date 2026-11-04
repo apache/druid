@@ -116,7 +116,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
             placeholder="Enter the lookup version"
             rightElement={
               <Button
-                minimal
+                variant="minimal"
                 text="Set to current ISO time"
                 onClick={() => onChange('version', new Date().toISOString())}
               />

@@ -16,16 +16,17 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
 
 import { HeaderBar } from './header-bar';
 
 describe('HeaderBar', () => {
   it('matches snapshot', () => {
-    const headerBar = shallow(
+    const { container } = render(
       <HeaderBar activeView="workbench" capabilities={Capabilities.FULL} onUnrestrict={() => {}} />,
     );
-    expect(headerBar).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

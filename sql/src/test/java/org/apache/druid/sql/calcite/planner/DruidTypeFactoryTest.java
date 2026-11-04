@@ -72,4 +72,41 @@ public class DruidTypeFactoryTest
     Assertions.assertNotNull(leastRestrictive);
     Assertions.assertEquals(SqlTypeName.VARCHAR, leastRestrictive.getSqlTypeName());
   }
+
+  @Test
+  public void testLeastRestrictiveDefaultDecimalAndFractionalDecimal()
+  {
+    final RelDataType defaultDecimalType = typeFactory.createSqlType(SqlTypeName.DECIMAL);
+    Assertions.assertEquals(19, defaultDecimalType.getPrecision());
+    Assertions.assertEquals(0, defaultDecimalType.getScale());
+    Assertions.assertEquals(
+        typeFactory.createSqlType(SqlTypeName.DECIMAL, 20, 1),
+        typeFactory.leastRestrictive(
+            ImmutableList.of(defaultDecimalType, typeFactory.createSqlType(SqlTypeName.DECIMAL, 2, 1))
+        )
+    );
+  }
+
+  @Test
+  public void testLeastRestrictiveDecimals()
+  {
+    Assertions.assertEquals(
+        typeFactory.createSqlType(SqlTypeName.DECIMAL, 10, 2),
+        typeFactory.leastRestrictive(
+            ImmutableList.of(
+                typeFactory.createSqlType(SqlTypeName.DECIMAL, 10, 2),
+                typeFactory.createSqlType(SqlTypeName.DECIMAL, 2, 1)
+            )
+        )
+    );
+    Assertions.assertEquals(
+        typeFactory.createSqlType(SqlTypeName.DECIMAL),
+        typeFactory.leastRestrictive(
+            ImmutableList.of(
+                typeFactory.createSqlType(SqlTypeName.DECIMAL),
+                typeFactory.createSqlType(SqlTypeName.INTEGER)
+            )
+        )
+    );
+  }
 }

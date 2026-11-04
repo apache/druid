@@ -26,6 +26,7 @@ import org.apache.druid.msq.querykit.datasource.FilteredDataSourcePlanner;
 import org.apache.druid.msq.querykit.datasource.InlineDataSourcePlanner;
 import org.apache.druid.msq.querykit.datasource.JoinDataSourcePlanner;
 import org.apache.druid.msq.querykit.datasource.LookupDataSourcePlanner;
+import org.apache.druid.msq.querykit.datasource.ProjectDataSourcePlanner;
 import org.apache.druid.msq.querykit.datasource.QueryDataSourcePlanner;
 import org.apache.druid.msq.querykit.datasource.RestrictedDataSourcePlanner;
 import org.apache.druid.msq.querykit.datasource.TableDataSourcePlanner;
@@ -37,6 +38,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.ProjectDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -67,6 +69,7 @@ public class DataSourcePlanners
           Map.entry(InlineDataSource.class, new InlineDataSourcePlanner()),
           Map.entry(LookupDataSource.class, new LookupDataSourcePlanner()),
           Map.entry(FilteredDataSource.class, new FilteredDataSourcePlanner()),
+          Map.entry(ProjectDataSource.class, new ProjectDataSourcePlanner()),
           Map.entry(UnnestDataSource.class, new UnnestDataSourcePlanner()),
           Map.entry(QueryDataSource.class, new QueryDataSourcePlanner()),
           Map.entry(UnionDataSource.class, new UnionDataSourcePlanner()),

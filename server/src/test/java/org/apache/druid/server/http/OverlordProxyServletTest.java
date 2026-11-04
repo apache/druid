@@ -21,7 +21,12 @@ package org.apache.druid.server.http;
 
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.ResponseIdentityHeaderHandler;
 import org.easymock.EasyMock;
+import org.eclipse.jetty.client.Response;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpFields;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -46,9 +51,94 @@ public class OverlordProxyServletTest
 
     EasyMock.replay(overlordClient, request);
 
-    URI uri = URI.create(new OverlordProxyServlet(overlordClient, null, null).rewriteTarget(request));
+    URI uri = URI.create(
+        new OverlordProxyServlet(overlordClient, null, null, new ServerConfig()).rewriteTarget(request)
+    );
     Assertions.assertEquals("https://overlord:port/druid/over%3Alord/worker?param1=test&param2=test2", uri.toString());
 
     EasyMock.verify(overlordClient, request);
+  }
+
+  @Test
+  public void testProxyCompleteIdentityWhenEnabled()
+  {
+    final Response serverResponse = mockResponse(
+        HttpFields.from(
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, "overlord:8090"),
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER, "druid/overlord"),
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER, "39.0.0")
+        ),
+        1
+    );
+    final HttpField serverField = new HttpField(
+        ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER,
+        "overlord:8090"
+    );
+
+    Assertions.assertEquals(
+        serverField,
+        new OverlordProxyServlet(null, null, null, enabledServerConfig())
+            .filterServerResponseHeader(null, serverResponse, serverField)
+    );
+    EasyMock.verify(serverResponse);
+  }
+
+  @Test
+  public void testSuppressPartialIdentity()
+  {
+    final Response serverResponse = mockResponse(
+        HttpFields.from(
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, "overlord:8090"),
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER, "druid/overlord")
+        ),
+        1
+    );
+
+    Assertions.assertNull(
+        new OverlordProxyServlet(null, null, null, enabledServerConfig())
+            .filterServerResponseHeader(
+                null,
+                serverResponse,
+                new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, "overlord:8090")
+            )
+    );
+    EasyMock.verify(serverResponse);
+  }
+
+  @Test
+  public void testSuppressIdentityWhenDisabled()
+  {
+    final Response serverResponse = EasyMock.strictMock(Response.class);
+    EasyMock.replay(serverResponse);
+
+    Assertions.assertNull(
+        new OverlordProxyServlet(null, null, null, new ServerConfig())
+            .filterServerResponseHeader(
+                null,
+                serverResponse,
+                new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, "overlord:8090")
+            )
+    );
+    EasyMock.verify(serverResponse);
+  }
+
+  private static ServerConfig enabledServerConfig()
+  {
+    return new ServerConfig()
+    {
+      @Override
+      public boolean isEnableResponseIdentityHeaders()
+      {
+        return true;
+      }
+    };
+  }
+
+  private static Response mockResponse(final HttpFields headers, final int calls)
+  {
+    final Response serverResponse = EasyMock.strictMock(Response.class);
+    EasyMock.expect(serverResponse.getHeaders()).andReturn(headers).times(calls);
+    EasyMock.replay(serverResponse);
+    return serverResponse;
   }
 }

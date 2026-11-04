@@ -27,6 +27,7 @@ import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  */
@@ -110,5 +111,24 @@ public class FloatNumericColumnPartSerde implements ColumnPartSerde
              .setHasMultipleValues(false)
              .setNumericColumnSupplier(columnSupplier);
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final FloatNumericColumnPartSerde that = (FloatNumericColumnPartSerde) o;
+    return Objects.equals(byteOrder, that.byteOrder);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(byteOrder);
   }
 }

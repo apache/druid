@@ -42,6 +42,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -90,50 +91,38 @@ public class UnloadUnusedSegmentsTest
     DateTime start1 = DateTimes.of("2012-01-01");
     DateTime start2 = DateTimes.of("2012-02-01");
     DateTime version = DateTimes.of("2012-05-01");
-    segment1 = new DataSegment(
-        "datasource1",
-        new Interval(start1, start1.plusHours(1)),
-        version.toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        0,
-        11L
-    );
-    segment2 = new DataSegment(
-        "datasource2",
-        new Interval(start1, start1.plusHours(1)),
-        version.toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        0,
-        7L
-    );
-    final DataSegment realtimeOnlySegment = new DataSegment(
-        "datasource2",
-        new Interval(start2, start2.plusHours(1)),
-        version.toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        0,
-        7L
-    );
-    final DataSegment broadcastSegment = new DataSegment(
-        broadcastDatasource,
-        new Interval(start1, start1.plusHours(1)),
-        version.toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        0,
-        7L
-    );
+    segment1 = DataSegment.builder(SegmentId.of("datasource1", new Interval(start1, start1.plusHours(1)), version.toString(), 0))
+                          .loadSpec(Collections.emptyMap())
+                          .dimensions(Collections.emptyList())
+                          .metrics(Collections.emptyList())
+                          .shardSpec(NoneShardSpec.instance())
+                          .binaryVersion(0)
+                          .size(11L)
+                          .build();
+    segment2 = DataSegment.builder(SegmentId.of("datasource2", new Interval(start1, start1.plusHours(1)), version.toString(), 0))
+                          .loadSpec(Collections.emptyMap())
+                          .dimensions(Collections.emptyList())
+                          .metrics(Collections.emptyList())
+                          .shardSpec(NoneShardSpec.instance())
+                          .binaryVersion(0)
+                          .size(7L)
+                          .build();
+    final DataSegment realtimeOnlySegment = DataSegment.builder(SegmentId.of("datasource2", new Interval(start2, start2.plusHours(1)), version.toString(), 0))
+                                                       .loadSpec(Collections.emptyMap())
+                                                       .dimensions(Collections.emptyList())
+                                                       .metrics(Collections.emptyList())
+                                                       .shardSpec(NoneShardSpec.instance())
+                                                       .binaryVersion(0)
+                                                       .size(7L)
+                                                       .build();
+    final DataSegment broadcastSegment = DataSegment.builder(SegmentId.of(broadcastDatasource, new Interval(start1, start1.plusHours(1)), version.toString(), 0))
+                                                    .loadSpec(Collections.emptyMap())
+                                                    .dimensions(Collections.emptyList())
+                                                    .metrics(Collections.emptyList())
+                                                    .shardSpec(NoneShardSpec.instance())
+                                                    .binaryVersion(0)
+                                                    .size(7L)
+                                                    .build();
 
     segments = new ArrayList<>();
     segments.add(segment1);

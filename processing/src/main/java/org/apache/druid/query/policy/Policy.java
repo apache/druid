@@ -22,10 +22,13 @@ package org.apache.druid.query.policy;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.CursorBuildSpec;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  * Extensible interface for a granular-level (e.x. row filter) restriction on read-table access. Implementations must be
@@ -49,6 +52,11 @@ public interface Policy
    * required columns.
    */
   CursorBuildSpec visit(CursorBuildSpec spec);
+
+  /**
+   * Returns the list of columns for {@link DataSource#getReservedColumns()} of {@link RestrictedDataSource}.
+   */
+  Set<String> getReservedColumns();
 
   /**
    * @return a {@link SegmentPruner} which can be used to skip processing entire segments if it is possible to determine

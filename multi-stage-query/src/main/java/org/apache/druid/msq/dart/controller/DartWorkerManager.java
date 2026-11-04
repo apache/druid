@@ -215,6 +215,13 @@ public class DartWorkerManager implements WorkerManager
       }
 
       stopFuture.set(null);
+    } else if (state.get() == State.STOPPED) {
+      try {
+        FutureUtils.getUnchecked(stopFuture, false);
+      }
+      catch (Throwable ignored) {
+        // Suppress errors.
+      }
     }
   }
 }

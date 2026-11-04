@@ -23,7 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
+import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -49,6 +52,40 @@ public class MomentSketchAggregatorFactoryTest
     );
 
     Assertions.assertEquals(factory, other);
+  }
+
+  @Test
+  public void testMakeAggregateCombiner()
+  {
+    final MomentSketchAggregatorFactory factory = new MomentSketchAggregatorFactory("name", "fieldName", 10, true);
+
+    final MomentSketchWrapper first = new MomentSketchWrapper(10);
+    first.setCompressed(true);
+    first.add(1);
+    first.add(2);
+    final MomentSketchWrapper second = new MomentSketchWrapper(10);
+    second.setCompressed(true);
+    second.add(3);
+
+    final TestObjectColumnSelector<MomentSketchWrapper> selector =
+        new TestObjectColumnSelector<>(new MomentSketchWrapper[]{first, second, null});
+    final AggregateCombiner<MomentSketchWrapper> combiner = factory.makeAggregateCombiner();
+
+    combiner.reset(selector);
+    selector.increment();
+    combiner.fold(selector);
+    selector.increment();
+    combiner.fold(selector);
+
+    final MomentSketchWrapper combined = combiner.getObject();
+    Assertions.assertNotNull(combined);
+    Assertions.assertEquals(3.0, combined.getPowerSums()[0], 1e-10);
+    Assertions.assertEquals(1.0, combined.getMin(), 1e-10);
+    Assertions.assertEquals(3.0, combined.getMax(), 1e-10);
+    Assertions.assertTrue(combined.getCompressed());
+    // the inputs come from segment columns and must not be modified
+    Assertions.assertEquals(2.0, first.getPowerSums()[0], 1e-10);
+    Assertions.assertEquals(1.0, second.getPowerSums()[0], 1e-10);
   }
 
   @Test

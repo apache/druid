@@ -199,7 +199,7 @@ public class RowSignatures
    * {@link ComplexSqlType} is interned. This is important because Calcite checks that the references are equal
    * instead of the objects being equivalent.
    * <p>
-   * This method uses {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean) ensures that if the
+   * This method uses {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean)} ensures that if the
    * type factory is a {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl} that the type is passed through
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl#canonize(RelDataType)} which interns the type.
    */
@@ -215,7 +215,7 @@ public class RowSignatures
    * Calcite {@link RelDataType} for Druid complex columns, to preserve complex type information.
    * <p>
    * If using with other operations of a {@link RelDataTypeFactory}, consider wrapping the creation of this type in
-   * {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean) to ensure that if the type factory is a
+   * {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean)} to ensure that if the type factory is a
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl} that the type is passed through
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl#canonize(RelDataType)} which interns the type.
    * <p>

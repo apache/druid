@@ -19,7 +19,11 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpResponseStatus;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  */
@@ -27,6 +31,7 @@ public class StatusResponseHolder
 {
   private final HttpResponseStatus status;
   private final StringBuilder builder;
+  private StreamingCharsetDecoder streamingDecoder;
 
   public StatusResponseHolder(
       HttpResponseStatus status,
@@ -50,5 +55,36 @@ public class StatusResponseHolder
   public String getContent()
   {
     return builder.toString();
+  }
+
+  /**
+   * Append the bytes of a chunk, decoded as UTF-8; multi-byte characters split across chunk
+   * boundaries are reassembled. See {@link StreamingCharsetDecoder} for the details.
+   */
+  public StatusResponseHolder addChunk(ByteBuf chunk)
+  {
+    return addChunk(chunk, StandardCharsets.UTF_8);
+  }
+
+  public StatusResponseHolder addChunk(ByteBuf chunk, Charset charset)
+  {
+    if (streamingDecoder == null) {
+      streamingDecoder = new StreamingCharsetDecoder(builder, charset);
+    }
+    streamingDecoder.append(chunk);
+    return this;
+  }
+
+  /**
+   * Signal end-of-input to the streaming decoder so any trailing bytes that could not yet form a
+   * character emit replacement characters rather than silently disappearing. A no-op if no bytes
+   * were ever appended.
+   */
+  public StatusResponseHolder done()
+  {
+    if (streamingDecoder != null) {
+      streamingDecoder.finish();
+    }
+    return this;
   }
 }

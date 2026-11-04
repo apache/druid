@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import type { QueryExplanation } from '../../../utils';
 import { QueryState } from '../../../utils';
-import { shallow } from '../../../utils/shallow-renderer';
 
 import { ExplainDialog } from './explain-dialog';
 
@@ -26,6 +27,7 @@ let explainState: QueryState<QueryExplanation[] | string> = QueryState.INIT;
 
 jest.mock('../../../hooks', () => {
   return {
+    ...jest.requireActual('../../../hooks'),
     useQueryManager: () => [explainState],
   };
 });
@@ -43,19 +45,22 @@ describe('ExplainDialog', () => {
   }
 
   it('matches snapshot on init', () => {
-    expect(shallow(makeExplainDialog())).toMatchSnapshot();
+    render(makeExplainDialog());
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('matches snapshot on loading', () => {
     explainState = QueryState.LOADING;
 
-    expect(shallow(makeExplainDialog())).toMatchSnapshot();
+    render(makeExplainDialog());
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('matches snapshot on error', () => {
     explainState = new QueryState({ error: new Error('test error') });
 
-    expect(shallow(makeExplainDialog())).toMatchSnapshot();
+    render(makeExplainDialog());
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('matches snapshot on some data (one query)', () => {
@@ -172,7 +177,8 @@ describe('ExplainDialog', () => {
       ],
     });
 
-    expect(shallow(makeExplainDialog())).toMatchSnapshot();
+    render(makeExplainDialog());
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('matches snapshot on some data (many queries)', () => {
@@ -258,6 +264,7 @@ describe('ExplainDialog', () => {
       ],
     });
 
-    expect(shallow(makeExplainDialog())).toMatchSnapshot();
+    render(makeExplainDialog());
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

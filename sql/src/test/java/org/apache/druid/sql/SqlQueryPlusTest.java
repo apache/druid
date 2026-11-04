@@ -26,10 +26,59 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class SqlQueryPlusTest
 {
+  @Test
+  public void testSetAcceptsUnmigratedParameters()
+  {
+    final SqlQueryPlus query = SqlQueryPlus.builder("SET lane = 'fast'; SELECT 1")
+                                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                           .build();
+
+    Assertions.assertEquals("fast", query.context().get("lane"));
+  }
+
+  @Test
+  public void testSetParameterConstraintIsValidated()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 0; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains(
+                "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
+            )
+    );
+  }
+
+  @Test
+  public void testSetParameterParserFailureIsInvalidSqlInput()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 'not-an-int'; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] should be in integer format, but got [not-an-int]")
+    );
+  }
+
   @Test
   public void testSyntaxError()
   {
@@ -103,6 +152,37 @@ public class SqlQueryPlusTest
     Assertions.assertEquals(
         Map.of("key", "user-provided-value"),
         sqlQueryPlusBuilder.build().withContext(Map.of(), userProvidedContext).context()
+    );
+  }
+
+  @Test
+  public void testNullUserValueFallsBackToSystemDefault()
+  {
+    final Map<String, Object> systemDefaultContext = Map.of("key", "system-default");
+    final Map<String, Object> nullUserContext = new HashMap<>();
+    nullUserContext.put("key", null);
+
+    // A null in the request context
+    final SqlQueryPlus.Builder builder = SqlQueryPlus.builder("SELECT 1")
+                                                     .systemDefaultContext(systemDefaultContext)
+                                                     .queryContext(nullUserContext)
+                                                     .auth(CalciteTests.REGULAR_USER_AUTH_RESULT);
+    Assertions.assertEquals(systemDefaultContext, builder.build().context());
+    Assertions.assertEquals(systemDefaultContext, builder.buildJdbc().context());
+    Assertions.assertEquals(
+        systemDefaultContext,
+        builder.build().withContext(systemDefaultContext, nullUserContext).context()
+    );
+
+    // A SET statement that unsets a value from the request context
+    Assertions.assertEquals(
+        systemDefaultContext,
+        SqlQueryPlus.builder("SET key = NULL; SELECT 1")
+                    .systemDefaultContext(systemDefaultContext)
+                    .queryContext(Map.of("key", "user-provided-value"))
+                    .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                    .build()
+                    .context()
     );
   }
 }

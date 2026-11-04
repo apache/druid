@@ -32,16 +32,15 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import java.util.Map;
 
 /**
  * Tests that expect succesfully ingestng data into catalog defined tables and querying the data
@@ -581,7 +580,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.CATALOG_VALIDATION_ENABLED, false),
+        QueryContext.ofMap(QueryContextParameters.CATALOG_VALIDATION_ENABLED, false),
         null
     );
     SqlTaskStatus sqlTaskStatus = cluster.callApi().onAnyBroker(b -> b.submitSqlTask(sqlQuery));
@@ -659,7 +658,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.CATALOG_VALIDATION_ENABLED, false),
+        QueryContext.ofMap(QueryContextParameters.CATALOG_VALIDATION_ENABLED, false),
         null
     );
     SqlTaskStatus sqlTaskStatus = cluster.callApi().onAnyBroker(b -> b.submitSqlTask(sqlQuery));

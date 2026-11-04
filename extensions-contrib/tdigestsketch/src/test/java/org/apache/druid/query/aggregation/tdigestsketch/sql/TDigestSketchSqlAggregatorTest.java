@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
 
@@ -105,10 +106,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       return walker.add(
-          DataSegment.builder()
-                     .dataSource(CalciteTests.DATASOURCE1)
-                     .interval(index.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE1, index.getDataInterval(), "1", 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(0)
                      .build(),
@@ -182,7 +180,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
-            new Object[]{1.0, 3.5, 6.0}
+            new Object[]{1.0, 4.0, 6.0}
         )
     );
   }
@@ -287,9 +285,9 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            1.1,
-            2.9,
-            5.3,
+            1.0,
+            3.0,
+            5.0,
             6.0
         }
     );
@@ -331,7 +329,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
-            3.5,
+            4.0,
             6.0
         }
     );
@@ -387,7 +385,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
-            3.5,
+            4.0,
             6.0
         }
     );
@@ -451,7 +449,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
-            new Object[]{1.0, 3.5, 6.0}
+            new Object[]{1.0, 4.0, 6.0}
         )
     );
   }

@@ -36,7 +36,7 @@ is_newer_than() {
   [ "$1" -nt "$2" ]
 }
 
-SQL_DOCS_OUTPUT="lib/sql-docs.ts"
+SQL_DOCS_OUTPUT="src/editor-languages/dsql-docs.ts"
 SQL_DOCS_SCRIPT="script/create-sql-docs.mjs"
 SQL_DOCS_FILELIST="script/sql-doc-files.txt"
 

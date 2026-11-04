@@ -29,7 +29,9 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
+import org.apache.druid.indexing.overlord.OverlordMode;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -52,7 +54,6 @@ import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
@@ -153,7 +154,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       SegmentsMetadataManagerConfig segmentManagerConfig,
       Supplier<DruidCompactionConfig> compactionConfigSupplier,
       CompactionStatusTracker statusTracker,
-      CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
+      OverlordMode overlordMode,
       TaskActionClientFactory taskActionClientFactory,
       DruidInputSourceFactory druidInputSourceFactory,
       ScheduledExecutorFactory executorFactory,
@@ -178,7 +179,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.executor = executorFactory.create(1, "CompactionScheduler-%s");
     this.statusTracker = statusTracker;
     this.shouldPollSegments = segmentManager != null
-                              && !coordinatorOverlordServiceConfig.isEnabled();
+                              && overlordMode == OverlordMode.STANDALONE;
     this.overlordClient = new LocalOverlordClient(taskMaster, taskQueryTool, objectMapper);
     this.brokerClient = brokerClient;
     this.activeSupervisors = new ConcurrentHashMap<>();
@@ -198,16 +199,16 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       }
 
       @Override
-      public void locationChanged(String taskId, TaskLocation newLocation)
+      public void locationChanged(Task task, TaskLocation newLocation)
       {
         // Do nothing
       }
 
       @Override
-      public void statusChanged(String taskId, TaskStatus status)
+      public void statusChanged(Task task, TaskStatus status)
       {
         if (status.isComplete()) {
-          onTaskFinished(taskId, status);
+          onTaskFinished(task, status);
           launchPendingJobs();
         }
       }
@@ -443,12 +444,12 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     }
   }
 
-  private void onTaskFinished(String taskId, TaskStatus taskStatus)
+  private void onTaskFinished(Task task, TaskStatus taskStatus)
   {
-    statusTracker.onTaskFinished(taskId, taskStatus);
+    statusTracker.onTaskFinished(task.getId(), taskStatus);
 
     updateQueueIfComputed(queue -> {
-      queue.onTaskFinished(taskId, taskStatus);
+      queue.onTaskFinished(task.getId(), taskStatus);
       updateCompactionSnapshots(queue);
     });
   }

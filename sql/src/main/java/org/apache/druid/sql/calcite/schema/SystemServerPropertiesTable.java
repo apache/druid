@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
@@ -33,6 +34,7 @@ import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -44,11 +46,9 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.table.RowSignatures;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -192,16 +192,18 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
   {
     final String url = druidNode.getUriToUse().resolve("/status/properties").toString();
     try {
-      final Request request = new Request(HttpMethod.GET, new URL(url));
+      final Request request = new Request(HttpMethod.GET, URIs.toURL(url));
       final StringFullResponseHolder response;
       response = httpClient
           .go(request, new StringFullResponseHandler(StandardCharsets.UTF_8))
           .get();
 
-      if (response.getStatus().getCode() != HttpServletResponse.SC_OK) {
-        final String errorMsg = StringUtils.format("HTTP %d: %s",
-                                                    response.getStatus().getCode(),
-                                                    response.getStatus().getReasonPhrase());
+      if (response.getStatus().code() != HttpServletResponse.SC_OK) {
+        final String errorMsg = StringUtils.format(
+            "HTTP %d: %s",
+            response.getStatus().code(),
+            response.getStatus().reasonPhrase()
+        );
         log.warn("Failed to get properties from node[%s]: error[%s]", url, errorMsg);
         return new PropertiesResult(new HashMap<>(), errorMsg);
       }

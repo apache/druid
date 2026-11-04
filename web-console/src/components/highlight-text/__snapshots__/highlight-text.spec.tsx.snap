@@ -1,21 +1,21 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`HighlightText matches snapshot 1`] = `
 <span
-  className="highlight-text"
+  class="highlight-text"
 >
   <span
-    className="pre"
+    class="pre"
   >
     H
   </span>
   <span
-    className="highlighted"
+    class="highlighted"
   >
     woot
   </span>
   <span
-    className="post"
+    class="post"
   >
      world
   </span>

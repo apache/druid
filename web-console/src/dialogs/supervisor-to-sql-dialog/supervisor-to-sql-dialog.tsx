@@ -25,14 +25,13 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   Radio,
   RadioGroup,
   TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import React, { useState } from 'react';
+import React, { useEffectEvent, useState } from 'react';
 
 import { ExternalLink } from '../../components';
 import type { IngestionSpec, QueryWithContext } from '../../druid-models';
@@ -179,11 +178,12 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
     }
   }, [selectedSupervisor, supervisorSource]);
 
+  const reparsePastedSupervisor = useEffectEvent(() => parsePastedSupervisor());
   React.useEffect(() => {
     if (supervisorSource !== 'paste') return;
     // Always reparse on entering paste mode or editing the text so a stale select-mode spec is
     // dropped and a cleared paste disables Generate SQL
-    parsePastedSupervisor();
+    reparsePastedSupervisor();
   }, [pastedSupervisor, supervisorSource]);
 
   return (
@@ -216,8 +216,8 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
 
         {supervisorSource === 'select' ? (
           <FormGroup label="Select supervisor">
-            <Popover
-              position={Position.BOTTOM_LEFT}
+            <PopoverNext
+              placement="bottom-start"
               disabled={!availableSupervisors.length}
               content={
                 <Menu>
@@ -231,13 +231,15 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
                   ))}
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <Button
                 text={selectedSupervisor || 'Select supervisor'}
-                rightIcon={IconNames.CARET_DOWN}
+                endIcon={IconNames.CARET_DOWN}
                 disabled={!availableSupervisors.length}
               />
-            </Popover>
+            </PopoverNext>
           </FormGroup>
         ) : (
           <FormGroup

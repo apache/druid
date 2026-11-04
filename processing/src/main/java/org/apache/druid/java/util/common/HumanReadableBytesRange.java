@@ -38,7 +38,7 @@ import java.lang.annotation.Target;
  *
  * <code>
  *   class Size {
- *     @HumanReadableBytesRange( min = 5, max = 1024 )
+ *     &#64;HumanReadableBytesRange( min = 5, max = 1024 )
  *     private HumanReadableBytes size;
  *   }
  * </code>

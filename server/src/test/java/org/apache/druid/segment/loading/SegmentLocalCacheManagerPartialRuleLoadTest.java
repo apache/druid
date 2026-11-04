@@ -40,9 +40,16 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AsyncCursorHolder;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.PartialQueryableIndexSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -50,6 +57,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
+import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -67,13 +77,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manager-level tests for the partial-load-rule {@link SegmentLocalCacheManager#load} path: a segment whose
@@ -119,6 +138,22 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
                              .build()
   );
 
+  // group by dim1 + count, which both projections can answer
+  private static final CursorBuildSpec COUNT_BY_DIM1 =
+      CursorBuildSpec.builder()
+                     .setGroupingColumns(List.of("dim1"))
+                     .setAggregators(List.of(new CountAggregatorFactory("_count")))
+                     .setPhysicalColumns(Set.of("dim1"))
+                     .build();
+
+  // group by dim1 + sum(metric1), which only AGG_BUNDLE (or the base table) can answer
+  private static final CursorBuildSpec SUM_BY_DIM1 =
+      CursorBuildSpec.builder()
+                     .setGroupingColumns(List.of("dim1"))
+                     .setAggregators(List.of(new LongSumAggregatorFactory("_metric1_sum", "metric1")))
+                     .setPhysicalColumns(Set.of("dim1", "metric1"))
+                     .build();
+
   private static final List<InputRow> ROWS = Arrays.asList(
       new ListBasedInputRow(ROW_SIGNATURE, TIME, ROW_SIGNATURE.getColumnNames(), Arrays.asList("a", 1L)),
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(1), ROW_SIGNATURE.getColumnNames(), Arrays.asList("a", 2L)),
@@ -130,6 +165,10 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
+  // the same segment, laid out as a legacy V10 segment whose only bundle is the root bundle
+  private static File LEGACY_ROOT_ONLY_DEEP_STORAGE_DIR;
+  // as above, but also without per-column file lists
+  private static File LEGACY_ROOT_ONLY_NO_COLUMN_FILES_DEEP_STORAGE_DIR;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
@@ -168,7 +207,57 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
                                                        .build())
                                    .rows(ROWS)
                                    .buildMMappedIndexFile();
+    LEGACY_ROOT_ONLY_DEEP_STORAGE_DIR = writeRootOnlyCopy(
+        DEEP_STORAGE_DIR,
+        SHARED_TEMPORARY_FOLDER.newFolder("legacy_" + ThreadLocalRandom.current().nextInt()),
+        false
+    );
+    LEGACY_ROOT_ONLY_NO_COLUMN_FILES_DEEP_STORAGE_DIR = writeRootOnlyCopy(
+        DEEP_STORAGE_DIR,
+        SHARED_TEMPORARY_FOLDER.newFolder("legacy_no_column_files_" + ThreadLocalRandom.current().nextInt()),
+        true
+    );
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
+
+  /**
+   * Writes a copy of the V10 segment in {@code sourceDir} to {@code targetDir} with every container re-tagged to the
+   * root bundle, the layout of a legacy segment written before bundle names were recorded. Container offsets are
+   * relative to the end of the header, so only the metadata changes.
+   *
+   * @param dropColumnFiles also drop the per-column file lists, which legacy segments predate, so prefetches fall back
+   *                        to downloading whole bundles
+   */
+  private static File writeRootOnlyCopy(File sourceDir, File targetDir, boolean dropColumnFiles) throws IOException
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final byte[] source = Files.readAllBytes(new File(sourceDir, IndexIO.V10_FILE_NAME).toPath());
+    Assertions.assertEquals(IndexIO.V10_VERSION, source[0]);
+    Assertions.assertEquals(CompressionStrategy.NONE.getId(), source[1], "fixture metadata must be uncompressed");
+    final int metadataLength = ByteBuffer.wrap(source, 2, Integer.BYTES).order(ByteOrder.LITTLE_ENDIAN).getInt();
+    final int headerLength = 2 + Integer.BYTES + metadataLength;
+    final SegmentFileMetadata metadata =
+        mapper.readValue(source, 2 + Integer.BYTES, metadataLength, SegmentFileMetadata.class);
+    final SegmentFileMetadata rootOnly = new SegmentFileMetadata(
+        metadata.getContainers()
+                .stream()
+                .map(container -> new SegmentFileContainerMetadata(container.getStartOffset(), container.getSize(), null))
+                .toList(),
+        metadata.getFiles(),
+        metadata.getInterval(),
+        metadata.getColumnDescriptors(),
+        dropColumnFiles ? null : metadata.getColumnFiles(),
+        metadata.getProjections(),
+        metadata.getBitmapEncoding()
+    );
+    final byte[] rootOnlyMetadata = mapper.writeValueAsBytes(rootOnly);
+    try (OutputStream out = new FileOutputStream(new File(targetDir, IndexIO.V10_FILE_NAME))) {
+      out.write(new byte[]{IndexIO.V10_VERSION, CompressionStrategy.NONE.getId()});
+      out.write(ByteBuffer.allocate(Integer.BYTES).order(ByteOrder.LITTLE_ENDIAN).putInt(rootOnlyMetadata.length).array());
+      out.write(rootOnlyMetadata);
+      out.write(source, headerLength, source.length - headerLength);
+    }
+    return targetDir;
   }
 
   @BeforeEach
@@ -755,6 +844,39 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   @Test
+  void testRangeReaderNullDoesNotDisturbANonPartialEntry() throws Exception
+  {
+    // A non-partial cache entry sits at this segment id and the coordinator asks for a rule this historical cannot
+    // honor. Giving up on the rule must leave that entry alone: it is not going to be replaced by a partial one, so
+    // there is nothing to clear out of the way, and discarding its cached data would buy nothing. Evicting it used
+    // to be attempted before the range-reader check, which both destroyed cache for nothing when the entry was
+    // unheld and failed the load outright when it was held, as it is here.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+
+    final DataSegment noRangeReader =
+        partialWrapperSegmentWithNullRangeReader(List.of(AGG_BUNDLE), "v1:cannot-honor");
+    // An on-demand acquire of a segment whose load spec cannot range-read registers a non-partial entry, held for
+    // as long as the action is open.
+    final AcquireSegmentAction inFlightQuery = manager.acquireSegment(noRangeReader, AcquireMode.PARTIAL);
+    try {
+      Assertions.assertNotNull(
+          location.getCacheEntry(id),
+          "precondition: an in-flight on-demand acquire holds a non-partial entry"
+      );
+
+      manager.load(noRangeReader);
+
+      Assertions.assertNotNull(location.getCacheEntry(id), "the non-partial entry is untouched");
+      Assertions.assertNull(manager.getRuleFingerprintForSegment(SEGMENT_ID), "and no rule is applied");
+    }
+    finally {
+      inFlightQuery.close();
+    }
+  }
+
+  @Test
   void testLoadFailureLeavesNoRuleApplied() throws Exception
   {
     // Wrapper referring to a non-existent projection — wrapper.getSelectedBundleNames throws before applyRule fires.
@@ -778,6 +900,117 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertNull(
         manager.getRuleFingerprintForSegment(SEGMENT_ID),
         "failed load must not leave a rule applied on the metadata entry"
+    );
+  }
+
+  @Test
+  void testFailedEagerDownloadRestoresThePriorRule() throws Exception
+  {
+    // A reload whose eager downloads fail must put the PRIOR rule back rather than clear the rule outright. The
+    // historical keeps serving the replica and keeps announcing the prior profile (the failed load never announces a
+    // new one), so the coordinator has to still find that profile's bundles pinned; clearing would leave the replica
+    // advertising a footprint it no longer holds, with every bundle of it evictable.
+    final StorageLoadingThreadPool loadingPool = StorageLoadingThreadPool.createFromConfig(
+        SegmentLoaderConfig.builder()
+                           .locations(List.of(new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null)))
+                           .virtualStorage(true)
+                           .virtualStoragePartialDownloadsEnabled(true)
+                           .build()
+    );
+    manager = makeManagerAtLocations(true, true, List.of(cacheRoot), loadingPool);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE), "v1:rule-original"));
+    final PartialSegmentMetadataCacheEntry meta = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertEquals("v1:rule-original", meta.getRuleFingerprint());
+    Assertions.assertTrue(meta.isBundleRuleHeld(AGG_BUNDLE));
+
+    // Stopping the loading pool makes every eager download for the new rule's bundle fail to even be submitted.
+    loadingPool.stop();
+
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> manager.load(partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), "v2:rule-updated"))
+    );
+
+    Assertions.assertEquals(
+        "v1:rule-original",
+        manager.getRuleFingerprintForSegment(SEGMENT_ID),
+        "a failed reload must restore the prior rule's fingerprint, not clear it"
+    );
+    Assertions.assertTrue(
+        meta.isBundleRuleHeld(AGG_BUNDLE),
+        "the prior rule's bundle must still be pinned after the failed reload"
+    );
+    Assertions.assertTrue(
+        location.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)),
+        "the prior rule's bundle must never have been unreserved during the attempt, so it was never evictable"
+    );
+    Assertions.assertFalse(
+        meta.isBundleRuleHeld(OTHER_AGG_BUNDLE),
+        "the attempted rule's bundle must not be left pinned"
+    );
+  }
+
+  @Test
+  void testRestartAfterFailedReloadReappliesThePriorRuleNotTheFailedOne() throws Exception
+  {
+    // The durable half of the rollback. A failed reload restores the prior rule in memory and the replica keeps
+    // announcing it, so the info file has to still describe that rule too. If it described the rule that just
+    // failed, a restart would reapply it from disk, and a second failure there takes the replica down entirely:
+    // SegmentManager.loadSegmentOnBootstrap drops on failure and the segment never gets announced.
+    final StorageLoadingThreadPool loadingPool = StorageLoadingThreadPool.createFromConfig(
+        SegmentLoaderConfig.builder()
+                           .locations(List.of(new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null)))
+                           .virtualStorage(true)
+                           .virtualStoragePartialDownloadsEnabled(true)
+                           .build()
+    );
+    final SegmentLocalCacheManager beforeRestart =
+        makeManagerAtLocations(true, true, List.of(cacheRoot), loadingPool);
+    try {
+      beforeRestart.load(partialWrapperSegment(List.of(AGG_BUNDLE), "v1:rule-original"));
+      Assertions.assertEquals("v1:rule-original", beforeRestart.getRuleFingerprintForSegment(SEGMENT_ID));
+
+      loadingPool.stop();
+      Assertions.assertThrows(
+          SegmentLoadingException.class,
+          () -> beforeRestart.load(partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), "v2:rule-updated"))
+      );
+      Assertions.assertEquals(
+          "v1:rule-original",
+          beforeRestart.getRuleFingerprintForSegment(SEGMENT_ID),
+          "precondition: the failed reload rolled the in-memory rule back"
+      );
+    }
+    finally {
+      beforeRestart.shutdown();
+    }
+
+    // Restart over the same cache directory.
+    manager = makeManager(true, true);
+    final List<DataSegment> cached = manager.getCachedSegments();
+    final DataSegment rediscovered = cached.stream()
+                                           .filter(s -> s.getId().equals(SEGMENT_ID))
+                                           .findFirst()
+                                           .orElseThrow();
+    Assertions.assertEquals(
+        "v1:rule-original",
+        rediscovered.getLoadSpec().get("fingerprint"),
+        "the persisted load spec must describe the rule the replica is serving under, not the failed one"
+    );
+
+    manager.bootstrap(rediscovered, SegmentLazyLoadFailCallback.NOOP);
+    Assertions.assertEquals(
+        "v1:rule-original",
+        manager.getRuleFingerprintForSegment(SEGMENT_ID),
+        "bootstrap must reapply the prior rule, not the one that failed"
+    );
+    Assertions.assertTrue(
+        manager.getLocations().get(0).isWeakReserved(
+            new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)
+        ),
+        "and pin that rule's bundle"
     );
   }
 
@@ -919,6 +1152,221 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     }
   }
 
+  @Test
+  void testRuleHeldAcquireServesOnlySelectedBundles() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final DataSegment segment = partialWrapperSegment(List.of(OTHER_AGG_BUNDLE));
+    manager.load(segment);
+    final long loadsAfterRule = location.getWeakStats().getLoadCount();
+
+    try (AcquireSegmentAction action = manager.acquireSegment(segment, AcquireMode.PARTIAL_RULE_HELD)) {
+      action.await();
+      try (Segment acquired = action.release().getSegment().orElseThrow()) {
+        Assertions.assertInstanceOf(PartialQueryableIndexSegment.class, acquired);
+        Assertions.assertEquals(2, countRows(acquired, COUNT_BY_DIM1), "served from the selected projection");
+        // only the unselected projection has the sum, and the base table fallback is resident (as a dependency of the
+        // selected projection) but was not selected itself
+        Assertions.assertEquals(0, countRows(acquired, SUM_BY_DIM1));
+        Assertions.assertEquals(0, countRows(acquired, CursorBuildSpec.FULL_SCAN));
+      }
+    }
+
+    // the cached fast path is restricted the same way
+    final Segment cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).orElseThrow();
+    try (cached) {
+      Assertions.assertEquals(2, countRows(cached, COUNT_BY_DIM1));
+      Assertions.assertEquals(0, countRows(cached, SUM_BY_DIM1));
+    }
+
+    Assertions.assertNull(
+        location.getCacheEntry(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)),
+        "the unselected projection must never be loaded"
+    );
+    Assertions.assertEquals(loadsAfterRule, location.getWeakStats().getLoadCount(), "nothing new was loaded");
+  }
+
+  @Test
+  void testRuleHeldAcquireDownloadsSelectedBundleOnDemand() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+
+    // mount the metadata the way an on-demand query would, then select a bundle that has not been loaded, as the rule
+    // state looks while a rule's eager downloads are still running
+    try (AcquireSegmentAction action = manager.acquireSegment(plainSegment(), AcquireMode.PARTIAL)) {
+      action.await();
+      action.release().getSegment().orElseThrow().close();
+    }
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    metadata.applyRule(FINGERPRINT, Set.of(AGG_BUNDLE));
+    Assertions.assertNull(location.getCacheEntry(aggId), "precondition: the selected bundle is not loaded yet");
+
+    final Segment cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).orElseThrow();
+    try (cached) {
+      Assertions.assertEquals(2, countRows(cached, SUM_BY_DIM1));
+      Assertions.assertEquals(0, countRows(cached, CursorBuildSpec.FULL_SCAN), "the base table was not selected");
+    }
+    Assertions.assertTrue(location.isWeakReserved(aggId), "the selected bundle was loaded on demand");
+  }
+
+  @Test
+  void testRuleHeldAcquireOfEntryWithoutRuleServesNothing() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    // an entry that exists only because a query loaded it has no rule applied
+    try (AcquireSegmentAction action = manager.acquireSegment(plainSegment(), AcquireMode.PARTIAL)) {
+      action.await();
+      action.release().getSegment().orElseThrow().close();
+    }
+    final long loadsBefore = location.getWeakStats().getLoadCount();
+
+    final Segment cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).orElseThrow();
+    try (cached) {
+      Assertions.assertEquals(0, countRows(cached, COUNT_BY_DIM1));
+      Assertions.assertEquals(0, countRows(cached, CursorBuildSpec.FULL_SCAN));
+    }
+    Assertions.assertEquals(loadsBefore, location.getWeakStats().getLoadCount(), "nothing was loaded");
+  }
+
+  @Test
+  void testRuleHeldAcquireOfUncachedSegmentLoadsNothing() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    Assertions.assertTrue(manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).isEmpty());
+    try (AcquireSegmentAction action = manager.acquireSegment(plainSegment(), AcquireMode.PARTIAL_RULE_HELD)) {
+      Assertions.assertTrue(action.isReady(), "nothing to load, so the action is ready immediately");
+      try (Segment acquired = action.release().getSegment().orElseThrow()) {
+        Assertions.assertInstanceOf(VirtualPlaceholderSegment.class, acquired);
+        Assertions.assertEquals(SEGMENT_ID, acquired.getId());
+        Assertions.assertEquals(0, countRows(acquired, COUNT_BY_DIM1));
+        Assertions.assertEquals(0, countRows(acquired, CursorBuildSpec.FULL_SCAN));
+      }
+    }
+    Assertions.assertNull(
+        location.getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+        "no cache entry may be created"
+    );
+    Assertions.assertEquals(0, location.getWeakStats().getLoadCount());
+  }
+
+  @Test
+  void testProjectionRuleOnLegacyRootOnlySegmentHoldsRootBundle() throws Exception
+  {
+    // On a legacy segment the root bundle physically holds everything, including the selected projection, so the rule
+    // must resolve its selection to the root bundle: that's what gets rule-held, eagerly downloaded, and served under
+    // PARTIAL_RULE_HELD. Without resolving, the rule holds and downloads nothing, and PARTIAL_RULE_HELD reads nothing.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final DataSegment segment =
+        partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), FINGERPRINT, LEGACY_ROOT_ONLY_DEEP_STORAGE_DIR);
+    manager.load(segment);
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper);
+    Assertions.assertEquals(
+        Set.of(SegmentFileBuilder.ROOT_BUNDLE_NAME),
+        PartialSegmentBundleCacheEntry.bundleNames(mapper),
+        "test setup: the segment must have only the root bundle"
+    );
+    Assertions.assertEquals(Set.of(SegmentFileBuilder.ROOT_BUNDLE_NAME), metadata.getRuleSelectedBundleNames());
+    Assertions.assertTrue(metadata.isBundleRuleHeld(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+    Assertions.assertTrue(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+    final long loadsAfterRule = location.getWeakStats().getLoadCount();
+
+    try (AcquireSegmentAction action = manager.acquireSegment(segment, AcquireMode.PARTIAL_RULE_HELD)) {
+      action.await();
+      try (Segment acquired = action.release().getSegment().orElseThrow()) {
+        Assertions.assertEquals(2, countRows(acquired, COUNT_BY_DIM1), "served from the selected projection");
+        // the root bundle is the only bundle, and it holds the other projection and the base table too
+        Assertions.assertEquals(2, countRows(acquired, SUM_BY_DIM1));
+        Assertions.assertEquals(4, countRows(acquired, CursorBuildSpec.FULL_SCAN));
+      }
+    }
+    Assertions.assertEquals(loadsAfterRule, location.getWeakStats().getLoadCount(), "nothing new was loaded");
+  }
+
+  @Test
+  void testOnDemandAcquireOfLegacyRootOnlySegmentWithoutColumnFiles() throws Exception
+  {
+    // Without column file lists the prefetch downloads whole bundles, and it must resolve the projection it matched
+    // to the root bundle that physically holds it, or it plans nothing and reading the columns fails.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    try (AcquireSegmentAction action =
+             manager.acquireSegment(plainSegment(LEGACY_ROOT_ONLY_NO_COLUMN_FILES_DEEP_STORAGE_DIR), AcquireMode.PARTIAL)) {
+      action.await();
+      try (Segment acquired = action.release().getSegment().orElseThrow()) {
+        final PartialSegmentFileMapperV10 mapper = weakReservedMetadata(location, SEGMENT_ID).getFileMapper();
+        Assertions.assertNotNull(mapper);
+        Assertions.assertNull(mapper.getSegmentFileMetadata().getColumnFiles(), "test setup: no column file lists");
+        Assertions.assertFalse(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+
+        Assertions.assertEquals(2, countRows(acquired, COUNT_BY_DIM1));
+        Assertions.assertTrue(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+      }
+    }
+  }
+
+  @Test
+  void testRuleHeldAcquireDownloadsSelectedRootBundleOfLegacySegmentWithoutColumnFiles() throws Exception
+  {
+    // The selected root bundle is not resident yet, so PARTIAL_RULE_HELD must download it on demand through the same
+    // whole-bundle prefetch.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    try (AcquireSegmentAction action =
+             manager.acquireSegment(plainSegment(LEGACY_ROOT_ONLY_NO_COLUMN_FILES_DEEP_STORAGE_DIR), AcquireMode.PARTIAL)) {
+      action.await();
+      action.release().getSegment().orElseThrow().close();
+    }
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    metadata.applyRule(FINGERPRINT, Set.of(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper);
+    Assertions.assertFalse(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+
+    final Segment cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL_RULE_HELD).orElseThrow();
+    try (cached) {
+      Assertions.assertEquals(2, countRows(cached, COUNT_BY_DIM1));
+    }
+    Assertions.assertTrue(mapper.isBundleFullyDownloaded(SegmentFileBuilder.ROOT_BUNDLE_NAME));
+  }
+
+  /**
+   * Builds an async cursor over {@code segment} for {@code spec}, waits for it, and counts the rows it reads.
+   */
+  private static int countRows(Segment segment, CursorBuildSpec spec) throws InterruptedException
+  {
+    try (AsyncCursorHolder asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(spec)) {
+      final CountDownLatch ready = new CountDownLatch(1);
+      asyncHolder.addReadyCallback(ready::countDown);
+      Assertions.assertTrue(ready.await(15, TimeUnit.SECONDS), "async cursor must materialize within the test timeout");
+      try (CursorHolder holder = asyncHolder.release()) {
+        final Cursor cursor = holder.asCursor();
+        if (cursor == null) {
+          return 0;
+        }
+        int rows = 0;
+        while (!cursor.isDone()) {
+          rows++;
+          cursor.advance();
+        }
+        return rows;
+      }
+    }
+  }
+
   private static CacheEntry bundleEntry(StorageLocation location, String bundleName)
   {
     final CacheEntry entry =
@@ -938,6 +1386,20 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
       List<File> locationRoots
   )
   {
+    return makeManagerAtLocations(virtualStorage, partialDownloadsEnabled, locationRoots, null);
+  }
+
+  /**
+   * @param loadingPool the loading pool to use, or null to build one from the config. Pass one in to keep a handle on
+   *                    it, e.g. to {@link StorageLoadingThreadPool#stop()} it mid-test and make eager downloads fail.
+   */
+  private SegmentLocalCacheManager makeManagerAtLocations(
+      boolean virtualStorage,
+      boolean partialDownloadsEnabled,
+      List<File> locationRoots,
+      @Nullable StorageLoadingThreadPool loadingPool
+  )
+  {
     final List<StorageLocationConfig> locConfigs = locationRoots.stream()
         .map(root -> new StorageLocationConfig(root, 1024L * 1024L * 1024L, null))
         .toList();
@@ -950,7 +1412,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     return new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
-        StorageLoadingThreadPool.createFromConfig(loaderConfig),
+        loadingPool == null ? StorageLoadingThreadPool.createFromConfig(loaderConfig) : loadingPool,
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -964,9 +1426,14 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
 
   private DataSegment partialWrapperSegment(List<String> selectedProjections, String fingerprint)
   {
+    return partialWrapperSegment(selectedProjections, fingerprint, DEEP_STORAGE_DIR);
+  }
+
+  private DataSegment partialWrapperSegment(List<String> selectedProjections, String fingerprint, File deepStorageDir)
+  {
     final Map<String, Object> delegate = Map.of(
         "type", "local",
-        "path", DEEP_STORAGE_DIR.getAbsolutePath()
+        "path", deepStorageDir.getAbsolutePath()
     );
     final Map<String, Object> wrapperWire =
         PartialProjectionLoadSpec.wireForm(delegate, selectedProjections, fingerprint);
@@ -1047,9 +1514,14 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
    */
   private DataSegment plainSegment()
   {
+    return plainSegment(DEEP_STORAGE_DIR);
+  }
+
+  private DataSegment plainSegment(File deepStorageDir)
+  {
     return DataSegment.builder(SEGMENT_ID)
                       .shardSpec(NoneShardSpec.instance())
-                      .loadSpec(Map.of("type", "local", "path", DEEP_STORAGE_DIR.getAbsolutePath()))
+                      .loadSpec(Map.of("type", "local", "path", deepStorageDir.getAbsolutePath()))
                       .size(0)
                       .build();
   }

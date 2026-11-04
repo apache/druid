@@ -21,10 +21,10 @@ import { sane } from 'druid-query-toolkit';
 import { DruidError, getDruidErrorMessage } from './druid-query';
 
 describe('DruidQuery', () => {
-  describe('DruidError.extractStartRowColumn', () => {
+  describe('DruidError.extractStartLineColumn', () => {
     it('works for single error 1', () => {
       expect(
-        DruidError.extractStartRowColumn({
+        DruidError.extractStartLineColumn({
           sourceType: 'sql',
           line: '2',
           column: '12',
@@ -32,14 +32,14 @@ describe('DruidQuery', () => {
           expected: '...',
         }),
       ).toEqual({
-        row: 1,
-        column: 11,
+        line: 2,
+        column: 12,
       });
     });
 
     it('works for range', () => {
       expect(
-        DruidError.extractStartRowColumn({
+        DruidError.extractStartLineColumn({
           sourceType: 'sql',
           line: '1',
           column: '16',
@@ -49,16 +49,16 @@ describe('DruidQuery', () => {
           expected: '...',
         }),
       ).toEqual({
-        row: 0,
-        column: 15,
+        line: 1,
+        column: 16,
       });
     });
   });
 
-  describe('DruidError.extractEndRowColumn', () => {
+  describe('DruidError.extractEndLineColumn', () => {
     it('works for single error 1', () => {
       expect(
-        DruidError.extractEndRowColumn({
+        DruidError.extractEndLineColumn({
           sourceType: 'sql',
           line: '2',
           column: '12',
@@ -70,7 +70,7 @@ describe('DruidQuery', () => {
 
     it('works for range', () => {
       expect(
-        DruidError.extractEndRowColumn({
+        DruidError.extractEndLineColumn({
           sourceType: 'sql',
           line: '1',
           column: '16',
@@ -80,8 +80,8 @@ describe('DruidQuery', () => {
           expected: '...',
         }),
       ).toEqual({
-        row: 0,
-        column: 16,
+        line: 1,
+        column: 17,
       });
     });
   });

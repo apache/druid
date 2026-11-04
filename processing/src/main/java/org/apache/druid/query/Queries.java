@@ -20,19 +20,20 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
@@ -179,10 +180,51 @@ public class Queries
   }
 
   /**
+   * Returns a {@link SegmentDescriptor} with its interval narrowed to the intervals of the lowest-level
+   * subquery of the provided {@link Query} (the same one that {@link #withSpecificSegments(Query, List)} modifies),
+   * or null if they do not overlap.
+   *
+   * <p>Data servers build each descriptor from the query's original intervals, so this normally returns
+   * {@code descriptor} unchanged. It differs only when a query engine rewrites its query to narrow the
+   * interval further.
+   */
+  @Nullable
+  public static SegmentDescriptor narrowToQuery(final SegmentDescriptor descriptor, final Query<?> query)
+  {
+    if (query.getDataSource() instanceof QueryDataSource) {
+      return narrowToQuery(descriptor, ((QueryDataSource) query.getDataSource()).getQuery());
+    }
+
+    // Query intervals are condensed, so each one overlaps a different, non-abutting part of the descriptor.
+    Interval narrowedInterval = null;
+    for (final Interval queryInterval : query.getIntervals()) {
+      final Interval overlap = descriptor.getInterval().overlap(queryInterval);
+      if (overlap != null && overlap.toDurationMillis() > 0) {
+        if (narrowedInterval != null) {
+          throw DruidException.defensive(
+              "Query intervals[%s] split segment interval[%s]",
+              query.getIntervals(),
+              descriptor.getInterval()
+          );
+        }
+        narrowedInterval = overlap;
+      }
+    }
+
+    if (narrowedInterval == null) {
+      return null;
+    } else if (narrowedInterval.equals(descriptor.getInterval())) {
+      return descriptor;
+    } else {
+      return new SegmentDescriptor(narrowedInterval, descriptor.getVersion(), descriptor.getPartitionNumber());
+    }
+  }
+
+  /**
    * Rewrite "query" to refer to some specific base datasource, instead of the one it currently refers to.
    *
    * Unlike the seemingly-similar {@link Query#withDataSource}, this will walk down the datasource tree and replace
-   * only the base datasource (in the sense defined in {@link DataSourceAnalysis}).
+   * only the base datasource (in the sense defined in {@link ExecutionVertex#getBaseDataSource()}).
    */
   public static Query withBaseDataSource(final Query query, final DataSource newBaseDataSource)
   {
@@ -257,8 +299,8 @@ public class Queries
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
     QueryContext context = query.context();
-    if (!context.containsKey(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY)) {
-      return query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit));
+    if (!context.has(QueryContextParameters.MAX_SCATTER_GATHER_BYTES)) {
+      return query.withOverriddenContext(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, maxScatterGatherBytesLimit);
     }
     context.verifyMaxScatterGatherBytes(maxScatterGatherBytesLimit);
     return query;
@@ -266,11 +308,11 @@ public class Queries
 
   public static <T> Query<T> withTimeout(Query<T> query, long timeout)
   {
-    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, timeout));
+    return query.withOverriddenContext(QueryContextParameters.TIMEOUT, timeout);
   }
 
   public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)
   {
-    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
+    return query.withOverriddenContext(QueryContextParameters.DEFAULT_TIMEOUT, defaultTimeout);
   }
 }

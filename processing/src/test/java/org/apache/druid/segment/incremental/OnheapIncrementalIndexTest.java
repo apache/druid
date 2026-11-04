@@ -21,7 +21,9 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -31,23 +33,37 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.TestColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-public class OnheapIncrementalIndexTest
+public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
@@ -507,5 +523,287 @@ public class OnheapIncrementalIndexTest
         + minTimestamp + "]",
         t.getMessage()
     );
+  }
+
+  @Test
+  public void testExpressionSelectorCacheUsesExpressionIdentity()
+  {
+    final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
+    final Expr expression = Parser.parse("value", TestExprMacroTable.INSTANCE);
+    final Expr structurallyEqualExpression = Parser.parse("value", TestExprMacroTable.INSTANCE);
+    final Expr differentExpression = Parser.parse("other", TestExprMacroTable.INSTANCE);
+
+    Assertions.assertNotSame(expression, structurallyEqualExpression);
+
+    final ColumnValueSelector<ExprEval> firstSelector = selectorFactory.getOrCreateExprEvalSelector(expression);
+    Assertions.assertSame(firstSelector, selectorFactory.getOrCreateExprEvalSelector(expression));
+
+    final ColumnValueSelector<ExprEval> structurallyEqualSelector =
+        selectorFactory.getOrCreateExprEvalSelector(structurallyEqualExpression);
+    Assertions.assertNotSame(firstSelector, structurallyEqualSelector);
+    Assertions.assertSame(
+        structurallyEqualSelector,
+        selectorFactory.getOrCreateExprEvalSelector(structurallyEqualExpression)
+    );
+
+    final ColumnValueSelector<ExprEval> differentSelector =
+        selectorFactory.getOrCreateExprEvalSelector(differentExpression);
+    Assertions.assertNotSame(structurallyEqualSelector, differentSelector);
+    Assertions.assertSame(differentSelector, selectorFactory.getOrCreateExprEvalSelector(differentExpression));
+  }
+
+  @Test
+  public void testExpressionSelectorCacheReusesSelector()
+  {
+    final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
+    final Expr expression = Parser.parse("value + 1", TestExprMacroTable.INSTANCE);
+
+    final ColumnValueSelector<?> firstSelector = ExpressionSelectors.makeExprEvalSelector(selectorFactory, expression);
+    final ColumnValueSelector<?> secondSelector = ExpressionSelectors.makeExprEvalSelector(selectorFactory, expression);
+    Assertions.assertSame(firstSelector, secondSelector);
+  }
+
+  @Test
+  public void testExpressionSelectorCacheReusesConstantSelector()
+  {
+    final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
+    final Expr constantExpression = Parser.parse("'constant'", TestExprMacroTable.INSTANCE);
+    final ColumnValueSelector<ExprEval> firstConstantSelector =
+        ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
+    final ColumnValueSelector<ExprEval> secondConstantSelector =
+        ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
+    Assertions.assertSame(firstConstantSelector, secondConstantSelector);
+  }
+
+  @Test
+  public void testExpressionSelectorCacheDoesNotShareAggregatorState()
+  {
+    final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
+    final AggregatorFactory aggregatorFactory = new LongSumAggregatorFactory(
+        "sum",
+        null,
+        "value + 1",
+        TestExprMacroTable.INSTANCE
+    );
+    final Aggregator firstAggregator = aggregatorFactory.factorize(selectorFactory);
+    final Aggregator secondAggregator = aggregatorFactory.factorize(selectorFactory);
+
+    Assertions.assertNotSame(firstAggregator, secondAggregator);
+    firstAggregator.aggregate();
+    Assertions.assertEquals(2L, firstAggregator.getLong());
+    Assertions.assertTrue(secondAggregator.isNull());
+  }
+
+  @Test
+  public void testExpressionIngestionProducesExpectedResults()
+  {
+    final int rowCount = 10_000;
+    final int rollupKeyCount = 100;
+    final List<InputRow> rows = new ArrayList<>(rowCount);
+    long expectedSum = 0L;
+    for (int rowNumber = 0; rowNumber < rowCount; rowNumber++) {
+      final long value = rowNumber % 100;
+      rows.add(
+          new MapBasedInputRow(
+              0L,
+              Collections.singletonList("key"),
+              ImmutableMap.of(
+                  "key", "key-" + rowNumber % rollupKeyCount,
+                  "value", value
+              )
+          )
+      );
+      // Each row contributes the result of the ingestion expression "value + 1".
+      expectedSum += value + 1;
+    }
+
+    try (
+        OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+            .setIndexSchema(
+                new IncrementalIndexSchema.Builder()
+                    .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
+                    .withMetrics(
+                        new LongSumAggregatorFactory(
+                            "sum",
+                            null,
+                            "value + 1",
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .withRollup(true)
+                    .build()
+            )
+            .setMaxRowCount(rowCount + 1)
+            .build()
+    ) {
+      for (final InputRow row : rows) {
+        index.add(row);
+      }
+
+      long actualSum = 0L;
+      for (final IncrementalIndexRow row : index.getFacts().keySet()) {
+        actualSum += index.getMetricLongValue(row.getRowIndex(), 0);
+      }
+
+      Assertions.assertEquals(rollupKeyCount, index.numRows());
+      Assertions.assertEquals(expectedSum, actualSum);
+    }
+  }
+
+  @Test
+  public void testExpressionIngestionWithChangingArrayBindingsAcrossRollupKeys()
+  {
+    final List<InputRow> rows = List.of(
+        new MapBasedInputRow(
+            0L,
+            Collections.singletonList("key"),
+            ImmutableMap.of("key", "key-0",
+                            "Aa", List.of("a1", "a2"),
+                            "BB", "b")
+        ),
+        new MapBasedInputRow(
+            0L,
+            Collections.singletonList("key"),
+            ImmutableMap.of("key", "key-1",
+                            "Aa", "a",
+                            "BB", List.of("b1", "b2"))
+        ),
+        new MapBasedInputRow(
+            0L,
+            Collections.singletonList("key"),
+            ImmutableMap.of("key", "key-2",
+                            "Aa", List.of("x"),
+                            "BB", "yz")
+        ),
+        new MapBasedInputRow(
+            0L,
+            Collections.singletonList("key"),
+            ImmutableMap.of("key", "key-3",
+                            "Aa", "xy",
+                            "BB", List.of("z"))
+        )
+    );
+
+    try (
+        OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+            .setIndexSchema(
+                new IncrementalIndexSchema.Builder()
+                    .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
+                    .withMetrics(
+                        new LongSumAggregatorFactory(
+                            "sum",
+                            null,
+                            "strlen(array_to_string(concat(\"Aa\", \"BB\"), ','))",
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .withRollup(true)
+                    .build()
+            )
+            .setMaxRowCount(rows.size() + 1)
+            .build()
+    ) {
+      for (final InputRow row : rows) {
+        index.add(row);
+      }
+
+      long actualSum = 0L;
+      for (final IncrementalIndexRow row : index.getFacts().keySet()) {
+        actualSum += index.getMetricLongValue(row.getRowIndex(), 0);
+      }
+
+      Assertions.assertEquals(rows.size(), index.numRows());
+
+      // Per-row expression results are 7, 7, 3, and 3, for a total of 20.
+      // For example: Row 1: Aa = ["a1", "a2"], BB = "b", concat("Aa", "BB") = ["a1b", "a2b"], array_to_string = "a1b,a2b", length is 7
+      Assertions.assertEquals(20L, actualSum);
+    }
+  }
+
+  @Test
+  public void testExpressionSelectorCacheReevaluatesNonDeterministicExpressionAcrossRollupKeys()
+  {
+    // MapBasedInputRow exposes its timestamp as __time. Use the same value for both rollup keys.
+    final long inputTimestamp = 0L;
+    try (
+        OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+            .setIndexSchema(
+                new IncrementalIndexSchema.Builder()
+                    .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
+                    .withMetrics(
+                        new LongSumAggregatorFactory(
+                            "expressionResult",
+                            null,
+                            "now() - __time",
+                            ExprMacroTable.nil()
+                        )
+                    )
+                    .withRollup(true)
+                    .build()
+            )
+            .setMaxRowCount(3)
+            .build()
+    ) {
+      index.add(
+          new MapBasedInputRow(
+              inputTimestamp,
+              Collections.singletonList("key"),
+              ImmutableMap.of("key", "key-0")
+          )
+      );
+
+      // Since __time is 0, wait until a new now() evaluation must be greater than the first result.
+      final IncrementalIndexRow firstIndexRow = index.getFacts().keySet().iterator().next();
+      final long firstExpressionResult = index.getMetricLongValue(firstIndexRow.getRowIndex(), 0);
+      final long waitDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+      while (System.currentTimeMillis() <= firstExpressionResult) {
+        Assertions.assertTrue(System.nanoTime() < waitDeadline, "Timed out waiting for the clock to advance");
+        Thread.onSpinWait();
+      }
+
+      index.add(
+          new MapBasedInputRow(
+              inputTimestamp,
+              Collections.singletonList("key"),
+              ImmutableMap.of("key", "key-1")
+          )
+      );
+
+      final List<Long> expressionResults = new ArrayList<>();
+      for (final IncrementalIndexRow row : index.getFacts().keySet()) {
+        expressionResults.add(index.getMetricLongValue(row.getRowIndex(), 0));
+      }
+
+      Assertions.assertEquals(2, expressionResults.size());
+      Assertions.assertTrue(
+          expressionResults.stream().anyMatch(expressionResult -> expressionResult > firstExpressionResult),
+          "The non-deterministic expression should be reevaluated for the second rollup key"
+      );
+    }
+  }
+
+  private static OnheapIncrementalIndex.CachingColumnSelectorFactory makeCachingColumnSelectorFactory()
+  {
+    final TestObjectColumnSelector<Long> valueSelector = new TestObjectColumnSelector<Long>()
+    {
+      @Override
+      public Class<Long> classOfObject()
+      {
+        return Long.class;
+      }
+
+      @Override
+      public Long getObject()
+      {
+        return 1L;
+      }
+    };
+
+    final ColumnSelectorFactory delegate = new TestColumnSelectorFactory()
+        .addColumnSelector("value", valueSelector)
+        .addCapabilities("value", null)
+        .addColumnSelector("other", valueSelector)
+        .addCapabilities("other", null);
+    return new OnheapIncrementalIndex.CachingColumnSelectorFactory(delegate);
   }
 }

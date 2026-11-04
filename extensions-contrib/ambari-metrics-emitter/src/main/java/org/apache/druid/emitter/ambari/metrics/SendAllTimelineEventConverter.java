@@ -35,7 +35,7 @@ import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
  * All the dimensions will be retained and lexicographically order using dimensions name.
  * <p>
  * The metric name of the timeline event is:
- * <namespacePrefix>.<druid service name>.<dimensions values ordered by dimension's name>.<metric>
+ * {@code <namespacePrefix>.<druid service name>.<dimensions values ordered by dimension's name>.<metric>}
  * <p>
  * Note that this name will be sanitized by replacing all the `.` or `space` to `_` {@link AmbariMetricsEmitter#sanitize(String)}
  */

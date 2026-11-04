@@ -19,10 +19,17 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutor;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Evals;
@@ -36,6 +43,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +72,12 @@ public class DruidRexExecutor implements RexExecutor
   )
   {
     for (RexNode constExp : constExps) {
+      final RexNode reducedArray = tryReduceLiteralArray(rexBuilder, constExp);
+      if (reducedArray != null) {
+        reducedValues.add(reducedArray);
+        continue;
+      }
+
       final DruidExpression druidExpression = Expressions.toDruidExpression(
           plannerContext,
           EMPTY_ROW_SIGNATURE,
@@ -115,15 +129,27 @@ public class DruidRexExecutor implements RexExecutor
               // There can be implicit casts of VARCHAR to TIMESTAMP where the VARCHAR is an invalid timestamp, but the
               // TIMESTAMP type is not nullable. In this case it's best to throw an error, since it likely means the
               // user's SQL query contains an invalid literal.
-              throw InvalidSqlInput.exception("Illegal TIMESTAMP constant [%s]", constExp);
+              throw InvalidSqlInput.exception(
+                  "Invalid TIMESTAMP value [%s]",
+                  getInputValueOrExpression(constExp)
+              );
             }
           } else {
-            literal = Calcites.jodaToCalciteTimestampLiteral(
-                rexBuilder,
-                DateTimes.utc(exprResult.asLong()),
-                plannerContext.getTimeZone(),
-                constExp.getType().getPrecision()
-            );
+            try {
+              literal = Calcites.jodaToCalciteTimestampLiteral(
+                  rexBuilder,
+                  DateTimes.utc(exprResult.asLong()),
+                  plannerContext.getTimeZone(),
+                  constExp.getType().getPrecision()
+              );
+            }
+            catch (IllegalArgumentException e) {
+              throw InvalidSqlInput.exception(
+                  e,
+                  "Invalid TIMESTAMP value [%s]",
+                  getInputValueOrExpression(constExp)
+              );
+            }
           }
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
           final BigDecimal bigDecimal;
@@ -156,6 +182,10 @@ public class DruidRexExecutor implements RexExecutor
           final Object[] array = exprResult.asArray();
           if (array == null) {
             literal = rexBuilder.makeNullLiteral(constExp.getType());
+          } else if (isArrayOfComplex(constExp.getType())) {
+            // arrays of complex constants, including nested arrays, are not reducible, so just leave them as an
+            // expression
+            literal = constExp;
           } else if (SqlTypeName.NUMERIC_TYPES.contains(constExp.getType().getComponentType().getSqlTypeName())) {
             if (exprResult.type().getElementType().is(ExprType.LONG)) {
               List<BigDecimal> resultAsBigDecimalList = new ArrayList<>(array.length);
@@ -219,5 +249,69 @@ public class DruidRexExecutor implements RexExecutor
         reducedValues.add(literal);
       }
     }
+  }
+
+  ///
+  /// Whether the leaf element type of an array type, looking through any nested arrays, is a complex type.
+  ///
+  private static boolean isArrayOfComplex(final RelDataType arrayType)
+  {
+    RelDataType elementType = arrayType.getComponentType();
+    while (elementType != null && elementType.getSqlTypeName() == SqlTypeName.ARRAY) {
+      elementType = elementType.getComponentType();
+    }
+    return elementType != null && elementType.getSqlTypeName() == SqlTypeName.OTHER;
+  }
+
+  private static String getInputValueOrExpression(final RexNode constExp)
+  {
+    if (constExp.isA(SqlKind.CAST)) {
+      final RexNode operand = ((RexCall) constExp).getOperands().get(0);
+      if (operand instanceof RexLiteral && SqlTypeName.STRING_TYPES.contains(operand.getType().getSqlTypeName())) {
+        return RexLiteral.stringValue(operand);
+      }
+    }
+    return constExp.toString();
+  }
+
+  ///
+  /// Reduces literal string and integer arrays without formatting, parsing, or evaluating a Druid expression.
+  ///
+  /// Reuses the original array call when every literal's type matches the array component type, ignoring nullability.
+  /// These literals already have the required types and values, so rebuilding them would only add allocations.
+  /// Nullability differences do not require conversion: a non-null literal may belong to an array with nullable elements,
+  /// and reusing the call preserves both null values and the original array type.
+  ///
+  /// Returns null for mismatched element types, unsupported types, or non-literal operands (including CAST calls).
+  /// These retain the existing Druid expression evaluation path, including any required type normalization.
+  ///
+  @Nullable
+  @VisibleForTesting
+  static RexNode tryReduceLiteralArray(final RexBuilder rexBuilder, final RexNode expression)
+  {
+    if (!(expression instanceof RexCall)) {
+      return null;
+    }
+    if (!((RexCall) expression).getOperator().equals(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR)) {
+      return null;
+    }
+
+    final SqlTypeName elementType = expression.getType().getComponentType().getSqlTypeName();
+    final boolean isString = SqlTypeName.CHAR_TYPES.contains(elementType);
+    if (!isString && !SqlTypeName.INT_TYPES.contains(elementType)) {
+      return null;
+    }
+
+    final List<RexNode> operands = ((RexCall) expression).getOperands();
+    for (final RexNode operand : operands) {
+      if (!(operand instanceof RexLiteral)
+          || !SqlTypeUtil.equalSansNullability(
+              rexBuilder.getTypeFactory(), expression.getType().getComponentType(), operand.getType()
+          )) {
+        return null;
+      }
+    }
+
+    return expression;
   }
 }

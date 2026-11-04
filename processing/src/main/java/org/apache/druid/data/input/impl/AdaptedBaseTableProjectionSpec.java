@@ -113,6 +113,12 @@ public final class AdaptedBaseTableProjectionSpec implements BaseTableProjection
   }
 
   @Override
+  public boolean isRollup()
+  {
+    return granularitySpec.isRollup();
+  }
+
+  @Override
   public BaseTableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity)
   {
     throw DruidException.defensive(

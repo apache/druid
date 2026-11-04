@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 import { Intent } from '@blueprintjs/core';
-import copy from 'copy-to-clipboard';
 import React from 'react';
 
 import { AppToaster } from '../../singletons';
+import { copyToClipboard } from '../../utils';
 
 export interface ClickToCopyProps {
   text: string;
@@ -33,7 +33,7 @@ export const ClickToCopy = React.memo(function ClickToCopy(props: ClickToCopyPro
       className="click-to-copy"
       data-tooltip={`Click to copy:\n${text}`}
       onClick={() => {
-        copy(text, { format: 'text/plain' });
+        copyToClipboard(text);
         AppToaster.show({
           message: `'${text}' copied to clipboard`,
           intent: Intent.SUCCESS,

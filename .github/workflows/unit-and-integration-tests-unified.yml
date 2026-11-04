@@ -24,6 +24,16 @@ on:
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
       - 'website/**'
+      # PR automation that the build and tests do not use
+      - '.github/dependabot.yml'
+      - '.github/labeler.yml'
+      - '.github/scripts/auto-add-milestone.sh'
+      - '.github/scripts/backport-pr.sh'
+      - '.github/workflows/backport.yml'
+      - '.github/workflows/labeler.yml'
+      - '.github/workflows/pr-checks.yml'
+      - '.github/workflows/pr-merged.yml'
+      - '.github/workflows/stale.yml'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
@@ -37,6 +47,16 @@ on:
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
       - 'website/**'
+      # PR automation that the build and tests do not use
+      - '.github/dependabot.yml'
+      - '.github/labeler.yml'
+      - '.github/scripts/auto-add-milestone.sh'
+      - '.github/scripts/backport-pr.sh'
+      - '.github/workflows/backport.yml'
+      - '.github/workflows/labeler.yml'
+      - '.github/workflows/pr-checks.yml'
+      - '.github/workflows/pr-merged.yml'
+      - '.github/workflows/stale.yml'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
@@ -60,7 +80,9 @@ jobs:
 
   actions-timeline:
     needs: [unit-tests, docker-tests]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ !cancelled() }}
     steps:
-      - uses: Kesin11/actions-timeline@44c9c178ffb2fb1d9859614a3ffa79ccfb77565e
+      # Third-party actions must be pinned to a SHA on the ASF allowlist
+      # https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
+      - uses: Kesin11/actions-timeline@57fc93f20c6da7fbc14063c6d24a2a5627c799ad # v3.2.0

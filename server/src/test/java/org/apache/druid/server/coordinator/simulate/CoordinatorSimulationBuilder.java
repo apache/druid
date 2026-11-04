@@ -48,6 +48,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
+import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
@@ -73,6 +74,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -414,6 +416,13 @@ public class CoordinatorSimulationBuilder
     public double getLoadPercentage(String datasource)
     {
       return coordinator.getDatasourceToLoadStatus().get(datasource);
+    }
+
+    @Nullable
+    @Override
+    public ServerCloneStatus getCloneStatus(DruidServer cloneTarget)
+    {
+      return env.cloneStatusManager.getStatusForServer(cloneTarget.getName());
     }
 
     @Override

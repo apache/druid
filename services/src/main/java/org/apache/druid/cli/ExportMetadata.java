@@ -49,12 +49,12 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 
 import javax.annotation.Nullable;
-import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -200,6 +200,10 @@ public class ExportMetadata extends GuiceRunnable
   private static final Logger log = new Logger(ExportMetadata.class);
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+
+  // Upper case to match the format previously produced by javax.xml.bind.DatatypeConverter#printHexBinary.
+  // Parsing (parseHex) accepts either case regardless of this setting.
+  private static final HexFormat HEX_FORMAT = HexFormat.of().withUpperCase();
 
   public ExportMetadata()
   {
@@ -434,7 +438,7 @@ public class ExportMetadata extends GuiceRunnable
       String payload
   ) throws IOException
   {
-    DataSegment segment = JSON_MAPPER.readValue(DatatypeConverter.parseHexBinary(payload), DataSegment.class);
+    DataSegment segment = JSON_MAPPER.readValue(HEX_FORMAT.parseHex(payload), DataSegment.class);
     String uniqueId = getUniqueIDFromLocalLoadSpec(segment.getLoadSpec());
     String segmentPath = DataSegmentPusher.getDefaultStorageDirWithExistingUniquePath(segment, uniqueId);
 
@@ -453,7 +457,7 @@ public class ExportMetadata extends GuiceRunnable
 
     String serialized = JSON_MAPPER.writeValueAsString(segment);
     if (useHexBlobs) {
-      return DatatypeConverter.printHexBinary(StringUtils.toUtf8(serialized));
+      return HEX_FORMAT.formatHex(StringUtils.toUtf8(serialized));
     } else {
       return serialized;
     }
@@ -468,7 +472,7 @@ public class ExportMetadata extends GuiceRunnable
     if (useHexBlobs) {
       return payload;
     }
-    return StringUtils.fromUtf8(DatatypeConverter.parseHexBinary(payload));
+    return StringUtils.fromUtf8(HEX_FORMAT.parseHex(payload));
   }
 
   private String convertBooleanString(final String booleanString)

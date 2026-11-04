@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.indexing.autoscaler;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
@@ -35,7 +36,6 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
 import org.hamcrest.Matchers;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.jupiter.api.AfterEach;
@@ -255,6 +255,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(4)
         .lagWeight(0.5)
         .idleWeight(0.5)
+        .usePollIdleRatio(false)
         .scaleActionPeriodMillis(10L)
         .minScaleDownDelay(Duration.standardSeconds(1))
         .build();
@@ -295,7 +296,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.equalTo(1L))
     );
-    Assertions.assertEquals(1, getCurrentTaskCount(supervisor.getId()));
 
     cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);

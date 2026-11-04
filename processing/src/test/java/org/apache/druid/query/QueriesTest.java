@@ -32,8 +32,10 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.ExecutionVertexTest;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.join.JoinType;
@@ -42,7 +44,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -335,6 +339,73 @@ public class QueriesTest
   }
 
   @Test
+  public void testNarrowToQueryCoveringQuery()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 0);
+    Assertions.assertSame(descriptor, Queries.narrowToQuery(descriptor, makeTimeseriesQuery("1999/2001", "2005/2006")));
+  }
+
+  @Test
+  public void testNarrowToQueryPartialOverlap()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 1);
+    Assertions.assertEquals(
+        new SegmentDescriptor(Intervals.of("2000-03/2001"), "0", 1),
+        Queries.narrowToQuery(descriptor, makeTimeseriesQuery("1998/1999", "2000-03/2002"))
+    );
+  }
+
+  @Test
+  public void testNarrowToQueryNoOverlap()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 0);
+    Assertions.assertNull(Queries.narrowToQuery(descriptor, makeTimeseriesQuery("1999/2000", "2001/2002")));
+  }
+
+  @Test
+  public void testNarrowToQuerySplitIsAnError()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 0);
+    final TimeseriesQuery query = makeTimeseriesQuery("1999/2000-03", "2000-06/2002");
+
+    DruidException e = assertThrows(DruidException.class, () -> Queries.narrowToQuery(descriptor, query));
+    Assertions.assertEquals(
+        "Query intervals[[1999-01-01T00:00:00.000Z/2000-03-01T00:00:00.000Z, "
+        + "2000-06-01T00:00:00.000Z/2002-01-01T00:00:00.000Z]] split segment interval"
+        + "[2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z]",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void testNarrowToQuerySubQueryStack()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2000/2001"), "0", 0);
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(new QueryDataSource(makeTimeseriesQuery("2000-03/2002")))
+              .intervals("1999/2000-02")
+              .granularity(Granularities.ALL)
+              .build();
+
+    Assertions.assertEquals(
+        new SegmentDescriptor(Intervals.of("2000-03/2001"), "0", 0),
+        Queries.narrowToQuery(descriptor, query)
+    );
+  }
+
+  private static TimeseriesQuery makeTimeseriesQuery(final String... intervals)
+  {
+    return Druids.newTimeseriesQueryBuilder()
+                 .dataSource("foo")
+                 .intervals(
+                     new MultipleIntervalSegmentSpec(Arrays.stream(intervals).map(Intervals::of).toList())
+                 )
+                 .granularity(Granularities.ALL)
+                 .build();
+  }
+
+  @Test
   public void testWithBaseDataSourceBasic()
   {
     Assertions.assertEquals(
@@ -522,6 +593,24 @@ public class QueriesTest
         e,
         DruidExceptionMatcher.defensive()
             .expectMessageContains("Its unsafe to replace the BaseDataSource of a non-processable query")
+    );
+  }
+
+  @Test
+  public void testWithMaxScatterGatherBytesAppliesLimitWhenExplicitlyNull()
+  {
+    final Map<String, Object> context = new HashMap<>();
+    context.put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), null);
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("foo")
+                                        .intervals("2000/3000")
+                                        .granularity(Granularities.ALL)
+                                        .context(context)
+                                        .build();
+
+    Assertions.assertEquals(
+        100L,
+        Queries.withMaxScatterGatherBytes(query, 100L).context().get(QueryContextParameters.MAX_SCATTER_GATHER_BYTES)
     );
   }
 }

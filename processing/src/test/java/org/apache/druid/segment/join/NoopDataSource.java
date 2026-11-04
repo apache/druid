@@ -69,6 +69,12 @@ public class NoopDataSource implements DataSource
   }
 
   @Override
+  public Set<String> getReservedColumns()
+  {
+    return Set.of();
+  }
+
+  @Override
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
     return SegmentMapFunction.IDENTITY;

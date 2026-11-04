@@ -24,6 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
@@ -56,12 +60,9 @@ import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -359,8 +360,8 @@ public class OverlordClientImplTest
 
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(HttpResponseException.class));
     Assertions.assertEquals(
-        HttpResponseStatus.NOT_FOUND.getCode(),
-        ((HttpResponseException) e.getCause()).getResponse().getStatus().getCode()
+        HttpResponseStatus.NOT_FOUND.code(),
+        ((HttpResponseException) e.getCause()).getResponse().getStatus().code()
     );
   }
 
@@ -541,10 +542,7 @@ public class OverlordClientImplTest
   @Test
   public void test_markSegmentAsUsed() throws Exception
   {
-    final DataSegment wikiSegment = DataSegment.builder()
-                                               .dataSource(TestDataSource.WIKI)
-                                               .interval(Intervals.of("2024-12-01/P1D"))
-                                               .version("v1")
+    final DataSegment wikiSegment = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2024-12-01/P1D"), "v1", 0))
                                                .size(100)
                                                .build();
 
@@ -568,10 +566,7 @@ public class OverlordClientImplTest
   @Test
   public void test_markSegmentAsUnused() throws Exception
   {
-    final DataSegment wikiSegment = DataSegment.builder()
-                                               .dataSource(TestDataSource.WIKI)
-                                               .interval(Intervals.of("2024-12-01/P1D"))
-                                               .version("v1")
+    final DataSegment wikiSegment = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2024-12-01/P1D"), "v1", 0))
                                                .size(100)
                                                .build();
 
@@ -595,10 +590,7 @@ public class OverlordClientImplTest
   @Test
   public void test_markNonOvershadowedSegmentsAsUsed_bySegmentIds() throws Exception
   {
-    final DataSegment wikiSegment = DataSegment.builder()
-                                               .dataSource(TestDataSource.WIKI)
-                                               .interval(Intervals.of("2024-12-01/P1D"))
-                                               .version("v1")
+    final DataSegment wikiSegment = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2024-12-01/P1D"), "v1", 0))
                                                .size(100)
                                                .build();
 
@@ -629,10 +621,7 @@ public class OverlordClientImplTest
   @Test
   public void test_markSegmentsAsUnused_bySegmentIds() throws Exception
   {
-    final DataSegment wikiSegment = DataSegment.builder()
-                                               .dataSource(TestDataSource.WIKI)
-                                               .interval(Intervals.of("2024-12-01/P1D"))
-                                               .version("v1")
+    final DataSegment wikiSegment = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2024-12-01/P1D"), "v1", 0))
                                                .size(100)
                                                .build();
 

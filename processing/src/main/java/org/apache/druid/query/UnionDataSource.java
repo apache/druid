@@ -26,8 +26,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -75,14 +80,12 @@ public class UnionDataSource implements DataSource
   }
 
   /**
-   * Returns true if this datasource can be ran by the native engine, i.e. all the children of the union are table
-   * datasource or restricted datasource.
+   * Returns true if this datasource can be ran by the native engine: i.e., every arm is processable as-is and reads
+   * nothing but tables.
    */
   public boolean isTableBased()
   {
-    return dataSources.stream()
-                      .allMatch(dataSource -> dataSource instanceof TableDataSource
-                                              || dataSource instanceof RestrictedDataSource);
+    return isProcessable() && dataSources.stream().allMatch(UnionDataSource::readsOnlyTables);
   }
 
   @Override
@@ -124,15 +127,39 @@ public class UnionDataSource implements DataSource
     return dataSources.stream().allMatch(DataSource::isProcessable);
   }
 
+  /**
+   * Throws, since each arm reads its own set of segments, so no single function applies to all of them. Callers split
+   * a union by arm first; see {@link org.apache.druid.query.planning.ExecutionVertex#splitUnion()}.
+   */
   @Override
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    for (DataSource dataSource : dataSources) {
-      if (!dataSource.getChildren().isEmpty()) {
-        throw new ISE("Union datasource with non-leaf inputs is not supported [%s]!", dataSources);
-      }
+    throw DruidException.defensive("Cannot map segments of union[%s] without splitting it by arm", dataSources);
+  }
+
+  /**
+   * Throws, for the same reason as {@link #createSegmentMapFunction}.
+   */
+  @Override
+  public SegmentPruner createSegmentPruner(@Nullable DimFilter filter, VirtualColumns virtualColumns)
+  {
+    throw DruidException.defensive("Cannot prune segments of union[%s] without splitting it by arm", dataSources);
+  }
+
+  @Override
+  public Set<String> getReservedColumns()
+  {
+    final Set<String> names = new HashSet<>();
+    for (final DataSource dataSource : dataSources) {
+      names.addAll(dataSource.getReservedColumns());
     }
-    return SegmentMapFunction.IDENTITY;
+    return names;
+  }
+
+  @Override
+  public boolean mayFilterRows()
+  {
+    return dataSources.stream().anyMatch(DataSource::mayFilterRows);
   }
 
   @Override
@@ -170,8 +197,17 @@ public class UnionDataSource implements DataSource
            '}';
   }
 
-  public static boolean isCompatibleDataSource(DataSource dataSource)
+  /**
+   * Whether every leaf of the given datasource is a {@link TableDataSource}.
+   */
+  private static boolean readsOnlyTables(final DataSource dataSource)
   {
-    return (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource);
+    final List<DataSource> children = dataSource.getChildren();
+
+    if (children.isEmpty()) {
+      return dataSource instanceof TableDataSource;
+    } else {
+      return children.stream().allMatch(UnionDataSource::readsOnlyTables);
+    }
   }
 }

@@ -31,7 +31,6 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CloseableUtils;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -46,12 +45,15 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   private static final Logger log = new Logger(ChainedProcessorManager.class);
 
   /**
-   * First processor manager. The {@link FrameProcessor}s it creates run before all the others. The reference is
-   * set to null once this manager has returned all of its processors.
+   * First processor manager. The {@link FrameProcessor}s it creates run before all the others.
    */
-  @Nullable
+  private final ProcessorManager<A, List<A>> first;
+
+  /**
+   * Whether {@link #first} has returned all its processors.
+   */
   @GuardedBy("lock")
-  private ProcessorManager<A, List<A>> first;
+  private boolean firstExhausted;
 
   /**
    * Produces {@link #restFuture}.
@@ -116,7 +118,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
     synchronized (lock) {
       if (closed) {
         throw new IllegalStateException();
-      } else if (first == null) {
+      } else if (firstExhausted) {
         return nextFromRest();
       }
 
@@ -134,7 +136,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
                 //noinspection unchecked
                 return Futures.immediateFuture(Optional.of((ProcessorAndCallback<Object>) processorAndCallback.get()));
               } else {
-                first = null;
+                firstExhausted = true;
                 checkFirstProcessorComplete();
                 return nextFromRest();
               }
@@ -174,7 +176,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   @GuardedBy("lock")
   private void checkFirstProcessorComplete()
   {
-    if (!closed && first == null && (firstProcessorResult.size() == firstProcessorCount)) {
+    if (!closed && firstExhausted && (firstProcessorResult.size() == firstProcessorCount)) {
       restFuture.set(restFactory.apply(firstProcessorResult));
     }
   }
@@ -188,7 +190,6 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   @Override
   public void close()
   {
-    final ProcessorManager<A, List<A>> firstToClose;
     final ProcessorManager<B, R> restToClose;
 
     synchronized (lock) {
@@ -197,13 +198,12 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
       }
 
       closed = true;
-      firstToClose = first;
       restToClose = restFuture.isDone() ? FutureUtils.getUncheckedImmediately(restFuture) : null;
     }
 
     // Cancel in case restFuture was never set, so futures from nextFromRest() do not remain pending forever.
     restFuture.cancel(false);
 
-    CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(firstToClose, restToClose));
+    CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(first, restToClose));
   }
 }

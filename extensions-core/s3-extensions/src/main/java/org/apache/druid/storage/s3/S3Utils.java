@@ -74,6 +74,13 @@ public class S3Utils
    */
   public static final String ERROR_ENTITY_TOO_LARGE = "EntityTooLarge";
 
+  /**
+   * Most keys S3 accepts in a single {@code DeleteObjects} request:
+   * <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html">DeleteObjects</a>. Unlike
+   * {@code max-keys} on a listing, which S3 silently caps, exceeding this fails the request.
+   */
+  public static final int MAX_MULTI_OBJECT_DELETE_SIZE = 1000;
+
   public static final Predicate<Throwable> S3RETRY = new Predicate<>()
   {
     @Override
@@ -360,7 +367,12 @@ public class S3Utils
   {
     log.debug("Deleting directory at bucket: [%s], path: [%s]", bucket, prefix);
 
-    final List<ObjectIdentifier> keysToDelete = new ArrayList<>(maxListingLength);
+    // A listing page and a multi-object delete do not have the same ceiling: S3 quietly returns only the first 1000
+    // keys when max-keys is larger, but rejects a DeleteObjects request carrying more than 1000 of them. Callers pass
+    // maxListingLength for the listing, so bound the delete batches separately instead of assuming the caller's
+    // listing size is small enough to be one.
+    final int deleteBatchSize = Math.min(maxListingLength, MAX_MULTI_OBJECT_DELETE_SIZE);
+    final List<ObjectIdentifier> keysToDelete = new ArrayList<>(deleteBatchSize);
     final Iterator<S3ObjectWithBucket> iterator = objectSummaryIterator(
         s3Client,
         ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("s3")),
@@ -371,7 +383,7 @@ public class S3Utils
       final S3ObjectWithBucket nextObject = iterator.next();
       if (filter.apply(nextObject.getS3Object())) {
         keysToDelete.add(ObjectIdentifier.builder().key(nextObject.getKey()).build());
-        if (keysToDelete.size() == maxListingLength) {
+        if (keysToDelete.size() == deleteBatchSize) {
           deleteBucketKeys(s3Client, bucket, keysToDelete, maxRetries);
           keysToDelete.clear();
         }

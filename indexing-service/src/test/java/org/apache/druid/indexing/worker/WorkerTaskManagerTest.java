@@ -23,6 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -44,6 +47,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.HttpResponseException;
@@ -60,9 +64,6 @@ import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -307,6 +308,13 @@ public class WorkerTaskManagerTest
     Assertions.assertEquals(task3.getId(), update4.getTaskAnnouncement().getTaskStatus().getId());
     Assertions.assertTrue(update4.getTaskAnnouncement().getTaskStatus().isSuccess());
     Assertions.assertNotNull(update4.getTaskAnnouncement().getTaskLocation().getHost());
+  }
+
+  @Test
+  public void testAssignTaskWithMaxLengthTaskId() throws Exception
+  {
+    workerTaskManager.start();
+    Assertions.assertDoesNotThrow(() -> workerTaskManager.assignTask(createNoopTask(StringUtils.repeat("x", 255))));
   }
 
   @Test

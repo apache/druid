@@ -64,7 +64,7 @@ public interface ValueSetIndexes
    * @param matchValueType type of the value to match, used to assist conversion from the match value type to the column
    *                       value type
    * @return {@link ImmutableBitmap} corresponding to the rows which match the values, or null if an index
-   * connot be computed for the supplied value type
+   * cannot be computed for the supplied value type
    */
   @Nullable
   BitmapColumnIndex forSortedValues(@Nonnull List<?> sortedValues, TypeSignature<ValueType> matchValueType);

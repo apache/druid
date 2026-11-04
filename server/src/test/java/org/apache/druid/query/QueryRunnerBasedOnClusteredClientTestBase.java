@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterAll;
@@ -203,8 +205,8 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
                  .granularity(Granularities.HOUR)
                  .aggregators(new CountAggregatorFactory("rows"))
                  .context(
-                     ImmutableMap.of(
-                         DirectDruidClient.QUERY_FAIL_TIME,
+                     QueryContext.ofMap(
+                         QueryContextParameters.QUERY_FAIL_TIME,
                          System.currentTimeMillis() + 10000
                      )
                  )
@@ -236,10 +238,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
       int numCorePartitions
   )
   {
-    return DataSegment.builder()
-                      .dataSource(DATASOURCE)
-                      .interval(interval)
-                      .version("1")
+    return DataSegment.builder(SegmentId.of(DATASOURCE, interval, "1", partitionId))
                       .shardSpec(new NumberedShardSpec(partitionId, numCorePartitions))
                       .size(10)
                       .build();

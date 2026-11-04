@@ -69,6 +69,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -225,6 +226,49 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
       }
     }
     Assertions.assertEquals(new HashSet<>(expectedValues), actualValues);
+  }
+
+  @Test
+  public void test_first_processor_manager_closed_after_exhaustion() throws ExecutionException, InterruptedException
+  {
+    final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(3);
+    final ProcessorManager<List<Long>, Long> firstManager =
+        ProcessorManagers.of(() -> new SimpleReturningFrameProcessor<>(ImmutableList.of(1L, 2L, 3L)));
+    final AtomicBoolean firstClosed = new AtomicBoolean(false);
+
+    final ChainedProcessorManager<List<Long>, Long, Long> chainedProcessorManager = new ChainedProcessorManager<>(
+        new ProcessorManager<List<Long>, Long>()
+        {
+          @Override
+          public ListenableFuture<Optional<ProcessorAndCallback<List<Long>>>> next()
+          {
+            return firstManager.next();
+          }
+
+          @Override
+          public Long result()
+          {
+            return firstManager.result();
+          }
+
+          @Override
+          public void close()
+          {
+            firstClosed.set(true);
+            firstManager.close();
+          }
+        },
+        (values) -> createNextProcessors(outputChannel.writable(), values.stream().flatMap(List::stream).collect(Collectors.toList()))
+    );
+
+    exec.runAllFully(
+        chainedProcessorManager,
+        maxOutstandingProcessors,
+        bouncer,
+        null
+    ).get();
+
+    Assertions.assertTrue(firstClosed.get(), "first manager must be closed even after returning all its processors");
   }
 
   @Test

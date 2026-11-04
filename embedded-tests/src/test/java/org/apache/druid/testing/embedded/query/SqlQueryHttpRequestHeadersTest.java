@@ -19,7 +19,7 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.FieldSource;
@@ -44,7 +44,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
         "select 1",
         (request) -> {
         },
-        (statusCode, responseBody) -> Assertions.assertEquals(statusCode, HttpResponseStatus.BAD_REQUEST.getCode())
+        (statusCode, responseBody) -> Assertions.assertEquals(statusCode, HttpResponseStatus.BAD_REQUEST.code())
     );
   }
 
@@ -60,7 +60,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
         },
         (statusCode, responseBody) -> Assertions.assertEquals(
             statusCode,
-            HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode()
+            HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.code()
         )
     );
   }

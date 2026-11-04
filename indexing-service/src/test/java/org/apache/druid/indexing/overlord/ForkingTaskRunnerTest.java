@@ -67,10 +67,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -526,6 +528,70 @@ public class ForkingTaskRunnerTest
     forkingTaskRunner.run(task).get();
     Assertions.assertTrue(xmxJavaOptsArrayIndex.get() > xmxJavaOptsIndex.get());
     Assertions.assertTrue(xmxJavaOptsIndex.get() >= 0);
+  }
+
+  @Test
+  public void testChildNeverInheritsAdvertisedPlaintextPort() throws ExecutionException, InterruptedException
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.advertisedPlaintextPort", "9443");
+    props.setProperty("druid.indexer.fork.property.druid.advertisedPlaintextPort", "9444");
+    final Task task = new NoopTask(
+        null,
+        null,
+        null,
+        1L,
+        0L,
+        Map.of("druid.indexer.fork.property.druid.advertisedPlaintextPort", 9445)
+    );
+    final AtomicReference<List<String>> childCommand = new AtomicReference<>();
+    final TaskConfig taskConfig = makeDefaultTaskConfigBuilder().build();
+    final WorkerConfig workerConfig = new WorkerConfig();
+    final ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        taskConfig,
+        workerConfig,
+        props,
+        new NoopTaskLogs(),
+        OBJECT_MAPPER,
+        new DruidNode("middleManager", "host", false, 8091, null, null, true, false, null, 9443),
+        new StartupLoggingConfig(),
+        TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation)
+      {
+        childCommand.set(command);
+        return makeTestProcessHolder(logFile, taskLocation);
+      }
+
+      @Override
+      int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
+      {
+        return 1;
+      }
+    };
+
+    forkingTaskRunner.setNumProcessorsPerTask();
+    forkingTaskRunner.run(task).get();
+
+    final List<String> advertisedArgs = childCommand.get()
+                                                    .stream()
+                                                    .filter(arg -> arg.startsWith("-Ddruid.advertisedPlaintextPort="))
+                                                    .collect(Collectors.toList());
+    Assertions.assertTrue(
+        advertisedArgs.containsAll(
+            List.of(
+                "-Ddruid.advertisedPlaintextPort=9443",
+                "-Ddruid.advertisedPlaintextPort=9444",
+                "-Ddruid.advertisedPlaintextPort=9445"
+            )
+        ),
+        advertisedArgs.toString()
+    );
+    // The JVM keeps the last -D value, so the forced -1 must come after every inherited or overridden value.
+    Assertions.assertEquals("-Ddruid.advertisedPlaintextPort=-1", advertisedArgs.get(advertisedArgs.size() - 1));
   }
 
   @Test

@@ -20,6 +20,7 @@
 package org.apache.druid.quidem;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -42,6 +43,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 
 import java.io.File;
@@ -67,11 +69,10 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     QueryableIndex idx = makeKttmIndex(tempDirProducer.newTempFolder());
 
     walker.add(
-        DataSegment.builder()
-            .dataSource("kttm_nested")
-            .interval(Intervals.of("2019-08-25/2019-08-26"))
-            .version("1")
+        DataSegment.builder(SegmentId.of("kttm_nested", Intervals.of("2019-08-25/2019-08-26"), "1", 0))
+            .loadSpec(ImmutableMap.of())
             .shardSpec(new NumberedShardSpec(0, 0))
+            .binaryVersion(null)
             .size(0)
             .build(),
         idx

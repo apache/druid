@@ -108,7 +108,7 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
               <Button
                 icon={getConsoleViewIcon('tasks')}
                 text="Go to Ingestion view"
-                rightIcon={IconNames.ARROW_TOP_RIGHT}
+                endIcon={IconNames.ARROW_TOP_RIGHT}
                 onClick={() => {
                   if (!insertResultState.intermediate) return;
                   goToView(
@@ -126,7 +126,7 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
               <Button
                 icon={getConsoleViewIcon('workbench')}
                 text={`Query: ${insertResultState.data.getIngestDatasource()}`}
-                rightIcon={IconNames.ARROW_TOP_RIGHT}
+                endIcon={IconNames.ARROW_TOP_RIGHT}
                 intent={Intent.PRIMARY}
                 onClick={() => {
                   if (!insertResultState.data) return;

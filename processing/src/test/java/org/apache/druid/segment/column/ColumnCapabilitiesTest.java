@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import org.apache.druid.segment.column.ColumnCapabilities.Capable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -27,23 +28,39 @@ public class ColumnCapabilitiesTest
   @Test
   public void testCapableAnd()
   {
-    Assertions.assertTrue(ColumnCapabilities.Capable.TRUE.and(ColumnCapabilities.Capable.TRUE).isTrue());
-    Assertions.assertFalse(ColumnCapabilities.Capable.TRUE.and(ColumnCapabilities.Capable.FALSE).isTrue());
-    Assertions.assertFalse(ColumnCapabilities.Capable.TRUE.and(ColumnCapabilities.Capable.UNKNOWN).isTrue());
+    Assertions.assertEquals(Capable.TRUE, Capable.TRUE.and(Capable.TRUE));
+    Assertions.assertEquals(Capable.FALSE, Capable.TRUE.and(Capable.FALSE));
+    Assertions.assertEquals(Capable.UNKNOWN, Capable.TRUE.and(Capable.UNKNOWN));
 
-    Assertions.assertFalse(ColumnCapabilities.Capable.FALSE.and(ColumnCapabilities.Capable.TRUE).isTrue());
-    Assertions.assertFalse(ColumnCapabilities.Capable.FALSE.and(ColumnCapabilities.Capable.FALSE).isTrue());
-    Assertions.assertFalse(ColumnCapabilities.Capable.FALSE.and(ColumnCapabilities.Capable.UNKNOWN).isTrue());
+    Assertions.assertEquals(Capable.FALSE, Capable.FALSE.and(Capable.TRUE));
+    Assertions.assertEquals(Capable.FALSE, Capable.FALSE.and(Capable.FALSE));
+    Assertions.assertEquals(Capable.FALSE, Capable.FALSE.and(Capable.UNKNOWN));
 
-    Assertions.assertFalse(ColumnCapabilities.Capable.UNKNOWN.and(ColumnCapabilities.Capable.TRUE).isTrue());
-    Assertions.assertFalse(ColumnCapabilities.Capable.UNKNOWN.and(ColumnCapabilities.Capable.FALSE).isTrue());
-    Assertions.assertFalse(ColumnCapabilities.Capable.UNKNOWN.and(ColumnCapabilities.Capable.UNKNOWN).isTrue());
+    Assertions.assertEquals(Capable.UNKNOWN, Capable.UNKNOWN.and(Capable.TRUE));
+    Assertions.assertEquals(Capable.FALSE, Capable.UNKNOWN.and(Capable.FALSE));
+    Assertions.assertEquals(Capable.UNKNOWN, Capable.UNKNOWN.and(Capable.UNKNOWN));
+  }
+
+  @Test
+  public void testCapableOr()
+  {
+    Assertions.assertEquals(Capable.TRUE, Capable.TRUE.or(Capable.TRUE));
+    Assertions.assertEquals(Capable.TRUE, Capable.TRUE.or(Capable.FALSE));
+    Assertions.assertEquals(Capable.TRUE, Capable.TRUE.or(Capable.UNKNOWN));
+
+    Assertions.assertEquals(Capable.TRUE, Capable.FALSE.or(Capable.TRUE));
+    Assertions.assertEquals(Capable.FALSE, Capable.FALSE.or(Capable.FALSE));
+    Assertions.assertEquals(Capable.UNKNOWN, Capable.FALSE.or(Capable.UNKNOWN));
+
+    Assertions.assertEquals(Capable.TRUE, Capable.UNKNOWN.or(Capable.TRUE));
+    Assertions.assertEquals(Capable.UNKNOWN, Capable.UNKNOWN.or(Capable.FALSE));
+    Assertions.assertEquals(Capable.UNKNOWN, Capable.UNKNOWN.or(Capable.UNKNOWN));
   }
 
   @Test
   public void testCapableOfBoolean()
   {
-    Assertions.assertEquals(ColumnCapabilities.Capable.TRUE, ColumnCapabilities.Capable.of(true));
-    Assertions.assertEquals(ColumnCapabilities.Capable.FALSE, ColumnCapabilities.Capable.of(false));
+    Assertions.assertEquals(Capable.TRUE, Capable.of(true));
+    Assertions.assertEquals(Capable.FALSE, Capable.of(false));
   }
 }

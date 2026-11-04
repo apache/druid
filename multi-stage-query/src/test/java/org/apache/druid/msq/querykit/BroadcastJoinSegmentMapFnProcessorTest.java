@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.querykit;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
@@ -45,6 +44,7 @@ import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.CursorFactory;
@@ -52,7 +52,6 @@ import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
@@ -259,12 +258,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     // Query: used only to retrieve configured join from context
     final Query<?> mockQuery = EasyMock.mock(Query.class);
     EasyMock.expect(mockQuery.context()).andReturn(
-        QueryContext.of(
-            ImmutableMap.of(
-                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
-                JoinAlgorithm.SORT_MERGE.getId()
-            )
-        )
+        QueryContext.of(QueryContextParameters.SQL_JOIN_ALGORITHM, JoinAlgorithm.SORT_MERGE)
     );
     EasyMock.replay(mockQuery);
     final BroadcastJoinSegmentMapFnProcessor broadcastJoinHelper = new BroadcastJoinSegmentMapFnProcessor(

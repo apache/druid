@@ -16,20 +16,18 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { IndexSpecDialog } from './index-spec-dialog';
 
 describe('IndexSpecDialog', () => {
   it('matches snapshot without compactionConfig', () => {
-    const compactionDialog = shallow(
-      <IndexSpecDialog onClose={() => {}} onSave={() => {}} indexSpec={undefined} />,
-    );
-    expect(compactionDialog).toMatchSnapshot();
+    render(<IndexSpecDialog onClose={() => {}} onSave={() => {}} indexSpec={undefined} />);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('matches snapshot with indexSpec', () => {
-    const compactionDialog = shallow(
+    render(
       <IndexSpecDialog
         onClose={() => {}}
         onSave={() => {}}
@@ -38,6 +36,6 @@ describe('IndexSpecDialog', () => {
         }}
       />,
     );
-    expect(compactionDialog).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

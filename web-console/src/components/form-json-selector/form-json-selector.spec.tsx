@@ -16,20 +16,20 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { FormJsonSelector } from './form-json-selector';
 
 describe('FormJsonSelector', () => {
   it('matches snapshot form tab', () => {
-    const formJsonSelector = shallow(<FormJsonSelector tab="form" onChange={() => {}} />);
+    const { container } = render(<FormJsonSelector tab="form" onChange={() => {}} />);
 
-    expect(formJsonSelector).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot form json', () => {
-    const formJsonSelector = shallow(<FormJsonSelector tab="json" onChange={() => {}} />);
+    const { container } = render(<FormJsonSelector tab="json" onChange={() => {}} />);
 
-    expect(formJsonSelector).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

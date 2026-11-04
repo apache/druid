@@ -89,6 +89,15 @@ public class Stopwatch
   }
 
   /**
+   * Returns the nanoseconds elapsed on the stopwatch.
+   */
+
+  public long nanosElapsed()
+  {
+    return delegate.elapsed(TimeUnit.NANOSECONDS);
+  }
+
+  /**
    * Checks if the given duration has already elapsed on the stopwatch.
    */
   public boolean hasElapsed(Duration duration)

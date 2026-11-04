@@ -90,7 +90,7 @@ export const DestinationForm = React.memo(function DestinationForm(props: Destin
                 <Button
                   icon={IconNames.DELETE}
                   intent={Intent.DANGER}
-                  minimal
+                  variant="minimal"
                   data-tooltip="Table name already exists"
                 />
               ) : undefined

@@ -26,7 +26,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfigTest;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -59,6 +62,10 @@ import java.util.Objects;
  * on-demand deep-storage range reads (so the count is positive), while the full-download path does not (the count
  * stays zero because {@code virtualStoragePartialDownloadsEnabled=false} makes the worker mount segments as complete
  * cache entries and download them in full instead of via range reads).
+ * <p>
+ * Separately, {@link QueryContextParameters#SEGMENT_ACQUIRE_MODE} overrides the leaf processor's default acquire mode while
+ * partial downloads stay enabled; forcing {@code FULL} shows up as more {@link StorageMonitor#VSF_LOAD_BYTES} than the
+ * default {@code PARTIAL} acquire for the same query.
  */
 class EmbeddedMSQPartialDownloadsTest extends EmbeddedClusterTestBase
 {
@@ -149,6 +156,44 @@ class EmbeddedMSQPartialDownloadsTest extends EmbeddedClusterTestBase
         emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_COUNT),
         "with partial downloads disabled via query context, the worker should download in full (no range reads)"
     );
+  }
+
+  @Test
+  void testSegmentAcquireModeQueryContextOverride()
+  {
+    final LatchableEmitter emitter = indexer.latchableEmitter();
+
+    // The GroupBy leaf processor defaults to AcquireMode.PARTIAL, so only the columns the query touches are pulled
+    // from deep storage. Forcing FULL via the query context makes the worker download the entire segment up front
+    // instead, even though partial downloads remain enabled.
+    final long partialLoadBytes = runMsqSelectAndGetLoadBytes(emitter, Collections.emptyMap());
+    final long fullLoadBytes = runMsqSelectAndGetLoadBytes(
+        emitter,
+        QueryContext.ofMap(QueryContextParameters.SEGMENT_ACQUIRE_MODE, AcquireMode.FULL)
+    );
+
+    Assertions.assertTrue(partialLoadBytes > 0, "expected the default PARTIAL acquire to download some bytes");
+    Assertions.assertTrue(
+        fullLoadBytes > partialLoadBytes,
+        StringUtils.format(
+            "expected the FULL acquire to download more bytes[%,d] than the PARTIAL acquire[%,d]",
+            fullLoadBytes,
+            partialLoadBytes
+        )
+    );
+  }
+
+  /**
+   * Runs {@link #SELECT_SQL} with the given context and returns the {@link StorageMonitor#VSF_LOAD_BYTES} the worker
+   * pulled from deep storage. Each worker task has its own ephemeral cache, so every run starts cold.
+   */
+  private long runMsqSelectAndGetLoadBytes(LatchableEmitter emitter, Map<String, Object> queryContext)
+  {
+    emitter.awaitMetricQuiescent(StorageMonitor.VSF_LOAD_BYTES, MONITOR_QUIESCE_TIMEOUT_MILLIS);
+    emitter.flush();
+    runMsqSelect(queryContext);
+    emitter.awaitMetricQuiescent(StorageMonitor.VSF_LOAD_BYTES, MONITOR_QUIESCE_TIMEOUT_MILLIS);
+    return emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES);
   }
 
   private void runMsqSelect(Map<String, Object> queryContext)

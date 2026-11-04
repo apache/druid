@@ -22,7 +22,6 @@ package org.apache.druid.benchmark.query;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
@@ -43,6 +42,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -58,6 +58,8 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
+import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -75,6 +77,7 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -112,7 +115,7 @@ public class ScanBenchmark
   @Param({"basic.A", "basic.B", "basic.C", "basic.D"})
   private String schemaAndQuery;
 
-  @Param({"1000", "99999"})
+  @Param({"10", "1000", "99999"})
   private int limit;
 
   @Param({"NONE", "DESCENDING", "ASCENDING"})
@@ -301,8 +304,17 @@ public class ScanBenchmark
   @State(Scope.Benchmark)
   public static class QueryableIndexState
   {
+    /**
+     * Number of time chunks that evenly divide the data interval of the schema.
+     */
+    @Param({"1", "8"})
+    private int numTimeChunks;
+
+    /**
+     * Number of segments per time chunk. Each one spans its whole time chunk.
+     */
     @Param({"2", "4"})
-    private int numSegments;
+    private int numPartitionsPerTimeChunk;
 
     @Param({"2"})
     private int numProcessingThreads;
@@ -310,6 +322,11 @@ public class ScanBenchmark
     private ExecutorService executorService;
     private File qIndexesDir;
     private List<QueryableIndex> qIndexes;
+
+    /**
+     * IDs of {@link #qIndexes}, in time order.
+     */
+    private List<SegmentId> segmentIds;
 
     @Setup
     public void setup(ScanBenchmark global) throws IOException
@@ -320,22 +337,39 @@ public class ScanBenchmark
 
       qIndexesDir = FileUtils.createTempDir();
       qIndexes = new ArrayList<>();
+      segmentIds = new ArrayList<>();
 
-      for (int i = 0; i < numSegments; i++) {
-        log.info("Generating rows for segment " + i);
-
-        IncrementalIndex incIndex = global.makeIncIndex();
-        global.generator.reset(RNG_SEED + i).addToIndex(incIndex, global.rowsPerSegment);
-
-        File indexFile = INDEX_MERGER_V9.persist(
-            incIndex,
-            new File(qIndexesDir, String.valueOf(i)),
-            IndexSpec.getDefault(),
-            null
+      final Interval dataInterval = global.schemaInfo.getDataInterval();
+      for (int chunk = 0; chunk < numTimeChunks; chunk++) {
+        final Interval chunkInterval = Intervals.utc(
+            dataInterval.getStartMillis() + dataInterval.toDurationMillis() * chunk / numTimeChunks,
+            dataInterval.getStartMillis() + dataInterval.toDurationMillis() * (chunk + 1) / numTimeChunks
         );
-        incIndex.close();
 
-        qIndexes.add(INDEX_IO.loadIndex(indexFile));
+        for (int partition = 0; partition < numPartitionsPerTimeChunk; partition++) {
+          final int i = qIndexes.size();
+          log.info("Generating rows for segment " + i);
+
+          final DataGenerator generator = new DataGenerator(
+              global.schemaInfo.getColumnSchemas(),
+              RNG_SEED + i,
+              chunkInterval,
+              global.rowsPerSegment
+          );
+          IncrementalIndex incIndex = global.makeIncIndex();
+          generator.addToIndex(incIndex, global.rowsPerSegment);
+
+          File indexFile = INDEX_MERGER_V9.persist(
+              incIndex,
+              new File(qIndexesDir, String.valueOf(i)),
+              IndexSpec.getDefault(),
+              null
+          );
+          incIndex.close();
+
+          qIndexes.add(INDEX_IO.loadIndex(indexFile));
+          segmentIds.add(SegmentId.of("qIndex", chunkInterval, "dummy_version", partition));
+        }
       }
     }
 
@@ -397,9 +431,7 @@ public class ScanBenchmark
                 )
             )
         )
-        .withOverriddenContext(
-            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
-        );
+        .withOverriddenContext(QueryContextParameters.SCAN_OUTERMOST, false);
 
     List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, effectiveQuery);
     blackhole.consume(results);
@@ -429,9 +461,7 @@ public class ScanBenchmark
                 )
             )
         )
-        .withOverriddenContext(
-            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
-        );
+        .withOverriddenContext(QueryContextParameters.SCAN_OUTERMOST, false);
 
     List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, effectiveQuery);
     blackhole.consume(results);
@@ -445,21 +475,22 @@ public class ScanBenchmark
     List<SegmentDescriptor> segmentDescriptors = new ArrayList<>();
     List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
-    for (int i = 0; i < state.numSegments; i++) {
-      String segmentName = "qIndex";
+    for (int i = 0; i < state.qIndexes.size(); i++) {
+      final SegmentId segmentId = state.segmentIds.get(i);
       final QueryRunner<Result<ScanResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
-          SegmentId.dummy(segmentName),
-          new QueryableIndexSegment(state.qIndexes.get(i), SegmentId.dummy(segmentName, i))
+          segmentId,
+          new QueryableIndexSegment(state.qIndexes.get(i), segmentId)
       );
-      segmentDescriptors.add(
-          new SegmentDescriptor(
-              Intervals.ETERNITY,
-              "dummy_version",
-              i
+      segmentDescriptors.add(segmentId.toDescriptor());
+
+      // Restrict each segment to its descriptor, as data servers do.
+      runners.add(
+          new SpecificSegmentQueryRunner<>(
+              toolChest.preMergeQueryDecoration(runner),
+              new SpecificSegmentSpec(segmentId.toDescriptor())
           )
       );
-      runners.add(toolChest.preMergeQueryDecoration(runner));
     }
 
     QueryRunner theRunner = toolChest.postMergeQueryDecoration(
@@ -474,9 +505,7 @@ public class ScanBenchmark
         .withQuerySegmentSpec(
             new MultipleSpecificSegmentSpec(segmentDescriptors)
         )
-        .withOverriddenContext(
-            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
-        );
+        .withOverriddenContext(QueryContextParameters.SCAN_OUTERMOST, false);
 
     Sequence<Result<ScanResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(effectiveQuery),

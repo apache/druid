@@ -28,12 +28,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
@@ -43,15 +41,11 @@ import java.util.IllegalFormatException;
 import java.util.Locale;
 
 /**
- * As of OpenJDK / Oracle JDK 8, the JVM is optimized around String charset variable instead of Charset passing, that
- * is exploited in {@link #toUtf8(String)} and {@link #fromUtf8(byte[])}.
+ * Utilities for working with strings, including UTF-8 encoding and decoding.
  */
 public class StringUtils
 {
   public static final byte[] EMPTY_BYTES = new byte[0];
-  @Deprecated // Charset parameters to String are currently slower than the charset's string name
-  public static final Charset UTF8_CHARSET = StandardCharsets.UTF_8;
-  public static final String UTF8_STRING = StandardCharsets.UTF_8.toString();
   private static final Base64.Encoder BASE64_ENCODER = Base64.getEncoder();
   private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
 
@@ -231,13 +225,7 @@ public class StringUtils
 
   public static String fromUtf8(final byte[] bytes, int offset, int length)
   {
-    try {
-      return new String(bytes, offset, length, UTF8_STRING);
-    }
-    catch (UnsupportedEncodingException e) {
-      // Should never happen
-      throw new RuntimeException(e);
-    }
+    return new String(bytes, offset, length, StandardCharsets.UTF_8);
   }
 
   /**
@@ -299,13 +287,7 @@ public class StringUtils
    */
   public static byte[] toUtf8(final String string)
   {
-    try {
-      return string.getBytes(UTF8_STRING);
-    }
-    catch (UnsupportedEncodingException e) {
-      // Should never happen
-      throw new RuntimeException(e);
-    }
+    return string.getBytes(StandardCharsets.UTF_8);
   }
 
   /**

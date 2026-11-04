@@ -20,25 +20,37 @@ on:
 jobs:
   run-docker-tests:
     name: Run Docker tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set Docker image env var
         run: echo "DRUID_DIST_IMAGE_NAME=apache/druid:docker-tests" >> $GITHUB_ENV
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: 'zulu'
           java-version: 25
           cache: 'maven'
-      - name: Build the Druid distribution
-        run: .github/scripts/build-dist
+      - name: Build the Druid distribution for the Docker image
+        # Build only what the Docker image needs: the binary distribution tarball.
+        # Release-only work and static checks are skipped. Same flags as the builder stage in
+        # distribution/docker/Dockerfile. This also installs every reactor module
+        # into the local Maven repository, which run_docker-tests relies on.
+        # benchmarks is excluded: nothing in the distribution or the Docker tests
+        # depends on it. The web console assets are skipped too: no Docker test
+        # uses the console, the router tolerates the missing assets, and the
+        # console is fully built and packaged by packaging-check on every commit.
+        run: ./mvnw -B clean install -pl '!benchmarks' -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests -Dweb.console.skip=true
       - name: Build the Docker image
         run: |
-          DOCKER_BUILDKIT=1 docker build \
+          set -o pipefail
+          {
+            cat distribution/docker/Dockerfile
+            printf '\nENV JAVA_TOOL_OPTIONS="-XX:+UseCompactObjectHeaders"\n'
+          } | DOCKER_BUILDKIT=1 docker build \
             --build-arg BUILD_FROM_SOURCE=false \
             -t "$DRUID_DIST_IMAGE_NAME" \
-            -f distribution/docker/Dockerfile .
+            -f - .
       - name: Run Docker tests
         id: run-it
         run: .github/scripts/run_docker-tests

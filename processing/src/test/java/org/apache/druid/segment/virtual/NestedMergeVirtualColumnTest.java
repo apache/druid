@@ -72,6 +72,23 @@ public class NestedMergeVirtualColumnTest
   }
 
   @Test
+  public void testWithOutputName()
+  {
+    NestedMergeVirtualColumn original = new NestedMergeVirtualColumn(
+        "v0",
+        Arrays.asList("col1", "col2"),
+        TestExprMacroTable.INSTANCE
+    );
+    Assertions.assertTrue(original.supportsOutputNameRewrite());
+    NestedMergeVirtualColumn renamed = original.withOutputName("declared");
+    Assertions.assertEquals(
+        new NestedMergeVirtualColumn("declared", Arrays.asList("col1", "col2"), TestExprMacroTable.INSTANCE),
+        renamed
+    );
+    Assertions.assertEquals(original.getEquivalanceKey(), renamed.getEquivalanceKey());
+  }
+
+  @Test
   public void testEquivalence()
   {
     NestedMergeVirtualColumn v1 = new NestedMergeVirtualColumn(

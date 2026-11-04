@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-@import 'common/colors';
-@import 'common/color-aliases';
-@import 'common/variables';
-@import 'components/button/common';
-@import 'components/button/button-group';
-@import 'components/forms/common';
-@import 'components/navbar/navbar';
-@import 'components/card/card';
-@import 'special-switch-modes';
-@import 'segmented-control';
+// The Blueprint variables that the console overrides, they are passed to Blueprint in _blueprint.scss
+@forward 'common/colors';
+@forward 'common/color-aliases';
+@forward 'common/variables';
+@forward 'components/button/common';
+@forward 'components/forms/common';
+@forward 'components/navbar/navbar';
+@forward 'components/card/card';

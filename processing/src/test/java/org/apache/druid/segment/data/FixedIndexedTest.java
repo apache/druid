@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
@@ -196,5 +197,55 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
     writer.writeTo(channel, null);
     Assertions.assertEquals(size, buffer.position());
     buffer.position(0);
+  }
+
+  @Test
+  public void testNegativeSizeRejected()
+  {
+    final ByteBuffer buffer = ByteBuffer.allocate(16).order(order);
+    buffer.put((byte) 0);
+    buffer.put((byte) 0);
+    buffer.putInt(-5);
+    buffer.flip();
+
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES)
+    );
+    Assertions.assertTrue(e.getMessage().contains("must be non-negative"), e.getMessage());
+  }
+
+  @Test
+  public void testSizeExceedingBufferRejected()
+  {
+    final ByteBuffer buffer = ByteBuffer.allocate(20).order(order);
+    buffer.put((byte) 0);
+    buffer.put((byte) 0);
+    buffer.putInt(4); // 4 * Long.BYTES = 32 bytes claimed, but the buffer only holds 8 value bytes
+    buffer.flip();
+
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES)
+    );
+    Assertions.assertTrue(e.getMessage().contains("exceeds the available buffer"), e.getMessage());
+  }
+
+  @Test
+  public void testNegativeCountWithNullFlagRejected()
+  {
+    // With the null flag set the serialized count is incremented before validation: a raw
+    // count of -1 yields size == 0 but valuesCount == -1, which must still be rejected.
+    final ByteBuffer buffer = ByteBuffer.allocate(16).order(order);
+    buffer.put((byte) 0);
+    buffer.put((byte) (TypeStrategies.IS_NULL_BYTE | FixedIndexed.IS_SORTED_MASK));
+    buffer.putInt(-1);
+    buffer.flip();
+
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES)
+    );
+    Assertions.assertTrue(e.getMessage().contains("must be non-negative"), e.getMessage());
   }
 }

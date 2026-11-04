@@ -20,14 +20,14 @@
 package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.StandardMSQComponentSupplier;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
@@ -166,9 +166,7 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
 
   public void querySql(String sql, Blackhole blackhole)
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        MultiStageQueryContext.CTX_MAX_NUM_TASKS, maxNumTasks
-    );
+    final Map<String, Object> context = QueryContext.ofMap(QueryContextParameters.MAX_NUM_TASKS, maxNumTasks);
     CalciteTestConfig calciteTestConfig = createCalciteTestConfig();
     QueryTestBuilder queryTestBuilder = new QueryTestBuilder(calciteTestConfig)
         .addCustomRunner(

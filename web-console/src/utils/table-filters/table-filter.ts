@@ -18,8 +18,8 @@
 
 import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { ColumnFilter } from '@tanstack/react-table';
 import { C, F, SqlExpression } from 'druid-query-toolkit';
-import type { Filter } from 'react-table';
 
 import { caseInsensitiveContains } from '../index';
 
@@ -33,9 +33,41 @@ export class TableFilter {
   public readonly mode: FilterMode;
   public readonly values: string[];
 
+  /**
+   * Splits a needle into its values, which are separated by `|`. In a value, `\|` is a literal `|` and `\\` a literal
+   * `\` (any other `\` is literal too).
+   */
+  static splitNeedle(needle: string): string[] {
+    const values: string[] = [];
+    let current = '';
+    for (let i = 0; i < needle.length; i++) {
+      const char = needle[i];
+      const next = needle[i + 1];
+      if (char === '\\' && (next === '|' || next === '\\')) {
+        current += next;
+        i++;
+      } else if (char === '|') {
+        values.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current);
+    return values;
+  }
+
+  /**
+   * Joins values into a needle, the inverse of `splitNeedle`.
+   */
+  static joinNeedle(values: readonly string[]): string {
+    return values.map(value => value.replace(/[\\|]/g, '\\$&')).join('|');
+  }
+
   static fromSingleTableFilterString(str: string): TableFilter | undefined {
+    // Undo the encoding of TableFilters.toString()
     const m = /^(\w+)((?:~|=|!=|<(?!=)|<=|>(?!=)|>=).*)$/.exec(
-      str.replace(/%2[56F]/g, decodeURIComponent),
+      str.replace(/%2[356F]|%3F/g, decodeURIComponent),
     );
     if (!m) return;
 
@@ -52,7 +84,7 @@ export class TableFilter {
     return new TableFilter(key, mode, value);
   }
 
-  static fromFilter(filter: Filter): TableFilter {
+  static fromFilter(filter: ColumnFilter): TableFilter {
     const modeMatch = /^(~|=|!=|<(?!=)|<=|>(?!=)|>=)?(.*)$/.exec(String(filter.value));
     if (!modeMatch) {
       return new TableFilter(filter.id, '~', String(filter.value));
@@ -64,17 +96,21 @@ export class TableFilter {
     return new TableFilter(filter.id, mode, value);
   }
 
+  /**
+   * @param value the values to filter on, or a needle (as typed in a filter input) of values separated by `|` (see
+   * `splitNeedle`). To filter on one literal value, that may contain a `|`, pass it as `[value]`.
+   */
   constructor(key: string, mode: FilterMode, value: string | string[]) {
     this.key = key;
     this.mode = mode;
-    this.values = typeof value === 'string' ? value.split('|') : value;
+    this.values = typeof value === 'string' ? TableFilter.splitNeedle(value) : value;
   }
 
   public get value(): string {
-    return this.values.join('|');
+    return TableFilter.joinNeedle(this.values);
   }
 
-  public toFilter(): Filter {
+  public toFilter(): ColumnFilter {
     return {
       id: this.key,
       value: `${this.mode}${this.value}`,
@@ -197,7 +233,7 @@ export class TableFilter {
   }
 
   static parseModeAndNeedle(
-    filter: Filter,
+    filter: ColumnFilter,
     loose = false,
   ): { mode: FilterMode; needle: string; needleParts: string[] } | undefined {
     const m = /^(~|=|!=|<(?!=)|<=|>(?!=)|>=)?(.*)$/.exec(String(filter.value));
@@ -208,7 +244,7 @@ export class TableFilter {
     return {
       mode,
       needle,
-      needleParts: needle.split('|'),
+      needleParts: TableFilter.splitNeedle(needle),
     };
   }
 }

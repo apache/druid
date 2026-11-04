@@ -221,6 +221,18 @@ public class MultipleKubernetesTaskRunnerConfigTest
   }
 
   @Test
+  public void test_fromProperties_withAdvertisedPlaintextPort()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.clusters[0].taskNamespace", "namespace1");
+    props.setProperty("druid.indexer.runner.advertisedPlaintextPort", "9443");
+
+    final MultipleKubernetesTaskRunnerConfig config = MultipleKubernetesTaskRunnerConfig.fromProperties(props);
+
+    Assertions.assertEquals(Integer.valueOf(9443), config.getAdvertisedPlaintextPort());
+  }
+
+  @Test
   public void test_fromProperties_withoutSelectionStrategy_defaultsToRoundRobin()
   {
     Properties props = new Properties();

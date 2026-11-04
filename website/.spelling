@@ -67,6 +67,7 @@ CentralizedDatasourceSchema
 Ceph
 circledR
 CloudWatch
+ClusterRole
 ColumnDescriptor
 Corretto
 CLI
@@ -104,6 +105,7 @@ DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
+EKS
 EMR
 EMRFS
 ETL
@@ -118,6 +120,7 @@ Float.POSITIVE_INFINITY
 Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
+GKE
 GPG
 GoogleCloudStorageInputSource
 GSSAPI
@@ -162,6 +165,7 @@ JDBC
 JDK
 JDK7
 JDK8
+JIT
 JKS
 jks
 JNDI
@@ -179,6 +183,7 @@ Joda
 JsonProperty
 Jupyter
 JupyterLab
+KIP-392
 KMS
 Kerberized
 Kerberos
@@ -205,10 +210,12 @@ Marquez
 MiddleManager
 MiddleManagers
 Montréal
+MSK
 MSQ
 Murmur3
 MVCC
 MV_TO_ARRAY
+Netty
 NFS
 NodeCache
 OCF
@@ -235,6 +242,7 @@ ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
 ROUTINE_TYPE
+RPC
 Rackspace
 Redis
 residualFilterMode
@@ -243,6 +251,7 @@ SAS
 SDK
 SIGAR
 SIMD
+SLEEF
 SNI
 SPNEGO
 Splunk
@@ -256,6 +265,7 @@ Splunk
 SqlParameter
 SslContextFactory
 StatsD
+SVML
 SYSTEM_TABLE
 TaskRunner
 TabItem
@@ -275,7 +285,9 @@ uris
 UTF-16
 UTF-8
 UTF8
+VO_MATHLIB
 XMLs
+x86
 ZK
 ZSTD
 accessor
@@ -420,6 +432,7 @@ kbps
 kerberos
 keystore
 keytool
+kubelet
 keytab
 kubeconfig
 kubernetes
@@ -528,6 +541,7 @@ processFromRaw
 programmatically
 proto
 proxied
+proxying
 proxyConfig
 python2
 python3
@@ -615,6 +629,7 @@ transactionally
 try_parse_json
 tsv
 ulimit
+ulps
 unannounce
 unannouncements
 unary
@@ -633,6 +648,7 @@ unnesting
 unnests
 unparseable
 unparsed
+unsets
 unsetting
 untrusted
 useFilterCNF
@@ -702,6 +718,7 @@ P1M
 P1Y
 PT1M
 PT5M
+QUERY_CONTEXT_PARAMETERS
 SCHEMA_NAME
 SCHEMA_OWNER
 SERVER_SEGMENTS
@@ -722,6 +739,8 @@ avg_num_rows
 avg_size
 created_time
 current_size
+default_description
+default_value
 detailed_state
 druid.server.maxSize
 druid.server.tier
@@ -732,6 +751,8 @@ druid.sql.planner.useApproximateTopN
 druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
+effective_source
+effective_value
 error_message
 error_msg
 exprs
@@ -740,12 +761,14 @@ interval_expr
 is_active
 is_available
 is_leader
+is_nullable
 is_overshadowed
 is_published
 is_realtime
 java.sql.Types
 last_compaction_state
 max_size
+native_query_types
 available_processors
 total_memory
 num_replicas
@@ -754,11 +777,13 @@ num_segments
 partition_num
 plaintext_port
 queue_insertion_time
+query_languages
 replication_factor
 runner_status
 segment_id
 server_type
 shard_spec
+statement_types
 sqlTimeZone
 sql-msq-task
 supervisor_id
@@ -772,6 +797,7 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 useLexicographicTopN
+value_range
 wikipedia
 your-table
 enableTimeBoundaryPlanning
@@ -1590,7 +1616,10 @@ case_simple
 cbrt
 concat
 copysign
+cosh
 expm1
+sinh
+tanh
 expr
 expr1
 expr2
@@ -2093,6 +2122,7 @@ addr
 affinityConfig
 allowAll
 ANDed
+ANDs
 array_mod
 autoscale
 autoscalers
@@ -2621,6 +2651,7 @@ SRE
 reachability
 ownership_mismatch
 giveup
+retryable
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2674,3 +2705,19 @@ dylan
 eve
 opaUri
 rego
+
+- ../docs/querying/sql-jdbc.md
+getters
+savepoints
+Scrollable
+updatable
+
+- ../docs/development/extensions-contrib/tsfile.md
+TsFile
+IoTDB
+INT32
+INT64
+
+- ../docs/configuration/extensions.md
+druid-tsfile-extensions
+TsFile

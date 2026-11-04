@@ -51,8 +51,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -213,6 +215,84 @@ public class TableManagerTest
 
     // Update fails if table is in the Deleting state
     manager.markDeleting(table.id());
+    assertThrows(
+        NotFoundException.class,
+        () -> manager.updateProperties(table.id(), t -> t.spec())
+    );
+  }
+
+  @Test
+  public void testUpdatePropertiesFailsWhenAnotherWriterCommits() throws CatalogException
+  {
+    final TableSpec spec = new TableSpec(
+        DatasourceDefn.TABLE_TYPE,
+        ImmutableMap.of(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"),
+        null
+    );
+    final TableMetadata table = TableMetadata.newTable(TableId.datasource("racy"), spec);
+    manager.create(table);
+
+    final AtomicInteger attempts = new AtomicInteger();
+    final CatalogException e = assertThrows(
+        CatalogException.class,
+        () -> manager.updateProperties(table.id(), t -> {
+          if (attempts.getAndIncrement() == 0) {
+            // Another writer lands between this read and its write.
+            try {
+              manager.updateProperties(table.id(), other -> {
+                final Map<String, Object> updated = new HashMap<>(other.spec().properties());
+                updated.put("other", "written");
+                return other.spec().withProperties(updated);
+              });
+            }
+            catch (CatalogException ce) {
+              throw new RuntimeException(ce);
+            }
+          }
+          final Map<String, Object> updated = new HashMap<>(t.spec().properties());
+          updated.put("mine", "written");
+          return t.spec().withProperties(updated);
+        })
+    );
+    assertTrue(e.getMessage().contains("was changed by another update"), e.getMessage());
+
+    // The transform ran once: the loser is reported rather than re-applied.
+    assertEquals(1, attempts.get());
+
+    // The writer that got there first is intact, and the loser wrote nothing.
+    final TableMetadata read = manager.read(table.id());
+    assertEquals("written", read.spec().properties().get("other"));
+    assertNull(read.spec().properties().get("mine"));
+  }
+
+  @Test
+  public void testUpdatePropertiesFailsWhenTableIsDeletedConcurrently() throws CatalogException
+  {
+    final TableSpec spec = new TableSpec(
+        DatasourceDefn.TABLE_TYPE,
+        ImmutableMap.of(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"),
+        null
+    );
+    final TableMetadata table = TableMetadata.newTable(TableId.datasource("deleting"), spec);
+    manager.create(table);
+
+    // The deletion lands between the edit's read and its write.
+    assertThrows(
+        CatalogException.class,
+        () -> manager.updateProperties(table.id(), t -> {
+          try {
+            manager.markDeleting(table.id());
+          }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+          final Map<String, Object> updated = new HashMap<>(t.spec().properties());
+          updated.put("mine", "written");
+          return t.spec().withProperties(updated);
+        })
+    );
+
+    // The deleting row was not rewritten, and a fresh edit sees no active table at all.
     assertThrows(
         NotFoundException.class,
         () -> manager.updateProperties(table.id(), t -> t.spec())

@@ -1302,6 +1302,73 @@ class PartialSegmentFileMapperV10Test
     return new File(baseDir, IndexIO.V10_FILE_NAME);
   }
 
+  @Test
+  void testBitmapUsesSortedFileNamePositions() throws IOException
+  {
+    // 12 files named "0" to "11" sort as "0", "1", "10", "11", "2", ..., "9", so a file's bit is its position in name
+    // order rather than in write order; persisted bitmaps depend on this layout
+    final File segmentFile = buildTestSegment(12, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("bitmap_layout");
+    final File headerFile = new File(
+        cacheDir,
+        IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      mapper.fetchFiles(Set.of("10"));
+      mapper.fetchFiles(Set.of("9"));
+    }
+
+    final byte[] header = Files.toByteArray(headerFile);
+    Assertions.assertEquals(1 << 2, header[header.length - 2]);
+    Assertions.assertEquals(1 << 3, header[header.length - 1]);
+
+    try (PartialSegmentFileMapperV10 restored = createMapper(rangeReader, cacheDir)) {
+      Assertions.assertEquals(Set.of("10", "9"), restored.getDownloadedFiles());
+      Assertions.assertEquals(10, restored.mapFile("10").getInt());
+      Assertions.assertEquals(9, restored.mapFile("9").getInt());
+    }
+  }
+
+  @Test
+  void testBitmapUsesUtf16OrderForEmojiFileNames() throws IOException
+  {
+    // String order compares UTF-16 code units, so emoji (surrogate pairs) sort before "Ａ" (U+FF21); code point and
+    // UTF-8 byte order would sort them after it. Persisted bitmaps depend on the UTF-16 order.
+    final List<String> sortedNames = List.of("a", "é", "🎉", "😀", "Ａ");
+    final File baseDir = temporaryFolder.newFolder("emoji_" + ThreadLocalRandom.current().nextInt());
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, CompressionStrategy.NONE)) {
+      for (int i = sortedNames.size() - 1; i >= 0; i--) {
+        final File tmpFile = temporaryFolder.newFile(StringUtils.format("emoji-%s.bin", i));
+        Files.write(Ints.toByteArray(i), tmpFile);
+        builder.add(sortedNames.get(i), tmpFile);
+      }
+    }
+
+    final File cacheDir = newCacheDir("emoji_bitmap_layout");
+    final File headerFile = new File(
+        cacheDir,
+        IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      Assertions.assertEquals(sortedNames, List.copyOf(mapper.getSegmentFileMetadata().getFiles().keySet()));
+      mapper.fetchFiles(Set.of("😀"));
+      mapper.fetchFiles(Set.of("Ａ"));
+    }
+
+    final byte[] header = Files.toByteArray(headerFile);
+    Assertions.assertEquals((1 << 3) | (1 << 4), header[header.length - 1]);
+
+    try (PartialSegmentFileMapperV10 restored = createMapper(rangeReader, cacheDir)) {
+      Assertions.assertEquals(Set.of("😀", "Ａ"), restored.getDownloadedFiles());
+      Assertions.assertEquals(3, restored.mapFile("😀").getInt());
+      Assertions.assertEquals(4, restored.mapFile("Ａ").getInt());
+    }
+  }
+
   private File buildTestSegment(int numFiles, CompressionStrategy compression) throws IOException
   {
     final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());

@@ -222,7 +222,7 @@ public class DurableStorageUtils
 
   /**
    * Tries to parse out the most top level directory from the path. Returns null if there is no such directory.
-   * <br></br>
+   * <br>
    * For eg:
    * <br/>
    * <ul>

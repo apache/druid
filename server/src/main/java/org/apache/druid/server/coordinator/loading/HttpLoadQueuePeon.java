@@ -26,6 +26,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -50,8 +52,6 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -60,6 +60,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -180,7 +181,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private URL getLoadCapabilitiesUrl() throws MalformedURLException
   {
-    return new URL(new URL(serverId), "druid-internal/v1/segments/loadCapabilities");
+    return URI.create(serverId).resolve("/druid-internal/v1/segments/loadCapabilities").toURL();
   }
 
   /**
@@ -385,14 +386,13 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         loadingRateTracker.markBatchLoadingStarted();
       }
 
-      final URL changeRequestURL = new URL(
-          new URL(serverId),
+      final URL changeRequestURL = URI.create(serverId).resolve(
           StringUtils.nonStrictFormat(
-              "druid-internal/v1/segments/changeRequests?timeout=%d&loadingMode=%s",
+              "/druid-internal/v1/segments/changeRequests?timeout=%d&loadingMode=%s",
               config.getHostTimeout().getMillis(),
               loadingMode
           )
-      );
+      ).toURL();
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = httpClient.go(

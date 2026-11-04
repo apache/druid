@@ -804,7 +804,7 @@ class StorageLocationTest
   private void verifyLoc(long maxSize, StorageLocation loc)
   {
     Assertions.assertEquals(maxSize, loc.availableSizeBytes());
-    for (int i = 0; i <= maxSize; ++i) {
+    for (long i = 0; i <= maxSize; ++i) {
       Assertions.assertTrue(loc.canHandle(makeSegmentEntry("2013/2014", i)).isSuccess(), String.valueOf(i));
     }
   }
@@ -820,17 +820,13 @@ class StorageLocationTest
 
   private static DataSegment makeSegment(String intervalString, long size)
   {
-    return new DataSegment(
-        "test",
-        Intervals.of(intervalString),
-        "1",
-        ImmutableMap.of(),
-        Collections.singletonList("d"),
-        Collections.singletonList("m"),
-        null,
-        null,
-        size
-    );
+    return DataSegment.builder(SegmentId.of("test", Intervals.of(intervalString), "1", 0))
+                      .loadSpec(ImmutableMap.of())
+                      .dimensions(Collections.singletonList("d"))
+                      .metrics(Collections.singletonList("m"))
+                      .binaryVersion(null)
+                      .size(size)
+                      .build();
   }
 
   private SegmentId newSegmentId(String intervalString)

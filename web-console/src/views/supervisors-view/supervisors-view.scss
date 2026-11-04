@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-@import '../../blueprint-overrides/common/colors';
+@use '../../variables' as *;
+@use '../../blueprint-overrides/common/colors' as *;
 
 .supervisors-view {
   height: 100%;
   width: 100%;
 
-  .ReactTable {
+  .console-table {
     position: absolute;
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;

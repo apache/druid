@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -161,7 +162,14 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
           }
 
           if (!closed) {
-            bytesIterator = recordIterator.next().getData().iterator();
+            final OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType> record =
+                recordIterator.next();
+            // Skip records dropped by pre-ingestion filtering (e.g. Kafka header-based filtering) so that sampling
+            // reflects what ingestion actually keeps. The payload is retained on filtered markers for task-side
+            // byte accounting, so it must be explicitly ignored here.
+            bytesIterator = record.isFiltered()
+                            ? Collections.emptyIterator()
+                            : record.getData().iterator();
           }
         }
       }

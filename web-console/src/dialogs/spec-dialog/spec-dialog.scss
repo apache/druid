@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+@use '../../variables' as *;
 
 .spec-dialog {
   &.#{$bp-ns}-dialog {
@@ -25,6 +25,8 @@
   }
 
   .spec-dialog-textarea {
+    width: 100%;
+    height: 500px;
     margin-bottom: 10px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.25);
   }
