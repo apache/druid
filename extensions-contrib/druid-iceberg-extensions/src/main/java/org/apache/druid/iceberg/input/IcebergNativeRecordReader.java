@@ -142,9 +142,10 @@ public class IcebergNativeRecordReader implements InputSourceReader
    * {@code inputFormat} options are only partially honored here:
    *
    * <ul>
-   *   <li>A configured {@code flattenSpec} with fields cannot be applied, since this reader has
-   *       no generic flattening layer over Iceberg {@link Record}s — fail fast instead of
-   *       silently producing different dimensions than the V1 (no-delete-files) path would.</li>
+   *   <li>A configured non-default {@code flattenSpec} (with fields, or with field discovery disabled)
+   *       cannot be applied, since this reader has no generic flattening layer over Iceberg
+   *       {@link Record}s — fail fast instead of silently producing different dimensions than the
+   *       V1 (no-delete-files) path would.</li>
    *   <li>{@code binaryAsString} (Parquet-specific) is cheap to replicate directly in
    *       {@link IcebergRecordConverter}, so it is detected here and honored.</li>
    * </ul>
@@ -156,14 +157,16 @@ public class IcebergNativeRecordReader implements InputSourceReader
     }
     if (inputFormat instanceof NestedInputFormat) {
       JSONPathSpec flattenSpec = ((NestedInputFormat) inputFormat).getFlattenSpec();
-      if (flattenSpec != null && !flattenSpec.getFields().isEmpty()) {
+      // Anything other than the default (field discovery on, no explicit fields) changes the flattened row shape.
+      if (flattenSpec != null && (!flattenSpec.getFields().isEmpty() || !flattenSpec.isUseFieldDiscovery())) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
                             .build(
                                 "Iceberg table has V2 delete files, and reading it requires the native "
                                 + "delete-applying reader, which does not support a configured "
-                                + "'flattenSpec' with fields on the inputFormat. Remove flattenSpec.fields "
-                                + "from the inputFormat to ingest this table."
+                                + "non-default 'flattenSpec' (explicit fields or useFieldDiscovery=false) on "
+                                + "the inputFormat. Remove the flattenSpec customization from the inputFormat "
+                                + "to ingest this table."
                             );
       }
     }

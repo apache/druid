@@ -90,17 +90,29 @@ public class IcebergRecordConverter
       if (value instanceof LocalDateTime) {
         return ((LocalDateTime) value).toInstant(ZoneOffset.UTC).toEpochMilli();
       }
+      if (value instanceof Long) {
+        // Iceberg timestamps are stored as microseconds since epoch; Druid expects milliseconds.
+        return Math.floorDiv((Long) value, 1000L);
+      }
       return value;
     }
     if (type instanceof Types.DateType) {
       if (value instanceof LocalDate) {
         return value.toString();
       }
+      if (value instanceof Integer) {
+        // Iceberg dates are stored as days since epoch.
+        return LocalDate.ofEpochDay((Integer) value).toString();
+      }
       return value;
     }
     if (type instanceof Types.TimeType) {
       if (value instanceof LocalTime) {
         return value.toString();
+      }
+      if (value instanceof Long) {
+        // Iceberg times are stored as microseconds since midnight.
+        return LocalTime.ofNanoOfDay((Long) value * 1000L).toString();
       }
       return value;
     }
