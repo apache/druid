@@ -51,6 +51,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -84,7 +85,7 @@ public class ReadableInputQueue implements Closeable
    * Segments to be loaded.
    */
   @GuardedBy("this")
-  private final Queue<NumberedItem<LoadableSegment>> loadableSegments = new ArrayDeque<>();
+  private final Deque<NumberedItem<LoadableSegment>> loadableSegments = new ArrayDeque<>();
 
   /**
    * Realtime servers to be queried.
@@ -106,12 +107,20 @@ public class ReadableInputQueue implements Closeable
   private final Set<SegmentReferenceHolder> loadedSegments = new LinkedHashSet<>();
 
   /**
-   * Futures waiting to be handed out by a call to {@link #nextInput()}, some still loading, mapped to the segment each
+   * Futures waiting to be handed out by a call to {@link #nextInput()}, some still loading, mapped to the input each
    * one delivers, in the order their acquisition started.
    */
   @GuardedBy("this")
-  private final LinkedHashMap<ListenableFuture<NumberedReadableInput>, LoadableSegment> pendingNextInputs =
+  private final LinkedHashMap<ListenableFuture<NumberedReadableInput>, PendingInput> pendingNextInputs =
       new LinkedHashMap<>();
+
+  /**
+   * Interval of the last group probed by {@link #acquireCachedInNextGroup()}. Intervals in the same group compare equal
+   * under {@link #intervalOrder}.
+   */
+  @GuardedBy("this")
+  @Nullable
+  private Interval probedGroupInterval;
 
   /**
    * Futures whose delivery is mid-flight and have been removed from {@link #loadingSegments} by {@link #onSegmentReady}
@@ -211,9 +220,8 @@ public class ReadableInputQueue implements Closeable
 
   /**
    * If this method has not yet been called, then:
-   * (1) when {@link #timeOrder} is {@link Order#NONE}, transition all locally-cached segments from
-   * {@link #loadableSegments} to {@link #pendingNextInputs}, so they are handed out first. Otherwise, cached segments
-   * keep their place in time order.
+   * (1) acquire the locally-cached segments of the first interval group, see {@link #acquireCachedInNextGroup()}. When
+   * {@link #timeOrder} is {@link Order#NONE}, that is all locally-cached segments.
    * (2) start loading up to {@link #loadahead} additional segments for future calls to {@link #nextInput()}
    * If this method has previously been called, subsequent calls do nothing.
    * This is separated from the constructor because we don't want to acquire resources immediately on construction.
@@ -221,22 +229,9 @@ public class ReadableInputQueue implements Closeable
   public void start()
   {
     if (started.compareAndSet(false, true)) {
-      // (1) acquire all locally-cached segments if timeOrder is NONE, otherwise acquire them in time order
-      if (timeOrder == Order.NONE) {
-        synchronized (this) {
-          // Temporarily store all non-cached segments.
-          final List<NumberedItem<LoadableSegment>> toLoad = new ArrayList<>();
-          NumberedItem<LoadableSegment> nextItem;
-          while ((nextItem = loadableSegments.poll()) != null) {
-            final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextItem);
-            if (cachedFuture != null) {
-              pendingNextInputs.put(cachedFuture, nextItem.item());
-            } else {
-              toLoad.add(nextItem);
-            }
-          }
-          loadableSegments.addAll(toLoad); // Put non-cached segments back into loadableSegments
-        }
+      // (1) acquire the locally-cached segments of the first interval group
+      synchronized (this) {
+        acquireCachedInNextGroup();
       }
 
       // (2) start loading up to "loadahead" additional segments
@@ -365,15 +360,19 @@ public class ReadableInputQueue implements Closeable
     ListenableFuture<NumberedReadableInput> unskippedFuture = null;
 
     synchronized (this) {
-      while (!pendingNextInputs.isEmpty()) {
+      while (true) {
+        acquireCachedInNextGroup();
+        if (pendingNextInputs.isEmpty()) {
+          break;
+        }
         final ListenableFuture<NumberedReadableInput> selectedFuture = selectPendingInput();
-        final LoadableSegment selectedSegment = pendingNextInputs.remove(selectedFuture);
-        if (pendingNextInputs.size() < loadahead) {
-          addLoadaheadFuture(); // Replace the one we just took out.
+        final PendingInput selectedInput = pendingNextInputs.remove(selectedFuture);
+        if (!selectedInput.cached()) {
+          addLoadaheadFuture();
         }
         // The selected segment may have been pruned since its load was started, check if it can be skipped once more
         // before handing it out.
-        if (canSkipSegment(selectedSegment)) {
+        if (canSkipSegment(selectedInput.segment())) {
           skippedFutures.add(selectedFuture);
         } else {
           unskippedFuture = selectedFuture;
@@ -398,9 +397,9 @@ public class ReadableInputQueue implements Closeable
   @GuardedBy("this")
   private ListenableFuture<NumberedReadableInput> selectPendingInput()
   {
-    final Iterator<Map.Entry<ListenableFuture<NumberedReadableInput>, LoadableSegment>> iterator =
+    final Iterator<Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput>> iterator =
         pendingNextInputs.entrySet().iterator();
-    final Map.Entry<ListenableFuture<NumberedReadableInput>, LoadableSegment> head = iterator.next();
+    final Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput> head = iterator.next();
     if (head.getKey().isDone()) {
       // Eagerly hand out a ready head input.
       return head.getKey();
@@ -408,17 +407,62 @@ public class ReadableInputQueue implements Closeable
 
     // head is not ready, seek for the next ready input who compares equal to head. for ordered inputs that means
     // matching intervals, for unordered inputs any ready input is fine.
-    final Interval headInterval = head.getValue().descriptor().getInterval();
+    final Interval headInterval = head.getValue().interval();
     while (iterator.hasNext()) {
-      final Map.Entry<ListenableFuture<NumberedReadableInput>, LoadableSegment> entry = iterator.next();
-      if (entry.getKey().isDone()
-          && intervalOrder.compare(headInterval, entry.getValue().descriptor().getInterval()) == 0) {
+      final Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput> entry = iterator.next();
+      if (entry.getKey().isDone() && intervalOrder.compare(headInterval, entry.getValue().interval()) == 0) {
         return entry.getKey();
       }
     }
 
     // Nothing level with the head is loaded, so hand out the head and let the caller wait for it.
     return head.getKey();
+  }
+
+  /**
+   * Acquires the locally-cached segments of the next interval group to be handed out and adds them to
+   * {@link #pendingNextInputs}, once per group.
+   * <p>
+   * A group is the leading run of {@link #loadableSegments} whose intervals compare equal under {@link #intervalOrder};
+   * with {@link Order#NONE}, that is every segment. Segments that {@link #inputPruner} rules out are dropped.
+   */
+  @GuardedBy("this")
+  private void acquireCachedInNextGroup()
+  {
+    final Interval nextInterval;
+    if (!pendingNextInputs.isEmpty()) {
+      nextInterval = pendingNextInputs.values().iterator().next().interval();
+    } else if (!loadableSegments.isEmpty()) {
+      nextInterval = loadableSegments.peek().item().descriptor().getInterval();
+    } else {
+      return;
+    }
+
+    if (probedGroupInterval != null && intervalOrder.compare(probedGroupInterval, nextInterval) == 0) {
+      return;
+    }
+    probedGroupInterval = nextInterval;
+
+    final List<NumberedItem<LoadableSegment>> notCached = new ArrayList<>();
+    NumberedItem<LoadableSegment> nextItem;
+    while ((nextItem = loadableSegments.peek()) != null
+           && intervalOrder.compare(nextInterval, nextItem.item().descriptor().getInterval()) == 0) {
+      loadableSegments.poll();
+      if (canSkipSegment(nextItem.item())) {
+        continue;
+      }
+      final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextItem);
+      if (cachedFuture != null) {
+        pendingNextInputs.put(cachedFuture, new PendingInput(nextItem.item(), true));
+      } else {
+        notCached.add(nextItem);
+      }
+    }
+
+    // Put non-cached segments back at the front of loadableSegments.
+    for (int i = notCached.size() - 1; i >= 0; i--) {
+      loadableSegments.addFirst(notCached.get(i));
+    }
   }
 
   /**
@@ -613,7 +657,7 @@ public class ReadableInputQueue implements Closeable
 
     final ListenableFuture<NumberedReadableInput> nextFuture = acquireSegment(nextItem);
     synchronized (this) {
-      pendingNextInputs.put(nextFuture, nextItem.item());
+      pendingNextInputs.put(nextFuture, new PendingInput(nextItem.item(), false));
     }
     return true;
   }
@@ -788,6 +832,20 @@ public class ReadableInputQueue implements Closeable
    */
   public record NumberedReadableInput(int inputNumber, ReadableInput input)
   {
+  }
+
+  /**
+   * A segment in {@link #pendingNextInputs}.
+   * <p>
+   * Cached segments come from {@link #acquireCachedInNextGroup()} and are marked accordingly so consumers are aware
+   * of how the segment was acquired.
+   */
+  private record PendingInput(LoadableSegment segment, boolean cached)
+  {
+    Interval interval()
+    {
+      return segment.descriptor().getInterval();
+    }
   }
 
   /**

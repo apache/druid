@@ -42,6 +42,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -625,10 +626,15 @@ class ReadableInputQueueTest
   @EnumSource(value = Order.class, names = {"ASCENDING", "DESCENDING"})
   void testTimeOrderHandsOutSegmentsInTimeOrder(final Order order)
   {
-    final ReadableInputQueue queue =
-        makeQueue(0, timeOrderedPruner(order, interval -> false), cachedSegmentOnDay(2), cachedSegmentOnDay(1),
-                  cachedSegmentOnDay(3));
+    final TestLoadableSegment day1 = cachedSegmentOnDay(1);
+    final TestLoadableSegment day2 = cachedSegmentOnDay(2);
+    final TestLoadableSegment day3 = cachedSegmentOnDay(3);
+    final ReadableInputQueue queue = makeQueue(0, timeOrderedPruner(order, interval -> false), day2, day1, day3);
     queue.start();
+
+    // Only the first interval in time order is acquired up front; later ones are acquired as they are reached.
+    Assertions.assertEquals(1, day1.countAcquires.get() + day3.countAcquires.get());
+    Assertions.assertEquals(0, day2.countAcquires.get());
 
     final List<Interval> expected = order == Order.DESCENDING ? List.of(day(3), day(2), day(1))
                                                               : List.of(day(1), day(2), day(3));
@@ -654,32 +660,31 @@ class ReadableInputQueueTest
     queue.close();
   }
 
-  @Test
-  void testTimeOrderLoadedSegmentJumpsAheadOnlyWithinItsInterval()
+  @ParameterizedTest
+  @ValueSource(ints = {0, 1})
+  void testTimeOrderCachedSegmentJumpsAheadOnlyWithinItsInterval(final int loadahead)
   {
-    // Loadahead acquires all three in time order: a loading segment, then a loaded one with the same interval, then a
-    // loaded one with an older interval.
-    final TestLoadableSegment loading = new TestLoadableSegment(
-        new AcquireSegmentAction(() -> {}),
-        Optional.empty(),
-        false,
-        descriptorOnDay(3, 0)
-    );
-    final TestLoadableSegment loadedSameDay = new TestLoadableSegment(
-        new AcquireSegmentAction(),
-        Optional.of(new CountingSegment()),
-        false,
-        descriptorOnDay(3, 1)
-    );
-    final TestLoadableSegment loadedOlderDay = cachedSegmentOnDay(2);
+    // In time order: a loading segment, then a cached one with the same interval, then a cached one with an older
+    // interval. The cached segment with the same interval is outside the loadahead window.
+    final TestLoadableSegment loading = loadingSegmentOnDay(3, 0);
+    final TestLoadableSegment cachedSameDay = cachedSegmentOnDay(3, 1);
+    final TestLoadableSegment cachedOlderDay = cachedSegmentOnDay(2, 0);
 
-    final ReadableInputQueue queue =
-        makeQueue(3, timeOrderedPruner(Order.DESCENDING, interval -> false), loading, loadedSameDay, loadedOlderDay);
+    final ReadableInputQueue queue = makeQueue(
+        loadahead,
+        timeOrderedPruner(Order.DESCENDING, interval -> false),
+        loading,
+        cachedSameDay,
+        cachedOlderDay
+    );
     queue.start();
+    Assertions.assertEquals(loadahead, loading.countAcquires.get(), "cached segments must not delay loadahead");
 
-    // The loaded segment level with the loading one goes first; the older one must wait for the loading one.
+    // The cached segment level with the loading one goes first; the older one must wait for the loading one.
     final ListenableFuture<ReadableInputQueue.NumberedReadableInput> first = queue.nextInput();
+    Assertions.assertTrue(first.isDone(), "a cached segment level with the head must be handed out first");
     Assertions.assertEquals(descriptorOnDay(3, 1), Futures.getUnchecked(first).input().getSegment().getDescriptor());
+    Assertions.assertEquals(0, cachedOlderDay.countAcquires.get(), "an older interval must not be acquired early");
     final ListenableFuture<ReadableInputQueue.NumberedReadableInput> second = queue.nextInput();
     Assertions.assertFalse(second.isDone(), "the loading segment must go before a loaded segment from an older day");
     final ListenableFuture<ReadableInputQueue.NumberedReadableInput> third = queue.nextInput();
@@ -687,6 +692,42 @@ class ReadableInputQueueTest
 
     closeHandedOut(first);
     closeHandedOut(third);
+    queue.close();
+  }
+
+  @Test
+  void testTimeOrderCachedSegmentsDoNotCountTowardLoadahead()
+  {
+    // Loadahead pulls day 3's completed load in behind day 4. Reaching day 3 acquires its two cached segments.
+    final TestLoadableSegment completedLoad = new TestLoadableSegment(
+        AcquireSegmentAction.completed(AcquireSegmentResult.of(Optional.of(new CountingSegment()))),
+        Optional.empty(),
+        false,
+        descriptorOnDay(3, 0)
+    );
+    final TestLoadableSegment loading = loadingSegmentOnDay(3, 3);
+
+    final ReadableInputQueue queue = makeQueue(
+        1,
+        timeOrderedPruner(Order.DESCENDING, interval -> false),
+        cachedSegmentOnDay(4),
+        completedLoad,
+        cachedSegmentOnDay(3, 1),
+        cachedSegmentOnDay(3, 2),
+        loading
+    );
+    queue.start();
+
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> day4Future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> completedFuture = queue.nextInput();
+    Assertions.assertEquals(
+        descriptorOnDay(3, 0),
+        Futures.getUnchecked(completedFuture).input().getSegment().getDescriptor()
+    );
+    Assertions.assertEquals(1, loading.countAcquires.get(), "handing out a load must start the next one");
+
+    closeHandedOut(day4Future);
+    closeHandedOut(completedFuture);
     queue.close();
   }
 
@@ -702,11 +743,29 @@ class ReadableInputQueueTest
 
   private static TestLoadableSegment cachedSegmentOnDay(final int day)
   {
+    return cachedSegmentOnDay(day, 0);
+  }
+
+  private static TestLoadableSegment cachedSegmentOnDay(final int day, final int partition)
+  {
     return new TestLoadableSegment(
         new AcquireSegmentAction(),
         Optional.of(new CountingSegment()),
         false,
-        descriptorOnDay(day, 0)
+        descriptorOnDay(day, partition)
+    );
+  }
+
+  /**
+   * Returns an uncached segment whose load never completes.
+   */
+  private static TestLoadableSegment loadingSegmentOnDay(final int day, final int partition)
+  {
+    return new TestLoadableSegment(
+        new AcquireSegmentAction(() -> {}),
+        Optional.empty(),
+        false,
+        descriptorOnDay(day, partition)
     );
   }
 
