@@ -20,8 +20,10 @@
 package org.apache.druid.msq.querykit;
 
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -355,6 +357,7 @@ public class ReadableInputQueue implements Closeable
   {
     final List<ListenableFuture<NumberedReadableInput>> skippedFutures = new ArrayList<>();
     ListenableFuture<NumberedReadableInput> unskippedFuture = null;
+    LoadableSegment unskippedSegment = null;
 
     synchronized (this) {
       while (true) {
@@ -373,6 +376,7 @@ public class ReadableInputQueue implements Closeable
           skippedFutures.add(selectedFuture);
         } else {
           unskippedFuture = selectedFuture;
+          unskippedSegment = selectedInput.segment();
           break;
         }
       }
@@ -380,12 +384,47 @@ public class ReadableInputQueue implements Closeable
 
     releaseSkippedInputs(skippedFutures);
     if (unskippedFuture != null) {
+      registerCountOnSuccess(unskippedFuture, unskippedSegment);
       return unskippedFuture;
     }
 
     // Acquires on demand when loadahead is 0. With loadahead, no unpruned segments remain here.
     final NumberedItem<LoadableSegment> nextItem = pollUnprunedSegment();
-    return nextItem == null ? null : acquireSegment(nextItem);
+    if (nextItem == null) {
+      return null;
+    }
+    final ListenableFuture<NumberedReadableInput> future = acquireSegment(nextItem);
+    registerCountOnSuccess(future, nextItem.item());
+    return future;
+  }
+
+  /**
+   * Registers a callback that counts {@code segment} as read once {@code future} succeeds, which is when the input is
+   * handed off for processing.
+   */
+  private static void registerCountOnSuccess(
+      final ListenableFuture<NumberedReadableInput> future,
+      final LoadableSegment segment
+  )
+  {
+    Futures.addCallback(
+        future,
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(final NumberedReadableInput result)
+          {
+            segment.countHandedOut();
+          }
+
+          @Override
+          public void onFailure(final Throwable t)
+          {
+            // Failed inputs are never processed, so there is nothing to count.
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
   }
 
   /**

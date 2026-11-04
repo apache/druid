@@ -103,6 +103,7 @@ class ReadableInputQueueTest
     private final SegmentDescriptor descriptor;
     final AtomicInteger countDeliveredCalls = new AtomicInteger();
     final AtomicInteger countAcquires = new AtomicInteger();
+    final AtomicInteger countHandedOutCalls = new AtomicInteger();
 
     TestLoadableSegment(AcquireSegmentAction action)
     {
@@ -169,6 +170,12 @@ class ReadableInputQueueTest
     }
 
     @Override
+    public void countHandedOut()
+    {
+      countHandedOutCalls.incrementAndGet();
+    }
+
+    @Override
     public ListenableFuture<DataSegment> dataSegmentFuture()
     {
       return Futures.immediateFailedFuture(DruidException.defensive("not available"));
@@ -219,6 +226,7 @@ class ReadableInputQueueTest
     Assertions.assertTrue(e.getCause().getMessage().contains("Input queue closed"), e.getCause().getMessage());
     Assertions.assertEquals(1, cancels.get(), "canceler must run exactly once");
     Assertions.assertEquals(0, loadable.countDeliveredCalls.get(), "cancelled loads must not be counted");
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get(), "failed inputs must not be counted as read");
   }
 
   @Test
@@ -286,8 +294,9 @@ class ReadableInputQueueTest
     );
     Assertions.assertTrue(e.getCause().getMessage().contains("descriptor blew up"), e.getCause().getMessage());
     Assertions.assertEquals(1, segment.closes.get(), "post-release failure must close the delivered segment");
-    // release succeeded, so the delivery was counted even though the downstream handoff then failed
+    // release succeeded, so the load was counted, but the failed input was never read
     Assertions.assertEquals(1, loadable.countDeliveredCalls.get());
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get());
 
     // nothing left to close on queue teardown
     queue.close();
@@ -313,6 +322,7 @@ class ReadableInputQueueTest
     result.close();
     Assertions.assertEquals(1, segment.closes.get());
     Assertions.assertEquals(0, loadable.countDeliveredCalls.get());
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get());
   }
 
   @Test
@@ -331,6 +341,7 @@ class ReadableInputQueueTest
     // never call nextInput(): the loaded-but-untransferred segment must be closed by the queue
     queue.close();
     Assertions.assertEquals(1, segment.closes.get());
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get(), "inputs never handed out must not be counted");
   }
 
   @Test
@@ -351,6 +362,7 @@ class ReadableInputQueueTest
     final SegmentReference ref = input.getSegment().getSegmentReferenceOnce();
     Assertions.assertNotNull(ref);
     Assertions.assertEquals(1, loadable.countDeliveredCalls.get());
+    Assertions.assertEquals(1, loadable.countHandedOutCalls.get());
 
     // queue close must not close a transferred reference
     queue.close();
@@ -378,6 +390,7 @@ class ReadableInputQueueTest
     );
     Assertions.assertTrue(e.getCause().getMessage().contains("load went sideways"));
     Assertions.assertEquals(0, loadable.countDeliveredCalls.get(), "failed loads must not be counted");
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get(), "failed loads must not be counted as read");
     queue.close();
   }
 
@@ -396,6 +409,7 @@ class ReadableInputQueueTest
     Assertions.assertNotNull(ref);
     Assertions.assertTrue(ref.getSegmentReference().isEmpty());
     Assertions.assertEquals(1, loadable.countDeliveredCalls.get());
+    Assertions.assertEquals(1, loadable.countHandedOutCalls.get());
     ref.close();
     queue.close();
   }
@@ -420,7 +434,8 @@ class ReadableInputQueueTest
     final SegmentReference ref = input.getSegment().getSegmentReferenceOnce();
     Assertions.assertNotNull(ref);
     Assertions.assertSame(cachedSegment, ref.getSegmentReference().orElseThrow());
-    Assertions.assertEquals(0, loadable.countDeliveredCalls.get(), "acquireIfCached counts inline, not via the hook");
+    Assertions.assertEquals(0, loadable.countDeliveredCalls.get(), "a cached segment has no delivery to count");
+    Assertions.assertEquals(1, loadable.countHandedOutCalls.get());
     ref.close();
     queue.close();
   }
@@ -458,6 +473,7 @@ class ReadableInputQueueTest
     canSkipRemaining.set(true);
     Assertions.assertNull(queue.nextInput(), "no inputs may be handed out once remaining inputs can be skipped");
     Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be released before close");
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get(), "skipped inputs must not be counted as read");
 
     queue.close();
     Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must not be closed twice");
@@ -517,6 +533,7 @@ class ReadableInputQueueTest
     skipDay2.set(true);
     Assertions.assertNull(queue.nextInput());
     Assertions.assertEquals(1, day2Segment.closes.get(), "skipped loaded segment must be released before close");
+    Assertions.assertEquals(0, day2.countHandedOutCalls.get(), "skipped loaded segment must not be counted as read");
 
     closeHandedOut(day3Future);
     queue.close();
