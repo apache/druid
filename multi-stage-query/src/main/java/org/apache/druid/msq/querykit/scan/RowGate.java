@@ -72,7 +72,8 @@ public interface RowGate
   Decision check();
 
   /**
-   * Called after the current row, which {@link #check()} allowed, is added to a frame.
+   * Called after the current row, which {@link #check()} allowed, is added to a frame. The row may count toward the
+   * limit before its frame is flushed, so callers must flush every frame they have added rows to before they finish.
    */
   void onRowWritten();
 

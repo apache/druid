@@ -32,6 +32,12 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class RowCountScanLimitTracker extends ScanLimitTracker
 {
+  /**
+   * Rows each gate writes before adding them to {@link #rowsWritten}. Smaller batches overshoot the limit less, but
+   * every addition contends with the other processors that check {@link #rowsWritten} on each row.
+   */
+  static final int ROWS_PER_UPDATE = 64;
+
   private final long rowsNeeded;
   private final AtomicLong rowsWritten;
 
@@ -77,14 +83,19 @@ public class RowCountScanLimitTracker extends ScanLimitTracker
       @Override
       public void onRowWritten()
       {
-        bufferedRows++;
+        if (++bufferedRows == ROWS_PER_UPDATE) {
+          rowsWritten.addAndGet(bufferedRows);
+          bufferedRows = 0;
+        }
       }
 
       @Override
       public void onFrameFlushed()
       {
-        rowsWritten.addAndGet(bufferedRows);
-        bufferedRows = 0;
+        if (bufferedRows > 0) {
+          rowsWritten.addAndGet(bufferedRows);
+          bufferedRows = 0;
+        }
       }
     };
   }

@@ -396,6 +396,79 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     writableInputChannel.close();
   }
 
+  @Test
+  public void test_runWithInputChannel_sharedLimitReachedByCountedUnflushedRows_writesThem() throws Exception
+  {
+    final int batch = RowCountScanLimitTracker.ROWS_PER_UPDATE;
+    final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
+    final FrameSequenceBuilder frameSequenceBuilder =
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                            .maxRowsPerFrame(batch)
+                            .frameType(FrameType.latestRowBased())
+                            .allocator(ArenaMemoryAllocator.createOnHeap(1_000_000));
+    final RowSignature signature = frameSequenceBuilder.signature();
+
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+              .columns(signature.getColumnNames())
+              .limit(100)
+              .build();
+    final ScanLimitTracker limitTracker = ScanLimitTracker.create(query);
+
+    // Provide one input frame of exactly one batch and leave the channel open. The processor counts the batch, its
+    // cursor runs out, and its rows stay in the frame writer while it awaits more input.
+    final BlockingQueueFrameChannel inputChannel = new BlockingQueueFrameChannel(1);
+    final WritableFrameChannel writableInputChannel = inputChannel.writable();
+    writableInputChannel.write(frameSequenceBuilder.frames().toList().getFirst());
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+    final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            signature,
+            Collections.emptyList(),
+            false
+        ),
+        Integer.MAX_VALUE
+    );
+
+    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
+        query,
+        limitTracker,
+        new DefaultObjectMapper(),
+        ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), 0, 0),
+        SegmentMapFunction.IDENTITY,
+        ResourceHolder.fromCloseable(outputChannel.writable()),
+        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
+    );
+    final ListenableFuture<Object> retVal = exec.runFully(processor, null);
+
+    // Another processor buffers the rest of the limit. Its gate stops once this processor's batch is counted.
+    final RowGate otherProcessorGate = limitTracker.forCursor(null, List.of());
+    for (int i = 0; i < 100 - batch; i++) {
+      otherProcessorGate.onRowWritten();
+    }
+    final long deadline = System.currentTimeMillis() + 30_000;
+    while (otherProcessorGate.check() != RowGate.Decision.STOP) {
+      Assertions.assertTrue(System.currentTimeMillis() < deadline, "processor never counted its batch");
+      Thread.sleep(10);
+    }
+    otherProcessorGate.onFrameFlushed();
+    Assertions.assertTrue(limitTracker.isSatisfied());
+
+    // The limit counts this processor's rows, so they must be written even though it stops without more input.
+    writableInputChannel.close();
+    final List<List<Object>> rows = FrameTestUtil.readRowsFromFrameChannel(
+        outputChannel.readable(),
+        FrameReader.create(signature)
+    ).toList();
+    Assertions.assertEquals(batch, rows.size());
+    Assertions.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
+  }
+
   /**
    * Verifies that {@link ScanQueryFrameProcessor#runWithSegment} yields via {@link
    * org.apache.druid.frame.processor.ReturnOrAwait#awaitAllFutures} when {@link CursorFactory#makeCursorHolderAsync}

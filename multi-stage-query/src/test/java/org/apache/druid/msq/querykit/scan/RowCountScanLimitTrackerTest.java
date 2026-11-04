@@ -73,13 +73,25 @@ public class RowCountScanLimitTrackerTest
     final RowGate gate = newGate(tracker);
 
     writeRows(gate, 3);
-    Assertions.assertFalse(tracker.isSatisfied(), "unflushed rows are not output yet");
+    Assertions.assertFalse(tracker.isSatisfied(), "rows short of a full batch are not counted until flushed");
     Assertions.assertFalse(tracker.canSkip(Intervals.ETERNITY));
 
     gate.onFrameFlushed();
     Assertions.assertTrue(tracker.isSatisfied());
     Assertions.assertTrue(tracker.canSkip(Intervals.ETERNITY));
     Assertions.assertEquals(RowGate.Decision.STOP, newGate(tracker).check());
+  }
+
+  @Test
+  public void test_gate_otherGateFullBatchCountsBeforeFlush_stopsGate()
+  {
+    final RowCountScanLimitTracker tracker = new RowCountScanLimitTracker(RowCountScanLimitTracker.ROWS_PER_UPDATE + 1);
+    final RowGate gateA = newGate(tracker);
+    final RowGate gateB = newGate(tracker);
+
+    writeRows(gateA, RowCountScanLimitTracker.ROWS_PER_UPDATE);
+    writeRows(gateB, 1);
+    Assertions.assertEquals(RowGate.Decision.STOP, gateB.check(), "a full batch counts before its frame is flushed");
   }
 
   /**

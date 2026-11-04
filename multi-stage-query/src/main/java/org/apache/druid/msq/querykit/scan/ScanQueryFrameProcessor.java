@@ -202,6 +202,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
     if (limitTracker.isSatisfied()) {
+      flushFrameWriter();
       return ReturnOrAwait.returnObject(Unit.instance());
     }
 
@@ -462,6 +463,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
     if (isCursorDone()) {
       if (limitTracker.isSatisfied()) {
+        flushFrameWriter();
         return ReturnOrAwait.returnObject(Unit.instance());
       }
       return ReturnOrAwait.awaitAll(inputChannels().size());
