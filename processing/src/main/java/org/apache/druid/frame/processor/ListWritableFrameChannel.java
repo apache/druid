@@ -32,8 +32,7 @@ import java.util.List;
 
 /**
  * {@link WritableFrameChannel} that collects up to {@code maxFrames} frames in a list. It is always writable. Frames
- * written beyond {@code maxFrames} are discarded and mark the channel as overflowed, so the writer can finish without
- * the channel holding more than {@code maxFrames} frames. Partition numbers are ignored.
+ * written beyond {@code maxFrames} are discarded and mark the channel as overflowed. Partition numbers are ignored.
  * <p>
  * Not thread-safe. Callers read {@link #isOverflowed()} and {@link #getFrames()} only after the writer has finished.
  */

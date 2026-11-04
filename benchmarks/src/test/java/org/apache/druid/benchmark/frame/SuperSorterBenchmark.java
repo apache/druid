@@ -135,8 +135,7 @@ public class SuperSorterBenchmark
   private long rowLimit;
 
   /**
-   * MSQ sorts with a row limit produce a single partition, so they run with one sorter processor. More processors model
-   * a multi-partition sort, and multiply the buffer, so the input should still exceed it.
+   * MSQ sorts with a row limit produce a single partition, so they run with one sorter processor.
    */
   @Param({"1"})
   private int maxActiveProcessors;

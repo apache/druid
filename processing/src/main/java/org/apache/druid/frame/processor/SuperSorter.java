@@ -98,9 +98,8 @@ import java.util.function.Consumer;
  * input to the direct mergers, so {@link #totalMergingLevels} is also 1. Each truncating merge's output is capped at
  * {@link #getMaxRetainedRunFrames()}, so that memory use stays within the buffer. The sorter leaves this mode for
  * external mode if, before the first truncating merge, the row limit is unlikely to fit within the cap, or if a
- * truncating merge's output exceeds the cap. In the latter case, the merge's output is discarded, and its input frames
- * and the {@link #retainedRun} move back into the {@link #inputBuffer}. Rows dropped by earlier truncating merges stay
- * dropped, since they cannot be in the result.
+ * truncating merge's output exceeds the cap. In the latter case, it continues from the {@link #retainedRun} and the
+ * merge's input frames.
  *
  * "External mode": the {@link #inputBuffer} fills up and in-memory top-K mode does not apply. In this mode,
  * {@link #totalMergingLevels} is 2 or more. Logic for external mode is:
@@ -195,10 +194,8 @@ public class SuperSorter
   private long framesDroppedByTruncatingMerges = 0;
 
   /**
-   * Whether the sorter is in in-memory top-K mode, so {@link #runNextTruncatingMerge()} may run.
-   * <p>
-   * Set initially at construction. If it is true at construction, it may yet be set to false later if the sorter
-   * determines that the row limit is too large to fit in memory. Once set to false, it cannot be set back to true.
+   * Whether the sorter is in in-memory top-K mode, so {@link #runNextTruncatingMerge()} may run. Once false, stays
+   * false.
    */
   @GuardedBy("runWorkersLock")
   private boolean inMemoryTopKEnabled;
@@ -598,8 +595,7 @@ public class SuperSorter
 
   /**
    * Launch a truncating merge: merge the {@link #retainedRun} and the full {@link #inputBuffer} in memory, keeping
-   * only the first {@link #rowLimit} rows. The output replaces the {@link #retainedRun}. See class-level javadoc for
-   * more details.
+   * only the first {@link #rowLimit} rows. The output replaces the {@link #retainedRun}.
    */
   @GuardedBy("runWorkersLock")
   private boolean runNextTruncatingMerge()
@@ -609,13 +605,11 @@ public class SuperSorter
         || inputChannelsToRead.isEmpty()
         || inputBuffer.isEmpty()
         || getRoomForInputInTopKMode() > 0) {
-      // Run only when more input is coming and there is no room to read it. Otherwise, the direct merger handles the
-      // retained run and the inputBuffer once all input is read.
+      // Otherwise, the direct merger handles the retained run and the inputBuffer once all input is read.
       return false;
     }
 
     if (retainedRun.isEmpty() && !isRowLimitLikelyToFitInRetainedRun()) {
-      // A truncating merge would overflow, and its work would be discarded. Continue in external mode instead.
       inMemoryTopKEnabled = false;
       return false;
     }
@@ -658,8 +652,7 @@ public class SuperSorter
         truncatingMergeRunning = false;
 
         if (out.isOverflowed()) {
-          // The new run would leave too little room for input. Discard it and continue in external mode from this
-          // merge's inputs. Each frame of the old run is sorted, so it can go back into the inputBuffer as-is.
+          // Each frame of the old run is sorted, so it can go back into the inputBuffer as-is.
           inputBuffer.addAll(retainedRun);
           inputBuffer.addAll(mergeInput);
           retainedRun = Collections.emptyList();
@@ -679,10 +672,7 @@ public class SuperSorter
 
   /**
    * Estimates whether {@link #rowLimit} rows fit in {@link #getMaxRetainedRunFrames()} frames, based on the average
-   * row size in the {@link #inputBuffer}.
-   * <p>
-   * If the estimate ends up being wrong, the sorter will fall back to external mode when the truncating merge
-   * overflows.
+   * row size in the current {@link #inputBuffer} frames.
    */
   @GuardedBy("runWorkersLock")
   private boolean isRowLimitLikelyToFitInRetainedRun()
@@ -1243,9 +1233,11 @@ public class SuperSorter
   }
 
   /**
-   * Maximum number of frames to store the {@link #retainedRun}, which caps each truncating merge's output. A truncating
-   * merge holds the retained run, its input, and its output together, so capping the run at a quarter of the buffer
-   * leaves at least half the buffer for input. Zero if the buffer is too small for in-memory top-K mode at all.
+   * Maximum number of frames to store the {@link #retainedRun}, which caps each truncating merge's output.
+   * <p>
+   * A truncating merge holds the retained run, its input, and its output together, so capping the run at a quarter of
+   * the buffer leaves at least half the buffer for input. Returns zero if the buffer is too small for in-memory top-K
+   * mode at all.
    */
   private int getMaxRetainedRunFrames()
   {
@@ -1253,9 +1245,7 @@ public class SuperSorter
   }
 
   /**
-   * Number of frames the batcher may read in in-memory top-K mode without exceeding the buffer. The buffer holds the
-   * {@link #retainedRun}, room for the next retained run, the input frames of a running truncating merge, and the
-   * {@link #inputBuffer}. A truncating merge runs when this reaches zero and more input is coming.
+   * Number of frames the batcher may read in in-memory top-K mode without exceeding the buffer.
    */
   @GuardedBy("runWorkersLock")
   private int getRoomForInputInTopKMode()

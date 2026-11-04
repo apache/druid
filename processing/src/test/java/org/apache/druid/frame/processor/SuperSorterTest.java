@@ -1400,10 +1400,6 @@ public class SuperSorterTest
       }
     }
 
-    /**
-     * Test combining with a row limit when input exceeds the buffer, so the sorter runs in in-memory top-K mode. Each
-     * key's rows arrive across several truncating merges, and every one must be combined into the output.
-     */
     @Test
     public void testCombineWithRowLimit_inputExceedsBuffer() throws Exception
     {
