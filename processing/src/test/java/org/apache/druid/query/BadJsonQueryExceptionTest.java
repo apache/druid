@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.junit.jupiter.api.Assertions;
@@ -59,6 +61,32 @@ public class BadJsonQueryExceptionTest
         "Invalid native query: the request contains invalid or missing fields",
         exception.getMessage()
     );
+  }
+
+  @Test
+  public void testMappingExceptionIncludesReferenceChain()
+  {
+    final JsonMappingException mappingException = JsonMappingException.from((JsonParser) null, "wrong type");
+    mappingException.prependPath(new Object(), "aggregations");
+
+    final BadJsonQueryException exception = new BadJsonQueryException(mappingException);
+
+    Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, exception.getErrorCode());
+    Assertions.assertEquals(JsonMappingException.class.getName(), exception.getErrorClass());
+    Assertions.assertEquals(
+        "Invalid native query: wrong type (through reference chain: java.lang.Object[\"aggregations\"])",
+        exception.getMessage()
+    );
+  }
+
+  @Test
+  public void testMappingExceptionWithoutReferenceChain()
+  {
+    final BadJsonQueryException exception = new BadJsonQueryException(
+        JsonMappingException.from((JsonParser) null, "wrong type")
+    );
+
+    Assertions.assertEquals("Invalid native query: wrong type", exception.getMessage());
   }
 
   private static ValueInstantiationException valueInstantiationException(Throwable cause)
