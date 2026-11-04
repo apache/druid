@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.base.Strings;
 
@@ -35,6 +36,11 @@ public class BadJsonQueryException extends BadQueryException
   }
 
   public BadJsonQueryException(ValueInstantiationException e)
+  {
+    this(e, JSON_PARSE_ERROR_CODE, getErrorMessage(e), e.getClass().getName());
+  }
+
+  public BadJsonQueryException(JsonMappingException e)
   {
     this(e, JSON_PARSE_ERROR_CODE, getErrorMessage(e), e.getClass().getName());
   }
@@ -74,5 +80,14 @@ public class BadJsonQueryException extends BadQueryException
       return "Invalid native query: the request contains invalid or missing fields";
     }
     return "Invalid native query: " + errorMessage;
+  }
+
+  private static String getErrorMessage(JsonMappingException e)
+  {
+    final String path = e.getPathReference();
+    if (Strings.isNullOrEmpty(path)) {
+      return "Invalid native query: " + e.getOriginalMessage();
+    }
+    return "Invalid native query: " + e.getOriginalMessage() + " (through reference chain: " + path + ")";
   }
 }

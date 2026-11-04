@@ -22,6 +22,8 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
@@ -1052,6 +1054,45 @@ public class QueryResourceTest
     Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
     Assertions.assertEquals(ValueInstantiationException.class.getName(), e.getErrorClass());
     Assertions.assertEquals("Invalid native query: dataSource can't be null", e.getMessage());
+  }
+
+  @Test
+  public void testUnknownQueryType() throws IOException
+  {
+    final QueryException e = postBadQuery(
+        StringUtils.replace(SIMPLE_TIMESERIES_QUERY, "\"timeseries\"", "\"noSuchQueryType\"")
+    );
+    Assertions.assertEquals(InvalidTypeIdException.class.getName(), e.getErrorClass());
+    Assertions.assertTrue(e.getMessage().contains("noSuchQueryType"), e.getMessage());
+  }
+
+  @Test
+  public void testQueryWithMismatchedFieldType() throws IOException
+  {
+    final QueryException e = postBadQuery(
+        "{\"queryType\":\"timeseries\",\"dataSource\":\"mmx_metrics\",\"intervals\":[\"2014-12-17/2015-12-30\"],"
+        + "\"aggregations\":\"rows\"}"
+    );
+    Assertions.assertEquals(MismatchedInputException.class.getName(), e.getErrorClass());
+    Assertions.assertTrue(e.getMessage().contains("\"aggregations\""), e.getMessage());
+  }
+
+  /**
+   * Posts a query that is well-formed JSON but cannot be bound to a {@link Query}, and verifies it is rejected as a
+   * user error rather than falling through to the generic 500 handler.
+   */
+  private QueryException postBadQuery(final String query) throws IOException
+  {
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream(query.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
+    return e;
   }
 
   @Test
