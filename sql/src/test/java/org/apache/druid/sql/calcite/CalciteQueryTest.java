@@ -15403,6 +15403,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  @Test
+  public void testCountDistinctNonNumericStringLiteral()
+  {
+    // COUNT shares the argument translation of numeric aggregators, but must still accept any string literal
+    testBuilder()
+        .sql("SELECT COUNT(DISTINCT 'abc') FROM foo")
+        .expectedResults(ImmutableList.of(new Object[]{1L}))
+        .run();
+  }
+
+  @Test
+  public void testScalarSubqueryNonNumericStringLiteral()
+  {
+    // SINGLE_VALUE shares the argument translation of numeric aggregators, but must still accept any string literal
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT COUNT(*) FROM foo WHERE dim1 = (SELECT 'abc' FROM foo WHERE dim1 = 'def')")
+        .expectedResults(ImmutableList.of(new Object[]{1L}))
+        .run();
+  }
+
   /**
    * see {@link TestDataBuilder#RAW_ROWS1_WITH_NUMERIC_DIMS}
    * for the input data source of this test

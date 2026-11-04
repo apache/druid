@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.OperandType;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -154,7 +155,10 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           DefaultOperandTypeChecker
               .builder()
               .operandNames("column", "compression")
-              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              .operandTypes(
+                  OperandType.numeric().orComplex(TDigestSketchAggregatorFactory.TYPE).coerceStrings().nullable(),
+                  OperandType.of(SqlTypeFamily.NUMERIC)
+              )
               .requiredOperandCount(1)
               .literalOperands(1)
               .build(),
