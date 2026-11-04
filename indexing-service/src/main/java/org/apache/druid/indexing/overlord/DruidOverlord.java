@@ -39,7 +39,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
-import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -57,7 +56,7 @@ public class DruidOverlord
   private final DruidLeaderSelector overlordLeaderSelector;
   private final DruidLeaderSelector.Listener leadershipListener;
   private final SegmentMetadataCache segmentMetadataCache;
-  private final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
+  private final OverlordMode overlordMode;
 
   private final ReentrantLock giant = new ReentrantLock(true);
 
@@ -86,7 +85,7 @@ public class DruidOverlord
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
       final TaskRunnerFactory runnerFactory,
-      final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
+      final OverlordMode overlordMode,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
       final OverlordDutyExecutor overlordDutyExecutor,
@@ -100,7 +99,7 @@ public class DruidOverlord
   {
     this.overlordLeaderSelector = overlordLeaderSelector;
     this.segmentMetadataCache = segmentMetadataCache;
-    this.coordinatorOverlordServiceConfig = coordinatorOverlordServiceConfig;
+    this.overlordMode = overlordMode;
 
     this.leadershipListener = new DruidLeaderSelector.Listener()
     {
@@ -309,7 +308,7 @@ public class DruidOverlord
 
   private boolean isStandalone()
   {
-    return !coordinatorOverlordServiceConfig.isEnabled();
+    return overlordMode == OverlordMode.STANDALONE;
   }
 
 }

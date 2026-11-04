@@ -33,6 +33,7 @@ import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
+import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogramAggregator;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
 import org.apache.druid.segment.column.ColumnType;
@@ -41,6 +42,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.OperandType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -243,12 +245,12 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
                   "outlierHandlingMode"
               )
               .operandTypes(
-                  SqlTypeFamily.ANY,
-                  SqlTypeFamily.NUMERIC,
-                  SqlTypeFamily.NUMERIC,
-                  SqlTypeFamily.NUMERIC,
-                  SqlTypeFamily.NUMERIC,
-                  SqlTypeFamily.STRING
+                  OperandType.numeric().orComplex(FixedBucketsHistogramAggregator.TYPE).coerceStrings().nullable(),
+                  OperandType.of(SqlTypeFamily.NUMERIC),
+                  OperandType.of(SqlTypeFamily.NUMERIC),
+                  OperandType.of(SqlTypeFamily.NUMERIC),
+                  OperandType.of(SqlTypeFamily.NUMERIC),
+                  OperandType.of(SqlTypeFamily.STRING)
               )
               .literalOperands(1, 2, 3, 4, 5)
               .requiredOperandCount(5)

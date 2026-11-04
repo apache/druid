@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -183,19 +184,16 @@ public class LocalDataSegmentKillerTest
   {
     final String fileName = zip ? LocalDataSegmentPusher.INDEX_ZIP_FILENAME : LocalDataSegmentPusher.INDEX_DIR;
     final File path = new File(baseDirectory, fileName);
-    return new DataSegment(
-        DATASOURCE_NAME,
-        Intervals.of("2000/3000"),
-        "ver",
-        ImmutableMap.of(
-            "type", "local",
-            "path", path.toURI().getPath()
-        ),
-        ImmutableList.of("product"),
-        ImmutableList.of("visited_sum", "unique_hosts"),
-        NoneShardSpec.instance(),
-        9,
-        12334
-    );
+    return DataSegment.builder(SegmentId.of(DATASOURCE_NAME, Intervals.of("2000/3000"), "ver", 0))
+                      .loadSpec(ImmutableMap.of(
+                              "type", "local",
+                              "path", path.toURI().getPath()
+                          ))
+                      .dimensions(ImmutableList.of("product"))
+                      .metrics(ImmutableList.of("visited_sum", "unique_hosts"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(12334)
+                      .build();
   }
 }

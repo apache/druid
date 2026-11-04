@@ -125,43 +125,22 @@ public class DataSourcesResourceTest
     auditManager = EasyMock.niceMock(AuditManager.class);
     dataSegmentList = new ArrayList<>();
     dataSegmentList.add(
-        new DataSegment(
-            TestDataSource.WIKI,
-            Intervals.of("2010-01-01/P1D"),
-            "v0",
-            null,
-            null,
-            null,
-            null,
-            0x9,
-            10
-        )
+        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2010-01-01/P1D"), "v0", 0))
+                   .binaryVersion(0x9)
+                   .size(10)
+                   .build()
     );
     dataSegmentList.add(
-        new DataSegment(
-            TestDataSource.WIKI,
-            Intervals.of("2010-01-22/P1D"),
-            "v0",
-            null,
-            null,
-            null,
-            null,
-            0x9,
-            20
-        )
+        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2010-01-22/P1D"), "v0", 0))
+                   .binaryVersion(0x9)
+                   .size(20)
+                   .build()
     );
     dataSegmentList.add(
-        new DataSegment(
-            TestDataSource.KOALA,
-            Intervals.of("2010-01-01/P1D"),
-            "v0",
-            null,
-            null,
-            null,
-            null,
-            0x9,
-            30
-        )
+        DataSegment.builder(SegmentId.of(TestDataSource.KOALA, Intervals.of("2010-01-01/P1D"), "v0", 0))
+                   .binaryVersion(0x9)
+                   .size(30)
+                   .build()
     );
     listDataSources = new ArrayList<>();
     listDataSources.add(
@@ -374,7 +353,10 @@ public class DataSourcesResourceTest
   {
     DruidDataSource dataSource1 = new DruidDataSource(TestDataSource.WIKI, new HashMap<>());
     dataSource1.addSegment(
-        new DataSegment("datasegment1", Intervals.of("2010-01-01/P1D"), "", null, null, null, null, 0x9, 10)
+        DataSegment.builder(SegmentId.of("datasegment1", Intervals.of("2010-01-01/P1D"), "", 0))
+                   .binaryVersion(0x9)
+                   .size(10)
+                   .build()
     );
     EasyMock.expect(server.getDataSource(TestDataSource.WIKI)).andReturn(dataSource1).atLeastOnce();
     EasyMock.expect(server.getTier()).andReturn(null).atLeastOnce();
@@ -950,10 +932,8 @@ public class DataSourcesResourceTest
       List<String> projections
   )
   {
-    return DataSegment.builder()
-                      .dataSource(dataSource)
-                      .interval(interval)
-                      .version(version)
+    return DataSegment.builder(SegmentId.of(dataSource, interval, version, partitionNumber))
+                      .loadSpec(ImmutableMap.of())
                       .shardSpec(new NumberedShardSpec(partitionNumber, 100))
                       .projections(projections)
                       .size(0)
@@ -1698,40 +1678,19 @@ public class DataSourcesResourceTest
   public void testGetDatasourceLoadstatusDefault()
   {
     final DateTime now = DateTimes.nowUtc();
-    DataSegment datasource1Segment1 = new DataSegment(
-        TestDataSource.WIKI,
-        new Interval(now.minusDays(5), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        10
-    );
+    DataSegment datasource1Segment1 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(now.minusDays(5), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(10)
+                                                 .build();
 
-    DataSegment datasource1Segment2 = new DataSegment(
-        TestDataSource.WIKI,
-        new Interval(now.minusDays(4), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        20
-    );
-    DataSegment datasource2Segment1 = new DataSegment(
-        TestDataSource.KOALA,
-        new Interval(now.minusDays(3), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        30
-    );
+    DataSegment datasource1Segment2 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(now.minusDays(4), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(20)
+                                                 .build();
+    DataSegment datasource2Segment1 = DataSegment.builder(SegmentId.of(TestDataSource.KOALA, new Interval(now.minusDays(3), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(30)
+                                                 .build();
     List<DataSegment> segments = ImmutableList.of(datasource1Segment1, datasource1Segment2);
     Map<SegmentId, SegmentLoadInfo> completedLoadInfoMap = ImmutableMap.of(
         datasource1Segment1.getId(), new SegmentLoadInfo(datasource1Segment1),
@@ -1776,40 +1735,19 @@ public class DataSourcesResourceTest
   public void testGetDatasourceLoadstatusSimple()
   {
     final DateTime now = DateTimes.nowUtc();
-    DataSegment datasource1Segment1 = new DataSegment(
-        TestDataSource.WIKI,
-        new Interval(now.minusDays(5), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        10
-    );
+    DataSegment datasource1Segment1 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(now.minusDays(5), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(10)
+                                                 .build();
 
-    DataSegment datasource1Segment2 = new DataSegment(
-        TestDataSource.WIKI,
-        new Interval(now.minusDays(4), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        20
-    );
-    DataSegment datasource2Segment1 = new DataSegment(
-        TestDataSource.KOALA,
-        new Interval(now.minusDays(3), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        30
-    );
+    DataSegment datasource1Segment2 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(now.minusDays(4), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(20)
+                                                 .build();
+    DataSegment datasource2Segment1 = DataSegment.builder(SegmentId.of(TestDataSource.KOALA, new Interval(now.minusDays(3), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(30)
+                                                 .build();
     List<DataSegment> segments = ImmutableList.of(datasource1Segment1, datasource1Segment2);
     Map<SegmentId, SegmentLoadInfo> completedLoadInfoMap = ImmutableMap.of(
         datasource1Segment1.getId(), new SegmentLoadInfo(datasource1Segment1),
@@ -1854,29 +1792,15 @@ public class DataSourcesResourceTest
   public void testGetDatasourceLoadstatusFull()
   {
     final DateTime now = DateTimes.nowUtc();
-    DataSegment datasource1Segment1 = new DataSegment(
-        TestDataSource.WIKI,
-        new Interval(now.minusDays(4), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        10
-    );
+    DataSegment datasource1Segment1 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(now.minusDays(4), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(10)
+                                                 .build();
 
-    DataSegment datasource1Segment2 = new DataSegment(
-        TestDataSource.WIKI,
-        new Interval(now.minusDays(3), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        20
-    );
+    DataSegment datasource1Segment2 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(now.minusDays(3), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(20)
+                                                 .build();
     List<DataSegment> segments = ImmutableList.of(datasource1Segment1, datasource1Segment2);
 
     final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
@@ -1913,29 +1837,15 @@ public class DataSourcesResourceTest
   public void testGetDatasourceLoadstatusFullAndComputeUsingClusterView()
   {
     final DateTime now = DateTimes.nowUtc();
-    DataSegment datasource1Segment1 = new DataSegment(
-        TestDataSource.WIKI,
-        new Interval(now.minusDays(5), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        10
-    );
+    DataSegment datasource1Segment1 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(now.minusDays(5), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(10)
+                                                 .build();
 
-    DataSegment datasource1Segment2 = new DataSegment(
-        TestDataSource.WIKI,
-        new Interval(now.minusDays(4), Period.days(1)),
-        "",
-        null,
-        null,
-        null,
-        null,
-        0x9,
-        20
-    );
+    DataSegment datasource1Segment2 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(now.minusDays(4), Period.days(1)), "", 0))
+                                                 .binaryVersion(0x9)
+                                                 .size(20)
+                                                 .build();
     List<DataSegment> segments = ImmutableList.of(datasource1Segment1, datasource1Segment2);
 
     final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
@@ -1985,16 +1895,11 @@ public class DataSourcesResourceTest
 
   private DataSegment createSegment(Interval interval, String version, int partitionNumber)
   {
-    return new DataSegment(
-        "test_ds",
-        interval,
-        version,
-        null,
-        null,
-        null,
-        new NumberedShardSpec(partitionNumber, 100),
-        0, 0
-    );
+    return DataSegment.builder(SegmentId.of("test_ds", interval, version, partitionNumber))
+                      .shardSpec(new NumberedShardSpec(partitionNumber, 100))
+                      .binaryVersion(0)
+                      .size(0)
+                      .build();
   }
 
   private void prepareRequestForAudit()

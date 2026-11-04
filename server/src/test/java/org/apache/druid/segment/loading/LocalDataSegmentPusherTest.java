@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.jupiter.api.Assertions;
@@ -48,28 +49,18 @@ public class LocalDataSegmentPusherTest
   LocalDataSegmentPusherConfig config;
   LocalDataSegmentPusherConfig configZip;
   File dataSegmentFiles;
-  DataSegment dataSegment = new DataSegment(
-      "ds",
-      Intervals.utc(0, 1),
-      "v1",
-      null,
-      ImmutableList.of("dim1"),
-      null,
-      NoneShardSpec.instance(),
-      null,
-      0
-  );
-  DataSegment dataSegment2 = new DataSegment(
-      "ds",
-      Intervals.utc(0, 1),
-      "v1",
-      null,
-      ImmutableList.of("dim2"),
-      null,
-      NoneShardSpec.instance(),
-      null,
-      0
-  );
+  DataSegment dataSegment = DataSegment.builder(SegmentId.of("ds", Intervals.utc(0, 1), "v1", 0))
+                                       .dimensions(ImmutableList.of("dim1"))
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .binaryVersion(null)
+                                       .size(0)
+                                       .build();
+  DataSegment dataSegment2 = DataSegment.builder(SegmentId.of("ds", Intervals.utc(0, 1), "v1", 0))
+                                        .dimensions(ImmutableList.of("dim2"))
+                                        .shardSpec(NoneShardSpec.instance())
+                                        .binaryVersion(null)
+                                        .size(0)
+                                        .build();
 
   @BeforeEach
   public void setUp() throws IOException

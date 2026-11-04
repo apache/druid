@@ -21,10 +21,7 @@ package org.apache.druid.indexing.worker.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.guice.annotations.Json;
@@ -36,10 +33,10 @@ import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
-import org.apache.druid.server.http.ServletResourceUtils;
+import org.apache.druid.server.http.AsyncRequest;
+import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
-import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -51,7 +48,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 
 /**
  * Endpoints used by Overlord to Manage tasks on this Middle Manager.
@@ -100,7 +96,6 @@ public class TaskManagementResource
    * @param timeout after which response is sent even if there are no new segment updates.
    * @param req
    * @return null to avoid "MUST return a non-void type" warning.
-   * @throws IOException
    */
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
@@ -109,7 +104,7 @@ public class TaskManagementResource
       @QueryParam("hash") long hash,
       @QueryParam("timeout") long timeout,
       @Context final HttpServletRequest req
-  ) throws IOException
+  )
   {
     if (timeout <= 0) {
       sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "timeout must be positive.");
@@ -125,56 +120,20 @@ public class TaskManagementResource
         )
     );
 
-    final AsyncContext asyncContext = req.startAsync();
-
-    asyncContext.addListener(
-        ServletResourceUtils.createAsyncTimeoutListener(event -> {
-          // HTTP 204 NO_CONTENT is sent to the client.
-          future.cancel(true);
-          event.getAsyncContext().complete();
-        })
-    );
-
-    Futures.addCallback(
-        future,
-        new FutureCallback<ChangeRequestsSnapshot>()
-        {
-          @Override
-          public void onSuccess(ChangeRequestsSnapshot result)
-          {
-            try {
-              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-              response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writerFor(WorkerHolder.WORKER_SYNC_RESP_TYPE_REF)
-                                 .writeValue(asyncContext.getResponse().getOutputStream(), result);
-              asyncContext.complete();
-            }
-            catch (Exception ex) {
-              log.debug(ex, "Request timed out or closed already.");
-            }
-          }
-
-          @Override
-          public void onFailure(Throwable th)
-          {
-            try {
-              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-              if (th instanceof IllegalArgumentException) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, th.getMessage());
-              } else {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage());
-              }
-              asyncContext.complete();
-            }
-            catch (Exception ex) {
-              log.debug(ex, "Request timed out or closed already.");
-            }
-          }
-        },
-        MoreExecutors.directExecutor()
-    );
-
-    asyncContext.setTimeout(timeout);
+    AsyncRequest.create(req, future, timeout)
+                .contentType(context.inputMapper, context.contentType)
+                .onTimeout(HttpServletResponse.SC_NO_CONTENT)
+                .onSuccess(
+                    result -> AsyncResponse.of(
+                        HttpServletResponse.SC_OK,
+                        result,
+                        WorkerHolder.WORKER_SYNC_RESP_TYPE_REF
+                    )
+                )
+                .onFailure(th -> th instanceof IllegalArgumentException
+                                  ? AsyncResponse.error(HttpServletResponse.SC_BAD_REQUEST, th.getMessage())
+                                  : AsyncResponse.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage()))
+                .start();
     return null;
   }
 
@@ -198,27 +157,28 @@ public class TaskManagementResource
     }
   }
 
-  private void sendErrorResponse(HttpServletRequest req, int code, String error) throws IOException
+  private void sendErrorResponse(HttpServletRequest req, int code, String error)
   {
-    AsyncContext asyncContext = req.startAsync();
-    HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-    response.sendError(code, error);
-    asyncContext.complete();
+    AsyncRequest.completed(req, jsonMapper, AsyncResponse.error(code, error));
   }
 
   private ResponseContext createContext(String requestType)
   {
     boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType);
-    return new ResponseContext(isSmile ? smileMapper : jsonMapper);
+    return isSmile
+           ? new ResponseContext(smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+           : new ResponseContext(jsonMapper, MediaType.APPLICATION_JSON);
   }
 
   private static class ResponseContext
   {
     private final ObjectMapper inputMapper;
+    private final String contentType;
 
-    ResponseContext(ObjectMapper inputMapper)
+    ResponseContext(ObjectMapper inputMapper, String contentType)
     {
       this.inputMapper = inputMapper;
+      this.contentType = contentType;
     }
   }
 }

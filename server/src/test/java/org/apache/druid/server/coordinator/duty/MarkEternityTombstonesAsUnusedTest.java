@@ -39,6 +39,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
@@ -55,79 +56,57 @@ public class MarkEternityTombstonesAsUnusedTest
 
   // The verbose variable names follow the convention for readability in the tests:
   // datasource name - shard spec type - interval - version
-  private final DataSegment ds1NumberedSegmentMinToMaxV0 = DataSegment.builder().dataSource(ds1)
-                                                                      .interval(Intervals.ETERNITY)
-                                                                      .version("0")
+  private final DataSegment ds1NumberedSegmentMinToMaxV0 = DataSegment.builder(SegmentId.of(ds1, Intervals.ETERNITY, "0", 0))
                                                                       .size(0)
                                                                       .build();
 
-  private final DataSegment ds1TombstoneSegmentMinToMaxV1 = DataSegment.builder().dataSource(ds1)
+  private final DataSegment ds1TombstoneSegmentMinToMaxV1 = DataSegment.builder(SegmentId.of(ds1, Intervals.ETERNITY, "1", 0))
                                                                        .shardSpec(new TombstoneShardSpec())
-                                                                       .interval(Intervals.ETERNITY)
-                                                                       .version("1")
                                                                        .size(0)
                                                                        .build();
 
-  private final DataSegment ds1TombstoneSegmentMinTo2000V1 = DataSegment.builder().dataSource(ds1)
+  private final DataSegment ds1TombstoneSegmentMinTo2000V1 = DataSegment.builder(SegmentId.of(ds1, new Interval(DateTimes.MIN, DateTimes.of("2000")), "1", 0))
                                                                         .shardSpec(new TombstoneShardSpec())
-                                                                        .interval(new Interval(DateTimes.MIN, DateTimes.of("2000")))
-                                                                        .version("1")
                                                                         .size(0)
                                                                         .build();
 
-  private final DataSegment ds1NumberedSegment2000To2001V1 = DataSegment.builder().dataSource(ds1)
-                                                                        .interval(Intervals.of("2000/2001"))
-                                                                        .version("1")
+  private final DataSegment ds1NumberedSegment2000To2001V1 = DataSegment.builder(SegmentId.of(ds1, Intervals.of("2000/2001"), "1", 0))
                                                                         .size(0)
                                                                         .build();
 
-  private final DataSegment ds1TombstoneSegment2001ToMaxV1 = DataSegment.builder().dataSource(ds1)
+  private final DataSegment ds1TombstoneSegment2001ToMaxV1 = DataSegment.builder(SegmentId.of(ds1, new Interval(DateTimes.of("2001"), DateTimes.MAX), "1", 0))
                                                                         .shardSpec(new TombstoneShardSpec())
-                                                                        .interval(new Interval(DateTimes.of("2001"), DateTimes.MAX))
-                                                                        .version("1")
                                                                         .size(0)
                                                                         .build();
 
   final DataSegment ds1TombstoneSegmentMinTo2000V2 = ds1TombstoneSegmentMinTo2000V1.withVersion("2");
   final DataSegment ds1TombstoneSegment2001ToMaxV2 = ds1TombstoneSegment2001ToMaxV1.withVersion("2");
 
-  private final DataSegment ds2TombstoneSegment1995To2005V0 = DataSegment.builder().dataSource(ds2)
+  private final DataSegment ds2TombstoneSegment1995To2005V0 = DataSegment.builder(SegmentId.of(ds2, Intervals.of("1995/2005"), "0", 0))
                                                                          .shardSpec(new TombstoneShardSpec())
-                                                                         .interval(Intervals.of("1995/2005"))
-                                                                         .version("0")
                                                                          .size(0)
                                                                          .build();
 
-  private final DataSegment ds2TombstoneSegmentMinTo2000V1 = DataSegment.builder().dataSource(ds2)
+  private final DataSegment ds2TombstoneSegmentMinTo2000V1 = DataSegment.builder(SegmentId.of(ds2, new Interval(DateTimes.MIN, DateTimes.of("2000")), "1", 0))
                                                                         .shardSpec(new TombstoneShardSpec())
-                                                                        .interval(new Interval(DateTimes.MIN, DateTimes.of("2000")))
-                                                                        .version("1")
                                                                         .size(0)
                                                                         .build();
 
-  private final DataSegment ds2NumberedSegment3000To4000V1 = DataSegment.builder().dataSource(ds2)
-                                                                        .interval(Intervals.of("3000/4000"))
-                                                                        .version("1")
+  private final DataSegment ds2NumberedSegment3000To4000V1 = DataSegment.builder(SegmentId.of(ds2, Intervals.of("3000/4000"), "1", 0))
                                                                         .size(0)
                                                                         .build();
 
-  private final DataSegment ds2TombstoneSegment4000ToMaxV1 = DataSegment.builder().dataSource(ds2)
+  private final DataSegment ds2TombstoneSegment4000ToMaxV1 = DataSegment.builder(SegmentId.of(ds2, new Interval(DateTimes.of("4000"), DateTimes.MAX), "1", 0))
                                                                         .shardSpec(new TombstoneShardSpec())
-                                                                        .interval(new Interval(DateTimes.of("4000"), DateTimes.MAX))
-                                                                        .version("1")
                                                                         .size(0)
                                                                         .build();
 
-  private final DataSegment ds2TombstoneSegment4000To4001V1 = DataSegment.builder().dataSource(ds2)
+  private final DataSegment ds2TombstoneSegment4000To4001V1 = DataSegment.builder(SegmentId.of(ds2, new Interval(DateTimes.of("4000"), DateTimes.of("4001")), "1", 0))
                                                                         .shardSpec(new TombstoneShardSpec())
-                                                                        .interval(new Interval(DateTimes.of("4000"), DateTimes.of("4001")))
-                                                                        .version("1")
                                                                         .size(0)
                                                                         .build();
 
-  private final DataSegment ds2NumberedSegment1999To2500V2 = DataSegment.builder().dataSource(ds2)
-                                                                        .interval(Intervals.of("1999/2500"))
-                                                                        .version("2")
+  private final DataSegment ds2NumberedSegment1999To2500V2 = DataSegment.builder(SegmentId.of(ds2, Intervals.of("1999/2500"), "2", 0))
                                                                         .size(0)
                                                                         .build();
 

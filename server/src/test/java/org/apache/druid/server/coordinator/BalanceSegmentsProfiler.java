@@ -37,6 +37,7 @@ import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
@@ -83,17 +84,14 @@ public class BalanceSegmentsProfiler
     List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       segments.add(
-          new DataSegment(
-              "datasource" + i,
-              new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)),
-              (DateTimes.of("2012-03-01")).toString(),
-              new HashMap<>(),
-              new ArrayList<>(),
-              new ArrayList<>(),
-              NoneShardSpec.instance(),
-              0,
-              4L
-          )
+          DataSegment.builder(SegmentId.of("datasource" + i, new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)), (DateTimes.of("2012-03-01")).toString(), 0))
+                     .loadSpec(new HashMap<>())
+                     .dimensions(new ArrayList<>())
+                     .metrics(new ArrayList<>())
+                     .shardSpec(NoneShardSpec.instance())
+                     .binaryVersion(0)
+                     .size(4L)
+                     .build()
       );
     }
 

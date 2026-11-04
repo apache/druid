@@ -28,6 +28,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
@@ -162,16 +163,12 @@ public class CachingCostBalancerStrategyTest
   private DataSegment createRandomSegment(Random random, DateTime referenceTime)
   {
     int timeShift = random.nextInt((int) TimeUnit.DAYS.toHours(DAYS_IN_MONTH * 12));
-    return new DataSegment(
-        String.valueOf(random.nextInt(50)),
-        new Interval(referenceTime.plusHours(timeShift), referenceTime.plusHours(timeShift + 1)),
-        "version",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        null,
-        0,
-        100
-    );
+    return DataSegment.builder(SegmentId.of(String.valueOf(random.nextInt(50)), new Interval(referenceTime.plusHours(timeShift), referenceTime.plusHours(timeShift + 1)), "version", 0))
+                      .loadSpec(Collections.emptyMap())
+                      .dimensions(Collections.emptyList())
+                      .metrics(Collections.emptyList())
+                      .binaryVersion(0)
+                      .size(100)
+                      .build();
   }
 }

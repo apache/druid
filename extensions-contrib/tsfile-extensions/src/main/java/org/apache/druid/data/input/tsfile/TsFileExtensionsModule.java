@@ -17,23 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.data.input.tsfile;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
 
-public class CoordinatorOverlordServiceConfigTest
+import java.util.Collections;
+import java.util.List;
+
+public class TsFileExtensionsModule implements DruidModule
 {
-  @Test
-  public void testOverlordServiceIsRequiredIfEnabled()
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    IllegalArgumentException e = Assertions.assertThrows(
-        IllegalArgumentException.class,
-        () -> new CoordinatorOverlordServiceConfig(true, null)
+    return Collections.singletonList(
+        new SimpleModule("TsFileInputRowParserModule")
+            .registerSubtypes(
+                new NamedType(TsFileInputFormat.class, "tsfile")
+            )
     );
-    Assertions.assertEquals(
-        "'overlordService' must be specified when running Coordinator as Overlord.",
-        e.getMessage()
-    );
+  }
+
+  @Override
+  public void configure(Binder binder)
+  {
   }
 }

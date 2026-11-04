@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -44,28 +45,18 @@ import java.util.Map;
 public class ServerHolderTest
 {
   private static final List<DataSegment> SEGMENTS = ImmutableList.of(
-      new DataSegment(
-          "src1",
-          Intervals.of("2015-04-12/2015-04-13"),
-          "1",
-          ImmutableMap.of("containerName", "container1", "blobPath", "blobPath1"),
-          null,
-          null,
-          NoneShardSpec.instance(),
-          0,
-          1
-      ),
-      new DataSegment(
-          "src2",
-          Intervals.of("2015-04-12/2015-04-13"),
-          "1",
-          ImmutableMap.of("containerName", "container2", "blobPath", "blobPath2"),
-          null,
-          null,
-          NoneShardSpec.instance(),
-          0,
-          1
-      )
+      DataSegment.builder(SegmentId.of("src1", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                 .loadSpec(ImmutableMap.of("containerName", "container1", "blobPath", "blobPath1"))
+                 .shardSpec(NoneShardSpec.instance())
+                 .binaryVersion(0)
+                 .size(1)
+                 .build(),
+      DataSegment.builder(SegmentId.of("src2", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                 .loadSpec(ImmutableMap.of("containerName", "container2", "blobPath", "blobPath2"))
+                 .shardSpec(NoneShardSpec.instance())
+                 .binaryVersion(0)
+                 .size(1)
+                 .build()
   );
 
   private static final Map<String, ImmutableDruidDataSource> DATA_SOURCES = ImmutableMap.of(

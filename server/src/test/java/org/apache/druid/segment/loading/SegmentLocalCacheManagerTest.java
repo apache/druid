@@ -49,6 +49,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.apache.druid.utils.CompressionUtils;
@@ -1291,10 +1292,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   @Test
   public void testIfTombstoneIsLoaded() throws IOException, SegmentLoadingException
   {
-    final DataSegment tombstone = DataSegment.builder()
-                                             .dataSource("foo")
-                                             .interval(Intervals.of("2014-10-20T00:00:00Z/P1D"))
-                                             .version("version")
+    final DataSegment tombstone = DataSegment.builder(SegmentId.of("foo", Intervals.of("2014-10-20T00:00:00Z/P1D"), "version", 0))
                                              .loadSpec(Collections.singletonMap(
                                                  "type",
                                                  DataSegment.TOMBSTONE_LOADSPEC_TYPE
@@ -1319,10 +1317,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   public void testGetTombstoneSegment() throws SegmentLoadingException
   {
     final Interval interval = Intervals.of("2014-01-01/2014-01-02");
-    final DataSegment tombstone = DataSegment.builder()
-                                             .dataSource("foo")
-                                             .interval(interval)
-                                             .version("v1")
+    final DataSegment tombstone = DataSegment.builder(SegmentId.of("foo", interval, "v1", 0))
                                              .loadSpec(ImmutableMap.of("type", "tombstone"))
                                              .shardSpec(TombstoneShardSpec.INSTANCE)
                                              .size(100)
@@ -1394,9 +1389,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
   private DataSegment dataSegmentWithInterval(String intervalStr, long size, int partition)
   {
-    return DataSegment.builder()
-                      .dataSource("test_segment_loader")
-                      .interval(Intervals.of(intervalStr))
+    return DataSegment.builder(SegmentId.of("test_segment_loader", Intervals.of(intervalStr), "2015-05-27T03:38:35.683Z", partition))
                       .loadSpec(
                           ImmutableMap.of(
                               "type",
@@ -1405,7 +1398,6 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
                               "somewhere"
                           )
                       )
-                      .version("2015-05-27T03:38:35.683Z")
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
                       .shardSpec(new LinearShardSpec(partition))

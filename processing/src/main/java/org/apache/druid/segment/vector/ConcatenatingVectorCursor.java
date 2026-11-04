@@ -24,6 +24,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.EmptyCursorHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
 
 import java.util.List;
@@ -116,7 +117,9 @@ public final class ConcatenatingVectorCursor implements VectorCursor
     currentCursor = null;
     if (!delegateSet) {
       wrapperFactory.setDelegate(
-          EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN).asVectorCursor().getColumnSelectorFactory(),
+          EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN, RowSignature.empty())
+                           .asVectorCursor()
+                           .getColumnSelectorFactory(),
           clusteringValuesByGroup.get(holderSuppliers.size() - 1)
       );
       delegateSet = true;

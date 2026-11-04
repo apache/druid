@@ -4087,7 +4087,7 @@ name: Brotli4j
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.20.0
+version: 1.24.0
 libraries:
   - com.aayushatharva.brotli4j: brotli4j
   - com.aayushatharva.brotli4j: service
@@ -4129,7 +4129,7 @@ name: Google Brotli bundled by Brotli4j
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: MIT License
-version: 1.1.0
+version: 1.2.1
 copyright: 2009, 2010, 2013-2016 the Brotli Authors
 license_file_path: licenses/bin/google-brotli.MIT
 
@@ -7700,3 +7700,20 @@ module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
+
+---
+
+name: Apache TsFile
+license_category: binary
+version: 2.5.0
+module: extensions-contrib/druid-tsfile-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.tsfile: tsfile
+  - org.apache.tsfile: common
+notice: |
+  TsFile: Java: TsFile
+  Copyright 2024 The Apache Software Foundation
+
+  This product includes software developed at
+  The Apache Software Foundation (http://www.apache.org/).
