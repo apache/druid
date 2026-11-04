@@ -36,17 +36,8 @@ import java.util.List;
 /**
  * Tracker for a limited scan whose first ordering column is {@code __time}.
  * <p>
- * Maintains a threshold such that at least offset + limit written rows are as good or better than it; rows and inputs
- * that cannot beat (or tie) it cannot contribute to the result and thus can be skipped.
- * <ul>
- * <li>The threshold for ASCENDING scans is the largest timestamp in the current selection of rows.</li>
- * <li>The threshold for DESCENDING scans is the smallest timestamp in the current selection of rows.</li>
- * </ul>
- * <p>
- * Gates timestamps to the tracker in batches, and the tracker appends those that beat the threshold to a buffer. When
- * the buffer fills, a selection keeps the best offset + limit timestamps. The worst timestamp in that selection becomes
- * the new threshold. By design, the threshold lags slightly behind the rows written, which does not affect correctness
- * but may slightly reduce pruning effectiveness.
+ * Maintains a threshold such that at least offset + limit written rows are as good or better than it; rows and
+ * inputs that cannot beat (or tie) it cannot contribute to the result and thus can be skipped.
  */
 public class TimeOrderedScanLimitTracker extends ScanLimitTracker
 {
@@ -93,7 +84,9 @@ public class TimeOrderedScanLimitTracker extends ScanLimitTracker
   /**
    * Timestamp that at least {@link #rowsNeeded} written rows are as good or better than.
    * <p>
-   * Until {@link #rowsNeeded} rows have been written, it is a value no row can be worse than.
+   * Until {@link #rowsNeeded} rows have been written, it is a value no row can be worse than. Timestamps reach the
+   * tracker in batches and the threshold only moves when {@link #keys} reaches {@link #keysCapacity}, so it trails
+   * rows written. This can result in pruning slightly less than what an exact threshold would.
    */
   private volatile long threshold;
 
@@ -129,11 +122,8 @@ public class TimeOrderedScanLimitTracker extends ScanLimitTracker
   @Override
   public boolean canSkip(final Interval interval)
   {
-    // The interval can be skipped if it cannot possibly contain a row that beats or ties the threshold.
     return switch (timeOrderBy.getOrder()) {
-      // The interval starts after the threshold, no row can beat it.
       case ASCENDING -> interval.getStartMillis() > threshold;
-      // The interval ends before or at the threshold, no row can beat it.
       case DESCENDING -> interval.getEndMillis() <= threshold;
       case NONE -> throw DruidException.defensive("Unexpected time order[%s]", timeOrderBy.getOrder());
     };

@@ -313,7 +313,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
    */
   protected InputPruner getInputPruner()
   {
-    return InputPruner.NEVER;
+    return InputPruner.INCLUDE_ALL;
   }
 
   /**

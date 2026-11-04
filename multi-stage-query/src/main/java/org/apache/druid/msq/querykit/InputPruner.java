@@ -32,9 +32,9 @@ import org.joda.time.Interval;
 public interface InputPruner
 {
   /**
-   * Pruner that never skips an input and imposes no time order. Used by anything that does not prune.
+   * Pruner that includes all inputs and imposes no time order. Used by anything that does not prune.
    */
-  InputPruner NEVER = (_) -> false;
+  InputPruner INCLUDE_ALL = (_) -> false;
 
   /**
    * Returns true if an input whose rows all fall within {@code interval} cannot contribute to the stage's output.

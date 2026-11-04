@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Tracker for a limited scan with no ordering. Any {@code rowsNeeded} rows satisfy the limit.
+ * Tracker for a limited scan with no ordering. Any {@link #getRowsNeeded} rows satisfy the limit.
  */
 public class RowCountScanLimitTracker extends ScanLimitTracker
 {

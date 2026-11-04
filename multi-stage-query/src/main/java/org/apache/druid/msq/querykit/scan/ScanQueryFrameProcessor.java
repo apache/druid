@@ -154,12 +154,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private long cursorPushDownLimit = NO_LIMIT;
 
   /**
-   * Decides which of the current cursor's rows are written, from {@link #limitTracker}.
+   * Decides which of the current cursor's rows should be written, from {@link #limitTracker}.
    */
-  private RowGate rowGate = RowGate.ALWAYS_WRITE;
+  private RowGate cursorRowGate;
 
   /**
-   * Whether {@link #rowGate} stopped the current cursor before it was done.
+   * Whether {@link #cursorRowGate} stopped the current cursor before it was done.
    */
   private boolean cursorStopped;
 
@@ -462,7 +462,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
     if (isCursorDone()) {
       if (limitTracker.isSatisfied()) {
-        // The limit has been satisfied, eagerly stop reading from the input channel and return.
         return ReturnOrAwait.returnObject(Unit.instance());
       }
       return ReturnOrAwait.awaitAll(inputChannels().size());
@@ -503,7 +502,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     createFrameWriterIfNeeded();
 
     while (!isCursorDone()) {
-      final RowGate.Decision rowGateDecision = rowGate.check();
+      final RowGate.Decision rowGateDecision = cursorRowGate.check();
       if (rowGateDecision == RowGate.Decision.STOP) {
         cursorStopped = true;
         flushFrameWriter();
@@ -517,7 +516,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       boolean flush;
 
       if (frameWriter.addSelection()) {
-        rowGate.onRowWritten();
+        cursorRowGate.onRowWritten();
         cursorRowsRead++;
         cursor.advance();
         cursorOffset.increment();
@@ -560,7 +559,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       frameWriter.close();
       frameWriter = null;
 
-      rowGate.onFrameFlushed();
+      cursorRowGate.onFrameFlushed();
 
       return frame.numRows();
     } else {
@@ -601,7 +600,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       cursorPushDownLimit = NO_LIMIT;
     }
 
-    this.rowGate = limitTracker.forCursor(cursor.getColumnSelectorFactory(), ordering);
+    this.cursorRowGate = limitTracker.forCursor(cursor.getColumnSelectorFactory(), ordering);
 
     return rowsFlushed;
   }

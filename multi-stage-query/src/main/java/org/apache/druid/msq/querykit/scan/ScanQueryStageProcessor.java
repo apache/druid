@@ -49,10 +49,9 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
   private final ScanQuery query;
 
   /**
-   * Shared by all the {@link ScanQueryFrameProcessor}s created from this factory, so a limited scan stops reading once
-   * rows can no longer contribute to the result. Holds the state of one execution: each work order deserializes its
-   * own instance, but nothing prevents calling {@link #execute} twice on one instance. Doing so would produce buggy
-   * behavior, and must be avoided by the caller.
+   * Shared by all the {@link ScanQueryFrameProcessor}s created from this factory. Allows a limited scan to stop reading
+   * once rows can no longer contribute to the result. It holds that execution's state, so {@link #execute} may be
+   * called at most once per instance.
    */
   private final ScanLimitTracker limitTracker;
 

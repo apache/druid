@@ -77,7 +77,7 @@ public interface RowGate
   void onRowWritten();
 
   /**
-   * Called after a frame of {@code numRows} rows from this cursor is written to the output channel.
+   * Called after a frame from the cursor is written to the output channel.
    */
   void onFrameFlushed();
 }

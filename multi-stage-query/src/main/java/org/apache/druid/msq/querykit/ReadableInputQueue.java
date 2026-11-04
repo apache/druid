@@ -146,9 +146,7 @@ public class ReadableInputQueue implements Closeable
   private final AcquireMode acquireMode;
 
   /**
-   * Decides which inputs can be skipped. Once {@link #canSkipRemaining()} is true, {@link #nextInput()} returns null
-   * and no new segment loads start. Pending inputs that turn out to be skippable are released as they are reached, see
-   * {@link #releaseSkippedInputs}.
+   * Decides which inputs can be skipped as well as which order (if any) they should be processed in.
    */
   private final InputPruner inputPruner;
 
@@ -212,7 +210,6 @@ public class ReadableInputQueue implements Closeable
     }
 
     if (timeOrder != Order.NONE) {
-      // Stable sort: segments with equal intervals keep their original order.
       segments.sort(Comparator.comparing(item -> item.item().descriptor().getInterval(), intervalOrder));
     }
     loadableSegments.addAll(segments);

@@ -177,7 +177,7 @@ class ReadableInputQueueTest
 
   private static ReadableInputQueue makeQueue(int loadahead, LoadableSegment... segments)
   {
-    return makeQueue(loadahead, InputPruner.NEVER, segments);
+    return makeQueue(loadahead, InputPruner.INCLUDE_ALL, segments);
   }
 
   private static ReadableInputQueue makeQueue(
