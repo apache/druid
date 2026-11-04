@@ -217,12 +217,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     ));
     final FileSystem fs = tmpPath.getFileSystem(hadoopConfig);
 
-    fs.mkdirs(tmpPath.getParent());
-    log.debug("Copying files from[%s] to [%s]", inDir, tmpPath);
-
     final long size;
     final DataSegment dataSegment;
     try {
+      fs.mkdirs(tmpPath.getParent());
+
+      log.debug("Copying files from[%s] to [%s]", inDir, tmpPath);
+
       if (compressionFormat == CompressionUtils.Format.NONE) {
         fs.copyFromLocalFile(false, true, new Path(inDir.toURI()), tmpPath);
         size = FileUtils.getFileSize(inDir);
@@ -237,7 +238,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
                            .withSize(size)
                            .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
 
-      // Create parent if it does not exist, recreation is not an error
+      // Create parent if it does not exist, recreation is not an error.
       fs.mkdirs(outIndexPath.getParent());
       copyFilesWithChecks(fs, tmpPath, outIndexPath);
     }
