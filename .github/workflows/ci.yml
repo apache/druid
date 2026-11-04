@@ -53,7 +53,7 @@ jobs:
         # https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
-          base: ${{ github.ref_name }}
+          base: ${{ github.event_name == 'push' && github.ref_name || '' }}
           predicate-quantifier: every
           filters: |
             java:
