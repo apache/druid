@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
 import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
@@ -610,6 +611,13 @@ public class IcebergInputSourceTest
     Assertions.assertTrue(splitSource instanceof IcebergFileTaskInputSource, "withSplit on a v2 split must return IcebergFileTaskInputSource");
     // Split workers only receive the configured InputFormat if the source asks for it.
     Assertions.assertTrue(splitSource.needsFormat(), "V2 split source must request the configured InputFormat");
+    // MSQ's external slicer re-splits the result of withSplit and casts it to SplittableInputSource.
+    Assertions.assertTrue(splitSource instanceof SplittableInputSource, "V2 split source must be a SplittableInputSource");
+    Assertions.assertEquals(
+        1,
+        ((SplittableInputSource<?>) splitSource).createSplits(null, null).count(),
+        "V2 split source must yield exactly one split"
+    );
 
     // A V1 split (no marker) should return a non-IcebergFileTaskInputSource.
     // Not possible to force with the current table, so just verify the encoding roundtrip:

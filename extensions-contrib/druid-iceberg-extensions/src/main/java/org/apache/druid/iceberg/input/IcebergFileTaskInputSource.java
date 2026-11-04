@@ -28,12 +28,15 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.iceberg.DeleteFile;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * A single-split {@link InputSource} representing one Iceberg V2 file scan task (one data file
@@ -50,7 +53,7 @@ import java.util.List;
  *
  */
 @JsonTypeName(IcebergFileTaskInputSource.TYPE_KEY)
-public class IcebergFileTaskInputSource implements InputSource
+public class IcebergFileTaskInputSource implements SplittableInputSource<List<String>>
 {
   public static final String TYPE_KEY = "icebergFileTask";
 
@@ -127,6 +130,32 @@ public class IcebergFileTaskInputSource implements InputSource
   public boolean isSplittable()
   {
     return false;
+  }
+
+  /**
+   * This source already represents exactly one split, but callers such as the MSQ external slicer re-split the
+   * result of {@code withSplit} and require it to be a {@link SplittableInputSource}. So it yields itself as the one
+   * and only split.
+   */
+  @Override
+  public Stream<InputSplit<List<String>>> createSplits(
+      InputFormat inputFormat,
+      @Nullable SplitHintSpec splitHintSpec
+  )
+  {
+    return Stream.of(new InputSplit<>(Collections.singletonList(dataFilePath)));
+  }
+
+  @Override
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  {
+    return 1;
+  }
+
+  @Override
+  public InputSource withSplit(InputSplit<List<String>> split)
+  {
+    return this;
   }
 
   @Override

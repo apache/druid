@@ -44,6 +44,8 @@ import java.util.Map;
  */
 public class IcebergRecordConverter
 {
+  private static final long MILLIS_PER_DAY = 86_400_000L;
+
   private IcebergRecordConverter()
   {
   }
@@ -97,22 +99,24 @@ public class IcebergRecordConverter
       return value;
     }
     if (type instanceof Types.DateType) {
+      // Epoch millis, matching the existing Parquet and Arrow readers.
       if (value instanceof LocalDate) {
-        return value.toString();
+        return ((LocalDate) value).toEpochDay() * MILLIS_PER_DAY;
       }
       if (value instanceof Integer) {
         // Iceberg dates are stored as days since epoch.
-        return LocalDate.ofEpochDay((Integer) value).toString();
+        return (Integer) value * MILLIS_PER_DAY;
       }
       return value;
     }
     if (type instanceof Types.TimeType) {
+      // Millis since midnight, matching the Arrow reader.
       if (value instanceof LocalTime) {
-        return value.toString();
+        return ((LocalTime) value).toNanoOfDay() / 1_000_000L;
       }
       if (value instanceof Long) {
         // Iceberg times are stored as microseconds since midnight.
-        return LocalTime.ofNanoOfDay((Long) value * 1000L).toString();
+        return Math.floorDiv((Long) value, 1000L);
       }
       return value;
     }
