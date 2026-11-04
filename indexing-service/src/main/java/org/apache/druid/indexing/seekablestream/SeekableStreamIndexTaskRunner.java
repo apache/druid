@@ -1901,14 +1901,21 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
     if (this.recordSupplier != null) {
-      returnMap.put(
-          AUTOSCALER_METRICS_KEY,
-          Map.of(
-              POLL_IDLE_RATIO_KEY, recordSupplier.getPollIdleRatioMetric(),
-              POLL_IDLE_RATIO_RUNNING_AVG, recordSupplier.getRunningAvgPollIdleRatio(),
-              PROCESSING_RATE_RUNNING_AVG, getRunningAvgProcessingRate()
-          )
-      );
+      final Map<String, Object> autoscalerMetrics = new HashMap<>();
+      autoscalerMetrics.put(PROCESSING_RATE_RUNNING_AVG, getRunningAvgProcessingRate());
+
+      // Only publish the poll-idle-ratio metrics once the recordSupplier has a known value for them;
+      // otherwise an unknown value could pollute the aggregate average computed across all tasks.
+      final double pollIdleRatio = recordSupplier.getPollIdleRatioMetric();
+      if (pollIdleRatio >= 0) {
+        autoscalerMetrics.put(POLL_IDLE_RATIO_KEY, pollIdleRatio);
+      }
+      final double runningAvgPollIdleRatio = recordSupplier.getRunningAvgPollIdleRatio();
+      if (runningAvgPollIdleRatio >= 0) {
+        autoscalerMetrics.put(POLL_IDLE_RATIO_RUNNING_AVG, runningAvgPollIdleRatio);
+      }
+
+      returnMap.put(AUTOSCALER_METRICS_KEY, autoscalerMetrics);
     }
     return returnMap;
   }
