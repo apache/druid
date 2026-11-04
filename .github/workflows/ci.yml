@@ -78,16 +78,11 @@ jobs:
 
   distribution-build:
     name: "distribution-build"
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [ "25" ]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/packaging-check.sh
       summary: "Builds the release distribution with the apache-release profile and checks its licenses."
-      jdk: ${{ matrix.jdk }}
-      key: "packaging-check-jdk${{ matrix.jdk }}"
+      key: "packaging-check-jdk25"
 
   docs-and-web-console:
     name: "docs-and-web-console"
