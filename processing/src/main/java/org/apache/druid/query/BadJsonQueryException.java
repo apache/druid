@@ -42,7 +42,7 @@ public class BadJsonQueryException extends BadQueryException
 
   public BadJsonQueryException(JsonMappingException e)
   {
-    this(e, JSON_PARSE_ERROR_CODE, getErrorMessage(e), e.getClass().getName());
+    this(e, JSON_PARSE_ERROR_CODE, getMappingErrorMessage(e), e.getClass().getName());
   }
 
   @JsonCreator
@@ -82,7 +82,7 @@ public class BadJsonQueryException extends BadQueryException
     return "Invalid native query: " + errorMessage;
   }
 
-  private static String getErrorMessage(JsonMappingException e)
+  private static String getMappingErrorMessage(JsonMappingException e)
   {
     final String path = e.getPathReference();
     if (Strings.isNullOrEmpty(path)) {
