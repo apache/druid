@@ -497,6 +497,8 @@ public class QueryLifecycle
         statsMap.put("exception", e.toString());
         if (shouldLogStackTrace(e, baseQuery.context())) {
           log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
+        } else if (isUserError(e)) {
+          log.noStackTrace().debug(e, "Exception while processing queryId [%s]", baseQuery.getId());
         } else {
           log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         }
@@ -610,5 +612,18 @@ public class QueryLifecycle
     } else {
       return false;
     }
+  }
+
+  /**
+   * Returns whether the exception is an error the user caused and can fix themselves, such as invalid SQL or an
+   * unknown table. The client already receives these in the response, and they are recorded in the request log and
+   * query metrics, so they don't need a WARN in the server log.
+   *
+   * @param e exception
+   */
+  public static boolean isUserError(final Throwable e)
+  {
+    return e instanceof DruidException
+           && ((DruidException) e).getTargetPersona() == DruidException.Persona.USER;
   }
 }

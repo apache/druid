@@ -227,6 +227,35 @@ public class QueryLifecycleTest
   }
 
   @Test
+  public void testIsUserError()
+  {
+    replayAll();
+
+    Assertions.assertTrue(
+        QueryLifecycle.isUserError(
+            DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Object 'foo' not found")
+        )
+    );
+    Assertions.assertFalse(
+        QueryLifecycle.isUserError(
+            DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Something broke")
+        )
+    );
+    Assertions.assertFalse(
+        QueryLifecycle.isUserError(
+            DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build("Not allowed")
+        )
+    );
+    Assertions.assertFalse(QueryLifecycle.isUserError(new ISE("Not a DruidException")));
+  }
+
+  @Test
   public void testRunSimple_withPolicyRestriction()
   {
     // Test the path when an external client send a sql query to broker, through runSimple.
