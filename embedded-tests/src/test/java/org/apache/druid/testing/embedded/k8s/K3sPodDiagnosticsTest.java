@@ -38,15 +38,17 @@ import io.fabric8.kubernetes.client.dsl.PodResource;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
 public class K3sPodDiagnosticsTest
 {
   @Test
-  public final void testFormatPodDiagnosticsWithNullPod()
+  public void testFormatPodDiagnosticsWithNullPod()
   {
     final String diagnostics = K3sPodDiagnostics.formatPodDiagnostics(null, null, null);
     Assertions.assertNotNull(diagnostics);
@@ -54,7 +56,7 @@ public class K3sPodDiagnosticsTest
   }
 
   @Test
-  public final void testFormatPodDiagnosticsWithRunningAndReadyPod()
+  public void testFormatPodDiagnosticsWithRunningAndReadyPod()
   {
     final PodCondition readyCondition = new PodConditionBuilder()
         .withType("Ready")
@@ -90,7 +92,7 @@ public class K3sPodDiagnosticsTest
   }
 
   @Test
-  public final void testFormatPodDiagnosticsWithCrashLoopBackOffPod()
+  public void testFormatPodDiagnosticsWithCrashLoopBackOffPod()
   {
     final PodCondition condition = new PodConditionBuilder()
         .withType("Ready")
@@ -161,7 +163,7 @@ public class K3sPodDiagnosticsTest
   }
 
   @Test
-  public final void testFormatPodDiagnosticsWithUnhealthyReadinessProbeEvent()
+  public void testFormatPodDiagnosticsWithUnhealthyReadinessProbeEvent()
   {
     final Pod pod = new PodBuilder()
         .withMetadata(new ObjectMetaBuilder().withName("druid-router-1").withNamespace("druid").build())
@@ -182,7 +184,7 @@ public class K3sPodDiagnosticsTest
   }
 
   @Test
-  public final void testFormatPodDiagnosticsWithCustomNamespace()
+  public void testFormatPodDiagnosticsWithCustomNamespace()
   {
     final Pod pod = new PodBuilder()
         .withMetadata(new ObjectMetaBuilder().withName("druid-operator-1").withNamespace("druid-operator-system").build())
@@ -195,7 +197,7 @@ public class K3sPodDiagnosticsTest
   }
 
   @Test
-  public final void testResolveNamespaceFromPodMetadata()
+  public void testResolveNamespaceFromPodMetadata()
   {
     final PodResource podResource = Mockito.mock(PodResource.class);
     final Pod pod = new PodBuilder()
@@ -207,7 +209,7 @@ public class K3sPodDiagnosticsTest
   }
 
   @Test
-  public final void testResolveNamespaceFallback()
+  public void testResolveNamespaceFallback()
   {
     final PodResource podResourceWithoutNamespace = Mockito.mock(PodResource.class);
     final Pod podWithoutNamespace = new PodBuilder()
@@ -233,7 +235,7 @@ public class K3sPodDiagnosticsTest
   }
 
   @Test
-  public final void testOnReadyTimeout()
+  public void testOnReadyTimeout(@TempDir final File tempDir)
   {
     final PodResource podResource = Mockito.mock(PodResource.class);
     final Pod pod = new PodBuilder()
@@ -243,7 +245,7 @@ public class K3sPodDiagnosticsTest
     Mockito.when(podResource.get()).thenReturn(pod);
 
     final KubernetesClient client = Mockito.mock(KubernetesClient.class, Mockito.RETURNS_DEEP_STUBS);
-    final K3sPodDiagnostics diagnostics = new K3sPodDiagnostics(client, "testClass");
+    final K3sPodDiagnostics diagnostics = new K3sPodDiagnostics(client, tempDir);
 
     final ISE ise = diagnostics.onReadyTimeout(podResource, "druid");
     Assertions.assertNotNull(ise);
@@ -252,9 +254,11 @@ public class K3sPodDiagnosticsTest
   }
 
   @Test
-  public final void testDumpPodLogsWithNullClientDoesNotThrow()
+  public void testDumpPodLogs(@TempDir final File tempDir)
   {
-    final K3sPodDiagnostics diagnostics = new K3sPodDiagnostics(null);
+    final KubernetesClient client = Mockito.mock(KubernetesClient.class, Mockito.RETURNS_DEEP_STUBS);
+    final K3sPodDiagnostics diagnostics = new K3sPodDiagnostics(client, tempDir);
     Assertions.assertDoesNotThrow(() -> diagnostics.dumpPodLogs("druid"));
+    Assertions.assertTrue(tempDir.exists());
   }
 }

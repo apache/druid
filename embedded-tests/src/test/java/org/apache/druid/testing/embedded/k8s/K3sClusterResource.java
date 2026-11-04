@@ -85,7 +85,6 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   private final List<File> manifestFiles = new ArrayList<>();
   private final List<K3sDruidService> services = new ArrayList<>();
 
-  private EmbeddedDruidCluster cluster;
   private KubernetesClient client;
   private K3sPodDiagnostics podDiagnostics;
   private String druidImageName;
@@ -162,8 +161,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
-    this.cluster = cluster;
-    initKubernetesClient();
+    initKubernetesClient(cluster);
     loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
     manifestFiles.forEach(this::applyManifest);
     initializeDruidServices(cluster);
@@ -209,13 +207,14 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     );
   }
 
-  private void initKubernetesClient()
+  private void initKubernetesClient(EmbeddedDruidCluster cluster)
   {
     client = new KubernetesClientBuilder()
         .withConfig(Config.fromKubeconfig(getContainer().getKubeConfigYaml()))
         .build();
     closer.register(client);
-    podDiagnostics = new K3sPodDiagnostics(client, cluster);
+    final File podLogDir = new File(new File("druid-container-logs", cluster.getTestClassName()), "k3s-pods");
+    podDiagnostics = new K3sPodDiagnostics(client, podLogDir);
   }
 
   protected void waitUntilPodsAreReady(final String namespace)
@@ -244,11 +243,6 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   public KubernetesClient getKubernetesClient()
   {
     return client;
-  }
-
-  public K3sPodDiagnostics getPodDiagnostics()
-  {
-    return podDiagnostics;
   }
 
   @Override
@@ -370,14 +364,6 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   }
 
   /**
-   * Waits for the given pod to be ready in the {@link #DRUID_NAMESPACE}.
-   */
-  private void waitUntilPodIsReady(final PodResource pod)
-  {
-    waitUntilPodIsReady(pod, DRUID_NAMESPACE);
-  }
-
-  /**
    * Waits for the given pod to be ready in the given namespace.
    */
   private void waitUntilPodIsReady(final PodResource pod, @Nullable final String defaultNamespace)
@@ -400,9 +386,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   public void dumpPodLogs(final String namespace)
   {
-    if (podDiagnostics != null) {
-      podDiagnostics.dumpPodLogs(namespace);
-    }
+    podDiagnostics.dumpPodLogs(namespace);
   }
 
   /**

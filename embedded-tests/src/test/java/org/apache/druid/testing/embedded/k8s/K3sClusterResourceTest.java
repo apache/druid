@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 public class K3sClusterResourceTest
 {
   @Test
-  public final void testDruidServiceManifestHasReadinessProbe()
+  public void testDruidServiceManifestHasReadinessProbe()
   {
     final K3sDruidService coordinatorService = new K3sDruidService(DruidCommand.Server.COORDINATOR);
     final String yaml = coordinatorService.createManifestYaml("manifests/druid-service.yaml", "druid:test");
@@ -37,14 +37,5 @@ public class K3sClusterResourceTest
     Assertions.assertTrue(yaml.contains("initialDelaySeconds: 5"));
     Assertions.assertTrue(yaml.contains("periodSeconds: 5"));
     Assertions.assertTrue(yaml.contains("value: \"256m\""));
-  }
-
-  @Test
-  public final void testDumpPodLogsWithNullDiagnosticsDoesNotThrow()
-  {
-    final K3sClusterResource resource = new K3sClusterResource();
-    Assertions.assertNull(resource.getPodDiagnostics());
-    Assertions.assertNull(resource.getKubernetesClient());
-    Assertions.assertDoesNotThrow(() -> resource.dumpPodLogs(K3sClusterResource.DRUID_NAMESPACE));
   }
 }

@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 
 import javax.annotation.Nullable;
 
@@ -41,6 +40,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Diagnostic helper for K3s pods. Gathers pod status, container states,
@@ -50,34 +50,13 @@ public class K3sPodDiagnostics
 {
   private static final Logger log = new Logger(K3sPodDiagnostics.class);
 
-  @Nullable
   private final KubernetesClient client;
-  @Nullable
-  private final String testClassName;
+  private final File podLogDirectory;
 
-  public K3sPodDiagnostics(@Nullable final KubernetesClient client)
+  public K3sPodDiagnostics(final KubernetesClient client, final File podLogDirectory)
   {
-    this(client, (String) null);
-  }
-
-  public K3sPodDiagnostics(@Nullable final KubernetesClient client, @Nullable final EmbeddedDruidCluster cluster)
-  {
-    this(client, cluster != null ? cluster.getTestClassName() : null);
-  }
-
-  public K3sPodDiagnostics(@Nullable final KubernetesClient client, @Nullable final String testClassName)
-  {
-    this.client = client;
-    this.testClassName = testClassName;
-  }
-
-  /**
-   * Handles pod readiness timeout in the default {@link K3sClusterResource#DRUID_NAMESPACE}:
-   * dumps pod logs, formats detailed diagnostics, and returns an {@link ISE}.
-   */
-  public ISE onReadyTimeout(final PodResource pod)
-  {
-    return onReadyTimeout(pod, K3sClusterResource.DRUID_NAMESPACE);
+    this.client = Objects.requireNonNull(client, "client");
+    this.podLogDirectory = Objects.requireNonNull(podLogDirectory, "podLogDirectory");
   }
 
   /**
@@ -106,7 +85,7 @@ public class K3sPodDiagnostics
     return fallbackNamespace != null ? fallbackNamespace : K3sClusterResource.DRUID_NAMESPACE;
   }
 
-  public String buildPodDiagnostics(final PodResource podResource, @Nullable final String defaultNamespace)
+  public String buildPodDiagnostics(final PodResource podResource, final String namespace)
   {
     Pod pod = null;
     try {
@@ -119,12 +98,9 @@ public class K3sPodDiagnostics
     final String podName = pod != null && pod.getMetadata() != null
                            ? pod.getMetadata().getName()
                            : null;
-    final String namespace = pod != null && pod.getMetadata() != null && pod.getMetadata().getNamespace() != null
-                             ? pod.getMetadata().getNamespace()
-                             : (defaultNamespace != null ? defaultNamespace : K3sClusterResource.DRUID_NAMESPACE);
 
     List<Event> events = null;
-    if (podName != null && client != null) {
+    if (podName != null) {
       try {
         final ObjectReference objectRef = new ObjectReferenceBuilder()
             .withApiVersion("v1")
@@ -277,16 +253,11 @@ public class K3sPodDiagnostics
 
   public void dumpPodLogs(final String namespace)
   {
-    if (client == null) {
-      return;
-    }
-    final String logCategory = testClassName != null ? testClassName : "k3s";
-    final File logDir = new File(new File("druid-container-logs", logCategory), "k3s-pods");
     try {
-      FileUtils.mkdirp(logDir);
+      FileUtils.mkdirp(podLogDirectory);
     }
     catch (Exception e) {
-      log.warn(e, "Failed to create pod log directory [%s]", logDir.getAbsolutePath());
+      log.warn(e, "Failed to create pod log directory [%s]", podLogDirectory.getAbsolutePath());
     }
 
     try {
@@ -295,7 +266,7 @@ public class K3sPodDiagnostics
           continue;
         }
         final String podName = pod.getMetadata().getName();
-        final File podLogFile = new File(logDir, podName + ".log");
+        final File podLogFile = new File(podLogDirectory, podName + ".log");
         try {
           final String podLogs = client.pods().inNamespace(namespace).withName(podName).getLog();
           if (podLogs != null) {
