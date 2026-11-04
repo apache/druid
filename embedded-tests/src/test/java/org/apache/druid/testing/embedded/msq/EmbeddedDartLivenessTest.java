@@ -20,11 +20,18 @@
 package org.apache.druid.testing.embedded.msq;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.messages.server.Outbox;
+import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.dart.controller.messages.DoneReadingInput;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.dart.worker.http.DartWorkerInfo;
+import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -177,6 +184,34 @@ public class EmbeddedDartLivenessTest extends BaseDartQueryTest
         cluster.callApi().waitForAllSegmentsToBeAvailable(ingestedDataSource, coordinator, broker1);
       }
     }
+  }
+
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
+  public void test_resetOutbox_relayRecovers() throws Exception
+  {
+    final String sql = StringUtils.format("SELECT COUNT(*) FROM \"%s\"", ingestedDataSource);
+
+    // Run a query first, so broker1 has a relay to the Historical with an established epoch.
+    Assertions.assertEquals("10", msqApis.submitDartSqlAsync(sql, Map.of(), broker1).get(30, TimeUnit.SECONDS).trim());
+
+    // Reset broker1's outbox, as the reaper does when broker1 is silent for too long. This cancels the relay's
+    // in-flight long poll while the Historical stays in discovery.
+    final String broker1Host = broker1.bindings().selfNode().getHostAndPortToUse();
+    final Outbox<ControllerMessage> outbox =
+        historical.bindings()
+                  .getInstance(Injector.class)
+                  .getInstance(Key.get(new TypeLiteral<Outbox<ControllerMessage>>() {}));
+    outbox.resetOutbox(broker1Host);
+
+    // The relay must pick up the new outbox rather than stopping for good. The future resolves when broker1 acks
+    // the message, which it does on its next poll after receiving it. broker1 ignores the message, since no query
+    // has this ID.
+    outbox.sendMessage(broker1Host, new DoneReadingInput(new StageId(UUID.randomUUID().toString(), 0), 0))
+          .get(10, TimeUnit.SECONDS);
+
+    // Queries must still work, since they depend on worker-to-controller messages flowing through the relay.
+    Assertions.assertEquals("10", msqApis.submitDartSqlAsync(sql, Map.of(), broker1).get(30, TimeUnit.SECONDS).trim());
   }
 
   private DartWorkerRunner getWorkerRunner()
