@@ -36,7 +36,9 @@ import java.util.function.BiFunction;
  * allows for situations where later processors depend on the results of earlier processors. (The result of earlier
  * processors are made available to the manager through {@link ProcessorAndCallback#onComplete(Object)}.)
  *
- * Implementations do not need to be thread-safe.
+ * Implementations do not need to be thread-safe with respect to calls of class-level methods. However, futures
+ * returned by {@link #next()} may resolve on any thread, including after {@link #close()}, so implementations
+ * must synchronize any state that is accessed by future callbacks.
  *
  * @param <T> return type of {@link FrameProcessor} created by this manager
  * @param <R> result type of this manager; see {@link #result()}

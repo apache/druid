@@ -29,10 +29,9 @@ import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.utils.CloseableUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -74,9 +73,17 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   @GuardedBy("lock")
   private boolean closed;
 
-  private final List<A> firstProcessorResult = new CopyOnWriteArrayList<>();
+  /**
+   * Results of processors from {@link #first} that have completed so far.
+   */
+  @GuardedBy("lock")
+  private final List<A> firstProcessorResult = new ArrayList<>();
 
-  private final AtomicInteger firstProcessorCount = new AtomicInteger(0);
+  /**
+   * Number of processors returned by {@link #first} so far.
+   */
+  @GuardedBy("lock")
+  private int firstProcessorCount;
 
   public ChainedProcessorManager(
       final ProcessorManager<A, ?> firstProcessor,
@@ -111,7 +118,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
               synchronized (lock) {
                 if (processorAndCallbackOptional.isPresent()) {
                   // More processors left to run.
-                  firstProcessorCount.incrementAndGet();
+                  firstProcessorCount++;
                   ProcessorAndCallback<A> aProcessorAndCallback = processorAndCallbackOptional.get();
                   //noinspection unchecked
                   return Futures.immediateFuture(Optional.of((ProcessorAndCallback<Object>) aProcessorAndCallback));
@@ -148,7 +155,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   @GuardedBy("lock")
   private void checkFirstProcessorComplete()
   {
-    if (!closed && firstExhausted && (firstProcessorResult.size() == firstProcessorCount.get())) {
+    if (!closed && firstExhausted && (firstProcessorResult.size() == firstProcessorCount)) {
       restFuture.set(restFactory.apply(firstProcessorResult));
     }
   }
