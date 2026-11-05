@@ -163,7 +163,7 @@ fi
 
 # take the ${TASK_JSON} environment variable and base64 decode, unzip and throw it in ${TASK_DIR}/task.json.
 # If TASK_JSON is not set, CliPeon will pull the task.json file from deep storage.
-mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
+mkdir -p "${TASK_DIR}"; [ -n "$TASK_JSON" ] && echo "${TASK_JSON}" | base64 -d | gzip -d > "${TASK_DIR}/task.json";
 
 # Combine options from jvm.config and those given as JAVA_OPTS
 # If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
