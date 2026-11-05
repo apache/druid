@@ -504,23 +504,45 @@ ORDER BY
 
         const auxiliaryQueries: AuxiliaryQueryFn<ServicesWithAuxiliaryInfo>[] = [];
 
-        if (capabilities.hasCoordinatorAccess()) {
+        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
-            const [cloneStatusResp, config] = await Promise.all([
-              visibleColumns.shown('Detail')
-                ? getApiArrayFromKey<CloneStatusInfo>(
-                    '/druid/coordinator/v1/config/cloneStatus',
-                    'cloneStatus',
-                    signal,
-                  ).catch(() => {
-                    AppToaster.show({
-                      icon: IconNames.ERROR,
-                      intent: Intent.DANGER,
-                      message: 'There was an error getting the clone status map',
-                    });
-                    return [] as CloneStatusInfo[];
-                  })
-                : Promise.resolve([] as CloneStatusInfo[]),
+            try {
+              const loadQueueInfos = (
+                await Api.instance.get<Record<string, LoadQueueInfo>>(
+                  '/druid/coordinator/v1/loadqueue?simple',
+                  { signal },
+                )
+              ).data;
+              return {
+                ...servicesWithAuxiliaryInfo,
+                loadQueueInfo: loadQueueInfos,
+              };
+            } catch {
+              AppToaster.show({
+                icon: IconNames.ERROR,
+                intent: Intent.DANGER,
+                message: 'There was an error getting the load queue info',
+              });
+              return servicesWithAuxiliaryInfo;
+            }
+          });
+        }
+
+        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
+            const [cloneStatusResp, configResp] = await Promise.all([
+              getApiArrayFromKey<CloneStatusInfo>(
+                '/druid/coordinator/v1/config/cloneStatus',
+                'cloneStatus',
+                signal,
+              ).catch(() => {
+                AppToaster.show({
+                  icon: IconNames.ERROR,
+                  intent: Intent.DANGER,
+                  message: 'There was an error getting the clone status map',
+                });
+                return [] as CloneStatusInfo[];
+              }),
               Api.instance
                 .get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', { signal })
                 .then(r => r.data)
@@ -530,23 +552,46 @@ ORDER BY
                     intent: Intent.DANGER,
                     message: 'There was an error getting the coordinator dynamic config',
                   });
-                  return undefined;
+                  return null;
                 }),
             ]);
 
+            const cloneStatusLookup: Record<string, CloneStatusInfo> = lookupBy(
+              cloneStatusResp,
+              s => s.targetServer,
+            );
+
             return {
               ...servicesWithAuxiliaryInfo,
-              cloneStatus: lookupBy(cloneStatusResp, s => s.targetServer),
-              ...(config
+              cloneStatus: cloneStatusLookup,
+              ...(configResp
                 ? {
                     serverMode: {
-                      turboLoadingNodes: new Set<string>(config.turboLoadingNodes || []),
-                      decommissioningNodes: new Set<string>(config.decommissioningNodes || []),
+                      turboLoadingNodes: new Set<string>(configResp.turboLoadingNodes || []),
+                      decommissioningNodes: new Set<string>(configResp.decommissioningNodes || []),
                     },
-                    tierToAlias: getTierToAliasLookup(config),
+                    tierToAlias: getTierToAliasLookup(configResp),
                   }
                 : {}),
             };
+          });
+        } else if (capabilities.hasCoordinatorAccess()) {
+          // The Detail column is hidden, so fetch the dynamic config only for the tier alias lookup. Errors are not
+          // surfaced because nothing visible depends on this beyond the optional tier alias grouping.
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
+            try {
+              const config = (
+                await Api.instance.get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', {
+                  signal,
+                })
+              ).data;
+              return {
+                ...servicesWithAuxiliaryInfo,
+                tierToAlias: getTierToAliasLookup(config),
+              };
+            } catch {
+              return servicesWithAuxiliaryInfo;
+            }
           });
         }
 
@@ -642,15 +687,14 @@ ORDER BY
     const { filters, onFiltersChange } = this.props;
     const { servicesState, groupServicesBy, visibleColumns } = this.state;
 
-    const { services, loadQueueInfo, cloneStatus, serverMode, workerInfo, tierToAlias } =
-      servicesState.data || {
-        services: [],
-        loadQueueInfo: {},
-        cloneStatus: {},
-        serverMode: DEFAULT_SERVER_MODE,
-        workerInfo: {},
-        tierToAlias: {},
-      };
+    const { services, loadQueueInfo, cloneStatus, serverMode, workerInfo } = servicesState.data || {
+      services: [],
+      loadQueueInfo: {},
+      cloneStatus: {},
+      serverMode: DEFAULT_SERVER_MODE,
+      workerInfo: {},
+    };
+    const tierToAlias = this.getTierToAlias();
 
     return (
       <LoadQueueInfoContext value={loadQueueInfo}>
@@ -764,7 +808,9 @@ ORDER BY
         },
         {
           Header: 'Tier alias',
-          show: visibleColumns.shown('Tier alias') || groupServicesBy === 'tier_alias',
+          show:
+            (visibleColumns.shown('Tier alias') && Object.keys(tierToAlias).length > 0) ||
+            groupServicesBy === 'tier_alias',
           id: 'tier_alias',
           width: 180,
           accessor: row => {
@@ -1202,15 +1248,21 @@ ORDER BY
     );
   }
 
+  /**
+   * While auxiliary queries run, the intermediate data still carries the initial empty tierToAlias, so keep using the
+   * previous lookup to avoid the tier alias column, grouping, and button flickering on a manual refresh.
+   */
+  private getTierToAlias(): Record<string, string> {
+    const { servicesState } = this.state;
+    const data =
+      (servicesState.isAuxiliaryLoading() && servicesState.lastData) || servicesState.getSomeData();
+    return data?.tierToAlias || {};
+  }
+
   render() {
     const { capabilities } = this.props;
-    const { servicesState, groupServicesBy, visibleColumns } = this.state;
-    // While auxiliary queries run, tierToAlias is still empty, so keep using the previous lookup
-    const tierToAlias = (
-      (servicesState.isAuxiliaryLoading() && servicesState.lastData) ||
-      servicesState.getSomeData()
-    )?.tierToAlias;
-    const hasTierAliases = Boolean(tierToAlias && Object.keys(tierToAlias).length);
+    const { groupServicesBy, visibleColumns } = this.state;
+    const hasTierAliases = Object.keys(this.getTierToAlias()).length > 0;
 
     return (
       <div className="services-view app-view">
