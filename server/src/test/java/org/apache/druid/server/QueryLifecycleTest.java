@@ -40,6 +40,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -270,6 +271,50 @@ public class QueryLifecycleTest
         )
     );
     Assertions.assertFalse(QueryLifecycle.isUserError(new ISE("Not a DruidException")));
+  }
+
+  @Test
+  public void testShouldLogStackTrace()
+  {
+    replayAll();
+
+    final QueryContext context = QueryContext.empty();
+    Assertions.assertTrue(
+        QueryLifecycle.shouldLogStackTrace(
+            DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Something broke"),
+            context
+        )
+    );
+    Assertions.assertTrue(
+        QueryLifecycle.shouldLogStackTrace(
+            DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build("Not implemented"),
+            context
+        )
+    );
+    Assertions.assertFalse(
+        QueryLifecycle.shouldLogStackTrace(
+            DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Bad input"),
+            context
+        )
+    );
+
+    // A missing extension is fixed by configuration, so its stack trace is not useful
+    final DruidException extensionNotLoaded = DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                                                            .build("Extension not loaded");
+    Assertions.assertFalse(QueryLifecycle.shouldLogStackTrace(extensionNotLoaded, context));
+    Assertions.assertTrue(
+        QueryLifecycle.shouldLogStackTrace(
+            extensionNotLoaded,
+            QueryContext.of(QueryContextParameters.DEBUG, true)
+        )
+    );
   }
 
   @Test
