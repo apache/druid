@@ -28,7 +28,6 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.QueryStats;
@@ -38,7 +37,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -198,7 +196,7 @@ public class FilteredRequestLoggerTest
   public void testAlwaysLogFailuresBypassesFilters() throws IOException
   {
     final RequestLogLine nativeFailure = RequestLogLine.forNative(
-        testSegmentMetadataQuery.withOverriddenContext(Map.of(QueryContexts.CTX_SQL_QUERY_ID, "sql-id")),
+        testSegmentMetadataQuery.withSqlQueryId("sql-id"),
         DateTimes.nowUtc(),
         null,
         new QueryStats(ImmutableMap.of("query/time", 1, "success", false))
@@ -291,7 +289,7 @@ public class FilteredRequestLoggerTest
     final QueryStats stats = new QueryStats(ImmutableMap.of("query/time", 10, "success", true));
     logger.logNativeQuery(
         RequestLogLine.forNative(
-            testSegmentMetadataQuery.withOverriddenContext(Map.of(QueryContexts.CTX_SQL_QUERY_ID, "sql-id")),
+            testSegmentMetadataQuery.withSqlQueryId("sql-id"),
             DateTimes.nowUtc(),
             null,
             stats
