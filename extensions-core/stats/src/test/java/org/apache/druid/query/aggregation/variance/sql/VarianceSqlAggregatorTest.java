@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
@@ -718,5 +719,22 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         "Query could not be planned. A possible reason is [Aggregation [STDDEV] is currently not supported for window functions]",
         e.getMessage()
     );
+  }
+
+  @Test
+  public void testVarianceOnNonNumericStringLiteral()
+  {
+    for (String function : ImmutableList.of("VARIANCE", "VAR_POP", "VAR_SAMP", "STDDEV", "STDDEV_POP", "STDDEV_SAMP")) {
+      testQueryThrows(
+          StringUtils.format("SELECT %s('m1') FROM numfoo", function),
+          invalidSqlContains(
+              StringUtils.format(
+                  "Function [%s] argument [1] must be numeric, got string literal ['m1']."
+                  + " If you meant to refer to a column, use double quotes.",
+                  function
+              )
+          )
+      );
+    }
   }
 }

@@ -3,6 +3,7 @@
 
 # Numeric aggregators on STRING columns and string literals.
 # A STRING column is implicitly cast to a number for SUM, AVG and COUNT; MIN and MAX reject it.
+# A string literal that cannot be parsed as a number is rejected by SUM and AVG.
 
 # Case 1: SUM(dim1), STRING column.
 SELECT SUM(dim1) FROM foo;
@@ -114,14 +115,8 @@ SELECT COUNT(DISTINCT '1.5') FROM foo;
 
 # Case 13: SUM('abc'), non-numeric string literal.
 SELECT SUM('abc') FROM foo;
-+--------+
-| EXPR$0 |
-+--------+
-|        |
-+--------+
-(1 row)
-
-!ok
+Function [SUM] argument [1] must be numeric, got string literal ['abc']
+!error
 
 # Case 14: MIN('abc'), non-numeric string literal.
 SELECT MIN('abc') FROM foo;
@@ -135,14 +130,8 @@ Aggregation [MAX] does not support type [STRING], column [v0]
 
 # Case 16: AVG('abc'), non-numeric string literal.
 SELECT AVG('abc') FROM foo;
-+--------+
-| EXPR$0 |
-+--------+
-|        |
-+--------+
-(1 row)
-
-!ok
+Function [AVG] argument [1] must be numeric, got string literal ['abc']
+!error
 
 # Case 17: COUNT('abc'), non-numeric string literal.
 SELECT COUNT('abc') FROM foo;
@@ -161,6 +150,182 @@ SELECT COUNT(DISTINCT 'abc') FROM foo;
 | EXPR$0 |
 +--------+
 |      1 |
++--------+
+(1 row)
+
+!ok
+
+# SUM and AVG on other input kinds.
+
+# Case 19: SUM(m1), numeric column.
+SELECT SUM(m1) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|   21.0 |
++--------+
+(1 row)
+
+!ok
+
+# Case 20: AVG(m1), numeric column.
+SELECT AVG(m1) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|    3.5 |
++--------+
+(1 row)
+
+!ok
+
+# Case 21: SUM(__time), timestamp column.
+SELECT SUM(__time) FROM foo;
+Cannot apply 'SUM' to arguments of type 'SUM(<TIMESTAMP(3)>)'
+!error
+
+# Case 22: AVG(__time), timestamp column.
+SELECT AVG(__time) FROM foo;
+Cannot apply 'AVG' to arguments of type 'AVG(<TIMESTAMP(3)>)'
+!error
+
+# Case 23: SUM(NULL).
+SELECT SUM(NULL) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 24: AVG(NULL).
+SELECT AVG(NULL) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 25: SUM(CAST(NULL AS DOUBLE)).
+SELECT SUM(CAST(NULL AS DOUBLE)) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 26: AVG(CAST(NULL AS DOUBLE)).
+SELECT AVG(CAST(NULL AS DOUBLE)) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 27: SUM of a BOOLEAN expression.
+SELECT SUM(dim1 = 'abc') FROM foo;
+Cannot apply 'SUM' to arguments of type 'SUM(<BOOLEAN>)'
+!error
+
+# Case 28: AVG of a BOOLEAN expression.
+SELECT AVG(dim1 = 'abc') FROM foo;
+Cannot apply 'AVG' to arguments of type 'AVG(<BOOLEAN>)'
+!error
+
+# Case 29: SUM of an ARRAY.
+SELECT SUM(ARRAY[1, 2]) FROM foo;
+Cannot apply 'SUM' to arguments of type 'SUM(<INTEGER ARRAY>)'
+!error
+
+# Case 30: AVG of an ARRAY.
+SELECT AVG(ARRAY[1, 2]) FROM foo;
+Cannot apply 'AVG' to arguments of type 'AVG(<INTEGER ARRAY>)'
+!error
+
+# Case 31: SUM of a complex column.
+SELECT SUM(unique_dim1) FROM foo;
+Cannot apply 'SUM' to arguments of type 'SUM(<COMPLEX<HYPERUNIQUE>>)'
+!error
+
+# Case 32: AVG of a complex column.
+SELECT AVG(unique_dim1) FROM foo;
+Cannot apply 'AVG' to arguments of type 'AVG(<COMPLEX<HYPERUNIQUE>>)'
+!error
+
+# Case 33: SUM(CAST('abc' AS DOUBLE)), explicit cast is not checked.
+SELECT SUM(CAST('abc' AS DOUBLE)) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 34: AVG(CAST('abc' AS DOUBLE)), explicit cast is not checked.
+SELECT AVG(CAST('abc' AS DOUBLE)) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 35: SUM('abc') OVER (), non-numeric string literal in a window function.
+SELECT SUM('abc') OVER () FROM foo LIMIT 1;
+Function [SUM] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 36: BIT_AND('abc'), non-numeric string literal.
+SELECT BIT_AND('abc') FROM foo;
+Function [BIT_AND] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 37: BIT_OR('abc'), non-numeric string literal.
+SELECT BIT_OR('abc') FROM foo;
+Function [BIT_OR] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 38: BIT_XOR('abc'), non-numeric string literal.
+SELECT BIT_XOR('abc') FROM foo;
+Function [BIT_XOR] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 39: SUM(DISTINCT 'abc'), non-numeric string literal.
+SELECT SUM(DISTINCT 'abc') FROM foo;
+Function [SUM] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 40: SUM('abc') with a FILTER clause, non-numeric string literal.
+SELECT SUM('abc') FILTER (WHERE dim1 = 'abc') FROM foo;
+Function [SUM] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 41: SUM(''), empty string literal.
+SELECT SUM('') FROM foo;
+Function [SUM] argument [1] must be numeric, got string literal ['']
+!error
+
+# Case 42: SUM('1e3'), numeric string literal with an exponent.
+SELECT SUM('1e3') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+| 6000.0 |
 +--------+
 (1 row)
 

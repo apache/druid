@@ -24,16 +24,21 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCallBinding;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.type.SqlTypeCoercionRule;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.implicit.TypeCoercion;
 import org.apache.calcite.sql.validate.implicit.TypeCoercionImpl;
+import org.apache.druid.java.util.common.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -77,6 +82,37 @@ public class DruidTypeCoercion extends TypeCoercionImpl
     }
 
     return super.commonTypeForBinaryComparison(type1, type2);
+  }
+
+  /**
+   * Rejects a string literal that cannot be parsed as a number when it is passed as the input of an aggregate function
+   * that expects a number, such as {@code SUM('abc')}. Otherwise the literal is cast to a number, which turns it into
+   * a null, and the aggregator silently returns null. Explicit CASTs are not checked, since they are the user's intent.
+   *
+   * Only the first operand of aggregate functions is checked. Scalar functions keep their current behavior, and other
+   * aggregator operands, such as the maxBytes of ARRAY_AGG, are validated by the aggregators themselves.
+   */
+  @Override
+  public boolean builtinFunctionCoercion(
+      SqlCallBinding binding,
+      List<RelDataType> operandTypes,
+      List<SqlTypeFamily> expectedFamilies
+  )
+  {
+    if (binding.getOperator().isAggregator()
+        && binding.getOperandCount() > 0
+        && binding.operand(0) instanceof SqlCharStringLiteral) {
+      final RelDataType implicitType = implicitCast(operandTypes.get(0), expectedFamilies.get(0));
+      final String value = ((SqlCharStringLiteral) binding.operand(0)).getValueAs(String.class);
+      if (implicitType != null && SqlTypeUtil.isNumeric(implicitType) && !Calcites.isNumericString(value)) {
+        throw Calcites.nonNumericStringLiteralError(
+            StringUtils.format("Function [%s] argument [1]", binding.getOperator().getName()),
+            value
+        );
+      }
+    }
+
+    return super.builtinFunctionCoercion(binding, operandTypes, expectedFamilies);
   }
 
   /**
