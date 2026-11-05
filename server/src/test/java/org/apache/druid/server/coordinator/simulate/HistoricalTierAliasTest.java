@@ -24,6 +24,7 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -205,6 +206,48 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
 
     verifyValue(Stats.Tier.CACHE_UTILIZATION.getMetricName(), aliasedTier(Tier.T1), 48L);
     verifyEmitted(Stats.Tier.CACHE_UTILIZATION.getMetricName(), filterByTier(Tier.T2), 0);
+    verifyValue(
+        Stats.Tier.ALIAS_CACHE_UTILIZATION.getMetricName(),
+        Map.of(Dimension.TIER_ALIAS.reportedName(), ALIAS),
+        48L
+    );
+  }
+
+  @Test
+  public void testCacheUtilizationExcludesClones()
+  {
+    final DruidServer sourceT1 = createHistorical(1, Tier.T1, 10_000);
+    // T2 holds only a clone of sourceT1, so it has no managed cache capacity of its own
+    final DruidServer cloneT2 = createHistorical(1, Tier.T2, 20_000);
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(Segments.WIKI_10X1D)
+                             .withServers(sourceT1, cloneT2)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withDynamicConfig(
+                                 CoordinatorDynamicConfig.builder()
+                                                         .withHistoricalTierAliases(
+                                                             Map.of(ALIAS, Set.of(Tier.T1, Tier.T2))
+                                                         )
+                                                         .withCloneServers(Map.of(cloneT2.getHost(), sourceT1.getHost()))
+                                                         .withSmartSegmentLoading(true)
+                                                         .build()
+                             )
+                             .withImmediateSegmentLoading(true)
+                             .build();
+
+    startSimulation(sim);
+
+    runCoordinatorCycle();
+    verifyValue(Stats.Tier.CACHE_UTILIZATION.getMetricName(), aliasedTier(Tier.T1), 0L);
+
+    runCoordinatorCycle();
+    Assertions.assertEquals(Segments.WIKI_10X1D.size(), cloneT2.getTotalSegments());
+    verifyValue(Stats.Tier.CLONE_COUNT.getMetricName(), aliasedTier(Tier.T2), 1L);
+    verifyValue(Stats.Tier.CACHE_UTILIZATION.getMetricName(), aliasedTier(Tier.T1), 48L);
+    verifyEmitted(Stats.Tier.CACHE_UTILIZATION.getMetricName(), filterByTier(Tier.T2), 0);
+
+    // Counting the clone would give 10,000,000,000 / 31,457,280,000 = 32
     verifyValue(
         Stats.Tier.ALIAS_CACHE_UTILIZATION.getMetricName(),
         Map.of(Dimension.TIER_ALIAS.reportedName(), ALIAS),

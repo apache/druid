@@ -178,8 +178,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       Map<String, String> tierToAliasName
   )
   {
-    final Map<String, Long> aliasCacheCapacity = new HashMap<>();
-    final Map<String, Long> aliasCacheUsed = new HashMap<>();
+    final Map<String, CacheTotals> aliasCacheTotals = new HashMap<>();
     cluster.getHistoricals().forEach((tier, historicals) -> {
       final String alias = tierToAliasName.get(tier);
       final RowKey rowKey = alias == null
@@ -212,20 +211,27 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
         stats.add(Stats.Tier.CACHE_UTILIZATION, rowKey, toPercent(cacheUsed, cacheCapacity));
       }
       if (alias != null) {
-        aliasCacheCapacity.merge(alias, cacheCapacity, Long::sum);
-        aliasCacheUsed.merge(alias, cacheUsed, Long::sum);
+        aliasCacheTotals.merge(alias, new CacheTotals(cacheUsed, cacheCapacity), CacheTotals::plus);
       }
     });
 
-    aliasCacheCapacity.forEach((alias, capacity) -> {
-      if (capacity > 0) {
+    aliasCacheTotals.forEach((alias, totals) -> {
+      if (totals.capacity() > 0) {
         stats.add(
             Stats.Tier.ALIAS_CACHE_UTILIZATION,
             RowKey.of(Dimension.TIER_ALIAS, alias),
-            toPercent(aliasCacheUsed.get(alias), capacity)
+            toPercent(totals.used(), totals.capacity())
         );
       }
     });
+  }
+
+  private record CacheTotals(long used, long capacity)
+  {
+    CacheTotals plus(CacheTotals other)
+    {
+      return new CacheTotals(used + other.used, capacity + other.capacity);
+    }
   }
 
   private static long toPercent(long used, long capacity)

@@ -504,76 +504,49 @@ ORDER BY
 
         const auxiliaryQueries: AuxiliaryQueryFn<ServicesWithAuxiliaryInfo>[] = [];
 
-        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
+        if (capabilities.hasCoordinatorAccess()) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
-            try {
-              const loadQueueInfos = (
-                await Api.instance.get<Record<string, LoadQueueInfo>>(
-                  '/druid/coordinator/v1/loadqueue?simple',
-                  { signal },
-                )
-              ).data;
-              return {
-                ...servicesWithAuxiliaryInfo,
-                loadQueueInfo: loadQueueInfos,
-              };
-            } catch {
-              AppToaster.show({
-                icon: IconNames.ERROR,
-                intent: Intent.DANGER,
-                message: 'There was an error getting the load queue info',
-              });
-              return servicesWithAuxiliaryInfo;
-            }
-          });
-        }
-
-        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
-          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
-            const cloneStatusResp = await getApiArrayFromKey<CloneStatusInfo>(
-              '/druid/coordinator/v1/config/cloneStatus',
-              'cloneStatus',
-              signal,
-            ).catch(() => {
-              AppToaster.show({
-                icon: IconNames.ERROR,
-                intent: Intent.DANGER,
-                message: 'There was an error getting the clone status map',
-              });
-              return [] as CloneStatusInfo[];
-            });
+            const [cloneStatusResp, config] = await Promise.all([
+              visibleColumns.shown('Detail')
+                ? getApiArrayFromKey<CloneStatusInfo>(
+                    '/druid/coordinator/v1/config/cloneStatus',
+                    'cloneStatus',
+                    signal,
+                  ).catch(() => {
+                    AppToaster.show({
+                      icon: IconNames.ERROR,
+                      intent: Intent.DANGER,
+                      message: 'There was an error getting the clone status map',
+                    });
+                    return [] as CloneStatusInfo[];
+                  })
+                : Promise.resolve([] as CloneStatusInfo[]),
+              Api.instance
+                .get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', { signal })
+                .then(r => r.data)
+                .catch(() => {
+                  AppToaster.show({
+                    icon: IconNames.ERROR,
+                    intent: Intent.DANGER,
+                    message: 'There was an error getting the coordinator dynamic config',
+                  });
+                  return undefined;
+                }),
+            ]);
 
             return {
               ...servicesWithAuxiliaryInfo,
               cloneStatus: lookupBy(cloneStatusResp, s => s.targetServer),
+              ...(config
+                ? {
+                    serverMode: {
+                      turboLoadingNodes: new Set<string>(config.turboLoadingNodes || []),
+                      decommissioningNodes: new Set<string>(config.decommissioningNodes || []),
+                    },
+                    tierToAlias: getTierToAliasLookup(config),
+                  }
+                : {}),
             };
-          });
-        }
-
-        if (capabilities.hasCoordinatorAccess()) {
-          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
-            try {
-              const config = (
-                await Api.instance.get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', {
-                  signal,
-                })
-              ).data;
-              return {
-                ...servicesWithAuxiliaryInfo,
-                serverMode: {
-                  turboLoadingNodes: new Set<string>(config.turboLoadingNodes || []),
-                  decommissioningNodes: new Set<string>(config.decommissioningNodes || []),
-                },
-                tierToAlias: getTierToAliasLookup(config),
-              };
-            } catch {
-              AppToaster.show({
-                icon: IconNames.ERROR,
-                intent: Intent.DANGER,
-                message: 'There was an error getting the coordinator dynamic config',
-              });
-              return servicesWithAuxiliaryInfo;
-            }
           });
         }
 
@@ -1232,7 +1205,11 @@ ORDER BY
   render() {
     const { capabilities } = this.props;
     const { servicesState, groupServicesBy, visibleColumns } = this.state;
-    const tierToAlias = servicesState.getSomeData()?.tierToAlias;
+    // While auxiliary queries run, tierToAlias is still empty, so keep using the previous lookup
+    const tierToAlias = (
+      (servicesState.isAuxiliaryLoading() && servicesState.lastData) ||
+      servicesState.getSomeData()
+    )?.tierToAlias;
     const hasTierAliases = Boolean(tierToAlias && Object.keys(tierToAlias).length);
 
     return (
