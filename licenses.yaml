@@ -355,7 +355,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-databind
@@ -408,7 +408,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -468,7 +468,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.50.0
+version: 2.52.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -498,7 +498,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.7.2-jre
+version: 33.8.0-jre
 libraries:
   - com.google.guava: guava
 
@@ -1136,7 +1136,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -2876,7 +2876,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.3
+version: 2.22.4
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2886,7 +2886,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.3
+version: 2.22.4
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -2899,7 +2899,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
 notice: |
@@ -2930,7 +2930,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.datatype: jackson-datatype-jsr310
 notice: |
@@ -7660,7 +7660,7 @@ libraries:
 ---
 
 name: Jackson Datatype JDK8
-version: 2.22.3
+version: 2.22.4
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0

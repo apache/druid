@@ -842,7 +842,7 @@
   <suppress>
     <!-- CVE-2026-89407, CVE-2026-89425: ReDoS/OOM in jackson-core's number and error-token parsing
          of malformed input. Affects jackson-core shaded inside hadoop-client-runtime-3.5.0.jar
-         and parquet-jackson-1.18.1.jar, not Druid's own jackson-core (2.22.3). -->
+         and parquet-jackson-1.18.1.jar, not Druid's own jackson-core (2.22.4). -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-core 2.18.6)
                  parquet-jackson-1.18.1.jar (shaded jackson-core 2.22.2)
@@ -870,7 +870,7 @@
          Each requires binding untrusted JSON into types that use these annotations or field types.
          Hadoop's client classes in hadoop-client-api reference none of these annotations and read
          JSON from cluster services (NameNode, KMS) as untyped maps. Druid's own jackson-databind
-         (2.22.3) is not affected. parquet-jackson's jackson-databind (2.22.2) already has these fixes.
+         (2.22.4) is not affected. parquet-jackson's jackson-databind (2.22.2) already has these fixes.
          Remove when Hadoop ships jackson-databind 2.18.10+. -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
