@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestConfig;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
@@ -112,10 +113,8 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           );
 
           if (matches) {
-            // Found existing one. Use this.
-            return Aggregation.create(
-                theFactory
-            );
+            // Refer to the existing sketch without adding its aggregator again.
+            return Aggregation.create(new FieldAccessPostAggregator(name, theFactory.getName()));
           }
         }
       }
