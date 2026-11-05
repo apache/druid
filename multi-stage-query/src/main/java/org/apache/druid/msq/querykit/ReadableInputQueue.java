@@ -387,11 +387,15 @@ public class ReadableInputQueue implements Closeable
     }
 
     // Acquires on demand when loadahead is 0. With loadahead, no unpruned segments remain here.
-    final NumberedItem<LoadableSegment> nextItem = pollUnprunedSegment();
-    if (nextItem == null) {
-      return null;
+    final NumberedItem<LoadableSegment> nextItem;
+    final ListenableFuture<NumberedReadableInput> future;
+    synchronized (this) {
+      nextItem = pollUnprunedSegment();
+      if (nextItem == null) {
+        return null;
+      }
+      future = acquireSegment(nextItem);
     }
-    final ListenableFuture<NumberedReadableInput> future = acquireSegment(nextItem);
     registerCountOnSuccess(future, nextItem.item());
     return future;
   }
@@ -503,16 +507,15 @@ public class ReadableInputQueue implements Closeable
    * Removes and returns the next item from {@link #loadableSegments} that {@link #inputPruner} does not rule out, or
    * null if none remain.
    */
+  @GuardedBy("this")
   @Nullable
   private NumberedItem<LoadableSegment> pollUnprunedSegment()
   {
-    synchronized (this) {
-      NumberedItem<LoadableSegment> nextItem;
-      do {
-        nextItem = loadableSegments.poll();
-      } while (nextItem != null && canSkipSegment(nextItem.item()));
-      return nextItem;
-    }
+    NumberedItem<LoadableSegment> nextItem;
+    do {
+      nextItem = loadableSegments.poll();
+    } while (nextItem != null && canSkipSegment(nextItem.item()));
+    return nextItem;
   }
 
   /**
@@ -526,16 +529,11 @@ public class ReadableInputQueue implements Closeable
   /**
    * Acquires the segment in {@code nextItem}: immediately if it is cached, otherwise by starting to load it.
    */
+  @GuardedBy("this")
   private ListenableFuture<NumberedReadableInput> acquireSegment(final NumberedItem<LoadableSegment> nextItem)
   {
-    synchronized (this) {
-      final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextItem);
-      if (cachedFuture != null) {
-        return cachedFuture;
-      }
-    }
-
-    return loadSegment(nextItem);
+    final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextItem);
+    return cachedFuture != null ? cachedFuture : loadSegment(nextItem);
   }
 
   /**
@@ -564,19 +562,18 @@ public class ReadableInputQueue implements Closeable
   /**
    * Starts loading the segment in {@code nextItem} and returns a future to its reference.
    */
+  @GuardedBy("this")
   private ListenableFuture<NumberedReadableInput> loadSegment(final NumberedItem<LoadableSegment> nextItem)
   {
-    synchronized (this) {
-      final LoadableSegment nextLoadableSegment = nextItem.item();
-      final SettableFuture<NumberedReadableInput> future = SettableFuture.create();
-      final AcquireSegmentAction acquireSegmentAction = nextLoadableSegment.acquire(acquireMode);
-      loadingSegments.put(acquireSegmentAction, future);
-      // may fire immediately on this thread for an already-ready acquire; the queue monitor is reentrant
-      acquireSegmentAction.addReadyCallback(
-          () -> onSegmentReady(nextItem.inputNumber(), nextLoadableSegment, acquireSegmentAction)
-      );
-      return future;
-    }
+    final LoadableSegment nextLoadableSegment = nextItem.item();
+    final SettableFuture<NumberedReadableInput> future = SettableFuture.create();
+    final AcquireSegmentAction acquireSegmentAction = nextLoadableSegment.acquire(acquireMode);
+    loadingSegments.put(acquireSegmentAction, future);
+    // may fire immediately on this thread for an already-ready acquire; the queue monitor is reentrant
+    acquireSegmentAction.addReadyCallback(
+        () -> onSegmentReady(nextItem.inputNumber(), nextLoadableSegment, acquireSegmentAction)
+    );
+    return future;
   }
 
   /**
@@ -684,16 +681,14 @@ public class ReadableInputQueue implements Closeable
       return false;
     }
 
-    final NumberedItem<LoadableSegment> nextItem = pollUnprunedSegment();
-    if (nextItem == null) {
-      return false;
-    }
-
-    final ListenableFuture<NumberedReadableInput> nextFuture = acquireSegment(nextItem);
     synchronized (this) {
-      pendingNextInputs.put(nextFuture, new PendingInput(nextItem.item(), false));
+      final NumberedItem<LoadableSegment> nextItem = pollUnprunedSegment();
+      if (nextItem == null) {
+        return false;
+      }
+      pendingNextInputs.put(acquireSegment(nextItem), new PendingInput(nextItem.item(), false));
+      return true;
     }
-    return true;
   }
 
   /**
