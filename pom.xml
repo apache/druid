@@ -97,11 +97,11 @@
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.17.1.0</derby.version>
         <dropwizard.metrics.version>4.2.40</dropwizard.metrics.version>
-        <errorprone.annotations.version>2.50.0</errorprone.annotations.version>
+        <errorprone.annotations.version>2.52.0</errorprone.annotations.version>
         <errorprone.version>2.50.0</errorprone.version>
         <fabric8.version>8.0.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>33.7.2-jre</guava.version>
+        <guava.version>33.8.0-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
         <iceberg.core.version>1.12.0</iceberg.core.version>
@@ -109,7 +109,7 @@
         <jetty.version>12.1.13</jetty.version>
         <jspecify.version>1.0.1</jspecify.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.22.3</jackson.version>
+        <jackson.version>2.22.4</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.26.1</log4j.version>
         <mysql.version>26.7.0</mysql.version>
