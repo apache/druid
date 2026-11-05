@@ -22,8 +22,10 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -1073,6 +1075,32 @@ public class QueryResourceTest
     final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
     Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
     Assertions.assertEquals(InvalidTypeIdException.class.getName(), e.getErrorClass());
+  }
+
+  @Test
+  public void testQueryWithBrokenDefinitionIsServerError() throws IOException
+  {
+    // A registered query type that Jackson cannot instantiate is a server-side defect, so it must not be reported
+    // as a bad request.
+    jsonMapper = jsonMapper.copy();
+    jsonMapper.registerSubtypes(new NamedType(BrokenQuery.class, "brokenQuery"));
+    queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
+    final MockHttpServletResponse asyncResponse = MockHttpServletResponse.forRequest(testServletRequest);
+    testServletRequest.remoteHost = "localhost";
+
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream(
+            StringUtils.replace(SIMPLE_TIMESERIES_QUERY, "\"timeseries\"", "\"brokenQuery\"")
+                       .getBytes(StandardCharsets.UTF_8)
+        ),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assertions.assertNull(response);
+    Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    final QueryException e = jsonMapper.readValue(asyncResponse.baos.toByteArray(), QueryException.class);
+    Assertions.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(InvalidDefinitionException.class.getName(), e.getErrorClass());
   }
 
   @Test
@@ -2139,5 +2167,12 @@ public class QueryResourceTest
   ) throws IOException
   {
     return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
+  }
+
+  /**
+   * A query type with no creator, which Jackson rejects with an {@link InvalidDefinitionException}.
+   */
+  private abstract static class BrokenQuery implements Query<Object>
+  {
   }
 }

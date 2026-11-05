@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
@@ -300,6 +301,11 @@ public class QueryResource implements QueryCountStatsProvider
     }
     catch (ValueInstantiationException e) {
       throw new BadJsonQueryException(e);
+    }
+    catch (InvalidDefinitionException e) {
+      // A query class that Jackson cannot bind to is a server-side defect, not a bad request, so leave it to the
+      // catch-all in doPost to log and return as a 500.
+      throw e;
     }
     catch (JsonMappingException e) {
       // Well-formed JSON that cannot be bound to a query, such as an unknown query type or a field of the wrong type.
