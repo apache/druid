@@ -277,6 +277,7 @@ libraries:
   - software.amazon.awssdk: crt-core
   - software.amazon.awssdk: ec2
   - software.amazon.awssdk: endpoints-spi
+  - software.amazon.awssdk: eventstream
   - software.amazon.awssdk: http-auth
   - software.amazon.awssdk: http-auth-aws
   - software.amazon.awssdk: http-auth-aws-eventstream
@@ -312,37 +313,11 @@ notice: |
 
 ---
 
-name: Amazon Event Stream
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.1
-libraries:
-  - software.amazon.eventstream: eventstream
-notice: |
-  AWS SDK for Java 2.0
-  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
----
-
-name: Amazon Event Stream
-license_category: binary
-module: extensions/druid-s3-extensions
-license_name: Apache License version 2.0
-version: 1.0.1
-libraries:
-  - software.amazon.eventstream: eventstream
-notice: |
-  AWS SDK for Java 2.0
-  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
----
-
 name: AWS CRT
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.48.4
+version: 0.48.5
 libraries:
   - software.amazon.awssdk.crt: aws-crt
 notice: |
