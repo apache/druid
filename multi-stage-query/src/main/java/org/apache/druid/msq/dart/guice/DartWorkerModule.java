@@ -37,7 +37,6 @@ import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleAnnouncements;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.LoadScope;
@@ -68,6 +67,7 @@ import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import java.io.File;
@@ -135,8 +135,22 @@ public class DartWorkerModule implements DruidModule
       return DartWorkerService.class;
     }
 
+    /**
+     * Create the {@link DartWorkerService}. Depends on {@link DartWorkerRunner} so the runner stops after this service
+     * is unannounced.
+     */
     @Provides
-    @ManageLifecycle
+    public DartWorkerService createDartWorkerService(final DartWorkerRunner workerRunner)
+    {
+      return new DartWorkerService();
+    }
+
+    /**
+     * Create the {@link DartWorkerRunner}. This is {@link ManageLifecycleAnnouncements} scoped so running workers can
+     * finish before the Jetty server stops.
+     */
+    @Provides
+    @ManageLifecycleAnnouncements
     public DartWorkerRunner createWorkerRunner(
         @Self final DruidNode selfNode,
         final DartWorkerContextFactory workerFactory,
@@ -144,7 +158,8 @@ public class DartWorkerModule implements DruidModule
         final DruidProcessingConfig processingConfig,
         @Dart final ResourcePermissionMapper permissionMapper,
         final MemoryIntrospector memoryIntrospector,
-        final AuthorizerMapper authorizerMapper
+        final AuthorizerMapper authorizerMapper,
+        final ServerConfig serverConfig
     )
     {
       final ExecutorService exec = Execs.multiThreaded(memoryIntrospector.numTasksInJvm(), "dart-worker-%s");
@@ -156,6 +171,7 @@ public class DartWorkerModule implements DruidModule
           discoveryProvider,
           permissionMapper,
           authorizerMapper,
+          serverConfig,
           baseTempDir
       );
     }
@@ -175,7 +191,8 @@ public class DartWorkerModule implements DruidModule
      *
      * This is {@link ManageLifecycleAnnouncements} scoped so {@link OutboxImpl#stop()} gets called before attempting
      * to shut down the Jetty server. If this doesn't happen, then server shutdown is delayed by however long it takes
-     * any currently-in-flight {@link MessageRelayResource#httpGetMessagesFromOutbox} to resolve.
+     * any currently-in-flight {@link MessageRelayResource#httpGetMessagesFromOutbox} to resolve. It stops after
+     * {@link DartWorkerRunner}, which depends on it.
      */
     @Provides
     @ManageLifecycleAnnouncements

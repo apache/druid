@@ -30,6 +30,8 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Reference to a single run of a particular worker.
@@ -148,10 +150,23 @@ public class WorkerRunRef
   }
 
   /**
+   * Wait for the worker run to finish, indefinitely.
+   */
+  public void awaitStop() throws InterruptedException
+  {
+    awaitStop(-1, TimeUnit.MILLISECONDS);
+  }
+
+  /**
    * Wait for the worker run to finish. Does not throw exceptions from the future, even if the worker
    * ended exceptionally.
+   *
+   * @param timeout maximum time to wait; negative to wait forever
+   * @param timeUnit unit for timeout
+   *
+   * @return true if the worker stopped, false if the timeout elapsed (in which case the worker may still be running)
    */
-  public void awaitStop()
+  public boolean awaitStop(final long timeout, final TimeUnit timeUnit) throws InterruptedException
   {
     final ListenableFuture<?> future;
     synchronized (this) {
@@ -163,13 +178,19 @@ public class WorkerRunRef
     }
 
     try {
-      future.get();
+      if (timeout < 0) {
+        future.get();
+      } else {
+        future.get(timeout, timeUnit);
+      }
+      return true;
     }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+    catch (TimeoutException e) {
+      return false;
     }
     catch (ExecutionException | CancellationException ignored) {
-      // Do nothing
+      // Error still counts as stopped.
+      return true;
     }
   }
 }
