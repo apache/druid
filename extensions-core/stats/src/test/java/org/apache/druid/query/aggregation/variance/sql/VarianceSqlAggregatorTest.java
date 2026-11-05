@@ -737,4 +737,69 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
       );
     }
   }
+
+  @Test
+  public void testVarianceOnNumericStringLiteral()
+  {
+    testBuilder()
+        .sql(
+            "SELECT VARIANCE('1.5'), VAR_POP('1.5'), VAR_SAMP('1.5'),"
+            + " STDDEV('1.5'), STDDEV_POP('1.5'), STDDEV_SAMP('1.5') FROM numfoo"
+        )
+        .expectedResults(
+            ResultMatchMode.EQUALS_EPS,
+            ImmutableList.of(new Object[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0})
+        )
+        .run();
+  }
+
+  @Test
+  public void testVarianceOnStringColumn()
+  {
+    testBuilder()
+        .sql(
+            "SELECT VARIANCE(dim1), VAR_POP(dim1), VAR_SAMP(dim1), STDDEV(dim1), STDDEV_POP(dim1), STDDEV_SAMP(dim1)"
+            + " FROM numfoo"
+        )
+        .expectedResults(
+            ResultMatchMode.EQUALS_EPS,
+            ImmutableList.of(
+                new Object[]{
+                    24.903333333333332,
+                    16.60222222222222,
+                    24.903333333333332,
+                    4.990323970779185,
+                    4.074582459862878,
+                    4.990323970779185
+                }
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testVarianceOnTimeColumn()
+  {
+    for (String function : ImmutableList.of("VARIANCE", "VAR_POP", "VAR_SAMP", "STDDEV", "STDDEV_POP", "STDDEV_SAMP")) {
+      testQueryThrows(
+          StringUtils.format("SELECT %s(__time) FROM numfoo", function),
+          invalidSqlContains(
+              StringUtils.format("Cannot apply '%s' to arguments of type '%s(<TIMESTAMP(3)>)'", function, function)
+          )
+      );
+    }
+  }
+
+  @Test
+  public void testVarianceOnNullDouble()
+  {
+    testBuilder()
+        .sql(
+            "SELECT VARIANCE(CAST(NULL AS DOUBLE)), VAR_POP(CAST(NULL AS DOUBLE)), VAR_SAMP(CAST(NULL AS DOUBLE)),"
+            + " STDDEV(CAST(NULL AS DOUBLE)), STDDEV_POP(CAST(NULL AS DOUBLE)), STDDEV_SAMP(CAST(NULL AS DOUBLE))"
+            + " FROM numfoo"
+        )
+        .expectedResults(ImmutableList.of(new Object[]{null, null, null, null, null, null}))
+        .run();
+  }
 }

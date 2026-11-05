@@ -290,42 +290,160 @@ SELECT SUM('abc') OVER () FROM foo LIMIT 1;
 Function [SUM] argument [1] must be numeric, got string literal ['abc']
 !error
 
-# Case 36: BIT_AND('abc'), non-numeric string literal.
-SELECT BIT_AND('abc') FROM foo;
-Function [BIT_AND] argument [1] must be numeric, got string literal ['abc']
-!error
-
-# Case 37: BIT_OR('abc'), non-numeric string literal.
-SELECT BIT_OR('abc') FROM foo;
-Function [BIT_OR] argument [1] must be numeric, got string literal ['abc']
-!error
-
-# Case 38: BIT_XOR('abc'), non-numeric string literal.
-SELECT BIT_XOR('abc') FROM foo;
-Function [BIT_XOR] argument [1] must be numeric, got string literal ['abc']
-!error
-
-# Case 39: SUM(DISTINCT 'abc'), non-numeric string literal.
+# Case 36: SUM(DISTINCT 'abc'), non-numeric string literal.
 SELECT SUM(DISTINCT 'abc') FROM foo;
 Function [SUM] argument [1] must be numeric, got string literal ['abc']
 !error
 
-# Case 40: SUM('abc') with a FILTER clause, non-numeric string literal.
+# Case 37: SUM('abc') with a FILTER clause, non-numeric string literal.
 SELECT SUM('abc') FILTER (WHERE dim1 = 'abc') FROM foo;
 Function [SUM] argument [1] must be numeric, got string literal ['abc']
 !error
 
-# Case 41: SUM(''), empty string literal.
+# Case 38: SUM(''), empty string literal.
 SELECT SUM('') FROM foo;
 Function [SUM] argument [1] must be numeric, got string literal ['']
 !error
 
-# Case 42: SUM('1e3'), numeric string literal with an exponent.
+# Case 39: SUM('1e3'), numeric string literal with an exponent.
 SELECT SUM('1e3') FROM foo;
 +--------+
 | EXPR$0 |
 +--------+
 | 6000.0 |
++--------+
+(1 row)
+
+!ok
+
+# Case 40: SUM('1.5') OVER (), numeric string literal in a window function.
+SELECT SUM('1.5') OVER () FROM foo LIMIT 1;
++--------+
+| EXPR$0 |
++--------+
+|    9.0 |
++--------+
+(1 row)
+
+!ok
+
+# Case 41: SUM('1.5') with a FILTER clause, numeric string literal.
+SELECT SUM('1.5') FILTER (WHERE dim1 = 'abc') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|    1.5 |
++--------+
+(1 row)
+
+!ok
+
+# Other numeric aggregators.
+
+# Case 42: BIT_AND('abc'), non-numeric string literal.
+SELECT BIT_AND('abc') FROM foo;
+Function [BIT_AND] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 43: BIT_OR('abc'), non-numeric string literal.
+SELECT BIT_OR('abc') FROM foo;
+Function [BIT_OR] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 44: BIT_XOR('abc'), non-numeric string literal.
+SELECT BIT_XOR('abc') FROM foo;
+Function [BIT_XOR] argument [1] must be numeric, got string literal ['abc']
+!error
+
+# Case 45: BIT_OR('3'), numeric string literal.
+SELECT BIT_OR('3') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      3 |
++--------+
+(1 row)
+
+!ok
+
+# Case 46: BIT_XOR('3'), numeric string literal. foo has 6 rows, so the result is 0.
+SELECT BIT_XOR('3') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      0 |
++--------+
+(1 row)
+
+!ok
+
+# Case 47: BIT_AND(__time), timestamp column.
+SELECT BIT_AND(__time) FROM foo;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(<TIMESTAMP(3)>)'
+!error
+
+# Case 48: BIT_OR(__time), timestamp column.
+SELECT BIT_OR(__time) FROM foo;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(<TIMESTAMP(3)>)'
+!error
+
+# Case 49: BIT_XOR(__time), timestamp column.
+SELECT BIT_XOR(__time) FROM foo;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(<TIMESTAMP(3)>)'
+!error
+
+# Case 50: BIT_AND(CAST(NULL AS BIGINT)).
+SELECT BIT_AND(CAST(NULL AS BIGINT)) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 51: BIT_OR(CAST(NULL AS BIGINT)).
+SELECT BIT_OR(CAST(NULL AS BIGINT)) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Case 52: BIT_XOR(CAST(NULL AS BIGINT)).
+SELECT BIT_XOR(CAST(NULL AS BIGINT)) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Aggregators that also accept a STRING input are not affected.
+
+# Case 53: APPROX_COUNT_DISTINCT('abc'), the STRING operand rule accepts the literal as is.
+SELECT APPROX_COUNT_DISTINCT('abc') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      1 |
++--------+
+(1 row)
+
+!ok
+
+# Case 54: APPROX_COUNT_DISTINCT_BUILTIN('abc'), the STRING operand rule accepts the literal as is.
+SELECT APPROX_COUNT_DISTINCT_BUILTIN('abc') FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      1 |
 +--------+
 (1 row)
 
