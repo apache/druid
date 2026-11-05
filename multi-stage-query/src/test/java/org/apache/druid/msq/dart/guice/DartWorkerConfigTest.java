@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Properties;
 
 /**
- * Tests for reading {@link DartWorkerConfig} from runtime properties, the same way {@link DartWorkerModule} does.
+ * Tests for reading {@link DartWorkerConfig} from runtime properties, the same way {@link DartWorkerMemoryManagementModule} does.
  */
 public class DartWorkerConfigTest
 {

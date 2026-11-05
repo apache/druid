@@ -32,7 +32,6 @@ import com.google.inject.name.Named;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
@@ -101,7 +100,6 @@ public class DartWorkerModule implements DruidModule
     @Override
     public void configure(Binder binder)
     {
-      JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".worker", DartWorkerConfig.class);
       Jerseys.addResource(binder, DartWorkerResource.class);
       LifecycleModule.register(binder, DartWorkerRunner.class);
 
