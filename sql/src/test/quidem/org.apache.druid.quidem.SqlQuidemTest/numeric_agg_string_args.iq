@@ -3,7 +3,7 @@
 
 # Numeric aggregators on STRING columns and string literals.
 # A STRING column is implicitly cast to a number for SUM, AVG and COUNT; MIN and MAX reject it.
-# A string literal that cannot be parsed as a number is rejected by SUM and AVG.
+# A string literal that cannot be parsed as a number is rejected by numeric aggregators such as SUM, AVG and BIT_AND.
 
 # Case 1: SUM(dim1), STRING column.
 SELECT SUM(dim1) FROM foo;
