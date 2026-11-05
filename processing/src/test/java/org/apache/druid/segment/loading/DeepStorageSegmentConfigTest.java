@@ -231,6 +231,14 @@ public class DeepStorageSegmentConfigTest
     final DeepStorageSegmentConfig deserializedLegacy = jsonMapper.readValue(jsonLegacy, DeepStorageSegmentConfig.class);
     assertEquals(CompressionUtils.Format.ZIP, deserializedLegacy.getCompressionFormat());
 
+    final DeepStorageSegmentConfig configLegacyFalse = new DeepStorageSegmentConfig(false, null);
+    final String jsonLegacyFalse = jsonMapper.writeValueAsString(configLegacyFalse);
+    assertTrue(jsonLegacyFalse.contains("\"compressionFormat\""));
+    assertFalse(jsonLegacyFalse.contains("\"zip\""));
+
+    final DeepStorageSegmentConfig deserializedLegacyFalse = jsonMapper.readValue(jsonLegacyFalse, DeepStorageSegmentConfig.class);
+    assertEquals(CompressionUtils.Format.NONE, deserializedLegacyFalse.getCompressionFormat());
+
     final DeepStorageSegmentConfig configUnset = new DeepStorageSegmentConfig();
     final String jsonUnset = jsonMapper.writeValueAsString(configUnset);
     assertFalse(jsonUnset.contains("\"zip\""));
@@ -243,6 +251,22 @@ public class DeepStorageSegmentConfigTest
     assertFalse(jsonLz4.contains("\"zip\""));
     final DeepStorageSegmentConfig deserializedLz4 = jsonMapper.readValue(jsonLz4, DeepStorageSegmentConfig.class);
     assertEquals(CompressionUtils.Format.LZ4, deserializedLz4.getCompressionFormat());
+
+    // Verify direct deserialization of legacy JSON payloads
+    final DeepStorageSegmentConfig fromLegacyTrue = jsonMapper.readValue("{\"zip\": true}", DeepStorageSegmentConfig.class);
+    assertEquals(CompressionUtils.Format.ZIP, fromLegacyTrue.getCompressionFormat());
+
+    final DeepStorageSegmentConfig fromLegacyFalse = jsonMapper.readValue("{\"zip\": false}", DeepStorageSegmentConfig.class);
+    assertEquals(CompressionUtils.Format.NONE, fromLegacyFalse.getCompressionFormat());
+
+    final DeepStorageSegmentConfig fromLegacyNull = jsonMapper.readValue("{\"zip\": null}", DeepStorageSegmentConfig.class);
+    assertNull(fromLegacyNull.getCompressionFormat());
+
+    final DeepStorageSegmentConfig fromConflicting = jsonMapper.readValue(
+        "{\"zip\": true, \"compressionFormat\": \"none\"}",
+        DeepStorageSegmentConfig.class
+    );
+    assertEquals(CompressionUtils.Format.NONE, fromConflicting.getCompressionFormat());
   }
 
   @Test

@@ -130,7 +130,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
     final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
     final String outIndexFilePath = StringUtils.format(
-      "%s/%s/%s_%sindex%s",
+        "%s/%s/%d_%sindex%s",
         fullyQualifiedStorageDirectory.get(),
         storageDir,
         segment.getShardSpec().getPartitionNum(),
@@ -149,10 +149,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     if (storageDirSuffix.endsWith("index.zip") || storageDirSuffix.endsWith("index.lz4")) {
       outIndexFilePath = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
     } else {
-      final String suffix = compressionFormat == CompressionUtils.Format.NONE ? "" : compressionFormat.getSuffix();
+      final String suffix = compressionFormat.getSuffix();
 
       outIndexFilePath = StringUtils.format(
-        "%s/%s/%s_index%s",
+        "%s/%s/%d_index%s",
         fullyQualifiedStorageDirectory.get(),
         storageDirSuffix.replace(':', '_'),
         segment.getShardSpec().getPartitionNum(),
@@ -213,7 +213,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         segment.getDataSource(),
         UUIDUtils.generateUuid(),
         segment.getShardSpec().getPartitionNum(),
-        compressionFormat == CompressionUtils.Format.NONE ? "" : compressionFormat.getSuffix()
+        compressionFormat.getSuffix()
     ));
     final FileSystem fs = tmpPath.getFileSystem(hadoopConfig);
 

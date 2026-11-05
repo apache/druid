@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
@@ -47,6 +48,31 @@ public class DeepStorageSegmentConfig
 {
   private static final Logger log = new Logger(DeepStorageSegmentConfig.class);
 
+  /**
+   * Filter that always returns {@code true} to suppress serialization of the deprecated {@code zip} field
+   * while allowing {@link org.apache.druid.guice.JsonConfigurator} to detect the field annotation.
+   */
+  public static class AlwaysFilter
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return 0;
+    }
+  }
+
+  @JsonProperty("zip")
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = AlwaysFilter.class)
+  @Deprecated
+  @Nullable
+  private final Boolean zip;
+
   @JsonProperty("compressionFormat")
   @Nullable
   private final CompressionUtils.Format compressionFormat;
@@ -57,6 +83,7 @@ public class DeepStorageSegmentConfig
       @JsonProperty("compressionFormat") @Nullable CompressionUtils.Format compressionFormat
   )
   {
+    this.zip = zip;
     if (zip != null) {
       log.warn("druid.storage.zip is deprecated, use druid.storage.compressionFormat instead.");
     }
