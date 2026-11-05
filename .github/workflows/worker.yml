@@ -78,7 +78,7 @@ jobs:
           {
             echo "$SUMMARY"
             echo
-            echo "Run it locally from the repository root:"
+            echo "Command:"
             echo '```'
             echo "$SCRIPT"
             echo '```'

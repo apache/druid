@@ -36,9 +36,6 @@ permissions:
   pull-requests: read # paths-filter lists a PR's files; coverage-jacoco reads its labels
   actions: read # actions-timeline reads the run's jobs
 
-env:
-  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
-
 jobs:
   # Path filtering lives here, not in a workflow-level paths-ignore: a skipped workflow
   # never reports quality-gate, so docs-only PRs could not merge once it is required.
@@ -47,7 +44,9 @@ jobs:
     outputs:
       java: ${{ steps.filter.outputs.java }}
     steps:
+      # Pull requests are read through the API; only push events need the repository.
       - uses: actions/checkout@v7
+        if: ${{ github.event_name == 'push' }}
       - id: filter
         # Third-party actions must be pinned to a SHA on the ASF allowlist
         # https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
@@ -77,7 +76,6 @@ jobs:
               - '!.github/workflows/stale.yml'
 
   distribution-build:
-    name: "distribution-build"
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/packaging-check.sh
@@ -85,7 +83,6 @@ jobs:
       key: "packaging-check-jdk25"
 
   docs-and-web-console:
-    name: "docs-and-web-console"
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/web-checks.sh
@@ -94,17 +91,15 @@ jobs:
       artifact_prefix: "web-checks-logs"
 
   static-analysis:
-    name: "static-analysis"
     needs: changes
     if: ${{ needs.changes.outputs.java == 'true' }}
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/static-checks-maven.sh
-      summary: "Checkstyle, RAT, dependency analysis, animal-sniffer, enforcer, forbidden-apis, PMD, SpotBugs and an OpenRewrite dry run."
+      summary: "The Maven static checks in static-checks-maven.sh, ending with an OpenRewrite dry run."
       key: "static-checks-maven"
 
   error-prone:
-    name: "error-prone"
     needs: changes
     if: ${{ needs.changes.outputs.java == 'true' }}
     uses: ./.github/workflows/worker.yml
@@ -151,7 +146,6 @@ jobs:
       key: "QTest ${{ matrix.split }}"
 
   coverage-jacoco:
-    name: "coverage-jacoco"
     needs: [changes, unit-tests, sql-query-tests]
     if: ${{ success() && needs.changes.outputs.java == 'true' && github.event_name != 'push' }}
     uses: ./.github/workflows/worker.yml
@@ -163,13 +157,10 @@ jobs:
       skip_label: "jacoco:skip"
 
   docker-image-tests:
-    name: "docker-image-tests"
     needs: changes
     if: ${{ needs.changes.outputs.java == 'true' }}
     runs-on: ubuntu-24.04
     steps:
-      - name: 📝 job summary
-        run: echo "Builds the Druid Docker image from this commit and runs the *DockerTest* classes of embedded-tests against it." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v7
       - name: Set Docker image env var
         run: echo "DRUID_DIST_IMAGE_NAME=apache/druid:docker-tests" >> $GITHUB_ENV
@@ -269,8 +260,9 @@ jobs:
             echo "$job: $result"
             case "$result" in
               success) ;;
-              # Without Java changes the Java jobs skip. coverage-jacoco also skips on push.
-              skipped) if [ "$JAVA" = true ] && [ "$job" != coverage-jacoco ]; then fail=1; fi ;;
+              # Without Java changes the Java jobs skip; coverage-jacoco also skips on push.
+              skipped)
+                if [ "$JAVA" = true ] && ! { [ "$job" = coverage-jacoco ] && [ "$GITHUB_EVENT_NAME" = push ]; }; then fail=1; fi ;;
               *) fail=1 ;;
             esac
           done
