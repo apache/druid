@@ -232,7 +232,7 @@ public class ServerConfig
 
   @JsonProperty
   @NotNull
-  private Period gracefulShutdownTimeout = Period.ZERO;
+  private Period gracefulShutdownTimeout = Period.seconds(30);
 
   @JsonProperty
   @NotNull
@@ -355,6 +355,22 @@ public class ServerConfig
    */
   public ServerConfig withUnannouncePropagationDelay(final Period newUnannouncePropagationDelay)
   {
+    return withShutdownTimings(gracefulShutdownTimeout, newUnannouncePropagationDelay);
+  }
+
+  /**
+   * Returns a copy of this config with {@link #getGracefulShutdownTimeout()} replaced by the given value.
+   */
+  public ServerConfig withGracefulShutdownTimeout(final Period newGracefulShutdownTimeout)
+  {
+    return withShutdownTimings(newGracefulShutdownTimeout, unannouncePropagationDelay);
+  }
+
+  private ServerConfig withShutdownTimings(
+      final Period newGracefulShutdownTimeout,
+      final Period newUnannouncePropagationDelay
+  )
+  {
     return new ServerConfig(
         numThreads,
         queueSize,
@@ -367,7 +383,7 @@ public class ServerConfig
         useNestedForUnknownTypeInSubquery,
         maxQueryTimeout,
         maxRequestHeaderSize,
-        gracefulShutdownTimeout,
+        newGracefulShutdownTimeout,
         newUnannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel,
