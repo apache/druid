@@ -54,30 +54,34 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/// Central catalog of query context parameter descriptors.
-///
-/// Define user-facing metadata here, including descriptions, default values, constraints,
-/// applicability, and introduction versions. The
-/// {@link org.apache.druid.query.context.docs.ParameterDocumentationGenerator} generates a table row
-/// for every public parameter wherever a managed document has a marker for it.
-///
-/// Descriptors are grouped into the sections below, each wrapped in `// region` and `// endregion` comments.
-/// IDEs can fold the sections and list them for navigation, such as IntelliJ's Navigate > Custom Folding.
-///
-/// - General query parameters
-/// - SQL planner parameters
-/// - GroupBy query parameters
-/// - Scan, search and timeseries query parameters
-/// - MSQ and Dart parameters
-/// - Other query context parameters
-///
-/// When adding or changing a descriptor, including introducing a new parameter, run this command
-/// from the repository root to regenerate the checked-in documentation. The default Maven mode
-/// verifies that the generated documentation is up to date.
-///
-/// ```shell
-/// mvn -ntp -pl processing -am -Pskip-static-checks -Dweb.console.skip=true -DskipTests -Dquery.context.docs.mode=generate -T1C process-classes
-/// ```
+/**
+ * Central catalog of query context parameter descriptors.
+ *
+ * <p>Define user-facing metadata here, including descriptions, default values, constraints,
+ * applicability, and introduction versions. The
+ * {@link org.apache.druid.query.context.docs.ParameterDocumentationGenerator} generates a table row
+ * for every public parameter wherever a managed document has a marker for it.
+ *
+ * <p>Descriptors are grouped into the sections below, each wrapped in {@code // region} and {@code // endregion} comments.
+ * IDEs can fold the sections and list them for navigation, such as IntelliJ's Navigate &gt; Custom Folding.
+ *
+ * <ul>
+ *   <li>General query parameters</li>
+ *   <li>SQL planner parameters</li>
+ *   <li>GroupBy query parameters</li>
+ *   <li>Scan, search and timeseries query parameters</li>
+ *   <li>MSQ and Dart parameters</li>
+ *   <li>Other query context parameters</li>
+ * </ul>
+ *
+ * <p>When adding or changing a descriptor, including introducing a new parameter, run this command
+ * from the repository root to regenerate the checked-in documentation. The default Maven mode
+ * verifies that the generated documentation is up to date.
+ *
+ * <pre>{@code
+ * mvn -ntp -pl processing -am -Pskip-static-checks -Dweb.console.skip=true -DskipTests -Dquery.context.docs.mode=generate -T1C process-classes
+ * }</pre>
+ */
 public final class QueryContextParameters
 {
   // region General query parameters
