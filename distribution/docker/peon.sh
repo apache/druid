@@ -174,7 +174,7 @@ fi
 
 # Start peon using CliPeon, with variables `Main internal peon TASK_DIR ATTEMPT_ID`
 if [ -n "$TASK_ID" ]; then
-    # TASK_ID is only set from PodTemplateTaskAdapter
+    # TASK_ID is set by all K8s pod adapters; older Overlords passed --taskId in "$@" instead
     exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CLASSPATH org.apache.druid.cli.Main internal peon "${TASK_DIR}" 1 --taskId "${TASK_ID}" "$@"
 else
     exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CLASSPATH org.apache.druid.cli.Main internal peon "${TASK_DIR}" 1 "$@"
