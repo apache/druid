@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -82,6 +83,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -698,5 +700,33 @@ public class WorkerTaskManagerTest
     workerTaskManager.workerDisabled();
     Assertions.assertFalse(workerTaskManager.isWorkerEnabled());
     Assertions.assertTrue(workerTaskManager.getStateFile().exists());
+  }
+
+  @Test
+  public void test_stopChangeHistory_failsWaitingAndLaterRequests() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    workerTaskManager.start();
+
+    final ChangeRequestHistory.Counter counter =
+        workerTaskManager.getChangesSince(new ChangeRequestHistory.Counter(-1, 0)).get().getCounter();
+
+    final ListenableFuture<ChangeRequestsSnapshot<WorkerHistoryItem>> waitingFuture =
+        workerTaskManager.getChangesSince(counter);
+    Assertions.assertFalse(waitingFuture.isDone());
+
+    workerTaskManager.stopChangeHistory();
+
+    Assertions.assertTrue(waitingFuture.isDone());
+    final ExecutionException e1 = Assertions.assertThrows(ExecutionException.class, waitingFuture::get);
+    Assertions.assertInstanceOf(IllegalStateException.class, e1.getCause());
+
+    final ListenableFuture<ChangeRequestsSnapshot<WorkerHistoryItem>> laterFuture =
+        workerTaskManager.getChangesSince(counter);
+    Assertions.assertTrue(laterFuture.isDone());
+    final ExecutionException e2 = Assertions.assertThrows(ExecutionException.class, laterFuture::get);
+    Assertions.assertInstanceOf(IllegalStateException.class, e2.getCause());
   }
 }
