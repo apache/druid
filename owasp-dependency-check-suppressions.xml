@@ -999,4 +999,25 @@
     <cve>CVE-2026-82463</cve>
     <cve>CVE-2026-82461</cve>
   </suppress>
+
+  <suppress>
+    <!-- reactor-netty is a transitive dependency of the Azure SDK (azure-core-http-netty).
+         Druid uses it only as an HTTPS client to Azure Blob Storage.
+         CVE-2026-47874: resource exhaustion with HTTP/1.1 pipelined requests. Affects only the
+         Reactor Netty HTTP server. Druid uses Jetty as its server.
+         CVE-2026-47845: remote IP misevaluated with the HAProxy protocol. Affects only the
+         Reactor Netty HTTP server with the HAProxy protocol enabled.
+         CVE-2026-47848: credential leak on a cross-origin redirect. Affects only the WebSocket
+         client. The Azure SDK does not use WebSocket.
+         CVE-2026-47843: DNS resolver configuration reused across clients. Affects only clients
+         with different custom DNS resolvers. Druid and the Azure SDK set no custom DNS resolver. -->
+    <notes><![CDATA[
+      file name: reactor-netty-core-1.2.18.jar / reactor-netty-http-1.2.18.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.projectreactor\.netty/reactor-netty-(core|http)@1\.2\.18$</packageUrl>
+    <cve>CVE-2026-47874</cve>
+    <cve>CVE-2026-47845</cve>
+    <cve>CVE-2026-47848</cve>
+    <cve>CVE-2026-47843</cve>
+  </suppress>
 </suppressions>
