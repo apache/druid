@@ -81,17 +81,23 @@ public class PeonServerModule implements Module
   @VisibleForTesting
   static ServerConfig adjustServerConfig(final ServerConfig config, final Task task)
   {
-    if (Period.ZERO.equals(config.getUnannouncePropagationDelay()) || isQueryable(task)) {
+    if ((Period.ZERO.equals(config.getUnannouncePropagationDelay())
+         && Period.ZERO.equals(config.getGracefulShutdownTimeout()))
+        || isQueryable(task)) {
       return config;
     }
 
+    // Requests in flight at exit are not queries, so draining them is not worth delaying task completion, which
+    // the Overlord only observes once this process exits.
     log.info(
-        "Ignoring unannouncePropagationDelay[%s] since task[%s] of type[%s] does not serve queries.",
+        "Ignoring unannouncePropagationDelay[%s] and gracefulShutdownTimeout[%s] since task[%s] of type[%s] does not"
+        + " serve queries.",
         config.getUnannouncePropagationDelay(),
+        config.getGracefulShutdownTimeout(),
         task.getId(),
         task.getType()
     );
-    return config.withUnannouncePropagationDelay(Period.ZERO);
+    return config.withUnannouncePropagationDelay(Period.ZERO).withGracefulShutdownTimeout(Period.ZERO);
   }
 
   /**

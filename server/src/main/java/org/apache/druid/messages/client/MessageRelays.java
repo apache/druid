@@ -29,9 +29,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.utils.CloseableUtils;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -81,15 +79,17 @@ public class MessageRelays<MessageType>
     }
 
     synchronized (serverRelays) {
-      try {
-        CloseableUtils.closeAll(serverRelays.values());
+      // Don't notify listeners, since the servers have not gone away; this client is just shutting down.
+      for (final Map.Entry<String, MessageRelay<MessageType>> entry : serverRelays.entrySet()) {
+        try {
+          entry.getValue().stop(false);
+        }
+        catch (Throwable e) {
+          log.noStackTrace().warn(e, "Could not close relay for server[%s]. Dropping.", entry.getKey());
+        }
       }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      finally {
-        serverRelays.clear();
-      }
+
+      serverRelays.clear();
     }
   }
 
@@ -130,9 +130,11 @@ public class MessageRelays<MessageType>
         }
       }
 
+      // Stop relays for servers that no longer show up in discovery. Note that this treats leaving discovery
+      // as lack of liveness, which must change once worker liveness is separated from discovery.
       for (final Pair<String, MessageRelay<MessageType>> relay : removed) {
         try {
-          relay.rhs.close();
+          relay.rhs.stop(true);
         }
         catch (Throwable e) {
           log.noStackTrace().warn(e, "Could not close relay for server[%s]. Dropping.", relay.lhs);

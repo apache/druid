@@ -62,15 +62,25 @@ public class MessageRelayResource<MessageType>
    */
   private final JavaType batchType;
 
+  /**
+   * Called on each {@link #httpGetMessagesFromOutbox} call.
+   */
+  private final PollListener pollListener;
+
+  /**
+   * Creates a resource that calls {@code pollListener} each time a client polls for messages.
+   */
   public MessageRelayResource(
       final Outbox<MessageType> outbox,
       final ObjectMapper smileMapper,
-      final Class<MessageType> messageClass
+      final Class<MessageType> messageClass,
+      final PollListener pollListener
   )
   {
     this.outbox = outbox;
     this.smileMapper = smileMapper;
     this.batchType = smileMapper.getTypeFactory().constructParametricType(MessageBatch.class, messageClass);
+    this.pollListener = pollListener;
   }
 
   /**
@@ -104,6 +114,13 @@ public class MessageRelayResource<MessageType>
       return null;
     }
 
+    try {
+      pollListener.pollReceived(clientHost);
+    }
+    catch (Throwable e) {
+      log.warn(e, "Exception handling pollReceived for clientHost[%s]", clientHost);
+    }
+
     final ListenableFuture<MessageBatch<MessageType>> batchFuture = outbox.getMessages(clientHost, epoch, watermark);
 
     // Save these items, since "req" becomes inaccessible in future exception handlers.
@@ -126,5 +143,17 @@ public class MessageRelayResource<MessageType>
                 .start();
 
     return null;
+  }
+
+  /**
+   * Listener for polls from clients. This can be used as a keep-alive signal.
+   */
+  @FunctionalInterface
+  public interface PollListener
+  {
+    /**
+     * Called when a client polls for messages, before the poll is handled.
+     */
+    void pollReceived(String clientHost);
   }
 }

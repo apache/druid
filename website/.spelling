@@ -962,6 +962,7 @@ datasource_intervalStart_intervalEnd_version_partitionNum
 partitionNum
 v9
 3.x
+4.x
 8u92
 DskipTests
 Papache-release

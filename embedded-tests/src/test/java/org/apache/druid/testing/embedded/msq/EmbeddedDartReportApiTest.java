@@ -291,7 +291,7 @@ public class EmbeddedDartReportApiTest extends BaseDartQueryTest
         msqApis.submitDartSqlAsync(sql, QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, sqlQueryId), broker1);
 
     // Step 2: Get the report.
-    final GetQueryReportResponse runningReport = waitForReport(sqlQueryId);
+    final GetQueryReportResponse runningReport = waitForReport(sqlQueryId, broker1);
 
     Assertions.assertNotNull(runningReport, "Report should be available for running query");
     Assertions.assertNotNull(runningReport.getQueryInfo(), "Query info should not be null");
