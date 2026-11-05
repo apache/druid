@@ -60,7 +60,7 @@ Other versions may not work with this extension.
 
 You can download the library from one of the following sources:
 
-- [MariaDB website](https://mariadb.com/downloads/connectors/connectors-data-access/java8-connector)  
+- [MariaDB website](https://mariadb.com/downloads/connectors/java8-connector/)  
   Click **Show All Files** to access older product versions.
 - [Maven Central (direct download)](https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/4.0.0/mariadb-java-client-4.0.0.jar)
 
@@ -72,7 +72,7 @@ To configure the `mysql-metadata-storage` extension to use the MariaDB connector
 MariaDB Connector/J 3.x and later accept `jdbc:mariadb:` connection strings by default.
 To use a `jdbc:mysql:` connection string, add the `permitMysqlScheme` option to the URL.
 For more information on the parameters to configure a connection,
-[see the MariaDB documentation](https://mariadb.com/kb/en/about-mariadb-connector-j/#connection-strings)
+[see the MariaDB documentation](https://mariadb.com/docs/connectors/mariadb-connector-j/about-mariadb-connector-j#connection-strings)
 for your connector version.
 
 MariaDB Connector/J 4.x enables TLS by default (`sslMode=verify-full`).

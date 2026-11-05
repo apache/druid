@@ -87,12 +87,12 @@ public final class ConnectionUriUtils
    * parameter whitelist validation.
    * <p>
    * uris starting with {@link #MYSQL_PREFIX} will first try to use the MySQL Connector/J driver (5.x), then fallback
-   * to MariaDB Connector/J (version 2.x or 3.x) which also accepts jdbc:mysql uris.
+   * to MariaDB Connector/J (version 2.x, or 3.x and later) which also accepts jdbc:mysql uris.
    * <p>
    * uris starting with {@link #POSTGRES_PREFIX} will use the postgresql driver to parse the uri
    * <p>
    * uris starting with {@link #MARIADB_PREFIX} will first try to use MariaDB Connector/J driver (2.x) then fallback to
-   * MariaDB Connector/J 3.x driver.
+   * MariaDB Connector/J 3.x or later driver.
    * <p>
    * If the uri does not match any of these schemes, this method will return an empty set if unknown uris are allowed,
    * or throw an exception if not.
