@@ -176,11 +176,14 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
       closed = true;
     }
 
-    // Close outside the lock: restFuture can no longer change, since checkFirstProcessorComplete() does nothing
+    // Read restFuture outside the lock: it can no longer be set, since checkFirstProcessorComplete() does nothing
     // once closed.
-    CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(
-        first,
-        restFuture.isDone() ? FutureUtils.getUnchecked(restFuture, false) : null
-    ));
+    final ProcessorManager<B, R> restToClose =
+        restFuture.isDone() ? FutureUtils.getUncheckedImmediately(restFuture) : null;
+
+    // Cancel in case restFuture was never set, so futures from nextFromRest() do not remain pending forever.
+    restFuture.cancel(false);
+
+    CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(first, restToClose));
   }
 }

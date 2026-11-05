@@ -272,6 +272,29 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
   }
 
   @Test
+  public void test_close_cancels_pending_next_from_rest() throws Exception
+  {
+    final ChainedProcessorManager<List<Long>, Long, Long> chainedProcessorManager = new ChainedProcessorManager<>(
+        ProcessorManagers.of(() -> new SimpleReturningFrameProcessor<>(ImmutableList.of(1L, 2L, 3L))),
+        values -> {
+          throw new AssertionError("restFactory must not be called");
+        }
+    );
+
+    final Optional<ProcessorAndCallback<Object>> firstProcessor = chainedProcessorManager.next().get();
+    Assertions.assertTrue(firstProcessor.isPresent());
+
+    // First manager is exhausted, but its processor has not completed, so this waits for restFuture.
+    final ListenableFuture<Optional<ProcessorAndCallback<Object>>> nextFromRest = chainedProcessorManager.next();
+    Assertions.assertFalse(nextFromRest.isDone());
+
+    chainedProcessorManager.close();
+    Assertions.assertTrue(nextFromRest.isCancelled());
+
+    firstProcessor.get().processor().cleanup();
+  }
+
+  @Test
   public void test_failing_processor_manager()
   {
     final ImmutableSet<Long> expectedValues = ImmutableSet.of();
