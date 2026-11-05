@@ -44,7 +44,7 @@ import {
 } from '../../components';
 import { AsyncActionDialog, ServiceTableActionDialog } from '../../dialogs';
 import type { CoordinatorDynamicConfig, QueryWithContext } from '../../druid-models';
-import { getConsoleViewIcon } from '../../druid-models';
+import { getConsoleViewIcon, getTierToAliasLookup } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
@@ -83,6 +83,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Service',
     'Type',
     'Tier',
+    'Tier alias',
     'Host',
     'Port',
     'Assigned size',
@@ -100,6 +101,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Service',
     'Type',
     'Tier',
+    'Tier alias',
     'Host',
     'Port',
     'Assigned size',
@@ -136,7 +138,7 @@ export interface ServicesViewProps {
 
 export interface ServicesViewState {
   servicesState: QueryState<ServicesWithAuxiliaryInfo>;
-  groupServicesBy?: 'service_type' | 'tier';
+  groupServicesBy?: 'service_type' | 'tier' | 'tier_alias';
 
   middleManagerDisableWorkerHost?: string;
   middleManagerEnableWorkerHost?: string;
@@ -187,6 +189,7 @@ interface ServicesWithAuxiliaryInfo {
   readonly cloneStatus: Record<string, CloneStatusInfo>;
   readonly serverMode: ServerModeInfo;
   readonly workerInfo: Record<string, WorkerInfo>;
+  readonly tierToAlias: Record<string, string>;
 }
 
 export const LoadQueueInfoContext = createContext<Record<string, LoadQueueInfo>>({});
@@ -457,6 +460,7 @@ ORDER BY
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
+        ['Tier alias'],
       ),
     };
 
@@ -526,49 +530,50 @@ ORDER BY
 
         if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
           auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
-            const [cloneStatusResp, configResp] = await Promise.all([
-              getApiArrayFromKey<CloneStatusInfo>(
-                '/druid/coordinator/v1/config/cloneStatus',
-                'cloneStatus',
-                signal,
-              ).catch(() => {
-                AppToaster.show({
-                  icon: IconNames.ERROR,
-                  intent: Intent.DANGER,
-                  message: 'There was an error getting the clone status map',
-                });
-                return [] as CloneStatusInfo[];
-              }),
-              Api.instance
-                .get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', { signal })
-                .then(r => r.data)
-                .catch(() => {
-                  AppToaster.show({
-                    icon: IconNames.ERROR,
-                    intent: Intent.DANGER,
-                    message: 'There was an error getting the coordinator dynamic config',
-                  });
-                  return null;
-                }),
-            ]);
-
-            const cloneStatusLookup: Record<string, CloneStatusInfo> = lookupBy(
-              cloneStatusResp,
-              s => s.targetServer,
-            );
+            const cloneStatusResp = await getApiArrayFromKey<CloneStatusInfo>(
+              '/druid/coordinator/v1/config/cloneStatus',
+              'cloneStatus',
+              signal,
+            ).catch(() => {
+              AppToaster.show({
+                icon: IconNames.ERROR,
+                intent: Intent.DANGER,
+                message: 'There was an error getting the clone status map',
+              });
+              return [] as CloneStatusInfo[];
+            });
 
             return {
               ...servicesWithAuxiliaryInfo,
-              cloneStatus: cloneStatusLookup,
-              ...(configResp
-                ? {
-                    serverMode: {
-                      turboLoadingNodes: new Set<string>(configResp.turboLoadingNodes || []),
-                      decommissioningNodes: new Set<string>(configResp.decommissioningNodes || []),
-                    },
-                  }
-                : {}),
+              cloneStatus: lookupBy(cloneStatusResp, s => s.targetServer),
             };
+          });
+        }
+
+        if (capabilities.hasCoordinatorAccess()) {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
+            try {
+              const config = (
+                await Api.instance.get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', {
+                  signal,
+                })
+              ).data;
+              return {
+                ...servicesWithAuxiliaryInfo,
+                serverMode: {
+                  turboLoadingNodes: new Set<string>(config.turboLoadingNodes || []),
+                  decommissioningNodes: new Set<string>(config.decommissioningNodes || []),
+                },
+                tierToAlias: getTierToAliasLookup(config),
+              };
+            } catch {
+              AppToaster.show({
+                icon: IconNames.ERROR,
+                intent: Intent.DANGER,
+                message: 'There was an error getting the coordinator dynamic config',
+              });
+              return servicesWithAuxiliaryInfo;
+            }
           });
         }
 
@@ -612,6 +617,7 @@ ORDER BY
             cloneStatus: {},
             serverMode: DEFAULT_SERVER_MODE,
             workerInfo: {},
+            tierToAlias: {},
           },
           auxiliaryQueries,
         );
@@ -663,13 +669,15 @@ ORDER BY
     const { filters, onFiltersChange } = this.props;
     const { servicesState, groupServicesBy, visibleColumns } = this.state;
 
-    const { services, loadQueueInfo, cloneStatus, serverMode, workerInfo } = servicesState.data || {
-      services: [],
-      loadQueueInfo: {},
-      cloneStatus: {},
-      serverMode: DEFAULT_SERVER_MODE,
-      workerInfo: {},
-    };
+    const { services, loadQueueInfo, cloneStatus, serverMode, workerInfo, tierToAlias } =
+      servicesState.data || {
+        services: [],
+        loadQueueInfo: {},
+        cloneStatus: {},
+        serverMode: DEFAULT_SERVER_MODE,
+        workerInfo: {},
+        tierToAlias: {},
+      };
 
     return (
       <LoadQueueInfoContext value={loadQueueInfo}>
@@ -691,7 +699,14 @@ ORDER BY
               defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
               pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
               showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
-              columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
+              columns={this.getTableColumns(
+                visibleColumns,
+                filters,
+                onFiltersChange,
+                workerInfo,
+                tierToAlias,
+                groupServicesBy,
+              )}
             />
           </ServerModeContext>
         </CloneStatusContext>
@@ -705,6 +720,8 @@ ORDER BY
       _filters: TableFilters,
       _onFiltersChange: (filters: TableFilters) => void,
       workerInfoLookup: Record<string, WorkerInfo>,
+      tierToAlias: Record<string, string>,
+      groupServicesBy: ServicesViewState['groupServicesBy'],
     ): ConsoleTableColumn<ServiceResultRow>[] => {
       const { capabilities } = this.props;
 
@@ -771,6 +788,17 @@ ORDER BY
             return workerInfoLookup[row.service]?.worker?.category;
           },
           Cell: this.renderFilterableCell('tier'),
+        },
+        {
+          Header: 'Tier alias',
+          show: visibleColumns.shown('Tier alias') || groupServicesBy === 'tier_alias',
+          id: 'tier_alias',
+          width: 180,
+          accessor: row => {
+            if (row.tier) return tierToAlias[row.tier] || row.tier;
+            return workerInfoLookup[row.service]?.worker?.category;
+          },
+          Cell: this.renderFilterableCell('tier_alias'),
         },
         {
           Header: 'Host',
@@ -1203,7 +1231,9 @@ ORDER BY
 
   render() {
     const { capabilities } = this.props;
-    const { groupServicesBy, visibleColumns } = this.state;
+    const { servicesState, groupServicesBy, visibleColumns } = this.state;
+    const tierToAlias = servicesState.getSomeData()?.tierToAlias;
+    const hasTierAliases = Boolean(tierToAlias && Object.keys(tierToAlias).length);
 
     return (
       <div className="services-view app-view">
@@ -1228,6 +1258,14 @@ ORDER BY
             >
               Tier
             </Button>
+            {(hasTierAliases || groupServicesBy === 'tier_alias') && (
+              <Button
+                active={groupServicesBy === 'tier_alias'}
+                onClick={() => this.setState({ groupServicesBy: 'tier_alias' })}
+              >
+                Tier alias
+              </Button>
+            )}
           </ButtonGroup>
           <RefreshButton
             onRefresh={auto => {
@@ -1238,7 +1276,9 @@ ORDER BY
           />
           {this.renderBulkServicesActions()}
           <TableColumnSelector
-            columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
+            columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()].filter(
+              column => column !== 'Tier alias' || hasTierAliases,
+            )}
             onChange={column =>
               this.setState(prevState => ({
                 visibleColumns: prevState.visibleColumns.toggle(column),
