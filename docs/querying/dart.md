@@ -65,6 +65,7 @@ For Brokers, you can set the following configs:
 |---|---|---|
 | `druid.msq.dart.controller.concurrentQueries` | Maximum number of query controllers that can run concurrently on that Broker. Druid queues additional controllers. Queries can get stuck waiting for each other if the total value on Brokers exceeds the setting on a single Historical (`druid.msq.dart.worker.concurrentQueries` ).| 1 |
 | `druid.msq.dart.query.context.targetPartitionsPerWorker` |To parallelize queries as much as possible on each Historical, set this to the same value as `druid.processing.numThreads` on the Historicals. | 1 (Multithreading is turned off on Historicals) |
+| `druid.msq.dart.controller.syncPeriod` | How often each Broker syncs the list of running queries with Historicals. | `PT15S` |
 
 
 For Historicals, you can set the following configs:
@@ -74,7 +75,7 @@ For Historicals, you can set the following configs:
 | `druid.msq.dart.worker.concurrentQueries` | Maximum number of query workers that can run concurrently on a Historical. We recommend leaving this config at the default value. If need to change this value, set it to a value equal to or larger than `druid.msq.dart.controller.concurrentQueries` on your Brokers. If you don't, queries can get stuck waiting for each other. Don't set it to a value higher than the number of merge buffers. | Equal to the number of merge buffers |
 | `druid.msq.dart.worker.heapFraction` | Maximum amount of heap available for use across all Dart queries as a decimal. | 0.35 (35% of heap) |
 | `druid.msq.dart.worker.segmentLoadAheadCount` | Number of segments a worker will prefetch ahead of processing them. This lets tiers with different hardware tune prefetch independently. It acts as a worker-local default: a value supplied in the query context (`segmentLoadAheadCount`) always takes precedence when it is set. Non-positive values are treated as unset. | Unset (uses twice the number of processing threads) |
-
+| `druid.msq.dart.worker.controllerTimeout` | How long a Broker can go without contacting a Historical before the Historical considers that Broker to be gone. Must be at least `PT1M`. | `PT3M` |
 
 ## Run a Dart query
 

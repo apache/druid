@@ -108,14 +108,14 @@ public abstract class BaseDartQueryTest extends EmbeddedClusterTestBase
   }
 
   /**
-   * Polls the report API on {@link #broker1} until a report is available.
+   * Polls the report API on the given Broker until a report is available.
    */
-  protected GetQueryReportResponse waitForReport(final String sqlQueryId)
+  protected GetQueryReportResponse waitForReport(final String sqlQueryId, final EmbeddedBroker broker)
   {
     final long timeout = 30_000;
     final long deadline = System.currentTimeMillis() + timeout;
     while (System.currentTimeMillis() < deadline) {
-      final GetQueryReportResponse report = msqApis.getDartQueryReport(sqlQueryId, broker1);
+      final GetQueryReportResponse report = msqApis.getDartQueryReport(sqlQueryId, broker);
       if (report != null) {
         return report;
       }

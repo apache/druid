@@ -19,9 +19,14 @@
 
 package org.apache.druid.msq.dart.guice;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.querykit.ReadableInputQueue;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 
@@ -36,16 +41,88 @@ public class DartWorkerConfig
    */
   private static final double DEFAULT_HEAP_FRACTION = 0.35;
 
+  private static final Period DEFAULT_CONTROLLER_TIMEOUT = Period.minutes(3);
+  private static final Period DEFAULT_SYNC_TIMEOUT = Period.seconds(30);
+
+  /**
+   * Minimum value for {@link #getControllerTimeout()}. Any shorter and we might end up reaping controllers in between
+   * heartbeats.
+   */
+  public static final long MIN_CONTROLLER_TIMEOUT_MILLIS = 60_000;
+
   public static final int AUTO = -1;
 
   @JsonProperty("concurrentQueries")
-  private int concurrentQueries = AUTO;
+  private final int concurrentQueries;
 
   @JsonProperty("heapFraction")
-  private double heapFraction = DEFAULT_HEAP_FRACTION;
+  private final double heapFraction;
+
+  @JsonProperty("segmentLoadAheadCount")
+  @Nullable
+  private final Integer segmentLoadAheadCount;
+
+  @JsonProperty("controllerTimeout")
+  private final Period controllerTimeout;
+
+  @JsonProperty("syncTimeout")
+  private final Period syncTimeout;
 
   /**
-   * Worker-local value for the segment load-ahead count used to size segment prefetch in {@link ReadableInputQueue}.
+   * Creates a config. Null parameters take their default values.
+   */
+  @JsonCreator
+  public DartWorkerConfig(
+      @JsonProperty("concurrentQueries") @Nullable final Integer concurrentQueries,
+      @JsonProperty("heapFraction") @Nullable final Double heapFraction,
+      @JsonProperty("segmentLoadAheadCount") @Nullable final Integer segmentLoadAheadCount,
+      @JsonProperty("controllerTimeout") @Nullable final Period controllerTimeout,
+      @JsonProperty("syncTimeout") @Nullable final Period syncTimeout
+  )
+  {
+    this.concurrentQueries = Configs.valueOrDefault(concurrentQueries, AUTO);
+    this.heapFraction = Configs.valueOrDefault(heapFraction, DEFAULT_HEAP_FRACTION);
+    this.segmentLoadAheadCount = segmentLoadAheadCount;
+    this.controllerTimeout = Configs.valueOrDefault(controllerTimeout, DEFAULT_CONTROLLER_TIMEOUT);
+    this.syncTimeout = Configs.valueOrDefault(syncTimeout, DEFAULT_SYNC_TIMEOUT);
+
+    if (this.controllerTimeout.toStandardDuration().getMillis() < MIN_CONTROLLER_TIMEOUT_MILLIS) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "druid.msq.dart.worker.controllerTimeout[%s] must be at least [%,d] ms",
+                              this.controllerTimeout,
+                              MIN_CONTROLLER_TIMEOUT_MILLIS
+                          );
+    }
+
+    if (this.syncTimeout.toStandardDuration().getMillis() <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("druid.msq.dart.worker.syncTimeout[%s] must be positive", this.syncTimeout);
+    }
+  }
+
+  /**
+   * Returns the maximum number of workers that can run concurrently on this server, or {@link #AUTO} to use the
+   * number of merge buffers.
+   */
+  public int getConcurrentQueries()
+  {
+    return concurrentQueries;
+  }
+
+  /**
+   * Returns the fraction of heap available to the MSQ framework, across all workers on this server.
+   */
+  public double getHeapFraction()
+  {
+    return heapFraction;
+  }
+
+  /**
+   * Returns the worker-local value for the segment load-ahead count used to size segment prefetch in
+   * {@link ReadableInputQueue}.
    * <p>
    * Defaults to null (unset), which leaves the value to query context (client or controller-default supplied) and the
    * built-in {@code 2 * threadCount} fallback. When set to a positive value, it acts as a worker-local default used
@@ -55,23 +132,27 @@ public class DartWorkerConfig
    * hardware (for example, separate tiers with more or less memory and storage bandwidth) tune their own prefetch
    * depth, rather than relying solely on a single cluster-wide query-context default.
    */
-  @JsonProperty("segmentLoadAheadCount")
-  @Nullable
-  private Integer segmentLoadAheadCount = null;
-
-  public int getConcurrentQueries()
-  {
-    return concurrentQueries;
-  }
-
-  public double getHeapFraction()
-  {
-    return heapFraction;
-  }
-
   @Nullable
   public Integer getSegmentLoadAheadCount()
   {
     return segmentLoadAheadCount;
+  }
+
+  /**
+   * Returns how long a controller can go without contacting this worker before {@link DartWorkerRunner} considers it
+   * gone. Always at least {@link #MIN_CONTROLLER_TIMEOUT_MILLIS}.
+   */
+  public Period getControllerTimeout()
+  {
+    return controllerTimeout;
+  }
+
+  /**
+   * Returns how long a query can be missing from a controller's syncs before {@link DartWorkerRunner} cancels it.
+   * Always positive.
+   */
+  public Period getSyncTimeout()
+  {
+    return syncTimeout;
   }
 }

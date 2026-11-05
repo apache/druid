@@ -20,6 +20,7 @@
 package org.apache.druid.msq.dart.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.msq.dart.controller.DartWorkerSyncer;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.joda.time.Period;
 
@@ -56,6 +57,12 @@ public class DartControllerConfig
   @JsonProperty("maxRetainedReportDuration")
   private Period maxRetainedReportDuration = Period.ZERO;
 
+  /**
+   * How often {@link DartWorkerSyncer} tells each worker which queries are still running there.
+   */
+  @JsonProperty("syncPeriod")
+  private Period syncPeriod = Period.seconds(15);
+
   public int getConcurrentQueries()
   {
     return concurrentQueries;
@@ -79,5 +86,10 @@ public class DartControllerConfig
   public Period getMaxRetainedReportDuration()
   {
     return maxRetainedReportDuration;
+  }
+
+  public Period getSyncPeriod()
+  {
+    return syncPeriod;
   }
 }

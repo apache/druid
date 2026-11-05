@@ -51,8 +51,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
@@ -93,6 +91,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -132,6 +131,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Nullable
   private AsyncCursorHolder asyncCursorHolder;
   private ListenableFuture<DataServerQueryResult<Object[]>> dataServerQueryResultFuture;
+  /**
+   * Cursors not yet read by {@link #runWithDataServerQuery}, one per results yielder. Null unless the data server
+   * query result is available.
+   */
+  @Nullable
+  private Iterator<Cursor> dataServerCursors;
   private Closeable cursorCloser;
   /**
    * Description for error messages, from {@link LoadableSegment#description()}.
@@ -253,7 +258,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler)
       throws IOException
   {
-    if (cursor == null) {
+    if (dataServerCursors == null) {
       ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
 
       if (dataServerQueryResultFuture == null) {
@@ -291,28 +296,26 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         return cursorFromIterable.lhs;
       }).collect(Collectors.toList());
 
-      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(cursors));
+      dataServerCursors = cursors.iterator();
+    }
 
-      if (cursorYielder.isDone()) {
-        // No cursors!
-        cursorYielder.close();
-        return ReturnOrAwait.returnObject(handedOffSegments);
-      } else {
-        final long rowsFlushed = setNextCursor(cursorYielder.get(), Collections.emptyList(), null, null);
-        closer.register(cursorYielder);
+    if (cursor == null || isCursorDone()) {
+      if (dataServerCursors.hasNext()) {
+        final long rowsFlushed = setNextCursor(dataServerCursors.next(), Collections.emptyList(), null, null);
         if (rowsFlushed > 0) {
           return ReturnOrAwait.runAgain();
         }
+      } else {
+        // No more cursors.
+        flushFrameWriter();
+        return ReturnOrAwait.returnObject(handedOffSegments);
       }
     }
 
     populateFrameWriterAndFlushIfNeededWithExceptionHandling();
 
-    if (isCursorDone()) {
+    if (isCursorDone() && !dataServerCursors.hasNext()) {
       flushFrameWriter();
-    }
-
-    if (isCursorDone() && (frameWriter == null || frameWriter.getNumRows() == 0)) {
       return ReturnOrAwait.returnObject(handedOffSegments);
     } else {
       return ReturnOrAwait.runAgain();
