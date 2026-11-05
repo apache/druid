@@ -2122,6 +2122,7 @@ addr
 affinityConfig
 allowAll
 ANDed
+ANDs
 array_mod
 autoscale
 autoscalers
@@ -2650,6 +2651,7 @@ SRE
 reachability
 ownership_mismatch
 giveup
+retryable
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2709,3 +2711,13 @@ getters
 savepoints
 Scrollable
 updatable
+
+- ../docs/development/extensions-contrib/tsfile.md
+TsFile
+IoTDB
+INT32
+INT64
+
+- ../docs/configuration/extensions.md
+druid-tsfile-extensions
+TsFile

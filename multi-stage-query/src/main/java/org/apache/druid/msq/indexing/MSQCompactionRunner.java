@@ -471,6 +471,12 @@ public class MSQCompactionRunner implements CompactionRunner
         } else {
           colType = ColumnType.fromCapabilities(vc.capabilities(inspector, vc.getOutputName()));
         }
+      } else if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension)) {
+        // A group-by output cannot be named __time, and getColumnMappings() maps TIME_VIRTUAL_COLUMN back to it for
+        // every group-by. A query granularity would have put a virtual column above that does the renaming; without
+        // one the column is read as it is, under the name the mapping expects.
+        dimensions.add(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+        continue;
       }
       dimensions.add(new DefaultDimensionSpec(dimension, dimension, colType));
     }

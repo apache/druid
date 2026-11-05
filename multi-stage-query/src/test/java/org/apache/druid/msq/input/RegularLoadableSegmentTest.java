@@ -67,6 +67,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
@@ -150,15 +151,10 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
       final int partitionNum = i % 2;
 
       segments.add(
-          DataSegment.builder()
-                     .dataSource(DATASOURCE)
-                     .interval(
-                         Intervals.utc(
+          DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.utc(
                              startTime.getMillis(),
                              startTime.plusDays(1).getMillis()
-                         )
-                     )
-                     .version("0")
+                         ), "0", partitionNum))
                      .shardSpec(new NumberedShardSpec(partitionNum, 2))
                      .loadSpec(
                          jsonMapper.convertValue(

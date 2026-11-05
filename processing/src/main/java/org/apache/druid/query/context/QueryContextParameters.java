@@ -503,7 +503,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Boolean> SET_PROCESSING_THREAD_NAMES =
       booleanParameter("setProcessingThreadNames")
-          .since("24.0.0").query(Query.JSON).engine(Engine.NATIVE)
+          .since("24.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .defaultValue(false)
           .description(
               """
@@ -889,6 +889,24 @@ public final class QueryContextParameters
           .since("30.0.1").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .defaultValue(true)
           .description("Whether to consider the [pull-up rewrite](lookups.md#pull-up) of the `LOOKUP` function during SQL planning.")
+          .build();
+
+  public static final QueryContextParameter<String> SQL_TIME_CONDITION =
+      // The SQL planner parses the intervals.
+      stringParameter("sqlTimeCondition")
+          .since("40.0.0").query(Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description(
+              """
+              Time condition to apply to all tables that the query reads, except global tables on the right side of a JOIN.
+              Comma-separated string of ISO8601 intervals, such as `"2000-01-01/2000-02-01,2001-01-01/2001-02-01"`.
+              An empty string is an error.\
+              <br /><br />Druid ANDs this condition with any other condition you provide on the `__time` column.
+              Intervals without an explicit offset are in UTC; `sqlTimeZone` doesn't affect them.\
+              <br /><br />You can't use this parameter with `INSERT`, `REPLACE`, or [catalog DDL](../development/extensions-core/catalog.md#sql-ddl) statements.
+              """
+          )
+          .defaultDescription("none")
+          .statement(StatementType.SELECT)
           .build();
 
   public static final QueryContextParameter<JoinAlgorithm> SQL_JOIN_ALGORITHM =
@@ -1530,7 +1548,7 @@ public final class QueryContextParameters
   // Public ones are documented in scan-query.md and searchquery.md.
   public static final QueryContextParameter<Integer> MAX_SEGMENT_PARTITIONS_ORDERED_IN_MEMORY =
       integerParameter("maxSegmentPartitionsOrderedInMemory")
-          .since("0.15.0-incubating").query(Query.JSON).engine(Engine.NATIVE)
+          .since("0.15.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .constraint(Range.closedRange(1, Integer.MAX_VALUE))
           .description(
               """
@@ -2430,7 +2448,7 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Integer> MAX_ROWS_QUEUED_FOR_ORDERING =
       integerParameter("maxRowsQueuedForOrdering")
-          .since("0.15.0-incubating").query(Query.JSON).engine(Engine.NATIVE)
+          .since("0.15.0-incubating").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
           .constraint(Range.closedRange(1, Integer.MAX_VALUE))
           .description(
               """

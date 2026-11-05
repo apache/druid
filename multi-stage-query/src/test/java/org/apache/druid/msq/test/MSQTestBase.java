@@ -1601,10 +1601,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           if (expectedTombstoneIntervals != null) {
             expectedTombstoneSegmentIds.addAll(
                 expectedTombstoneIntervals.stream()
-                                          .map(interval -> DataSegment.builder()
-                                                                      .dataSource(expectedDataSource)
-                                                                      .interval(interval)
-                                                                      .version(MSQTestTaskActionClient.VERSION)
+                                          .map(interval -> DataSegment.builder(SegmentId.of(expectedDataSource, interval, MSQTestTaskActionClient.VERSION, 0))
                                                                       .shardSpec(new TombstoneShardSpec())
                                                                       .loadSpec(tombstoneLoadSpec)
                                                                       .size(1)

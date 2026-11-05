@@ -131,8 +131,16 @@ public class SystemQueryContextParametersTableTest
     // The default is the value of a runtime property
     Assertions.assertEquals("${druid.query.scan.maxRowsQueuedForOrdering}", value(row, "default_value"));
     Assertions.assertNull(value(row, "default_description"));
-    Assertions.assertEquals(List.of("JSON"), value(row, "query_languages"));
+    Assertions.assertEquals(List.of("JSON", "SQL"), value(row, "query_languages"));
     Assertions.assertEquals(List.of("scan"), value(row, "native_query_types"));
+    Assertions.assertEquals(List.of(), value(row, "statement_types"));
+  }
+
+  @Test
+  public void testParameterNotProvidedBySql()
+  {
+    final Object[] row = scan().get(QueryContextParameters.BY_SEGMENT.getName());
+    Assertions.assertEquals(List.of("JSON"), value(row, "query_languages"));
     // Not provided by SQL queries, so statement types don't apply.
     Assertions.assertNull(value(row, "statement_types"));
   }

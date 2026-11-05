@@ -48,6 +48,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -830,9 +831,7 @@ public class BrokerServerViewTest
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
   {
-    return DataSegment.builder()
-                      .dataSource("test_broker_server_view")
-                      .interval(Intervals.of(intervalStr))
+    return DataSegment.builder(SegmentId.of("test_broker_server_view", Intervals.of(intervalStr), version, 0))
                       .loadSpec(
                           ImmutableMap.of(
                               "type",
@@ -841,7 +840,6 @@ public class BrokerServerViewTest
                               "somewhere"
                           )
                       )
-                      .version(version)
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
                       .shardSpec(NoneShardSpec.instance())

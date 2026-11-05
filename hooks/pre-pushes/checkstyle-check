@@ -16,4 +16,4 @@
 # limitations under the License.
 
 # set thread count to 2 times of cores to speed up checking
-mvn checkstyle:checkstyle -T 2C --fail-at-end
+mvn checkstyle:check -T 2C --fail-at-end

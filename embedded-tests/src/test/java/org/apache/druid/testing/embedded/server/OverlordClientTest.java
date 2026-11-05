@@ -19,9 +19,11 @@
 
 package org.apache.druid.testing.embedded.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.utils.IdUtils;
@@ -36,6 +38,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
@@ -132,6 +135,31 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
         taskId,
         TaskStatus.failure(taskId, "Shutdown request from user")
     );
+  }
+
+  @Test
+  public void test_shutdownAllTasks_forDatasourceWithActiveTask()
+  {
+    // Submit a task that would run for much longer than this test
+    final String taskId = IdUtils.newTaskId("sim_test_noop", dataSource, null);
+    cluster.callApi().submitTask(new NoopTask(taskId, null, dataSource, 300_000L, 0L, null));
+
+    // Send a real HTTP request, since a routing conflict made this API return 404 (#18419)
+    final Map<String, String> response = cluster.callApi().serviceClient().onLeaderOverlord(
+        mapper -> new RequestBuilder(
+            HttpMethod.POST,
+            StringUtils.format(
+                "/druid/indexer/v1/datasources/%s/shutdownAllTasks",
+                StringUtils.urlEncode(dataSource)
+            )
+        ),
+        new TypeReference<>() {}
+    );
+    Assertions.assertEquals(Map.of("dataSource", dataSource), response);
+
+    final TaskStatus taskStatus = cluster.callApi().waitForTaskToFinish(taskId, overlord.latchableEmitter());
+    Assertions.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
+    Assertions.assertEquals("Shutdown request from user", taskStatus.getErrorMsg());
   }
 
   @Test

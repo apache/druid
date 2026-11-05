@@ -53,6 +53,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -227,11 +228,8 @@ public class IndexerDataServerQueryHandlerTest
         .isHandoffComplete(DATASOURCE1, IndexerDataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2));
     doReturn(ImmutableList.of(
         new ImmutableSegmentLoadInfo(
-            DataSegment.builder()
-                       .interval(SEGMENT_2.getInterval())
-                       .version(SEGMENT_2.getVersion())
+            DataSegment.builder(SegmentId.of(DATASOURCE1, SEGMENT_2.getInterval(), SEGMENT_2.getVersion(), 0))
                        .shardSpec(new NumberedShardSpec(SEGMENT_2.getPartitionNumber(), SEGMENT_2.getPartitionNumber()))
-                       .dataSource(DATASOURCE1)
                        .size(1)
                        .build(),
         ImmutableSet.of(DRUID_SERVER_2)

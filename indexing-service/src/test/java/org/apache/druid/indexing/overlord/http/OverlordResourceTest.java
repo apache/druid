@@ -65,7 +65,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -1193,58 +1192,6 @@ public class OverlordResourceTest
         .doShutdown("id_1")
         .getEntity();
     Assertions.assertEquals("id_1", response.get("task"));
-  }
-
-  @Test
-  public void testShutdownAllTasks()
-  {
-    // This is disabled since OverlordResource.shutdownTasksForDataSource is annotated with DatasourceResourceFilter
-    // This should be fixed in https://github.com/apache/druid/issues/6685.
-    // expectAuthorizationTokenCheck();
-    TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(
-        Optional.of(mockQueue)
-    ).anyTimes();
-    EasyMock.expect(
-        taskStorage.getTaskInfos(TaskLookup.activeTasksOnly(), "datasource")
-    ).andStubReturn(ImmutableList.of(
-        new TaskInfo(
-            DateTime.now(ISOChronology.getInstanceUTC()),
-            TaskStatus.success("id_1"),
-            new NoopTask("id_1", null, "datasource", 1L, 0L, null)
-        ),
-        new TaskInfo(
-            DateTime.now(ISOChronology.getInstanceUTC()),
-            TaskStatus.success("id_2"),
-            new NoopTask("id_2", null, "datasource", 1L, 0L, null)
-        )
-    ));
-    mockQueue.shutdown("id_1", "Shutdown request from user");
-    EasyMock.expectLastCall();
-    mockQueue.shutdown("id_2", "Shutdown request from user");
-    EasyMock.expectLastCall();
-
-    replayAll();
-    EasyMock.replay(mockQueue);
-
-    final Map<String, String> response = (Map<String, String>) overlordResource
-        .shutdownTasksForDataSource("datasource")
-        .getEntity();
-    Assertions.assertEquals("datasource", response.get("dataSource"));
-  }
-
-  @Test
-  public void testShutdownAllTasksForNonExistingDataSource()
-  {
-    final TaskQueue taskQueue = EasyMock.createMock(TaskQueue.class);
-    EasyMock.expect(overlord.isLeader()).andReturn(true).anyTimes();
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskStorage.getTaskInfos(EasyMock.anyObject(TaskLookup.class), EasyMock.anyString()))
-            .andReturn(Collections.emptyList());
-    replayAll();
-
-    final Response response = overlordResource.shutdownTasksForDataSource("notExisting");
-    Assertions.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
   }
 
   @Test

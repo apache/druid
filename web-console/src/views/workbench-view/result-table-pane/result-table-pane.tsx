@@ -52,6 +52,7 @@ import {
   filterMap,
   formatNumber,
   getNumericColumnBraces,
+  isNumberLike,
   oneOf,
   prettyPrintSql,
   timeFormatToSql,
@@ -572,7 +573,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         const descOrderBy = orderByExpression.toOrderByExpression('DESC');
         const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
         const descOrderByPretty = prettyPrintSql(descOrderBy);
-        const ascOrderByPretty = prettyPrintSql(descOrderBy);
+        const ascOrderByPretty = prettyPrintSql(ascOrderBy);
 
         menuItems.push(
           <MenuItem
@@ -724,7 +725,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
-                          text={typeof value === 'number' ? formatNumber(value) : String(value)}
+                          text={isNumberLike(value) ? formatNumber(value) : String(value)}
                           braces={numericColumnBraces[i]}
                           padFractionalPart
                         />

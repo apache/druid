@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -36,7 +37,7 @@ public class SegmentGenerationMetrics
   private final AtomicLong dedupCount = new AtomicLong(0);
   private final AtomicLong rowOutputCount = new AtomicLong(0);
   private final AtomicLong numPersists = new AtomicLong(0);
-  private final AtomicLong persistTimeMillis = new AtomicLong(0);
+  private final AtomicLong persistTimeNanos = new AtomicLong(0);
   private final AtomicLong persistBackPressureMillis = new AtomicLong(0);
   private final AtomicLong failedPersists = new AtomicLong(0);
   private final AtomicLong failedHandoffs = new AtomicLong(0);
@@ -44,7 +45,7 @@ public class SegmentGenerationMetrics
   private final AtomicLong mergedRows = new AtomicLong(0);
   // Measures the number of rows that have been pushed to deep storage.
   private final AtomicLong pushedRows = new AtomicLong(0);
-  private final AtomicLong mergeTimeMillis = new AtomicLong(0);
+  private final AtomicLong mergeTimeNanos = new AtomicLong(0);
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
   private final AtomicLong persistCpuTime = new AtomicLong(0);
   private final AtomicLong handOffCount = new AtomicLong(0);
@@ -127,9 +128,9 @@ public class SegmentGenerationMetrics
     numPersists.incrementAndGet();
   }
 
-  public void incrementPersistTimeMillis(long millis)
+  public void incrementPersistTimeNanos(long nanos)
   {
-    persistTimeMillis.addAndGet(millis);
+    persistTimeNanos.addAndGet(nanos);
   }
 
   public void incrementPersistBackPressureMillis(long millis)
@@ -186,9 +187,9 @@ public class SegmentGenerationMetrics
     }
   }
 
-  public void setMergeTime(long elapsedMergeTimeMillis)
+  public void setMergeTime(long elapsedMergeTimeNanos)
   {
-    mergeTimeMillis.set(elapsedMergeTimeMillis);
+    mergeTimeNanos.set(elapsedMergeTimeNanos);
   }
 
   public void setMergeCpuTime(long elapsedCpuTimeNanos)
@@ -229,7 +230,12 @@ public class SegmentGenerationMetrics
 
   public long persistTimeMillis()
   {
-    return persistTimeMillis.get();
+    return TimeUnit.NANOSECONDS.toMillis(persistTimeNanos.get());
+  }
+
+  public long persistTimeNanos()
+  {
+    return persistTimeNanos.get();
   }
 
   public long persistBackPressureMillis()
@@ -259,7 +265,12 @@ public class SegmentGenerationMetrics
 
   public long mergeTimeMillis()
   {
-    return mergeTimeMillis.get();
+    return TimeUnit.NANOSECONDS.toMillis(mergeTimeNanos.get());
+  }
+
+  public long mergeTimeNanos()
+  {
+    return mergeTimeNanos.get();
   }
 
   public long mergeCpuTime()
@@ -306,11 +317,11 @@ public class SegmentGenerationMetrics
     retVal.dedupCount.set(dedupCount.get());
     retVal.rowOutputCount.set(rowOutputCount.get());
     retVal.numPersists.set(numPersists.get());
-    retVal.persistTimeMillis.set(persistTimeMillis.get());
+    retVal.persistTimeNanos.set(persistTimeNanos.get());
     retVal.persistBackPressureMillis.set(persistBackPressureMillis.get());
     retVal.failedPersists.set(failedPersists.get());
     retVal.failedHandoffs.set(failedHandoffs.get());
-    retVal.mergeTimeMillis.set(mergeTimeMillis.get());
+    retVal.mergeTimeNanos.set(mergeTimeNanos.get());
     retVal.mergeCpuTime.set(mergeCpuTime.get());
     retVal.persistCpuTime.set(persistCpuTime.get());
     retVal.handOffCount.set(handOffCount.get());

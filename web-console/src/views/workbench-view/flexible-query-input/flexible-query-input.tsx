@@ -18,11 +18,14 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Compartment } from '@codemirror/state';
+import { closeCompletion } from '@codemirror/autocomplete';
+import { Compartment, Prec } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
+import { keymap } from '@codemirror/view';
 import React from 'react';
 
 import { CodeEditor } from '../../../components';
+import { useQueryContextParameters } from '../../../contexts/query-context-parameters-context';
 import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import { NATIVE_JSON_QUERY_COMPLETIONS } from '../../../druid-models';
 import { dsql } from '../../../editor-languages/dsql';
@@ -36,6 +39,20 @@ import { subQueryMarkers } from './sub-query-markers';
 import './flexible-query-input.scss';
 
 const V_PADDING = 10;
+
+// Mod+Enter and Mod+Shift+Enter are the global run / preview hotkeys (see RunPanel). Claim them in the
+// editor so CodeMirror does not also act on them (defaultKeymap binds Mod-Enter to insertBlankLine).
+// The event still bubbles up to the hotkey handler.
+const runKeyHandler = (view: EditorView) => {
+  closeCompletion(view);
+  return true;
+};
+const RUN_KEYS_EXTENSION = Prec.highest(
+  keymap.of([
+    { key: 'Mod-Enter', run: runKeyHandler },
+    { key: 'Mod-Shift-Enter', run: runKeyHandler },
+  ]),
+);
 
 export interface FlexibleQueryInputProps {
   /** Gives you the CodeMirror EditorView (to use with focusEditorAt for example) */
@@ -71,6 +88,7 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
   } = props;
 
   const availableSqlFunctions = useAvailableSqlFunctions();
+  const queryContextParameters = useQueryContextParameters();
   const editorViewRef = React.useRef<EditorView | undefined>(undefined);
   React.useImperativeHandle(ref, () => editorViewRef.current);
 
@@ -95,7 +113,10 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
     () => (subQueriesEnabled ? subQueryMarkers(handleRunSubQuery) : []),
     [subQueriesEnabled, handleRunSubQuery],
   );
-  const extensions = useConstant(() => subQueryCompartment.of(subQueryExtension));
+  const extensions = useConstant(() => [
+    RUN_KEYS_EXTENSION,
+    subQueryCompartment.of(subQueryExtension),
+  ]);
 
   React.useEffect(() => {
     editorViewRef.current?.dispatch({
@@ -108,8 +129,8 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
     () =>
       isJson
         ? hjson({ jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS })
-        : dsql({ columnMetadata, availableSqlFunctions }),
-    [isJson, columnMetadata, availableSqlFunctions],
+        : dsql({ columnMetadata, availableSqlFunctions, queryContextParameters }),
+    [isJson, columnMetadata, availableSqlFunctions, queryContextParameters],
   );
 
   return (

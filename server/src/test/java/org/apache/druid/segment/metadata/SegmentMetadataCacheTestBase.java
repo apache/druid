@@ -215,42 +215,27 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
                              .buildMMappedIndex();
 
     segment1 =
-        DataSegment.builder()
-                   .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("2000/P1Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(DATASOURCE1, Intervals.of("2000/P1Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
     segment2 =
-        DataSegment.builder()
-                   .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("2001/P1Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(DATASOURCE1, Intervals.of("2001/P1Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
     segment3 =
-        DataSegment.builder()
-                   .dataSource(DATASOURCE2)
-                   .interval(index2.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(DATASOURCE2, index2.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
     segment4 =
-        DataSegment.builder()
-                   .dataSource(SOME_DATASOURCE)
-                   .interval(Intervals.of("2023-01-01T00Z/P1D"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(SOME_DATASOURCE, Intervals.of("2023-01-01T00Z/P1D"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
     segment5 =
-        DataSegment.builder()
-                   .dataSource(SOME_DATASOURCE)
-                   .interval(Intervals.of("2023-01-02T00Z/P1D"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(SOME_DATASOURCE, Intervals.of("2023-01-02T00Z/P1D"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();

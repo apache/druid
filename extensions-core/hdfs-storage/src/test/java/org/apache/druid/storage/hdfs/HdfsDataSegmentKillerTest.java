@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -473,19 +474,16 @@ public class HdfsDataSegmentKillerTest
 
   private DataSegment getSegmentWithPath(String path)
   {
-    return new DataSegment(
-        "dataSource",
-        Intervals.of("2000/3000"),
-        "ver",
-        ImmutableMap.of(
-            "type", "hdfs",
-            "path", path
-        ),
-        ImmutableList.of("product"),
-        ImmutableList.of("visited_sum", "unique_hosts"),
-        NoneShardSpec.instance(),
-        9,
-        12334
-    );
+    return DataSegment.builder(SegmentId.of("dataSource", Intervals.of("2000/3000"), "ver", 0))
+                      .loadSpec(ImmutableMap.of(
+                              "type", "hdfs",
+                              "path", path
+                          ))
+                      .dimensions(ImmutableList.of("product"))
+                      .metrics(ImmutableList.of("visited_sum", "unique_hosts"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(12334)
+                      .build();
   }
 }

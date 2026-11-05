@@ -1,8 +1,48 @@
-# note: documentation can be found here https://cwiki.apache.org/confluence/display/INFRA/Git+-+.asf.yaml+features
+# note: documentation can be found here https://github.com/apache/infrastructure-asfyaml/blob/main/README.md
 
 github:
   description: 'Apache Druid: a high performance real-time analytics database.'
   homepage: https://druid.apache.org/
+
+  enabled_merge_buttons:
+    squash: true
+    merge: false
+    rebase: false
+
+  pull_requests:
+    del_branch_on_merge: true
+
+  rulesets:
+    - name: "Default Branch Protection"
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+          # release branches, such as 39.0.0
+          - "[0-9]*.[0-9]*.*"
+      bypass_teams:
+        - root
+    # Raw syntax, because GitHub refuses the secret druid-committers team as a bypass actor.
+    # actor_id 4 is the Write repository role, which on this repository only committers hold.
+    - name: "Require review"
+      target: branch
+      enforcement: active
+      conditions:
+        ref_name:
+          include:
+            - "~DEFAULT_BRANCH"
+          exclude: []
+      bypass_actors:
+        - actor_id: 4
+          actor_type: RepositoryRole
+          bypass_mode: always
+      rules:
+        - type: pull_request
+          parameters:
+            required_approving_review_count: 1
+            dismiss_stale_reviews_on_push: false
+            require_code_owner_review: false
+            require_last_push_approval: false
+            required_review_thread_resolution: false
 
   # Attempt to make the auto-generated github emails more easily readable in email clients.
   # Configuration adapted from https://github.com/apache/plc4x/blob/develop/.asf.yaml.

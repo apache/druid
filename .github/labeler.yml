@@ -93,6 +93,3 @@
   - changed-files:
       - any-glob-to-any-file:
           - '.github/**'
-
-'Backport':
-  - head-branch: ['^backport']

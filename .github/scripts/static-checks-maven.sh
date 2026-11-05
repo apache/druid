@@ -19,21 +19,11 @@ set -e
 set -x
 
 echo 'Running Maven install...'
-./mvnw -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
+./mvnw -B install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -Dcyclonedx.skip
 
 ./mvnw -B checkstyle:checkstyle --fail-at-end
 
-# Repo-wide RAT check. This is the only RAT pass in CI. It must run without -T:
-# apache-rat-plugin 0.17+ shares per-run state across modules, so parallel runs
-# can drop configured excludes or throw NPEs (RAT-553, fixed upstream by RAT-573).
-./mvnw -B apache-rat:check -Prat --fail-at-end \
-  -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-  -Drat.consoleOutput=true
-
-# The license dependency reports and check-licenses.py that used to run via
-# license_checks_script.sh are covered by the packaging-check job, which builds
-# the distribution with the apache-release profile. Not repeated here.
-# ./.github/scripts/license_checks_script.sh
+./mvnw -B apache-rat:check -Prat --fail-at-end -Drat.consoleOutput=true
 
 ./.github/scripts/analyze_dependencies_script.sh
 

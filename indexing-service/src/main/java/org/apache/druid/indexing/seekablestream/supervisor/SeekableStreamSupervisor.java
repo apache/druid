@@ -555,23 +555,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  // change taskCount without resubmitting.
+  /**
+   * Notice to scale up or down the number of tasks as dictated by the auto-scaler.
+   * Scaling takes effect only if there is no task currently pending completion
+   * and the respective scaling cooldown has elapsed. But these restrictions do
+   * not apply if task rollover (i.e. task restart after completion of taskDuration)
+   * is already in progress.
+   */
   private class DynamicAllocationTasksNotice implements Notice
   {
-    Callable<Integer> computeDesiredTaskCount;
-    ServiceEmitter emitter;
-    Runnable onSuccessfulScale;
+    final Callable<Integer> computeDesiredTaskCount;
+    final Runnable onSuccessfulScale;
+    final boolean isRolloverInProgress;
+
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
     DynamicAllocationTasksNotice(
         Callable<Integer> computeDesiredTaskCount,
         Runnable onSuccessfulScale,
-        ServiceEmitter emitter
+        boolean isRolloverInProgress
     )
     {
       this.computeDesiredTaskCount = computeDesiredTaskCount;
       this.onSuccessfulScale = onSuccessfulScale;
-      this.emitter = emitter;
+      this.isRolloverInProgress = isRolloverInProgress;
     }
 
     /**
@@ -587,39 +594,33 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           long nowTime = System.currentTimeMillis();
           if (spec.isSuspended()) {
             log.info(
-                "Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is suspended",
+                "Skipping DynamicAllocationTasksNotice execution because supervisor[%s] is suspended",
                 supervisorId
             );
             return;
           }
           if (SupervisorStateManager.BasicState.IDLE == getState()) {
             log.info(
-                "Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is idle",
+                "Skipping DynamicAllocationTasksNotice execution because supervisor[%s] is idle",
                 supervisorId
             );
             return;
           }
-          log.debug("PendingCompletionTaskGroups is [%s] for supervisor[%s] for dataSource[%s]", pendingCompletionTaskGroups,
-                    supervisorId,
-                    dataSource
+          log.debug(
+              "PendingCompletionTaskGroups is [%s] for supervisor[%s] for dataSource[%s]",
+              pendingCompletionTaskGroups, supervisorId, dataSource
           );
           final int desiredTaskCount = computeDesiredTaskCount.call();
           final int currentTaskCount = getCurrentTaskCount();
 
-          ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
-                                                               .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
-
           if (desiredTaskCount <= 0) {
             log.warn(
-                "Auto-scaler returned pathological taskCount[%d] for supervisor[%s] for dataSource[%s]; skipping scale.",
+                "Auto-scaler returned invalid taskCount[%d] for supervisor[%s], dataSource[%s]; skipping scale.",
                 desiredTaskCount,
                 supervisorId,
                 dataSource
             );
-            emitter.emit(event.setDimension(AUTOSCALER_SKIP_REASON_DIMENSION, "Auto-scaler failed to compute a task count")
-                             .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            emitRequiredTaskCountMetric(desiredTaskCount, "Auto-scaler failed to compute a task count");
             return;
           }
 
@@ -659,8 +660,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 taskCountMin,
                 taskCountMax
             );
-            emitter.emit(event.setDimension(AUTOSCALER_SKIP_REASON_DIMENSION, skipReason)
-                             .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            emitRequiredTaskCountMetric(desiredTaskCount, skipReason);
             return;
           }
 
@@ -669,18 +669,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // We want to avoid killing any old generation tasks preemptively, as that might cause the current generation tasks' offsets to become invalid.
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
             // There are expected to be pending tasks if this scaling is happening on task rollover
-            if (!list.isEmpty() && !isScalingTasksOnRollover.get()) {
+            if (!list.isEmpty() && !isRolloverInProgress) {
               log.info(
                   "Skipping DynamicAllocationTasksNotice execution for supervisor[%s] for datasource[%s] because following tasks are pending [%s]",
                   supervisorId,
                   dataSource,
                   list
               );
-              emitter.emit(event.setDimension(
-                                    AUTOSCALER_SKIP_REASON_DIMENSION,
-                                    "There are tasks pending completion"
-                                )
-                                .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+              emitRequiredTaskCountMetric(desiredTaskCount, "There are tasks pending completion");
               return;
             }
           }
@@ -702,7 +698,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             cooldownMillis = autoScalerConfig.getMinScaleDownDelay().getMillis();
           }
 
-          if (nowTime - dynamicTriggerLastScaleRunTime < cooldownMillis) {
+          // Ignore scaling cooldown on task rollover. Since tasks are being
+          // restarted anyway, we might as well consider changing the taskCount.
+          if (!isRolloverInProgress && (nowTime - dynamicTriggerLastScaleRunTime) < cooldownMillis) {
             log.info(
                 "DynamicAllocationTasksNotice submitted again in [%d]ms, [%s] cooldown is [%d]ms for supervisor[%s] for dataSource[%s], skipping it! scaler wants [%d] (clamped [%d]), current task count is [%d]",
                 nowTime - dynamicTriggerLastScaleRunTime,
@@ -715,16 +713,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 currentTaskCount
             );
 
-            emitter.emit(event.setDimension(
-                                  AUTOSCALER_SKIP_REASON_DIMENSION,
-                                  "Scale cooldown not elapsed yet"
-                              )
-                              .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            emitRequiredTaskCountMetric(desiredTaskCount, "Scale cooldown not elapsed yet");
             return;
           }
 
           // Emit the scaler's unclamped preferred count so operators see what it wants.
-          emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+          emitRequiredTaskCountMetric(desiredTaskCount, null);
 
           boolean allocationSuccess = changeTaskCount(clampedTaskCount);
           if (allocationSuccess) {
@@ -736,6 +730,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           log.warn(ex, "Error parsing DynamicAllocationTasksNotice");
         }
       }
+    }
+
+    private void emitRequiredTaskCountMetric(int desiredTaskCount, @Nullable String skipReason)
+    {
+      final ServiceMetricEvent.Builder event = ServiceMetricEvent
+          .builder()
+          .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+          .setDimension(DruidMetrics.DATASOURCE, dataSource)
+          .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
+      if (skipReason != null) {
+        event.setDimension(AUTOSCALER_SKIP_REASON_DIMENSION, skipReason);
+      }
+      event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount);
+      emitter.emit(event);
     }
 
     @Override
@@ -1158,7 +1166,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Wired by {@link SupervisorManager} after supervisor creation.
    */
   private volatile SupervisorTaskAutoScaler taskAutoScaler;
-  private final AtomicBoolean isScalingTasksOnRollover = new AtomicBoolean(false);
 
   // snapshots latest sequences from the stream to be verified in the next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
@@ -1688,21 +1695,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   public Runnable buildDynamicAllocationTask(
       Callable<Integer> scaleAction,
-      Runnable onSuccessfulScale,
-      ServiceEmitter emitter
+      Runnable onSuccessfulScale
   )
   {
-    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, false));
   }
 
   @VisibleForTesting
   void handleDynamicAllocationTasksNotice(
       Callable<Integer> scaleAction,
       Runnable onSuccessfulScale,
-      ServiceEmitter emitter
+      boolean isRolloverInProgress
   )
   {
-    new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter).handle();
+    new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, isRolloverInProgress).handle();
   }
 
   private Runnable buildRunTask()
@@ -4066,17 +4072,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             "Updating taskCount for supervisor[%s] from [%d] to [%d] during rollover.",
             supervisorId, currentTaskCount, rolloverTaskCount
         );
-        isScalingTasksOnRollover.set(true);
-        try {
-          new DynamicAllocationTasksNotice(
-              () -> rolloverTaskCount,
-              () -> {},
-              emitter
-          ).handle();
-        }
-        finally {
-          isScalingTasksOnRollover.set(false);
-        }
+        handleDynamicAllocationTasksNotice(
+            () -> rolloverTaskCount,
+            () -> {},
+            true
+        );
+      } else if (rolloverTaskCount != SupervisorTaskAutoScaler.CANNOT_COMPUTE) {
+        // Reset last scale time even if taskCount is not being changed.
+        // Otherwise, we might have a scaling event right after the task rollover.
+        dynamicTriggerLastScaleRunTime = System.currentTimeMillis();
       }
     }
   }

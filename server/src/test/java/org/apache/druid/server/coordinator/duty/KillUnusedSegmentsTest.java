@@ -56,6 +56,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -1106,17 +1107,14 @@ public class KillUnusedSegmentsTest
 
   private DataSegment createSegment(final String dataSource, final Interval interval, final String version)
   {
-    return new DataSegment(
-        dataSource,
-        interval,
-        version,
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        1,
-        0
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, interval, version, 0))
+                      .loadSpec(new HashMap<>())
+                      .dimensions(new ArrayList<>())
+                      .metrics(new ArrayList<>())
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(1)
+                      .size(0)
+                      .build();
   }
 
   private void initDuty()

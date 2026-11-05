@@ -75,7 +75,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <maven.resolver.version>2.0.24</maven.resolver.version>
         <apache.curator.version>5.9.0</apache.curator.version>
-        <apache.kafka.version>4.3.1</apache.kafka.version>
+        <apache.kafka.version>4.4.0</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-contrib/druid-ranger-security/pom.xml  -->
         <apache.ranger.version>2.9.0</apache.ranger.version>
@@ -85,7 +85,8 @@
         <avatica.version>1.29.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
-        <bytebuddy.version>1.18.14</bytebuddy.version>
+        <tsfile.version>2.5.0</tsfile.version>
+        <bytebuddy.version>1.18.15</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -99,7 +100,7 @@
         <errorprone.annotations.version>2.50.0</errorprone.annotations.version>
         <errorprone.version>2.50.0</errorprone.version>
         <fabric8.version>8.0.0</fabric8.version>
-        <fastutil.version>8.5.4</fastutil.version>
+        <fastutil.version>8.5.19</fastutil.version>
         <guava.version>33.7.2-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
@@ -121,22 +122,22 @@
         <jna.version>5.19.1</jna.version>
         <jna-platform.version>5.19.1</jna-platform.version>
         <hadoop.compile.version>3.5.0</hadoop.compile.version>
-        <graaljs.version>25.3.4.1</graaljs.version>
+        <graaljs.version>25.4.4.1.1</graaljs.version>
         <mockito.version>5.24.0</mockito.version>
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.55.6</aws.sdk.v2.version>
         <aws.msk.iam.auth.version>2.3.9</aws.msk.iam.auth.version>
-        <caffeine.version>3.3.0</caffeine.version>
+        <caffeine.version>3.3.1</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
-        <hibernate-validator.version>9.1.4.Final</hibernate-validator.version>
+        <hibernate-validator.version>9.1.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.14</httpclient.version>
         <okhttp.version>5.5.0</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.7</zookeeper.version>
-        <checkerframework.version>4.3.0</checkerframework.version>
+        <checkerframework.version>4.3.1</checkerframework.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
         <com.google.cloud.libraries-bom.version>26.90.0</com.google.cloud.libraries-bom.version>
         <jdk.strong.encapsulation.argLine>
@@ -270,6 +271,7 @@
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
         <module>extensions-contrib/druid-ranger-security</module>
+        <module>extensions-contrib/tsfile-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- more test stuff -->
@@ -279,9 +281,9 @@
 
     <repositories>
         <repository>
-            <id>maven.org</id>
+            <id>central</id>
             <name>Maven Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2/</url>
+            <url>https://repo.maven.apache.org/maven2</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
@@ -298,9 +300,9 @@
 
     <pluginRepositories>
         <pluginRepository>
-            <id>maven.org</id>
+            <id>central</id>
             <name>Maven Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2/</url>
+            <url>https://repo.maven.apache.org/maven2</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
@@ -594,6 +596,11 @@
                 <version>${zookeeper.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.tsfile</groupId>
+                <artifactId>tsfile</artifactId>
+                <version>${tsfile.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
                 <version>${apache.curator.version}</version>
@@ -726,12 +733,12 @@
             <dependency>
                 <groupId>org.tukaani</groupId>
                 <artifactId>xz</artifactId>
-                <version>1.9</version>
+                <version>1.12</version>
             </dependency>
             <dependency>
                 <groupId>com.github.luben</groupId>
                 <artifactId>zstd-jni</artifactId>
-                <version>1.5.7-11</version>
+                <version>1.5.7-17</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
@@ -1029,7 +1036,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.11</version>
+                <version>1.1.10.12</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -1114,11 +1121,6 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil</artifactId>
-                <version>${fastutil.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>it.unimi.dsi</groupId>
-                <artifactId>fastutil-core</artifactId>
                 <version>${fastutil.version}</version>
             </dependency>
             <dependency>
@@ -1498,7 +1500,7 @@
           <dependency>
             <groupId>org.immutables</groupId>
             <artifactId>value-annotations</artifactId>
-            <version>2.12.2</version>
+            <version>2.12.3</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -1877,14 +1879,8 @@
                                     <excludes>
                                        <!-- upgrading these later -->
                                        <exclude>org.apache.zookeeper:zookeeper</exclude>
-                                       <exclude>com.google.guava:guava</exclude>
                                        <exclude>com.google.inject.extensions:guice-assistedinject</exclude>
-                                       <exclude>com.fasterxml.jackson.module:jackson-module-guice</exclude>
                                        <exclude>com.google.inject:guice</exclude>
-                                       <exclude>com.google.http-client:google-http-client-jackson2</exclude>
-                                       <exclude>com.google.http-client:google-http-client</exclude>
-                                       <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
-                                       <exclude>io.confluent:kafka-schema-registry-client</exclude>
                                        <exclude>org.apache.kafka:kafka-clients</exclude>
                                     </excludes>
                                     <excludedScopes>
@@ -2355,6 +2351,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/*.tsfile</exclude>
                                 <exclude>**/*.pmd</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/*.pmdruleset.xml</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/docker/schema-registry/*</exclude>

@@ -154,16 +154,16 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
     final ClusteredValueGroupsBaseTableSchema summary = clusteredBaseTable.toMetadataSchema();
     final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(summary.getClusterGroups(), spec);
     final List<TableClusterGroupSpec> surviving = plan.survivingGroups();
-
-    if (surviving.isEmpty()) {
-      return EmptyCursorHolder.forSpec(spec);
-    }
-
-    final RowSignature clusteringColumns = summary.getClusteringColumns();
     // Capabilities come from the groups rather than the base index, since the base index's dimensions never see values
     // computed by the cluster spec's virtual columns. Snapshot them like the per-group selector factories do.
     final ColumnInspector allGroupsInspector =
         column -> ColumnCapabilitiesImpl.snapshot(clusteredBaseTable.getColumnCapabilities(column), COERCE_LOGIC);
+
+    if (surviving.isEmpty()) {
+      return EmptyCursorHolder.forSpec(spec, allGroupsInspector);
+    }
+
+    final RowSignature clusteringColumns = summary.getClusteringColumns();
     final List<Object[]> clusteringValuesByGroup = new ArrayList<>(surviving.size());
     final List<Supplier<CursorHolder>> holderSuppliers = new ArrayList<>(surviving.size());
     final Closer closer = Closer.create();

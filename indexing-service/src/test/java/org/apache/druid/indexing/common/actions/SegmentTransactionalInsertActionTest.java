@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -55,41 +56,32 @@ public class SegmentTransactionalInsertActionTest
   private static final String PARTY_YEAR = "1999";
   private static final String THE_DISTANT_FUTURE = "3000";
 
-  private static final DataSegment SEGMENT1 = new DataSegment(
-      DATA_SOURCE,
-      INTERVAL,
-      PARTY_YEAR,
-      ImmutableMap.of(),
-      ImmutableList.of(),
-      ImmutableList.of(),
-      new LinearShardSpec(0),
-      9,
-      1024
-  );
+  private static final DataSegment SEGMENT1 = DataSegment.builder(SegmentId.of(DATA_SOURCE, INTERVAL, PARTY_YEAR, 0))
+                                                         .loadSpec(ImmutableMap.of())
+                                                         .dimensions(ImmutableList.of())
+                                                         .metrics(ImmutableList.of())
+                                                         .shardSpec(new LinearShardSpec(0))
+                                                         .binaryVersion(9)
+                                                         .size(1024)
+                                                         .build();
 
-  private static final DataSegment SEGMENT2 = new DataSegment(
-      DATA_SOURCE,
-      INTERVAL,
-      PARTY_YEAR,
-      ImmutableMap.of(),
-      ImmutableList.of(),
-      ImmutableList.of(),
-      new LinearShardSpec(1),
-      9,
-      1024
-  );
+  private static final DataSegment SEGMENT2 = DataSegment.builder(SegmentId.of(DATA_SOURCE, INTERVAL, PARTY_YEAR, 1))
+                                                         .loadSpec(ImmutableMap.of())
+                                                         .dimensions(ImmutableList.of())
+                                                         .metrics(ImmutableList.of())
+                                                         .shardSpec(new LinearShardSpec(1))
+                                                         .binaryVersion(9)
+                                                         .size(1024)
+                                                         .build();
 
-  private static final DataSegment SEGMENT3 = new DataSegment(
-      DATA_SOURCE,
-      INTERVAL,
-      THE_DISTANT_FUTURE,
-      ImmutableMap.of(),
-      ImmutableList.of(),
-      ImmutableList.of(),
-      new LinearShardSpec(1),
-      9,
-      1024
-  );
+  private static final DataSegment SEGMENT3 = DataSegment.builder(SegmentId.of(DATA_SOURCE, INTERVAL, THE_DISTANT_FUTURE, 1))
+                                                         .loadSpec(ImmutableMap.of())
+                                                         .dimensions(ImmutableList.of())
+                                                         .metrics(ImmutableList.of())
+                                                         .shardSpec(new LinearShardSpec(1))
+                                                         .binaryVersion(9)
+                                                         .size(1024)
+                                                         .build();
 
   private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval, long timeoutMs)
       throws InterruptedException

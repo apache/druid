@@ -65,6 +65,7 @@ import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -93,28 +94,19 @@ public class CoordinatorClientImplTest
   private MockServiceClient serviceClient;
   private CoordinatorClient coordinatorClient;
 
-  private static final DataSegment SEGMENT1 = DataSegment.builder()
-                                                         .dataSource("xyz")
-                                                         .interval(Intervals.of("1000/2000"))
-                                                         .version("1")
+  private static final DataSegment SEGMENT1 = DataSegment.builder(SegmentId.of("xyz", Intervals.of("1000/2000"), "1", 0))
                                                          .loadSpec(ImmutableMap.of("type", "local", "loc", "foo"))
                                                          .shardSpec(new NumberedShardSpec(0, 1))
                                                          .size(1)
                                                          .build();
 
-  private static final DataSegment SEGMENT2 = DataSegment.builder()
-                                                         .dataSource("xyz")
-                                                         .interval(Intervals.of("2000/3000"))
-                                                         .version("1")
+  private static final DataSegment SEGMENT2 = DataSegment.builder(SegmentId.of("xyz", Intervals.of("2000/3000"), "1", 0))
                                                          .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
                                                          .shardSpec(new NumberedShardSpec(0, 1))
                                                          .size(1)
                                                          .build();
 
-  private static final DataSegment SEGMENT3 = DataSegment.builder()
-                                                         .dataSource("abc")
-                                                         .interval(Intervals.of("2000/3000"))
-                                                         .version("1")
+  private static final DataSegment SEGMENT3 = DataSegment.builder(SegmentId.of("abc", Intervals.of("2000/3000"), "1", 0))
                                                          .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
                                                          .shardSpec(new NumberedShardSpec(0, 1))
                                                          .size(1)
@@ -170,10 +162,7 @@ public class CoordinatorClientImplTest
   public void test_fetchUsedSegment() throws Exception
   {
     final DataSegment segment =
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(Intervals.of("2000/3000"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", Intervals.of("2000/3000"), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build();
@@ -198,10 +187,7 @@ public class CoordinatorClientImplTest
   public void test_fetchSegment() throws Exception
   {
     final DataSegment segment =
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(Intervals.of("2000/3000"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", Intervals.of("2000/3000"), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build();
@@ -227,10 +213,7 @@ public class CoordinatorClientImplTest
   {
     final List<Interval> intervals = Collections.singletonList(Intervals.of("2000/3000"));
     final DataSegment segment =
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(intervals.get(0))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", intervals.get(0), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build();
@@ -376,10 +359,7 @@ public class CoordinatorClientImplTest
         );
 
     final ImmutableSegmentLoadInfo immutableSegmentLoadInfo1 = new ImmutableSegmentLoadInfo(
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(intervals.get(0))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", intervals.get(0), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build(),
@@ -397,10 +377,7 @@ public class CoordinatorClientImplTest
     );
 
     final ImmutableSegmentLoadInfo immutableSegmentLoadInfo2 = new ImmutableSegmentLoadInfo(
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(intervals.get(1))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", intervals.get(1), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build(),

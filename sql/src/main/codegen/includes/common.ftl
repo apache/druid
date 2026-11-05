@@ -106,6 +106,36 @@ SqlTypeNameSpec DruidType() :
   }
 }
 
+// Parses the PostgreSQL-style infix cast operator (e.g. x::BIGINT).
+void InfixCast(List<Object> list, ExprContext exprContext, Span s) :
+{
+  final SqlNode dt;
+}
+{
+  <INFIX_CAST>
+  {
+    checkNonQueryExpression(exprContext);
+    list.add(new SqlParserUtil.ToTreeListItem(SqlLibraryOperators.INFIX_CAST, getPos()));
+  }
+  (
+    // Accept LONG as an alias for BIGINT, matching CAST(x AS LONG).
+    LOOKAHEAD(2)
+    <LONG>
+    {
+      dt = new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.BIGINT, getPos()), getPos());
+    }
+  |
+    dt = DataType()
+  |
+    // Accept interval types, matching CAST(x AS INTERVAL DAY).
+    LOOKAHEAD(2)
+    <INTERVAL> dt = IntervalQualifier()
+  )
+  {
+    list.add(dt);
+  }
+}
+
 // Parses the supported file formats for export.
 SqlIdentifier FileFormat() :
 {
