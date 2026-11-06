@@ -75,6 +75,12 @@ public class CalciteMSQTestsHelper
 {
   public static final class MSQTestModule implements DruidModule
   {
+    /**
+     * System property that sets the number of threads in the processing pool shared by all in-JVM workers. Defaults
+     * to 1. Each worker runs at most {@link MSQTestWorkerContext#THREAD_COUNT_PROPERTY} processors on it at once.
+     */
+    public static final String POOL_THREADS_PROPERTY = "druid.msq.test.processingPoolThreads";
+
     @Override
     public void configure(Binder binder)
     {
@@ -85,8 +91,13 @@ public class CalciteMSQTestsHelper
       {
       }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
 
+      final int poolThreads = Integer.getInteger(POOL_THREADS_PROPERTY, 1);
       binder.bind(QueryProcessingPool.class)
-            .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
+            .toInstance(new ForwardingQueryProcessingPool(
+                poolThreads == 1
+                ? Execs.singleThreaded("Test-runner-processing-pool")
+                : Execs.multiThreaded(poolThreads, "Test-runner-processing-pool-%d")
+            ));
 
       binder.bind(Bouncer.class).toInstance(new Bouncer(1));
     }
