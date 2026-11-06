@@ -47,7 +47,6 @@ import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientConfig;
 import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientFactory;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,7 +71,6 @@ import java.util.stream.IntStream;
 @Disabled
 public class DruidPeonClientIntegrationTest
 {
-  private StartupLoggingConfig startupLoggingConfig;
   private TaskConfig taskConfig;
   private DruidNode druidNode;
   private KubernetesClientApi k8sClient;
@@ -99,7 +97,6 @@ public class DruidPeonClientIntegrationTest
         true,
         false
     );
-    startupLoggingConfig = new StartupLoggingConfig();
     taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
@@ -117,7 +114,6 @@ public class DruidPeonClientIntegrationTest
         k8sClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         druidNode,
         jsonMapper,
         null

@@ -20,8 +20,8 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class StartupLoggingConfig
@@ -29,14 +29,24 @@ public class StartupLoggingConfig
   @JsonProperty
   private boolean logProperties = false;
 
+  /**
+   * @deprecated use {@code druid.server.hiddenProperties} instead.
+   */
+  @Deprecated(since = "40.0.0", forRemoval = true)
   @JsonProperty
-  private List<String> maskProperties = ImmutableList.of("Password", "password", "Secret", "secret");
+  @Nullable
+  private List<String> maskProperties;
 
   public boolean isLogProperties()
   {
     return logProperties;
   }
 
+  /**
+   * Returns the deprecated {@code druid.startup.logging.maskProperties}. Only read by
+   * {@link org.apache.druid.server.security.SensitiveProperties} for backward compatibility.
+   */
+  @Nullable
   public List<String> getMaskProperties()
   {
     return maskProperties;

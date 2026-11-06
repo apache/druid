@@ -63,7 +63,6 @@ import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.junit.jupiter.api.Assertions;
@@ -86,7 +85,6 @@ class K8sTaskAdapterTest
 {
   private KubernetesClient client;
 
-  private final StartupLoggingConfig startupLoggingConfig;
   private final TaskConfig taskConfig;
   private final DruidNode node;
   private final ObjectMapper jsonMapper;
@@ -110,7 +108,6 @@ class K8sTaskAdapterTest
         true,
         false
     );
-    startupLoggingConfig = new StartupLoggingConfig();
     taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
     taskLogs = new NoopTaskLogs();
   }
@@ -146,7 +143,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -197,7 +193,6 @@ class K8sTaskAdapterTest
         targetClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -237,7 +232,6 @@ class K8sTaskAdapterTest
         new TestKubernetesClient(client, "remote-task-namespace"),
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -264,7 +258,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -318,7 +311,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -371,7 +363,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         mockTestLogs
@@ -396,7 +387,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -418,7 +408,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -440,7 +429,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -547,7 +535,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -571,7 +558,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -589,7 +575,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -622,7 +607,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -672,7 +656,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
@@ -727,7 +710,6 @@ class K8sTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         node,
         jsonMapper,
         taskLogs
