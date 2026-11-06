@@ -795,11 +795,13 @@
     <!-- CVE-2026-33117: Vulnerability in Azure SDK for Java's Key Vault Keys local cryptographic verification path.
          The CVE fires against azure-core, azure-core-http-netty, azure-identity, and azure-json due to broad CPE
          matching, but none of these jars contain the vulnerable Key Vault code path. Druid uses these artifacts
-         for blob storage auth only and does not use the Key Vault cryptography client. -->
+         for blob storage auth only and does not use the Key Vault cryptography client.
+         NVD matches all azure_sdk_for_java versions before 4.10.6, so this entry matches all versions
+         of these four artifacts. Druid does not depend on azure-security-keyvault-keys. -->
     <notes><![CDATA[
-      file name: azure-core-1.58.1.jar azure-core-http-netty-1.16.5.jar azure-identity-1.18.4.jar azure-json-1.5.1.jar
+      file name: azure-core, azure-core-http-netty, azure-identity, azure-json
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.azure/azure-(core@1\.58\.1|core-http-netty@1\.16\.5|identity@1\.18\.4|json@1\.5\.1)$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.azure/azure-(core|core-http-netty|identity|json)@.*$</packageUrl>
     <cve>CVE-2026-33117</cve>
   </suppress>
 
@@ -982,9 +984,9 @@
          standard OIDC discovery and extracts a single configured claim.
          Fixed in pac4j 6.5.6+, but 5.x -> 6.x is a major bump with likely breaking API changes. -->
     <notes><![CDATA[
-      file name: pac4j-core-5.7.10.jar / pac4j-oidc-5.7.10.jar
+      file name: pac4j-core-5.8.0.jar / pac4j-oidc-5.8.0.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-(core|oidc)@5\.7\.10$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-(core|oidc)@5\.8\.0$</packageUrl>
     <cve>CVE-2026-82463</cve>
     <cve>CVE-2026-82461</cve>
   </suppress>
