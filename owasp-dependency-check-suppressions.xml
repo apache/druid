@@ -827,6 +827,9 @@
          base types, enabling arbitrary class instantiation via polymorphic deserialization.
          CVE-2026-91776: unbounded type-id cache growth with @JsonTypeInfo(use = NAME, defaultImpl = ...).
          CVE-2026-91777: quadratic forward-reference resolution with @JsonIdentityInfo.
+         CVE-2026-110879: incomplete fix for CVE-2026-54512. It requires default typing or
+         @JsonTypeInfo(use = Id.CLASS). Fixed in 2.18.12 and 2.22.4. No class in hadoop-client-api 3.5.0
+         or in the Parquet 1.18.1 jars enables default typing or uses @JsonTypeInfo.
          Neither Hadoop's client classes nor Parquet's classes reference these annotations.
          These CVEs affect jackson-databind shaded inside hadoop/parquet jars,
          not Druid's own jackson-databind (2.22.x).
@@ -842,6 +845,7 @@
     <cve>CVE-2026-83557</cve>
     <cve>CVE-2026-91776</cve>
     <cve>CVE-2026-91777</cve>
+    <cve>CVE-2026-110879</cve>
   </suppress>
 
   <suppress>
@@ -868,10 +872,7 @@
          Hadoop's client classes in hadoop-client-api reference none of these annotations and read
          JSON from cluster services (NameNode, KMS) as untyped maps. Druid's own jackson-databind
          (2.22.4) is not affected. parquet-jackson's jackson-databind (2.22.2) already has these fixes.
-         CVE-2026-110879: polymorphic type validation bypass through generic type arguments (fixed in
-         2.18.12). It requires default typing or @JsonTypeInfo(use = Id.CLASS). No class in
-         hadoop-client-api 3.5.0 enables default typing or uses @JsonTypeInfo.
-         Remove when Hadoop ships jackson-databind 2.18.12+. -->
+         Remove when Hadoop ships jackson-databind 2.18.10+. -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
     ]]></notes>
@@ -882,7 +883,6 @@
     <cve>CVE-2026-59888</cve>
     <cve>CVE-2026-59889</cve>
     <cve>CVE-2026-77310</cve>
-    <cve>CVE-2026-110879</cve>
     <vulnerabilityName>GHSA-mhm7-754m-9p8w</vulnerabilityName>
   </suppress>
 
