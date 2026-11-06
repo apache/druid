@@ -222,12 +222,15 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       ParseExceptionHandler parseExceptionHandler
   ) throws IOException
   {
+    // Same as the streaming path: pass dataSchema's dimension exclusions so a transform spec that
+    // generates its own new columns (e.g. ScanTransformSpec) doesn't re-discover one as a dimension.
     final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
         inputSource.reader(
             InputRowSchemas.fromDataSchema(dataSchema),
             inputFormat,
             tmpDir
-        )
+        ),
+        dataSchema.getDimensionsSpec().getDimensionExclusions()
     );
     return new FilteringCloseableInputRowIterator(
         inputSourceReader.read(ingestionMeters),
