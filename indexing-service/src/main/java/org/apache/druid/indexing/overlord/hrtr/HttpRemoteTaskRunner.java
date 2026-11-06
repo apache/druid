@@ -1188,8 +1188,24 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         try {
           // this will send HTTP request to worker for assigning task
           if (!runTaskOnWorker(taskItem, immutableWorker.getWorker().getHost())) {
-            if (taskItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
-              taskItem.revertStateFromPendingWorkerAssignToPending();
+            boolean shutdownRequested = false;
+            String shutdownReason = null;
+            synchronized (statusLock) {
+              if (taskItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
+                if (taskItem.isShutdownRequested()) {
+                  shutdownRequested = true;
+                  shutdownReason = taskItem.getShutdownReason();
+                } else {
+                  taskItem.revertStateFromPendingWorkerAssignToPending();
+                }
+              }
+            }
+            if (shutdownRequested) {
+              taskComplete(
+                  taskItem,
+                  null,
+                  TaskStatus.failure(taskId, shutdownReason)
+              );
             }
           }
         }
@@ -1261,9 +1277,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           pendingTaskIds.remove(taskId);
           pendingWorkItem = taskRunnerWorkItem;
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
-          // The thread assigning this task owns the work item. Once the worker runs the task, or the item goes back
-          // to PENDING, a later shutdown request handles it.
+          // The thread assigning this task owns the work item. If the assignment fails, it completes
+          // the task as failed with the shutdown reason. If the assignment succeeds, a later shutdown request kills it.
           pendingTaskIds.remove(taskId);
+          taskRunnerWorkItem.setShutdownReason(reason);
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
           tasks.remove(taskId);
         }
@@ -1809,6 +1826,22 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
     private Task task;
     private State state;
+    private volatile String shutdownReason;
+
+    public void setShutdownReason(String shutdownReason)
+    {
+      this.shutdownReason = shutdownReason;
+    }
+
+    public String getShutdownReason()
+    {
+      return shutdownReason;
+    }
+
+    public boolean isShutdownRequested()
+    {
+      return shutdownReason != null;
+    }
 
     HttpRemoteTaskRunnerWorkItem(
         String taskId,

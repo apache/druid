@@ -1949,6 +1949,79 @@ public class HttpRemoteTaskRunnerTest
 
   @Timeout(60)
   @Test
+  public void testShutdownTaskBeingAssignedCompletesWhenAssignmentFails() throws Exception
+  {
+    final TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery)
+            .times(2);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    final Task task = NoopTask.create();
+    final CountDownLatch assignmentStarted = new CountDownLatch(1);
+    final CountDownLatch assignmentAllowed = new CountDownLatch(1);
+    final Map<Task, List<TaskAnnouncement>> toBeAssignedTasks = new ForwardingMap<Task, List<TaskAnnouncement>>()
+    {
+      @Override
+      protected Map<Task, List<TaskAnnouncement>> delegate()
+      {
+        return ImmutableMap.of();
+      }
+
+      @Override
+      public boolean containsKey(Object key)
+      {
+        assignmentStarted.countDown();
+        try {
+          assignmentAllowed.await();
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        return false;
+      }
+    };
+
+    final HttpRemoteTaskRunner taskRunner = newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        new NoopProvisioningStrategy<>(),
+        EasyMock.createNiceMock(HttpClient.class),
+        toBeAssignedTasks
+    );
+    taskRunner.start();
+    try {
+      druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(
+          new DiscoveryDruidNode(
+              new DruidNode("service", "host1", false, 8080, null, true, false),
+              NodeRole.MIDDLE_MANAGER,
+              ImmutableMap.of(
+                  WorkerNodeService.DISCOVERY_SERVICE_KEY,
+                  new WorkerNodeService("ip1", 1, "0", WorkerConfig.DEFAULT_CATEGORY)
+              )
+          )
+      ));
+
+      final Future<TaskStatus> future = taskRunner.run(task);
+      assignmentStarted.await();
+      taskRunner.shutdown(task.getId(), "Killed while being assigned");
+
+      // Now allow assignment to continue and fail
+      assignmentAllowed.countDown();
+
+      final TaskStatus status = future.get(10, TimeUnit.SECONDS);
+      Assertions.assertTrue(status.isFailure());
+      Assertions.assertEquals("Killed while being assigned", status.getErrorMsg());
+      Assertions.assertFalse(taskRunner.getPendingTasks().stream().anyMatch(t -> t.getTaskId().equals(task.getId())));
+    }
+    finally {
+      assignmentAllowed.countDown();
+      taskRunner.stop();
+    }
+  }
+
+  @Timeout(60)
+  @Test
   public void testSyncMonitoring_finiteIteration()
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
