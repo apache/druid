@@ -633,6 +633,35 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSumWithNonNumericStringParameter()
+  {
+    DruidException exception = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql("SELECT SUM(?) FROM druid.foo")
+            .parameters(ImmutableList.of(new SqlParameter(SqlType.VARCHAR, "abc")))
+            .run()
+    );
+    assertDruidException(
+        exception,
+        DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+            "Function [SUM] argument [1] must be numeric, got string literal ['abc']."
+            + " If you meant to refer to a column, use double quotes."
+        )
+    );
+  }
+
+  @Test
+  public void testSumWithNumericStringParameter()
+  {
+    testBuilder()
+        .sql("SELECT SUM(?) FROM druid.foo")
+        .parameters(ImmutableList.of(new SqlParameter(SqlType.VARCHAR, "1.5")))
+        .expectedResults(ImmutableList.of(new Object[]{9.0}))
+        .run();
+  }
+
+  @Test
   public void testWrongTypeParameter()
   {
     testQuery(
