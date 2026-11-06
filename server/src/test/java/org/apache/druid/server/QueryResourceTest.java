@@ -286,6 +286,8 @@ public class QueryResourceTest
         NoopPolicyEnforcer.instance(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new DefaultQueryConfig(Map.of()),
+        Map.of(),
+        new ServerConfig(),
         null
     );
   }
@@ -384,6 +386,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             overrideConfig,
+            Map.of(),
+            new ServerConfig(),
             null
         )
     );
@@ -453,6 +457,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             queryConfig,
+            Map.of(),
+            new ServerConfig(),
             null
         )
     );
@@ -554,6 +560,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             null
         )
     );
@@ -632,6 +640,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             null
         )
     );
@@ -722,6 +732,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             null
         )
     );
@@ -780,7 +792,20 @@ public class QueryResourceTest
 
     queryResource = createQueryResource(
 
-        new QueryLifecycleFactory(null, null, null, null, null, null, NoopPolicyEnforcer.instance(), null, overrideConfig, null)
+        new QueryLifecycleFactory(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            NoopPolicyEnforcer.instance(),
+            null,
+            overrideConfig,
+            Map.of(),
+            new ServerConfig(),
+            null
+        )
         {
           @Override
           public QueryLifecycle factorize()
@@ -845,6 +870,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             overrideConfig,
+            Map.of(),
+            new ServerConfig(),
             null
         )
     );
@@ -1132,6 +1159,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             authMapper,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             null
         ),
         authMapper,
@@ -1207,6 +1236,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             null
         ),
         null,
@@ -1306,6 +1337,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             authMapper,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             null
         ),
         authMapper,
@@ -1414,6 +1447,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             authMapper,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             null
         ),
         authMapper,
@@ -1797,6 +1832,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             null
         ),
         null,
@@ -2024,6 +2061,8 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
+            new ServerConfig(),
             brokerViewOfBrokerConfig
         ),
         null,

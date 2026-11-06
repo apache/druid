@@ -70,7 +70,8 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 
   /**
    * With {@code druid.auth.authorizeSystemTablesDirectly}, a native {@code sys.server_properties} query needs both
-   * SYSTEM_TABLE READ on the table and STATE READ, which the table's row authorizer requires, on every route.
+   * SYSTEM_TABLE READ on the table and STATE READ, which the table's row authorizer requires, on every route and
+   * on the Broker, the Router, the Coordinator and the Overlord.
    */
   @Test
   public void test_nativeSystemTableQuery_requiresSystemTableAndStateRead()

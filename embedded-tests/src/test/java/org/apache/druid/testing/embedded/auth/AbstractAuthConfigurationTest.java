@@ -648,8 +648,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   /**
-   * Native {@code systemTable} queries sent to {@code /druid/v2/} authorize the caller on the Broker and the Router,
-   * whatever the value of {@code X-Druid-Native-Query-Route}.
+   * Native {@code systemTable} queries sent to {@code /druid/v2/} authorize the caller on the Broker, the Router, the
+   * Coordinator and the Overlord, whatever the value of {@code X-Druid-Native-Query-Route}.
    */
   @Test
   public void test_nativeSystemTableQuery_authorizedForAllRoutes()
@@ -664,9 +664,10 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   /**
-   * Sends a native {@code sys.server_properties} Scan to {@code /druid/v2/} on the Broker and the Router, with
-   * {@code X-Druid-Native-Query-Route} absent (Broker fan-out, or Router forwarding to the Broker), {@code local} (run
-   * on the contacted node only) and a non-matching value (treated as absent), and checks every response status.
+   * Sends a native {@code sys.server_properties} Scan to {@code /druid/v2/} on the Broker, the Router, the Coordinator
+   * and the Overlord, with {@code X-Druid-Native-Query-Route} absent (Broker fan-out, or Router forwarding to the
+   * Broker), {@code local} (run on the contacted node only) and a non-matching value (treated as absent), and checks
+   * every response status. The Coordinator and the Overlord run the query on the contacted node whatever the header.
    */
   protected void assertNativeSystemTableQueryStatus(final HttpClient client, final HttpResponseStatus expectedStatus)
   {
@@ -682,7 +683,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         Map.of(QueryResource.HEADER_NATIVE_QUERY_ROUTE, "LOCAL")
     );
 
-    for (final EmbeddedDruidServer<?> server : List.of(broker, router)) {
+    for (final EmbeddedDruidServer<?> server : List.of(broker, router, coordinator, overlord)) {
       for (final Map<String, String> headers : routes) {
         final StatusResponseHolder response = HttpUtil.makeRequest(
             client,

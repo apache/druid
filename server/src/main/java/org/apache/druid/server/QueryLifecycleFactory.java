@@ -84,35 +84,6 @@ public class QueryLifecycleFactory
     this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
   }
 
-  public QueryLifecycleFactory(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final QuerySegmentWalker texasRanger,
-      final GenericQueryMetricsFactory queryMetricsFactory,
-      final ServiceEmitter emitter,
-      final RequestLogger requestLogger,
-      final AuthConfig authConfig,
-      final PolicyEnforcer policyEnforcer,
-      final AuthorizerMapper authorizerMapper,
-      final QueryConfigProvider queryConfigProvider,
-      @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
-  )
-  {
-    this(
-        conglomerate,
-        texasRanger,
-        queryMetricsFactory,
-        emitter,
-        requestLogger,
-        authConfig,
-        policyEnforcer,
-        authorizerMapper,
-        queryConfigProvider,
-        Map.of(),
-        new ServerConfig(),
-        brokerViewOfBrokerConfig
-    );
-  }
-
   public QueryLifecycle factorize()
   {
     // Read once per query so the whole lifecycle sees one config, even if it is swapped mid-query.
