@@ -130,6 +130,7 @@ There is only one possible resource name for the "STATE" config resource type, "
 |`/druid/indexer/v1/isLeader`|overlord|
 |`/druid/indexer/v1/action`|overlord|
 |`/druid/indexer/v1/workers`|overlord|
+|`/druid/indexer/v1/worker/{host}/handoff`|overlord|
 |`/druid/indexer/v1/scaling`|overlord|
 |`/druid/worker/v1/enabled`|middleManager|
 |`/druid/worker/v1/tasks`|middleManager|
