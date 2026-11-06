@@ -23,9 +23,11 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.initialization.ServerConfig;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
@@ -41,17 +43,20 @@ public class QueryResourceQueryResultPusherFactory
   protected final ObjectMapper jsonMapper;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
+  private final ServerConfig serverConfig;
 
   @Inject
   public QueryResourceQueryResultPusherFactory(
       @Json ObjectMapper jsonMapper,
       ResponseContextConfig responseContextConfig,
-      @Self DruidNode selfNode
+      @Self DruidNode selfNode,
+      ServerConfig serverConfig
   )
   {
     this.jsonMapper = jsonMapper;
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
+    this.serverConfig = serverConfig;
   }
 
   /**
@@ -71,7 +76,8 @@ public class QueryResourceQueryResultPusherFactory
         counter,
         req,
         queryLifecycle,
-        io
+        io,
+        serverConfig.getErrorResponseTransformStrategy()
     );
   }
 
@@ -94,7 +100,8 @@ public class QueryResourceQueryResultPusherFactory
         final QueryResource.QueryMetricCounter counter,
         final HttpServletRequest req,
         final QueryLifecycle queryLifecycle,
-        final ResourceIOReaderWriterFactory.ResourceIOReaderWriter io
+        final ResourceIOReaderWriterFactory.ResourceIOReaderWriter io,
+        final ErrorResponseTransformStrategy errorResponseTransformStrategy
     )
     {
       super(
@@ -106,7 +113,8 @@ public class QueryResourceQueryResultPusherFactory
           queryLifecycle.getQueryId(),
           MediaType.valueOf(io.getResponseWriter().getResponseType()),
           ImmutableMap.of(),
-          queryLifecycle.getQuery().getContext()
+          queryLifecycle.getQuery().getContext(),
+          errorResponseTransformStrategy
       );
       this.req = req;
       this.queryLifecycle = queryLifecycle;

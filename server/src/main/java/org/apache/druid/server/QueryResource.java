@@ -173,7 +173,10 @@ public class QueryResource implements QueryCountStatsProvider
         query = readQuery(req, in, io);
       }
       catch (QueryException e) {
-        return io.getResponseWriter().buildNonOkResponse(e.getFailType().getExpectedStatus(), e);
+        return io.getResponseWriter().buildNonOkResponse(
+            e.getFailType().getExpectedStatus(),
+            serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e)
+        );
       }
 
       final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
