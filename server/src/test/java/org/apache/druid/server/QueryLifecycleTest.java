@@ -82,6 +82,7 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -224,6 +225,51 @@ public class QueryLifecycleTest
       lifecycle.runSimple(query, authenticationResult, AuthorizationResult.DENY);
     });
     Assertions.assertTrue(exception.getMessage().contains("Unexpected state [UNAUTHORIZED], expecting [AUTHORIZED]"));
+  }
+
+  @Test
+  public void testIsUserError()
+  {
+    replayAll();
+
+    final EnumSet<DruidException.Category> userErrorCategories = EnumSet.of(
+        DruidException.Category.INVALID_INPUT,
+        DruidException.Category.NOT_FOUND,
+        DruidException.Category.UNSUPPORTED
+    );
+    for (DruidException.Category category : DruidException.Category.values()) {
+      Assertions.assertEquals(
+          userErrorCategories.contains(category),
+          QueryLifecycle.isUserError(
+              DruidException.forPersona(DruidException.Persona.USER).ofCategory(category).build("Some error")
+          ),
+          category.name()
+      );
+    }
+
+    // Segment reference acquisition timeouts in ServerManager target the USER persona, but may need operator attention
+    Assertions.assertFalse(
+        QueryLifecycle.isUserError(
+            DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.TIMEOUT)
+                          .build("Timed out acquiring segment references")
+        )
+    );
+    Assertions.assertFalse(
+        QueryLifecycle.isUserError(
+            DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Something broke")
+        )
+    );
+    Assertions.assertFalse(
+        QueryLifecycle.isUserError(
+            DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build("Not allowed")
+        )
+    );
+    Assertions.assertFalse(QueryLifecycle.isUserError(new ISE("Not a DruidException")));
   }
 
   @Test
