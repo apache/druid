@@ -67,8 +67,6 @@ For more information, see [Catalog](../development/extensions-core/catalog.md).
 
 [#19830](https://github.com/apache/druid/pull/19830) [#20377](https://github.com/apache/druid/pull/20377) [#20452](https://github.com/apache/druid/pull/20452) [#19770](https://github.com/apache/druid/pull/19770) [#19711](https://github.com/apache/druid/pull/19711)
 
-### Pre-ingestion header filtering for Kafka
-
 ### Kafka header-based filtering
 
 Kafka supervisors can now filter records by their headers. This reduces ingestion CPU and memory use when you only need some of a topic's records. 
@@ -111,10 +109,6 @@ Leader-status endpoints are excluded from the cap so load balancers/monitors sta
 ## Functional area and related changes
 
 This section contains detailed release notes separated by areas.
-
-### Web console
-
-#### Other web console improvements
 
 ### Ingestion
 
@@ -310,8 +304,6 @@ Apache Iceberg ingestion now supports an opt-in vectorized reader backed by `ice
 Added the `druid-opa-authorizer` contributor extension, which enables authorization through Open Policy Agent (OPA). You can write Rego policies to control access to Druid resources based on user identity, action, and resource type. The extension supports both basic authentication and LDAP authentication workflows.
 
 [#19670](https://github.com/apache/druid/pull/19670)
-
-### Documentation improvements
 
 ## Upgrade notes and incompatible changes
 
