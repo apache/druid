@@ -398,12 +398,15 @@
     <!-- CVE-2022-3171: False positive. This CVE affects Google's protobuf-java (com.google.protobuf),
          but the scanner matches it against dev.cel:protobuf via the broad protobuf CPE.
          dev.cel:protobuf is part of the Common Expression Language library and is unrelated
-         to Google's protobuf-java parsing code that contains the vulnerability. -->
+         to Google's protobuf-java parsing code that contains the vulnerability.
+         CVE-2021-22569: False positive for the same reason. This CVE affects the parser of
+         com.google.protobuf:protobuf-java before 3.16.1, not dev.cel:protobuf. -->
     <notes><![CDATA[
       file name: protobuf-0.13.0.jar
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/dev\.cel/protobuf@.*$</packageUrl>
     <cve>CVE-2022-3171</cve>
+    <cve>CVE-2021-22569</cve>
   </suppress>
 
    <suppress>
@@ -970,20 +973,6 @@
     <cve>CVE-2026-71290</cve>
     <cve>CVE-2026-54399</cve>
     <cve>CVE-2026-54428</cve>
-  </suppress>
-
-  <suppress>
-    <!-- CVE-2026-90559/93452: OOB read/write in Snappy.uncompress/compress(ByteBuffer, ByteBuffer).
-         CVE-2026-108106: unbounded memory allocation during decompression (fixed in 1.1.10.9).
-         snappy-java is a transitive dependency (via Kafka, Parquet, etc.); Druid's own snappy
-         compression/decompression uses Apache Commons Compress, not the xerial ByteBuffer APIs. -->
-    <notes><![CDATA[
-      file name: snappy-java-1.1.10.8.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.xerial\.snappy/snappy-java@1\.1\.10\.8$</packageUrl>
-    <cve>CVE-2026-90559</cve>
-    <cve>CVE-2026-93452</cve>
-    <cve>CVE-2026-108106</cve>
   </suppress>
 
   <suppress>

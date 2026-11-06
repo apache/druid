@@ -136,7 +136,7 @@
         <httpclient.version>4.5.14</httpclient.version>
         <okhttp.version>5.5.0</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
-        <zookeeper.version>3.8.7</zookeeper.version>
+        <zookeeper.version>3.8.8</zookeeper.version>
         <checkerframework.version>4.3.1</checkerframework.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
         <com.google.cloud.libraries-bom.version>26.90.0</com.google.cloud.libraries-bom.version>
@@ -424,7 +424,7 @@
             <dependency>
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
-                <version>2.6.0</version>
+                <version>2.6.1</version>
             </dependency>
             <!-- azure-core-http-netty 1.16.5 requires Reactor Core 3.7.19. -->
             <dependency>
@@ -1172,12 +1172,12 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>9.11</version>
+                <version>9.11.1</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>9.11</version>
+                <version>9.11.1</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
