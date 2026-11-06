@@ -737,6 +737,7 @@ TINYINT
 VARCHAR
 avg_num_rows
 avg_size
+binary_version
 created_time
 current_size
 default_description
