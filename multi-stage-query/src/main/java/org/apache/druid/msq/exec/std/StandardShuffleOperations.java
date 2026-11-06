@@ -229,6 +229,7 @@ public class StandardShuffleOperations
               executionContext.frameContext().frameWriterSpec().getRowBasedFrameType(),
               memoryParameters.getSuperSorterConcurrentProcessors(),
               memoryParameters.getSuperSorterMaxChannelsPerMerger(),
+              memoryParameters.getFrameSize(),
               stageDefinition.getShuffleSpec().limitHint(),
               executionContext.cancellationId(),
               executionContext.counters().sortProgress(),
@@ -404,6 +405,7 @@ public class StandardShuffleOperations
                       // have many frames buffered.
                       memoryParameters.getSuperSorterConcurrentProcessors(),
                       memoryParameters.getSuperSorterMaxChannelsPerMerger(),
+                      memoryParameters.getFrameSize(),
                       ShuffleSpec.UNLIMITED,
                       executionContext.cancellationId(),
 
