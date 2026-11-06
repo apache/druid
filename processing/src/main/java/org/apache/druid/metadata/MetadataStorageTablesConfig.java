@@ -79,6 +79,49 @@ public class MetadataStorageTablesConfig
   @JsonProperty("indexingStates")
   private final String indexingStatesTable;
 
+  @JsonProperty("shareReceipts")
+  private final String shareReceiptsTable;
+
+  @JsonProperty("shareInbox")
+  private final String shareInboxTable;
+
+  public MetadataStorageTablesConfig(
+      String base,
+      String dataSourceTable,
+      String pendingSegmentsTable,
+      String segmentsTable,
+      String rulesTable,
+      String configTable,
+      String tasksTable,
+      String taskLockTable,
+      String auditTable,
+      String supervisorTable,
+      String upgradeSegmentsTable,
+      String segmentSchemasTable,
+      Boolean useShortIndexNames,
+      String indexingStatesTable
+  )
+  {
+    this(
+        base,
+        dataSourceTable,
+        pendingSegmentsTable,
+        segmentsTable,
+        rulesTable,
+        configTable,
+        tasksTable,
+        taskLockTable,
+        auditTable,
+        supervisorTable,
+        upgradeSegmentsTable,
+        segmentSchemasTable,
+        useShortIndexNames,
+        indexingStatesTable,
+        null,
+        null
+    );
+  }
+
   @JsonCreator
   public MetadataStorageTablesConfig(
       @JsonProperty("base") String base,
@@ -94,7 +137,9 @@ public class MetadataStorageTablesConfig
       @JsonProperty("upgradeSegments") String upgradeSegmentsTable,
       @JsonProperty("segmentSchemas") String segmentSchemasTable,
       @JsonProperty("useShortIndexNames") Boolean useShortIndexNames,
-      @JsonProperty("indexingStates") String indexingStatesTable
+      @JsonProperty("indexingStates") String indexingStatesTable,
+      @JsonProperty("shareReceipts") String shareReceiptsTable,
+      @JsonProperty("shareInbox") String shareInboxTable
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
@@ -112,6 +157,8 @@ public class MetadataStorageTablesConfig
     this.segmentSchemasTable = makeTableName(segmentSchemasTable, "segmentSchemas");
     this.useShortIndexNames = Configs.valueOrDefault(useShortIndexNames, false);
     this.indexingStatesTable = makeTableName(indexingStatesTable, "indexingStates");
+    this.shareReceiptsTable = makeTableName(shareReceiptsTable, "shareReceipts");
+    this.shareInboxTable = makeTableName(shareInboxTable, "shareInbox");
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)
@@ -189,6 +236,16 @@ public class MetadataStorageTablesConfig
   public String getIndexingStatesTable()
   {
     return indexingStatesTable;
+  }
+
+  public String getShareReceiptsTable()
+  {
+    return shareReceiptsTable;
+  }
+
+  public String getShareInboxTable()
+  {
+    return shareInboxTable;
   }
 
   /**
