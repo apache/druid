@@ -317,7 +317,7 @@ public class ServerManagerTest
         )
     );
 
-    factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
+    Assertions.assertTrue(factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS));
 
     Assertions.assertEquals(1, factory.getReferenceProviders().size());
 
@@ -356,7 +356,7 @@ public class ServerManagerTest
         )
     );
 
-    factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
+    Assertions.assertTrue(factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS));
 
     Assertions.assertEquals(1, factory.getReferenceProviders().size());
 
@@ -399,7 +399,7 @@ public class ServerManagerTest
         )
     );
 
-    factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
+    Assertions.assertTrue(factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS));
 
     Assertions.assertEquals(1, factory.getReferenceProviders().size());
 
@@ -666,7 +666,7 @@ public class ServerManagerTest
   private void waitForTestVerificationAndCleanup(Future future)
   {
     try {
-      factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
+      Assertions.assertTrue(factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS));
       factory.waitLatch.countDown();
       future.get();
       factory.clearSegments();
