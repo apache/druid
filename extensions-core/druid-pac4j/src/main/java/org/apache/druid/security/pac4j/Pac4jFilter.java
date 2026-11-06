@@ -38,6 +38,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Pac4jFilter implements Filter
 {
@@ -83,24 +84,27 @@ public class Pac4jFilter implements Filter
     HttpServletRequest request = (HttpServletRequest) servletRequest;
     HttpServletResponse response = (HttpServletResponse) servletResponse;
     JEEContext context = new JEEContext(request, response);
+    String requestUri = request.getRequestURI();
+    // Set once pac4j hands the request on, so exceptions from the rest of the chain are not reported as OIDC failures
+    AtomicBoolean passedToChain = new AtomicBoolean(false);
 
-    if (request.getRequestURI().equals(callbackPath)) {
-      DefaultCallbackLogic callbackLogic = new DefaultCallbackLogic();
-      String originalUrl = (String) request.getSession().getAttribute("pac4j.originalUrl");
-      String redirectUrl = originalUrl != null ? originalUrl : "/";
+    try {
+      if (requestUri.equals(callbackPath)) {
+        DefaultCallbackLogic callbackLogic = new DefaultCallbackLogic();
+        String originalUrl = (String) request.getSession().getAttribute("pac4j.originalUrl");
+        String redirectUrl = originalUrl != null ? originalUrl : "/";
 
-      callbackLogic.perform(
-              context,
-              sessionStore,
-              pac4jConfig,
-              JEEHttpActionAdapter.INSTANCE,
-              redirectUrl,                      // Redirect to original URL or root
-              null,
-              null
-      );
-    } else {
-      DefaultSecurityLogic securityLogic = new DefaultSecurityLogic();
-      try {
+        callbackLogic.perform(
+                context,
+                sessionStore,
+                pac4jConfig,
+                JEEHttpActionAdapter.INSTANCE,
+                redirectUrl,                      // Redirect to original URL or root
+                null,
+                null
+        );
+      } else {
+        DefaultSecurityLogic securityLogic = new DefaultSecurityLogic();
         securityLogic.perform(
             context,
             sessionStore,
@@ -113,6 +117,7 @@ public class Pac4jFilter implements Filter
                   if (uid != null) {
                     AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
                     servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+                    passedToChain.set(true);
                     filterChain.doFilter(servletRequest, servletResponse);
                   }
                 } else {
@@ -131,9 +136,21 @@ public class Pac4jFilter implements Filter
             null
         );
       }
-      catch (HttpAction e) {
-        JEEHttpActionAdapter.INSTANCE.adapt(e, context);
+    }
+    catch (HttpAction e) {
+      JEEHttpActionAdapter.INSTANCE.adapt(e, context);
+    }
+    catch (RuntimeException e) {
+      if (passedToChain.get()) {
+        throw e;
       }
+      // Misconfiguration or IdP errors (discovery document unreachable, client authentication method not accepted,
+      // token request rejected) only surface here, when a user logs in.
+      LOGGER.error(e, "OIDC authentication failed for request[%s]", requestUri);
+      response.sendError(
+          HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+          "OIDC authentication failed. See the server log for details."
+      );
     }
   }
 

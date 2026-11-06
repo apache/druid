@@ -22,13 +22,28 @@ package org.apache.druid.security.pac4j;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 public class OIDCConfig
 {
   private static final String DEFAULT_SCOPE = "name";
+
+  /**
+   * Client authentication methods that work with the pac4j configuration Druid builds. pac4j does not implement
+   * client_secret_jwt, and private_key_jwt needs a private key that Druid has no properties for.
+   */
+  private static final Set<String> SUPPORTED_CLIENT_AUTHENTICATION_METHODS = ImmutableSet.of(
+      ClientAuthenticationMethod.CLIENT_SECRET_BASIC.getValue(),
+      ClientAuthenticationMethod.CLIENT_SECRET_POST.getValue(),
+      ClientAuthenticationMethod.NONE.getValue()
+  );
+
   @JsonProperty
   private final String clientID;
 
@@ -50,7 +65,7 @@ public class OIDCConfig
   @JsonCreator
   public OIDCConfig(
       @JsonProperty("clientID") String clientID,
-      @JsonProperty("clientSecret") PasswordProvider clientSecret,
+      @JsonProperty("clientSecret") @Nullable PasswordProvider clientSecret,
       @JsonProperty("discoveryURI") String discoveryURI,
       @JsonProperty("oidcClaim") String oidcClaim,
       @JsonProperty("scope") @Nullable String scope,
@@ -58,7 +73,35 @@ public class OIDCConfig
   )
   {
     this.clientID = Preconditions.checkNotNull(clientID, "null clientID");
-    this.clientSecret = Preconditions.checkNotNull(clientSecret, "null clientSecret");
+    if (clientAuthenticationMethod != null
+        && !SUPPORTED_CLIENT_AUTHENTICATION_METHODS.contains(clientAuthenticationMethod)) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "druid.auth.pac4j.oidc.clientAuthenticationMethod[%s] is not supported. "
+                              + "Supported values are %s, or leave it unset to pick one from the provider's discovery document.",
+                              clientAuthenticationMethod,
+                              SUPPORTED_CLIENT_AUTHENTICATION_METHODS
+                          );
+    }
+    if (ClientAuthenticationMethod.NONE.getValue().equals(clientAuthenticationMethod)) {
+      if (clientSecret != null) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "druid.auth.pac4j.oidc.clientSecret must not be set when "
+                                + "druid.auth.pac4j.oidc.clientAuthenticationMethod is [none]."
+                            );
+      }
+    } else if (clientSecret == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "druid.auth.pac4j.oidc.clientSecret is required unless "
+                              + "druid.auth.pac4j.oidc.clientAuthenticationMethod is [none]."
+                          );
+    }
+    this.clientSecret = clientSecret;
     this.discoveryURI = Preconditions.checkNotNull(discoveryURI, "null discoveryURI");
     this.oidcClaim = oidcClaim == null ? DEFAULT_SCOPE : oidcClaim;
     this.scope = scope;
@@ -72,6 +115,7 @@ public class OIDCConfig
   }
 
   @JsonProperty
+  @Nullable
   public PasswordProvider getClientSecret()
   {
     return clientSecret;
