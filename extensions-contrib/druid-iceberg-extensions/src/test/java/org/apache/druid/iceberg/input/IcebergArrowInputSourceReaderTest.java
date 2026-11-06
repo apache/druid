@@ -21,6 +21,7 @@ package org.apache.druid.iceberg.input;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.BatchToInputRowIterator;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -33,6 +34,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DataFiles;
@@ -60,10 +62,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class IcebergArrowInputSourceReaderTest
 {
+  private static final Logger LOG = new Logger(IcebergArrowInputSourceReaderTest.class);
   private static final String NAMESPACE = "default";
   private static final String TABLE = "arrowTestTable";
 
@@ -126,6 +130,43 @@ public class IcebergArrowInputSourceReaderTest
     Assertions.assertEquals("bob", rows.get(1).getDimension("name").get(0));
     Assertions.assertEquals(3_000L, rows.get(2).getTimestampFromEpoch());
     Assertions.assertEquals("carol", rows.get(2).getDimension("name").get(0));
+  }
+
+  @Test
+  public void testBatchReadUsesArrowBackedRowsAcrossBatches() throws IOException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "alice", 1.1), row(2_000L, "bob", 2.2), row(3_000L, "alice", 3.3));
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        INPUT_SCHEMA,
+        2
+    );
+
+    try (BatchToInputRowIterator rows = new BatchToInputRowIterator(
+        reader.readBatches(new NoopInputStats()),
+        INPUT_SCHEMA
+    )) {
+      InputRow row = rows.next();
+      Assertions.assertEquals(1_000L, row.getTimestampFromEpoch());
+      Assertions.assertEquals("alice", row.getRaw("name"));
+      Assertions.assertEquals(1.1, row.getMetric("value").doubleValue());
+
+      row = rows.next();
+      Assertions.assertEquals(2_000L, row.getTimestampFromEpoch());
+      Assertions.assertEquals("bob", row.getRaw("name"));
+      Assertions.assertEquals(2.2, row.getMetric("value").doubleValue());
+
+      row = rows.next();
+      Assertions.assertEquals(3_000L, row.getTimestampFromEpoch());
+      Assertions.assertEquals("alice", row.getRaw("name"));
+      Assertions.assertEquals(3.3, row.getMetric("value").doubleValue());
+      Assertions.assertFalse(rows.hasNext());
+    }
   }
 
   @Test
@@ -310,8 +351,15 @@ public class IcebergArrowInputSourceReaderTest
     final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
     final int count = 5_000;
     final GenericRecord[] data = new GenericRecord[count];
+    long expectedChecksum = 1;
     for (int i = 0; i < count; i++) {
-      data[i] = row((long) (i + 1) * 1000, "user" + i, i * 0.1);
+      final long timestamp = (long) (i + 1) * 1000;
+      final String name = "user" + i;
+      final double value = i * 0.1;
+      data[i] = row(timestamp, name, value);
+      expectedChecksum = 31 * expectedChecksum + timestamp;
+      expectedChecksum = 31 * expectedChecksum + name.hashCode();
+      expectedChecksum = 31 * expectedChecksum + Double.hashCode(value);
     }
     writeRows(table, data);
 
@@ -324,8 +372,34 @@ public class IcebergArrowInputSourceReaderTest
         IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
-    final List<InputRow> rows = readAll(reader);
-    Assertions.assertEquals(count, rows.size());
+    for (int i = 0; i < 2; i++) {
+      timeRead(reader, false, count, expectedChecksum);
+      timeRead(reader, true, count, expectedChecksum);
+    }
+
+    final int measuredReads = 4;
+    long materializedElapsedNanos = 0;
+    long batchElapsedNanos = 0;
+    for (int i = 0; i < measuredReads; i++) {
+      if (i % 2 == 0) {
+        materializedElapsedNanos += timeRead(reader, false, count, expectedChecksum);
+        batchElapsedNanos += timeRead(reader, true, count, expectedChecksum);
+      } else {
+        batchElapsedNanos += timeRead(reader, true, count, expectedChecksum);
+        materializedElapsedNanos += timeRead(reader, false, count, expectedChecksum);
+      }
+    }
+    LOG.info(
+        "Iceberg Arrow reader diagnostic timing: rows [%,d], columns [%d], batchSize [%d], measuredReadsPerPath [%d], "
+        + "materializedRowsMeanMs [%.2f], batchBackedRowsMeanMs [%.2f], materializedToBatchRatio [%.2f]",
+        count,
+        SCHEMA.columns().size(),
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE,
+        measuredReads,
+        materializedElapsedNanos / (measuredReads * 1_000_000D),
+        batchElapsedNanos / (measuredReads * 1_000_000D),
+        (double) materializedElapsedNanos / batchElapsedNanos
+    );
   }
 
   @Test
@@ -596,6 +670,44 @@ public class IcebergArrowInputSourceReaderTest
       }
     }
     return result;
+  }
+
+  private static long timeRead(
+      final IcebergArrowInputSourceReader reader,
+      final boolean batchBacked,
+      final int expectedRowCount,
+      final long expectedChecksum
+  ) throws IOException
+  {
+    final long startNanos = System.nanoTime();
+    final CloseableIterator<InputRow> rows = batchBacked
+                                            ? new BatchToInputRowIterator(
+                                                reader.readBatches(new NoopInputStats()),
+                                                INPUT_SCHEMA
+                                            )
+                                            : reader.read(new NoopInputStats());
+    final long checksum = readChecksum(rows, expectedRowCount);
+    final long elapsedNanos = System.nanoTime() - startNanos;
+    Assertions.assertEquals(expectedChecksum, checksum);
+    return elapsedNanos;
+  }
+
+  private static long readChecksum(final CloseableIterator<InputRow> rows, final int expectedRowCount)
+      throws IOException
+  {
+    long checksum = 1;
+    int rowCount = 0;
+    try (rows) {
+      while (rows.hasNext()) {
+        final InputRow row = rows.next();
+        checksum = 31 * checksum + row.getTimestampFromEpoch();
+        checksum = 31 * checksum + Objects.hashCode(row.getRaw("name"));
+        checksum = 31 * checksum + Objects.hashCode(row.getRaw("value"));
+        rowCount++;
+      }
+    }
+    Assertions.assertEquals(expectedRowCount, rowCount);
+    return checksum;
   }
 
   private static final class NoopInputStats implements org.apache.druid.data.input.InputStats
