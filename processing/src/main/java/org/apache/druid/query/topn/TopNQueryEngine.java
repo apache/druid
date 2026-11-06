@@ -341,11 +341,13 @@ public class TopNQueryEngine
    */
   public static boolean canApplyExtractionInPost(TopNQuery query)
   {
-    return query.getDimensionSpec() != null
-           && query.getDimensionSpec().getExtractionFn() != null
-           && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(query.getDimensionSpec()
-                                                                 .getExtractionFn()
-                                                                 .getExtractionType())
+    if (query.getDimensionSpec() == null) {
+      return false;
+    }
+    // inspection only
+    final ExtractionFn extractionFn = query.getDimensionSpec().getExtractionFnForMetadata();
+    return extractionFn != null
+           && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(extractionFn.getExtractionType())
            && query.getTopNMetricSpec().canBeOptimizedUnordered();
   }
 }

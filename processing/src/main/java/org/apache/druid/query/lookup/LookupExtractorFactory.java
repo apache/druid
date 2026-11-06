@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Supplier;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -90,4 +91,14 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    * @return true if cache is loaded and lookup is queryable else returns false
    */
   boolean isInitialized();
+
+  /**
+   * Returns a retained lookup extractor bound to a specific backing resource version, if supported.
+   *
+   * The returned handle must be closed when the caller is finished with the extractor.
+   */
+  default Optional<RetainedLookupExtractor> acquireRetainedLookupExtractor()
+  {
+    return Optional.empty();
+  }
 }
