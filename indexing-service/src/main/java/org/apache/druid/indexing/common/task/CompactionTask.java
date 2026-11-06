@@ -1183,13 +1183,37 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
      * on finding any 'range' partition dimension to be multivalued at runtime, which ends up in a mismatch between
      * the compaction config and the actual segments (lastCompactionState), leading to repeated compactions.
      * <p>
-     * Note that needProjections alone does not trigger a download: every caller that asks for projections also asks
-     * for something above, so the lists stay in step. A caller that wants only projections would have to add it here.
+     * Projections are only considered a reason to analyze if we can confirm that any existing segments contain them via
+     * {@link #anySegmentHasProjections()}.
      */
     private boolean shouldDownloadSegments()
     {
+      return needRollup
+             || needQueryGranularity
+             || needDimensionsSpec
+             || needMetricsSpec
+             || needMultiValuedDimensions
+             || (needProjections && anySegmentHasProjections());
+    }
 
-      return needRollup || needQueryGranularity || needDimensionsSpec || needMetricsSpec || needMultiValuedDimensions;
+    /**
+     * Whether any segment to be compacted stores a projection, taken from {@link DataSegment#getProjections()} so
+     * that it costs no I/O.
+     * <p>
+     * A null list is read as "none". It means either a segment built from a schema that declared no projections,
+     * which is most of them, or one written before the field existed, which could hold projections this never sees.
+     * Reading null the other way round is not an option, as it would make every compaction of every datasource
+     * without projections fetch all of its segments to discover there are none.
+     */
+    private boolean anySegmentHasProjections()
+    {
+      for (Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> segmentPair : segmentsIterable) {
+        final List<String> projectionNames = segmentPair.lhs.getProjections();
+        if (projectionNames != null && !projectionNames.isEmpty()) {
+          return true;
+        }
+      }
+      return false;
     }
 
     public void fetchAndProcessIfNeeded()
@@ -1641,6 +1665,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
     }
 
+    /**
+     * Retrieves the segments to compact. Unrequested details are stripped from what comes back, so this has to name
+     * everything the task reads off a segment rather than out of its index: the load spec to fetch it with, and the
+     * projections it stores, which decide whether its schema has to be read at all.
+     */
     List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException
     {
       return new ArrayList<>(
@@ -1648,7 +1677,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
               new RetrieveUsedSegmentsAction(
                   dataSource,
                   ImmutableList.of(interval),
-                  EnumSet.of(SegmentDetail.LOAD_SPEC)
+                  EnumSet.of(SegmentDetail.LOAD_SPEC, SegmentDetail.PROJECTIONS)
               )
           )
       );
