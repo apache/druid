@@ -261,7 +261,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.55.6
+version: 2.57.2
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -277,6 +277,7 @@ libraries:
   - software.amazon.awssdk: crt-core
   - software.amazon.awssdk: ec2
   - software.amazon.awssdk: endpoints-spi
+  - software.amazon.awssdk: eventstream
   - software.amazon.awssdk: http-auth
   - software.amazon.awssdk: http-auth-aws
   - software.amazon.awssdk: http-auth-aws-eventstream
@@ -312,37 +313,11 @@ notice: |
 
 ---
 
-name: Amazon Event Stream
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.1
-libraries:
-  - software.amazon.eventstream: eventstream
-notice: |
-  AWS SDK for Java 2.0
-  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
----
-
-name: Amazon Event Stream
-license_category: binary
-module: extensions/druid-s3-extensions
-license_name: Apache License version 2.0
-version: 1.0.1
-libraries:
-  - software.amazon.eventstream: eventstream
-notice: |
-  AWS SDK for Java 2.0
-  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
----
-
 name: AWS CRT
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.48.4
+version: 0.48.5
 libraries:
   - software.amazon.awssdk.crt: aws-crt
 notice: |
@@ -1316,7 +1291,7 @@ name: org.jooq joou-java-6
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.9.5
+version: 0.9.6
 libraries:
   - org.jooq: joou-java-6
 
@@ -1326,7 +1301,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.5.0
+version: 5.5.1
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1338,7 +1313,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.5.0
+version: 5.5.1
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -2574,7 +2549,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.7.1
+version: 7.7.2
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -2643,7 +2618,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.0
+version: 1.12.1
 libraries:
   - at.yawk.lz4: lz4-java
 
@@ -2684,7 +2659,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.24
+version: 1.6.25
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -3721,7 +3696,7 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 9.11
+version: 9.11.1
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
@@ -4849,7 +4824,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.8.7
+version: 3.8.8
 libraries:
   - io.projectreactor: reactor-core
 ---
