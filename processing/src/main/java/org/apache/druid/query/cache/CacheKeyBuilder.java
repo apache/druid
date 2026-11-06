@@ -30,13 +30,10 @@ import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -44,12 +41,12 @@ import java.util.List;
  *
  * The layout of the serialized cache key is like below.
  *
- * +--------------------------------------------------------+
- * | ID (1 byte)                                            |
- * | type key (1 byte) | serialized value (variable length) |
- * | type key (1 byte) | serialized value (variable length) |
- * | ...                                                    |
- * +--------------------------------------------------------+
+ * +--------------------------------------------------+
+ * | ID (1 byte)                                      |
+ * | type key (1 byte) | length (4 bytes) | value     |
+ * | type key (1 byte) | length (4 bytes) | value     |
+ * | ...                                              |
+ * +--------------------------------------------------+
  *
  */
 @PublicApi
@@ -72,20 +69,11 @@ public class CacheKeyBuilder
   static final byte[] STRING_SEPARATOR = new byte[]{(byte) 0xFF};
   static final byte[] EMPTY_BYTES = StringUtils.EMPTY_BYTES;
 
-  private static class Item
+  private record Item(byte typeKey, byte[] item)
   {
-    private final byte typeKey;
-    private final byte[] item;
-
-    Item(byte typeKey, byte[] item)
-    {
-      this.typeKey = typeKey;
-      this.item = item;
-    }
-
     int byteSize()
     {
-      return 1 + item.length;
+      return 1 + Integer.BYTES + item.length;
     }
   }
 
@@ -127,17 +115,23 @@ public class CacheKeyBuilder
       boolean preserveOrder
   )
   {
-    return collectionToByteArray(input, CacheKeyBuilder::cacheableToByteArray, EMPTY_BYTES, preserveOrder);
+    return collectionToByteArray(input, CacheKeyBuilder::cacheableToByteArray, null, preserveOrder);
   }
 
+  /**
+   * Serializes a collection as an element count followed by the elements.
+   *
+   * <p>Elements are joined with {@code separator} when one is given. When {@code separator} is null, each element
+   * is preceded by its own length.
+   */
   private static <T> byte[] collectionToByteArray(
       @Nullable Collection<? extends T> collection,
       Function<T, byte[]> serializeFunction,
-      byte[] separator,
+      @Nullable byte[] separator,
       boolean preserveOrder
   )
   {
-    if (collection != null && collection.size() > 0) {
+    if (collection != null && !collection.isEmpty()) {
       List<byte[]> byteArrayList = Lists.newArrayListWithCapacity(collection.size());
       int totalByteLength = 0;
       for (T eachItem : collection) {
@@ -148,17 +142,27 @@ public class CacheKeyBuilder
 
       if (!preserveOrder) {
         // Sort the byte array list to guarantee that collections of same items but in different orders make the same result
-        Collections.sort(byteArrayList, UnsignedBytes.lexicographicalComparator());
+        byteArrayList.sort(UnsignedBytes.lexicographicalComparator());
       }
 
-      final Iterator<byte[]> iterator = byteArrayList.iterator();
-      final int bufSize = Integer.BYTES + separator.length * (byteArrayList.size() - 1) + totalByteLength;
-      final ByteBuffer buffer = ByteBuffer.allocate(bufSize)
-                                          .putInt(byteArrayList.size())
-                                          .put(iterator.next());
+      final int bufSize;
+      if (separator == null) {
+        bufSize = Integer.BYTES * (byteArrayList.size() + 1) + totalByteLength;
+      } else {
+        bufSize = Integer.BYTES + separator.length * (byteArrayList.size() - 1) + totalByteLength;
+      }
 
-      while (iterator.hasNext()) {
-        buffer.put(separator).put(iterator.next());
+      final ByteBuffer buffer = ByteBuffer.allocate(bufSize).putInt(byteArrayList.size());
+
+      boolean first = true;
+      for (final byte[] byteArray : byteArrayList) {
+        if (separator == null) {
+          buffer.putInt(byteArray.length);
+        } else if (!first) {
+          buffer.put(separator);
+        }
+        buffer.put(byteArray);
+        first = false;
       }
 
       return buffer.array();
@@ -280,7 +284,7 @@ public class CacheKeyBuilder
 
   /**
    * Add a collection of Cacheables to the cache key.
-   * Cacheables in the collection are concatenated without any separator,
+   * Cacheables in the collection each appear preceded by their length,
    * and they appear in the cache key in their input order.
    *
    * @param input a collection of Cacheables to be included in the cache key
@@ -295,7 +299,7 @@ public class CacheKeyBuilder
   /**
    * Add a collection of Cacheables to the cache key.
    * Cacheables in the collection are sorted by their byte representation and
-   * concatenated without any separator.
+   * each appears preceded by their length.
    *
    * @param input a collection of Cacheables to be included in the cache key
    * @return this instance
@@ -323,7 +327,7 @@ public class CacheKeyBuilder
     buffer.put(id);
 
     for (Item item : items) {
-      buffer.put(item.typeKey).put(item.item);
+      buffer.put(item.typeKey).putInt(item.item.length).put(item.item);
     }
 
     return buffer.array();
