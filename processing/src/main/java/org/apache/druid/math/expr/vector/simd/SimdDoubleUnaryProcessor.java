@@ -59,8 +59,15 @@ abstract class SimdDoubleUnaryProcessor implements ExprVectorProcessor<double[]>
   public final ExprEvalVector<double[]> evalVector(Expr.VectorInputBinding bindings)
   {
     final ExprEvalVector<double[]> lhs = input.evalVector(bindings);
-    processVector(lhs.values(), lhs.getNullVector(), bindings.getCurrentVectorSize());
-    return new ExprEvalDoubleVector(outValues, outNulls);
+    final boolean[] inputNulls = lhs.getNullVector();
+    processVector(lhs.values(), inputNulls, bindings.getCurrentVectorSize());
+
+    return new ExprEvalDoubleVector(
+        outValues,
+        inputNulls == null
+        ? null
+        : SimdProcessorUtils.nullVectorOrNull(outNulls, bindings.getCurrentVectorSize())
+    );
   }
 
   protected abstract void processVector(double[] input, @Nullable boolean[] inputNulls, int currentSize);

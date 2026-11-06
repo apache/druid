@@ -22,8 +22,6 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExpressionType;
 
-import java.util.Arrays;
-
 public final class ExprEvalDoubleVector extends BaseExprEvalVector<double[]>
 {
   public ExprEvalDoubleVector(double[] values, boolean[] nulls)
@@ -46,7 +44,11 @@ public final class ExprEvalDoubleVector extends BaseExprEvalVector<double[]>
   @Override
   public long[] getLongVector()
   {
-    return Arrays.stream(values).mapToLong(d -> (long) d).toArray();
+    final long[] longs = new long[values.length];
+    for (int i = 0; i < values.length; i++) {
+      longs[i] = (long) values[i];
+    }
+    return longs;
   }
 
   @Override

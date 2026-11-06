@@ -55,22 +55,23 @@ public abstract class DoubleUnivariateFunctionVectorProcessor<TInput> implements
 
     final TInput input = lhs.values();
 
+    boolean anyNulls = false;
     if (hasNulls) {
       for (int i = 0; i < currentSize; i++) {
         outNulls[i] = inputNulls[i];
         if (!outNulls[i]) {
           processIndex(input, i);
         } else {
+          anyNulls = true;
           outValues[i] = 0.0;
         }
       }
     } else {
       for (int i = 0; i < currentSize; i++) {
-        outNulls[i] = false;
         processIndex(input, i);
       }
     }
-    return asEval();
+    return asEval(anyNulls ? outNulls : null);
   }
 
   @Override
@@ -81,8 +82,8 @@ public abstract class DoubleUnivariateFunctionVectorProcessor<TInput> implements
 
   abstract void processIndex(TInput input, int i);
 
-  final ExprEvalVector<double[]> asEval()
+  final ExprEvalVector<double[]> asEval(boolean[] nulls)
   {
-    return new ExprEvalDoubleVector(outValues, outNulls);
+    return new ExprEvalDoubleVector(outValues, nulls);
   }
 }
