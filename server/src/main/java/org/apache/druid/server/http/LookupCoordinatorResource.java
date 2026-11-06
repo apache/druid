@@ -26,6 +26,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -35,10 +38,18 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupsState;
-import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.LookupResourceFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -58,8 +69,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,31 +84,47 @@ import java.util.stream.Collectors;
  * Contains information about lookups exposed through the coordinator
  */
 @Path("/druid/coordinator/v1/lookups")
-@ResourceFilters(ConfigResourceFilter.class)
+@ResourceFilters(LookupResourceFilter.class)
 public class LookupCoordinatorResource
 {
   private static final Logger LOG = new Logger(LookupCoordinatorResource.class);
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final ObjectMapper smileMapper;
   private final ObjectMapper jsonMapper;
+  private final AuthorizerMapper authorizerMapper;
+  private final boolean lookupAuthorizationEnabled;
 
   @Inject
   public LookupCoordinatorResource(
       final LookupCoordinatorManager lookupCoordinatorManager,
       final @Smile ObjectMapper smileMapper,
-      final @Json ObjectMapper jsonMapper
+      final @Json ObjectMapper jsonMapper,
+      final AuthorizerMapper authorizerMapper,
+      final AuthConfig authConfig
   )
   {
     this.smileMapper = smileMapper;
     this.jsonMapper = jsonMapper;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
+    this.authorizerMapper = authorizerMapper;
+    this.lookupAuthorizationEnabled = authConfig.isEnableLookupAuthorization();
+  }
+
+  LookupCoordinatorResource(
+      final LookupCoordinatorManager lookupCoordinatorManager,
+      final ObjectMapper smileMapper,
+      final ObjectMapper jsonMapper
+  )
+  {
+    this(lookupCoordinatorManager, smileMapper, jsonMapper, null, new AuthConfig());
   }
 
   @GET
   @Path("/config")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response getTiers(
-      @DefaultValue("false") @QueryParam("discover") boolean discover
+      @DefaultValue("false") @QueryParam("discover") boolean discover,
+      @Context HttpServletRequest req
   )
   {
     try {
@@ -105,13 +135,14 @@ public class LookupCoordinatorResource
         if (knownLookups != null) {
           discovered.addAll(knownLookups.keySet());
         }
-        return Response.ok().entity(discovered).build();
+        return Response.ok().entity(filterTierListing(req, discovered, knownLookups)).build();
       }
 
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
-        return Response.ok().entity(knownLookups.keySet()).build();
+        return Response.ok().entity(filterLookups(req, knownLookups).keySet())
+                       .build();
       }
     }
     catch (Exception e) {
@@ -123,7 +154,7 @@ public class LookupCoordinatorResource
   @GET
   @Produces({MediaType.APPLICATION_JSON})
   @Path("/config/all")
-  public Response getAllLookupSpecs()
+  public Response getAllLookupSpecs(@Context HttpServletRequest req)
   {
     try {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager
@@ -131,7 +162,7 @@ public class LookupCoordinatorResource
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
-        return Response.ok().entity(knownLookups).build();
+        return Response.ok().entity(filterLookups(req, knownLookups)).build();
       }
     }
     catch (Exception ex) {
@@ -159,11 +190,15 @@ public class LookupCoordinatorResource
       catch (IOException e) {
         return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(e)).build();
       }
+      authorizeLookupWrites(req, map);
       if (lookupCoordinatorManager.updateLookups(map, AuthorizationUtils.buildAuditInfo(req))) {
         return Response.status(Response.Status.ACCEPTED).entity(map).build();
       } else {
         throw new RuntimeException("Unknown error updating configuration");
       }
+    }
+    catch (ForbiddenException e) {
+      return forbidden(e);
     }
     catch (Exception e) {
       LOG.error(e, "Error creating new lookups");
@@ -186,11 +221,18 @@ public class LookupCoordinatorResource
                        .build();
       }
 
-      if (lookupCoordinatorManager.deleteTier(tier, AuthorizationUtils.buildAuditInfo(req))) {
+      if (lookupCoordinatorManager.deleteTier(
+          tier,
+          AuthorizationUtils.buildAuditInfo(req),
+          lookups -> authorizeLookupWrites(req, Collections.singletonMap(tier, lookups))
+      )) {
         return Response.status(Response.Status.ACCEPTED).build();
       } else {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
+    }
+    catch (ForbiddenException e) {
+      return forbidden(e);
     }
     catch (Exception e) {
       LOG.error(e, "Error deleting tier [%s]", tier);
@@ -318,8 +360,8 @@ public class LookupCoordinatorResource
   @Path("/config/{tier}")
   public Response getSpecificTier(
       @PathParam("tier") String tier,
-      @DefaultValue("false") @QueryParam("detailed") boolean detailed
-
+      @DefaultValue("false") @QueryParam("detailed") boolean detailed,
+      @Context HttpServletRequest req
   )
   {
     try {
@@ -340,10 +382,12 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.sanitizeException(new RE("Tier [%s] not found", tier)))
                        .build();
       }
+      final Map<String, LookupExtractorFactoryMapContainer> readable =
+          filterLookups(req, tier, tierLookups);
       if (detailed) {
-        return Response.ok().entity(tierLookups).build();
+        return Response.ok().entity(readable).build();
       } else {
-        return Response.ok().entity(tierLookups.keySet()).build();
+        return Response.ok().entity(readable.keySet()).build();
       }
     }
     catch (Exception e) {
@@ -356,7 +400,8 @@ public class LookupCoordinatorResource
   @Produces({MediaType.APPLICATION_JSON})
   @Path("/status")
   public Response getAllLookupsStatus(
-      @QueryParam("detailed") boolean detailed
+      @QueryParam("detailed") boolean detailed,
+      @Context HttpServletRequest req
   )
   {
     try {
@@ -393,7 +438,7 @@ public class LookupCoordinatorResource
         }
       }
 
-      return Response.ok(result).build();
+      return Response.ok(filterLookups(req, result)).build();
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status");
@@ -406,7 +451,8 @@ public class LookupCoordinatorResource
   @Path("/status/{tier}")
   public Response getLookupStatusForTier(
       @PathParam("tier") String tier,
-      @QueryParam("detailed") boolean detailed
+      @QueryParam("detailed") boolean detailed,
+      @Context HttpServletRequest req
   )
   {
     try {
@@ -439,7 +485,7 @@ public class LookupCoordinatorResource
         );
       }
 
-      return Response.ok(lookupStatusMap).build();
+      return Response.ok(filterLookups(req, tier, lookupStatusMap)).build();
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status for tier [%s].", tier);
@@ -530,10 +576,11 @@ public class LookupCoordinatorResource
   @Path("/nodeStatus")
   public Response getAllNodesStatus(
       @QueryParam("discover") boolean discover,
-      @QueryParam("detailed") @Nullable Boolean detailed
+      @QueryParam("detailed") @Nullable Boolean detailed,
+      @Context HttpServletRequest req
   )
   {
-    boolean full = detailed == null || detailed;
+    final boolean full = detailed == null || detailed;
 
     try {
       Collection<String> tiers;
@@ -553,14 +600,12 @@ public class LookupCoordinatorResource
       Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts =
           lookupCoordinatorManager.getLastKnownLookupsStateOnNodes();
 
-      final Map result;
       if (full) {
-        result = getDetailedAllNodeStatus(lookupsStateOnHosts, tiers);
+        return Response.ok(filterNodeStates(req, getDetailedAllNodeStatus(lookupsStateOnHosts, tiers))).build();
       } else {
         // lookups to load per host by version
-        result = getSimpleAllNodeStatus(lookupsStateOnHosts, tiers);
+        return Response.ok(filterNodeStates(req, getSimpleAllNodeStatus(lookupsStateOnHosts, tiers))).build();
       }
-      return Response.ok(result).build();
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status.");
@@ -572,7 +617,8 @@ public class LookupCoordinatorResource
   @Produces({MediaType.APPLICATION_JSON})
   @Path("/nodeStatus/{tier}")
   public Response getNodesStatusInTier(
-      @PathParam("tier") String tier
+      @PathParam("tier") String tier,
+      @Context HttpServletRequest req
   )
   {
     try {
@@ -592,7 +638,7 @@ public class LookupCoordinatorResource
         }
       }
 
-      return Response.ok(tierNodesStatus).build();
+      return Response.ok(filterNodeStates(req, tier, tierNodesStatus)).build();
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status for tier [%s].", tier);
@@ -605,10 +651,18 @@ public class LookupCoordinatorResource
   @Path("/nodeStatus/{tier}/{hostAndPort}")
   public Response getSpecificNodeStatus(
       @PathParam("tier") String tier,
-      @PathParam("hostAndPort") HostAndPort hostAndPort
+      @PathParam("hostAndPort") HostAndPort hostAndPort,
+      @Context HttpServletRequest req
   )
   {
     try {
+      // A node from another tier must not be authorized using the tier in this URL.
+      if (lookupAuthorizationEnabled
+          && !lookupCoordinatorManager.discoverNodesInTier(tier).contains(hostAndPort)) {
+        return Response.status(Response.Status.NOT_FOUND)
+                       .entity(ServletResourceUtils.jsonize("Node [%s] status is unknown.", hostAndPort))
+                       .build();
+      }
       Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager
           .getLastKnownLookupsStateOnNodes();
 
@@ -618,7 +672,7 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.jsonize("Node [%s] status is unknown.", hostAndPort))
                        .build();
       } else {
-        return Response.ok(lookupsState).build();
+        return Response.ok(filterState(req, tier, lookupsState)).build();
       }
 
     }
@@ -626,6 +680,232 @@ public class LookupCoordinatorResource
       LOG.error(ex, "Error getting node status for [%s].", hostAndPort);
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
     }
+  }
+
+  private static Response forbidden(ForbiddenException e)
+  {
+    return Response.status(Response.Status.FORBIDDEN)
+                   .type(MediaType.APPLICATION_JSON)
+                   .entity(ImmutableMap.of("Access-Check-Result", e.getMessage()))
+                   .build();
+  }
+
+  private static ResourceAction lookupAction(String name, Action action)
+  {
+    return new ResourceAction(new Resource(name, ResourceType.LOOKUP), action);
+  }
+
+  private void authorizeLookupWrites(
+      HttpServletRequest req,
+      Map<String, ? extends Map<String, ?>> lookups
+  )
+  {
+    if (!lookupAuthorizationEnabled) {
+      return;
+    }
+    final Set<String> names = new LinkedHashSet<>();
+    lookups.forEach((tier, tierLookups) -> addLookupNames(names, tier, tierLookups == null
+                                                                 ? Collections.emptySet()
+                                                                 : tierLookups.keySet()));
+    if (names.isEmpty()) {
+      names.add(LookupResourceFilter.resourceName(null, null));
+    }
+    final List<ResourceAction> actions = names.stream()
+                                              .map(name -> lookupAction(name, Action.WRITE))
+                                              .collect(Collectors.toList());
+    final AuthorizationResult result = AuthorizationUtils.authorizeAllResourceActions(req, actions, authorizerMapper);
+    if (!result.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(result.getErrorMessage());
+    }
+  }
+
+  private Set<String> readableNames(HttpServletRequest req, Set<String> names)
+  {
+    if (names.isEmpty()) {
+      names.add(LookupResourceFilter.resourceName(null, null));
+    }
+    return ImmutableSet.copyOf(AuthorizationUtils.filterAuthorizedResources(
+        req,
+        names,
+        name -> ImmutableList.of(lookupAction(name, Action.READ)),
+        authorizerMapper
+    ));
+  }
+
+  private static void addLookupNames(Set<String> names, String tier, Collection<String> lookups)
+  {
+    if (lookups.isEmpty()) {
+      names.add(LookupResourceFilter.resourceName(tier, null));
+    } else {
+      lookups.forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
+    }
+  }
+
+  private static boolean canReadTier(Set<String> readable, String tier)
+  {
+    final String tierName = LookupResourceFilter.resourceName(tier, null);
+    return readable.contains(tierName) || readable.stream().anyMatch(name -> name.startsWith(tierName + "/"));
+  }
+
+  private Set<String> filterTierListing(
+      HttpServletRequest req,
+      Set<String> tiers,
+      Map<String, ? extends Map<String, ?>> knownLookups
+  )
+  {
+    if (!lookupAuthorizationEnabled) {
+      return tiers;
+    }
+    final Set<String> names = new LinkedHashSet<>();
+    tiers.forEach(tier -> addLookupNames(
+        names,
+        tier,
+        knownLookups == null || knownLookups.get(tier) == null
+        ? Collections.emptySet()
+        : knownLookups.get(tier).keySet()
+    ));
+    final Set<String> readable = readableNames(req, names);
+    final Set<String> result = new LinkedHashSet<>();
+    tiers.forEach(tier -> {
+      if (canReadTier(readable, tier)) {
+        result.add(tier);
+      }
+    });
+    return result;
+  }
+
+  private <T> Map<String, Map<String, T>> filterLookups(
+      HttpServletRequest req,
+      Map<String, Map<String, T>> lookups
+  )
+  {
+    if (!lookupAuthorizationEnabled) {
+      return lookups;
+    }
+    final Set<String> names = new LinkedHashSet<>();
+    lookups.forEach((tier, tierLookups) -> addLookupNames(names, tier, tierLookups.keySet()));
+    final Set<String> readable = readableNames(req, names);
+    final Map<String, Map<String, T>> result = new LinkedHashMap<>();
+    lookups.forEach((tier, tierLookups) -> {
+      if (canReadTier(readable, tier)) {
+        result.put(tier, filterLookups(readable, tier, tierLookups));
+      }
+    });
+    return result;
+  }
+
+  private <T> Map<String, T> filterLookups(HttpServletRequest req, String tier, Map<String, T> lookups)
+  {
+    if (!lookupAuthorizationEnabled) {
+      return lookups;
+    }
+    final Set<String> names = new LinkedHashSet<>();
+    addLookupNames(names, tier, lookups.keySet());
+    return filterLookups(readableNames(req, names), tier, lookups);
+  }
+
+  private static <T> Map<String, T> filterLookups(Set<String> readable, String tier, Map<String, T> lookups)
+  {
+    final Map<String, T> result = new LinkedHashMap<>();
+    lookups.forEach((lookup, value) -> {
+      if (readable.contains(LookupResourceFilter.resourceName(tier, lookup))) {
+        result.put(lookup, value);
+      }
+    });
+    return result;
+  }
+
+  private static <T> void addStateNames(Set<String> names, String tier, LookupsState<T> state)
+  {
+    state.getCurrent().keySet().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
+    state.getToLoad().keySet().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
+    state.getToDrop().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
+  }
+
+  private <T> LookupsState<T> filterState(HttpServletRequest req, String tier, LookupsState<T> state)
+  {
+    if (!lookupAuthorizationEnabled) {
+      return state;
+    }
+    final Set<String> names = new LinkedHashSet<>();
+    addStateNames(names, tier, state);
+    if (names.isEmpty()) {
+      names.add(LookupResourceFilter.resourceName(tier, null));
+    }
+    return filterState(readableNames(req, names), tier, state);
+  }
+
+  private static <T> LookupsState<T> filterState(Set<String> readable, String tier, LookupsState<T> state)
+  {
+    final Set<String> toDrop = new LinkedHashSet<>(state.getToDrop());
+    toDrop.removeIf(lookup -> !readable.contains(LookupResourceFilter.resourceName(tier, lookup)));
+    return new LookupsState<>(
+        filterLookups(readable, tier, state.getCurrent()),
+        filterLookups(readable, tier, state.getToLoad()),
+        toDrop
+    );
+  }
+
+  private <T> Map<HostAndPort, LookupsState<T>> filterNodeStates(
+      HttpServletRequest req,
+      String tier,
+      Map<HostAndPort, LookupsState<T>> states
+  )
+  {
+    if (!lookupAuthorizationEnabled) {
+      return states;
+    }
+    final Set<String> names = new LinkedHashSet<>();
+    states.values().forEach(state -> addStateNames(names, tier, state));
+    if (names.isEmpty()) {
+      names.add(LookupResourceFilter.resourceName(tier, null));
+    }
+    return filterNodeStates(readableNames(req, names), tier, states);
+  }
+
+  private static <T> Map<HostAndPort, LookupsState<T>> filterNodeStates(
+      Set<String> readable,
+      String tier,
+      Map<HostAndPort, LookupsState<T>> states
+  )
+  {
+    final Map<HostAndPort, LookupsState<T>> result = new LinkedHashMap<>();
+    states.forEach((host, state) -> {
+      final LookupsState<T> filtered = filterState(readable, tier, state);
+      if (readable.contains(LookupResourceFilter.resourceName(tier, null))
+          || !filtered.getCurrent().isEmpty()
+          || !filtered.getToLoad().isEmpty()
+          || !filtered.getToDrop().isEmpty()) {
+        result.put(host, filtered);
+      }
+    });
+    return result;
+  }
+
+  private <T> Map<String, Map<HostAndPort, LookupsState<T>>> filterNodeStates(
+      HttpServletRequest req,
+      Map<String, Map<HostAndPort, LookupsState<T>>> tiers
+  )
+  {
+    if (!lookupAuthorizationEnabled) {
+      return tiers;
+    }
+    final Set<String> names = new LinkedHashSet<>();
+    tiers.forEach((tier, states) -> {
+      final int before = names.size();
+      states.values().forEach(state -> addStateNames(names, tier, state));
+      if (names.size() == before) {
+        names.add(LookupResourceFilter.resourceName(tier, null));
+      }
+    });
+    final Set<String> readable = readableNames(req, names);
+    final Map<String, Map<HostAndPort, LookupsState<T>>> result = new LinkedHashMap<>();
+    tiers.forEach((tier, states) -> {
+      if (canReadTier(readable, tier)) {
+        result.put(tier, filterNodeStates(readable, tier, states));
+      }
+    });
+    return result;
   }
 
 
