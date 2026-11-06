@@ -1024,4 +1024,19 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.zookeeper/zookeeper@3\.8\.8$</packageUrl>
     <cve>CVE-2026-115448</cve>
   </suppress>
+
+  <suppress until="2027-04-30Z">
+    <!-- CVE-2026-102554: unbounded allocation when Java deserialization reads a CompactHashMap,
+         CompactHashSet or MapMakerInternalMap. Fixed in Guava 33.7.2.
+         CVE-2026-118042: fixed in Guava 33.8.0. #20852 upgraded Druid's own Guava and the Guava
+         shaded in opentelemetry-emitter to 33.8.0, but it cannot change the copies that Hadoop ships.-->
+    <notes><![CDATA[
+      file name: hadoop-shaded-guava-1.4.0.jar (shaded Guava 32.0.1)
+                 hadoop-shaded-guava-1.5.0.jar (shaded Guava 33.4.8)
+                 hadoop-client-runtime-3.5.0.jar (shaded Guava 33.4.8)
+    ]]></notes>
+    <filePath regex="true">.*/(hadoop-shaded-guava|hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/com\.google\.guava/guava/pom\.xml$</filePath>
+    <cve>CVE-2026-102554</cve>
+    <cve>CVE-2026-118042</cve>
+  </suppress>
 </suppressions>
