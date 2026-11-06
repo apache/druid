@@ -599,10 +599,6 @@ public class QueryLifecycle
    * personas are meant to interact with the API, not with code or logs, so logging stack traces by default adds
    * clutter that is not very helpful.
    *
-   * {@link DruidException.Category#UNSUPPORTED} errors targeting {@link DruidException.Persona#OPERATOR}, such as a
-   * required extension not being loaded, are fixed by changing the cluster configuration, not the code, so their
-   * stack trace is not logged either.
-   *
    * @param e            exception
    * @param queryContext query context
    */
@@ -611,12 +607,8 @@ public class QueryLifecycle
     if (queryContext.isDebug() || e.getMessage() == null) {
       return true;
     } else if (e instanceof DruidException) {
-      final DruidException de = (DruidException) e;
-      final DruidException.Persona persona = de.getTargetPersona();
-      if (persona == DruidException.Persona.OPERATOR) {
-        return de.getCategory() != DruidException.Category.UNSUPPORTED;
-      }
-      return persona == DruidException.Persona.DEVELOPER;
+      final DruidException.Persona persona = ((DruidException) e).getTargetPersona();
+      return persona == DruidException.Persona.OPERATOR || persona == DruidException.Persona.DEVELOPER;
     } else {
       return false;
     }
