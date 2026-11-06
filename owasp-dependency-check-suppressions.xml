@@ -1009,4 +1009,17 @@
     <cve>CVE-2026-47848</cve>
     <cve>CVE-2026-47843</cve>
   </suppress>
+
+  <suppress>
+    <!-- CVE-2026-115448: False positive. ZooKeeper 3.8.8 contains the fix (ZOOKEEPER-5097, fix
+         versions 3.8.8, 3.9.7 and 3.10.0). The "Affected versions" header of the Apache advisory
+         says "3.8.0 through 3.8.8", but the advisory text says "3.8.0 through 3.8.7" and
+         recommends an upgrade to 3.8.8. The scanner uses the incorrect header.
+         See https://lists.apache.org/thread/p892jm8qw0zqv8z152lpokyt7mp6gc41 -->
+    <notes><![CDATA[
+      file name: zookeeper-3.8.8.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.zookeeper/zookeeper@3\.8\.8$</packageUrl>
+    <cve>CVE-2026-115448</cve>
+  </suppress>
 </suppressions>
