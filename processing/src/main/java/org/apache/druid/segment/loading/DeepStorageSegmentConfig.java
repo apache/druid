@@ -49,29 +49,15 @@ public class DeepStorageSegmentConfig
   private static final Logger log = new Logger(DeepStorageSegmentConfig.class);
 
   /**
-   * Filter that always returns {@code true} to suppress serialization of the deprecated {@code zip} field
-   * while allowing {@link org.apache.druid.guice.JsonConfigurator} to detect the field annotation.
+   * Deprecated configuration property retained as an always-null serialization placeholder so that
+   * {@link org.apache.druid.guice.JsonConfigurator} can validate its field annotation. The creator parameter
+   * below consumes legacy {@code zip} input and derives {@code compressionFormat} from it.
    */
-  public static class AlwaysFilter
-  {
-    @Override
-    public boolean equals(Object obj)
-    {
-      return true;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return 0;
-    }
-  }
-
   @JsonProperty("zip")
-  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = AlwaysFilter.class)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @Deprecated
   @Nullable
-  private final Boolean zip;
+  private final Boolean zip = null;
 
   @JsonProperty("compressionFormat")
   @Nullable
@@ -83,7 +69,6 @@ public class DeepStorageSegmentConfig
       @JsonProperty("compressionFormat") @Nullable CompressionUtils.Format compressionFormat
   )
   {
-    this.zip = zip;
     if (zip != null) {
       log.warn("druid.storage.zip is deprecated, use druid.storage.compressionFormat instead.");
     }
