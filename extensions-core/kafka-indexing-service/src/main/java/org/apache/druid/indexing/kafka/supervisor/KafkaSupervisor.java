@@ -99,9 +99,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
   private final Pattern pattern;
 
-  /// Position of each selected partition ID in the sorted `partitionIds`, e.g. `[0, 3, 6]` gives `{0=0, 3=1, 6=2}`.
-  /// Used to spread selected partitions evenly across task groups (`rank % taskCount`), where
-  /// `partition % taskCount` could put them all in one group. Empty when no selection is configured.
+  /**
+   * Position of each selected partition ID in the sorted {@code partitionIds}, e.g. {@code [0, 3, 6]} gives
+   * {@code {0=0, 3=1, 6=2}}. Used to spread selected partitions evenly across task groups ({@code rank % taskCount}),
+   * where {@code partition % taskCount} could put them all in one group. Empty when no selection is configured.
+   */
   private final Map<Integer, Integer> selectedPartitionRanks;
 
   private volatile Map<KafkaTopicPartition, Long> partitionToTimeLag;
