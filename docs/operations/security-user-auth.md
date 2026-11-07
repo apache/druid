@@ -37,7 +37,7 @@ Druid uses the following resource types:
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
 * EXTERNAL &ndash; External data read through the [EXTERN function](../multi-stage-query/concepts.md#read-external-data-with-extern) in SQL.
 * STATE &ndash; Cluster-wide state resources.
-* SYSTEM_TABLE &ndash; when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, then Druid uses this resource type to authorize the system tables in the `sys` schema in SQL.
+* SYSTEM_TABLE &ndash; when `druid.auth.authorizeSystemTablesDirectly` is true, then Druid uses this resource type to authorize the system tables in the `sys` schema, in SQL and in native queries.
 
 For specific resources associated with the resource types, see [Defining permissions](#defining-permissions) and the corresponding endpoint descriptions in [API reference](../api-reference/api-reference.md).
 
@@ -142,7 +142,7 @@ There is only one possible resource name for the "STATE" config resource type, "
 |`/status`|all process types|
 
 ### `SYSTEM_TABLE`
-Resource names for this type are system schema table names in the `sys` schema in SQL, for example `sys.segments` and `sys.server_segments`. Druid only enforces authorization for `SYSTEM_TABLE` resources when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true.
+Resource names for this type are system schema table names in the `sys` schema in SQL, for example `sys.segments` and `sys.server_segments`. Druid only enforces authorization for `SYSTEM_TABLE` resources when `druid.auth.authorizeSystemTablesDirectly` is true, or, for SQL only, when the deprecated Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true.
 ### HTTP methods
 
 For information on what HTTP methods are supported on a particular request endpoint, refer to [API reference](../api-reference/api-reference.md).
@@ -166,7 +166,7 @@ Queries on the [system schema tables](../querying/sql-metadata-tables.md#system-
 - `supervisors`: Druid filters supervisors according to DATASOURCE READ permissions.
 - `query_context_parameters`: No additional permissions are required. The `effective_value` and `effective_source` columns require CONFIG READ permissions; without them, they show null and `UNAUTHORIZED`.
 
-When the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, users also require  `SYSTEM_TABLE` authorization on a system schema table to query it.
+When `druid.auth.authorizeSystemTablesDirectly` is true, users also require  `SYSTEM_TABLE` authorization on a system schema table to query it.
 
 ## Configuration propagation
 

@@ -32,6 +32,7 @@ This document describes non-extension specific Apache&circledR; Druid authentica
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
 |`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, allow HTTP OPTIONS requests by unauthenticated users. This is primarily useful for supporting CORS preflight requests, which Druid does not support directly, but which can be enabled using third-party extensions.<br /><br />Note that you must add "OPTIONS" to `druid.server.http.allowedHttpMethods`.<br /><br />Also note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404). Enabling this option will reveal information about server configuration, including information about what extensions are loaded, to unauthenticated users.|false|no|
+|`druid.auth.authorizeSystemTablesDirectly`|Boolean|If true, Druid authorizes the system tables in the `sys` schema as `SYSTEM_TABLE` resources that require `READ` access: in SQL queries on the Broker, and in native queries on every service. Set it on all services. Replaces the deprecated `druid.sql.planner.authorizeSystemTablesDirectly`.|false|no|
 
 ## Enabling Authentication/AuthorizationLoadingLookupTest
 

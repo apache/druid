@@ -23,17 +23,20 @@ import com.google.inject.Inject;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 @LazySingleton
 public class QueryLifecycleFactory
@@ -48,6 +51,8 @@ public class QueryLifecycleFactory
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
+  private final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers;
+  private final ServerConfig serverConfig;
 
   @Inject
   public QueryLifecycleFactory(
@@ -60,6 +65,8 @@ public class QueryLifecycleFactory
       final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
       final QueryConfigProvider queryConfigProvider,
+      final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers,
+      final ServerConfig serverConfig,
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
@@ -70,6 +77,8 @@ public class QueryLifecycleFactory
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
     this.queryConfigProvider = queryConfigProvider;
+    this.dataSourceQueryHandlers = dataSourceQueryHandlers;
+    this.serverConfig = serverConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
@@ -93,6 +102,8 @@ public class QueryLifecycleFactory
         authConfig,
         policyEnforcer,
         configSnapshot,
+        dataSourceQueryHandlers,
+        serverConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );

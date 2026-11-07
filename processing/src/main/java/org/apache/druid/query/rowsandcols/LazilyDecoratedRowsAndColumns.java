@@ -32,6 +32,7 @@ import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -281,7 +282,9 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
           cursor.advance();
         }
         for (; !cursor.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
-          writer.addSelection();
+          if (!writer.addSelection()) {
+            throw materializationLimitExceeded();
+          }
           cursor.advance();
         }
 
@@ -395,10 +398,20 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
           continue;
         }
         remainingRowsToFetch--;
-        frameWriter.addSelection();
+        if (!frameWriter.addSelection()) {
+          throw materializationLimitExceeded();
+        }
       }
 
       return Pair.of(frameWriter.toByteArray(), sigBob.build());
     }
+  }
+
+  private ResourceLimitExceededException materializationLimitExceeded()
+  {
+    return ResourceLimitExceededException.withMessage(
+        "RowsAndColumns materialization exceeded the configured frame capacity of [%,d] bytes",
+        allocatorCapacity
+    );
   }
 }

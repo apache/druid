@@ -28,9 +28,11 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedClient;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -42,6 +44,8 @@ import java.util.Set;
 
 public class SystemSchemaProvider implements SchemaProvider
 {
+  private static final Logger log = new Logger(SystemSchemaProvider.class);
+
   private final BrokerSegmentMetadataCache segmentMetadataCache;
   private final MetadataSegmentView metadataView;
   private final TimelineServerView serverView;
@@ -73,7 +77,8 @@ public class SystemSchemaProvider implements SchemaProvider
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
       final PlannerConfig plannerConfig,
       final QueryConfigProvider queryConfigProvider,
-      final Properties properties
+      final Properties properties,
+      final AuthConfig authConfig
   )
   {
     this.segmentMetadataCache = segmentMetadataCache;
@@ -87,10 +92,29 @@ public class SystemSchemaProvider implements SchemaProvider
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
-    this.plannerConfig = plannerConfig;
+    this.plannerConfig = withSystemTableAuthorization(plannerConfig, authConfig);
     this.queryConfigProvider = queryConfigProvider;
     this.properties = properties;
     this.allTableNames = computeAllTableNames(plannerConfig);
+  }
+
+  /**
+   * Returns the planner config with {@link PlannerConfig#isAuthorizeSystemTablesDirectly()} set if either
+   * {@code druid.auth.authorizeSystemTablesDirectly} or the deprecated {@code druid.sql.planner.authorizeSystemTablesDirectly}
+   * is set.
+   */
+  static PlannerConfig withSystemTableAuthorization(final PlannerConfig plannerConfig, final AuthConfig authConfig)
+  {
+    if (plannerConfig.isAuthorizeSystemTablesDirectly() && !authConfig.isAuthorizeSystemTablesDirectly()) {
+      log.warn(
+          "druid.sql.planner.authorizeSystemTablesDirectly is deprecated. Set druid.auth.authorizeSystemTablesDirectly"
+          + " instead, which also applies to native queries on system tables."
+      );
+    }
+    if (authConfig.isAuthorizeSystemTablesDirectly() && !plannerConfig.isAuthorizeSystemTablesDirectly()) {
+      return plannerConfig.toBuilder().authorizeSystemTablesDirectly(true).build();
+    }
+    return plannerConfig;
   }
 
   /**

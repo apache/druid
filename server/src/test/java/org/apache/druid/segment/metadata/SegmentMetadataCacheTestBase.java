@@ -43,6 +43,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
@@ -277,6 +278,8 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
         NoopPolicyEnforcer.instance(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new DefaultQueryConfig(Map.of()),
+        Map.of(),
+        new ServerConfig(),
         null
     );
   }
