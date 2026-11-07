@@ -416,6 +416,15 @@ SET useCache = 0;
 SET populateCache = '1';
 ```
 
+An integer or long parameter also accepts a [human-readable number](../configuration/human-readable-byte.md) as a string. The unit can follow the number directly or after a space, such as `'1MiB'` or `'1 MiB'`. Unlike in runtime properties, a human-readable number here can also be negative, such as `'-2K'`, for a parameter that allows negative values. For example:
+
+```sql
+SET maxSubqueryRows = '100K';
+SET maxScatterGatherBytes = '1MiB';
+SET maxScatterGatherBytes = '1 MiB';
+SET priority = '-2K';
+```
+
 For other approaches to set the query context, see [Set query context](./query-context.md).
 
 ## Identifiers and literals
