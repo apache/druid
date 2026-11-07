@@ -45,9 +45,9 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
   /**
-   * Originally S3 always wrote segments zipped, so that is what {@code druid.storage.zip} falls back to.
+   * Originally S3 always wrote segments zipped, so that is the default when neither property is set.
    */
-  private static final boolean DEFAULT_ZIP = true;
+  private static final CompressionUtils.Format DEFAULT_FORMAT = CompressionUtils.Format.ZIP;
 
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
@@ -62,7 +62,11 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   {
     this.s3Client = s3Client;
     this.config = config;
-    this.zip = deepStorageConfig.isZip(DEFAULT_ZIP);
+    this.zip = deepStorageConfig.getEffectiveCompressionFormat(
+        DEFAULT_FORMAT,
+        CompressionUtils.Format.ZIP,
+        CompressionUtils.Format.NONE
+    ) == CompressionUtils.Format.ZIP;
   }
 
   @Override

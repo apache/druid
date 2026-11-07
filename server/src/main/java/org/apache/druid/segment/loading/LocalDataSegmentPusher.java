@@ -45,18 +45,22 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   public static final String INDEX_ZIP_FILENAME = "index.zip";
 
   /**
-   * Local deep storage writes segments as a directory of files unless {@code druid.storage.zip} says otherwise.
+   * Local deep storage writes segments as a directory of files by default.
    */
-  private static final boolean DEFAULT_ZIP = false;
+  private static final CompressionUtils.Format DEFAULT_FORMAT = CompressionUtils.Format.NONE;
 
   private final LocalDataSegmentPusherConfig config;
-  private final boolean zip;
+  private final CompressionUtils.Format compressionFormat;
 
   @Inject
   public LocalDataSegmentPusher(LocalDataSegmentPusherConfig config, DeepStorageSegmentConfig deepStorageConfig)
   {
     this.config = config;
-    this.zip = deepStorageConfig.isZip(DEFAULT_ZIP);
+    this.compressionFormat = deepStorageConfig.getEffectiveCompressionFormat(
+        DEFAULT_FORMAT,
+        CompressionUtils.Format.ZIP,
+        CompressionUtils.Format.NONE
+    );
   }
 
   @Override
@@ -87,7 +91,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       return segment.withLoadSpec(makeLoadSpec(outDir.toURI()))
                     .withSize(size)
                     .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
-    } else if (zip) {
+    } else if (compressionFormat == CompressionUtils.Format.ZIP) {
       return pushZip(dataSegmentFile, outDir, segment);
     } else {
       return pushNoZip(dataSegmentFile, outDir, segment);

@@ -26,6 +26,7 @@ import com.google.common.io.Files;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexBuilder;
@@ -34,6 +35,7 @@ import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -427,7 +429,7 @@ public class S3DataSegmentPusherTest
       long size
   ) throws IOException
   {
-    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(zip));
+    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(zip, null));
 
     DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
                                            .loadSpec(new HashMap<>())
@@ -450,5 +452,56 @@ public class S3DataSegmentPusherTest
 
     EasyMock.verify(s3Client);
     return segment;
+  }
+
+  @Test
+  public void testUnsupportedCompressionFormatThrows()
+  {
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+
+    final IAE e = Assertions.assertThrows(
+        IAE.class,
+        () -> new S3DataSegmentPusher(
+            s3Client,
+            config,
+            new DeepStorageSegmentConfig(null, CompressionUtils.Format.LZ4)
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("Compression format [LZ4] is not supported"));
+  }
+
+  @Test
+  public void testExplicitCompressionFormatZip() throws IOException
+  {
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+
+    final S3DataSegmentPusher pusher = new S3DataSegmentPusher(
+        s3Client,
+        config,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
+    );
+    Assertions.assertNotNull(pusher);
+  }
+
+  @Test
+  public void testExplicitCompressionFormatNone() throws IOException
+  {
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+
+    final S3DataSegmentPusher pusher = new S3DataSegmentPusher(
+        s3Client,
+        config,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+    Assertions.assertNotNull(pusher);
   }
 }
