@@ -32,6 +32,7 @@ import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.validator.CredentialsValidator;
 import org.apache.druid.server.security.AuthConfig;
@@ -76,7 +77,8 @@ public class BasicAuthTest extends BaseCalciteQueryTest
         plannerFixture.statementFactory(),
         new DefaultQueryConfig(Map.of("forbiddenKey", "system-default-value")), // system default forbidden key, only superuser can change it
         sqlTestFramework.queryLifecycleFactory(),
-        TestServer.NOOP_SCHEDULER
+        TestServer.NOOP_SCHEDULER,
+        QueryContextConfig.DEFAULT
     );
 
     CredentialsValidator validator = new CredentialsValidator()

@@ -88,6 +88,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.TestAuthorizer;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlResourceTest;
@@ -710,7 +711,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         authorizerMapper,
         new DefaultQueryConfig(Map.of("debug", "true")),
         new ServerConfig(),
-        null
+        null,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
   }
 

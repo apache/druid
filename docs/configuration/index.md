@@ -2283,6 +2283,21 @@ If runtime property only contains `druid.query.default.context.maxQueuedBytes=y`
 `druid.query.default.context.maxQueuedBytes`, `y`, is use (given that query does not have `maxQueuedBytes` in the
 context). If query does have `maxQueuedBytes` in the context, then that value is use instead.
 
+### Query context validation
+
+The Broker checks the parameters that a query sets in its context. This applies to the top-level context of native queries, and to the context and `SET` statements of SQL queries, including the connection properties of JDBC connections.
+
+The Broker always rejects a recognized parameter with an invalid value. If you set `druid.query.context.rejectUnknownParameters` to `true`, it also rejects a parameter that Druid doesn't recognize, such as a misspelled parameter name, instead of ignoring it. The error names an invalid parameter and, for an unrecognized parameter, suggests the parameters with similar names, if any. For example: `Unknown query context parameter [useCahce]. Did you mean [useCache]?`
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.context.rejectUnknownParameters`|Whether the Broker rejects queries with unrecognized query context parameters. If `false`, the Broker ignores unrecognized parameters.|`false`|
+
+Druid also checks the default context that operators configure, in the same way: it always rejects invalid values, and rejects unrecognized parameters if `druid.query.context.rejectUnknownParameters` is `true`.
+
+* The Broker fails to start if `druid.query.default.context.*` or `druid.msq.dart.query.context.*` sets an invalid parameter.
+* The Coordinator rejects an update of the [Broker dynamic configuration](../api-reference/dynamic-configuration-api.md) whose `queryContext` sets an invalid parameter. To reject unrecognized parameters there, set `druid.query.context.rejectUnknownParameters` on the Coordinator as well as on the Broker, for example in `common.runtime.properties`.
+
 ### Search query config
 
 |Property|Description|Default|

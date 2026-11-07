@@ -35,6 +35,9 @@ import java.util.Properties;
 
 public class DruidQuidemConnectionFactory implements ConnectionFactory, PropertyHandler
 {
+  private static final String COMPONENT_SUPPLIER = "componentSupplier";
+  private static final String QUIDEM_OUTPUT_FORMAT = "outputformat";
+
   private Properties props = new Properties();
   private Map<String, String> envs = new HashMap<>();
 
@@ -54,14 +57,18 @@ public class DruidQuidemConnectionFactory implements ConnectionFactory, Property
       // note: caching will be based on the effective config: so if the same
       // supplier is used from different MultiComponentSupplier it will be
       // shared.
-      String customSupplier = props.getProperty("componentSupplier");
+      final String customSupplier = props.getProperty(COMPONENT_SUPPLIER);
       if (customSupplier != null) {
         URIBuilder builder = new URIBuilder(uri);
-        builder.addParameter("componentSupplier", customSupplier);
+        builder.addParameter(COMPONENT_SUPPLIER, customSupplier);
         builder.setHost("");
         name = builder.build().toString();
       }
-      Connection connection = DriverManager.getConnection(name, props);
+      // The component supplier selects the test framework, so it is not a query context parameter to send to Druid.
+      final Properties connectionProps = new Properties();
+      connectionProps.putAll(props);
+      connectionProps.remove(COMPONENT_SUPPLIER);
+      Connection connection = DriverManager.getConnection(name, connectionProps);
       envs = buildEnvsForConnection(connection);
       return connection;
     }
@@ -96,6 +103,9 @@ public class DruidQuidemConnectionFactory implements ConnectionFactory, Property
   @Override
   public void onSet(String key, Object value)
   {
-    props.setProperty(key, value.toString());
+    // outputformat is a Quidem directive rather than a query context parameter, so it is not sent to Druid.
+    if (!QUIDEM_OUTPUT_FORMAT.equals(key)) {
+      props.setProperty(key, value.toString());
+    }
   }
 }
