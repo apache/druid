@@ -135,12 +135,16 @@ public class CommonCacheNotifier
                 }
               }
               catch (Exception e) {
+                if (e instanceof InterruptedException) {
+                  Thread.currentThread().interrupt();
+                }
                 LOG.makeAlert(e, callerName + ":Failed to get response for cache notification.").emit();
               }
 
               LOG.debug(callerName + ":Received responses for cache update notifications.");
             }
             catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
               LOG.noStackTrace().info(e, "%s: Interrupted while handling updates for cachedUserMaps.", callerName);
             }
             catch (Throwable t) {
