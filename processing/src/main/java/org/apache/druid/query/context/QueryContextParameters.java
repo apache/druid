@@ -2533,13 +2533,7 @@ public final class QueryContextParameters
     return QueryContextParameter.builder(
         name,
         Boolean.class,
-        value -> {
-          if (value instanceof String) {
-            // Matches the established QueryContexts coercion: any string other than "true" (ignoring case) is false.
-            return Boolean.parseBoolean((String) value);
-          }
-          throw invalidValueException(name, "a boolean", value);
-        }
+        value -> QueryContexts.getAsBoolean(name, value)
     );
   }
 

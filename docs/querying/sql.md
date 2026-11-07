@@ -407,6 +407,15 @@ If you use the [JSON API](../api-reference/sql-api.md), you can also include que
 
 Note that you can only use SET to assign literal values, such as numbers, strings, or Booleans. To set a query context parameter to an array or JSON object, use the `context` field rather than SET.
 
+A Boolean parameter accepts `true` or `false`, as a Boolean or as a string in any case, and `1` or `0`, as an integer or as a string. Other values, including floating-point numbers such as `1.0`, are rejected. For example, these statements are all valid:
+
+```sql
+SET useCache = false;
+SET useCache = 'FALSE';
+SET useCache = 0;
+SET populateCache = '1';
+```
+
 For other approaches to set the query context, see [Set query context](./query-context.md).
 
 ## Identifiers and literals
