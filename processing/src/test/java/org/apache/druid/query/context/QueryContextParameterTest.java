@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -225,7 +226,7 @@ class QueryContextParameterTest
         assertThrows(BadQueryContextException.class, () -> parameter.parse(12.7d)).getMessage()
     );
     assertEquals(
-        "Query context parameter [ints] should be in integer format, but got [not-an-int]",
+        "Query context parameter [ints] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [not-an-int]",
         assertThrows(BadQueryContextException.class, () -> parameter.parse("not-an-int")).getMessage()
     );
 
@@ -280,6 +281,104 @@ class QueryContextParameterTest
         assertThrows(BadQueryContextException.class, () -> QueryContextParameters.USE_RESULT_LEVEL_CACHE.parse(1))
             .getMessage()
     );
+  }
+
+  @Test
+  void testIntegerParameterAcceptsHumanReadableNumbers()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameters.integerParameter("ints")
+        .description("Test parameter.")
+        .build();
+
+    // Such as from "SET ints = '1MiB'"
+    assertEquals(1_048_576, parameter.parse("1MiB"));
+    assertEquals(10_000, parameter.parse("10K"));
+    assertEquals(1_073_741_824, parameter.parse("1GiB"));
+
+    // With spaces between the number and the unit
+    assertEquals(1_048_576, parameter.parse("1 MiB"));
+    assertEquals(1_073_741_824, parameter.parse("1  GiB"));
+
+    // Negative numbers, with or without a unit
+    assertEquals(-1, parameter.parse("-1"));
+    assertEquals(-2_000, parameter.parse("-2K"));
+    assertEquals(-2_000_000, parameter.parse("-2 M"));
+    assertEquals(-2 * 1024 * 1024, parameter.parse("-2MiB"));
+    assertEquals(-2 * 1024 * 1024, parameter.parse("-2 MiB"));
+    assertEquals(-10 * 1024, parameter.parse("-10 Ki"));
+    assertEquals(-1_000_000_000, parameter.parse("-1g"));
+    assertEquals(-2_000_000, parameter.parse("-2 m"));
+    assertEquals(-3_000, parameter.parse("-3k"));
+
+    assertEquals(
+        "Query context parameter [ints] must be within the range [-2147483648, 2147483647], but was [2GiB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("2GiB")).getMessage()
+    );
+    assertEquals(
+        "Query context parameter [ints] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [1 M iB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("1 M iB")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("--1K"));
+  }
+
+  @Test
+  void testLongParameterAcceptsHumanReadableNumbers()
+  {
+    final QueryContextParameter<Long> parameter = QueryContextParameters.longParameter("longs")
+        .description("Test parameter.")
+        .build();
+
+    // Such as from "SET longs = '5GiB'"
+    assertEquals(2_000_000_000L, parameter.parse("2G"));
+    assertEquals(5L * 1024 * 1024 * 1024, parameter.parse("5GiB"));
+    assertEquals(1024L * 1024 * 1024 * 1024 * 1024, parameter.parse("1PiB"));
+
+    // With spaces between the number and the unit
+    assertEquals(1_048_576L, parameter.parse("1 MiB"));
+    assertEquals(3_000_000_000L, parameter.parse("3   G"));
+
+    // Negative numbers, with or without a unit
+    assertEquals(-1L, parameter.parse("-1"));
+    assertEquals(-2_000L, parameter.parse("-2K"));
+    assertEquals(-5_000_000_000L, parameter.parse("-5 G"));
+    assertEquals(-2L * 1024 * 1024, parameter.parse("-2MiB"));
+    assertEquals(-5L * 1024 * 1024 * 1024, parameter.parse("-5 GiB"));
+    assertEquals(-10L * 1024, parameter.parse("-10 Ki"));
+    assertEquals(-2L * 1024 * 1024 * 1024 * 1024, parameter.parse("-2 Ti"));
+    assertEquals(-3_000_000_000L, parameter.parse("-3g"));
+    assertEquals(-2_000_000L, parameter.parse("-2 m"));
+    assertEquals(-3_000L, parameter.parse("-3k"));
+
+    assertEquals(
+        "Query context parameter [longs] should be in long format, or a human-readable number such as '10 K' or '256 MiB', but got [1 M iB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("1 M iB")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("--1K"));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("abc"));
+
+    // Beyond the range of a long
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("10000PiB"));
+  }
+
+  @Test
+  void testGroupBySizeParametersAreNonNegativeLongs()
+  {
+    for (final QueryContextParameter<Long> parameter : List.of(
+        QueryContextParameters.MAX_ON_DISK_STORAGE,
+        QueryContextParameters.MIN_SPILL_FILE_SIZE,
+        QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE,
+        QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE
+    )) {
+      assertEquals(1_073_741_824L, parameter.parse("1 GiB"), parameter.getName());
+      assertEquals(3_000_000L, parameter.parse("3M"), parameter.getName());
+      assertEquals(4L, parameter.parse(4), parameter.getName());
+      assertEquals(0L, parameter.parse(0), parameter.getName());
+
+      // A negative size is rejected, and a fractional one is no longer truncated
+      assertThrows(BadQueryContextException.class, () -> parameter.parse("-1K"), parameter.getName());
+      assertThrows(BadQueryContextException.class, () -> parameter.parse(-5), parameter.getName());
+      assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5), parameter.getName());
+    }
   }
 
   @Test

@@ -146,18 +146,18 @@ public final class QueryContextParameter<T>
   }
 
   /**
-   * Thrown by {@link #exactNumber} for a whole number that does not fit the value type. {@link #parse(Object)}
-   * converts it to a {@link BadQueryContextException} that quotes the parameter's {@link Range} bounds when declared.
+   * Thrown by {@link #exactNumber} for a whole number that does not fit the value type, quoting the type's bounds.
+   * {@link #parse(Object)} replaces it with one that quotes the parameter's {@link Range} bounds when declared.
    */
-  private static final class OutOfTypeRangeException extends RuntimeException
+  private static final class OutOfTypeRangeException extends BadQueryContextException
   {
     private final Object value;
     private final long min;
     private final long max;
 
-    OutOfTypeRangeException(final Object value, final long min, final long max)
+    OutOfTypeRangeException(final String name, final Object value, final long min, final long max)
     {
-      super(null, null, false, false);
+      super(Range.outOfRangeException(name, min, max, value).getMessage());
       this.value = value;
       this.min = min;
       this.max = max;
@@ -395,10 +395,12 @@ public final class QueryContextParameter<T>
   /**
    * Converts a number or numeric string without silent truncation or overflow, unlike {@link Number#intValue()} and
    * {@link Number#longValue()}. Integral values with a zero fractional part, such as {@code 12.0} or {@code "12.00"},
-   * are accepted. Whole numbers outside {@code [min, max]} are reported through
-   * {@link OutOfTypeRangeException} so the parameter can quote its own range constraint.
+   * are accepted. Whole numbers outside {@code [min, max]} are rejected with an error that quotes those bounds.
+   * {@link #parse(Object)} quotes the parameter's own {@link Range} bounds instead when declared.
+   *
+   * @throws BadQueryContextException for an invalid value
    */
-  static <T> T exactNumber(
+  public static <T> T exactNumber(
       final String name,
       final Object value,
       final String typeName,
@@ -409,25 +411,51 @@ public final class QueryContextParameter<T>
   {
     final String expectedFormat = "in " + typeName + " format";
     final BigDecimal decimal;
-    try {
-      if (value instanceof BigDecimal) {
-        decimal = (BigDecimal) value;
-      } else if (value instanceof Number || value instanceof String) {
-        decimal = new BigDecimal(value.toString());
-      } else {
-        throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
+    switch (value) {
+      case BigDecimal bigDecimal -> decimal = bigDecimal;
+
+      case Number _ -> {
+        try {
+          decimal = new BigDecimal(value.toString());
+        }
+        catch (NumberFormatException e) {
+          // Such as NaN or infinity
+          throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
+        }
       }
-    }
-    catch (NumberFormatException e) {
-      throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
+
+      case String s -> {
+        // A plain number, or a human-readable number with a unit suffix, such as 10K or 256MiB
+        BigDecimal parsed;
+        try {
+          parsed = new BigDecimal(s);
+        }
+        catch (NumberFormatException e) {
+          try {
+            parsed = BigDecimal.valueOf(HumanReadableBytes.parse(s, true));
+          }
+          catch (IAE iae) {
+            throw QueryContextParameters.invalidValueException(
+                name,
+                expectedFormat + ", or a human-readable number such as '10 K' or '256 MiB'",
+                value
+            );
+          }
+        }
+        decimal = parsed;
+      }
+
+      case null, default -> throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
     }
 
     if (decimal.signum() != 0 && decimal.stripTrailingZeros().scale() > 0) {
       throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
     }
+
     if (decimal.compareTo(BigDecimal.valueOf(min)) < 0 || decimal.compareTo(BigDecimal.valueOf(max)) > 0) {
-      throw new OutOfTypeRangeException(value, min, max);
+      throw new OutOfTypeRangeException(name, value, min, max);
     }
+
     return converter.apply(decimal);
   }
 

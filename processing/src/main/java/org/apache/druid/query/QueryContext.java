@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -375,7 +374,7 @@ public class QueryContext
    */
   public int getInt(final String key, final int defaultValue)
   {
-    return QueryContexts.parseInt(context, key, defaultValue);
+    return QueryContexts.getAsInt(key, get(key), defaultValue);
   }
 
   /**
@@ -397,7 +396,7 @@ public class QueryContext
    */
   public long getLong(final String key, final long defaultValue)
   {
-    return QueryContexts.parseLong(context, key, defaultValue);
+    return QueryContexts.getAsLong(key, get(key), defaultValue);
   }
 
   /**
@@ -409,16 +408,6 @@ public class QueryContext
   public float getFloat(final String key, final float defaultValue)
   {
     return QueryContexts.getAsFloat(key, get(key), defaultValue);
-  }
-
-  public HumanReadableBytes getHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
-  {
-    return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
-  }
-
-  public HumanReadableBytes getHumanReadableBytes(final String key, final long defaultBytes)
-  {
-    return QueryContexts.getAsHumanReadableBytes(key, get(key), HumanReadableBytes.valueOf(defaultBytes));
   }
 
   public <E extends Enum<E>> E getEnum(String key, Class<E> clazz, E defaultValue)
