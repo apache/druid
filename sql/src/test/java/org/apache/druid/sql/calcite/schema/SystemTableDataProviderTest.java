@@ -36,7 +36,7 @@ import java.util.Map;
 
 public class SystemTableDataProviderTest
 {
-  /// The typed flag defaults to false and accepts boolean or SQL SET string values.
+  /** The typed flag defaults to false and accepts boolean or SQL SET string values. */
   @Test
   public void testUseQueryEngineUsesTypedQueryContext()
   {

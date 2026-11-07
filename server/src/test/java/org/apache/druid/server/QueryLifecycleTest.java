@@ -184,7 +184,7 @@ public class QueryLifecycleTest
     );
   }
 
-  /// Handler-backed queries must receive the server default before local execution or node fanout.
+  /** Handler-backed queries must receive the server default before local execution or node fanout. */
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   public void testHandlerUsesServerDefaultTimeout(final boolean local)
@@ -199,7 +199,7 @@ public class QueryLifecycleTest
     assertHandlerDeadline(captured.get(), before, 5_000L);
   }
 
-  /// A zero timeout is bounded by the server maximum, not an unlimited node deadline.
+  /** A zero timeout is bounded by the server maximum, not an unlimited node deadline. */
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   public void testHandlerZeroTimeoutUsesServerMaximum(final boolean local)
@@ -212,7 +212,7 @@ public class QueryLifecycleTest
     assertHandlerDeadline(captured.get(), before, 10_000L);
   }
 
-  /// An explicit timeout below the server maximum is retained.
+  /** An explicit timeout below the server maximum is retained. */
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   public void testHandlerPreservesExplicitTimeout(final boolean local)
@@ -226,7 +226,7 @@ public class QueryLifecycleTest
     assertHandlerDeadline(captured.get(), before, 7_000L);
   }
 
-  /// Reject excessive timeouts before creating a handler runner or starting provider work.
+  /** Reject excessive timeouts before creating a handler runner or starting provider work. */
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   public void testHandlerRejectsTimeoutAboveServerMaximum(final boolean local)
@@ -240,7 +240,7 @@ public class QueryLifecycleTest
     Assertions.assertNull(captured.get());
   }
 
-  /// Normalization must not extend a deadline inherited from an earlier query stage.
+  /** Normalization must not extend a deadline inherited from an earlier query stage. */
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   public void testHandlerPreservesEarlierDeadline(final boolean local)

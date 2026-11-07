@@ -805,7 +805,7 @@ public class SystemTableQueryClientTest
     Assertions.assertFalse(capturedNodeQuery.get().context().isBySegment());
   }
 
-  /// SELECT * FROM (SELECT * FROM sys.server_properties) must retain the outer query deadline.
+  /** SELECT * FROM (SELECT * FROM sys.server_properties) must retain the outer query deadline. */
   @ParameterizedTest
   @ValueSource(longs = {0L, 7_000L, Long.MAX_VALUE})
   public void testSubqueryRetainsOuterDeadline(final long innerTimeout)

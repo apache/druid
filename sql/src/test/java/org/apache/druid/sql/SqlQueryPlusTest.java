@@ -33,7 +33,7 @@ import java.util.Map;
 
 public class SqlQueryPlusTest
 {
-  /// SET useDruidEngineForSystemTables = 'true' uses the registered boolean parameter.
+  /** SET useDruidEngineForSystemTables = 'true' uses the registered boolean parameter. */
   @Test
   public void testSetAllowsNativeFunctionsForSystemTables()
   {
@@ -47,7 +47,7 @@ public class SqlQueryPlusTest
     );
   }
 
-  /// SET useDruidEngineForSystemTables = 1 rejects a non-boolean value before planning.
+  /** SET useDruidEngineForSystemTables = 1 rejects a non-boolean value before planning. */
   @Test
   public void testSetRejectsInvalidNativeFunctionsFlag()
   {

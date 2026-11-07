@@ -36,21 +36,25 @@ import org.apache.druid.sql.calcite.schema.SystemSchema;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/// Converts a native system table that Calcite has represented as a [Bindables.BindableTableScan]. Calcite may push
-/// filters and projections into this node for a `ProjectableFilterableTable`; they must be restored as Druid logical
-/// nodes so native query generation can process them.
-///
-/// This rule is used only by the **DECOUPLED** planner. The coupled planner converts a regular table scan through
-/// `DruidTableScanRule` before Calcite produces a `BindableTableScan`.
-///
-/// ```
-/// BindableTableScan(filters, projects)
-///   -> DruidProject
-///        `- DruidFilter
-///             `- DruidTableScan
-/// ```
-///
-/// The project and filter nodes are omitted when the Bindable scan contains an identity projection or no filters.
+/**
+ * Converts a native system table that Calcite has represented as a {@link Bindables.BindableTableScan}. Calcite may
+ * push filters and projections into this node for a {@code ProjectableFilterableTable}; they must be restored as Druid
+ * logical nodes so native query generation can process them.
+ *
+ * <p>
+ * This rule is used only by the <b>DECOUPLED</b> planner. The coupled planner converts a regular table scan through
+ * {@code DruidTableScanRule} before Calcite produces a {@code BindableTableScan}.
+ *
+ * <pre>
+ * BindableTableScan(filters, projects)
+ *   -&gt; DruidProject
+ *        `- DruidFilter
+ *             `- DruidTableScan
+ * </pre>
+ *
+ * <p>
+ * The project and filter nodes are omitted when the Bindable scan contains an identity projection or no filters.
+ */
 public class DruidBindableTableScanRule extends ConverterRule
 {
   public DruidBindableTableScanRule()

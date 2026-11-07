@@ -59,7 +59,7 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
     return withTimeoutAndMaxScatterGatherBytes(query, serverConfig, startTimeMillis);
   }
 
-  /// Applies the native server guardrails before execution paths that do not use the normal segment walker.
+  /** Applies the native server guardrails before execution paths that do not use the normal segment walker. */
   public static <T> Query<T> withTimeoutAndMaxScatterGatherBytes(
       final Query<T> query,
       final ServerConfig serverConfig,
