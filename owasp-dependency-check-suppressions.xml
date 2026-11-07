@@ -398,12 +398,15 @@
     <!-- CVE-2022-3171: False positive. This CVE affects Google's protobuf-java (com.google.protobuf),
          but the scanner matches it against dev.cel:protobuf via the broad protobuf CPE.
          dev.cel:protobuf is part of the Common Expression Language library and is unrelated
-         to Google's protobuf-java parsing code that contains the vulnerability. -->
+         to Google's protobuf-java parsing code that contains the vulnerability.
+         CVE-2021-22569: False positive for the same reason. This CVE affects the parser of
+         com.google.protobuf:protobuf-java before 3.16.1, not dev.cel:protobuf. -->
     <notes><![CDATA[
       file name: protobuf-0.13.0.jar
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/dev\.cel/protobuf@.*$</packageUrl>
     <cve>CVE-2022-3171</cve>
+    <cve>CVE-2021-22569</cve>
   </suppress>
 
    <suppress>
@@ -792,11 +795,13 @@
     <!-- CVE-2026-33117: Vulnerability in Azure SDK for Java's Key Vault Keys local cryptographic verification path.
          The CVE fires against azure-core, azure-core-http-netty, azure-identity, and azure-json due to broad CPE
          matching, but none of these jars contain the vulnerable Key Vault code path. Druid uses these artifacts
-         for blob storage auth only and does not use the Key Vault cryptography client. -->
+         for blob storage auth only and does not use the Key Vault cryptography client.
+         NVD matches all azure_sdk_for_java versions before 4.10.6, so this entry matches all versions
+         of these four artifacts. Druid does not depend on azure-security-keyvault-keys. -->
     <notes><![CDATA[
-      file name: azure-core-1.58.1.jar azure-core-http-netty-1.16.5.jar azure-identity-1.18.4.jar azure-json-1.5.1.jar
+      file name: azure-core, azure-core-http-netty, azure-identity, azure-json
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.azure/azure-(core@1\.58\.1|core-http-netty@1\.16\.5|identity@1\.18\.4|json@1\.5\.1)$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.azure/azure-(core|core-http-netty|identity|json)@.*$</packageUrl>
     <cve>CVE-2026-33117</cve>
   </suppress>
 
@@ -824,6 +829,11 @@
          base types, enabling arbitrary class instantiation via polymorphic deserialization.
          CVE-2026-91776: unbounded type-id cache growth with @JsonTypeInfo(use = NAME, defaultImpl = ...).
          CVE-2026-91777: quadratic forward-reference resolution with @JsonIdentityInfo.
+         CVE-2026-110879: polymorphic type validation bypass through generic type arguments (fixed in
+         2.18.12 and 2.22.4). It requires default typing or @JsonTypeInfo(use = Id.CLASS). No class in
+         hadoop-client-api 3.5.0 or in Parquet 1.18.1 enables default typing or uses @JsonTypeInfo.
+         Parquet uses its shaded ObjectMapper only to write ParquetMetadata JSON and to read
+         encryption key material as untyped maps. #20852 upgraded Druid's own jackson-databind to 2.22.4.
          Neither Hadoop's client classes nor Parquet's classes reference these annotations.
          These CVEs affect jackson-databind shaded inside hadoop/parquet jars,
          not Druid's own jackson-databind (2.22.x). -->
@@ -837,6 +847,7 @@
     <cve>CVE-2026-83557</cve>
     <cve>CVE-2026-91776</cve>
     <cve>CVE-2026-91777</cve>
+    <cve>CVE-2026-110879</cve>
   </suppress>
 
   <suppress>
@@ -907,7 +918,10 @@
          All affect Jetty shaded inside hadoop-client-runtime-3.5.0.jar. Druid cannot upgrade
          the Jetty version inside this shaded jar. The shaded Jetty is used only for Hadoop's
          internal HTTP server (WebHDFS, etc.), not for Druid's own HTTP server (Jetty 12.x).
-         Druid does not use Hadoop's embedded Jetty server or Digest auth. -->
+         Druid does not use Hadoop's embedded Jetty server or Digest auth.
+         CVE-2026-77711: Jetty HttpClient sends proxy credentials to the server after a 407 response.
+         CVE-2026-76184: Jetty HttpClient sends the Authorization header on a crafted redirect.
+         In hadoop-client-api 3.5.0, only YarnClientImpl uses the Jetty client -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded org.eclipse.jetty* 9.4.58.v20250814)
     ]]></notes>
@@ -916,6 +930,8 @@
     <cve>CVE-2026-10050</cve>
     <cve>CVE-2026-19203</cve>
     <cve>CVE-2024-6763</cve>
+    <cve>CVE-2026-77711</cve>
+    <cve>CVE-2026-76184</cve>
   </suppress>
 
   <suppress>
@@ -973,29 +989,15 @@
   </suppress>
 
   <suppress>
-    <!-- CVE-2026-90559/93452: OOB read/write in Snappy.uncompress/compress(ByteBuffer, ByteBuffer).
-         CVE-2026-108106: unbounded memory allocation during decompression (fixed in 1.1.10.9).
-         snappy-java is a transitive dependency (via Kafka, Parquet, etc.); Druid's own snappy
-         compression/decompression uses Apache Commons Compress, not the xerial ByteBuffer APIs. -->
-    <notes><![CDATA[
-      file name: snappy-java-1.1.10.8.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.xerial\.snappy/snappy-java@1\.1\.10\.8$</packageUrl>
-    <cve>CVE-2026-90559</cve>
-    <cve>CVE-2026-93452</cve>
-    <cve>CVE-2026-108106</cve>
-  </suppress>
-
-  <suppress>
     <!-- CVE-2026-82463: auth bypass in pac4j-core's CheckProfileTypeAuthorizer. Not used by Druid.
          CVE-2026-82461: pac4j-oidc fails to verify tokens when extracting Keycloak realm/client
          roles. Druid does not do Keycloak role extraction; it only validates the ID token via
          standard OIDC discovery and extracts a single configured claim.
          Fixed in pac4j 6.5.6+, but 5.x -> 6.x is a major bump with likely breaking API changes. -->
     <notes><![CDATA[
-      file name: pac4j-core-5.7.10.jar / pac4j-oidc-5.7.10.jar
+      file name: pac4j-core-5.8.0.jar / pac4j-oidc-5.8.0.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-(core|oidc)@5\.7\.10$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-(core|oidc)@5\.8\.0$</packageUrl>
     <cve>CVE-2026-82463</cve>
     <cve>CVE-2026-82461</cve>
   </suppress>
@@ -1019,5 +1021,33 @@
     <cve>CVE-2026-47845</cve>
     <cve>CVE-2026-47848</cve>
     <cve>CVE-2026-47843</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-115448: False positive. ZooKeeper 3.8.8 contains the fix (ZOOKEEPER-5097, fix
+         versions 3.8.8, 3.9.7 and 3.10.0). The "Affected versions" header of the Apache advisory
+         says "3.8.0 through 3.8.8", but the advisory text says "3.8.0 through 3.8.7" and
+         recommends an upgrade to 3.8.8. The scanner uses the incorrect header.
+         See https://lists.apache.org/thread/p892jm8qw0zqv8z152lpokyt7mp6gc41 -->
+    <notes><![CDATA[
+      file name: zookeeper-3.8.8.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.zookeeper/zookeeper@3\.8\.8$</packageUrl>
+    <cve>CVE-2026-115448</cve>
+  </suppress>
+
+  <suppress until="2027-04-30Z">
+    <!-- CVE-2026-102554: unbounded allocation when Java deserialization reads a CompactHashMap,
+         CompactHashSet or MapMakerInternalMap. Fixed in Guava 33.7.2.
+         CVE-2026-118042: fixed in Guava 33.8.0. #20852 upgraded Druid's own Guava and the Guava
+         shaded in opentelemetry-emitter to 33.8.0, but it cannot change the copies that Hadoop ships.-->
+    <notes><![CDATA[
+      file name: hadoop-shaded-guava-1.4.0.jar (shaded Guava 32.0.1)
+                 hadoop-shaded-guava-1.5.0.jar (shaded Guava 33.4.8)
+                 hadoop-client-runtime-3.5.0.jar (shaded Guava 33.4.8)
+    ]]></notes>
+    <filePath regex="true">.*/(hadoop-shaded-guava|hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/com\.google\.guava/guava/pom\.xml$</filePath>
+    <cve>CVE-2026-102554</cve>
+    <cve>CVE-2026-118042</cve>
   </suppress>
 </suppressions>
