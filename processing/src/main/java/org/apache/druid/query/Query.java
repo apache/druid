@@ -135,8 +135,7 @@ public interface Query<T>
    * {@link QueryContext#getInt(String)} <br/>
    * {@link QueryContext#getLong(String)} <br/>
    * {@link QueryContext#getFloat(String, float)} <br/>
-   * {@link QueryContext#getEnum(String, Class, Enum)} <br/>
-   * {@link QueryContext#getHumanReadableBytes(String, HumanReadableBytes)}
+   * {@link QueryContext#getEnum(String, Class, Enum)}
    *
    * @deprecated use {@code queryContext().get<Type>()} instead
    */
@@ -165,12 +164,13 @@ public interface Query<T>
    * @param key          The context key value being looked up
    * @param defaultValue The default to return if the key value doesn't exist or the context is null.
    * @return {@link HumanReadableBytes}
-   * @deprecated use {@code queryContext().getContextHumanReadableBytes()} instead.
+   * @deprecated use {@code context().get(parameter)} with a {@link org.apache.druid.query.context.QueryContextParameter}
+   * instead.
    */
   @Deprecated
   default HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
   {
-    return context().getHumanReadableBytes(key, defaultValue);
+    return QueryContexts.getAsHumanReadableBytes(key, context().get(key), defaultValue);
   }
 
   /**

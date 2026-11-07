@@ -382,19 +382,23 @@ public class GroupByQueryConfig
     // choose a default value lower than the max allowed when the context key is missing in the client query.
     newConfig.maxOnDiskStorage = HumanReadableBytes.valueOf(
         Math.min(
-            queryContext.getOrDefault(QueryContextParameters.MAX_ON_DISK_STORAGE, getDefaultOnDiskStorage()).getBytes(),
+            queryContext.getOrDefault(QueryContextParameters.MAX_ON_DISK_STORAGE, getDefaultOnDiskStorage().getBytes()),
             getMaxOnDiskStorage().getBytes()
         )
     );
 
-    newConfig.maxSelectorDictionarySize = queryContext.getOrDefault(
-        QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE,
-        HumanReadableBytes.valueOf(getConfiguredMaxSelectorDictionarySize())
+    newConfig.maxSelectorDictionarySize = HumanReadableBytes.valueOf(
+        queryContext.getOrDefault(
+            QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE,
+            getConfiguredMaxSelectorDictionarySize()
+        )
     );
 
-    newConfig.maxMergingDictionarySize = queryContext.getOrDefault(
-        QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE,
-        HumanReadableBytes.valueOf(getConfiguredMaxMergingDictionarySize())
+    newConfig.maxMergingDictionarySize = HumanReadableBytes.valueOf(
+        queryContext.getOrDefault(
+            QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE,
+            getConfiguredMaxMergingDictionarySize()
+        )
     );
 
     newConfig.maxSpillFileCount = queryContext.getOrDefault(
@@ -402,9 +406,8 @@ public class GroupByQueryConfig
         getMaxSpillFileCount()
     );
 
-    newConfig.minSpillFileSize = queryContext.getOrDefault(
-        QueryContextParameters.MIN_SPILL_FILE_SIZE,
-        HumanReadableBytes.valueOf(getMinSpillFileSize())
+    newConfig.minSpillFileSize = HumanReadableBytes.valueOf(
+        queryContext.getOrDefault(QueryContextParameters.MIN_SPILL_FILE_SIZE, getMinSpillFileSize())
     );
 
     newConfig.forcePushDownLimit = queryContext.getOrDefault(

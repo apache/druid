@@ -704,11 +704,19 @@ public class QueryContexts
   {
   }
 
+  /**
+   * @deprecated Use {@link #getAsLong(String, Object, long)} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static long parseLong(Map<String, Object> context, String key, long defaultValue)
   {
     return getAsLong(key, context.get(key), defaultValue);
   }
 
+  /**
+   * @deprecated Use {@link #getAsInt(String, Object, int)} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static int parseInt(Map<String, Object> context, String key, int defaultValue)
   {
     return getAsInt(key, context.get(key), defaultValue);
@@ -730,6 +738,10 @@ public class QueryContexts
     return getAsString(key, context.get(key), defaultValue);
   }
 
+  /**
+   * @deprecated Use {@link #getAsFloat(String, Object, float)} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   @SuppressWarnings("unused") // To keep IntelliJ inspections happy
   public static float parseFloat(Map<String, Object> context, String key, float defaultValue)
   {
@@ -780,37 +792,35 @@ public class QueryContexts
     return val == null ? defaultValue : val;
   }
 
+  /**
+   * Get the value of a context value as an {@code Integer}, returning {@code null} if the value is not set.
+   * The value can be a whole number, such as {@code 12} or {@code 12.0}, or a string of one, such as {@code "12"}.
+   * Strings can also be human-readable numbers, such as {@code "10K"} or {@code "256 MiB"}.
+   *
+   * @throws BadQueryContextException for a fractional value, a value outside the {@code int} range, or a non-number
+   */
   @Nullable
   public static Integer getAsInt(String key, Object value)
   {
     if (value == null) {
       return null;
-    } else if (value instanceof Number) {
-      return ((Number) value).intValue();
-    } else if (value instanceof String) {
-      try {
-        return Numbers.parseInt(value);
-      }
-      catch (NumberFormatException ignored) {
-
-        // Attempt to handle trivial decimal values: 12.00, etc.
-        // This mimics how Jackson will convert "12.00" to a Integer on request.
-        try {
-          return new BigDecimal((String) value).intValueExact();
-        }
-        catch (Exception nfe) {
-          // That didn't work either. Give up.
-          throw badValueException(key, "in integer format", value);
-        }
-      }
     }
-
-    throw badTypeException(key, "an Integer", value);
+    return QueryContextParameter.exactNumber(
+        key,
+        value,
+        "integer",
+        Integer.MIN_VALUE,
+        Integer.MAX_VALUE,
+        BigDecimal::intValueExact
+    );
   }
 
   /**
-   * Get the value of a context value as an {@code int}. The value is expected
-   * to be {@code null}, a string or a {@code Number} object.
+   * Get the value of a context value as an {@code int}, returning the default value if the value is not set.
+   * The value can be a whole number, such as {@code 12} or {@code 12.0}, or a string of one, such as {@code "12"}.
+   * Strings can also be human-readable numbers, such as {@code "10K"} or {@code "256 MiB"}.
+   *
+   * @throws BadQueryContextException for a fractional value, a value outside the {@code int} range, or a non-number
    */
   public static int getAsInt(
       final String key,
@@ -822,36 +832,35 @@ public class QueryContexts
     return val == null ? defaultValue : val;
   }
 
+  /**
+   * Get the value of a context value as a {@code Long}, returning {@code null} if the value is not set.
+   * The value can be a whole number, such as {@code 12} or {@code 12.0}, or a string of one, such as {@code "12"}.
+   * Strings can also be human-readable numbers, such as {@code "10K"} or {@code "256 MiB"}.
+   *
+   * @throws BadQueryContextException for a fractional value, a value outside the {@code long} range, or a non-number
+   */
   @Nullable
   public static Long getAsLong(String key, Object value)
   {
     if (value == null) {
       return null;
-    } else if (value instanceof Number) {
-      return ((Number) value).longValue();
-    } else if (value instanceof String) {
-      try {
-        return Numbers.parseLong(value);
-      }
-      catch (NumberFormatException ignored) {
-
-        // Attempt to handle trivial decimal values: 12.00, etc.
-        // This mimics how Jackson will convert "12.00" to a Long on request.
-        try {
-          return new BigDecimal((String) value).longValueExact();
-        }
-        catch (Exception nfe) {
-          // That didn't work either. Give up.
-          throw badValueException(key, "in long format", value);
-        }
-      }
     }
-    throw badTypeException(key, "a Long", value);
+    return QueryContextParameter.exactNumber(
+        key,
+        value,
+        "long",
+        Long.MIN_VALUE,
+        Long.MAX_VALUE,
+        BigDecimal::longValueExact
+    );
   }
 
   /**
-   * Get the value of a context value as an {@code long}. The value is expected
-   * to be {@code null}, a string or a {@code Number} object.
+   * Get the value of a context value as a {@code long}, returning the default value if the value is not set.
+   * The value can be a whole number, such as {@code 12} or {@code 12.0}, or a string of one, such as {@code "12"}.
+   * Strings can also be human-readable numbers, such as {@code "10K"} or {@code "256 MiB"}.
+   *
+   * @throws BadQueryContextException for a fractional value, a value outside the {@code long} range, or a non-number
    */
   public static long getAsLong(
       final String key,
@@ -894,6 +903,11 @@ public class QueryContexts
     return val == null ? defaultValue : val;
   }
 
+  /**
+   * @deprecated Use {@link #getAsLong(String, Object, long)}, which also accepts human-readable numbers such as
+   * {@code 256MiB}, or a {@link QueryContextParameter} with {@link QueryContext#get(QueryContextParameter)}.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static HumanReadableBytes getAsHumanReadableBytes(
       final String key,
       final Object value,
