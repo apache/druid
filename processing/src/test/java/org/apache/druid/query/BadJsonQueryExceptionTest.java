@@ -19,8 +19,12 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +63,55 @@ public class BadJsonQueryExceptionTest
         "Invalid native query: the request contains invalid or missing fields",
         exception.getMessage()
     );
+  }
+
+  @Test
+  public void testUnknownQueryType()
+  {
+    final BadJsonQueryException exception = readBadQuery(
+        "{\"queryType\":\"noSuchQueryType\",\"dataSource\":\"ds\",\"intervals\":[\"2000/P1D\"]}"
+    );
+
+    Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, exception.getErrorCode());
+    Assertions.assertEquals(InvalidTypeIdException.class.getName(), exception.getErrorClass());
+    // Fails at the root, so there is no reference chain to report.
+    Assertions.assertTrue(exception.getMessage().startsWith("Invalid native query: "), exception.getMessage());
+    Assertions.assertTrue(
+        exception.getMessage().contains("Could not resolve type id 'noSuchQueryType'"),
+        exception.getMessage()
+    );
+    Assertions.assertFalse(exception.getMessage().contains("reference chain"), exception.getMessage());
+  }
+
+  @Test
+  public void testFieldOfWrongType()
+  {
+    final BadJsonQueryException exception = readBadQuery(
+        "{\"queryType\":\"timeseries\",\"dataSource\":\"ds\",\"intervals\":[\"2000/P1D\"],\"aggregations\":\"rows\"}"
+    );
+
+    Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, exception.getErrorCode());
+    Assertions.assertEquals(MismatchedInputException.class.getName(), exception.getErrorClass());
+    Assertions.assertTrue(exception.getMessage().startsWith("Invalid native query: "), exception.getMessage());
+    Assertions.assertTrue(
+        exception.getMessage().endsWith(
+            "(through reference chain: org.apache.druid.query.timeseries.TimeseriesQuery[\"aggregations\"])"
+        ),
+        exception.getMessage()
+    );
+  }
+
+  /**
+   * Reads a query that is well-formed JSON but cannot be bound to a {@link Query}, and wraps the resulting
+   * {@link JsonMappingException} the same way QueryResource does.
+   */
+  private static BadJsonQueryException readBadQuery(final String json)
+  {
+    final JsonMappingException e = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> TestHelper.JSON_MAPPER.readValue(json, Query.class)
+    );
+    return new BadJsonQueryException(e);
   }
 
   private static ValueInstantiationException valueInstantiationException(Throwable cause)

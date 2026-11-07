@@ -19,30 +19,38 @@
 
 package org.apache.druid.indexing.overlord;
 
-/// Deployment mode of the Overlord in the current process.
-///
-/// The mode is bound by `CliOverlord#getModules(boolean)`, which already knows how
-/// the process was started: as the `overlord` service, or with the Overlord modules
-/// loaded into a Coordinator by `CliCoordinator`.
-///
-/// Overlord code must use this binding rather than `druid.coordinator.asOverlord.enabled`
-/// to find out how it is deployed. That property is meant for the Coordinator only, and a
-/// standalone Overlord may still see it set to `true`, for example when it shares a
-/// `runtime.properties` file with the Coordinator.
-///
-/// Components that the Overlord shares with the Coordinator in the same process use the mode
-/// to decide who owns their lifecycle:
-///
-/// - [DruidOverlord] starts and stops the segment metadata cache only when [#STANDALONE].
-/// - `OverlordCompactionScheduler` polls segments itself only when [#STANDALONE].
+/**
+ * Deployment mode of the Overlord in the current process.
+ *
+ * <p>The mode is bound by {@code CliOverlord#getModules(boolean)}, which already knows how
+ * the process was started: as the {@code overlord} service, or with the Overlord modules
+ * loaded into a Coordinator by {@code CliCoordinator}.
+ *
+ * <p>Overlord code must use this binding rather than {@code druid.coordinator.asOverlord.enabled}
+ * to find out how it is deployed. That property is meant for the Coordinator only, and a
+ * standalone Overlord may still see it set to {@code true}, for example when it shares a
+ * {@code runtime.properties} file with the Coordinator.
+ *
+ * <p>Components that the Overlord shares with the Coordinator in the same process use the mode
+ * to decide who owns their lifecycle:
+ *
+ * <ul>
+ *   <li>{@link DruidOverlord} starts and stops the segment metadata cache only when {@link #STANDALONE}.</li>
+ *   <li>{@code OverlordCompactionScheduler} polls segments itself only when {@link #STANDALONE}.</li>
+ * </ul>
+ */
 public enum OverlordMode
 {
-  /// The Overlord runs as its own service, started by `CliOverlord`. It owns the lifecycle
-  /// of every component it uses.
+  /**
+   * The Overlord runs as its own service, started by {@code CliOverlord}. It owns the lifecycle
+   * of every component it uses.
+   */
   STANDALONE,
 
-  /// The Overlord runs inside a Coordinator process (`druid.coordinator.asOverlord.enabled=true`
-  /// on the Coordinator). Components shared with the Coordinator, such as the segment metadata cache
-  /// and segment polling, are started and stopped by the Coordinator.
+  /**
+   * The Overlord runs inside a Coordinator process ({@code druid.coordinator.asOverlord.enabled=true}
+   * on the Coordinator). Components shared with the Coordinator, such as the segment metadata cache
+   * and segment polling, are started and stopped by the Coordinator.
+   */
   EMBEDDED_IN_COORDINATOR
 }

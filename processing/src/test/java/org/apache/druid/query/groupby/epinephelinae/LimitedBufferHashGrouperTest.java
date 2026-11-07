@@ -43,8 +43,10 @@ import org.junit.jupiter.api.Test;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
 {
@@ -448,6 +450,58 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     Assertions.assertEquals(1.0, grouper.getMaxSpillProximity(), 0.0);
 
     grouper.close();
+  }
+
+  @Test
+  public void testRepeatedKeysAcrossBufferSwaps()
+  {
+    for (final byte fill : new byte[]{0, (byte) 0xFF, 0x7F}) {
+      final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+      final ByteBuffer buffer = ByteBuffer.allocate(20000);
+      for (int i = 0; i < buffer.capacity(); i++) {
+        buffer.put(i, fill);
+      }
+      final LimitedBufferHashGrouper<IntKey> grouper = new LimitedBufferHashGrouper<>(
+          Suppliers.ofInstance(buffer),
+          GrouperTestUtil.intKeySerde(),
+          AggregatorAdapters.factorizeBuffered(
+              columnSelectorFactory,
+              ImmutableList.of(
+                  new LongSumAggregatorFactory("valueSum", "value"),
+                  new CountAggregatorFactory("count")
+              )
+          ),
+          Integer.MAX_VALUE,
+          0.5f,
+          2,
+          LIMIT,
+          false
+      );
+      grouper.init();
+
+      // Shuffle so that keys recur after buffer swaps, which is when the stale heap index matters.
+      final int numKeys = 1000;
+      final int repeats = 10;
+      final List<Integer> rows = new ArrayList<>();
+      for (int r = 0; r < repeats; r++) {
+        for (int k = 0; k < numKeys; k++) {
+          rows.add(k);
+        }
+      }
+      Collections.shuffle(rows, new Random(0));
+
+      columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 1L)));
+      for (final int k : rows) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(k)).isOk());
+      }
+      Assertions.assertTrue(grouper.getGrowthCount() > 1, "growthCount " + grouper.getGrowthCount());
+
+      final List<Pair<Integer, List<Object>>> expected = new ArrayList<>();
+      for (int i = 0; i < LIMIT; i++) {
+        expected.add(Pair.of(i, ImmutableList.of((long) repeats, (long) repeats)));
+      }
+      Assertions.assertEquals(expected, entriesToList(grouper.iterator(true)), "fill " + fill);
+    }
   }
 
   private static LimitedBufferHashGrouper<IntKey> makeGrouper(

@@ -19,10 +19,18 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -42,9 +50,11 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -1079,6 +1089,83 @@ public class QueryResourceTest
     Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
     Assertions.assertEquals(ValueInstantiationException.class.getName(), e.getErrorClass());
     Assertions.assertEquals("Invalid native query: dataSource can't be null", e.getMessage());
+  }
+
+  @Test
+  public void testQueryThatFailsJsonBinding() throws IOException
+  {
+    // Well-formed JSON that cannot be bound to a query is a user error, not a 500 from the catch-all handler.
+    // The error message itself is covered by BadJsonQueryExceptionTest.
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream(
+            StringUtils.replace(SIMPLE_TIMESERIES_QUERY, "\"timeseries\"", "\"noSuchQueryType\"")
+                       .getBytes(StandardCharsets.UTF_8)
+        ),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(InvalidTypeIdException.class.getName(), e.getErrorClass());
+  }
+
+  @Test
+  public void testQueryWithBrokenDefinitionIsServerError() throws IOException
+  {
+    // A registered query type that Jackson cannot instantiate is a server-side defect, so it must not be reported
+    // as a bad request.
+    jsonMapper = jsonMapper.copy();
+    jsonMapper.registerSubtypes(new NamedType(BrokenQuery.class, "brokenQuery"));
+    queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
+    final MockHttpServletResponse asyncResponse = MockHttpServletResponse.forRequest(testServletRequest);
+    testServletRequest.remoteHost = "localhost";
+
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream(
+            StringUtils.replace(SIMPLE_TIMESERIES_QUERY, "\"timeseries\"", "\"brokenQuery\"")
+                       .getBytes(StandardCharsets.UTF_8)
+        ),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assertions.assertNull(response);
+    Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    final QueryException e = jsonMapper.readValue(asyncResponse.baos.toByteArray(), QueryException.class);
+    Assertions.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(InvalidDefinitionException.class.getName(), e.getErrorClass());
+  }
+
+  @Test
+  public void testBadInputRejectedByDeserializerIsBadRequest() throws IOException
+  {
+    for (final RuntimeException exception : List.of(
+        new IAE("bad granularity"),
+        InvalidInput.exception("bad granularity")
+    )) {
+      final Response response = postWithFailingGranularityDeserializer(exception);
+      Assertions.assertNotNull(response);
+      Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+      final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+      Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
+      Assertions.assertEquals(JsonMappingException.class.getName(), e.getErrorClass());
+      Assertions.assertTrue(e.getMessage().contains("bad granularity"), e.getMessage());
+    }
+  }
+
+  @Test
+  public void testBugInDeserializerIsServerError() throws IOException
+  {
+    final MockHttpServletResponse asyncResponse = MockHttpServletResponse.forRequest(testServletRequest);
+    testServletRequest.remoteHost = "localhost";
+
+    final Response response = postWithFailingGranularityDeserializer(new NullPointerException());
+    Assertions.assertNull(response);
+    Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    final QueryException e = jsonMapper.readValue(asyncResponse.baos.toByteArray(), QueryException.class);
+    Assertions.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(JsonMappingException.class.getName(), e.getErrorClass());
   }
 
   @Test
@@ -2157,5 +2244,40 @@ public class QueryResourceTest
   ) throws IOException
   {
     return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
+  }
+
+  /**
+   * Posts {@link #SIMPLE_TIMESERIES_QUERY} with a granularity deserializer that throws {@code exception}. Jackson wraps
+   * it in a plain {@link JsonMappingException}, as it does for any exception thrown while deserializing a property.
+   */
+  private Response postWithFailingGranularityDeserializer(final RuntimeException exception) throws IOException
+  {
+    jsonMapper = jsonMapper.copy();
+    jsonMapper.registerModule(
+        new SimpleModule().addDeserializer(
+            Granularity.class,
+            new JsonDeserializer<>()
+            {
+              @Override
+              public Granularity deserialize(final JsonParser p, final DeserializationContext ctxt)
+              {
+                throw exception;
+              }
+            }
+        )
+    );
+    queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
+    return queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+  }
+
+  /**
+   * A query type with no creator, which Jackson rejects with an {@link InvalidDefinitionException}.
+   */
+  private abstract static class BrokenQuery implements Query<Object>
+  {
   }
 }

@@ -194,6 +194,11 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     }
   }
 
+  public void stopChangeHistory()
+  {
+    changeHistory.stop();
+  }
+
   public Map<String, TaskAnnouncement> getCompletedTasks()
   {
     return completedTasks;

@@ -19,7 +19,9 @@
 
 package org.apache.druid.msq.querykit.scan;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
@@ -41,12 +43,18 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.SegmentReferenceHolder;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -67,6 +75,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -80,6 +89,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 {
@@ -133,6 +143,75 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 
     Assertions.assertEquals(3, rows.size());
     Assertions.assertEquals(13, sharedRunningCountForLimit.get());
+  }
+
+  @Test
+  public void test_runWithDataServerQuery_sharedLimitAcrossMultipleYielders() throws Exception
+  {
+    final RowSignature signature = RowSignature.builder().add("dim", ColumnType.STRING).build();
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+              .columns(signature.getColumnNames())
+              .columnTypes(signature.getColumnTypes())
+              .limit(4)
+              .build();
+
+    // Each yielder has fewer rows than the limit, and the first one leaves a partial frame behind when it runs out.
+    final DataServerQueryHandler dataServerQueryHandler = new DataServerQueryHandler()
+    {
+      @Override
+      @SuppressWarnings("unchecked")
+      public <RowType, QueryType> ListenableFuture<DataServerQueryResult<RowType>> fetchRowsFromDataServer(
+          final Query<QueryType> query,
+          final JavaType queryResultType,
+          final Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
+          final Closer closer
+      )
+      {
+        final List<Yielder<Object[]>> yielders = ImmutableList.of(
+            Yielders.each(Sequences.simple(ImmutableList.of(new Object[]{"a"}, new Object[]{"b"}, new Object[]{"c"}))),
+            Yielders.each(Sequences.simple(ImmutableList.of(new Object[]{"d"}, new Object[]{"e"}, new Object[]{"f"}))),
+            Yielders.each(Sequences.simple(ImmutableList.of(new Object[]{"g"}, new Object[]{"h"}, new Object[]{"i"})))
+        );
+
+        return Futures.immediateFuture(
+            (DataServerQueryResult<RowType>) new DataServerQueryResult<>(yielders, ImmutableList.of(), "test")
+        );
+      }
+    };
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.latestRowBased(),
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        signature,
+        Collections.emptyList(),
+        false
+    );
+
+    final AtomicLong sharedRunningCountForLimit = new AtomicLong();
+    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
+        query,
+        sharedRunningCountForLimit,
+        new DefaultObjectMapper(),
+        ReadableInput.dataServerQuery(dataServerQueryHandler),
+        SegmentMapFunction.IDENTITY,
+        ResourceHolder.fromCloseable(outputChannel.writable()),
+        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
+    );
+
+    final ListenableFuture<Object> retVal = exec.runFully(processor, null);
+    final List<List<Object>> rows =
+        FrameTestUtil.readRowsFromFrameChannel(outputChannel.readable(), FrameReader.create(signature)).toList();
+    retVal.get();
+
+    Assertions.assertEquals(
+        ImmutableList.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")),
+        rows
+    );
+    Assertions.assertEquals(4, sharedRunningCountForLimit.get());
   }
 
   @Test

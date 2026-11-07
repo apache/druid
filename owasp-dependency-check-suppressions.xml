@@ -842,7 +842,7 @@
   <suppress>
     <!-- CVE-2026-89407, CVE-2026-89425: ReDoS/OOM in jackson-core's number and error-token parsing
          of malformed input. Affects jackson-core shaded inside hadoop-client-runtime-3.5.0.jar
-         and parquet-jackson-1.18.1.jar, not Druid's own jackson-core (2.22.3). -->
+         and parquet-jackson-1.18.1.jar, not Druid's own jackson-core (2.22.4). -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-core 2.18.6)
                  parquet-jackson-1.18.1.jar (shaded jackson-core 2.22.2)
@@ -870,7 +870,7 @@
          Each requires binding untrusted JSON into types that use these annotations or field types.
          Hadoop's client classes in hadoop-client-api reference none of these annotations and read
          JSON from cluster services (NameNode, KMS) as untyped maps. Druid's own jackson-databind
-         (2.22.3) is not affected. parquet-jackson's jackson-databind (2.22.2) already has these fixes.
+         (2.22.4) is not affected. parquet-jackson's jackson-databind (2.22.2) already has these fixes.
          Remove when Hadoop ships jackson-databind 2.18.10+. -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
@@ -998,5 +998,26 @@
     <packageUrl regex="true">^pkg:maven/org\.pac4j/pac4j-(core|oidc)@5\.7\.10$</packageUrl>
     <cve>CVE-2026-82463</cve>
     <cve>CVE-2026-82461</cve>
+  </suppress>
+
+  <suppress>
+    <!-- reactor-netty is a transitive dependency of the Azure SDK (azure-core-http-netty).
+         Druid uses it only as an HTTPS client to Azure Blob Storage.
+         CVE-2026-47874: resource exhaustion with HTTP/1.1 pipelined requests. Affects only the
+         Reactor Netty HTTP server. Druid uses Jetty as its server.
+         CVE-2026-47845: remote IP misevaluated with the HAProxy protocol. Affects only the
+         Reactor Netty HTTP server with the HAProxy protocol enabled.
+         CVE-2026-47848: credential leak on a cross-origin redirect. Affects only the WebSocket
+         client. The Azure SDK does not use WebSocket.
+         CVE-2026-47843: DNS resolver configuration reused across clients. Affects only clients
+         with different custom DNS resolvers. Druid and the Azure SDK set no custom DNS resolver. -->
+    <notes><![CDATA[
+      file name: reactor-netty-core-1.2.18.jar / reactor-netty-http-1.2.18.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.projectreactor\.netty/reactor-netty-(core|http)@1\.2\.18$</packageUrl>
+    <cve>CVE-2026-47874</cve>
+    <cve>CVE-2026-47845</cve>
+    <cve>CVE-2026-47848</cve>
+    <cve>CVE-2026-47843</cve>
   </suppress>
 </suppressions>
