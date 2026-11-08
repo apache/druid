@@ -80,6 +80,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -1868,8 +1870,9 @@ public class HttpRemoteTaskRunnerTest
   }
 
   @Timeout(60)
-  @Test
-  public void testShutdownTaskBeingAssignedLeavesItToAssigningThread() throws Exception
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void testShutdownTaskBeingAssigned(final boolean assignmentAccepted) throws Exception
   {
     final TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
@@ -1887,9 +1890,11 @@ public class HttpRemoteTaskRunnerTest
       @Override
       protected Map<Task, List<TaskAnnouncement>> delegate()
       {
-        return ImmutableMap.of(
+        return Collections.singletonMap(
             task,
-            ImmutableList.of(TaskAnnouncement.create(task, TaskStatus.running(task.getId()), TaskLocation.unknown()))
+            assignmentAccepted
+            ? ImmutableList.of(TaskAnnouncement.create(task, TaskStatus.running(task.getId()), TaskLocation.unknown()))
+            : null
         );
       }
 
@@ -1933,13 +1938,23 @@ public class HttpRemoteTaskRunnerTest
       Assertions.assertFalse(future.isDone());
       Assertions.assertFalse(taskRunner.getPendingTasksList().contains(task.getId()));
 
-      // The assignment goes through, so the next shutdown request finds the task RUNNING on the worker
       assignmentAllowed.countDown();
-      while (taskRunner.getRunningTasks().isEmpty()) {
-        Thread.sleep(10);
+      if (assignmentAccepted) {
+        // The next shutdown request finds the task RUNNING on the worker
+        while (taskRunner.getRunningTasks().isEmpty()) {
+          Thread.sleep(10);
+        }
+        Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
+        Assertions.assertFalse(future.isDone());
+      } else {
+        // Another task can use the worker once the rejected assignment releases its reservation
+        Assertions.assertTrue(taskRunner.run(NoopTask.create()).get().isSuccess());
+        Assertions.assertTrue(future.isDone(), "A cancelled task must complete after its assignment is rejected");
+        Assertions.assertEquals(TaskState.FAILED, future.get().getStatusCode());
+        Assertions.assertEquals("Killed while being assigned", future.get().getErrorMsg());
+        Assertions.assertTrue(taskRunner.getPendingTasks().isEmpty());
+        Assertions.assertTrue(taskRunner.getPendingTaskPayloads().isEmpty());
       }
-      Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
-      Assertions.assertFalse(future.isDone());
     }
     finally {
       assignmentAllowed.countDown();
@@ -2359,6 +2374,10 @@ public class HttpRemoteTaskRunnerTest
         final List<TaskAnnouncement> announcements;
         if (toBeAssignedTasks.containsKey(task)) {
           announcements = toBeAssignedTasks.get(task);
+          if (announcements == null) {
+            // A null announcement list simulates a worker rejecting the assignment
+            return false;
+          }
         } else {
           // no behavior specified for the task, so do default behavior of completing the task
           announcements = new ArrayList<>();
