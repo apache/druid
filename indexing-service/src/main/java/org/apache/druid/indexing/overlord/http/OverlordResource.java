@@ -795,13 +795,14 @@ public class OverlordResource
         taskMaster.getTaskRunner(),
         taskRunner -> {
           if (!(taskRunner instanceof WorkerTaskRunner)) {
-            log.debug(
-                "Task runner[%s] of type[%s] does not support worker handoff",
-                taskRunner,
-                taskRunner.getClass().getName()
-            );
             return Response.serverError()
-                           .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
+                           .entity(ImmutableMap.of(
+                               "error",
+                               StringUtils.format(
+                                   "Task runner type[%s] does not support worker handoff",
+                                   taskRunner.getClass().getName()
+                               )
+                           ))
                            .build();
           }
 
