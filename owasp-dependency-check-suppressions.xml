@@ -829,11 +829,6 @@
          base types, enabling arbitrary class instantiation via polymorphic deserialization.
          CVE-2026-91776: unbounded type-id cache growth with @JsonTypeInfo(use = NAME, defaultImpl = ...).
          CVE-2026-91777: quadratic forward-reference resolution with @JsonIdentityInfo.
-         CVE-2026-110879: polymorphic type validation bypass through generic type arguments (fixed in
-         2.18.12 and 2.22.4). It requires default typing or @JsonTypeInfo(use = Id.CLASS). No class in
-         hadoop-client-api 3.5.0 or in Parquet 1.18.1 enables default typing or uses @JsonTypeInfo.
-         Parquet uses its shaded ObjectMapper only to write ParquetMetadata JSON and to read
-         encryption key material as untyped maps. #20852 upgraded Druid's own jackson-databind to 2.22.4.
          Neither Hadoop's client classes nor Parquet's classes reference these annotations.
          These CVEs affect jackson-databind shaded inside hadoop/parquet jars,
          not Druid's own jackson-databind (2.22.x). -->
@@ -847,6 +842,17 @@
     <cve>CVE-2026-83557</cve>
     <cve>CVE-2026-91776</cve>
     <cve>CVE-2026-91777</cve>
+  </suppress>
+
+  <suppress until="2027-04-30Z">
+    <!-- CVE-2026-110879: polymorphic type validation bypass through generic type arguments (fixed in
+         2.18.12 and 2.22.4). It requires default typing or @JsonTypeInfo(use = Id.CLASS). No class in
+         hadoop-client-api 3.5.0 or in Parquet 1.18.1 enables default typing or uses @JsonTypeInfo. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
+                 parquet-jackson-1.18.1.jar (shaded jackson-databind 2.22.2)
+    ]]></notes>
+    <filePath regex="true">.*/(hadoop-client-runtime|parquet-jackson)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-databind/pom\.xml$</filePath>
     <cve>CVE-2026-110879</cve>
   </suppress>
 
