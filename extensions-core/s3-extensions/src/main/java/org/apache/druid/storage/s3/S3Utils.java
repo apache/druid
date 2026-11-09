@@ -28,6 +28,7 @@ import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
@@ -54,7 +55,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -65,7 +66,9 @@ public class S3Utils
 {
   private static final String SCHEME = S3StorageDruidModule.SCHEME;
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
-  private static final Pattern S3_ARN = Pattern.compile("^arn:(aws|aws-cn|aws-us-gov):s3:[a-z0-9-]*:\\d{12}:accesspoint[:/][A-Za-z0-9.-]+$");
+  private static final Pattern S3_ARN = Pattern.compile("^arn:(aws|aws-cn|aws-us-gov):s3:(?<region>[a-z0-9-]*):\\d{12}:accesspoint:[A-Za-z0-9.-]+$");
+  private static final String ACCESS_POINT_SLASH = ":accesspoint/";
+  private static final String ACCESS_POINT_COLON = ":accesspoint:";
   private static final Logger log = new Logger(S3Utils.class);
 
   /**
@@ -132,7 +135,11 @@ public class S3Utils
     return RetryUtils.retry(f, S3RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
 
-  public static boolean isS3Arn(String value)
+  /**
+   * Whether the value is an S3 Access Point or Multi-Region Access Point ARN in the colon form expected by the
+   * AWS SDK, e.g. arn:aws:s3::&lt;account&gt;:accesspoint:alias.mrap.
+   */
+  public static boolean isS3Arn(@Nullable String value)
   {
     return value != null && S3_ARN.matcher(value).matches();
   }
@@ -273,17 +280,47 @@ public class S3Utils
   }
 
   /**
-   * Normalizes a bucket name or ARN by replacing '/' with ':'.
-   * Some inputs may provide Access Point ARNs in the form
-   * arn:aws:s3::<account>:accesspoint/alias.mrap, which should be normalized to
-   * arn:aws:s3::<account>:accesspoint:alias.mrap.
+   * Whether the value is a Multi-Region Access Point ARN in colon form. These ARNs have an empty region field, which
+   * distinguishes them from regional Access Point ARNs.
    */
-  public static String normalizeBucketName(String bucket)
+  public static boolean isMultiRegionAccessPointArn(@Nullable String value)
   {
-    return Optional.ofNullable(bucket)
-                   .filter(S3Utils::isS3Arn)
-                   .map(arn -> arn.replace('/', ':'))
-                   .orElse(bucket);
+    if (value == null) {
+      return false;
+    }
+    final Matcher matcher = S3_ARN.matcher(value);
+    return matcher.matches() && matcher.group("region").isEmpty();
+  }
+
+  /**
+   * Fails when ACL grants are enabled for an Access Point ARN bucket. Granting the bucket owner full control needs
+   * GetBucketAcl, which Multi-Region Access Points do not support, so these buckets require disableAcl=true.
+   *
+   * @param disableAclProperty runtime property that controls the ACL behavior, used in the error message
+   */
+  public static void checkAclSupported(@Nullable String bucket, boolean disableAcl, String disableAclProperty)
+  {
+    if (!disableAcl && isS3Arn(normalizeBucketName(bucket))) {
+      throw new IAE(
+          "Bucket [%s] is an S3 Access Point ARN, which does not support bucket ACL lookups. Set [%s=true].",
+          bucket,
+          disableAclProperty
+      );
+    }
+  }
+
+  /**
+   * Normalizes an Access Point ARN given in the slash form, arn:aws:s3::&lt;account&gt;:accesspoint/alias.mrap, to the
+   * colon form accepted by {@link #isS3Arn}. Any other value, including plain bucket names, is returned unchanged.
+   */
+  @Nullable
+  public static String normalizeBucketName(@Nullable String bucket)
+  {
+    if (bucket == null) {
+      return null;
+    }
+    final String candidate = StringUtils.replace(bucket, ACCESS_POINT_SLASH, ACCESS_POINT_COLON);
+    return isS3Arn(candidate) ? candidate : bucket;
   }
 
   public static String extractS3Key(URI uri)

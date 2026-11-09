@@ -61,6 +61,14 @@ public class S3DataSegmentPusherConfigTest
   }
 
   @Test
+  public void testDeserializationNormalizesSlashFormArnBucket() throws IOException
+  {
+    String jsonConfig = "{\"bucket\":\"arn:aws:s3::123456789012:accesspoint/abcdef0123456.mrap\"}";
+    S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
+    Assert.assertEquals("arn:aws:s3::123456789012:accesspoint:abcdef0123456.mrap", config.getBucket());
+  }
+
+  @Test
   public void testSerializationValidatingMaxListingLength() throws IOException
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","

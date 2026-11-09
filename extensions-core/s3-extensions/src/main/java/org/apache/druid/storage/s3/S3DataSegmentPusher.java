@@ -49,6 +49,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       S3DataSegmentPusherConfig config
   )
   {
+    S3Utils.checkAclSupported(config.getBucket(), config.getDisableAcl(), "druid.storage.disableAcl");
     this.s3Client = s3Client;
     this.config = config;
   }

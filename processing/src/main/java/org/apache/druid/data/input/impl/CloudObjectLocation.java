@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import java.net.URI;
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 /**
  * Common type for 'bucket' and 'path' concept of cloud objects to allow code sharing between cloud specific
@@ -44,11 +43,11 @@ import java.util.regex.Pattern;
  * The constructor ensures that bucket names are DNS compliant by checking that the URL encoded form of the bucket
  * matches the supplied value. Technically it should probably confirm that the bucket is also all lower-case, but
  * S3 has a legacy mode where buckets did not have to be compliant so we can't enforce that here unfortunately.
+ * ':' is also permitted so that providers can use identifiers such as ARNs in place of a bucket name; any stricter,
+ * provider-specific rules belong in a {@link CloudBucketValidator}.
  */
 public class CloudObjectLocation
 {
-  private static final Pattern S3_ARN = Pattern.compile("^arn:(aws|aws-cn|aws-us-gov):s3:[a-z0-9-]*:\\d{12}:accesspoint:[A-Za-z0-9.-]+$");
-
   public static URI validateUriScheme(String scheme, URI uri)
   {
     if (!scheme.equalsIgnoreCase(uri.getScheme())) {
@@ -67,20 +66,23 @@ public class CloudObjectLocation
                  "bucket name cannot be null. Please verify if bucket name adheres to naming rules");
     this.path = Preconditions.checkNotNull(StringUtils.maybeRemoveLeadingSlash(path));
     Preconditions.checkArgument(
-      this.bucket.equals(StringUtils.urlEncode(this.bucket)) || isS3Arn(this.bucket),
-      "bucket must follow DNS-compliant naming conventions or be a valid S3 Access Point ARN"
-      + " or S3 Multi-Region Access Point ARN. Use colon form: arn:...:accesspoint:name"
+        this.bucket.equals(StringUtils.replace(StringUtils.urlEncode(this.bucket), "%3A", ":")),
+        "bucket must follow DNS-compliant naming conventions"
     );
   }
 
   public CloudObjectLocation(URI uri)
   {
-    this(uri.getHost() != null ? uri.getHost() : uri.getAuthority(), uri.getPath());
+    this(extractBucket(uri), uri.getPath());
   }
 
-  private static boolean isS3Arn(String value)
+  /**
+   * Returns the bucket portion of a cloud object URI. Falls back to the authority when the bucket is not a valid
+   * host name, for example when it contains ':'.
+   */
+  public static String extractBucket(URI uri)
   {
-    return value != null && S3_ARN.matcher(value).matches();
+    return uri.getHost() != null ? uri.getHost() : uri.getAuthority();
   }
 
   /**

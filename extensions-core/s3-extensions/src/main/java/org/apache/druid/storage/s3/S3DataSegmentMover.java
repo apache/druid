@@ -73,10 +73,11 @@ public class S3DataSegmentMover implements DataSegmentMover
   {
     try {
       Map<String, Object> loadSpec = segment.getLoadSpec();
-      String s3Bucket = MapUtils.getString(loadSpec, "bucket");
+      // load specs reach the mover as raw maps, bypassing the normalizing setters on S3 config and S3LoadSpec
+      String s3Bucket = S3Utils.normalizeBucketName(MapUtils.getString(loadSpec, "bucket"));
       String s3Path = MapUtils.getString(loadSpec, "key");
 
-      final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
+      final String targetS3Bucket = S3Utils.normalizeBucketName(MapUtils.getString(targetLoadSpec, "bucket"));
       final String targetS3BaseKey = MapUtils.getString(targetLoadSpec, "baseKey");
       final String targetS3Path;
 
@@ -198,6 +199,13 @@ public class S3DataSegmentMover implements DataSegmentMover
       log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
       return;
     }
+    if (S3Utils.isMultiRegionAccessPointArn(s3Bucket)) {
+      throw new SegmentLoadingException(
+          "Unable to move file %s. Multi-Region Access Points are supported only as a CopyObject destination,"
+          + " not as a source.",
+          copyMsg
+      );
+    }
     final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
     final HeadObjectResponse sourceMetadata;
     try {
@@ -241,6 +249,7 @@ public class S3DataSegmentMover implements DataSegmentMover
         .sourceKey(s3Path)
         .destinationBucket(targetS3Bucket)
         .destinationKey(targetS3Path);
+    S3Utils.checkAclSupported(targetS3Bucket, config.getDisableAcl(), "druid.storage.disableAcl");
     if (!config.getDisableAcl()) {
       final String headerValue = S3Utils.grantFullControlHeaderValue(
           s3Client.getBucketOwnerGrant(targetS3Bucket)

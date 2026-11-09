@@ -257,6 +257,7 @@ libraries:
   - software.amazon.awssdk: endpoints-spi
   - software.amazon.awssdk: http-auth
   - software.amazon.awssdk: http-auth-aws
+  - software.amazon.awssdk: http-auth-aws-crt
   - software.amazon.awssdk: http-auth-aws-eventstream
   - software.amazon.awssdk: http-auth-spi
   - software.amazon.awssdk: http-client-spi

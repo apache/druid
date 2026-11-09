@@ -50,10 +50,11 @@ public class S3TaskLogsConfig
     return s3Bucket;
   }
 
-  @VisibleForTesting
+  // annotated so Jackson routes deserialization through the normalizing setter instead of writing the field directly
+  @JsonProperty("s3Bucket")
   void setS3Bucket(String s3Bucket)
   {
-    this.s3Bucket = s3Bucket;
+    this.s3Bucket = S3Utils.normalizeBucketName(s3Bucket);
   }
 
   public String getS3Prefix()

@@ -1262,6 +1262,8 @@ protoMessageType
 timeAndDims
 tmp
 SigV4
+SigV4A
+STS
 jvm.config
 kms
 s3

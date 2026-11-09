@@ -472,6 +472,28 @@ public class S3UtilsTest
   }
 
   @Test
+  public void testCheckAclSupported()
+  {
+    final String arn = "arn:aws:s3::123456789123:accesspoint:bucket.mrap";
+    final IllegalArgumentException e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> S3Utils.checkAclSupported(arn, false, "druid.storage.disableAcl")
+    );
+    Assert.assertTrue(e.getMessage().contains("druid.storage.disableAcl=true"));
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> S3Utils.checkAclSupported(
+            "arn:aws:s3::123456789123:accesspoint/bucket.mrap",
+            false,
+            "druid.storage.disableAcl"
+        )
+    );
+
+    S3Utils.checkAclSupported(arn, true, "druid.storage.disableAcl");
+    S3Utils.checkAclSupported("bucket", false, "druid.storage.disableAcl");
+  }
+
+  @Test
   public void testNonS3Bucket()
   {
     String bucket = "bucket/subpath";

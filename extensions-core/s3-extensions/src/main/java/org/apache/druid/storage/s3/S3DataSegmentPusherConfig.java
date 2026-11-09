@@ -43,6 +43,8 @@ public class S3DataSegmentPusherConfig
   @JsonProperty
   private boolean zip = true;
 
+  // annotated so Jackson routes deserialization through the normalizing setter instead of writing the field directly
+  @JsonProperty("bucket")
   public void setBucket(String bucket)
   {
     this.bucket = S3Utils.normalizeBucketName(bucket);
