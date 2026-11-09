@@ -26,9 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -43,10 +41,10 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.LookupAuthorizationUtils;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
@@ -713,23 +711,12 @@ public class LookupCoordinatorResource
     final List<ResourceAction> actions = names.stream()
                                               .map(name -> lookupAction(name, Action.WRITE))
                                               .collect(Collectors.toList());
-    final AuthorizationResult result = AuthorizationUtils.authorizeAllResourceActions(req, actions, authorizerMapper);
-    if (!result.allowAccessWithNoRestriction()) {
-      throw new ForbiddenException(result.getErrorMessage());
-    }
+    LookupAuthorizationUtils.authorizeResourceActions(req, actions, authorizerMapper);
   }
 
   private Set<String> readableNames(HttpServletRequest req, Set<String> names)
   {
-    if (names.isEmpty()) {
-      names.add(LookupResourceFilter.resourceName(null, null));
-    }
-    return ImmutableSet.copyOf(AuthorizationUtils.filterAuthorizedResources(
-        req,
-        names,
-        name -> ImmutableList.of(lookupAction(name, Action.READ)),
-        authorizerMapper
-    ));
+    return LookupAuthorizationUtils.readableNames(req, names, authorizerMapper, false);
   }
 
   private static void addLookupNames(Set<String> names, String tier, Collection<String> lookups)
@@ -788,7 +775,7 @@ public class LookupCoordinatorResource
     final Map<String, Map<String, T>> result = new LinkedHashMap<>();
     lookups.forEach((tier, tierLookups) -> {
       if (canReadTier(readable, tier)) {
-        result.put(tier, filterLookups(readable, tier, tierLookups));
+        result.put(tier, LookupAuthorizationUtils.filterLookups(readable, tier, tierLookups));
       }
     });
     return result;
@@ -801,25 +788,7 @@ public class LookupCoordinatorResource
     }
     final Set<String> names = new LinkedHashSet<>();
     addLookupNames(names, tier, lookups.keySet());
-    return filterLookups(readableNames(req, names), tier, lookups);
-  }
-
-  private static <T> Map<String, T> filterLookups(Set<String> readable, String tier, Map<String, T> lookups)
-  {
-    final Map<String, T> result = new LinkedHashMap<>();
-    lookups.forEach((lookup, value) -> {
-      if (readable.contains(LookupResourceFilter.resourceName(tier, lookup))) {
-        result.put(lookup, value);
-      }
-    });
-    return result;
-  }
-
-  private static <T> void addStateNames(Set<String> names, String tier, LookupsState<T> state)
-  {
-    state.getCurrent().keySet().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
-    state.getToLoad().keySet().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
-    state.getToDrop().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
+    return LookupAuthorizationUtils.filterLookups(readableNames(req, names), tier, lookups);
   }
 
   private <T> LookupsState<T> filterState(HttpServletRequest req, String tier, LookupsState<T> state)
@@ -828,22 +797,11 @@ public class LookupCoordinatorResource
       return state;
     }
     final Set<String> names = new LinkedHashSet<>();
-    addStateNames(names, tier, state);
+    LookupAuthorizationUtils.addStateNames(names, tier, state);
     if (names.isEmpty()) {
       names.add(LookupResourceFilter.resourceName(tier, null));
     }
-    return filterState(readableNames(req, names), tier, state);
-  }
-
-  private static <T> LookupsState<T> filterState(Set<String> readable, String tier, LookupsState<T> state)
-  {
-    final Set<String> toDrop = new LinkedHashSet<>(state.getToDrop());
-    toDrop.removeIf(lookup -> !readable.contains(LookupResourceFilter.resourceName(tier, lookup)));
-    return new LookupsState<>(
-        filterLookups(readable, tier, state.getCurrent()),
-        filterLookups(readable, tier, state.getToLoad()),
-        toDrop
-    );
+    return LookupAuthorizationUtils.filterState(readableNames(req, names), tier, state);
   }
 
   private <T> Map<HostAndPort, LookupsState<T>> filterNodeStates(
@@ -856,7 +814,7 @@ public class LookupCoordinatorResource
       return states;
     }
     final Set<String> names = new LinkedHashSet<>();
-    states.values().forEach(state -> addStateNames(names, tier, state));
+    states.values().forEach(state -> LookupAuthorizationUtils.addStateNames(names, tier, state));
     if (names.isEmpty()) {
       names.add(LookupResourceFilter.resourceName(tier, null));
     }
@@ -871,7 +829,7 @@ public class LookupCoordinatorResource
   {
     final Map<HostAndPort, LookupsState<T>> result = new LinkedHashMap<>();
     states.forEach((host, state) -> {
-      final LookupsState<T> filtered = filterState(readable, tier, state);
+      final LookupsState<T> filtered = LookupAuthorizationUtils.filterState(readable, tier, state);
       if (readable.contains(LookupResourceFilter.resourceName(tier, null))
           || !filtered.getCurrent().isEmpty()
           || !filtered.getToLoad().isEmpty()
@@ -893,7 +851,7 @@ public class LookupCoordinatorResource
     final Set<String> names = new LinkedHashSet<>();
     tiers.forEach((tier, states) -> {
       final int before = names.size();
-      states.values().forEach(state -> addStateNames(names, tier, state));
+      states.values().forEach(state -> LookupAuthorizationUtils.addStateNames(names, tier, state));
       if (names.size() == before) {
         names.add(LookupResourceFilter.resourceName(tier, null));
       }

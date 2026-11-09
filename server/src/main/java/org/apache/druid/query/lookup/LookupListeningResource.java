@@ -21,7 +21,6 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -37,10 +36,9 @@ import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthorizationResult;
-import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.LookupAuthorizationUtils;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
@@ -51,7 +49,6 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -220,14 +217,7 @@ class LookupListeningResource extends ListenerResource
     if (actions.isEmpty()) {
       actions.add(lookupAction(LookupResourceFilter.resourceName(tier, null), Action.WRITE));
     }
-    final AuthorizationResult result = AuthorizationUtils.authorizeAllResourceActions(
-        request,
-        actions,
-        authorizerMapper
-    );
-    if (!result.allowAccessWithNoRestriction()) {
-      throw new ForbiddenException(result.getErrorMessage());
-    }
+    LookupAuthorizationUtils.authorizeResourceActions(request, actions, authorizerMapper);
   }
 
   /**
@@ -248,42 +238,15 @@ class LookupListeningResource extends ListenerResource
       return state;
     }
     final Set<String> names = new LinkedHashSet<>();
-    state.getCurrent().keySet().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
-    state.getToLoad().keySet().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
-    state.getToDrop().forEach(lookup -> names.add(LookupResourceFilter.resourceName(tier, lookup)));
+    LookupAuthorizationUtils.addStateNames(names, tier, state);
     if (names.isEmpty()) {
       names.add(LookupResourceFilter.resourceName(tier, null));
     }
-    final Set<String> readable = new LinkedHashSet<>();
-    final Iterable<String> allowed = writeResponse
-                                                ? AuthorizationUtils.filterAuthorizedResources(
-                                                    AuthorizationUtils.authenticationResultFromRequest(request),
-                                                    names,
-                                                    name -> ImmutableList.of(lookupAction(name, Action.READ)),
-                                                    authorizerMapper
-                                                )
-                                                : AuthorizationUtils.filterAuthorizedResources(
-                                                    request,
-                                                    names,
-                                                    name -> ImmutableList.of(lookupAction(name, Action.READ)),
-                                                    authorizerMapper
-                                                );
-    allowed.forEach(readable::add);
-    final Map<String, T> current = new LinkedHashMap<>();
-    state.getCurrent().forEach((lookup, value) -> {
-      if (readable.contains(LookupResourceFilter.resourceName(tier, lookup))) {
-        current.put(lookup, value);
-      }
-    });
-    final Map<String, T> toLoad = new LinkedHashMap<>();
-    state.getToLoad().forEach((lookup, value) -> {
-      if (readable.contains(LookupResourceFilter.resourceName(tier, lookup))) {
-        toLoad.put(lookup, value);
-      }
-    });
-    final Set<String> toDrop = new LinkedHashSet<>(state.getToDrop());
-    toDrop.removeIf(lookup -> !readable.contains(LookupResourceFilter.resourceName(tier, lookup)));
-    return new LookupsState<>(current, toLoad, toDrop);
+    return LookupAuthorizationUtils.filterState(
+        LookupAuthorizationUtils.readableNames(request, names, authorizerMapper, writeResponse),
+        tier,
+        state
+    );
   }
 
   private static ResourceAction lookupAction(String name, Action action)

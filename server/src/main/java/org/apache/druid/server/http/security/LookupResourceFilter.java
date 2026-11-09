@@ -25,10 +25,8 @@ import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthorizationResult;
-import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.LookupAuthorizationUtils;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
@@ -91,12 +89,9 @@ public class LookupResourceFilter extends AbstractResourceFilter
       );
     }
 
-    final AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(
-        getReq(), resourceAction, getAuthorizerMapper()
+    LookupAuthorizationUtils.authorizeResourceActions(
+        getReq(), ImmutableList.of(resourceAction), getAuthorizerMapper()
     );
-    if (!authResult.allowAccessWithNoRestriction()) {
-      throw new ForbiddenException(authResult.getErrorMessage());
-    }
     return request;
   }
 
