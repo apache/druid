@@ -1271,8 +1271,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           pendingTaskIds.remove(taskId);
           pendingWorkItem = taskRunnerWorkItem;
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
-          // The assigning thread completes the task if assignment fails. If the worker runs the task,
-          // a later shutdown request handles it.
+          // The assigning thread completes the task if assignment fails, and taskAddedOrUpdated
+          // asks the worker to shut it down if the worker runs it.
           taskRunnerWorkItem.shutdownStatus = TaskStatus.failure(taskId, reason);
           pendingTaskIds.remove(taskId);
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
@@ -1531,6 +1531,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
               case PENDING_WORKER_ASSIGN:
                 taskItem.setWorker(worker);
                 taskItem.setState(HttpRemoteTaskRunnerWorkItem.State.RUNNING);
+                shouldShutdownTask = taskItem.shutdownStatus != null;
                 log.info("Task[%s] started RUNNING on worker[%s].", taskId, worker.getHost());
 
                 final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();

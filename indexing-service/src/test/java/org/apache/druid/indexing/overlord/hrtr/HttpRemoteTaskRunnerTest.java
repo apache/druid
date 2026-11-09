@@ -1884,6 +1884,7 @@ public class HttpRemoteTaskRunnerTest
     final Task task = NoopTask.create();
     final CountDownLatch assignmentStarted = new CountDownLatch(1);
     final CountDownLatch assignmentAllowed = new CountDownLatch(1);
+    final Set<String> actualShutdowns = ConcurrentHashMap.newKeySet();
     // The test worker looks the task up here while assigning it, so this holds the task in PENDING_WORKER_ASSIGN
     final Map<Task, List<TaskAnnouncement>> toBeAssignedTasks = new ForwardingMap<Task, List<TaskAnnouncement>>()
     {
@@ -1916,7 +1917,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         new NoopProvisioningStrategy<>(),
         EasyMock.createNiceMock(HttpClient.class),
-        toBeAssignedTasks
+        toBeAssignedTasks,
+        actualShutdowns
     );
     taskRunner.start();
     try {
@@ -1940,8 +1942,8 @@ public class HttpRemoteTaskRunnerTest
 
       assignmentAllowed.countDown();
       if (assignmentAccepted) {
-        // The next shutdown request finds the task RUNNING on the worker
-        while (taskRunner.getRunningTasks().isEmpty()) {
+        // The worker is asked to shut the task down once it reports it RUNNING
+        while (!actualShutdowns.contains(task.getId())) {
           Thread.sleep(10);
         }
         Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
@@ -2197,7 +2199,8 @@ public class HttpRemoteTaskRunnerTest
                     TaskLocation.create("host", 1234, -1)
                 )
             )
-        )
+        ),
+        ImmutableSet.of()
     );
 
     try {
@@ -2500,7 +2503,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         provisioningStrategy,
         EasyMock.createNiceMock(HttpClient.class),
-        ImmutableMap.of()
+        ImmutableMap.of(),
+        ImmutableSet.of()
     );
   }
 
@@ -2508,7 +2512,8 @@ public class HttpRemoteTaskRunnerTest
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       ProvisioningStrategy provisioningStrategy,
       HttpClient httpClient,
-      Map<Task, List<TaskAnnouncement>> toBeAssignedTasks)
+      Map<Task, List<TaskAnnouncement>> toBeAssignedTasks,
+      Set<String> actualShutdowns)
   {
     return new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
@@ -2550,7 +2555,7 @@ public class HttpRemoteTaskRunnerTest
             ImmutableList.of(),
             toBeAssignedTasks,
             new AtomicInteger(),
-            ImmutableSet.of()
+            actualShutdowns
         );
       }
     };
