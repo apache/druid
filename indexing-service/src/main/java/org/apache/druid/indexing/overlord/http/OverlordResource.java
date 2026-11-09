@@ -26,6 +26,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -54,16 +55,15 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
-import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
-import org.apache.druid.indexing.overlord.WorkerHandoffHelper;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.WorkerHandoffResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -781,7 +781,7 @@ public class OverlordResource
    * {@code host} is the worker identity registered with the Overlord ({@code hostname:port}),
    * the same value used by {@link #enableWorker} and {@link #disableWorker}.
    * This is a best-effort API; 202 means notices were queued, not that handoff finished.
-   * {@link WorkerHandoffResponse#getSkipped()} lists seekable-stream tasks that were not queued.
+   * {@link WorkerHandoffResponse#skipped()} lists seekable-stream tasks that were not queued.
    */
   @POST
   @Path("/worker/{host}/handoff")
@@ -806,9 +806,9 @@ public class OverlordResource
                            .build();
           }
 
-          final Optional<ImmutableWorkerInfo> workerInfo = WorkerHandoffHelper.findWorker(
+          final Optional<ImmutableWorkerInfo> workerInfo = Iterables.tryFind(
               ((WorkerTaskRunner) taskRunner).getWorkers(),
-              host
+              entry -> entry.getWorker().getHost().equals(host)
           );
           if (!workerInfo.isPresent()) {
             return Response.status(Status.NOT_FOUND)
@@ -824,19 +824,15 @@ public class OverlordResource
             return Response.status(Status.SERVICE_UNAVAILABLE).build();
           }
 
-          final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
+          final WorkerHandoffResult result = supervisorManager.get().submitHandoffNotices(
               workerInfo.get().getRunningTasks(),
               taskMaster.getTaskQueue().get()::getActiveTask
-          );
-          final WorkerHandoffHelper.Result result = WorkerHandoffHelper.submitHandoffs(
-              supervisorManager.get(),
-              grouping
           );
           return Response.status(Status.ACCEPTED)
                          .entity(new WorkerHandoffResponse(
                              host,
-                             result.getTaskGroups(),
-                             result.getSkipped()
+                             result.taskGroups(),
+                             result.skipped()
                          ))
                          .build();
         }

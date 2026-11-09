@@ -25,20 +25,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskQueue;
-import org.apache.druid.indexing.overlord.WorkerHandoffHelper;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.overlord.supervisor.WorkerHandoffResult;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestHelper;
@@ -89,25 +85,26 @@ public class OverlordResourceWorkerHandoffTest
   @Test
   public void testHandoffReturnsAcceptedWithGroupedSupervisors()
   {
-    final Task primary = streamTask("index_kafka", "KubeState", "KubeState", 0);
-    final Task haCopy = streamTask("index_kafka", "KubeState_gcp_moncevents", "KubeState", 1);
     EasyMock.expect(taskRunner.getWorkers()).andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("primary", "ha"))));
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(taskQueue.getActiveTask("primary")).andReturn(Optional.of(primary));
-    EasyMock.expect(taskQueue.getActiveTask("ha")).andReturn(Optional.of(haCopy));
-    EasyMock.expect(supervisorManager.handoffTaskGroupsEarly("KubeState", ImmutableList.of(0))).andReturn(true);
-    EasyMock.expect(supervisorManager.handoffTaskGroupsEarly("KubeState_gcp_moncevents", ImmutableList.of(1)))
-            .andReturn(true);
+    EasyMock.expect(supervisorManager.submitHandoffNotices(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(new WorkerHandoffResult(
+                ImmutableMap.of(
+                    "KubeState", ImmutableList.of(0),
+                    "KubeState_gcp_moncevents", ImmutableList.of(1)
+                ),
+                Collections.emptyList()
+            ));
     EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
 
     final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
     final WorkerHandoffResponse entity = (WorkerHandoffResponse) response.getEntity();
-    Assertions.assertEquals(HOST, entity.getHost());
-    Assertions.assertEquals(ImmutableList.of(0), entity.getTaskGroups().get("KubeState"));
-    Assertions.assertEquals(ImmutableList.of(1), entity.getTaskGroups().get("KubeState_gcp_moncevents"));
-    Assertions.assertEquals(Collections.emptyList(), entity.getSkipped());
+    Assertions.assertEquals(HOST, entity.host());
+    Assertions.assertEquals(ImmutableList.of(0), entity.taskGroups().get("KubeState"));
+    Assertions.assertEquals(ImmutableList.of(1), entity.taskGroups().get("KubeState_gcp_moncevents"));
+    Assertions.assertEquals(Collections.emptyList(), entity.skipped());
     EasyMock.verify(taskMaster, taskRunner, taskQueue, supervisorManager);
   }
 
@@ -117,13 +114,15 @@ public class OverlordResourceWorkerHandoffTest
     EasyMock.expect(taskRunner.getWorkers()).andReturn(ImmutableList.of(workerInfo(ImmutableSet.of())));
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.submitHandoffNotices(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(new WorkerHandoffResult(Collections.emptyMap(), Collections.emptyList()));
     EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
 
     final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
     final WorkerHandoffResponse entity = (WorkerHandoffResponse) response.getEntity();
-    Assertions.assertEquals(Collections.emptyMap(), entity.getTaskGroups());
-    Assertions.assertEquals(Collections.emptyList(), entity.getSkipped());
+    Assertions.assertEquals(Collections.emptyMap(), entity.taskGroups());
+    Assertions.assertEquals(Collections.emptyList(), entity.skipped());
     EasyMock.verify(taskMaster, taskRunner, taskQueue, supervisorManager);
   }
 
@@ -144,42 +143,48 @@ public class OverlordResourceWorkerHandoffTest
     EasyMock.expect(taskRunner.getWorkers()).andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("noop-task"))));
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(taskQueue.getActiveTask("noop-task")).andReturn(Optional.of(NoopTask.create()));
+    EasyMock.expect(supervisorManager.submitHandoffNotices(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(new WorkerHandoffResult(Collections.emptyMap(), Collections.emptyList()));
     EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
 
     final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
     final WorkerHandoffResponse entity = (WorkerHandoffResponse) response.getEntity();
-    Assertions.assertEquals(Collections.emptyMap(), entity.getTaskGroups());
-    Assertions.assertEquals(Collections.emptyList(), entity.getSkipped());
+    Assertions.assertEquals(Collections.emptyMap(), entity.taskGroups());
+    Assertions.assertEquals(Collections.emptyList(), entity.skipped());
   }
 
   @Test
   public void testHandoffReportsNullTaskGroupIdAsSkipped()
   {
-    final Task queued = streamTask("index_kafka", "wikipedia", "wikipedia", 0);
-    final Task legacy = streamTask("index_kafka", "wikipedia", "wikipedia", null);
     EasyMock.expect(taskRunner.getWorkers())
             .andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("queued", "index_kafka_legacy_abc"))));
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(taskQueue.getActiveTask("queued")).andReturn(Optional.of(queued));
-    EasyMock.expect(taskQueue.getActiveTask("index_kafka_legacy_abc")).andReturn(Optional.of(legacy));
-    EasyMock.expect(supervisorManager.handoffTaskGroupsEarly("wikipedia", ImmutableList.of(0))).andReturn(true);
+    EasyMock.expect(supervisorManager.submitHandoffNotices(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(new WorkerHandoffResult(
+                ImmutableMap.of("wikipedia", ImmutableList.of(0)),
+                ImmutableList.of(
+                    new WorkerHandoffResult.SkippedTask(
+                        "index_kafka_legacy_abc",
+                        WorkerHandoffResult.REASON_MISSING_TASK_GROUP_ID
+                    )
+                )
+            ));
     EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
 
     final Response response = resource.handoffWorkerTasks(HOST);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
     final WorkerHandoffResponse entity = (WorkerHandoffResponse) response.getEntity();
-    Assertions.assertEquals(ImmutableList.of(0), entity.getTaskGroups().get("wikipedia"));
+    Assertions.assertEquals(ImmutableList.of(0), entity.taskGroups().get("wikipedia"));
     Assertions.assertEquals(
         ImmutableList.of(
-            new WorkerHandoffHelper.SkippedTask(
+            new WorkerHandoffResult.SkippedTask(
                 "index_kafka_legacy_abc",
-                WorkerHandoffHelper.REASON_MISSING_TASK_GROUP_ID
+                WorkerHandoffResult.REASON_MISSING_TASK_GROUP_ID
             )
         ),
-        entity.getSkipped()
+        entity.skipped()
     );
   }
 
@@ -190,13 +195,13 @@ public class OverlordResourceWorkerHandoffTest
         HOST,
         ImmutableMap.of("wikipedia", ImmutableList.of(0, 2)),
         ImmutableList.of(
-            new WorkerHandoffHelper.SkippedTask(
+            new WorkerHandoffResult.SkippedTask(
                 "index_kafka_legacy_abc",
-                WorkerHandoffHelper.REASON_MISSING_TASK_GROUP_ID
+                WorkerHandoffResult.REASON_MISSING_TASK_GROUP_ID
             ),
-            new WorkerHandoffHelper.SkippedTask(
+            new WorkerHandoffResult.SkippedTask(
                 "index_kafka_manual_xyz",
-                WorkerHandoffHelper.REASON_MISSING_SUPERVISOR_ID
+                WorkerHandoffResult.REASON_MISSING_SUPERVISOR_ID
             )
         )
     );
@@ -239,25 +244,5 @@ public class OverlordResourceWorkerHandoffTest
         runningTasks,
         DateTimes.nowUtc()
     );
-  }
-
-  private static SeekableStreamIndexTask<?, ?, ?> streamTask(
-      String type,
-      String supervisorId,
-      String dataSource,
-      Integer taskGroupId
-  )
-  {
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    final SeekableStreamIndexTaskIOConfig ioConfig = EasyMock.mock(SeekableStreamIndexTaskIOConfig.class);
-    EasyMock.expect(ioConfig.getTaskGroupId()).andReturn(taskGroupId).anyTimes();
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    final SeekableStreamIndexTask task = EasyMock.mock(SeekableStreamIndexTask.class);
-    EasyMock.expect(task.getType()).andReturn(type).anyTimes();
-    EasyMock.expect(task.getSupervisorId()).andReturn(supervisorId).anyTimes();
-    EasyMock.expect(task.getDataSource()).andReturn(dataSource).anyTimes();
-    EasyMock.expect(task.getIOConfig()).andReturn(ioConfig).anyTimes();
-    EasyMock.replay(ioConfig, task);
-    return task;
   }
 }
