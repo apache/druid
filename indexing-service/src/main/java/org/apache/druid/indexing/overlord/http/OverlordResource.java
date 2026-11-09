@@ -814,7 +814,7 @@ public class OverlordResource
             return Response.status(Status.NOT_FOUND)
                            .entity(ImmutableMap.of(
                                "error",
-                               StringUtils.format("Worker on host [%s] does not exist", host)
+                               StringUtils.format("Worker[%s] does not exist", host)
                            ))
                            .build();
           }
