@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.annotations.SuppressFBWarnings;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -53,7 +54,9 @@ public class SegmentFileContainerMetadata
   {
     this.startOffset = startOffset;
     this.size = size;
-    this.bundle = bundle == null ? SegmentFileBuilder.ROOT_BUNDLE_NAME : bundle;
+    this.bundle = bundle == null
+                  ? SegmentFileBuilder.ROOT_BUNDLE_NAME
+                  : SmooshedFileMapper.STRING_INTERNER.intern(bundle);
   }
 
   @JsonProperty

@@ -29,7 +29,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ProjectionMetadata;
-import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
@@ -94,7 +93,7 @@ public class PartialClusterGroupLoadSpec extends PartialLoadSpec
 
   /**
    * Resolve each {@code clusterGroupIndex} against the segment's {@link ClusteredValueGroupsBaseTableSchema} to a
-   * {@code __base$<clusteringValueIds>} bundle name via {@link Projections#getClusterGroupBundleName}. The base
+   * {@code __base$<clusteringValueIds>} bundle name via {@link TableClusterGroupSpec#getBundleName}. The base
    * projection carries the authoritative group list; each index picks the group at that position and its
    * {@code clusteringValueIds} disambiguate the bundle in the V10 layout.
    * <p>
@@ -145,7 +144,7 @@ public class PartialClusterGroupLoadSpec extends PartialLoadSpec
             segment.getId()
         );
       }
-      bundleNames.add(Projections.getClusterGroupBundleName(metadataGroups.get(idx).getClusteringValueIds()));
+      bundleNames.add(metadataGroups.get(idx).getBundleName());
     }
     return bundleNames;
   }

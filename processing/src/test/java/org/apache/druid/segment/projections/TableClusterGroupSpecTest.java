@@ -240,6 +240,18 @@ class TableClusterGroupSpecTest
     Assertions.assertFalse(specJson.contains("\"virtualColumns\""), "spec must not carry virtualColumns");
     // serialized form is dictionary IDs, not typed values: spec must not contain the literal value.
     Assertions.assertFalse(specJson.contains("\"" + VAL_ACME + "\""), "spec must not carry typed values inline");
+    // the bundle name is derived from the ids, never serialized
+    Assertions.assertFalse(specJson.contains("\"bundleName\""), "spec must not carry its derived bundle name");
+  }
+
+  @Test
+  void testBundleNameIsDerivedAndInterned() throws JsonProcessingException
+  {
+    final Built b = buildSummary(TENANT_REGION_CLUSTER_SIGNATURE, List.of(tuple(VAL_ACME, VAL_US_EAST_1)));
+    final TableClusterGroupSpec spec = b.specs().get(0);
+    Assertions.assertEquals(Projections.getClusterGroupBundleName(spec.getClusteringValueIds()), spec.getBundleName());
+    // deserialized specs (one per loaded segment) share the interned name rather than each holding a copy
+    Assertions.assertSame(spec.getBundleName(), roundTrip(b.schema()).getBundleName());
   }
 
   @Test
@@ -311,7 +323,7 @@ class TableClusterGroupSpecTest
         null
     );
     EqualsVerifier.forClass(TableClusterGroupSpec.class)
-                  .withIgnoredFields("summary", "numRows")
+                  .withIgnoredFields("summary", "numRows", "bundleName")
                   .withPrefabValues(ClusteredValueGroupsBaseTableSchema.class, redSummary, blueSummary)
                   .suppress(Warning.NONFINAL_FIELDS)
                   .usingGetClass()
