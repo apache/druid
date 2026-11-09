@@ -57,6 +57,10 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
+### Java
+
+Support for Java 21 has been dropped. Yuo must upgrade to Java 25.
+
 ### DDL statements for the catalog (experimental)
 
 Druid now supports CREATE and ALTER statements to manage metadata in the catalog. Use them to declare a table's columns, time partitioning, clustering, aggregate projections, and physical layout, instead of setting these in each ingestion spec.
@@ -171,7 +175,7 @@ The `druid-kubernetes-extensions` extension now support a `k8sNodeLabel` dynamic
 
 #### Peon pod template
 
-You can now retrieve the Peon pod template names currently configured on the Overlord using the new `GET` `/druid/indexer/v1/k8s/taskrunner/podTemplates` endpoint. It returns each configured template's name and full pod spec. The endpoint requires CONFIG read permission and returns 404 when the Overlord is not using the custom template pod adapter.
+You can now retrieve the Peon pod template names currently configured on the Overlord using the new `GET` `/druid/indexer/v1/k8s/taskrunner/podTemplates` endpoint. It returns the name for each configured template. The endpoint requires CONFIG read permission and returns 404 when the Overlord is not using the custom template pod adapter.
 
 [#19712](https://github.com/apache/druid/pull/19712)
 
