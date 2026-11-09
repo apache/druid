@@ -819,15 +819,14 @@ public class OverlordResource
                            .build();
           }
 
-          final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
           final Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
-          if (!taskQueue.isPresent() || !supervisorManager.isPresent()) {
+          if (!supervisorManager.isPresent()) {
             return Response.status(Status.SERVICE_UNAVAILABLE).build();
           }
 
           final WorkerHandoffHelper.Grouping grouping = WorkerHandoffHelper.groupTaskGroups(
               workerInfo.get().getRunningTasks(),
-              taskQueue.get()::getActiveTask
+              taskMaster.getTaskQueue().get()::getActiveTask
           );
           final WorkerHandoffHelper.Result result = WorkerHandoffHelper.submitHandoffs(
               supervisorManager.get(),
