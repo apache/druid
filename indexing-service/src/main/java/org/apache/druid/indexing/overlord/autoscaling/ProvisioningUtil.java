@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.java.util.common.ISE;
 
 public class ProvisioningUtil
 {
@@ -34,11 +33,9 @@ public class ProvisioningUtil
       @Override
       public boolean apply(ImmutableWorkerInfo worker)
       {
+        // workerVersion is optional. Without it no worker is too old, but a disabled worker is still not valid.
         final String minVersion = config.getWorkerVersion();
-        if (minVersion == null) {
-          throw new ISE("No minVersion found! It should be set in your runtime properties or configuration database.");
-        }
-        return worker.isValidVersion(minVersion);
+        return worker.isValidVersion(minVersion == null ? "" : minVersion);
       }
     };
   }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -733,6 +734,69 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
+  public void testProvisioningWithoutWorkerVersion()
+  {
+    useConfigWithoutWorkerVersion();
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).anyTimes();
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).anyTimes();
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject())).andReturn(new ArrayList<>()).anyTimes();
+    EasyMock.expect(autoScaler.provision()).andReturn(new AutoScalingData(Collections.singletonList("fake")));
+    final HttpRemoteTaskRunner runner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(Collections.singletonList(NoopTask.create()));
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Collections.singletonList(workerWithTask(testTask, "http", "h1", "n1", INVALID_VERSION))
+    );
+    EasyMock.expect(runner.getConfig()).andReturn(new HttpRemoteTaskRunnerConfig());
+    EasyMock.replay(runner, autoScaler);
+
+    final Provisioner provisioner = strategy.makeProvisioner(runner);
+
+    Assertions.assertTrue(provisioner.doProvision());
+    Assertions.assertEquals(ScalingStats.EVENT.PROVISION, provisioner.getStats().toList().get(0).getEvent());
+    EasyMock.verify(autoScaler, runner);
+  }
+
+  @Test
+  public void testTerminatingWithoutWorkerVersion()
+  {
+    useConfigWithoutWorkerVersion();
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).anyTimes();
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject())).andReturn(new ArrayList<>()).anyTimes();
+    EasyMock.expect(autoScaler.terminate(EasyMock.anyObject())).andReturn(new AutoScalingData(new ArrayList<>()));
+    final HttpRemoteTaskRunner runner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        ImmutableList.of(workerWithTask(testTask), workerWithTask(testTask))
+    ).anyTimes();
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.singletonList(workerWithTask(testTask).getWorker()));
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(new ArrayList<>());
+    EasyMock.replay(runner, autoScaler);
+
+    final Provisioner provisioner = strategy.makeProvisioner(runner);
+
+    Assertions.assertTrue(provisioner.doTerminate());
+    Assertions.assertEquals(ScalingStats.EVENT.TERMINATE, provisioner.getStats().toList().get(0).getEvent());
+    EasyMock.verify(autoScaler, runner);
+  }
+
+  @Test
+  public void testValidWorkerPredicateWithoutWorkerVersion()
+  {
+    final Predicate<ImmutableWorkerInfo> isValid = ProvisioningUtil.createValidWorkerPredicate(
+        new PendingTaskBasedWorkerProvisioningConfig()
+    );
+    final ImmutableWorkerInfo disabledWorker = ImmutableWorkerInfo.fromWorkerAnnouncements(
+        new Worker("http", "h1", "n1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY, true),
+        ImmutableMap.of(),
+        DateTimes.EPOCH,
+        null
+    );
+
+    Assertions.assertTrue(isValid.apply(workerWithTask(testTask, "http", "h1", "n1", INVALID_VERSION)));
+    Assertions.assertFalse(isValid.apply(disabledWorker));
+  }
+
+  @Test
   public void testSomethingTerminating()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(3);
@@ -915,6 +979,21 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     EasyMock.verify(autoScaler);
     EasyMock.verify(runner);
+  }
+
+  private void useConfigWithoutWorkerVersion()
+  {
+    config = new PendingTaskBasedWorkerProvisioningConfig()
+        .setMaxScalingDuration(new Period(1000))
+        .setNumEventsToTrack(10)
+        .setPendingTaskTimeout(new Period(0))
+        .setMaxScalingStep(2);
+    strategy = new PendingTaskBasedWorkerProvisioningStrategy(
+        config,
+        DSuppliers.of(workerConfig),
+        new ProvisioningSchedulerConfig(),
+        () -> executorService
+    );
   }
 
   private static ImmutableWorkerInfo workerWithTask(Task task)
