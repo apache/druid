@@ -488,6 +488,22 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
   }
 
   @Test
+  public void testCacheKeyIgnoresIntervalOrderWhenFlagEnabled()
+  {
+    cache = Mockito.spy(cache);
+    prepareCluster(10);
+    final Interval first = Intervals.of("2000-01-01T00/PT1H");
+    final Interval second = Intervals.of("2000-01-01T02/PT1H");
+    final Interval third = Intervals.of("2000-01-01T04/PT1H");
+
+    // A query sorts its intervals, so the order they're passed in doesn't change the key.
+    final Cache.NamedKey key = resultLevelCacheKey(timeseriesQuery(List.of(first, second, third)), true);
+    Assertions.assertEquals(key, resultLevelCacheKey(timeseriesQuery(List.of(third, first, second)), true));
+    Assertions.assertEquals(key, resultLevelCacheKey(timeseriesQuery(List.of(second, third, first)), true));
+    Assertions.assertNotEquals(key, resultLevelCacheKey(timeseriesQuery(List.of(second, first)), true));
+  }
+
+  @Test
   public void testCacheKeyUsesCondensedIntervalsWhenFlagEnabled()
   {
     cache = Mockito.spy(cache);
@@ -495,10 +511,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     final Interval first = Intervals.of("2000-01-01T00/PT2H");
     final Interval later = Intervals.of("2000-01-01T03/PT2H");
 
-    // A query sorts and merges its intervals, so their order doesn't change the key, and intervals that abut or
-    // overlap get the key of the single interval they merge into.
+    // A query merges intervals that abut or overlap, so they get the key of the single interval they merge into.
     final Cache.NamedKey withGap = resultLevelCacheKey(timeseriesQuery(List.of(first, later)), true);
-    Assertions.assertEquals(withGap, resultLevelCacheKey(timeseriesQuery(List.of(later, first)), true));
     Assertions.assertEquals(
         resultLevelCacheKey(timeseriesQuery(Intervals.of("2000-01-01T00/PT4H")), true),
         resultLevelCacheKey(timeseriesQuery(List.of(first, Intervals.of("2000-01-01T02/PT2H"))), true)
