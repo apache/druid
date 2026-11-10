@@ -213,6 +213,19 @@ public class OverlordResourceWorkerHandoffTest
   }
 
   @Test
+  public void testHandoffMissingTaskQueueIsServiceUnavailable()
+  {
+    EasyMock.expect(taskRunner.getWorkers()).andReturn(ImmutableList.of(workerInfo(ImmutableSet.of("t1"))));
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent());
+    EasyMock.replay(taskMaster, taskRunner, taskQueue, supervisorManager);
+
+    final Response response = resource.handoffWorkerTasks(HOST);
+    Assertions.assertEquals(Response.Status.SERVICE_UNAVAILABLE.getStatusCode(), response.getStatus());
+    EasyMock.verify(taskMaster, taskRunner, taskQueue, supervisorManager);
+  }
+
+  @Test
   public void testHandoffNotLeaderIsServiceUnavailable()
   {
     final TaskMaster absentMaster = EasyMock.mock(TaskMaster.class);

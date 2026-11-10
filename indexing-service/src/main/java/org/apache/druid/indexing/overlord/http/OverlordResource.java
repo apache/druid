@@ -55,6 +55,7 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
+import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
@@ -820,13 +821,14 @@ public class OverlordResource
           }
 
           final Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
-          if (!supervisorManager.isPresent()) {
+          final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+          if (!supervisorManager.isPresent() || !taskQueue.isPresent()) {
             return Response.status(Status.SERVICE_UNAVAILABLE).build();
           }
 
           final WorkerHandoffResult result = supervisorManager.get().submitHandoffNotices(
               workerInfo.get().getRunningTasks(),
-              taskMaster.getTaskQueue().get()::getActiveTask
+              taskQueue.get()::getActiveTask
           );
           return Response.status(Status.ACCEPTED)
                          .entity(new WorkerHandoffResponse(
