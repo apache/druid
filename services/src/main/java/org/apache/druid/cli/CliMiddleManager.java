@@ -134,6 +134,7 @@ public class CliMiddleManager extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
             binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
+
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);

@@ -17,10 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.server.system.handler;
+package org.apache.druid.server.system.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResourceQueryResultPusherFactory;
@@ -69,7 +70,9 @@ public class SystemTableQueryResourceTest
     );
   }
 
-  /** A scan-only node must reject an externally submitted {@code segmentMetadata} native query. */
+  /**
+   * A scan-only node must reject an externally submitted {@code segmentMetadata} native query.
+   */
   @Test
   public void testRejectsSegmentMetadataQuery() throws IOException
   {
@@ -82,7 +85,9 @@ public class SystemTableQueryResourceTest
     );
   }
 
-  /** A scan-only node must reject a regular segment-backed native Scan query. */
+  /**
+   * A scan-only node must reject a regular segment-backed native Scan query.
+   */
   @Test
   public void testRejectsTableScanQuery() throws IOException
   {
@@ -95,7 +100,9 @@ public class SystemTableQueryResourceTest
     );
   }
 
-  /** A direct local system-table Scan is admitted to normal authentication, authorization, and execution. */
+  /**
+   * A direct local system-table Scan is admitted to normal authentication, authorization, and execution.
+   */
   @Test
   public void testAcceptsDirectSystemTableScanQuery() throws IOException
   {
@@ -123,12 +130,12 @@ public class SystemTableQueryResourceTest
   {
     final Response response = post(queryJson);
 
-    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(QueryUnsupportedException.STATUS_CODE, response.getStatus());
     Assertions.assertTrue(
         objectMapper.readTree((byte[]) response.getEntity())
                     .get("errorMessage")
                     .asText()
-                    .contains("local system-table Scan")
+                    .contains("accepts only Scan queries on a systemTable datasource")
     );
     Mockito.verifyNoInteractions(queryLifecycleFactory);
   }

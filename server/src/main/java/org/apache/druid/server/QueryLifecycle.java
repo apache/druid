@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,7 +42,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
@@ -51,7 +51,6 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -59,21 +58,23 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.server.system.module.SystemTableModule;
+import org.apache.druid.server.system.table.SystemTableDescriptor;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -106,15 +107,13 @@ public class QueryLifecycle
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final QueryConfigSnapshot configSnapshot;
-  private final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers;
-  private final ServerConfig serverConfig;
+  private final Map<String, SystemTableDescriptor> systemTableDescriptors;
   private final long startMs;
   private final long startNs;
 
   private State state = State.NEW;
   private AuthenticationResult authenticationResult;
   private QueryToolChest toolChest;
-  private boolean executeNativeQueryLocally;
 
   @MonotonicNonNull
   private Query<?> baseQuery;
@@ -134,8 +133,7 @@ public class QueryLifecycle
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final QueryConfigSnapshot configSnapshot,
-      final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers,
-      final ServerConfig serverConfig,
+      final Map<String, SystemTableDescriptor> systemTableDescriptors,
       final long startMs,
       final long startNs
   )
@@ -149,41 +147,9 @@ public class QueryLifecycle
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.configSnapshot = configSnapshot;
-    this.dataSourceQueryHandlers = dataSourceQueryHandlers;
-    this.serverConfig = serverConfig;
+    this.systemTableDescriptors = systemTableDescriptors;
     this.startMs = startMs;
     this.startNs = startNs;
-  }
-
-  public QueryLifecycle(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final QuerySegmentWalker texasRanger,
-      final GenericQueryMetricsFactory queryMetricsFactory,
-      final ServiceEmitter emitter,
-      final RequestLogger requestLogger,
-      final AuthorizerMapper authorizerMapper,
-      final AuthConfig authConfig,
-      final PolicyEnforcer policyEnforcer,
-      final QueryConfigSnapshot configSnapshot,
-      final long startMs,
-      final long startNs
-  )
-  {
-    this(
-        conglomerate,
-        texasRanger,
-        queryMetricsFactory,
-        emitter,
-        requestLogger,
-        authorizerMapper,
-        authConfig,
-        policyEnforcer,
-        configSnapshot,
-        Collections.emptyMap(),
-        new ServerConfig(),
-        startMs,
-        startNs
-    );
   }
 
   /**
@@ -197,7 +163,8 @@ public class QueryLifecycle
    * @param authenticationResult authentication result indicating identity of the requester
    * @param authorizationResult  authorization result of requester
    * @return results
-   * @throws DruidException if the given authorizationResult deny access, which indicates a bug
+   * @throws DruidException      if the given authorizationResult deny access, which indicates a bug
+   * @throws ForbiddenException if the row authorizer of a system table that the query reads rejects the caller
    */
   public <T> QueryResponse<T> runSimple(
       final Query<T> query,
@@ -316,9 +283,6 @@ public class QueryLifecycle
   public AuthorizationResult authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    executeNativeQueryLocally = QueryResource.NATIVE_QUERY_ROUTE_LOCAL.equals(
-        req.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE)
-    );
     final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         dataSourceResourcesToAuthorize(),
         Iterables.transform(
@@ -396,9 +360,13 @@ public class QueryLifecycle
   )
   {
     // The authorization have already been checked previously (or skipped). This just follows the state transition
-    // process, should not throw unauthorized error.
+    // process, should not throw unauthorized error, except that the row authorizer of a system table may still reject
+    // the caller.
     transition(State.INITIALIZED, State.AUTHORIZING);
-    doAuthorize(authenticationResult, authorizationResult);
+    final AuthorizationResult result = doAuthorize(authenticationResult, authorizationResult);
+    if (authorizationResult.allowBasicAccess() && !result.allowBasicAccess()) {
+      throw new ForbiddenException(result.getErrorMessage());
+    }
     if (!state.equals(State.AUTHORIZED)) {
       throw DruidException.defensive("Unexpected state [%s], expecting [%s].", state, State.AUTHORIZED);
     }
@@ -446,20 +414,96 @@ public class QueryLifecycle
     if (!authorizationResult.allowBasicAccess()) {
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
-    } else {
-      // Check blocklist while in AUTHORIZING state, before transitioning to AUTHORIZED
-      // This ensures the exception is properly handled as an authorization failure
-      checkQueryBlocklist();
-
-      transition(State.AUTHORIZING, State.AUTHORIZED);
-      this.baseQuery = this.baseQuery.withDataSource(baseQuery.getDataSource()
-                                                              .withPolicies(
-                                                                  authorizationResult.getPolicyMap(),
-                                                                  policyEnforcer
-                                                              ));
+      return authorizationResult;
     }
 
+    final DataSource authorizedDataSource;
+    try {
+      authorizedDataSource = withSystemTableAccess(baseQuery.getDataSource(), authenticationResult);
+    }
+    catch (ForbiddenException e) {
+      transition(State.AUTHORIZING, State.UNAUTHORIZED);
+      return AuthorizationResult.deny(e.getMessage());
+    }
+
+    // Check blocklist while in AUTHORIZING state, before transitioning to AUTHORIZED
+    // This ensures the exception is properly handled as an authorization failure
+    checkQueryBlocklist();
+
+    transition(State.AUTHORIZING, State.AUTHORIZED);
+    this.baseQuery = this.baseQuery.withDataSource(authorizedDataSource.withPolicies(
+        authorizationResult.getPolicyMap(),
+        policyEnforcer
+    ));
     return authorizationResult;
+  }
+
+  /**
+   * Attaches to each system table in the datasource the {@link org.apache.druid.query.SystemTableAccess} of the given
+   * identity, which says which rows of the table it may read. The table can't be read without it. Tables without a
+   * descriptor are left as they are, and {@link #execute()} rejects them.
+   *
+   * @throws ForbiddenException if the identity may not read one of the tables at all
+   */
+  private DataSource withSystemTableAccess(final DataSource dataSource, final AuthenticationResult authenticationResult)
+  {
+    if (!SystemTableDataSource.readsSystemTable(dataSource)) {
+      return dataSource;
+    }
+    if (dataSource instanceof SystemTableDataSource systemTable) {
+      final SystemTableDescriptor descriptor = systemTableDescriptors.get(systemTable.getTable());
+      if (descriptor == null) {
+        return systemTable;
+      }
+      return systemTable.withAccess(descriptor.getRowAuthorizer().authorize(authenticationResult, authorizerMapper));
+    }
+    final List<DataSource> children = dataSource.getChildren();
+    if (children.isEmpty()) {
+      return dataSource;
+    }
+    final List<DataSource> authorizedChildren = new ArrayList<>(children.size());
+    for (final DataSource child : children) {
+      authorizedChildren.add(withSystemTableAccess(child, authenticationResult));
+    }
+    return dataSource.withChildren(authorizedChildren);
+  }
+
+  private DruidException unservedSystemTableException(final SystemTableDataSource systemTable)
+  {
+    if (systemTableDescriptors.isEmpty()) {
+      // Descriptors are bound only when the Druid engine is enabled for system tables.
+      return DruidException.forPersona(DruidException.Persona.USER)
+                           .ofCategory(DruidException.Category.UNSUPPORTED)
+                           .build(
+                               "System table[%s] can't be queried with native queries unless [%s] is set on all "
+                               + "services",
+                               systemTable.getTable(),
+                               SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY
+                           );
+    }
+    return InvalidInput.exception(
+        "System table[%s] can't be queried with native queries. Tables that can: %s",
+        systemTable.getTable(),
+        new TreeSet<>(systemTableDescriptors.keySet())
+    );
+  }
+
+  /**
+   * Returns a system table in the datasource that this service has no descriptor for, if any.
+   */
+  @Nullable
+  private SystemTableDataSource findUnservedSystemTable(final DataSource dataSource)
+  {
+    if (dataSource instanceof SystemTableDataSource systemTable) {
+      return systemTableDescriptors.containsKey(systemTable.getTable()) ? null : systemTable;
+    }
+    for (final DataSource child : dataSource.getChildren()) {
+      final SystemTableDataSource unservedSystemTable = findUnservedSystemTable(child);
+      if (unservedSystemTable != null) {
+        return unservedSystemTable;
+      }
+    }
+    return null;
   }
 
   /**
@@ -480,86 +524,17 @@ public class QueryLifecycle
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
-    @SuppressWarnings("unchecked")
-    final Query<T> originalQuery = (Query<T>) baseQuery;
-    final DataSourceQueryHandler dataSourceQueryHandler = findDataSourceQueryHandler(originalQuery.getDataSource());
-    if (dataSourceQueryHandler == null) {
-      final SystemTableDataSource systemTable = findSystemTable(originalQuery.getDataSource());
-      if (systemTable != null) {
-        // System-table handlers are bound only when the Druid engine is enabled for system tables.
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build(
-                                "System table[%s] can't be queried with native queries unless [%s] is set on all services",
-                                systemTable.getTable(),
-                                SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY
-                            );
-      }
+    final SystemTableDataSource unservedSystemTable = findUnservedSystemTable(baseQuery.getDataSource());
+    if (unservedSystemTable != null) {
+      throw unservedSystemTableException(unservedSystemTable);
     }
 
-    // Handlers can start fanout or provider work before reaching a segment walker, or bypass it entirely.
-    // Apply the same server guardrails first, and pass the normalized query to both runner creation and execution.
-    final Query<T> query = dataSourceQueryHandler == null
-                           ? originalQuery
-                           : SetAndVerifyContextQueryRunner.withTimeoutAndMaxScatterGatherBytes(
-                               originalQuery,
-                               serverConfig,
-                               System.currentTimeMillis()
-                           );
-    final QueryRunner<T> queryRunner = dataSourceQueryHandler == null
-                                       ? query.getRunner(texasRanger)
-                                       : dataSourceQueryHandler.createRunner(
-                                           query,
-                                           authenticationResult,
-                                           executeNativeQueryLocally
-                                       );
-    final Sequence<T> res = queryRunner.run(
-        QueryPlus.wrap(query).withIdentity(authenticationResult.getIdentity()),
-        responseContext
-    );
+    @SuppressWarnings("unchecked")
+    final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
+                                     .withIdentity(authenticationResult.getIdentity())
+                                     .run(texasRanger, responseContext);
 
     return new QueryResponse<>(res == null ? Sequences.empty() : res, responseContext);
-  }
-
-  /**
-   * Finds a handler for the root datasource or one of its descendants. A handler selected for a descendant receives
-   * the complete query so it can resolve the matching datasource vertices before normal native execution.
-   */
-  @Nullable
-  private DataSourceQueryHandler findDataSourceQueryHandler(final DataSource dataSource)
-  {
-    final DataSourceQueryHandler directHandler = dataSourceQueryHandlers.get(dataSource.getClass());
-    if (directHandler != null) {
-      return directHandler;
-    }
-
-    DataSourceQueryHandler descendantHandler = null;
-    for (final DataSource child : dataSource.getChildren()) {
-      final DataSourceQueryHandler childHandler = findDataSourceQueryHandler(child);
-      if (childHandler == null) {
-        continue;
-      }
-      if (descendantHandler != null && descendantHandler != childHandler) {
-        throw DruidException.defensive("Multiple datasource query handlers are required for datasource[%s]", dataSource);
-      }
-      descendantHandler = childHandler;
-    }
-    return descendantHandler;
-  }
-
-  @Nullable
-  private static SystemTableDataSource findSystemTable(final DataSource dataSource)
-  {
-    if (dataSource instanceof SystemTableDataSource systemTableDataSource) {
-      return systemTableDataSource;
-    }
-    for (final DataSource child : dataSource.getChildren()) {
-      final SystemTableDataSource systemTable = findSystemTable(child);
-      if (systemTable != null) {
-        return systemTable;
-      }
-    }
-    return null;
   }
 
   /**

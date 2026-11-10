@@ -28,7 +28,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 public class SystemSchemaProviderTest
 {
-  /** The Broker authorizes system tables directly if either the deprecated SQL property or the auth property is set. */
+  /**
+   * The Broker authorizes system tables directly if either the deprecated SQL property or the auth property is set.
+   */
   @ParameterizedTest(name = "sql = {0}, auth = {1}")
   @CsvSource({"false, false, false", "true, false, true", "false, true, true", "true, true, true"})
   public void testSystemTableAuthorizationCombinesProperties(

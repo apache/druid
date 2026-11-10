@@ -113,7 +113,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String AVATICA_QUERY_ATTRIBUTE = "org.apache.druid.proxy.avaticaQuery";
   private static final String SQL_QUERY_ATTRIBUTE = "org.apache.druid.proxy.sqlQuery";
   private static final String OBJECTMAPPER_ATTRIBUTE = "org.apache.druid.proxy.objectMapper";
-  private static final String NODE_LOCAL_ATTRIBUTE = "org.apache.druid.proxy.nodeLocalSystemQuery";
 
   private static final String PROPERTY_SQL_ENABLE = "druid.router.sql.enable";
   private static final String PROPERTY_SQL_ENABLE_DEFAULT = "false";
@@ -245,8 +244,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
     // The Router does not have the ability to look inside SQL queries and route them intelligently, so just treat
     // them as a generic request.
-    final boolean isNativeQueryEndpoint = requestURI.startsWith("/druid/v2")
-                                          && !requestURI.startsWith("/druid/v2/sql");
+    final boolean isNativeQueryEndpoint = requestURI.startsWith("/druid/v2") && !requestURI.startsWith("/druid/v2/sql");
     final boolean isSqlQueryEndpoint = requestURI.startsWith("/druid/v2/sql");
 
     final boolean isAvaticaJson = requestURI.startsWith("/druid/v2/sql/avatica");
@@ -269,8 +267,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       byte[] requestBytes = objectMapper.writeValueAsBytes(requestMap);
       request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
       LOG.debug("Forwarding JDBC connection [%s] to broker [%s]", connectionId, targetServer.getHost());
-    } else if (HttpMethod.DELETE.is(method) && isNativeQueryEndpoint && isLocalNativeQueryRoute(request)) {
-      dispatchNodeLocalCancellation(request, response);
+    } else if (HttpMethod.DELETE.is(method) && isNativeQueryEndpoint && isLocalSystemTableCancellation(request)) {
+      // The query being cancelled runs on this Router.
+      dispatchLocally(new NodeLocalRequest(request), response);
       return;
     } else if (HttpMethod.DELETE.is(method)) {
       // query cancellation request
@@ -282,8 +281,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       try {
         Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
         if (inputQuery != null) {
-          if (isLocalSystemTableQuery(request, inputQuery)) {
-            dispatchNodeLocalQuery(request, response, inputQuery, objectMapper);
+          if (isLocalSystemTableQuery(inputQuery)) {
+            // The servlet has read the request body, so pass the query on as a new body.
+            dispatchLocally(new CachedBodyRequest(request, objectMapper.writeValueAsBytes(inputQuery)), response);
             return;
           }
           targetServer = hostFinder.pickServer(inputQuery);
@@ -336,47 +336,39 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     doService(request, response);
   }
 
-  private void dispatchNodeLocalQuery(
-      final HttpServletRequest request,
-      final HttpServletResponse response,
-      final Query<?> query,
-      final ObjectMapper objectMapper
-  ) throws ServletException, IOException
+  /**
+   * Serves the request with the Router's own native query resource, rather than forwarding it to a Broker.
+   */
+  private void dispatchLocally(final HttpServletRequest request, final HttpServletResponse response)
+      throws ServletException, IOException
   {
-    request.setAttribute(NODE_LOCAL_ATTRIBUTE, true);
     if (localQueryContainer == null) {
       throw DruidException.defensive("Router local query container is not available");
     }
-    localQueryContainer.service(new CachedBodyRequest(request, objectMapper.writeValueAsBytes(query)), response);
-  }
-
-  private void dispatchNodeLocalCancellation(
-      final HttpServletRequest request,
-      final HttpServletResponse response
-  ) throws ServletException, IOException
-  {
-    request.setAttribute(NODE_LOCAL_ATTRIBUTE, true);
-    if (localQueryContainer == null) {
-      throw DruidException.defensive("Router local query container is not available");
-    }
-    localQueryContainer.service(new NodeLocalRequest(request), response);
-  }
-
-  private boolean isLocalSystemTableQuery(final HttpServletRequest request, final Query<?> query)
-  {
-    return query.getDataSource() instanceof SystemTableDataSource
-           && isLocalNativeQueryRoute(request);
+    localQueryContainer.service(request, response);
   }
 
   /**
-   * Whether the request asks the Router to run the query itself. The header is ignored, and the request forwarded to a
-   * Broker, unless {@link SystemTableModule#ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY} is set.
+   * Whether the Router runs the query itself. Native queries on a system table read the rows of the service that
+   * receives them, so the Router answers them with its own rows, unless
+   * {@link SystemTableModule#ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY} is off. As on the Coordinator, Overlord
+   * and Middle Manager, the Router's local resource accepts only Scan queries, and rejects other query types on a
+   * system table. Queries that read a system table through another datasource, such as a subquery or a join, are
+   * forwarded to a Broker like any other.
    */
-  private boolean isLocalNativeQueryRoute(final HttpServletRequest request)
+  private boolean isLocalSystemTableQuery(final Query<?> query)
   {
-    return enableDruidEngineForSystemTables && QueryResource.NATIVE_QUERY_ROUTE_LOCAL.equals(
-        request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE)
-    );
+    return enableDruidEngineForSystemTables && query.getDataSource() instanceof SystemTableDataSource;
+  }
+
+  /**
+   * Whether the request cancels a node query that a Broker sent to this Router while gathering the rows of a system
+   * table. Such queries run on the Router, so they are cancelled here rather than on the Brokers.
+   */
+  private boolean isLocalSystemTableCancellation(final HttpServletRequest request)
+  {
+    return enableDruidEngineForSystemTables
+           && request.getRequestURI().startsWith("/druid/v2/" + SystemTableDataSource.NODE_QUERY_ID_PREFIX);
   }
 
   /**
@@ -539,9 +531,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       HttpServletResponse response
   ) throws ServletException, IOException
   {
-    if (Boolean.TRUE.equals(request.getAttribute(NODE_LOCAL_ATTRIBUTE))) {
-      throw DruidException.defensive("Node-local system table queries must not be proxied");
-    }
     // Just call the superclass service method. Overridden in tests.
     super.service(request, response);
   }
@@ -646,7 +635,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         }
       };
     }
-
   }
 
   @Override

@@ -40,7 +40,9 @@ public class CursorFactoryRowsAndColumnsTest extends RowsAndColumnsTestBase
   public static Function<MapOfColumnsRowsAndColumns, CursorFactoryRowsAndColumns> MAKER =
       CursorFactoryRowsAndColumnsTest::buildFrame;
 
-  /** Exceeding a single frame's capacity must fail instead of returning a truncated row count. */
+  /**
+   * Exceeding a single frame's capacity must fail instead of returning a truncated row count.
+   */
   @Test
   public void testMaterializationFailsWhenFrameIsFull()
   {
@@ -52,7 +54,9 @@ public class CursorFactoryRowsAndColumnsTest extends RowsAndColumnsTestBase
     Assertions.assertTrue(exception.getMessage().contains("4,096"));
   }
 
-  /** Rows that fit in the same bounded allocator are all retained with their original values. */
+  /**
+   * Rows that fit in the same bounded allocator are all retained with their original values.
+   */
   @Test
   public void testMaterializationWithinFrameCapacity()
   {

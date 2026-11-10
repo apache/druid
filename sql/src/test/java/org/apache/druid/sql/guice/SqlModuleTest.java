@@ -196,7 +196,7 @@ public class SqlModuleTest
             new AuthenticatorMapperModule(),
             new CatalogCoreModule(),
             binder -> {
-              DruidBinders.dataSourceQueryHandlerBinder(binder);
+              DruidBinders.systemTableDescriptorBinder(binder);
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
               binder.bind(JsonConfigurator.class).in(LazySingleton.class);
               binder.bind(Properties.class).toInstance(props);

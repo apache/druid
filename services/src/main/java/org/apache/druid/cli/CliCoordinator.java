@@ -75,6 +75,7 @@ import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
+import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CloneStatusManager;
@@ -186,6 +187,7 @@ public class CliCoordinator extends ServerRunnable
           NativeQueryEngineModule.builder()
                                  .scanOnly()
                                  .enableSystemTableQuery(properties)
+                                 .withQuerySegmentWalker(SegmentMetadataQuerySegmentWalker.class)
                                  // Segment metadata queries historically use Coordinator-specific scheduler and
                                  // default-query configuration prefixes. Override the generic native-engine bindings
                                  // here to preserve that behavior without coupling it to SegmentSchemaCacheModule.
@@ -230,6 +232,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8281);
 
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
+
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator", CoordinatorRunConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.kill", CoordinatorKillConfigs.class);

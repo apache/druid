@@ -34,11 +34,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-public class SystemTableDataProviderTest
+public class SystemSchemaDataSourceTableTest
 {
-  /** The typed flag defaults to false and accepts boolean or SQL SET string values. */
+  /**
+   * The typed flag defaults to false and accepts boolean or SQL SET string values.
+   */
   @Test
-  public void testUseQueryEngineUsesTypedQueryContext()
+  public void testUseDruidEngineForSystemTablesUsesTypedQueryContext()
   {
     final PlannerContext context = EasyMock.partialMockBuilder(PlannerContext.class)
                                           .addMockedMethod("queryContext")
@@ -88,7 +90,9 @@ public class SystemTableDataProviderTest
     EasyMock.expect(bindableContext.getEngine()).andReturn(bindableEngine).once();
     EasyMock.expect(enabledContext.useDruidEngineForSystemTables()).andReturn(true).once();
     EasyMock.expect(enabledContext.getEngine()).andReturn(nativeEngine).once();
-    EasyMock.expect(table.unwrap(SystemTableDataSourceTable.class)).andReturn(ServerPropertiesDataSourceTable::new).once();
+    EasyMock.expect(table.unwrap(SystemTableDataSourceTable.class))
+            .andReturn(ServerPropertiesDataSourceTable::new)
+            .once();
     EasyMock.replay(table, nativeEngine, bindableEngine, disabledContext, bindableContext, enabledContext);
 
     Assertions.assertFalse(SystemSchema.canUseSystemTableDataSource(table, disabledContext));
@@ -96,27 +100,5 @@ public class SystemTableDataProviderTest
     Assertions.assertTrue(SystemSchema.canUseSystemTableDataSource(table, enabledContext));
 
     EasyMock.verify(table, nativeEngine, bindableEngine, disabledContext, bindableContext, enabledContext);
-  }
-
-  @Test
-  public void testSystemSchemaGetsNativeRepresentation()
-  {
-    final RelOptTable table = EasyMock.createMock(RelOptTable.class);
-    EasyMock.expect(table.unwrap(SystemTableDataSourceTable.class)).andReturn(ServerPropertiesDataSourceTable::new).once();
-    EasyMock.replay(table);
-
-    Assertions.assertInstanceOf(ServerPropertiesDataSourceTable.class, SystemSchema.getSystemTableDataSourceTable(table));
-    EasyMock.verify(table);
-  }
-
-  @Test
-  public void testSystemSchemaRejectsTableWithoutNativeCapability()
-  {
-    final RelOptTable table = EasyMock.createMock(RelOptTable.class);
-    EasyMock.expect(table.unwrap(SystemTableDataSourceTable.class)).andReturn(null).once();
-    EasyMock.replay(table);
-
-    Assertions.assertNull(SystemSchema.getSystemTableDataSourceTable(table));
-    EasyMock.verify(table);
   }
 }

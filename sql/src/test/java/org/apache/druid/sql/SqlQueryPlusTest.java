@@ -33,9 +33,11 @@ import java.util.Map;
 
 public class SqlQueryPlusTest
 {
-  /** SET useDruidEngineForSystemTables = 'true' uses the registered boolean parameter. */
+  /**
+   * SET useDruidEngineForSystemTables = 'true' uses the registered boolean parameter.
+   */
   @Test
-  public void testSetAllowsNativeFunctionsForSystemTables()
+  public void testSetUseDruidEngineForSystemTables()
   {
     final SqlQueryPlus query = SqlQueryPlus
         .builder("SET useDruidEngineForSystemTables = 'true'; SELECT COUNT(DISTINCT server) FROM sys.server_properties")
@@ -47,9 +49,11 @@ public class SqlQueryPlusTest
     );
   }
 
-  /** SET useDruidEngineForSystemTables = 1 rejects a non-boolean value before planning. */
+  /**
+   * SET useDruidEngineForSystemTables = 1 rejects a non-boolean value before planning.
+   */
   @Test
-  public void testSetRejectsInvalidNativeFunctionsFlag()
+  public void testSetRejectsNonBooleanUseDruidEngineForSystemTables()
   {
     final DruidException e = Assertions.assertThrows(
         DruidException.class,
@@ -60,8 +64,9 @@ public class SqlQueryPlusTest
 
     BaseCalciteQueryTest.assertDruidException(
         e,
-        DruidExceptionMatcher.invalidSqlInput()
-                             .expectMessageContains("Query context parameter [useDruidEngineForSystemTables] should be a boolean")
+        DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+            "Query context parameter [useDruidEngineForSystemTables] should be a boolean"
+        )
     );
   }
 

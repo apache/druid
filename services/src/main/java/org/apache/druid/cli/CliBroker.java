@@ -81,6 +81,9 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
+import org.apache.druid.server.system.module.SystemTableModule;
+import org.apache.druid.server.system.query.SystemTableGatheringQuerySegmentWalker;
+import org.apache.druid.server.system.query.SystemTableQuerySegmentWalker;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
@@ -153,7 +156,17 @@ public class CliBroker extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", InternalQueryConfig.class);
 
-          binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
+          if (SystemTableModule.isEnabled(getProperties())) {
+            // Gathers the rows of system tables planned by SQL from every service, then runs the query as usual.
+            binder.bind(Key.get(QuerySegmentWalker.class, SystemTableQuerySegmentWalker.Delegate.class))
+                  .to(ClientQuerySegmentWalker.class)
+                  .in(LazySingleton.class);
+            binder.bind(QuerySegmentWalker.class)
+                  .to(SystemTableGatheringQuerySegmentWalker.class)
+                  .in(LazySingleton.class);
+          } else {
+            binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
+          }
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
           binder.bind(SubqueryGuardrailHelper.class).toProvider(SubqueryGuardrailHelperProvider.class);

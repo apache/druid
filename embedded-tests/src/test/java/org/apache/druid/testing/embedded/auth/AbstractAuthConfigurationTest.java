@@ -43,7 +43,6 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -649,10 +648,10 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
   /**
    * Native {@code systemTable} queries sent to {@code /druid/v2/} authorize the caller on the Broker, the Router, the
-   * Coordinator and the Overlord, whatever the value of {@code X-Druid-Native-Query-Route}.
+   * Coordinator and the Overlord.
    */
   @Test
-  public void test_nativeSystemTableQuery_authorizedForAllRoutes()
+  public void test_nativeSystemTableQuery_authorizedOnEveryService()
   {
     assertNativeSystemTableQueryStatus(getHttpClient(User.ADMIN), HttpResponseStatus.OK);
 
@@ -665,9 +664,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
   /**
    * Sends a native {@code sys.server_properties} Scan to {@code /druid/v2/} on the Broker, the Router, the Coordinator
-   * and the Overlord, with {@code X-Druid-Native-Query-Route} absent (Broker fan-out, or Router forwarding to the
-   * Broker), {@code local} (run on the contacted node only) and a non-matching value (treated as absent), and checks
-   * every response status. The Coordinator and the Overlord run the query on the contacted node whatever the header.
+   * and the Overlord, each of which reads its own rows of the table, and checks every response status.
    */
   protected void assertNativeSystemTableQueryStatus(final HttpClient client, final HttpResponseStatus expectedStatus)
   {
@@ -677,25 +674,16 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
                                   .columns("server", "property")
                                   .limit(5)
                                   .build();
-    final List<Map<String, String>> routes = List.of(
-        Map.of(),
-        Map.of(QueryResource.HEADER_NATIVE_QUERY_ROUTE, QueryResource.NATIVE_QUERY_ROUTE_LOCAL),
-        Map.of(QueryResource.HEADER_NATIVE_QUERY_ROUTE, "LOCAL")
-    );
-
     for (final EmbeddedDruidServer<?> server : List.of(broker, router, coordinator, overlord)) {
-      for (final Map<String, String> headers : routes) {
-        final StatusResponseHolder response = HttpUtil.makeRequest(
-            client,
-            HttpMethod.POST,
-            getServerUrl(server) + "/druid/v2/",
-            query,
-            headers,
-            expectedStatus
-        );
-        if (HttpResponseStatus.OK.equals(expectedStatus)) {
-          Assertions.assertTrue(response.getContent().contains("\"events\""), response.getContent());
-        }
+      final StatusResponseHolder response = HttpUtil.makeRequest(
+          client,
+          HttpMethod.POST,
+          getServerUrl(server) + "/druid/v2/",
+          query,
+          expectedStatus
+      );
+      if (HttpResponseStatus.OK.equals(expectedStatus)) {
+        Assertions.assertTrue(response.getContent().contains("\"events\""), response.getContent());
       }
     }
   }

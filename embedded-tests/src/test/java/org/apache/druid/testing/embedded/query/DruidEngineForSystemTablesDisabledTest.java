@@ -30,7 +30,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.system.module.SystemTableModule;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -92,28 +91,31 @@ public class DruidEngineForSystemTablesDisabledTest extends EmbeddedClusterTestB
   @Test
   public void testBrokerRejectsSystemTableDataSource()
   {
-    assertSystemTableQueryRejected(broker, Map.of());
-    assertSystemTableQueryRejected(broker, localRoute());
+    assertSystemTableQueryRejected(broker);
   }
 
-  /** The Router ignores the local route, and forwards the query to the Broker. */
+  /**
+   * The Router doesn't answer system-table queries itself: it forwards them to the Broker, which rejects them.
+   */
   @Test
-  public void testRouterForwardsLocalRoute()
+  public void testRouterForwardsSystemTableQuery()
   {
-    assertSystemTableQueryRejected(router, localRoute());
+    assertSystemTableQueryRejected(router);
   }
 
-  /** Servers that don't otherwise handle queries don't serve {@code /druid/v2/}. */
+  /**
+   * Servers that don't otherwise handle queries don't serve {@code /druid/v2/}.
+   */
   @Test
   public void testNoNativeQueryEndpointOnCoordinatorAndOverlord()
   {
-    Assertions.assertEquals(HttpResponseStatus.NOT_FOUND, postSystemTableQuery(coordinator, localRoute()).getStatus());
-    Assertions.assertEquals(HttpResponseStatus.NOT_FOUND, postSystemTableQuery(overlord, localRoute()).getStatus());
+    Assertions.assertEquals(HttpResponseStatus.NOT_FOUND, postSystemTableQuery(coordinator).getStatus());
+    Assertions.assertEquals(HttpResponseStatus.NOT_FOUND, postSystemTableQuery(overlord).getStatus());
   }
 
-  private void assertSystemTableQueryRejected(final EmbeddedDruidServer<?> server, final Map<String, String> headers)
+  private void assertSystemTableQueryRejected(final EmbeddedDruidServer<?> server)
   {
-    final StatusResponseHolder response = postSystemTableQuery(server, headers);
+    final StatusResponseHolder response = postSystemTableQuery(server);
     Assertions.assertEquals(HttpResponseStatus.NOT_IMPLEMENTED, response.getStatus(), response.getContent());
     Assertions.assertTrue(
         response.getContent().contains(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY),
@@ -121,15 +123,7 @@ public class DruidEngineForSystemTablesDisabledTest extends EmbeddedClusterTestB
     );
   }
 
-  private static Map<String, String> localRoute()
-  {
-    return Map.of(QueryResource.HEADER_NATIVE_QUERY_ROUTE, QueryResource.NATIVE_QUERY_ROUTE_LOCAL);
-  }
-
-  private static StatusResponseHolder postSystemTableQuery(
-      final EmbeddedDruidServer<?> server,
-      final Map<String, String> headers
-  )
+  private static StatusResponseHolder postSystemTableQuery(final EmbeddedDruidServer<?> server)
   {
     final ScanQuery query = Druids.newScanQueryBuilder()
                                   .dataSource(new SystemTableDataSource("server_properties"))
@@ -138,7 +132,6 @@ public class DruidEngineForSystemTablesDisabledTest extends EmbeddedClusterTestB
     try {
       final Request request = new Request(HttpMethod.POST, URIs.toURL(getServerUrl(server) + "/druid/v2/"))
           .setContent(MediaType.APPLICATION_JSON, server.bindings().jsonMapper().writeValueAsBytes(query));
-      headers.forEach(request::setHeader);
       return server.bindings().globalHttpClient().go(request, StatusResponseHandler.getInstance()).get();
     }
     catch (Exception e) {

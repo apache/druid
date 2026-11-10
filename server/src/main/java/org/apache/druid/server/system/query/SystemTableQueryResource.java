@@ -17,14 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.server.system.handler;
+package org.apache.druid.server.system.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -40,7 +41,9 @@ import javax.ws.rs.Path;
 import java.io.IOException;
 import java.io.InputStream;
 
-/** Native query endpoint for nodes that serve only local system-table scans. */
+/**
+ * Native query endpoint for nodes that serve only local system-table scans.
+ */
 @LazySingleton
 @Path("/druid/v2/")
 public class SystemTableQueryResource extends QueryResource
@@ -77,8 +80,13 @@ public class SystemTableQueryResource extends QueryResource
     final Query<?> query = super.readQuery(req, in, ioReaderWriter);
     if (!(query instanceof ScanQuery)
         || !(query.getDataSource() instanceof SystemTableDataSource)) {
-      throw new BadQueryContextException(
-          "This native query endpoint accepts only local system-table Scan queries"
+      throw new QueryUnsupportedException(
+          StringUtils.format(
+              "This service accepts only Scan queries on a systemTable datasource, not queryType[%s] on dataSource[%s]."
+              + " Run other queries on a Broker.",
+              query.getType(),
+              query.getDataSource()
+          )
       );
     }
     return query;

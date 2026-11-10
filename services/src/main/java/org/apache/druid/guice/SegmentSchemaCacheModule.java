@@ -22,11 +22,9 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
-import com.google.inject.multibindings.OptionalBinder;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -35,7 +33,6 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
-import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
 
 /**
  * Module that binds dependencies required for segment schema management and
@@ -61,10 +58,6 @@ public class SegmentSchemaCacheModule implements Module
         DruidBinders.queryRunnerFactoryBinder(binder);
     queryFactoryBinder.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryRunnerFactory.class);
     binder.bind(SegmentMetadataQueryRunnerFactory.class).in(LazySingleton.class);
-    OptionalBinder.newOptionalBinder(binder, QuerySegmentWalker.class)
-                  .setBinding()
-                  .to(SegmentMetadataQuerySegmentWalker.class)
-                  .in(LazySingleton.class);
 
     LifecycleModule.register(binder, CoordinatorSegmentMetadataCache.class);
   }

@@ -65,7 +65,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false, false, null, null, false, false);
+    this(null, null, null, false, false, null, null, false, false, false);
   }
 
   @JsonProperty
@@ -111,32 +111,6 @@ public class AuthConfig
    */
   @JsonProperty
   private final boolean authorizeSystemTablesDirectly;
-
-  public AuthConfig(
-      List<String> authenticatorChain,
-      List<String> authorizers,
-      List<String> unsecuredPaths,
-      boolean allowUnauthenticatedHttpOptions,
-      boolean authorizeQueryContextParams,
-      Set<String> unsecuredContextKeys,
-      Set<String> securedContextKeys,
-      boolean enableInputSourceSecurity,
-      boolean emitAuthMetrics
-  )
-  {
-    this(
-        authenticatorChain,
-        authorizers,
-        unsecuredPaths,
-        allowUnauthenticatedHttpOptions,
-        authorizeQueryContextParams,
-        unsecuredContextKeys,
-        securedContextKeys,
-        enableInputSourceSecurity,
-        emitAuthMetrics,
-        false
-    );
-  }
 
   @JsonCreator
   public AuthConfig(

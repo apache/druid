@@ -297,7 +297,6 @@ public class QueryResourceTest
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new DefaultQueryConfig(Map.of()),
         Map.of(),
-        new ServerConfig(),
         null
     );
   }
@@ -397,7 +396,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             overrideConfig,
             Map.of(),
-            new ServerConfig(),
             null
         )
     );
@@ -468,7 +466,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             queryConfig,
             Map.of(),
-            new ServerConfig(),
             null
         )
     );
@@ -571,7 +568,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             null
         )
     );
@@ -651,7 +647,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             null
         )
     );
@@ -743,7 +738,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             null
         )
     );
@@ -813,7 +807,6 @@ public class QueryResourceTest
             null,
             overrideConfig,
             Map.of(),
-            new ServerConfig(),
             null
         )
         {
@@ -830,6 +823,7 @@ public class QueryResourceTest
                 new AuthConfig(),
                 NoopPolicyEnforcer.instance(),
                 new QueryConfigSnapshot(overrideConfig.getContext(), null),
+                Map.of(),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )
@@ -881,7 +875,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             overrideConfig,
             Map.of(),
-            new ServerConfig(),
             null
         )
     );
@@ -1247,7 +1240,6 @@ public class QueryResourceTest
             authMapper,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             null
         ),
         authMapper,
@@ -1324,7 +1316,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             null
         ),
         null,
@@ -1425,7 +1416,6 @@ public class QueryResourceTest
             authMapper,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             null
         ),
         authMapper,
@@ -1535,7 +1525,6 @@ public class QueryResourceTest
             authMapper,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             null
         ),
         authMapper,
@@ -1920,7 +1909,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             null
         ),
         null,
@@ -2149,7 +2137,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             Map.of(),
-            new ServerConfig(),
             brokerViewOfBrokerConfig
         ),
         null,

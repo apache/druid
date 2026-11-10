@@ -20,10 +20,8 @@
 package org.apache.druid.cli;
 
 import com.github.rvesse.airline.annotations.Command;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -44,7 +42,6 @@ import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.ServerManager;
@@ -88,6 +85,7 @@ public class CliHistorical extends ServerRunnable
         new DruidProcessingModule(),
         NativeQueryEngineModule.builder()
                                .enableSystemTableQuery(getProperties())
+                               .withQuerySegmentWalker(ServerManager.class)
                                .build(),
         new HistoricalServiceModule(),
         binder -> {
@@ -98,8 +96,6 @@ public class CliHistorical extends ServerRunnable
           LifecycleModule.register(binder, Server.class);
           binder.bind(ServerManager.class).in(LazySingleton.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
-          bindQuerySegmentWalker(binder);
-
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
           Jerseys.addResource(binder, SegmentListerResource.class);
@@ -129,14 +125,5 @@ public class CliHistorical extends ServerRunnable
         new DartWorkerModule(),
         new DartWorkerMemoryManagementModule()
     );
-  }
-
-  /**
-   * This method is visible for testing query retry on missing segments.
-   */
-  @VisibleForTesting
-  public void bindQuerySegmentWalker(Binder binder)
-  {
-    binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
   }
 }

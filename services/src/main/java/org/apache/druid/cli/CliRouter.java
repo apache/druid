@@ -37,7 +37,6 @@ import org.apache.druid.guice.RouterProcessingModule;
 import org.apache.druid.guice.RouterQueryResourceModule;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.server.NoopQuerySegmentWalker;
 import org.apache.druid.server.http.RouterResource;
@@ -91,6 +90,7 @@ public class CliRouter extends ServerRunnable
         NativeQueryEngineModule.builder()
                                .enableSystemTableQuery(enableDruidEngineForSystemTables)
                                .withQueryResourceModule(new RouterQueryResourceModule(enableDruidEngineForSystemTables))
+                               .withQuerySegmentWalker(NoopQuerySegmentWalker.class)
                                .build(),
         new JettyHttpClientModule("druid.router.http", Router.class),
         JettyHttpClientModule.global(),
@@ -98,11 +98,10 @@ public class CliRouter extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9088);
+
           JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
           JsonConfigProvider.bind(binder, "druid.router.avatica.balancer", AvaticaConnectionBalancer.class);
           JsonConfigProvider.bind(binder, "druid.router.managementProxy", ManagementProxyConfig.class);
-
-          binder.bind(QuerySegmentWalker.class).to(NoopQuerySegmentWalker.class).in(LazySingleton.class);
 
           binder.bind(CoordinatorRuleManager.class);
           LifecycleModule.register(binder, CoordinatorRuleManager.class);

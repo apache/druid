@@ -715,7 +715,7 @@ public final class QueryContextParameters
               `druid.query.default.context.useDruidEngineForSystemTables`.
               """
           )
-          .since("39.0.0")
+          .since("40.0.0")
           .query(Query.SQL)
           .engine(Engine.NATIVE)
           .build();

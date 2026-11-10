@@ -77,7 +77,7 @@ public class QueryToolChestModule implements Module
   public static final String TOPN_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.topN.queryMetricsFactory";
   public static final String SEARCH_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.search.queryMetricsFactory";
 
-  private static final Map<Class<? extends Query>, Class<? extends QueryToolChest>> MAPPINGS =
+  public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
                   .put(DataSourceMetadataQuery.class, DataSourceQueryQueryToolChest.class)
                   .put(GroupByQuery.class, GroupByQueryQueryToolChest.class)
@@ -90,13 +90,12 @@ public class QueryToolChestModule implements Module
                   .put(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class)
                   .build();
 
-  public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings = MAPPINGS;
-
   private final Set<Class<? extends Query>> queryTypes;
 
   public QueryToolChestModule()
   {
-    this(MAPPINGS.keySet());
+    // Field initializers run before the constructor body, so mappings is set here.
+    this.queryTypes = mappings.keySet();
   }
 
   public QueryToolChestModule(final Set<? extends Class<? extends Query>> queryTypes)
@@ -109,7 +108,7 @@ public class QueryToolChestModule implements Module
   {
     MapBinder<Class<? extends Query>, QueryToolChest> toolChests = DruidBinders.queryToolChestBinder(binder);
 
-    for (Map.Entry<Class<? extends Query>, Class<? extends QueryToolChest>> entry : MAPPINGS.entrySet()) {
+    for (Map.Entry<Class<? extends Query>, Class<? extends QueryToolChest>> entry : mappings.entrySet()) {
       if (queryTypes.contains(entry.getKey())) {
         toolChests.addBinding(entry.getKey()).to(entry.getValue());
         binder.bind(entry.getValue()).in(LazySingleton.class);

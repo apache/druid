@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.system.handler;
+package org.apache.druid.server.system.query;
 
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
@@ -25,7 +25,9 @@ import org.apache.druid.discovery.NodeRole;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/** A physical Druid process selected to contribute rows to a native system-table query. */
+/**
+ * A physical Druid process selected to contribute rows to a native system-table query.
+ */
 class SystemTableNode
 {
   private final DiscoveryDruidNode discoveryNode;

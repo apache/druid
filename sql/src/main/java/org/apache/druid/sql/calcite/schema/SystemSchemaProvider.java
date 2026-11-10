@@ -100,8 +100,8 @@ public class SystemSchemaProvider implements SchemaProvider
 
   /**
    * Returns the planner config with {@link PlannerConfig#isAuthorizeSystemTablesDirectly()} set if either
-   * {@code druid.auth.authorizeSystemTablesDirectly} or the deprecated {@code druid.sql.planner.authorizeSystemTablesDirectly}
-   * is set.
+   * {@code druid.auth.authorizeSystemTablesDirectly} or the deprecated
+   * {@code druid.sql.planner.authorizeSystemTablesDirectly} is set.
    */
   static PlannerConfig withSystemTableAuthorization(final PlannerConfig plannerConfig, final AuthConfig authConfig)
   {

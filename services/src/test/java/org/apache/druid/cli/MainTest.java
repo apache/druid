@@ -24,8 +24,9 @@ import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.JSR311Resource;
-import org.apache.druid.server.system.handler.SystemTableQueryResource;
+import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.system.module.SystemTableModule;
+import org.apache.druid.server.system.query.SystemTableQueryResource;
 import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.junit.jupiter.api.Assertions;
@@ -97,7 +98,10 @@ public class MainTest
       final Injector middleManagerInjector = makeInjector(new CliMiddleManager());
 
       // Middle Managers expose /druid/v2 through the resource restricted to internal system-table scans.
-      Assertions.assertNotNull(middleManagerInjector.getInstance(SystemTableQueryResource.class));
+      final Set<Class<?>> jerseyResources =
+          middleManagerInjector.getInstance(Key.get(new TypeLiteral<>() {}, JSR311Resource.class));
+      Assertions.assertTrue(jerseyResources.contains(SystemTableQueryResource.class));
+      Assertions.assertFalse(jerseyResources.contains(QueryResource.class));
       Assertions.assertTrue(
           systemTableDataProviders(middleManagerInjector).containsKey(ServerPropertiesTableDescriptor.TABLE_NAME)
       );

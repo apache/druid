@@ -19,24 +19,35 @@
 
 package org.apache.druid.server.system.table;
 
-import jakarta.validation.constraints.NotNull;
-import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
- * Supplies storage-prefiltered rows of one native system table. Authorization isn't applied here: the table's
- * {@link SystemTableDescriptor#getRowAuthorizer()} filters these rows wherever they are consumed.
- * The implementation is deployed in related service.
- * For example, the data provider of sys.tasks is deployed in overlord module
- * */
+ * Supplies this server's rows of one system table. Authorization isn't applied here: the caller's
+ * {@link org.apache.druid.query.SystemTableAccess} filters the rows wherever they are read.
+ *
+ * <p>The provider is bound on the services that serve the table. For example, the provider of
+ * {@code sys.server_properties} is bound on every service.</p>
+ */
 public interface SystemTableDataProvider
 {
-  default List<SystemTablePushdownFilter> getPushdownFilters()
+  /**
+   * Columns whose filters {@link #getRows} can use to read fewer rows from storage.
+   */
+  default Set<String> getPushdownColumns()
   {
-    return Collections.emptyList();
+    return Set.of();
   }
 
-  Iterable<Object[]> getRows(@NotNull List<DimFilter> filters);
+  /**
+   * Returns the table's rows, in row-signature order, each time it's called. It's called synchronously on the thread
+   * that runs the query.
+   *
+   * @param filters filters that read only {@link #getPushdownColumns() pushdown columns}. The result must include
+   *                every row matching all of them, and may include other rows: the query applies its whole filter to
+   *                the result.
+   */
+  Iterable<Object[]> getRows(List<Filter> filters);
 }

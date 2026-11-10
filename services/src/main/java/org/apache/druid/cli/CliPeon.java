@@ -97,7 +97,6 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.PeonMemoryManagementModule;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierConfig;
 import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierFactory;
@@ -211,6 +210,7 @@ public class CliPeon extends GuiceRunnable
         new PeonProcessingModule(),
         NativeQueryEngineModule.builder()
                                .enableSystemTableQuery(properties)
+                               .withQuerySegmentWalker(SingleTaskBackgroundRunner.class)
                                .build(),
         new IndexingServiceTaskLogsModule(properties),
         new RegexEngineModule(),
@@ -267,7 +267,6 @@ public class CliPeon extends GuiceRunnable
                       ));
 
             binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
-            binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
             // Bind to ManageLifecycleServer to ensure SingleTaskBackgroundRunner is closed before
             // its dependent services, such as DiscoveryServiceLocator and OverlordClient.
             // This order ensures that tasks can finalize their cleanup operations before service location closure.

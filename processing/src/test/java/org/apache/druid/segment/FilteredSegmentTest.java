@@ -32,7 +32,9 @@ import java.util.List;
 
 public class FilteredSegmentTest
 {
-  /** Window queries read segments as {@link RowsAndColumns}; a filtered segment provides them with its filter applied. */
+  /**
+   * Window queries read segments as {@link RowsAndColumns}; a filtered segment provides them with its filter applied.
+   */
   @Test
   public void testShapeshiftsToFilteredRowsAndColumns() throws Exception
   {

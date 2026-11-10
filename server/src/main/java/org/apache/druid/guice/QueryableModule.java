@@ -45,7 +45,7 @@ public class QueryableModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    DruidBinders.dataSourceQueryHandlerBinder(binder);
+    DruidBinders.systemTableDescriptorBinder(binder);
     binder.bind(RequestLogger.class).toProvider(RequestLoggerProvider.class).in(ManageLifecycle.class);
     JsonConfigProvider.bindWithDefault(
         binder,

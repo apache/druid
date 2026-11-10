@@ -17,14 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.server.system;
+package org.apache.druid.server.system.table;
 
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.system.table.ServerPropertiesTableDataProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +59,9 @@ public class ServerPropertiesTableDataProviderTest
     );
   }
 
-  /** Configured {@code druid.server.hiddenProperties} are matched as case-insensitive substrings of property names. */
+  /**
+   * Configured {@code druid.server.hiddenProperties} are matched as case-insensitive substrings of property names.
+   */
   @Test
   public void testMasksConfiguredHiddenProperties()
   {
@@ -90,16 +93,34 @@ public class ServerPropertiesTableDataProviderTest
   public void testAppliesServerAndServiceNameFilters()
   {
     final ServerPropertiesTableDataProvider supplier = supplier(new Properties());
-    final DimFilter wrongServer = new SelectorDimFilter("server", "other:8080", null);
-    final DimFilter wrongService = new SelectorDimFilter("service_name", "broker", null);
+    final Filter wrongServer = new SelectorDimFilter("server", "other:8080", null).toFilter();
+    final Filter wrongService = new EqualityFilter("service_name", ColumnType.STRING, "broker", null);
 
     Assertions.assertTrue(toRows(supplier.getRows(List.of(wrongServer))).isEmpty());
     Assertions.assertTrue(toRows(supplier.getRows(List.of(wrongService))).isEmpty());
     Assertions.assertFalse(
         toRows(
-            supplier.getRows(List.of(new SelectorDimFilter("server", "localhost:8080", null)))
+            supplier.getRows(List.of(new SelectorDimFilter("server", "localhost:8080", null).toFilter()))
         ).isEmpty()
     );
+    Assertions.assertFalse(
+        toRows(
+            supplier.getRows(List.of(new EqualityFilter("server", ColumnType.STRING, "localhost:8080", null)))
+        ).isEmpty()
+    );
+  }
+
+  /**
+   * An equality filter compares values as its match type. A LONG equality on "01" matches the service name "1", so the
+   * provider must not drop the row by comparing the strings.
+   */
+  @Test
+  public void testDoesNotCompareNonStringEqualityAsStrings()
+  {
+    final ServerPropertiesTableDataProvider supplier = supplier("1", new Properties());
+    final Filter numericEquality = new EqualityFilter("service_name", ColumnType.LONG, "01", null);
+
+    Assertions.assertFalse(toRows(supplier.getRows(List.of(numericEquality))).isEmpty());
   }
 
   @Test
@@ -116,8 +137,13 @@ public class ServerPropertiesTableDataProviderTest
 
   private static ServerPropertiesTableDataProvider supplier(final Properties properties)
   {
+    return supplier("overlord", properties);
+  }
+
+  private static ServerPropertiesTableDataProvider supplier(final String serviceName, final Properties properties)
+  {
     return new ServerPropertiesTableDataProvider(
-        new DruidNode("overlord", "localhost", false, 8080, null, true, false),
+        new DruidNode(serviceName, "localhost", false, 8080, null, true, false),
         Set.of(NodeRole.OVERLORD),
         properties,
         new DruidServerConfig(null, null)

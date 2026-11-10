@@ -22,11 +22,13 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.AsyncQueryForwardingServlet;
-import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
+import org.apache.druid.server.system.query.SystemTableQueryResource;
 
-/** Registers the Router's local native query resource and forwarding-servlet query metrics. */
+/**
+ * Registers the Router's local native query resource and forwarding-servlet query metrics.
+ */
 public class RouterQueryResourceModule implements DruidModule
 {
   private final boolean enableDruidEngineForSystemTables;
@@ -41,10 +43,12 @@ public class RouterQueryResourceModule implements DruidModule
   {
     binder.bind(QueryCountStatsProvider.class).to(AsyncQueryForwardingServlet.class).in(LazySingleton.class);
     if (enableDruidEngineForSystemTables) {
-      // Serves system-table queries that the Router runs locally.
+      // Serves system-table queries that the Router runs locally. As on the Coordinator, Overlord and Middle Manager,
+      // only Scan queries on a system table are accepted.
       binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
-      Jerseys.addResource(binder, QueryResource.class);
-      LifecycleModule.register(binder, QueryResource.class);
+      binder.bind(SystemTableQueryResource.class).in(LazySingleton.class);
+      Jerseys.addResource(binder, SystemTableQueryResource.class);
+      LifecycleModule.register(binder, SystemTableQueryResource.class);
     }
   }
 }

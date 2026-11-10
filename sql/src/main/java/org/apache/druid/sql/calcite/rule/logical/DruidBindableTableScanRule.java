@@ -41,19 +41,18 @@ import java.util.stream.Collectors;
  * push filters and projections into this node for a {@code ProjectableFilterableTable}; they must be restored as Druid
  * logical nodes so native query generation can process them.
  *
- * <p>
- * This rule is used only by the <b>DECOUPLED</b> planner. The coupled planner converts a regular table scan through
- * {@code DruidTableScanRule} before Calcite produces a {@code BindableTableScan}.
+ * <p>This rule is used only by the <b>DECOUPLED</b> planner. The coupled planner converts a regular table scan through
+ * {@code DruidTableScanRule} before Calcite produces a {@code BindableTableScan}.</p>
  *
  * <pre>
  * BindableTableScan(filters, projects)
- *   -&gt; DruidProject
+ *   -> DruidProject
  *        `- DruidFilter
  *             `- DruidTableScan
  * </pre>
  *
- * <p>
- * The project and filter nodes are omitted when the Bindable scan contains an identity projection or no filters.
+ * <p>The project and filter nodes are omitted when the Bindable scan contains an identity projection or no
+ * filters.</p>
  */
 public class DruidBindableTableScanRule extends ConverterRule
 {

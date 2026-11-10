@@ -25,7 +25,9 @@ import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 
-/** Registers the standard native query HTTP resource. */
+/**
+ * Registers the standard native query HTTP resource.
+ */
 public class QueryResourceModule implements DruidModule
 {
   @Override

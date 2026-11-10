@@ -60,6 +60,7 @@ import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.SystemTableDataSource;
@@ -255,34 +256,42 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     latch.await();
   }
 
-  /** {@code X-Druid-Native-Query-Route: local} dispatches a user's cancellation to the Router-local query resource. */
+  /**
+   * Cancelling a node query that a Broker sent to this Router while gathering system-table rows dispatches the
+   * cancellation to the Router-local query resource, where the query runs.
+   */
   @Test
-  public void testLocalNativeQueryRouteDispatchesDeleteLocally() throws Exception
+  public void testNodeQueryCancellationIsDispatchedLocally() throws Exception
   {
-    assertNativeQueryRouteForDelete(QueryResource.NATIVE_QUERY_ROUTE_LOCAL, true, true);
-  }
-
-  /** The local route is ignored, and the cancellation forwarded, unless the Druid engine is enabled for system tables. */
-  @Test
-  public void testLocalNativeQueryRouteIsIgnoredWhenDruidEngineForSystemTablesIsDisabled() throws Exception
-  {
-    assertNativeQueryRouteForDelete(QueryResource.NATIVE_QUERY_ROUTE_LOCAL, false, false);
-  }
-
-  /** A non-exact native-query route value follows the normal cancellation forwarding path. */
-  @Test
-  public void testNonExactNativeQueryRouteDoesNotDispatchDeleteLocally() throws Exception
-  {
-    assertNativeQueryRouteForDelete("LOCAL", true, false);
+    assertDelete("/druid/v2/" + SystemTableDataSource.NODE_QUERY_ID_PREFIX + "query-id", true, true);
   }
 
   /**
-   * A Router-local system table query reports the length of its reserialized body, not the original request body.
+   * Node query cancellations are forwarded like any other unless the Druid engine is enabled for system tables.
+   */
+  @Test
+  public void testNodeQueryCancellationIsForwardedWhenDruidEngineForSystemTablesIsDisabled() throws Exception
+  {
+    assertDelete("/druid/v2/" + SystemTableDataSource.NODE_QUERY_ID_PREFIX + "query-id", false, false);
+  }
+
+  /**
+   * Other cancellations are forwarded to the Brokers.
+   */
+  @Test
+  public void testOtherCancellationIsForwarded() throws Exception
+  {
+    assertDelete("/druid/v2/query-id", true, false);
+  }
+
+  /**
+   * The Router answers native system-table queries with its own rows. A Router-local system table query reports the
+   * length of its reserialized body, not the original request body.
    * It also keeps the caller's identity and isn't marked as authorized, so the Router's local
    * {@code QueryResource} authorizes the caller as any other node would.
    */
   @Test
-  public void testLocalNativeQueryRouteUsesReserializedBodyLength() throws Exception
+  public void testLocalSystemTableQueryUsesReserializedBodyLength() throws Exception
   {
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final Query<?> query = Druids.newScanQueryBuilder()
@@ -345,8 +354,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Mockito.when(request.getContentLengthLong()).thenReturn((long) originalBody.length);
     Mockito.when(request.getHeader(HttpHeader.CONTENT_LENGTH.asString()))
            .thenReturn(String.valueOf(originalBody.length));
-    Mockito.when(request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE))
-           .thenReturn(QueryResource.NATIVE_QUERY_ROUTE_LOCAL);
     final AuthenticationResult caller = new AuthenticationResult("caller", "basic", "basic", null);
     Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(caller);
 
@@ -373,12 +380,96 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     );
 
     Assertions.assertSame(caller, reserializedRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT));
-    Assertions.assertEquals(
-        QueryResource.NATIVE_QUERY_ROUTE_LOCAL,
-        reserializedRequest.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE)
-    );
     Mockito.verify(request, Mockito.never())
            .setAttribute(Mockito.eq(AuthConfig.DRUID_AUTHORIZATION_CHECKED), Mockito.any());
+  }
+
+  /**
+   * A query that the Router can't run by itself, such as a query on a subquery of a system table, goes to a Broker,
+   * which runs the subquery.
+   */
+  @Test
+  public void testSystemTableSubqueryIsForwarded() throws Exception
+  {
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    final Query<?> query = Druids.newScanQueryBuilder()
+                                  .dataSource(
+                                      new QueryDataSource(
+                                          Druids.newScanQueryBuilder()
+                                                .dataSource(new SystemTableDataSource("server_properties"))
+                                                .eternityInterval()
+                                                .build()
+                                      )
+                                  )
+                                  .eternityInterval()
+                                  .build();
+    final byte[] body = objectMapper.writeValueAsBytes(query);
+    final ByteArrayInputStream input = new ByteArrayInputStream(body);
+    final ServletInputStream requestInputStream = new ServletInputStream()
+    {
+      @Override
+      public boolean isFinished()
+      {
+        return input.available() == 0;
+      }
+
+      @Override
+      public boolean isReady()
+      {
+        return true;
+      }
+
+      @Override
+      public void setReadListener(final ReadListener readListener)
+      {
+        // Synchronous in-memory request body.
+      }
+
+      @Override
+      public int read()
+      {
+        return input.read();
+      }
+    };
+    final QueryHostFinder hostFinder = Mockito.mock(QueryHostFinder.class);
+    Mockito.when(hostFinder.pickServer(Mockito.any())).thenReturn(new TestServer("http", "localhost", 8082));
+    final AtomicInteger proxyCalls = new AtomicInteger();
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        objectMapper,
+        TestHelper.makeSmileMapper(),
+        hostFinder,
+        null,
+        null,
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        enableDruidEngineForSystemTablesProperties(true),
+        new ServerConfig()
+    )
+    {
+      @Override
+      protected void doService(final HttpServletRequest request, final HttpServletResponse response)
+      {
+        proxyCalls.incrementAndGet();
+      }
+    };
+    final GuiceContainer localQueryContainer = Mockito.mock(GuiceContainer.class);
+    servlet.setLocalQueryContainer(localQueryContainer);
+
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getContentType()).thenReturn(MediaType.APPLICATION_JSON);
+    Mockito.when(request.getRequestURI()).thenReturn("/druid/v2/");
+    Mockito.when(request.getMethod()).thenReturn("POST");
+    Mockito.when(request.getInputStream()).thenReturn(requestInputStream);
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(new AuthenticationResult("caller", "basic", "basic", null));
+
+    servlet.service(request, Mockito.mock(HttpServletResponse.class));
+
+    Mockito.verifyNoInteractions(localQueryContainer);
+    Assertions.assertEquals(1, proxyCalls.get());
   }
 
   private static Properties enableDruidEngineForSystemTablesProperties(final boolean enabled)
@@ -388,8 +479,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     return properties;
   }
 
-  private void assertNativeQueryRouteForDelete(
-      final String route,
+  private void assertDelete(
+      final String requestURI,
       final boolean enableDruidEngineForSystemTables,
       final boolean expectedLocal
   ) throws Exception
@@ -428,11 +519,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     final HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(request.getContentType()).thenReturn(MediaType.APPLICATION_JSON);
-    Mockito.when(request.getRequestURI())
-           .thenReturn("/druid/v2/" + SystemTableDataSource.NODE_QUERY_ID_PREFIX + "query-id");
+    Mockito.when(request.getRequestURI()).thenReturn(requestURI);
     Mockito.when(request.getMethod()).thenReturn("DELETE");
-    Mockito.when(request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE))
-           .thenReturn(route);
     Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
            .thenReturn(new AuthenticationResult("alice", "allow", "external", null));
 

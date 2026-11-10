@@ -64,7 +64,6 @@ import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
@@ -122,6 +121,7 @@ public class CliIndexer extends ServerRunnable
         new DruidProcessingModule(),
         NativeQueryEngineModule.builder()
                                .enableSystemTableQuery(getProperties())
+                               .withQuerySegmentWalker(ThreadingTaskRunner.class)
                                .build(),
         new IndexerServiceModule(),
         new Module()
@@ -148,7 +148,6 @@ public class CliIndexer extends ServerRunnable
             binder.bind(TaskReportFileWriter.class).toInstance(new MultipleFileTaskReportFileWriter());
 
             binder.bind(TaskRunner.class).to(ThreadingTaskRunner.class);
-            binder.bind(QuerySegmentWalker.class).to(ThreadingTaskRunner.class);
             binder.bind(ThreadingTaskRunner.class).in(LazySingleton.class);
             binder.bind(IndexerTaskCountStatsProvider.class).to(WorkerTaskManager.class);
 

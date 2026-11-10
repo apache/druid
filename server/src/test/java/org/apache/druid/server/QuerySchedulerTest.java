@@ -103,7 +103,9 @@ public class QuerySchedulerTest
   private ListeningExecutorService executorService;
   private ObservableQueryScheduler scheduler;
 
-  /** System-table queries are cancelled with a SYSTEM_TABLE resource, not a datasource named after the table. */
+  /**
+   * System-table queries are cancelled with a SYSTEM_TABLE resource, not a datasource named after the table.
+   */
   @Test
   public void testSystemTableCancellationHasAuthorizationResource()
   {

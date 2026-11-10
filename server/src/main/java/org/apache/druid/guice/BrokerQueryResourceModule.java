@@ -25,7 +25,9 @@ import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 
-/** Registers the Broker's specialized native query HTTP resource. */
+/**
+ * Registers the Broker's specialized native query HTTP resource.
+ */
 public class BrokerQueryResourceModule implements DruidModule
 {
   @Override

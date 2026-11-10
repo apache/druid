@@ -27,7 +27,9 @@ import org.apache.druid.server.DruidNode;
 import java.util.Optional;
 import java.util.Set;
 
-/** Descriptor for the native {@code sys.server_properties} table. */
+/**
+ * Descriptor for the native {@code sys.server_properties} table.
+ */
 public class ServerPropertiesTableDescriptor implements SystemTableDescriptor
 {
   public static final String TABLE_NAME = "server_properties";

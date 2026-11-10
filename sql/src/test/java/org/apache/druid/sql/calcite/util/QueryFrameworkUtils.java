@@ -39,7 +39,6 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
@@ -99,7 +98,6 @@ public class QueryFrameworkUtils
         authorizerMapper,
         new DefaultQueryConfig(Map.of()),
         Map.of(),
-        new ServerConfig(),
         null  // BrokerConfigManager - null for tests
     );
   }
