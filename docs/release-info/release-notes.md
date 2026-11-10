@@ -145,7 +145,7 @@ Kafka supervisors now accept `ioConfig.partitionIds`, which lets you ingest only
 ##### Cost-based autoscaler improvements
 
 - You can now simulate the cost-based autoscaler for Kafka to help determine the optimal task count for different amounts of lag. [#19687](https://github.com/apache/druid/pull/19687)
-- You can now set a critical lag threshold for the cost-based autoscaler. When lag reaches 75% of the threshold, the autoscaler skips the lag cost factor. When lag reaches 100%, the autoscaler scales up to the maximum task count. [#19655](https://github.com/apache/druid/pull/19655)
+- You can now set a critical lag threshold for the cost-based autoscaler. When lag reaches 75% of the threshold, the autoscaler bypasses the scale-up boundary. When lag reaches 100%, the autoscaler scales up to the maximum task count. [#19655](https://github.com/apache/druid/pull/19655)
 - You can now choose to configure cooldown for the costBased auto-scaler for a supervisor in one of 2 ways:
      - **High sensitivity**: Set `minScaleUpDelay / minScaleDownDelay < taskDuration`. For example if `minScaleUpDelay = taskDuration / 2`, there would be at most 1 scaling event between 2 task rollovers
      - **Low sensitivity** : Set `minScaleUpDelay / minScaleDownDelay > taskDuration`. In this case, the cooldowns are effectively ignored and the scaling happens on task rollover only.
