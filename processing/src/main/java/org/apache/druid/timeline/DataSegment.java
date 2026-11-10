@@ -259,6 +259,26 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   /**
+   * Copies {@code other} by reference, for subclasses that decorate an existing segment. The copy shares the
+   * original's state rather than rebuilding it.
+   */
+  protected DataSegment(DataSegment other)
+  {
+    this.binaryVersion = other.binaryVersion;
+    this.id = other.id;
+    this.loadSpec = other.loadSpec;
+    this.dimensions = other.dimensions;
+    this.metrics = other.metrics;
+    this.projections = other.projections;
+    this.clusterGroups = other.clusterGroups;
+    this.shardSpec = other.shardSpec;
+    this.lastCompactionState = other.lastCompactionState;
+    this.size = other.size;
+    this.totalRows = other.totalRows;
+    this.indexingStateFingerprint = other.indexingStateFingerprint;
+  }
+
+  /**
    * Get dataSource
    *
    * @return the dataSource
