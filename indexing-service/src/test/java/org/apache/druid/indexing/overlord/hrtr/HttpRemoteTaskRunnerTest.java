@@ -1221,6 +1221,33 @@ public class HttpRemoteTaskRunnerTest
     assertStreamTaskReportsFromWorker(HttpResponseStatus.SERVICE_UNAVAILABLE, Optional.absent());
   }
 
+  @Test
+  public void testShutdownSentAgainWhenKilledTaskIsReportedRunning()
+  {
+    final Task task = NoopTask.create();
+    final HttpRemoteTaskRunner taskRunner = createTaskRunnerForTestTaskAddedOrUpdated(
+        EasyMock.createStrictMock(TaskStorage.class),
+        new ArrayList<>()
+    );
+
+    final WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getWorker())
+            .andReturn(new Worker("http", "worker", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY))
+            .anyTimes();
+    workerHolder.shutdownTask(task.getId());
+    EasyMock.replay(workerHolder);
+
+    taskRunner.run(task);
+    final TaskAnnouncement running =
+        TaskAnnouncement.create(task, TaskStatus.running(task.getId()), TaskLocation.unknown());
+    taskRunner.taskAddedOrUpdated(running, workerHolder);
+    taskRunner.shutdown(task.getId(), "Killed");
+
+    // The worker may have ignored the first request, so it is asked again when it reports the task RUNNING
+    taskRunner.taskAddedOrUpdated(running, workerHolder);
+    EasyMock.verify(workerHolder);
+  }
+
   /*
    * Task goes PENDING -> RUNNING -> SUCCESS and few more useless notifications in between.
    */
@@ -1948,6 +1975,14 @@ public class HttpRemoteTaskRunnerTest
         }
         Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
         Assertions.assertFalse(future.isDone());
+
+        // The worker may have ignored that request, so it is sent again when the worker reports the task RUNNING
+        actualShutdowns.clear();
+        taskRunner.taskAddedOrUpdated(
+            TaskAnnouncement.create(task, TaskStatus.running(task.getId()), TaskLocation.unknown()),
+            taskRunner.getWorkersForTestingReadOnly().get("host1:8080")
+        );
+        Assertions.assertEquals(Collections.singleton(task.getId()), actualShutdowns);
       } else {
         // Another task can use the worker once the rejected assignment releases its reservation
         Assertions.assertTrue(taskRunner.run(NoopTask.create()).get().isSuccess());

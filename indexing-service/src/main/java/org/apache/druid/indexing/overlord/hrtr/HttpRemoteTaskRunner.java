@@ -1262,6 +1262,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
       if (taskRunnerWorkItem != null) {
         if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
+          taskRunnerWorkItem.shutdownStatus = TaskStatus.failure(taskId, reason);
           workerHolderRunningTask = workers.get(taskRunnerWorkItem.getWorker().getHost());
           if (workerHolderRunningTask == null) {
             log.info("Can't shutdown! No worker running task[%s]", taskId);
@@ -1531,7 +1532,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
               case PENDING_WORKER_ASSIGN:
                 taskItem.setWorker(worker);
                 taskItem.setState(HttpRemoteTaskRunnerWorkItem.State.RUNNING);
-                shouldShutdownTask = taskItem.shutdownStatus != null;
                 log.info("Task[%s] started RUNNING on worker[%s].", taskId, worker.getHost());
 
                 final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
@@ -1543,6 +1543,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
                 // fall through
               case RUNNING:
+                // A worker can report a task RUNNING before its task runner has it and ignore a shutdown request
+                shouldShutdownTask = taskItem.shutdownStatus != null;
                 if (worker.getHost().equals(taskItem.getWorker().getHost())) {
                   if (!announcement.getTaskLocation().equals(taskItem.getLocation())) {
                     log.info(
