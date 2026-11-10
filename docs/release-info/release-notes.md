@@ -83,6 +83,16 @@ The new `ingest/events/filtered` metric reports how many records header filterin
 
 [#18525](https://github.com/apache/druid/pull/18525)
 
+### Typed query context parameters
+
+Common query context parameters listed in the [Query context reference](../querying/query-context-reference.md) and [Scan queries](../querying/scan-query.md) are now typed `QueryContextParameter` descriptors. The following changes apply to the query context handling:
+
+* Integer and long parameters reject values that aren't exact integers instead of truncating or wrapping them. For example `1.5`, and values out of range. Integral values like 5.0 or "5.0" are still accepted. Invalid values now fail with an error message: "Query context parameter [x] should be ...."
+* A null in the query context, or SET x = NULL, no longer clears a default configured with druid.query.default.context or the Broker dynamic configuration. The default applies as if the key were not set. Previously the null reached readers, which used the built-in default. To override a configured default, set an explicit value.
+* `maxSubqueryBytes` is a typed string parameter that accepts auto, disabled or a non-negative number of bytes, as the subquery guardrail does. Invalid values such as SET maxSubqueryBytes = TRUE now fail during validation, and numbers such as 1e9 are now accepted.
+
+[#20555]9https://github.com/apache/druid/pull/20555/)
+
 ### Druid JDBC driver
 
 Druid now provides its own JDBC driver that uses the `/druid/v2/sql/` endpoint. We recommend that you switch from the Avatica driver to this driver. The new driver provides the following benefits: driver-side connection management that doesn't require sticky load balancing, streaming results, support for SET statements, and support for non-native SQL engines.
