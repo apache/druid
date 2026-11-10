@@ -170,6 +170,8 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
         getTimeline(
             tableInputSpec.getDataSource(),
             tableInputSpec.getIntervals(),
+            // Without a pruner, no details are needed, not even LoadSpec, because workers fetch them from the
+            // Coordinator.
             segmentPruner == null ? SegmentDetail.none() : segmentPruner.getRequiredSegmentDetails()
         );
     final Predicate<SegmentDescriptor> segmentFilter = tableInputSpec.getSegments() != null

@@ -687,6 +687,7 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
         slicer.sliceDynamic(spec, null, 100, 5, BYTES_PER_SEGMENT)
     );
   }
+
   @Test
   public void test_sliceStatic_clusterGroupsPruneSegments()
   {

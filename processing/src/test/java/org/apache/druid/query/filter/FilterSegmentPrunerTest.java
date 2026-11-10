@@ -219,12 +219,6 @@ class FilterSegmentPrunerTest
       }
 
       @Override
-      public EnumSet<SegmentDetail> getRequiredSegmentDetails()
-      {
-        return SegmentDetail.none();
-      }
-
-      @Override
       public SegmentPruner combine(SegmentPruner other)
       {
         return this;

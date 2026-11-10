@@ -262,6 +262,12 @@ class CompositeSegmentPrunerTest
     );
   }
 
+  @Test
+  void testRequiredSegmentDetailsDefaultsToNone()
+  {
+    Assertions.assertEquals(SegmentDetail.none(), new AlwaysIncludePruner().getRequiredSegmentDetails());
+  }
+
   /**
    * Test pruner that includes every segment and declares the given details.
    */
@@ -305,12 +311,6 @@ class CompositeSegmentPrunerTest
     }
 
     @Override
-    public EnumSet<SegmentDetail> getRequiredSegmentDetails()
-    {
-      return SegmentDetail.none();
-    }
-
-    @Override
     public SegmentPruner combine(SegmentPruner other)
     {
       return other;
@@ -326,12 +326,6 @@ class CompositeSegmentPrunerTest
     public boolean include(DataSegment segment)
     {
       return false;
-    }
-
-    @Override
-    public EnumSet<SegmentDetail> getRequiredSegmentDetails()
-    {
-      return SegmentDetail.none();
     }
 
     @Override
