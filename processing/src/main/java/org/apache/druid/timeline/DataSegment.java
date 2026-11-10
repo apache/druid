@@ -46,6 +46,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -136,6 +137,26 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
       ""
+  );
+
+  /**
+   * Load spec keys, at any nesting level, whose values repeat across segments and so are interned, such as the type of
+   * the deep storage or the bucket it writes to. Values that are unique to each segment (such as the S3 {@code key}, or
+   * the {@code path} of HDFS and Google) are deliberately left out, since interning a string nothing else shares costs
+   * more than it saves.
+   */
+  private static final Set<String> INTERNED_LOAD_SPEC_VALUE_KEYS = Set.of(
+      // every load spec, including the partial load wrappers and their delegates
+      "type",
+      // S3, Google, and Aliyun OSS
+      "bucket",
+      // S3
+      "S3Schema",
+      // Azure
+      "containerName",
+      // partial load specs: the request fingerprint, and the selected projection names
+      "fingerprint",
+      "projections"
   );
 
   private final Integer binaryVersion;
@@ -563,12 +584,42 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     if (loadSpec == null) {
       return null;
     }
+    return prepareLoadSpecMap(loadSpec);
+  }
+
+  /**
+   * Compacts one level of a load spec, recursing into nested maps and lists (such as the {@code delegate} of a partial
+   * load spec, or the {@code members} of a composite one). Keys are interned, and so are the values of
+   * {@link #INTERNED_LOAD_SPEC_VALUE_KEYS}.
+   */
+  private static Map<String, Object> prepareLoadSpecMap(Map<?, ?> map)
+  {
     // Load spec is just of 3 entries on average; HashMap/LinkedHashMap consumes much more memory than ArrayMap
-    Map<String, Object> result = new Object2ObjectArrayMap<>(loadSpec.size());
-    for (Map.Entry<String, Object> e : loadSpec.entrySet()) {
-      result.put(STRING_INTERNER.intern(e.getKey()), e.getValue());
+    final Map<String, Object> result = new Object2ObjectArrayMap<>(map.size());
+    for (Map.Entry<?, ?> e : map.entrySet()) {
+      final String key = STRING_INTERNER.intern((String) e.getKey());
+      result.put(key, prepareLoadSpecValue(e.getValue(), INTERNED_LOAD_SPEC_VALUE_KEYS.contains(key)));
     }
     return result;
+  }
+
+  @Nullable
+  private static Object prepareLoadSpecValue(@Nullable Object value, boolean intern)
+  {
+    if (value instanceof Map<?, ?> map) {
+      return prepareLoadSpecMap(map);
+    }
+    if (value instanceof List<?> list) {
+      final List<Object> result = new ArrayList<>(list.size());
+      for (Object element : list) {
+        result.add(prepareLoadSpecValue(element, intern));
+      }
+      return result;
+    }
+    if (intern && value instanceof String s) {
+      return STRING_INTERNER.intern(s);
+    }
+    return value;
   }
 
   @Nullable
