@@ -28,7 +28,9 @@ For the full release notes for a specific version, see the [releases page](https
 
 ## 39.0.0
 
-### Java
+### Upgrade notes
+
+#### Java
 
 Support for Java 21 has been dropped. Yuo must upgrade to Java 25.
 
@@ -38,11 +40,11 @@ Dart workers on Historicals are now announced and discovered by the Broker with 
 
 [#20508](https://github.com/apache/druid/pull/20508)
 
-## Incompatible changes
+### Incompatible changes
 
 ### Permissions changes for SQL-based ingestion
 
-The [table visibility](#table-visibility) changes affect the permissions required for SQL-based ingestion. INSERT and REPLACE now require READ access (in addition to WRITE) on the target table.
+The [table visibility](./release-notes.md#table-visibility) changes affect the permissions required for SQL-based ingestion. INSERT and REPLACE now require READ access (in addition to WRITE) on the target table.
 
 To restore the previous behavior, set `druid.sql.planner.authorizeTableVisibility` to `false`.
 
