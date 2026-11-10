@@ -32,7 +32,7 @@ For the full release notes for a specific version, see the [releases page](https
 
 #### Java
 
-Support for Java 21 has been dropped. Yuo must upgrade to Java 25.
+Support for Java 21 has been dropped. You must upgrade to Java 25.
 
 ### Dart workers
 
