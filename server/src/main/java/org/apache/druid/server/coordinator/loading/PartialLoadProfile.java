@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -65,6 +66,7 @@ public record PartialLoadProfile(
     Objects.requireNonNull(wrappedLoadSpec, "wrappedLoadSpec");
     Objects.requireNonNull(fingerprint, "fingerprint");
     wrappedLoadSpec = Map.copyOf(wrappedLoadSpec);
+    fingerprint = DataSegment.stringInterner().intern(fingerprint);
   }
 
   /**
