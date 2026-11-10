@@ -85,7 +85,7 @@ The new `ingest/events/filtered` metric reports how many records header filterin
 
 ### Typed query context parameters
 
-Common query context parameters listed in the [Query context reference](../querying/query-context-reference.md) and [Scan queries](../querying/scan-query.md) are now typed `QueryContextParameter` descriptors. The following changes apply to the query context handling:
+Common query context parameters listed in [Query context reference](../querying/query-context-reference.md) and [Scan queries](../querying/scan-query.md) are now typed `QueryContextParameter` descriptors. The following changes apply to the query context handling:
 
 * Integer and long parameters reject values that aren't exact integers instead of truncating or wrapping them. For example `1.5`, and values out of range. Integral values like 5.0 or "5.0" are still accepted. Invalid values now fail with an error message: "Query context parameter [x] should be ...."
 * A null in the query context, or SET x = NULL, no longer clears a default configured with druid.query.default.context or the Broker dynamic configuration. The default applies as if the key were not set. Previously the null reached readers, which used the built-in default. To override a configured default, set an explicit value.
@@ -131,7 +131,8 @@ This section contains detailed release notes separated by areas.
 
 #### SQL-based ingestion
 
-##### Other SQL-based ingestion improvements
+-  Workers now only pass only the necessary worker context instead of the entire worker context to the task context. [#20650](https://github.com/apache/druid/pull/20650)
+
 
 #### Streaming ingestion
 
@@ -141,19 +142,19 @@ Kafka supervisors now accept `ioConfig.partitionIds`, which lets you ingest only
 
 [#20474](https://github.com/apache/druid/pull/20474)
 
-##### Simulate cost-based autoscaler
+##### Cost-based autoscaler improvements
 
-You can now simulate the cost-based autoscaler for Kafka to help determine the optimal task count for different amounts of lag.
-
-[#19687](https://github.com/apache/druid/pull/19687)
-
-##### Cost-based autoscaler critical lag
-
-You can now set a critical lag threshold for the cost-based autoscaler. When lag reaches 75% of the threshold, the autoscaler skips the lag cost factor. When lag reaches 100%, the autoscaler scales up to the maximum task count.
-
-[#19655](https://github.com/apache/druid/pull/19655)
+- You can now simulate the cost-based autoscaler for Kafka to help determine the optimal task count for different amounts of lag. [#19687](https://github.com/apache/druid/pull/19687)
+- You can now set a critical lag threshold for the cost-based autoscaler. When lag reaches 75% of the threshold, the autoscaler skips the lag cost factor. When lag reaches 100%, the autoscaler scales up to the maximum task count. [#19655](https://github.com/apache/druid/pull/19655)
+- You can now choose to configure cooldown for the costBased auto-scaler for a supervisor in one of 2 ways:
+     - **High sensitivity**: Set `minScaleUpDelay / minScaleDownDelay < taskDuration`. For example if `minScaleUpDelay = taskDuration / 2`, there would be at most 1 scaling event between 2 task rollovers
+     - **Low sensitivity** : Set `minScaleUpDelay / minScaleDownDelay > taskDuration`. In this case, the cooldowns are effectively ignored and the scaling happens on task rollover only.
+     [#20706](https://github.com/apache/druid/pull/20706)
+- The cost-based autoscaler now uses running averages instead of instantaneous values of task metrics to make decisions for the costBased auto-scaler. This leads to smoother scaling but may sometimes come at the cost of slightly delayed responses to change in metric trends that occur towards the end of the task lifecycle. For higher sensitivity to changing trends, set `minScaleUpDelay` and `minScaleDownDelay` to be smaller than `taskDuration`.
 
 ##### Other streaming ingestion improvements
+
+- Fixed a bug where a Kafka indexing task would report a poll-idle-ratio of 1.0 (i.e. fully idle) before any sample was actually available, which could skew the supervisor autoscaler's averaged idle ratio across tasks. [#20783](https://github.com/apache/druid/pull/20783)
 
 ### Querying
 
@@ -162,6 +163,12 @@ You can now set a critical lag threshold for the cost-based autoscaler. When lag
 You can now limit how long the Broker spends planning a SQL query with the new `druid.sql.planner.maxPlanningTimeMs` runtime property. You can also set it per query using the `maxPlanningTimeMs` query context parameter. When planning exceeds the configured budget, the query fails with an HTTP 504 Query timeout error instead of tying up a Broker thread. The default value is `0`, which disables the timeout.
 
 [#20314](https://github.com/apache/druid/pull/20314)
+
+#### Fixed JDK HTTPClient Failures caused by query response trailers
+
+Brokers and Historicals now send the `X-Druid-Response-Complete` and `X-Error-Message` HTTP trailers only when the request includes the `TE: trailers` header. Clients that read these trailers must send that header. This fixes query failures (`java.net.ProtocolException: CR expected`) in `java.net.http.HttpClient-based` clients, including the Druid JDBC driver, on JDK 17.0.21, 21.0.13 and 25.0.5.
+
+[#20717](https://github.com/apache/druid/pull/20717)
 
 #### Other querying improvements
 
@@ -246,6 +253,7 @@ Druid uses the following logic
 - Peons running tasks that do not serve queries (for example, batch, compaction, and MSQ tasks) now ignore `druid.server.http.unannouncePropagationDelay` and shut down without waiting. Real-time streaming tasks still honor the delay [#20444](https://github.com/apache/druid/pull/20444)
 - Improved port binding. Druid nodes can now advertise a different plaintext port for peer discovery while binding Jetty to the actual service port [#19598](https://github.com/apache/druid/pull/19598)
 - Reduced the heap footprint of loaded segments [#20467](https://github.com/apache/druid/pull/20467)
+- Fixed the `shutdownAllTasks` Overlord API (`POST /druid/indexer/v1/datasources/{datasource}/shutdownAllTasks`), which returned a 404 error since Druid 32.0.0. [#20824](https://github.com/apache/druid/pull/20824)
 
 ### Data management
 
