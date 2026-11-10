@@ -343,6 +343,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`task/run/time`|Milliseconds taken to run a task.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `description`, `tags`|Varies|
+|`task/status/persistFailed/count`|Failed attempts to persist a completed task's status, including retries during task storage synchronization.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`task/pending/time`|Milliseconds taken for a task to start running after being scheduled by the Overlord.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
 |`task/waiting/time`|Milliseconds taken for a task to be scheduled to run after being submitted to the Overlord.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
 |`task/action/run/time`|Milliseconds taken to execute a task action.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|Varies from subsecond to a few seconds, based on action type.|
