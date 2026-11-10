@@ -20,9 +20,11 @@
 package org.apache.druid.query.filter;
 
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -34,6 +36,12 @@ public interface SegmentPruner
    * during processing.
    */
   boolean include(DataSegment segment);
+
+  /**
+   * The optional {@link SegmentDetail}s that {@link #include(DataSegment)} reads. A segment missing any of them may be
+   * included even though it could have been pruned, so callers that fetch segments to prune should request these.
+   */
+  EnumSet<SegmentDetail> getRequiredSegmentDetails();
 
   /**
    * Filter the given {@link Iterable} of objects containing a {@link DataSegment} (obtained from the converter

@@ -31,6 +31,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -40,6 +41,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -191,6 +193,18 @@ class FilterSegmentPrunerTest
   }
 
   @Test
+  void testRequiredSegmentDetails()
+  {
+    final FilterSegmentPruner pruner = new FilterSegmentPruner(
+        new EqualityFilter("dim1", ColumnType.STRING, "abc", null),
+        null,
+        null
+    );
+
+    Assertions.assertEquals(EnumSet.of(SegmentDetail.CLUSTER_GROUPS), pruner.getRequiredSegmentDetails());
+  }
+
+  @Test
   void testCombineWithUnknownPrunerType()
   {
     DimFilter filterA = new RangeFilter("dim1", ColumnType.STRING, null, "aaa", null, null, null);
@@ -202,6 +216,12 @@ class FilterSegmentPrunerTest
       public boolean include(DataSegment segment)
       {
         return false;
+      }
+
+      @Override
+      public EnumSet<SegmentDetail> getRequiredSegmentDetails()
+      {
+        return SegmentDetail.none();
       }
 
       @Override

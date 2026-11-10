@@ -32,10 +32,15 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterSegmentPruner;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -45,7 +50,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javax.annotation.Nullable;
+
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 
 public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
@@ -93,14 +101,44 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
                                                          .binaryVersion(null)
                                                          .size(BYTES_PER_SEGMENT)
                                                          .build();
+  private static final String CLUSTERED_DATASOURCE = "clustered-ds";
+  private static final RowSignature CLUSTERING_COLUMNS = RowSignature.builder()
+                                                                     .add("tenant", ColumnType.STRING)
+                                                                     .add("region", ColumnType.STRING)
+                                                                     .build();
+
+  private static final DataSegment CLUSTERED_SEGMENT1 = makeClusteredSegment(
+      0,
+      null,
+      StringTuple.create("acme", "us-west-3"),
+      List.of(List.of("acme", "us-west-1"), List.of("acme", "us-west-2"))
+  );
+  private static final DataSegment CLUSTERED_SEGMENT2 = makeClusteredSegment(
+      1,
+      StringTuple.create("acme", "us-west-3"),
+      StringTuple.create("globex", "us-east-1"),
+      List.of(List.of("acme", "us-west-3"), List.of("acme", "us-west-4"))
+  );
+  private static final DataSegment CLUSTERED_SEGMENT3 = makeClusteredSegment(
+      2,
+      StringTuple.create("globex", "us-east-1"),
+      null,
+      List.of(List.of("globex", "us-east-1"))
+  );
+
   private SegmentTimeline timeline;
+  private SegmentTimeline clusteredTimeline;
   private IndexerTableInputSpecSlicer slicer;
   private TaskActionClient taskActionClient;
+  private RetrieveUsedSegmentsAction lastRetrieveUsedSegmentsAction;
 
   @BeforeEach
   public void setUp()
   {
     timeline = SegmentTimeline.forSegments(ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3));
+    clusteredTimeline = SegmentTimeline.forSegments(
+        ImmutableList.of(CLUSTERED_SEGMENT1, CLUSTERED_SEGMENT2, CLUSTERED_SEGMENT3)
+    );
     taskActionClient = new TaskActionClient()
     {
       @Override
@@ -109,19 +147,27 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
       {
         if (taskAction instanceof RetrieveUsedSegmentsAction) {
           final RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = (RetrieveUsedSegmentsAction) taskAction;
+          lastRetrieveUsedSegmentsAction = retrieveUsedSegmentsAction;
           final String dataSource = retrieveUsedSegmentsAction.getDataSource();
+          final SegmentTimeline dataSourceTimeline;
 
           if (DATASOURCE.equals(dataSource)) {
-            return (RetType) FluentIterable
-                .from(retrieveUsedSegmentsAction.getIntervals())
-                .transformAndConcat(
-                    interval ->
-                        VersionedIntervalTimeline.getAllObjects(timeline.lookup(interval))
-                )
-                .toList();
+            dataSourceTimeline = timeline;
+          } else if (CLUSTERED_DATASOURCE.equals(dataSource)) {
+            dataSourceTimeline = clusteredTimeline;
           } else {
             return (RetType) Collections.emptyList();
           }
+
+          // Like the Overlord, return only the segment details the action asks for.
+          return (RetType) FluentIterable
+              .from(retrieveUsedSegmentsAction.getIntervals())
+              .transformAndConcat(
+                  interval ->
+                      VersionedIntervalTimeline.getAllObjects(dataSourceTimeline.lookup(interval))
+              )
+              .transform(segment -> segment.retainOnlyDetails(retrieveUsedSegmentsAction.getDetails()))
+              .toList();
         }
 
         throw new UnsupportedOperationException();
@@ -640,5 +686,115 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
         ),
         slicer.sliceDynamic(spec, null, 100, 5, BYTES_PER_SEGMENT)
     );
+  }
+  @Test
+  public void test_sliceStatic_clusterGroupsPruneSegments()
+  {
+    Assertions.assertEquals(
+        ImmutableList.of(clusteredSliceOf(CLUSTERED_SEGMENT3)),
+        slicer.sliceStatic(new TableInputSpec(CLUSTERED_DATASOURCE, null, null), excludeTenantPruner("acme"), 1)
+    );
+  }
+
+  @Test
+  public void test_sliceDynamic_clusterGroupsPruneSegments()
+  {
+    Assertions.assertEquals(
+        ImmutableList.of(clusteredSliceOf(CLUSTERED_SEGMENT3)),
+        slicer.sliceDynamic(
+            new TableInputSpec(CLUSTERED_DATASOURCE, null, null),
+            excludeTenantPruner("acme"),
+            1,
+            100,
+            BYTES_PER_SEGMENT * 100
+        )
+    );
+  }
+
+  @Test
+  public void test_sliceStatic_withoutPruner_requestsNoSegmentDetails()
+  {
+    slicer.sliceStatic(new TableInputSpec(CLUSTERED_DATASOURCE, null, null), null, 1);
+
+    Assertions.assertEquals(SegmentDetail.none(), lastRetrieveUsedSegmentsAction.getDetails());
+  }
+
+  @Test
+  public void test_sliceStatic_requestsSegmentDetailsDeclaredByPruner()
+  {
+    final SegmentPruner pruner = new SegmentPruner()
+    {
+      @Override
+      public boolean include(DataSegment segment)
+      {
+        return true;
+      }
+
+      @Override
+      public EnumSet<SegmentDetail> getRequiredSegmentDetails()
+      {
+        return EnumSet.of(SegmentDetail.DIMENSIONS);
+      }
+
+      @Override
+      public SegmentPruner combine(SegmentPruner other)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+
+    slicer.sliceStatic(new TableInputSpec(CLUSTERED_DATASOURCE, null, null), pruner, 1);
+
+    Assertions.assertEquals(EnumSet.of(SegmentDetail.DIMENSIONS), lastRetrieveUsedSegmentsAction.getDetails());
+  }
+
+  private static FilterSegmentPruner excludeTenantPruner(String tenant)
+  {
+    return new FilterSegmentPruner(
+        new NotDimFilter(new EqualityFilter("tenant", ColumnType.STRING, tenant, null)),
+        null,
+        null
+    );
+  }
+
+  private static SegmentsInputSlice clusteredSliceOf(DataSegment segment)
+  {
+    return new SegmentsInputSlice(
+        CLUSTERED_DATASOURCE,
+        ImmutableList.of(
+            new RichSegmentDescriptor(
+                segment.getInterval(),
+                segment.getInterval(),
+                segment.getVersion(),
+                segment.getShardSpec().getPartitionNum()
+            )
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  private static DataSegment makeClusteredSegment(
+      int partitionNum,
+      @Nullable StringTuple start,
+      @Nullable StringTuple end,
+      List<List<Object>> tuples
+  )
+  {
+    return DataSegment.builder(SegmentId.of(CLUSTERED_DATASOURCE, Intervals.of("2002/2003"), "1", partitionNum))
+                      .loadSpec(Collections.emptyMap())
+                      .dimensions(Collections.emptyList())
+                      .metrics(Collections.emptyList())
+                      .shardSpec(new DimensionRangeShardSpec(
+                          ImmutableList.of("tenant", "region"),
+                          VirtualColumns.EMPTY,
+                          start,
+                          end,
+                          partitionNum,
+                          3
+                      ))
+                      .clusterGroups(new ClusterGroupTuples(CLUSTERING_COLUMNS, tuples))
+                      .binaryVersion(null)
+                      .size(BYTES_PER_SEGMENT)
+                      .build();
   }
 }

@@ -60,6 +60,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -166,7 +167,11 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
   )
   {
     final TimelineLookup<String, DataSegment> timeline =
-        getTimeline(tableInputSpec.getDataSource(), tableInputSpec.getIntervals());
+        getTimeline(
+            tableInputSpec.getDataSource(),
+            tableInputSpec.getIntervals(),
+            segmentPruner == null ? SegmentDetail.none() : segmentPruner.getRequiredSegmentDetails()
+        );
     final Predicate<SegmentDescriptor> segmentFilter = tableInputSpec.getSegments() != null
                                                        ? Set.copyOf(tableInputSpec.getSegments())::contains
                                                        : Predicates.alwaysTrue();
@@ -198,7 +203,8 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
   @Nullable
   private VersionedIntervalTimeline<String, DataSegment> getTimeline(
       final String dataSource,
-      final List<Interval> intervals
+      final List<Interval> intervals,
+      final EnumSet<SegmentDetail> segmentDetails
   )
   {
     final boolean includeRealtime = SegmentSource.shouldQueryRealtimeServers(includeSegmentSource);
@@ -226,7 +232,7 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
             new RetrieveUsedSegmentsAction(
                 dataSource,
                 intervals,
-                SegmentDetail.none() // Even LoadSpec is not needed, because workers fetch them from the Coordinator.
+                segmentDetails
             )
         );
       }
