@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -467,17 +468,98 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(Intervals.of("2000-01-01T00/PT2H"));
     final Query<Result<TimeseriesResultValue>> sameQuery = timeseriesQuery(Intervals.of("2000-01-01T00/PT2H"));
     final Query<Result<TimeseriesResultValue>> otherInterval = timeseriesQuery(Intervals.of("2000-01-01T01/PT2H"));
+    final Query<Result<TimeseriesResultValue>> otherEnd = timeseriesQuery(Intervals.of("2000-01-01T00/PT3H"));
+    final Query<Result<TimeseriesResultValue>> otherStart = timeseriesQuery(Intervals.of("2000-01-01T01/PT1H"));
     final Query<Result<TimeseriesResultValue>> otherDatasource = query.withDataSource(TableDataSource.create("other"));
 
     final Cache.NamedKey key = resultLevelCacheKey(query, false);
     Assertions.assertEquals(key, resultLevelCacheKey(otherInterval, false));
+    Assertions.assertEquals(key, resultLevelCacheKey(otherEnd, false));
+    Assertions.assertEquals(key, resultLevelCacheKey(otherStart, false));
     Assertions.assertEquals(key, resultLevelCacheKey(otherDatasource, false));
 
     final Cache.NamedKey keyWithFlag = resultLevelCacheKey(query, true);
     Assertions.assertNotEquals(key, keyWithFlag);
     Assertions.assertEquals(keyWithFlag, resultLevelCacheKey(sameQuery, true));
     Assertions.assertNotEquals(keyWithFlag, resultLevelCacheKey(otherInterval, true));
+    Assertions.assertNotEquals(keyWithFlag, resultLevelCacheKey(otherEnd, true));
+    Assertions.assertNotEquals(keyWithFlag, resultLevelCacheKey(otherStart, true));
     Assertions.assertNotEquals(keyWithFlag, resultLevelCacheKey(otherDatasource, true));
+  }
+
+  @Test
+  public void testCacheKeyUsesCondensedIntervalsWhenFlagEnabled()
+  {
+    cache = Mockito.spy(cache);
+    prepareCluster(10);
+    final Interval first = Intervals.of("2000-01-01T00/PT2H");
+    final Interval later = Intervals.of("2000-01-01T03/PT2H");
+
+    // A query sorts and merges its intervals, so their order doesn't change the key, and intervals that abut or
+    // overlap get the key of the single interval they merge into.
+    final Cache.NamedKey withGap = resultLevelCacheKey(timeseriesQuery(List.of(first, later)), true);
+    Assertions.assertEquals(withGap, resultLevelCacheKey(timeseriesQuery(List.of(later, first)), true));
+    Assertions.assertEquals(
+        resultLevelCacheKey(timeseriesQuery(Intervals.of("2000-01-01T00/PT4H")), true),
+        resultLevelCacheKey(timeseriesQuery(List.of(first, Intervals.of("2000-01-01T02/PT2H"))), true)
+    );
+    Assertions.assertEquals(
+        resultLevelCacheKey(timeseriesQuery(Intervals.of("2000-01-01T00/PT3H")), true),
+        resultLevelCacheKey(timeseriesQuery(List.of(first, Intervals.of("2000-01-01T01/PT2H"))), true)
+    );
+
+    // Intervals with a gap between them stay separate.
+    Assertions.assertNotEquals(resultLevelCacheKey(timeseriesQuery(first), true), withGap);
+    Assertions.assertNotEquals(resultLevelCacheKey(timeseriesQuery(Intervals.of("2000-01-01T00/PT5H")), true), withGap);
+  }
+
+  @Test
+  public void testStaleEntryRejectedAfterTurningFlagOnAndOff()
+  {
+    prepareCluster(10);
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    final CacheConfig flagOff = newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE, false);
+    final CacheConfig flagOn = newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE, true);
+
+    // Each run builds a new runner over the same cache, as a Broker restarting with an external cache would.
+    final List<Result<TimeseriesResultValue>> results1 =
+        createQueryRunner(flagOff, query).run(QueryPlus.wrap(query), responseContext()).toList();
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    emitter.flush();
+
+    // With the flag on, the entry stored under the default key isn't read.
+    Assertions.assertEquals(
+        results1,
+        createQueryRunner(flagOn, query).run(QueryPlus.wrap(query), responseContext()).toList()
+    );
+    Assertions.assertEquals(2, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
+
+    // A new segment changes the data, so the ETag stored with the entry under the default key no longer matches.
+    final DataSegment segment = newSegment(Intervals.of("2000-01-01T05/PT1H"), 0, 1);
+    addServer(SimpleServerView.createServer(11), segment, generateSegment(segment));
+    final List<Result<TimeseriesResultValue>> currentResults =
+        createQueryRunner(newCacheConfig(false, false, DEFAULT_CACHE_ENTRY_MAX_SIZE), query)
+            .run(QueryPlus.wrap(query), responseContext())
+            .toList();
+    Assertions.assertNotEquals(results1, currentResults);
+    emitter.flush();
+
+    // With the flag off again, the old entry is found but rejected, and the query returns the current results.
+    Assertions.assertEquals(
+        currentResults,
+        createQueryRunner(flagOff, query).run(QueryPlus.wrap(query), responseContext()).toList()
+    );
+    Assertions.assertEquals(1, cache.getStats().getNumHits());
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
+  }
+
+  private static Query<Result<TimeseriesResultValue>> timeseriesQuery(List<Interval> intervals)
+  {
+    return timeseriesQuery(intervals.get(0)).withQuerySegmentSpec(new MultipleIntervalSegmentSpec(intervals));
   }
 
   /**
