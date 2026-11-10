@@ -13297,7 +13297,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT_DEFAULT,
         "SELECT exp(count(*)) + 10, sin(pi / 6), cos(pi / 6), tan(pi / 6), cot(pi / 6)," +
         "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1)," +
-        "sinh(exp(count(*)) / 2), cosh(exp(count(*)) / 2), tanh(exp(count(*)) / 2), cbrt(exp(count(*))) " +
+        "sinh(exp(count(*)) / 2), cosh(exp(count(*)) / 2), tanh(exp(count(*)) / 2), cbrt(exp(count(*)))," +
+        "hypot(exp(count(*)), 3) " +
         "FROM druid.foo WHERE  dim2 = 0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
@@ -13323,7 +13324,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    expressionPostAgg("p9", "sinh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
                                    expressionPostAgg("p10", "cosh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
                                    expressionPostAgg("p11", "tanh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
-                                   expressionPostAgg("p12", "cbrt(exp(\"a0\"))", ColumnType.DOUBLE)
+                                   expressionPostAgg("p12", "cbrt(exp(\"a0\"))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p13", "hypot(exp(\"a0\"),3)", ColumnType.DOUBLE)
                                )
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
@@ -13341,7 +13343,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 Math.sinh(0.5),
                 Math.cosh(0.5),
                 Math.tanh(0.5),
-                Math.cbrt(1.0)
+                Math.cbrt(1.0),
+                Math.hypot(1.0, 3.0)
             }
         )
     );

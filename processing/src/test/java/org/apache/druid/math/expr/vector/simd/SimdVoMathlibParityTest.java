@@ -27,10 +27,16 @@ import org.apache.druid.math.expr.vector.ExprEvalLongVector;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorTestAssertions;
+import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoubleLongFunction;
+import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoublesFunction;
+import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongDoubleFunction;
+import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongsFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateDoubleFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateLongFunction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.function.DoubleBinaryOperator;
 
 /**
  * Verifies that the SIMD processors for VO_MATHLIB unary ops (SVML/SLEEF-backed transcendentals) are
@@ -59,15 +65,26 @@ public class SimdVoMathlibParityTest
   // the SIMD path targets the same, so the SIMD-vs-scalar delta can be up to 2 ulps from both landing at
   // opposite ends of their independent 1-ulp windows. sinh/cosh/tanh however are only spec'd to 2.5 ulps in
   // Math, and VectorOperators offers no tighter guarantee, so their SIMD-vs-scalar delta can plausibly reach
-  // ~5 ulps by the same triangle-inequality argument.
+  // ~5 ulps by the same triangle-inequality argument. Math.atan2 is spec'd to 2 ulps so its SIMD-vs-Math
+  // bound is 4 ulps; Math.pow and Math.hypot are both 1 ulp like the common unary set, so bound is 2 ulps.
   private static final int DEFAULT_MAX_ULPS = 2;
   private static final int HYPERBOLIC_MAX_ULPS = 5;
+  private static final int ATAN2_MAX_ULPS = 4;
 
   private static int maxUlpsFor(SimdSupportedUnaryOp op)
   {
     return switch (op) {
       case SINH, COSH, TANH -> HYPERBOLIC_MAX_ULPS;
       default -> DEFAULT_MAX_ULPS;
+    };
+  }
+
+  private static int maxUlpsFor(SimdSupportedBinaryOp op)
+  {
+    return switch (op) {
+      case ATAN2 -> ATAN2_MAX_ULPS;
+      case POW, HYPOT -> DEFAULT_MAX_ULPS;
+      default -> throw new IllegalStateException("not a VO_MATHLIB op: " + op);
     };
   }
 
@@ -163,13 +180,18 @@ public class SimdVoMathlibParityTest
 
   private static void assertStable(SimdSupportedUnaryOp op, double[] warmed, ValuesSupplier rerun)
   {
+    assertStable("op=" + op, warmed, rerun);
+  }
+
+  private static void assertStable(String label, double[] warmed, ValuesSupplier rerun)
+  {
     for (int i = 0; i < STABILITY_ITERATIONS; i++) {
       final double[] again = rerun.get();
       for (int j = 0; j < warmed.length; j++) {
         Assertions.assertEquals(
             Double.doubleToRawLongBits(warmed[j]),
             Double.doubleToRawLongBits(again[j]),
-            "op=" + op + " lane=" + j + " bit-unstable after warmup at iter=" + i
+            label + " lane=" + j + " bit-unstable after warmup at iter=" + i
         );
       }
     }
@@ -235,6 +257,333 @@ public class SimdVoMathlibParityTest
   {
     final DoubleUnivariateDoubleFunction dbl = doubleScalarFor(op);
     return x -> dbl.process((double) x);
+  }
+
+  @Test
+  public void binaryDoubleDoubleStabilityAndParity()
+  {
+    for (SimdSupportedBinaryOp op : SimdSupportedBinaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final DoubleBinaryOperator scalar = binaryDoubleScalarFor(op);
+      final double[] leftIn = inDomainLeftDoubles(op);
+      final double[] rightIn = inDomainRightDoubles(op);
+      final ExprVectorProcessor<double[]> processor = SimdProcessors.makeDoubleDouble(
+          fixedDoubleInput(leftIn),
+          fixedDoubleInput(rightIn),
+          op,
+          (l, r) -> scalar.applyAsDouble(l, r)
+      );
+
+      double[] warmed = null;
+      for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+        warmed = processor.evalVector(STUB_BINDING).values().clone();
+      }
+
+      assertStable("op=" + op + " shape=double,double", warmed, () -> processor.evalVector(STUB_BINDING).values());
+      assertParityBinary(op, "double,double", leftIn, rightIn, warmed, scalar);
+    }
+  }
+
+  @Test
+  public void binaryDoubleLongStabilityAndParity()
+  {
+    for (SimdSupportedBinaryOp op : SimdSupportedBinaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final DoubleBinaryOperator scalar = binaryDoubleScalarFor(op);
+      final double[] leftIn = inDomainLeftDoubles(op);
+      final long[] rightIn = inDomainRightLongs(op);
+      final ExprVectorProcessor<double[]> processor = SimdProcessors.makeDoubleLong(
+          fixedDoubleInput(leftIn),
+          fixedLongInput(rightIn),
+          op,
+          (l, r) -> scalar.applyAsDouble(l, (double) r)
+      );
+
+      double[] warmed = null;
+      for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+        warmed = processor.evalVector(STUB_BINDING).values().clone();
+      }
+
+      assertStable("op=" + op + " shape=double,long", warmed, () -> processor.evalVector(STUB_BINDING).values());
+      assertParityBinary(op, "double,long", leftIn, longsToDoubles(rightIn), warmed, scalar);
+    }
+  }
+
+  @Test
+  public void binaryLongDoubleStabilityAndParity()
+  {
+    for (SimdSupportedBinaryOp op : SimdSupportedBinaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final DoubleBinaryOperator scalar = binaryDoubleScalarFor(op);
+      final long[] leftIn = inDomainLeftLongs(op);
+      final double[] rightIn = inDomainRightDoubles(op);
+      final ExprVectorProcessor<double[]> processor = SimdProcessors.makeLongDouble(
+          fixedLongInput(leftIn),
+          fixedDoubleInput(rightIn),
+          op,
+          (l, r) -> scalar.applyAsDouble((double) l, r)
+      );
+
+      double[] warmed = null;
+      for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+        warmed = processor.evalVector(STUB_BINDING).values().clone();
+      }
+
+      assertStable("op=" + op + " shape=long,double", warmed, () -> processor.evalVector(STUB_BINDING).values());
+      assertParityBinary(op, "long,double", longsToDoubles(leftIn), rightIn, warmed, scalar);
+    }
+  }
+
+  @Test
+  public void binaryLongLongStabilityAndParity()
+  {
+    for (SimdSupportedBinaryOp op : SimdSupportedBinaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final DoubleBinaryOperator scalar = binaryDoubleScalarFor(op);
+      final long[] leftIn = inDomainLeftLongs(op);
+      final long[] rightIn = inDomainRightLongs(op);
+      final ExprVectorProcessor<double[]> processor = SimdProcessors.makeLongLongToDouble(
+          fixedLongInput(leftIn),
+          fixedLongInput(rightIn),
+          op,
+          (l, r) -> scalar.applyAsDouble((double) l, (double) r)
+      );
+
+      double[] warmed = null;
+      for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+        warmed = processor.evalVector(STUB_BINDING).values().clone();
+      }
+
+      assertStable("op=" + op + " shape=long,long", warmed, () -> processor.evalVector(STUB_BINDING).values());
+      assertParityBinary(op, "long,long", longsToDoubles(leftIn), longsToDoubles(rightIn), warmed, scalar);
+    }
+  }
+
+  @Test
+  public void binaryDoubleDoubleTailBypassesScalarFallback()
+  {
+    final DoubleBivariateDoublesFunction poison = (l, r) -> {
+      throw new IllegalStateException(StringUtils.format("scalar fallback called for (%s, %s)", l, r));
+    };
+    for (SimdSupportedBinaryOp op : SimdSupportedBinaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final double[] leftIn = inDomainLeftDoubles(op);
+      final double[] rightIn = inDomainRightDoubles(op);
+      final ExprVectorProcessor<double[]> processor = SimdProcessors.makeDoubleDouble(
+          fixedDoubleInput(leftIn),
+          fixedDoubleInput(rightIn),
+          op,
+          poison
+      );
+      assertTailBypasses(op, "double,double", processor);
+    }
+  }
+
+  @Test
+  public void binaryDoubleLongTailBypassesScalarFallback()
+  {
+    final DoubleBivariateDoubleLongFunction poison = (l, r) -> {
+      throw new IllegalStateException(StringUtils.format("scalar fallback called for (%s, %s)", l, r));
+    };
+    for (SimdSupportedBinaryOp op : SimdSupportedBinaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final double[] leftIn = inDomainLeftDoubles(op);
+      final long[] rightIn = inDomainRightLongs(op);
+      final ExprVectorProcessor<double[]> processor = SimdProcessors.makeDoubleLong(
+          fixedDoubleInput(leftIn),
+          fixedLongInput(rightIn),
+          op,
+          poison
+      );
+      assertTailBypasses(op, "double,long", processor);
+    }
+  }
+
+  @Test
+  public void binaryLongDoubleTailBypassesScalarFallback()
+  {
+    final DoubleBivariateLongDoubleFunction poison = (l, r) -> {
+      throw new IllegalStateException(StringUtils.format("scalar fallback called for (%s, %s)", l, r));
+    };
+    for (SimdSupportedBinaryOp op : SimdSupportedBinaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final long[] leftIn = inDomainLeftLongs(op);
+      final double[] rightIn = inDomainRightDoubles(op);
+      final ExprVectorProcessor<double[]> processor = SimdProcessors.makeLongDouble(
+          fixedLongInput(leftIn),
+          fixedDoubleInput(rightIn),
+          op,
+          poison
+      );
+      assertTailBypasses(op, "long,double", processor);
+    }
+  }
+
+  @Test
+  public void binaryLongLongTailBypassesScalarFallback()
+  {
+    final DoubleBivariateLongsFunction poison = (l, r) -> {
+      throw new IllegalStateException(StringUtils.format("scalar fallback called for (%s, %s)", l, r));
+    };
+    for (SimdSupportedBinaryOp op : SimdSupportedBinaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final long[] leftIn = inDomainLeftLongs(op);
+      final long[] rightIn = inDomainRightLongs(op);
+      final ExprVectorProcessor<double[]> processor = SimdProcessors.makeLongLongToDouble(
+          fixedLongInput(leftIn),
+          fixedLongInput(rightIn),
+          op,
+          poison
+      );
+      assertTailBypasses(op, "long,long", processor);
+    }
+  }
+
+  private static void assertTailBypasses(
+      SimdSupportedBinaryOp op,
+      String shapeLabel,
+      ExprVectorProcessor<double[]> processor
+  )
+  {
+    for (int size : partialTailSizes()) {
+      final Expr.VectorInputBinding partial = new StubBinding(INPUT_LANES, size);
+      // Would throw here if the tail path invoked the poisoned scalarFallback for any lane.
+      final double[] out = processor.evalVector(partial).values();
+      Assertions.assertEquals(
+          INPUT_LANES,
+          out.length,
+          "op=" + op + " shape=" + shapeLabel + " size=" + size + " unexpected output length"
+      );
+    }
+  }
+
+  private static void assertParityBinary(
+      SimdSupportedBinaryOp op,
+      String shapeLabel,
+      double[] leftAsDouble,
+      double[] rightAsDouble,
+      double[] simd,
+      DoubleBinaryOperator scalar
+  )
+  {
+    for (int i = 0; i < leftAsDouble.length; i++) {
+      VectorTestAssertions.assertDoublesEquivalent(
+          StringUtils.format(
+              "op=%s shape=%s lane=%d left=%s right=%s SIMD-vs-Math",
+              op, shapeLabel, i, leftAsDouble[i], rightAsDouble[i]
+          ),
+          scalar.applyAsDouble(leftAsDouble[i], rightAsDouble[i]),
+          simd[i],
+          maxUlpsFor(op)
+      );
+    }
+  }
+
+  private static DoubleBinaryOperator binaryDoubleScalarFor(SimdSupportedBinaryOp op)
+  {
+    return switch (op) {
+      case POW -> Math::pow;
+      case ATAN2 -> Math::atan2;
+      case HYPOT -> Math::hypot;
+      default -> throw new IllegalStateException("not a VO_MATHLIB op: " + op);
+    };
+  }
+
+  /**
+   * Deterministic in-domain left operand for the given op. POW keeps the base strictly positive so
+   * negative-with-fractional-exponent does not produce NaN. ATAN2 and HYPOT accept any real.
+   */
+  private static double[] inDomainLeftDoubles(SimdSupportedBinaryOp op)
+  {
+    final double[] xs = new double[INPUT_LANES];
+    for (int i = 0; i < INPUT_LANES; i++) {
+      // bias to [0.1, 2.1] — small positive magnitudes that won't overflow pow(x, 5)
+      xs[i] = 0.1 + 2.0 * ((double) i / INPUT_LANES);
+    }
+    xs[0] = 1.0;
+    xs[1] = 0.5;
+    xs[2] = 2.0;
+    xs[3] = Math.E;
+    if (op != SimdSupportedBinaryOp.POW) {
+      xs[4] = -0.7;
+      xs[5] = -3.0;
+    }
+    return xs;
+  }
+
+  private static double[] inDomainRightDoubles(SimdSupportedBinaryOp op)
+  {
+    final double[] xs = new double[INPUT_LANES];
+    for (int i = 0; i < INPUT_LANES; i++) {
+      // bias to [-2, 2] for POW to keep magnitudes modest; same range works for ATAN2/HYPOT
+      xs[i] = -2.0 + 4.0 * ((double) i / INPUT_LANES);
+    }
+    xs[0] = 0.5;
+    xs[1] = 1.0;
+    xs[2] = 2.0;
+    xs[3] = -1.5;
+    if (op != SimdSupportedBinaryOp.POW) {
+      xs[4] = -0.7;
+      xs[5] = Math.PI;
+    }
+    return xs;
+  }
+
+  private static long[] inDomainLeftLongs(SimdSupportedBinaryOp op)
+  {
+    final long[] xs = new long[INPUT_LANES];
+    if (op == SimdSupportedBinaryOp.POW) {
+      // positive bases keep POW defined for arbitrary (double-cast) exponents
+      for (int i = 0; i < INPUT_LANES; i++) {
+        xs[i] = 1L + (i % 10);
+      }
+    } else {
+      for (int i = 0; i < INPUT_LANES; i++) {
+        xs[i] = i - (INPUT_LANES / 2);
+      }
+    }
+    return xs;
+  }
+
+  private static long[] inDomainRightLongs(SimdSupportedBinaryOp op)
+  {
+    final long[] xs = new long[INPUT_LANES];
+    if (op == SimdSupportedBinaryOp.POW) {
+      // keep exponents small so pow(x, y) stays within representable range
+      for (int i = 0; i < INPUT_LANES; i++) {
+        xs[i] = (i % 10) - 5;
+      }
+    } else {
+      for (int i = 0; i < INPUT_LANES; i++) {
+        xs[i] = i - (INPUT_LANES / 2);
+      }
+    }
+    return xs;
+  }
+
+  private static double[] longsToDoubles(long[] xs)
+  {
+    final double[] out = new double[xs.length];
+    for (int i = 0; i < xs.length; i++) {
+      out[i] = (double) xs[i];
+    }
+    return out;
   }
 
 

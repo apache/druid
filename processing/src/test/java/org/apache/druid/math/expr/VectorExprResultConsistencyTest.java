@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorTestAssertions;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedBinaryOp;
 import org.apache.druid.math.expr.vector.simd.SimdSupportedUnaryOp;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -62,6 +63,7 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * randomize inputs to various vector expressions and make sure the results match nonvectorized expressions
@@ -77,16 +79,22 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
   // Regexes for detecting VO_MATHLIB function calls in an expression string so the ulp tolerance below only kicks in
   // where the SIMD path can actually diverge from scalar Math. Everything else stays on strict equality. Derived from
-  // SimdSupportedUnaryOp so future ops picked up by the enum's isMathLib() classification get covered automatically.
-  // This part could probably be done nicer if we exposed Simd stuff via the Expr itself instead of this semi-fragile
-  // regex.
+  // SimdSupported{Unary,Binary}Op so future ops picked up by the enum's isMathLib() classification get covered
+  // automatically. This part could probably be done nicer if we exposed Simd stuff via the Expr itself instead of this
+  // semi-fragile regex.
   private static final Set<String> HYPERBOLIC_FN_NAMES = Set.of("sinh", "cosh", "tanh");
   private static final Pattern HYPERBOLIC_FN_PATTERN = functionNamePattern(HYPERBOLIC_FN_NAMES);
+  private static final Set<String> ATAN2_FN_NAMES = Set.of("atan2");
+  private static final Pattern ATAN2_FN_PATTERN = functionNamePattern(ATAN2_FN_NAMES);
   private static final Pattern MATH_LIB_FN_PATTERN = functionNamePattern(
-      Arrays.stream(SimdSupportedUnaryOp.values())
-            .filter(SimdSupportedUnaryOp::isMathLib)
-            .map(op -> op.name().toLowerCase(Locale.ROOT))
-            .collect(Collectors.toSet())
+      Stream.concat(
+          Arrays.stream(SimdSupportedUnaryOp.values())
+                .filter(SimdSupportedUnaryOp::isMathLib)
+                .map(op -> op.name().toLowerCase(Locale.ROOT)),
+          Arrays.stream(SimdSupportedBinaryOp.values())
+                .filter(SimdSupportedBinaryOp::isMathLib)
+                .map(op -> op.name().toLowerCase(Locale.ROOT))
+      ).collect(Collectors.toSet())
   );
 
   private static Pattern functionNamePattern(Set<String> names)
@@ -102,12 +110,16 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   /**
    * Ulp tolerance the vector-vs-scalar comparison should allow for the given expression. Returns 0 for
    * expressions with no VO_MATHLIB ops (strict equality); the same per-op bounds SimdVoMathlibParityTest
-   * uses otherwise.
+   * uses otherwise. Checked in widest-first order so an expression containing multiple VO_MATHLIB ops gets
+   * the loosest tolerance any of them needs.
    */
   private static int allowedUlpsFor(String exprString)
   {
     if (HYPERBOLIC_FN_PATTERN.matcher(exprString).find()) {
       return 5;
+    }
+    if (ATAN2_FN_PATTERN.matcher(exprString).find()) {
+      return 4;
     }
     if (MATH_LIB_FN_PATTERN.matcher(exprString).find()) {
       return 2;

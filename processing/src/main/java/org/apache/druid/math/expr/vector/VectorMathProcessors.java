@@ -428,7 +428,8 @@ public class VectorMathProcessors
           (left, right) -> LongMath.pow(left, Ints.checkedCast(right)),
           Math::pow,
           Math::pow,
-          Math::pow
+          Math::pow,
+          SimdSupportedBinaryOp.POW
       );
     }
   }
@@ -439,7 +440,7 @@ public class VectorMathProcessors
 
     public DoublePower()
     {
-      super(Math::pow, Math::pow, Math::pow, Math::pow);
+      super(Math::pow, Math::pow, Math::pow, Math::pow, SimdSupportedBinaryOp.POW);
     }
   }
 
@@ -469,7 +470,7 @@ public class VectorMathProcessors
 
     public Atan2()
     {
-      super(Math::atan2, Math::atan2, Math::atan2, Math::atan2);
+      super(Math::atan2, Math::atan2, Math::atan2, Math::atan2, SimdSupportedBinaryOp.ATAN2);
     }
   }
 
@@ -494,7 +495,7 @@ public class VectorMathProcessors
 
     public Hypot()
     {
-      super(Math::hypot, Math::hypot, Math::hypot, Math::hypot);
+      super(Math::hypot, Math::hypot, Math::hypot, Math::hypot, SimdSupportedBinaryOp.HYPOT);
     }
   }
 
