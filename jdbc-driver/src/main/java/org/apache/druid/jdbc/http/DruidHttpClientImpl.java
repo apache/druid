@@ -287,6 +287,14 @@ public class DruidHttpClientImpl implements DruidHttpClient
         }
 
         builder.header("Authorization", "Basic " + password);
+      } else if (ClientProperties.AUTHENTICATION_BEARER.equals(authentication)) {
+        final String password = clientProperties.getPassword();
+
+        if (password == null || password.isEmpty()) {
+          throw new DruidJdbcException("Password is required for bearer authentication");
+        }
+
+        builder.header("Authorization", "Bearer " + password);
       } else {
         throw new DruidJdbcException("Unsupported authentication method: %s", authentication);
       }
