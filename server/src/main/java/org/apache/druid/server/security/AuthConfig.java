@@ -65,7 +65,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false, false, null, null, false, false, false);
+    this(null, null, null, false, false, null, null, false, false, false, false);
   }
 
   @JsonProperty
@@ -112,6 +112,9 @@ public class AuthConfig
   @JsonProperty
   private final boolean authorizeSystemTablesDirectly;
 
+  @JsonProperty
+  private final boolean enableLookupAuthorization;
+
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticatorChain,
@@ -123,7 +126,8 @@ public class AuthConfig
       @JsonProperty("securedContextKeys") Set<String> securedContextKeys,
       @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity,
       @JsonProperty("emitAuthMetrics") boolean emitAuthMetrics,
-      @JsonProperty("authorizeSystemTablesDirectly") boolean authorizeSystemTablesDirectly
+      @JsonProperty("authorizeSystemTablesDirectly") boolean authorizeSystemTablesDirectly,
+      @JsonProperty("enableLookupAuthorization") boolean enableLookupAuthorization
   )
   {
     this.authenticatorChain = authenticatorChain;
@@ -138,6 +142,7 @@ public class AuthConfig
     this.enableInputSourceSecurity = enableInputSourceSecurity;
     this.emitAuthMetrics = emitAuthMetrics;
     this.authorizeSystemTablesDirectly = authorizeSystemTablesDirectly;
+    this.enableLookupAuthorization = enableLookupAuthorization;
   }
 
   public List<String> getAuthenticatorChain()
@@ -178,6 +183,11 @@ public class AuthConfig
   public boolean isAuthorizeSystemTablesDirectly()
   {
     return authorizeSystemTablesDirectly;
+  }
+
+  public boolean isEnableLookupAuthorization()
+  {
+    return enableLookupAuthorization;
   }
 
   /**
@@ -229,7 +239,8 @@ public class AuthConfig
            && Objects.equals(unsecuredPaths, that.unsecuredPaths)
            && Objects.equals(unsecuredContextKeys, that.unsecuredContextKeys)
            && Objects.equals(securedContextKeys, that.securedContextKeys)
-           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity);
+           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity)
+           && Objects.equals(enableLookupAuthorization, that.enableLookupAuthorization);
   }
 
   @Override
@@ -245,7 +256,8 @@ public class AuthConfig
         securedContextKeys,
         enableInputSourceSecurity,
         emitAuthMetrics,
-        authorizeSystemTablesDirectly
+        authorizeSystemTablesDirectly,
+        enableLookupAuthorization
     );
   }
 
@@ -263,6 +275,7 @@ public class AuthConfig
            ", enableInputSourceSecurity=" + enableInputSourceSecurity +
            ", emitAuthMetrics=" + emitAuthMetrics +
            ", authorizeSystemTablesDirectly=" + authorizeSystemTablesDirectly +
+           ", enableLookupAuthorization=" + enableLookupAuthorization +
            '}';
   }
 
@@ -286,6 +299,7 @@ public class AuthConfig
     private boolean enableInputSourceSecurity;
     private boolean emitAuthMetrics;
     private boolean authorizeSystemTablesDirectly;
+    private boolean enableLookupAuthorization;
 
     public Builder setAuthenticatorChain(List<String> authenticatorChain)
     {
@@ -347,6 +361,12 @@ public class AuthConfig
       return this;
     }
 
+    public Builder setEnableLookupAuthorization(boolean enableLookupAuthorization)
+    {
+      this.enableLookupAuthorization = enableLookupAuthorization;
+      return this;
+    }
+
     public AuthConfig build()
     {
       return new AuthConfig(
@@ -359,7 +379,8 @@ public class AuthConfig
           securedContextKeys,
           enableInputSourceSecurity,
           emitAuthMetrics,
-          authorizeSystemTablesDirectly
+          authorizeSystemTablesDirectly,
+          enableLookupAuthorization
       );
     }
   }
