@@ -260,11 +260,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     return dataSegment;
   }
 
-  public CompressionUtils.Format getCompressionFormat()
-  {
-    return compressionFormat;
-  }
-
   private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
   {
     if (!HadoopFsWrapper.rename(fs, from, to)) {
