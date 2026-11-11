@@ -258,6 +258,46 @@ aggregate whose output it cannot re-aggregate, such as `COUNT(*)`, is rejected: 
 a count by summing a count column, as in `SUM(cnt) AS cnt`. A body that groups without any
 aggregates collapses duplicate rows. A rollup table cannot also declare `CLUSTERED BY`.
 
+A grouping column written as `MV_TO_ARRAY(<column>)` declares that the column is a
+[multi-value string](../../querying/multi-value-dimensions.md), so that roll-up groups its values as the whole set in
+a single row rather than implicitly unnesting the values into multiple rows.
+
+```sql
+CREATE TABLE "druid"."visits" SEALED (
+  tags VARCHAR,
+  __time TIMESTAMP,
+  total BIGINT,
+  PROJECTION __base AS (
+    SELECT MV_TO_ARRAY(tags) AS tags, __time, SUM(total) AS total
+    GROUP BY 1, 2
+  )
+)
+PARTITIONED BY DAY
+```
+
+Like `TIME_FLOOR`, this describes how rows are grouped rather than what is stored: `tags` is still stored as the
+`VARCHAR` the table declares.
+
+Note that a `__base` body reads differently from the `INSERT` or `REPLACE` statement that would produce the same
+rollup. Rolling up a multi-valued column in an ingestion query is written as:
+
+```sql
+SELECT ARRAY_TO_MV(MV_TO_ARRAY(tags)) AS tags, ...
+GROUP BY MV_TO_ARRAY(tags), ...
+```
+
+The `ARRAY_TO_MV` is there because in an ingestion query the selected value is what gets stored, so the array the
+rows were grouped by has to be turned back into a multi-valued column on the way out. A `__base` body never selects
+what to store (the table's column list already does that), and writing it in that manner is an error.
+
+Declaring columns multi-valued is essential for a sealed table (see
+[Catalog-based compaction](#catalog-based-compaction)), because sealing means compaction does not fetch and analyze
+the segments before it runs, and a column holding several values has to be grouped as a set or the rows roll up
+differently than they did at ingestion. If a string column is not declared this way, it is taken to hold a single
+value per row. If a multi-value row is encountered, compaction fails rather than rolling it up wrongly. On a
+table that is not sealed the declaration is unnecessary, since compaction fetches and analyzes the segments, but may
+still be included to more accurately model the table schema in the catalog.
+
 ##### Clustered tables
 
 A clustered table stores the rows of each segment internally partitioned by the clustering columns, which must be the
@@ -363,14 +403,14 @@ columns are. Note that before sealing a table that already has projections it ha
 the next compaction; declare them with `ADD PROJECTION` first to keep them.
 
 Sealing makes compaction skip reading the segments entirely. Importantly, this includes the one thing the catalog cannot
-currently state, which is whether a string column holds more than one value per row. A sealed table's `VARCHAR` columns
-are taken to hold a single value each, because there is no way to declare otherwise yet. Where the stored data
-disagrees, the compaction task fails rather than writing something that was not asked for:
+infer, which is whether a string column holds more than one value per row. A [rollup table](#rollup-tables) declares
+that with `MV_TO_ARRAY`; every other `VARCHAR` column of a sealed table is taken to hold a single value. Where the
+stored data disagrees, the compaction task fails rather than writing something that was not asked for:
 
 - a [`clusterKeys`](#table-properties) column that turns out to be multi-valued fails once the data has been read,
   because the MSQ task engine cannot range-partition by one
-- a [rollup table](#rollup-tables) grouping column that turns out to be multi-valued fails at the grouping step,
-  because grouping by such a column requires converting it to an array first
+- an undeclared rollup grouping column that turns out to be multi-valued fails at the grouping step, because grouping
+  by such a column requires converting it to an array first
 
 Neither is detected before the task runs, and a non-sealed table avoids both by reading the segments to find out.
 

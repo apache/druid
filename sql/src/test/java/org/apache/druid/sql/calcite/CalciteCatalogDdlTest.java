@@ -39,6 +39,7 @@ import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.RollupBaseTableProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -1150,6 +1151,93 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         new RollupTableBaseTableMetadata(null, null, null),
         WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
     );
+  }
+
+  /**
+   * {@code MV_TO_ARRAY} over a grouping column declares that the column holds more than one value per row, so that
+   * rolling the table up groups its values as one set rather than one at a time. Like the granularity carrier it is
+   * metadata and not a computed column: the column is still stored as the declared {@code VARCHAR}.
+   */
+  @Test
+  public void testRollupBaseProjectionWithMultiValuedGroupingColumn()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, tags VARCHAR, __time TIMESTAMP, total BIGINT,"
+        + " PROJECTION __base AS (SELECT tenant, MV_TO_ARRAY(tags) AS tags, __time, SUM(total) AS total"
+        + " GROUP BY 1, 2, 3))"
+    );
+    assertEquals(
+        new RollupTableBaseTableMetadata(
+            VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("tags")),
+            new AggregatorFactory[]{new LongSumAggregatorFactory("total", "total")},
+            null
+        ),
+        WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  /**
+   * The two carriers are independent, so a table can declare both a query granularity and a multi-valued column.
+   */
+  @Test
+  public void testRollupBaseProjectionWithBothCarriers()
+  {
+    execute(
+        "CREATE TABLE tbl (tags VARCHAR, __time TIMESTAMP,"
+        + " PROJECTION __base AS (SELECT MV_TO_ARRAY(tags) AS tags, TIME_FLOOR(__time, 'PT1H') AS __time"
+        + " GROUP BY 1, 2))"
+    );
+    assertEquals(
+        new RollupTableBaseTableMetadata(
+            VirtualColumns.create(
+                RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("tags"),
+                Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+            ),
+            null,
+            null
+        ),
+        WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  /**
+   * The declaration is about the column it names, so aliasing it onto a different one is not a declaration at all and
+   * falls back to the computed-column rejection.
+   */
+  @Test
+  public void testRollupBaseProjectionRejectsMultiValueOfAnotherColumn()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, tags VARCHAR, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT tenant, MV_TO_ARRAY(tenant) AS tags, __time GROUP BY 1, 2, 3))"
+        )
+    );
+    assertTrue(e.getMessage().contains("is computed by an expression"), e.getMessage());
+    assertTrue(e.getMessage().contains("MV_TO_ARRAY(tags)"), e.getMessage());
+  }
+
+  /**
+   * The INSERT idiom for rolling up a multi-valued column converts the grouped array back with {@code ARRAY_TO_MV},
+   * because there the selected value is what gets stored. A {@code __base} body is not that: the column list says
+   * what is stored. Rejecting it is fine, but the message has to say which of the two the writer is in.
+   */
+  @Test
+  public void testRollupBaseProjectionRejectsTheInsertStyleArrayRoundTrip()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tags VARCHAR, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT ARRAY_TO_MV(MV_TO_ARRAY(tags)) AS tags, __time"
+            + " GROUP BY MV_TO_ARRAY(tags), __time))"
+        )
+    );
+    assertTrue(e.getMessage().contains("computes a column from the grouping"), e.getMessage());
+    assertTrue(e.getMessage().contains("MV_TO_ARRAY(<column>) AS <column>"), e.getMessage());
+    // and not the message about aggregates, of which this statement has none
+    assertFalse(e.getMessage().contains("over aggregates"), e.getMessage());
   }
 
   @Test

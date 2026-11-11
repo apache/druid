@@ -34,6 +34,7 @@ import org.apache.druid.catalog.model.RollupTableBaseTableMetadata;
 import org.apache.druid.catalog.model.TableBaseTableMetadata;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.RollupBaseTableProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.Intervals;
@@ -59,6 +60,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -308,6 +310,20 @@ public class ProjectionSpecTranslator
   }
 
   /**
+   * Whether {@code virtualColumn} is {@code MV_TO_ARRAY(declared)}, which groups a column's values as one set
+   * instead of one at a time and so declares the column to hold more than one value per row. The column is still
+   * stored as the table declares it; this says only how rows are grouped onto it, which is why it becomes a carrier
+   * on the spec rather than a computed column.
+   */
+  private static boolean declaresMultiValued(VirtualColumn virtualColumn, String declared)
+  {
+    return virtualColumn instanceof ExpressionVirtualColumn
+           && RollupBaseTableProjectionSpec.toMultiValueVirtualColumn(declared)
+                                           .getExpression()
+                                           .equals(((ExpressionVirtualColumn) virtualColumn).getExpression());
+  }
+
+  /**
    * Lift a GROUP BY body into the rollup layout's metadata. The body plans like an aggregate projection body, and its
    * outputs must name every declared column in declared order: an output backed by a grouping dimension must reference
    * the declared column itself (or {@code TIME_FLOOR(__time, <period>) AS __time}, which becomes the query
@@ -323,6 +339,16 @@ public class ProjectionSpecTranslator
     final PlannedAggregation planned = plannedAggregation(BASE_PROJECTION_NAME, tableName, druidQuery);
     if (planned.virtualColumnsAndFilter.filter(BASE_PROJECTION_NAME) != null) {
       throw invalid(BASE_PROJECTION_NAME, "its body filters. The base table stores every ingested row");
+    }
+    if (!druidQuery.getGrouping().getPostAggregators().isEmpty()) {
+      // the table's column list says what is stored, and the body only says how rows group onto it, so converting
+      // back to a mv is invalid
+      throw invalid(
+          BASE_PROJECTION_NAME,
+          "its body computes a column from the grouping instead of selecting it as grouped. A base table stores each"
+          + " column as the table declares it, so there is nothing to convert back: write MV_TO_ARRAY(<column>) AS"
+          + " <column> rather than ARRAY_TO_MV(MV_TO_ARRAY(<column>)) AS <column>"
+      );
     }
 
     final List<String> outputNames = druidQuery.getOutputRowType().getFieldNames();
@@ -399,12 +425,17 @@ public class ProjectionSpecTranslator
           );
         }
         carrier.add(Granularities.toVirtualColumn(granularity, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME));
+      } else if (virtualColumn != null && declaresMultiValued(virtualColumn, declared)) {
+        carrier.add(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn(declared));
       } else if (virtualColumn != null) {
         throw invalid(
             BASE_PROJECTION_NAME,
             StringUtils.format(
                 "its column [%s] is computed by an expression. Computed columns are not supported; compute the column"
-                + " at ingestion time instead",
+                + " at ingestion time instead, or write MV_TO_ARRAY(%s) to declare that [%s] holds more than one"
+                + " value per row",
+                declared,
+                declared,
                 declared
             )
         );
@@ -618,6 +649,13 @@ public class ProjectionSpecTranslator
   )
   {
     final PlannedAggregation planned = plannedAggregation(projectionName, tableName, druidQuery);
+    if (!druidQuery.getGrouping().getPostAggregators().isEmpty()) {
+      throw invalid(
+          projectionName,
+          "its body computes an expression over aggregates, which a projection cannot store. Store the aggregates"
+          + " themselves instead, for example SUM(x) and COUNT(x) rather than AVG(x)"
+      );
+    }
     return AggregateProjectionSpec
         .builder(projectionName)
         .virtualColumns(planned.virtualColumnsAndFilter.virtualColumns)
@@ -667,13 +705,6 @@ public class ProjectionSpecTranslator
     final Grouping grouping = druidQuery.getGrouping();
     if (grouping == null) {
       throw invalid(projectionName, "its body does not aggregate. Add a GROUP BY clause, or use SELECT DISTINCT");
-    }
-    if (!grouping.getPostAggregators().isEmpty()) {
-      throw invalid(
-          projectionName,
-          "its body computes an expression over aggregates, which a projection cannot store. Store the aggregates"
-          + " themselves instead, for example SUM(x) and COUNT(x) rather than AVG(x)"
-      );
     }
     if (grouping.getHavingFilter() != null) {
       throw invalid(projectionName, "its body has a HAVING clause, which a projection cannot store");

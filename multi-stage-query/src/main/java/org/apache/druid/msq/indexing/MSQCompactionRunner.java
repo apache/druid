@@ -669,11 +669,11 @@ public class MSQCompactionRunner implements CompactionRunner
       ));
     }
     if (isGroupBy(dataSchema)) {
-      // Convert MVDs to arrays for grouping to avoid unnest, assuming all string cols to be MVDs.
+      // Convert MVDs to arrays for grouping to avoid unnest.
       Set<String> multiValuedColumns = dataSchema.getDimensionsSpec()
                                                  .getDimensions()
                                                  .stream()
-                                                 .filter(dim -> dim.getColumnType().equals(ColumnType.STRING))
+                                                 .filter(DimensionSchema::canBeMultiValued)
                                                  .map(DimensionSchema::getName)
                                                  .collect(Collectors.toSet());
       if (dataSchema instanceof CombinedDataSchema &&

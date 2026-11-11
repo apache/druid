@@ -82,8 +82,12 @@ public final class RollupTableProjectionSpec implements RollupBaseTableProjectio
   {
     BaseTableProjectionSpec.validateDeclaredColumns(groupingColumns, "groupingColumns", TYPE_NAME);
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
-    BaseTableProjectionSpec.validateGranularityOnlyVirtualColumns(this.virtualColumns, TYPE_NAME);
-    this.groupingColumns = Collections.unmodifiableList(new ArrayList<>(groupingColumns));
+    this.groupingColumns = List.copyOf(groupingColumns);
+    RollupBaseTableProjectionSpec.validateGroupingCarrierVirtualColumns(
+        this.virtualColumns,
+        this.groupingColumns,
+        TYPE_NAME
+    );
     this.aggregators = aggregators == null ? new AggregatorFactory[0] : aggregators;
     validateAggregators(this.groupingColumns, this.aggregators);
     this.dimensionsSpec = DimensionsSpec.builder()
