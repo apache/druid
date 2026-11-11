@@ -19,12 +19,13 @@
 
 package org.apache.druid.indexing.rabbitstream;
 
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
-
-import javax.validation.constraints.NotNull;
 
 // OrderedSequenceNumber.equals() should be used instead.
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
+// Every Rabbit sequence number is inclusive, so inherited equality and value-only ordering are consistent.
+// codeql[java/inconsistent-compareto-and-equals]
 public class RabbitSequenceNumber extends OrderedSequenceNumber<Long>
 {
   private RabbitSequenceNumber(Long sequenceNumber)

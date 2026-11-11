@@ -53,6 +53,7 @@ import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -79,7 +80,7 @@ import java.util.Set;
 public class IndexerWorkerContext implements WorkerContext
 {
   /**
-   * Default for {@link MultiStageQueryContext#CTX_LIVE_REPORT_COUNTERS}. On by default for tasks.
+   * Default for {@link QueryContextParameters#LIVE_REPORT_COUNTERS}. On by default for tasks.
    */
   public static final boolean DEFAULT_LIVE_REPORT_COUNTERS = true;
 
@@ -174,6 +175,11 @@ public class IndexerWorkerContext implements WorkerContext
   {
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
     final TaskConfig taskConfig = injector.getInstance(TaskConfig.class);
+    // Opt into on-demand partial downloads via the MSQ query context (falls back to the node's TaskConfig default).
+    final boolean partialDownloadsEnabled = MultiStageQueryContext.getVirtualStoragePartialDownloadsEnabled(
+        QueryContext.of(task.getContext()),
+        taskConfig.isVirtualStoragePartialDownloadsEnabled()
+    );
     final SegmentCacheManager cacheManager =
         injector.getInstance(SegmentCacheManagerFactory.class)
                 .manufacturate(
@@ -181,7 +187,8 @@ public class IndexerWorkerContext implements WorkerContext
                     // Divide tmpStorageBytesPerTask by 3 so the local cache never takes up the majority of space.
                     // In a typical leaf stage run, we may need some disk space for inputs and some for outputs.
                     taskConfig.getTmpStorageBytesPerTask() > 0 ? taskConfig.getTmpStorageBytesPerTask() / 3 : null,
-                    true
+                    true,
+                    partialDownloadsEnabled
                 );
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
     final VirtualStorageManager virtualStorageManager =

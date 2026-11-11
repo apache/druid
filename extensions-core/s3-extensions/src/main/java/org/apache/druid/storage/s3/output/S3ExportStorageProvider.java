@@ -30,6 +30,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
@@ -39,13 +40,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.s3.S3IntermediateRoleConfig;
 import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.net.URI;
 import java.util.List;
@@ -85,6 +86,9 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   AWSClientConfig awsClientConfig;
   @JacksonInject
   AwsCredentialsProvider baseCredentialsProvider;
+  @JacksonInject
+  @Nullable
+  S3IntermediateRoleConfig intermediateRoleConfig;
 
   @JacksonInject
   S3UploadManager s3UploadManager;
@@ -113,7 +117,9 @@ public class S3ExportStorageProvider implements ExportStorageProvider
           awsEndpointConfig,
           awsClientConfig,
           null,
-          this
+          this,
+          intermediateRoleConfig,
+          awsEndpointConfig
       ).build();
     });
   }

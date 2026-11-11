@@ -38,6 +38,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -90,7 +91,11 @@ public abstract class DimensionSchema
       case DOUBLE:
         return new DoubleDimensionSchema(name);
       default:
-        // the auto column indexer can handle any type
+        // Use the auto column with type coercion when dealing with arrays of primitive types.
+        // Otherwise, allow type inference, which may yield a column of a different type.
+        if (type.isPrimitiveArray()) {
+          return new AutoTypeColumnSchema(name, ColumnTypeFactory.ofType(type), null);
+        }
         return AutoTypeColumnSchema.of(name);
     }
   }

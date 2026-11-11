@@ -41,10 +41,10 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -210,7 +210,7 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
   private FrameBasedIndexedTable frameBasedIndexedTable;
   private Pair<Cursor, Closeable> cursorCloseablePair;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     cursorCloseablePair = IterableRowsCursorHelper.getCursorFromIterable(DATASOURCE_ROWS, ROW_SIGNATURE);
@@ -230,7 +230,7 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
     frameBasedIndexedTable = new FrameBasedIndexedTable(dataSource, KEY_COLUMNS, "test");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     cursorCloseablePair.rhs.close();
@@ -239,7 +239,7 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
   @Test
   public void testInitShouldGenerateCorrectTable()
   {
-    Assert.assertEquals(9, frameBasedIndexedTable.numRows());
+    Assertions.assertEquals(9, frameBasedIndexedTable.numRows());
   }
 
   @Test
@@ -313,7 +313,7 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
   @Test
   public void testIsCacheable()
   {
-    Assert.assertFalse(frameBasedIndexedTable.isCacheable());
+    Assertions.assertFalse(frameBasedIndexedTable.isCacheable());
   }
 
   private void checkIndexAndReader(String columnName, Object[] vals)
@@ -332,15 +332,15 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
 
       for (Object val : vals) {
         final IntSortedSet valIndex = valueIndex.find(val);
-        Assert.assertTrue(valIndex.size() > 0);
+        Assertions.assertTrue(valIndex.size() > 0);
         final IntBidirectionalIterator rowIterator = valIndex.iterator();
         while (rowIterator.hasNext()) {
-          Assert.assertEquals(val, reader.read(rowIterator.nextInt()));
+          Assertions.assertEquals(val, reader.read(rowIterator.nextInt()));
         }
       }
       for (Object val : nonmatchingVals) {
         final IntSortedSet valIndex = valueIndex.find(val);
-        Assert.assertEquals(0, valIndex.size());
+        Assertions.assertEquals(0, valIndex.size());
       }
     }
     catch (IOException e) {
@@ -354,10 +354,10 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
     checkColumnReader(columnName);
     int columnIndex = ROW_SIGNATURE.indexOf(columnName);
     try {
-      Assert.assertNull(frameBasedIndexedTable.columnIndex(columnIndex));
+      Assertions.assertNull(frameBasedIndexedTable.columnIndex(columnIndex));
     }
     catch (IAE iae) {
-      Assert.assertEquals(StringUtils.format("Column[%d] is not a key column", columnIndex), iae.getMessage());
+      Assertions.assertEquals(StringUtils.format("Column[%d] is not a key column", columnIndex), iae.getMessage());
     }
   }
 
@@ -374,8 +374,8 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
       final Object actualValue = reader.read(i);
 
       if (!Objects.deepEquals(originalValue, actualValue)) {
-        // Call Assert.assertEquals, which we expect to fail, to get a nice failure message
-        Assert.assertEquals(
+        // Call Assertions.assertEquals, which we expect to fail, to get a nice failure message
+        Assertions.assertEquals(
             originalValue instanceof Object[] ? Arrays.toString((Object[]) originalValue) : originalValue,
             actualValue instanceof Object[] ? Arrays.toString((Object[]) actualValue) : actualValue
         );

@@ -26,26 +26,25 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class LauncherSmokeTest
 {
   private static Launcher launcher;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception
   {
     launcher = new Launcher("druidtest:///");
     launcher.start();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown()
   {
     launcher.shutdown();
@@ -71,6 +70,6 @@ public class LauncherSmokeTest
     CloseableHttpResponse response = client.execute(request);
     assertEquals(200, response.getStatusLine().getStatusCode());
     String responseStr = EntityUtils.toString(response.getEntity());
-    MatcherAssert.assertThat(responseStr, Matchers.containsString("\"version\":\""));
+    Assertions.assertTrue(responseStr.contains("\"version\":\""));
   }
 }

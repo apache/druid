@@ -34,7 +34,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
- * Simple class that takes a `ByteSource` and uses a `Parser<K, V>` to populate a `Map<K, V>`
+ * Simple class that takes a `ByteSource` and uses a {@code Parser<K, V>} to populate a {@code Map<K, V>}
  * The `ByteSource` must be UTF-8 encoded
  * <p>
  * If this is handy for other use cases pleaes move this class into a common module

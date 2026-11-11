@@ -19,8 +19,7 @@
 
 package org.apache.druid.server.emitter;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -55,17 +54,10 @@ public class ComposingEmitterModule implements DruidModule
   {
     log.info("Creating Composing Emitter with %s", config.getEmitters());
 
-    List<Emitter> emitters = Lists.transform(
-        config.getEmitters(),
-        new Function<>()
-        {
-          @Override
-          public Emitter apply(String s)
-          {
-            return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
-          }
-        }
-    );
+    List<Emitter> emitters = config.getEmitters()
+                                   .stream()
+                                   .map(s -> injector.getInstance(Key.get(Emitter.class, Names.named(s))))
+                                   .collect(ImmutableList.toImmutableList());
 
     return new ComposingEmitter(emitters);
   }

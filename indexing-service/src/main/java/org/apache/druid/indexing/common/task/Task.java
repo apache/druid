@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -118,7 +119,19 @@ public interface Task
    */
   default int getPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_TASK_PRIORITY);
+    return QueryContexts.getAsInt(
+        Tasks.PRIORITY_KEY,
+        getContextValue(Tasks.PRIORITY_KEY),
+        getDefaultPriority()
+    );
+  }
+
+  /**
+   * Default value for {@link Tasks#PRIORITY_KEY} if not specified in the task context.
+   */
+  default int getDefaultPriority()
+  {
+    return Tasks.DEFAULT_TASK_PRIORITY;
   }
 
   /**

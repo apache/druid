@@ -22,7 +22,7 @@ title: "Automatic compaction"
   ~ under the License.
   -->
 
-In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks issued by Druid itself. In addition to auto-compaction, you can perform [manual compaction](./manual-compaction.md) using the Overlord APIs.
+In Apache&circledR; Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks issued by Druid itself. In addition to auto-compaction, you can perform [manual compaction](./manual-compaction.md) using the Overlord APIs.
 
 :::info
  Auto-compaction skips datasources that have a segment granularity of `ALL`.
@@ -40,7 +40,13 @@ This topic guides you through setting up automatic compaction for your Druid clu
 ## Auto-compaction syntax
 
 You can configure automatic compaction dynamically without restarting Druid.
-The automatic compaction system uses the following syntax:
+
+A configuration's `type` selects where the schema it compacts toward comes from. The default, `inline`, declares the
+schema in the configuration itself; `catalog` reads it from the datasource's catalog table definition.
+
+### Define the schema inline
+
+An `inline` schema declaration for the automatic compaction uses the following syntax:
 
 ```json
 {
@@ -52,21 +58,23 @@ The automatic compaction system uses the following syntax:
     "tuningConfig": <parallel indexing task tuningConfig>,
     "granularitySpec": <compaction task granularitySpec>,
     "skipOffsetFromLatest": <time period to avoid compaction>,
+    "skipIntervals": <list of time intervals to avoid compaction>,
     "taskPriority": <compaction task priority>,
     "taskContext": <task context>
 }
 ```
 
-Most fields in the auto-compaction configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
+Most fields in the configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
 The following properties only apply to auto-compaction:
 * `skipOffsetFromLatest`
+* `skipIntervals`
 * `taskPriority`
 * `taskContext`
 
 Since the automatic compaction system provides a management layer on top of manual compaction tasks,
 the auto-compaction configuration does not include task-specific properties found in a typical Druid ingestion spec.
 The following properties are automatically set by the auto-compaction system:
-* `type`: Set to `compact`.
+* `type`: Set to `compact`. This is the generated task's type, not the configuration's own `type` described above.
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `auto`.
 * `context`: Set according to the user-provided `taskContext`.
 
@@ -79,6 +87,28 @@ maximize performance and minimize disk usage of the `compact` tasks launched by 
 - `metricsSpec`
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
+
+### Take the schema from the catalog
+
+An [inline](#define-the-schema-inline) configuration declares its own schema, which has to be kept in step with the
+datasource by hand. If the datasource has a [catalog](../development/extensions-core/catalog.md) table definition,
+compaction can read the schema from it instead, by setting `"type": "catalog"`:
+
+```json
+{
+  "type": "catalog",
+  "dataSource": "events",
+  "engine": "msq"
+}
+```
+
+Such a configuration carries no schema of its own. It accepts only `dataSource`, `engine`, `skipOffsetFromLatest`,
+`skipIntervals`, `taskPriority`, `taskContext`, and `inputSegmentSizeBytes`; everything else (segment granularity,
+partitioning, projections, and the stored column layout) is read from the table definition on every compaction run.
+Editing the definition therefore changes how the datasource is compacted from then on, which means it can also rewrite
+data that is already stored. See
+[Catalog-based compaction](../development/extensions-core/catalog.md#catalog-based-compaction) for exactly which table
+properties take effect and which are ignored.
 
 ## Auto-compaction using compaction supervisors
 
@@ -293,6 +323,7 @@ Compaction tasks may be interrupted when they interfere with ingestion. For exam
 
 * Enable [concurrent append and replace tasks](#enable-concurrent-append-and-replace) on your datasource and on the ingestion tasks.
 * Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in [Skip compaction for latest segments](#skip-compaction-for-latest-segments).
+* Set `skipIntervals` to exclude a specific interval from compaction, for example, while a backfill job is actively writing to that interval or if the interval keeps failing compaction. See more details in [Skip compaction for specific intervals](#skip-compaction-for-specific-intervals).
 * Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
 
 ### Enable concurrent append and replace
@@ -313,6 +344,16 @@ For information on how to do this, see [Concurrent append and replace](../ingest
 The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
 
 To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
+
+### Skip compaction for specific intervals
+
+In addition to `skipOffsetFromLatest`, you can set `skipIntervals` to a list of time intervals to exclude from compaction. Any candidate compaction interval that overlaps one of these intervals is skipped.
+
+This is useful, for example, when a backfill job is actively writing to a specific interval and you don't want to compact it until the backfill finishes, or when a specific interval consistently fails compaction and you want to exclude it while you investigate:
+
+```json
+"skipIntervals": ["2015-04-01/2015-04-02"]
+```
 
 ## Examples
 

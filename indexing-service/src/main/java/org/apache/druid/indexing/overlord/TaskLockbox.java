@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.duty.UnusedSegmentsKiller;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -571,6 +572,14 @@ public class TaskLockbox
         throw new ISE("Unable to grant LockPosse to inactive Task [%s]", task.getId());
       }
 
+      if (request.getType() == TaskLockType.KILL
+          && !UnusedSegmentsKiller.TASK_TYPE_EMBEDDED_KILL.equals(task.getType())) {
+        throw new ISE(
+            "Task[%s] of type[%s] cannot acquire a KILL lock. Only tasks of type[%s] may use KILL locks.",
+            task.getId(), task.getType(), UnusedSegmentsKiller.TASK_TYPE_EMBEDDED_KILL
+        );
+      }
+
       final TaskLockPosse posseToUse;
       final List<TaskLockPosse> foundPosses = findLockPossesOverlapsInterval(
           request.getInterval()
@@ -587,7 +596,7 @@ public class TaskLockbox
         final List<TaskLockPosse> reusablePosses = foundPosses
             .stream()
             .filter(posse -> posse.reusableFor(request))
-            .collect(Collectors.toList());
+            .toList();
 
         if (reusablePosses.isEmpty()) {
           // case 1) this task doesn't have any lock, but others do
@@ -835,8 +844,9 @@ public class TaskLockbox
         throw new ISE("Cannot revoke lock for inactive task[%s]", taskId);
       }
 
+      // Embedded kill tasks can hold locks but are not persisted in TaskStorage
       final Task task = taskStorage.getTask(taskId).orNull();
-      if (task == null) {
+      if (task == null && lock.getType() != TaskLockType.KILL) {
         throw new ISE("Cannot revoke lock for unknown task[%s]", taskId);
       }
 
@@ -963,25 +973,28 @@ public class TaskLockbox
             }
 
             final int priority = lockFilter.getPriority();
-            final boolean isReplaceLock = TaskLockType.REPLACE.name().equals(
-                lockFilter.getContext().getOrDefault(
-                    Tasks.TASK_LOCK_TYPE,
-                    Tasks.DEFAULT_TASK_LOCK_TYPE
-                )
+            final TaskLockType lockType = QueryContexts.getAsEnum(
+                Tasks.TASK_LOCK_TYPE,
+                lockFilter.getContext().get(Tasks.TASK_LOCK_TYPE),
+                TaskLockType.class,
+                Tasks.DEFAULT_TASK_LOCK_TYPE
             );
-            final boolean isUsingConcurrentLocks = Boolean.TRUE.equals(
-                lockFilter.getContext().getOrDefault(
-                    Tasks.USE_CONCURRENT_LOCKS,
-                    Tasks.DEFAULT_USE_CONCURRENT_LOCKS
-                )
+            final boolean isReplaceLock = TaskLockType.REPLACE == lockType;
+            final boolean isUsingConcurrentLocks = QueryContexts.getAsBoolean(
+                Tasks.USE_CONCURRENT_LOCKS,
+                lockFilter.getContext().get(Tasks.USE_CONCURRENT_LOCKS),
+                Tasks.DEFAULT_USE_CONCURRENT_LOCKS
             );
             final boolean ignoreAppendLocks = isUsingConcurrentLocks || isReplaceLock;
+            final boolean ignoreKillLocks = lockType != TaskLockType.KILL;
 
             running.forEach(
                 (startTime, startTimeLocks) -> startTimeLocks.forEach(
                     (interval, taskLockPosses) -> taskLockPosses.forEach(
                         taskLockPosse -> {
                           if (taskLockPosse.getTaskLock().isRevoked()) {
+                            // do nothing
+                          } else if (ignoreKillLocks && TaskLockType.KILL.equals(taskLockPosse.getTaskLock().getType())) {
                             // do nothing
                           } else if (ignoreAppendLocks
                                      && TaskLockType.APPEND.equals(taskLockPosse.getTaskLock().getType())) {
@@ -1363,7 +1376,7 @@ public class TaskLockbox
       final List<TaskLockPosse> filteredPosses = findLockPossesContainingInterval(interval)
           .stream()
           .filter(lockPosse -> lockPosse.containsTask(task))
-          .collect(Collectors.toList());
+          .toList();
 
       if (filteredPosses.isEmpty()) {
         throw new ISE("Cannot find any lock for task[%s] and interval[%s]", task.getId(), interval);
@@ -1422,6 +1435,8 @@ public class TaskLockbox
         return canSharedLockCoexist(conflictPosses);
       case EXCLUSIVE:
         return canExclusiveLockCoexist(conflictPosses);
+      case KILL:
+        return canKillLockCoexist(conflictPosses);
       default:
         throw new UOE("Unsupported lock type: " + request.getType());
     }
@@ -1430,7 +1445,7 @@ public class TaskLockbox
   /**
    * Check if an APPEND lock can coexist with a given set of conflicting posses.
    * An APPEND lock can coexist with any number of other APPEND locks
-   *    OR with at most one REPLACE lock over an interval which encloes this request.
+   *    OR with at most one REPLACE lock over an interval which encloses this request.
    * @param conflictPosses conflicting lock posses
    * @param appendRequest append lock request
    * @return true iff append lock can coexist with all its conflicting locks
@@ -1477,6 +1492,8 @@ public class TaskLockbox
           || posse.getTaskLock().getType().equals(TaskLockType.REPLACE)) {
         return false;
       }
+      // REPLACE lock can coexist with an APPEND lock only if the append interval
+      // is fully contained within the replace interval
       if (posse.getTaskLock().getType().equals(TaskLockType.APPEND)
           && !replaceLock.getInterval().contains(posse.getTaskLock().getInterval())) {
         return false;
@@ -1487,7 +1504,8 @@ public class TaskLockbox
 
   /**
    * Check if a SHARED lock can coexist with a given set of conflicting posses.
-   * A SHARED lock can coexist with any number of other active SHARED locks
+   * A SHARED lock can coexist with any number of other active SHARED locks or
+   * a KILL lock.
    * @param conflictPosses conflicting lock posses
    * @return true iff shared lock can coexist with all its conflicting locks
    */
@@ -1508,7 +1526,8 @@ public class TaskLockbox
 
   /**
    * Check if an EXCLUSIVE lock can coexist with a given set of conflicting posses.
-   * An EXCLUSIVE lock cannot coexist with any other overlapping active locks
+   * An EXCLUSIVE lock cannot coexist with any other overlapping active locks,
+   * except a KILL lock.
    * @param conflictPosses conflicting lock posses
    * @return true iff the exclusive lock can coexist with all its conflicting locks
    */
@@ -1518,11 +1537,36 @@ public class TaskLockbox
       if (posse.getTaskLock().isRevoked()) {
         continue;
       }
-      return false;
+      if (!isLockTypeKill(posse)) {
+        return false;
+      }
     }
     return true;
   }
 
+  /**
+   * Check if a KILL lock can coexist with a given set of conflicting posses.
+   * A KILL lock can coexist with any other lock type but not with another KILL lock.
+   * @param conflictPosses conflicting lock posses
+   * @return true iff the kill lock can coexist with all its conflicting locks
+   */
+  private boolean canKillLockCoexist(List<TaskLockPosse> conflictPosses)
+  {
+    for (TaskLockPosse posse : conflictPosses) {
+      if (posse.getTaskLock().isRevoked()) {
+        continue;
+      }
+      if (isLockTypeKill(posse)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean isLockTypeKill(TaskLockPosse posse)
+  {
+    return posse.getTaskLock().getType().equals(TaskLockType.KILL);
+  }
 
   /**
    * Verify if every incompatible active lock is revokable. If yes, revoke all of them.
@@ -1545,7 +1589,9 @@ public class TaskLockbox
     final List<TaskLockPosse> possesToRevoke = new ArrayList<>();
 
     for (TaskLockPosse posse : conflictPosses) {
-      if (posse.getTaskLock().isRevoked()) {
+      // No need to revoke an already revoked lock or a KILL lock (unless the new LockRequest is also a KILL)
+      if (posse.getTaskLock().isRevoked()
+          || (isLockTypeKill(posse) && type != TaskLockType.KILL)) {
         continue;
       }
       switch (type) {
@@ -1576,6 +1622,15 @@ public class TaskLockbox
           if (!(posse.getTaskLock().getType().equals(TaskLockType.APPEND)
                 || (posse.getTaskLock().getType().equals(TaskLockType.REPLACE)
                     && posse.getTaskLock().getInterval().contains(request.getInterval())))) {
+            if (posse.getTaskLock().getNonNullPriority() >= priority) {
+              return false;
+            }
+            possesToRevoke.add(posse);
+          }
+          break;
+        case KILL:
+          // KILL locks are incompatible only with other KILL locks
+          if (isLockTypeKill(posse)) {
             if (posse.getTaskLock().getNonNullPriority() >= priority) {
               return false;
             }
@@ -1686,6 +1741,7 @@ public class TaskLockbox
           case REPLACE:
           case APPEND:
           case SHARED:
+          case KILL:
             if (request instanceof TimeChunkLockRequest) {
               return taskLock.getInterval().contains(request.getInterval())
                      && taskLock.getGroupId().equals(request.getGroupId());

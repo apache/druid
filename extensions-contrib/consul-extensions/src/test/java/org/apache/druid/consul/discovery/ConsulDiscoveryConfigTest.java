@@ -22,8 +22,10 @@ package org.apache.druid.consul.discovery;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ConsulDiscoveryConfigTest
 {
@@ -80,7 +82,7 @@ public class ConsulDiscoveryConfigTest
         + "  \"service\": { \"servicePrefix\": \"druid\" }\n"
         + "}\n"
     );
-    Assert.assertFalse(config.getAuth().getAllowBasicAuthOverHttp());
+    Assertions.assertFalse(config.getAuth().getAllowBasicAuthOverHttp());
   }
 
   @Test
@@ -92,7 +94,7 @@ public class ConsulDiscoveryConfigTest
         + "  \"service\": { \"servicePrefix\": \"druid\" }\n"
         + "}\n"
     );
-    Assert.assertTrue(config.getAuth().getAllowBasicAuthOverHttp());
+    Assertions.assertTrue(config.getAuth().getAllowBasicAuthOverHttp());
   }
 
   @Test
@@ -104,19 +106,21 @@ public class ConsulDiscoveryConfigTest
         + "  \"watch\": { \"maxWatchRetries\": -1 }\n"
         + "}\n"
     );
-    Assert.assertEquals(Long.MAX_VALUE, config.getWatch().getMaxWatchRetries());
+    Assertions.assertEquals(Long.MAX_VALUE, config.getWatch().getMaxWatchRetries());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNullServicePrefixThrows()
   {
-    TestUtils.builder().servicePrefix(null).build();
+    assertThrows(IllegalArgumentException.class, () ->
+      TestUtils.builder().servicePrefix(null).build());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testEmptyServicePrefixThrows()
   {
-    TestUtils.builder().servicePrefix("").build();
+    assertThrows(IllegalArgumentException.class, () ->
+      TestUtils.builder().servicePrefix("").build());
   }
 
   @Test
@@ -128,8 +132,8 @@ public class ConsulDiscoveryConfigTest
         + "  \"leader\": { \"leaderMaxErrorRetries\": 5, \"leaderRetryBackoffMax\": \"PT30S\" }\n"
         + "}\n"
     );
-    Assert.assertEquals(5L, config.getLeader().getLeaderMaxErrorRetries());
-    Assert.assertEquals(Duration.millis(30000), config.getLeader().getLeaderRetryBackoffMax());
+    Assertions.assertEquals(5L, config.getLeader().getLeaderMaxErrorRetries());
+    Assertions.assertEquals(Duration.millis(30000), config.getLeader().getLeaderRetryBackoffMax());
   }
 
   @Test
@@ -141,7 +145,7 @@ public class ConsulDiscoveryConfigTest
           .socketTimeout(Duration.millis(5000))
           .watchSeconds(Duration.millis(60000))
           .build();
-      Assert.fail("Expected IllegalArgumentException for socketTimeout <= watchSeconds");
+      Assertions.fail("Expected IllegalArgumentException for socketTimeout <= watchSeconds");
     }
     catch (IllegalArgumentException expected) {
       // expected
@@ -156,7 +160,7 @@ public class ConsulDiscoveryConfigTest
         .watchSeconds(Duration.millis(60000))
         .build();
 
-    Assert.assertTrue(config.getConnection().getSocketTimeout().isLongerThan(config.getWatch().getWatchSeconds()));
+    Assertions.assertTrue(config.getConnection().getSocketTimeout().isLongerThan(config.getWatch().getWatchSeconds()));
   }
 
   @Test
@@ -175,12 +179,12 @@ public class ConsulDiscoveryConfigTest
 
     String toString = config.toString();
 
-    Assert.assertFalse(toString.contains("secret-acl-token"));
-    Assert.assertFalse(toString.contains("password"));
-    Assert.assertFalse(toString.contains("admin"));
-    Assert.assertTrue(toString.contains("*****"));
-    Assert.assertTrue(toString.contains("localhost"));
-    Assert.assertTrue(toString.contains("druid"));
+    Assertions.assertFalse(toString.contains("secret-acl-token"));
+    Assertions.assertFalse(toString.contains("password"));
+    Assertions.assertFalse(toString.contains("admin"));
+    Assertions.assertTrue(toString.contains("*****"));
+    Assertions.assertTrue(toString.contains("localhost"));
+    Assertions.assertTrue(toString.contains("druid"));
   }
 
   @Test
@@ -192,7 +196,7 @@ public class ConsulDiscoveryConfigTest
         .build();
 
     // Default should be max(45s, 3 * healthCheckInterval)
-    Assert.assertEquals(Duration.standardSeconds(45), config.getLeader().getLeaderSessionTtl());
+    Assertions.assertEquals(Duration.standardSeconds(45), config.getLeader().getLeaderSessionTtl());
   }
 
   @Test
@@ -205,16 +209,17 @@ public class ConsulDiscoveryConfigTest
         + "}\n"
     );
 
-    Assert.assertEquals(Duration.standardSeconds(60), config.getLeader().getLeaderSessionTtl());
+    Assertions.assertEquals(Duration.standardSeconds(60), config.getLeader().getLeaderSessionTtl());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testLeaderSessionTtlTooLow()
   {
-    TestUtils.builder()
-        .servicePrefix("druid")
-        .leaderSessionTtl(Duration.standardSeconds(5))
-        .build();
+    assertThrows(IllegalArgumentException.class, () ->
+      TestUtils.builder()
+          .servicePrefix("druid")
+          .leaderSessionTtl(Duration.standardSeconds(5))
+          .build());
   }
 
   @Test
@@ -238,7 +243,7 @@ public class ConsulDiscoveryConfigTest
         .build();
 
     // Should be 3 * healthCheckInterval = 60s (greater than minimum 45s)
-    Assert.assertEquals(Duration.standardSeconds(60), config.getLeader().getLeaderSessionTtl());
+    Assertions.assertEquals(Duration.standardSeconds(60), config.getLeader().getLeaderSessionTtl());
   }
 
   @Test
@@ -258,11 +263,11 @@ public class ConsulDiscoveryConfigTest
     // Original map modifications should not affect stored map
     originalTags.put("key1", "mutated");
 
-    Assert.assertEquals("value1", serviceConfig.getServiceTags().get("key1"));
+    Assertions.assertEquals("value1", serviceConfig.getServiceTags().get("key1"));
 
     try {
       serviceConfig.getServiceTags().put("key2", "value2");
-      Assert.fail("Expected UnsupportedOperationException when mutating serviceTags");
+      Assertions.fail("Expected UnsupportedOperationException when mutating serviceTags");
     }
     catch (UnsupportedOperationException expected) {
       // expected
@@ -276,7 +281,7 @@ public class ConsulDiscoveryConfigTest
         jsonMapper.writeValueAsString(config),
         ConsulDiscoveryConfig.class
     );
-    Assert.assertEquals(config, roundTrip);
+    Assertions.assertEquals(config, roundTrip);
   }
 
   private ConsulDiscoveryConfig testSerdeAndReturn(String jsonStr) throws Exception
@@ -286,7 +291,7 @@ public class ConsulDiscoveryConfigTest
         jsonMapper.writeValueAsString(config),
         ConsulDiscoveryConfig.class
     );
-    Assert.assertEquals(config, roundTrip);
+    Assertions.assertEquals(config, roundTrip);
     return config;
   }
 }

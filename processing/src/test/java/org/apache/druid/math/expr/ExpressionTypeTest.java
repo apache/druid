@@ -67,12 +67,18 @@ public class ExpressionTypeTest
     Assertions.assertEquals(ExpressionType.STRING_ARRAY, MAPPER.readValue("\"string_array\"", ExpressionType.class));
     Assertions.assertEquals(ExpressionType.LONG_ARRAY, MAPPER.readValue("\"long_array\"", ExpressionType.class));
     Assertions.assertEquals(ExpressionType.DOUBLE_ARRAY, MAPPER.readValue("\"double_array\"", ExpressionType.class));
-    // ARRAY<*> and COMPLEX<*> patterns must match exactly ...
-    Assertions.assertNotEquals(ExpressionType.STRING_ARRAY, MAPPER.readValue("\"array<string>\"", ExpressionType.class));
-    Assertions.assertNotEquals(ExpressionType.LONG_ARRAY, MAPPER.readValue("\"array<LONG>\"", ExpressionType.class));
-    Assertions.assertNotEquals(SOME_COMPLEX, MAPPER.readValue("\"COMPLEX<FOO>\"", ExpressionType.class));
-    // this works though because array recursively calls on element type...
+    // the ARRAY<*> and COMPLEX<*> prefixes match case-insensitively, like the scalar type names ...
+    Assertions.assertEquals(ExpressionType.STRING_ARRAY, MAPPER.readValue("\"array<string>\"", ExpressionType.class));
+    Assertions.assertEquals(ExpressionType.LONG_ARRAY, MAPPER.readValue("\"array<LONG>\"", ExpressionType.class));
     Assertions.assertEquals(ExpressionType.DOUBLE_ARRAY, MAPPER.readValue("\"ARRAY<double>\"", ExpressionType.class));
+    Assertions.assertEquals(SOME_COMPLEX, MAPPER.readValue("\"complex<foo>\"", ExpressionType.class));
+    // ... but the complex type name inside the brackets is a case-sensitive registry key, preserved as written
+    Assertions.assertNotEquals(SOME_COMPLEX, MAPPER.readValue("\"COMPLEX<FOO>\"", ExpressionType.class));
+    // a parameterized type missing its closing bracket is malformed, not a truncated type parameter
+    Assertions.assertNull(MAPPER.readValue("\"COMPLEX<foo\"", ExpressionType.class));
+    // an unrecognized array element type makes the whole array type unrecognized, rather than an error
+    Assertions.assertNull(MAPPER.readValue("\"ARRAY<FOO>\"", ExpressionType.class));
+    Assertions.assertNull(MAPPER.readValue("\"ARRAY<ARRAY<FOO>>\"", ExpressionType.class));
   }
 
   @Test

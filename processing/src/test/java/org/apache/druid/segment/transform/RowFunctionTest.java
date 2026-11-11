@@ -19,14 +19,13 @@
 
 package org.apache.druid.segment.transform;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
-import org.joda.time.DateTime;
+import org.apache.druid.java.util.common.DateTimes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import javax.annotation.Nullable;
-import java.util.List;
 
 public class RowFunctionTest implements RowFunction
 {
@@ -39,46 +38,7 @@ public class RowFunctionTest implements RowFunction
   @Test
   public void defaultEvalDimensionTest()
   {
-    Row row = new Row()
-    {
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return 0;
-      }
-
-      @Override
-      public DateTime getTimestamp()
-      {
-        return null;
-      }
-
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public Object getRaw(String dimension)
-      {
-        return dimension;
-      }
-
-      @Nullable
-      @Override
-      public Number getMetric(String metric)
-      {
-        return null;
-      }
-
-      @Override
-      public int compareTo(Row o)
-      {
-        return 0;
-      }
-    };
+    final Row row = new MapBasedRow(DateTimes.EPOCH, ImmutableMap.of());
     Assertions.assertEquals(Rows.objectToStrings(eval(row)), evalDimension(row));
   }
 }

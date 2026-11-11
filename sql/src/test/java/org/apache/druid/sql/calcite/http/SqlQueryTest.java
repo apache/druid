@@ -32,7 +32,7 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class SqlQueryTest extends CalciteTestBase
@@ -51,7 +51,7 @@ public class SqlQueryTest extends CalciteTestBase
         ImmutableMap.of("useCache", false),
         ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
     );
-    Assert.assertEquals(query, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(query), SqlQuery.class));
+    Assertions.assertEquals(query, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(query), SqlQuery.class));
   }
 
   @Test
@@ -79,7 +79,7 @@ public class SqlQueryTest extends CalciteTestBase
 
     final SqlQuery observedSqlQuery =
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(givenClientSqlQuery), SqlQuery.class);
-    Assert.assertEquals(expectedSqlQuery, observedSqlQuery);
+    Assertions.assertEquals(expectedSqlQuery, observedSqlQuery);
   }
 
   @Test
@@ -107,7 +107,7 @@ public class SqlQueryTest extends CalciteTestBase
 
     final SqlQuery observedSqlQuery =
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(givenClientSqlQuery), SqlQuery.class);
-    Assert.assertEquals(expectedSqlQuery, observedSqlQuery);
+    Assertions.assertEquals(expectedSqlQuery, observedSqlQuery);
   }
 
   @Test

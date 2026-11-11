@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.overlord.hrtr;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -29,15 +31,19 @@ import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.joda.time.DateTime;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -90,8 +96,8 @@ public class WorkerHolderTest
 
     ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> syncListener = workerHolder.createSyncListener();
 
-    Assert.assertFalse(workerHolder.isEnabled());
-    Assert.assertFalse(workerHolder.isInitialized());
+    Assertions.assertFalse(workerHolder.isEnabled());
+    Assertions.assertFalse(workerHolder.isInitialized());
 
     syncListener.fullSync(
         ImmutableList.of(
@@ -114,23 +120,23 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertTrue(workerHolder.isEnabled());
+    Assertions.assertTrue(workerHolder.isEnabled());
 
-    Assert.assertEquals(4, updates.size());
+    Assertions.assertEquals(4, updates.size());
 
-    Assert.assertEquals(task1.getId(), updates.get(0).getTaskId());
-    Assert.assertTrue(updates.get(0).getTaskStatus().isSuccess());
+    Assertions.assertEquals(task1.getId(), updates.get(0).getTaskId());
+    Assertions.assertTrue(updates.get(0).getTaskStatus().isSuccess());
 
-    Assert.assertEquals(task2.getId(), updates.get(1).getTaskId());
-    Assert.assertTrue(updates.get(1).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task2.getId(), updates.get(1).getTaskId());
+    Assertions.assertTrue(updates.get(1).getTaskStatus().isRunnable());
 
-    Assert.assertEquals(task3.getId(), updates.get(2).getTaskId());
-    Assert.assertTrue(updates.get(2).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task3.getId(), updates.get(2).getTaskId());
+    Assertions.assertTrue(updates.get(2).getTaskStatus().isRunnable());
 
-    Assert.assertEquals(task0.getId(), updates.get(3).getTaskId());
-    Assert.assertTrue(updates.get(3).getTaskStatus().isFailure());
-    Assert.assertNotNull(updates.get(3).getTaskStatus().getErrorMsg());
-    Assert.assertTrue(
+    Assertions.assertEquals(task0.getId(), updates.get(3).getTaskId());
+    Assertions.assertTrue(updates.get(3).getTaskStatus().isFailure());
+    Assertions.assertNotNull(updates.get(3).getTaskStatus().getErrorMsg());
+    Assertions.assertTrue(
         updates.get(3).getTaskStatus().getErrorMsg().startsWith(
             "This task disappeared on the worker where it was assigned"
         )
@@ -153,20 +159,20 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertTrue(workerHolder.isEnabled());
-    Assert.assertEquals(2, updates.size());
+    Assertions.assertTrue(workerHolder.isEnabled());
+    Assertions.assertEquals(2, updates.size());
 
-    Assert.assertEquals(task2.getId(), updates.get(0).getTaskId());
-    Assert.assertTrue(updates.get(0).getTaskStatus().isFailure());
-    Assert.assertNotNull(updates.get(0).getTaskStatus().getErrorMsg());
-    Assert.assertTrue(
+    Assertions.assertEquals(task2.getId(), updates.get(0).getTaskId());
+    Assertions.assertTrue(updates.get(0).getTaskStatus().isFailure());
+    Assertions.assertNotNull(updates.get(0).getTaskStatus().getErrorMsg());
+    Assertions.assertTrue(
         updates.get(0).getTaskStatus().getErrorMsg().startsWith(
             "This task disappeared on the worker where it was assigned"
         )
     );
 
-    Assert.assertEquals(task3.getId(), updates.get(1).getTaskId());
-    Assert.assertTrue(updates.get(1).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task3.getId(), updates.get(1).getTaskId());
+    Assertions.assertTrue(updates.get(1).getTaskStatus().isRunnable());
 
     updates.clear();
 
@@ -191,19 +197,149 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertFalse(workerHolder.isEnabled());
+    Assertions.assertFalse(workerHolder.isEnabled());
 
-    Assert.assertEquals(3, updates.size());
+    Assertions.assertEquals(3, updates.size());
 
-    Assert.assertEquals(task1.getId(), updates.get(0).getTaskId());
-    Assert.assertTrue(updates.get(0).getTaskStatus().isSuccess());
+    Assertions.assertEquals(task1.getId(), updates.get(0).getTaskId());
+    Assertions.assertTrue(updates.get(0).getTaskStatus().isSuccess());
 
-    Assert.assertEquals(task2.getId(), updates.get(1).getTaskId());
-    Assert.assertTrue(updates.get(1).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task2.getId(), updates.get(1).getTaskId());
+    Assertions.assertTrue(updates.get(1).getTaskStatus().isRunnable());
 
-    Assert.assertEquals(task3.getId(), updates.get(2).getTaskId());
-    Assert.assertTrue(updates.get(2).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task3.getId(), updates.get(2).getTaskId());
+    Assertions.assertTrue(updates.get(2).getTaskStatus().isRunnable());
 
     updates.clear();
+  }
+
+  @Test
+  public void testToImmutableIsUpdatedBeforeListenerIsNotified()
+  {
+    final Task task0 = NoopTask.create();
+    final Task task1 = NoopTask.create();
+    final RunningTasksRecorder recorder = new RunningTasksRecorder();
+    final WorkerHolder workerHolder = createWorkerHolder(recorder, running(task0));
+    final ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> syncListener = workerHolder.createSyncListener();
+
+    // Known announcements are reflected before any sync
+    Assertions.assertEquals(ImmutableSet.of(task0.getId()), workerHolder.toImmutable().getRunningTasks());
+
+    syncListener.fullSync(
+        ImmutableList.of(new WorkerHistoryItem.Metadata(false), update(running(task0)), update(running(task1)))
+    );
+    final Set<String> bothTasks = ImmutableSet.of(task0.getId(), task1.getId());
+    Assertions.assertEquals(ImmutableList.of(bothTasks, bothTasks), recorder.drain());
+    Assertions.assertFalse(workerHolder.toImmutable().getWorker().isDisabled());
+
+    syncListener.deltaSync(ImmutableList.of(update(succeeded(task0))));
+    Assertions.assertEquals(ImmutableList.of(ImmutableSet.of(task1.getId())), recorder.drain());
+
+    syncListener.deltaSync(ImmutableList.of(new WorkerHistoryItem.TaskRemoval(task1.getId())));
+    Assertions.assertEquals(ImmutableList.of(ImmutableSet.of()), recorder.drain());
+    Assertions.assertEquals(0, workerHolder.toImmutable().getCurrCapacityUsed());
+  }
+
+  @Test
+  public void testToImmutableReflectsFieldsNotDerivedFromAnnouncementsWithoutSync()
+  {
+    final WorkerHolder workerHolder = createWorkerHolder(new RunningTasksRecorder());
+    final DateTime lastCompletedTaskTime = DateTimes.of("2026-01-01");
+    final DateTime blacklistedUntil = DateTimes.of("2026-01-02");
+
+    workerHolder.setLastCompletedTaskTime(lastCompletedTaskTime);
+    workerHolder.setBlacklistedUntil(blacklistedUntil);
+
+    Assertions.assertEquals(lastCompletedTaskTime, workerHolder.toImmutable().getLastCompletedTaskTime());
+    Assertions.assertEquals(blacklistedUntil, workerHolder.toImmutable().getBlacklistedUntil());
+    // Disabled until the first sync enables it
+    Assertions.assertTrue(workerHolder.toImmutable().getWorker().isDisabled());
+  }
+
+  @Test
+  public void testWorkerRejoiningWithPlaceholderAnnouncements()
+  {
+    final String taskId = "task1";
+    final TaskAnnouncement placeholder = TaskAnnouncement.create(
+        taskId,
+        NoopTask.TYPE,
+        null,
+        TaskStatus.running(taskId),
+        TaskLocation.unknown(),
+        null
+    );
+    final WorkerHolder workerHolder = createWorkerHolder(new RunningTasksRecorder(), placeholder);
+
+    Assertions.assertEquals(ImmutableSet.of(taskId), workerHolder.toImmutable().getRunningTasks());
+    Assertions.assertEquals(1, workerHolder.toImmutable().getCurrCapacityUsed());
+  }
+
+  @Test
+  public void testToImmutableDoesNotExposeCachedCapacityByTaskType()
+  {
+    final Task task = NoopTask.create();
+    final WorkerHolder workerHolder = createWorkerHolder(new RunningTasksRecorder(), running(task));
+    final Map<String, Integer> capacityByTaskType = workerHolder.toImmutable().getCurrCapacityUsedByTaskType();
+
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> capacityByTaskType.put(task.getType(), 100));
+    Assertions.assertEquals(
+        ImmutableMap.of(task.getType(), 1),
+        workerHolder.toImmutable().getCurrCapacityUsedByTaskType()
+    );
+  }
+
+  private static WorkerHolder createWorkerHolder(WorkerHolder.Listener listener, TaskAnnouncement... knownAnnouncements)
+  {
+    return new WorkerHolder(
+        TestHelper.makeJsonMapper(),
+        EasyMock.createNiceMock(HttpClient.class),
+        new HttpRemoteTaskRunnerConfig(),
+        EasyMock.createNiceMock(ScheduledExecutorService.class),
+        listener,
+        new Worker("http", "localhost", "127.0.0.1", 5, "v1", WorkerConfig.DEFAULT_CATEGORY),
+        ImmutableList.copyOf(knownAnnouncements)
+    );
+  }
+
+  private static TaskAnnouncement running(Task task)
+  {
+    return TaskAnnouncement.create(task, TaskStatus.running(task.getId()), TaskLocation.unknown());
+  }
+
+  private static TaskAnnouncement succeeded(Task task)
+  {
+    return TaskAnnouncement.create(task, TaskStatus.success(task.getId()), TaskLocation.unknown());
+  }
+
+  private static WorkerHistoryItem update(TaskAnnouncement announcement)
+  {
+    return new WorkerHistoryItem.TaskUpdate(announcement);
+  }
+
+  /**
+   * Records the running tasks seen through {@link WorkerHolder#toImmutable()} from inside each listener callback.
+   */
+  private static class RunningTasksRecorder implements WorkerHolder.Listener
+  {
+    private final List<Set<String>> seen = new ArrayList<>();
+
+    @Override
+    public void taskAddedOrUpdated(TaskAnnouncement announcement, WorkerHolder workerHolder)
+    {
+      seen.add(workerHolder.toImmutable().getRunningTasks());
+    }
+
+    @Override
+    public void stateChanged(boolean enabled, WorkerHolder workerHolder)
+    {
+      // Do nothing
+    }
+
+    List<Set<String>> drain()
+    {
+      final List<Set<String>> drained = new ArrayList<>(seen);
+      seen.clear();
+      return drained;
+    }
   }
 }

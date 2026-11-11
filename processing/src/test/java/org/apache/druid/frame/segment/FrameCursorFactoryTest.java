@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.segment;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Intervals;
@@ -27,8 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.extraction.UpperExtractionFn;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -49,12 +48,12 @@ import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,7 +65,8 @@ public class FrameCursorFactoryTest
   /**
    * Basic tests: everything except makeCursor, makeVectorCursor.
    */
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("constructorFeeder")
   public static class BasicTests extends InitializedNullHandlingTest
   {
     private final FrameType frameType;
@@ -80,7 +80,6 @@ public class FrameCursorFactoryTest
       this.frameType = frameType;
     }
 
-    @Parameterized.Parameters(name = "frameType = {0}")
     public static Iterable<Object[]> constructorFeeder()
     {
       final List<Object[]> constructors = new ArrayList<>();
@@ -92,7 +91,7 @@ public class FrameCursorFactoryTest
       return constructors;
     }
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
 
@@ -101,7 +100,7 @@ public class FrameCursorFactoryTest
       frameCursorFactory = Objects.requireNonNull(frameSegment.as(CursorFactory.class));
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
       if (frameSegment != null) {
@@ -112,7 +111,7 @@ public class FrameCursorFactoryTest
     @Test
     public void test_getRowSignature()
     {
-      Assert.assertEquals(queryableCursorFactory.getRowSignature(), frameCursorFactory.getRowSignature());
+      Assertions.assertEquals(queryableCursorFactory.getRowSignature(), frameCursorFactory.getRowSignature());
     }
 
     @Test
@@ -122,27 +121,27 @@ public class FrameCursorFactoryTest
         final ColumnCapabilities expectedCapabilities = queryableCursorFactory.getColumnCapabilities(columnName);
         final ColumnCapabilities actualCapabilities = frameCursorFactory.getColumnCapabilities(columnName);
 
-        Assert.assertEquals(
-            StringUtils.format("column [%s] type", columnName),
+        Assertions.assertEquals(
             expectedCapabilities.toColumnType(),
-            actualCapabilities.toColumnType()
+            actualCapabilities.toColumnType(),
+            StringUtils.format("column [%s] type", columnName)
         );
 
         if (frameType == FrameType.latestColumnar()) {
           // Columnar frames retain fine-grained hasMultipleValues information
-          Assert.assertEquals(
-              StringUtils.format("column [%s] hasMultipleValues", columnName),
+          Assertions.assertEquals(
               expectedCapabilities.hasMultipleValues(),
-              actualCapabilities.hasMultipleValues()
+              actualCapabilities.hasMultipleValues(),
+              StringUtils.format("column [%s] hasMultipleValues", columnName)
           );
         } else {
           // Row-based frames do not retain fine-grained hasMultipleValues information
-          Assert.assertEquals(
-              StringUtils.format("column [%s] hasMultipleValues", columnName),
+          Assertions.assertEquals(
               expectedCapabilities.getType() == ValueType.STRING
               ? ColumnCapabilities.Capable.UNKNOWN
               : ColumnCapabilities.Capable.FALSE,
-              actualCapabilities.hasMultipleValues()
+              actualCapabilities.hasMultipleValues(),
+              StringUtils.format("column [%s] hasMultipleValues", columnName)
           );
         }
       }
@@ -151,14 +150,15 @@ public class FrameCursorFactoryTest
     @Test
     public void test_getColumnCapabilities_unknownColumn()
     {
-      Assert.assertNull(frameCursorFactory.getColumnCapabilities("nonexistent"));
+      Assertions.assertNull(frameCursorFactory.getColumnCapabilities("nonexistent"));
     }
   }
 
   /**
    * CursorTests: matrix of tests of makeCursor, makeVectorCursor
    */
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("constructorFeeder")
   public static class CursorTests extends InitializedNullHandlingTest
   {
     private static final int VECTOR_SIZE = 7;
@@ -169,9 +169,7 @@ public class FrameCursorFactoryTest
     private CursorFactory queryableCursorFactory;
     private FrameSegment frameSegment;
     private CursorFactory frameCursorFactory;
-    private final QueryContext queryContext = QueryContext.of(
-        ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, VECTOR_SIZE)
-    );
+    private final QueryContext queryContext = QueryContext.of(QueryContextParameters.VECTOR_SIZE, VECTOR_SIZE);
 
     public CursorTests(
         FrameType frameType,
@@ -182,9 +180,6 @@ public class FrameCursorFactoryTest
       this.interval = interval;
     }
 
-    @Parameterized.Parameters(
-        name = "frameType = {0}, interval = {1}"
-    )
     public static Iterable<Object[]> constructorFeeder()
     {
       final List<Object[]> constructors = new ArrayList<>();
@@ -206,7 +201,7 @@ public class FrameCursorFactoryTest
       return constructors;
     }
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
       queryableCursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
@@ -214,7 +209,7 @@ public class FrameCursorFactoryTest
       frameCursorFactory = Objects.requireNonNull(frameSegment.as(CursorFactory.class));
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
       if (frameSegment != null) {
@@ -406,10 +401,10 @@ public class FrameCursorFactoryTest
      */
     private void verifyCursorFactory(final CursorBuildSpec cursorSpec, final boolean expectedCanVectorize)
     {
-      Assert.assertEquals(
-          "expected interval (if this assertion fails, the test is likely written incorrectly)",
+      Assertions.assertEquals(
           this.interval,
-          cursorSpec.getInterval()
+          cursorSpec.getInterval(),
+          "expected interval (if this assertion fails, the test is likely written incorrectly)"
       );
 
       // Frame adapters don't know the order of the underlying frames, so they should ignore the "preferred ordering"
@@ -421,8 +416,8 @@ public class FrameCursorFactoryTest
       try (final CursorHolder queryableCursorHolder = queryableCursorFactory.makeCursorHolder(queryableCursorSpec);
            final CursorHolder frameCursorHolder = frameCursorFactory.makeCursorHolder(cursorSpec)) {
         // Frames don't know their own order, so they cannot guarantee any particular ordering.
-        Assert.assertEquals("ordering", Collections.emptyList(), frameCursorHolder.getOrdering());
-        Assert.assertEquals("canVectorize", expectedCanVectorize, frameCursorHolder.canVectorize());
+        Assertions.assertEquals(Collections.emptyList(), frameCursorHolder.getOrdering(), "ordering");
+        Assertions.assertEquals(expectedCanVectorize, frameCursorHolder.canVectorize(), "canVectorize");
         verifyCursors(queryableCursorHolder, frameCursorHolder, frameCursorFactory.getRowSignature());
 
         if (expectedCanVectorize) {

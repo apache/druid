@@ -40,8 +40,8 @@ import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 import java.util.Set;
@@ -70,16 +70,16 @@ public class MySQLMetadataStorageModuleTest
     properties.setProperty(propertyPrefix + ".verifyServerCertificate", "true");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final MySQLConnectorSslConfig config = provider.get();
-    Assert.assertTrue(config.isUseSSL());
-    Assert.assertEquals("url", config.getTrustCertificateKeyStoreUrl());
-    Assert.assertEquals("type", config.getTrustCertificateKeyStoreType());
-    Assert.assertEquals("secret", config.getTrustCertificateKeyStorePassword());
-    Assert.assertEquals("url", config.getClientCertificateKeyStoreUrl());
-    Assert.assertEquals("type", config.getClientCertificateKeyStoreType());
-    Assert.assertEquals("secret", config.getClientCertificateKeyStorePassword());
-    Assert.assertEquals(ImmutableList.of("some", "ciphers"), config.getEnabledSSLCipherSuites());
-    Assert.assertEquals(ImmutableList.of("some", "protocols"), config.getEnabledTLSProtocols());
-    Assert.assertTrue(config.isVerifyServerCertificate());
+    Assertions.assertTrue(config.isUseSSL());
+    Assertions.assertEquals("url", config.getTrustCertificateKeyStoreUrl());
+    Assertions.assertEquals("type", config.getTrustCertificateKeyStoreType());
+    Assertions.assertEquals("secret", config.getTrustCertificateKeyStorePassword());
+    Assertions.assertEquals("url", config.getClientCertificateKeyStoreUrl());
+    Assertions.assertEquals("type", config.getClientCertificateKeyStoreType());
+    Assertions.assertEquals("secret", config.getClientCertificateKeyStorePassword());
+    Assertions.assertEquals(ImmutableList.of("some", "ciphers"), config.getEnabledSSLCipherSuites());
+    Assertions.assertEquals(ImmutableList.of("some", "protocols"), config.getEnabledTLSProtocols());
+    Assertions.assertTrue(config.isVerifyServerCertificate());
   }
 
   @Test
@@ -94,7 +94,7 @@ public class MySQLMetadataStorageModuleTest
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final MySQLConnectorDriverConfig config = provider.get();
-    Assert.assertEquals(new MySQLConnectorDriverConfig().getDriverClassName(), config.getDriverClassName());
+    Assertions.assertEquals(new MySQLConnectorDriverConfig().getDriverClassName(), config.getDriverClassName());
   }
 
   @Test
@@ -110,7 +110,7 @@ public class MySQLMetadataStorageModuleTest
     properties.setProperty(propertyPrefix + ".driverClassName", "some.driver.classname");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final MySQLConnectorDriverConfig config = provider.get();
-    Assert.assertEquals("some.driver.classname", config.getDriverClassName());
+    Assertions.assertEquals("some.driver.classname", config.getDriverClassName());
   }
 
   private Injector createInjector()

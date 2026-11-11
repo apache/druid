@@ -24,14 +24,14 @@ sidebar_label: "Load files natively"
   -->
 
 
-This tutorial demonstrates how to load data into Apache Druid from a file using Apache Druid's native batch ingestion feature.
+This tutorial demonstrates how to load data into Apache&circledR; Druid from a file using Apache Druid's native batch ingestion feature.
 
 You initiate data loading in Druid by submitting an *ingestion task* spec to the Druid Overlord. You can write ingestion 
 specs by hand or using the _data loader_ built into the web console. 
 
 For production environments, it's likely that you'll want to automate data ingestion. This tutorial starts by showing
 you how to submit an ingestion spec directly in the web console, and then introduces ways to ingest batch data that
-lend themselves to automation&mdash;from the command line and from a script. 
+lend themselves to automation&mdash;from the command line. 
 
 ## Loading data with a spec (via console)
 
@@ -116,52 +116,24 @@ This brings up the spec submission dialog where you can paste the spec above.
 Once the spec is submitted, wait a few moments for the data to load, after which you can query it.
 
 
-## Loading data with a spec (via command line)
+## Loading data from the command line
 
-For convenience, the Druid package includes a batch ingestion helper script at `bin/post-index-task`.
-
-This script will POST an ingestion task to the Druid Overlord and poll Druid until the data is available for querying.
+To load data from the command line, you need to POST an ingestion spec to the Druid Overlord using its task API.
 
 Run the following command from Druid package root:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/wikipedia-index.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/wikipedia-index.json
 ```
-
-You should see output like the following:
+If the submission was successful, Druid will print a task ID similar to the following:
 
 ```bash
-Beginning indexing data for wikipedia
-Task started: index_wikipedia_2018-07-27T06:37:44.323Z
-Task log:     http://localhost:8081/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/log
-Task status:  http://localhost:8081/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/status
-Task index_wikipedia_2018-07-27T06:37:44.323Z still running...
-Task index_wikipedia_2018-07-27T06:37:44.323Z still running...
-Task finished with status: SUCCESS
-Completed indexing data for wikipedia. Now loading indexed data onto the cluster...
-wikipedia loading complete! You may now query your data
+{"task":"index_parallel_wikipedia_oiemabcp_2026-07-07T16:05:33.242Z"}
 ```
 
-Once the spec is submitted, you can follow the same instructions as above to wait for the data to load and then query it.
-
-
-## Loading data without the script
-
-Let's briefly discuss how we would've submitted the ingestion task without using the script. You do not need to run these commands.
-
-To submit the task, POST it to Druid in a new terminal window from the `apache-druid-{{DRUIDVERSION}}` directory:
-
-```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index.json http://localhost:8081/druid/indexer/v1/task
-```
-
-Which will print the ID of the task if the submission was successful:
-
-```bash
-{"task":"index_wikipedia_2018-06-09T21:30:32.802Z"}
-```
-
-You can monitor the status of this task from the console as outlined above.
+Wait a few moments for the data to load, then move on to querying it.
 
 
 ## Querying your data

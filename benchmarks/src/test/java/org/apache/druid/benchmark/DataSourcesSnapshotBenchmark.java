@@ -24,6 +24,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -74,17 +75,14 @@ public class DataSourcesSnapshotBenchmark
 
       for (int j = 0; j < numSegmentPerDataSource; j++) {
         segments.add(
-            new DataSegment(
-                dataSource,
-                TEST_SEGMENT_INTERVAL,
-                String.valueOf(j),
-                Collections.emptyMap(),
-                Collections.emptyList(),
-                Collections.emptyList(),
-                NoneShardSpec.instance(),
-                0,
-                10L
-            )
+            DataSegment.builder(SegmentId.of(dataSource, TEST_SEGMENT_INTERVAL, String.valueOf(j), 0))
+                       .loadSpec(Collections.emptyMap())
+                       .dimensions(Collections.emptyList())
+                       .metrics(Collections.emptyList())
+                       .shardSpec(NoneShardSpec.instance())
+                       .binaryVersion(0)
+                       .size(10L)
+                       .build()
         );
       }
     }

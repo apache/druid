@@ -26,13 +26,24 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>38.0.0-SNAPSHOT</version>
+        <version>40.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <properties>
-        <orc.version>1.7.6</orc.version>
+        <hive-storage-api.version>4.2.0</hive-storage-api.version>
+        <orc.version>2.3.1</orc.version>
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <!-- override the transitive dependency from orc-core 2.3.1 to address CVE-2026-111497 -->
+            <dependency>
+                <groupId>com.aayushatharva.brotli4j</groupId>
+                <artifactId>brotli4j</artifactId>
+                <version>1.24.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -177,11 +188,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>it.unimi.dsi</groupId>
-            <artifactId>fastutil-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <scope>provided</scope>
@@ -199,6 +205,7 @@
         <dependency>
             <groupId>org.apache.hive</groupId>
             <artifactId>hive-storage-api</artifactId>
+            <version>${hive-storage-api.version}</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
@@ -212,8 +219,13 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

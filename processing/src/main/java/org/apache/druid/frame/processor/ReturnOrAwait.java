@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
+import java.util.List;
 
 /**
  * Instances of this class are returned by {@link FrameProcessor#runIncrementally}, and are used by
@@ -52,12 +52,12 @@ public class ReturnOrAwait<T>
   private final boolean awaitAllChannels;
 
   @Nullable
-  private final Collection<ListenableFuture<?>> awaitFutures;
+  private final List<ListenableFuture<?>> awaitFutures;
 
   private ReturnOrAwait(
       @Nullable T retVal,
       @Nullable IntSet awaitChannels,
-      @Nullable Collection<ListenableFuture<?>> awaitFutures,
+      @Nullable List<ListenableFuture<?>> awaitFutures,
       final boolean awaitAllChannels
   )
   {
@@ -106,7 +106,7 @@ public class ReturnOrAwait<T>
   /**
    * Wait for all of the provided futures.
    */
-  public static <T> ReturnOrAwait<T> awaitAllFutures(final Collection<ListenableFuture<?>> futures)
+  public static <T> ReturnOrAwait<T> awaitAllFutures(final List<ListenableFuture<?>> futures)
   {
     return new ReturnOrAwait<>(null, null, futures, true);
   }
@@ -161,7 +161,7 @@ public class ReturnOrAwait<T>
   }
 
 
-  public Collection<ListenableFuture<?>> awaitableFutures()
+  public List<ListenableFuture<?>> awaitableFutures()
   {
     if (!hasAwaitableFutures()) {
       throw new ISE("No futures set");

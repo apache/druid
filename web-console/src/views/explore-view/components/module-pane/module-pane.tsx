@@ -22,8 +22,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   ResizeSensor,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -272,8 +271,8 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
         )}
       </div>
       <ButtonGroup className="corner-buttons">
-        <Popover
-          position={Position.BOTTOM_RIGHT}
+        <PopoverNext
+          placement="bottom-end"
           content={
             <Menu>
               <MenuItem
@@ -293,22 +292,24 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
               />
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
-          <Button icon={IconNames.MORE} data-tooltip="More module options" minimal />
-        </Popover>
+          <Button icon={IconNames.MORE} data-tooltip="More module options" variant="minimal" />
+        </PopoverNext>
         <Button
           icon={moduleHasFilter ? IconNames.FILTER_KEEP : IconNames.FILTER}
           data-tooltip={`${showModuleWhere ? 'Hide' : 'Show'} module filter bar${
             moduleHasFilter ? `\nCurrent filter: ${moduleWhere}` : ''
           }`}
-          minimal
+          variant="minimal"
           active={showModuleWhere}
           onClick={() => setModuleState(moduleState.change({ showModuleWhere: !showModuleWhere }))}
         />
         <Button
           icon={IconNames.PROPERTIES}
           data-tooltip={`${showControls ? 'Hide' : 'Show'} module controls`}
-          minimal
+          variant="minimal"
           active={showControls}
           onClick={() => setModuleState(moduleState.change({ showControls: !showControls }))}
         />

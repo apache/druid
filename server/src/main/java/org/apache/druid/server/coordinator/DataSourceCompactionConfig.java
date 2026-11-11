@@ -36,6 +36,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.timeline.CompactionState;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -80,6 +81,11 @@ public interface DataSourceCompactionConfig
 
   Period getSkipOffsetFromLatest();
 
+  /**
+   * Intervals to skip from compaction. A compaction interval overlapping any of these will be skipped.
+   */
+  List<Interval> getSkipIntervals();
+
   @Nullable
   UserCompactionTaskQueryTuningConfig getTuningConfig();
 
@@ -109,6 +115,20 @@ public interface DataSourceCompactionConfig
 
   @Nullable
   AggregatorFactory[] getMetricsSpec();
+
+  /**
+   * Whether the schema declared by this config is the complete schema of the datasource, i.e. the segments cannot
+   * contain columns it does not declare. When false, compaction analyzes the existing segments even where this config
+   * does declare a schema, and preserves whatever the declaration does not cover.
+   * <p>
+   * Only {@link #getBaseTable()} observes this. The legacy {@link #getDimensionsSpec()} and {@link #getMetricsSpec()}
+   * express a partial declaration by being absent, so analysis for those is already driven by nullness; making a
+   * declaration that is present merge with an analyzed schema rather than replace it is not implemented.
+   */
+  default boolean isSealed()
+  {
+    return true;
+  }
 
   /**
    * Converts this compaction config to a {@link CompactionState}.

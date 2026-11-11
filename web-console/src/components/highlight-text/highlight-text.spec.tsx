@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { HighlightText } from './highlight-text';
 
 describe('HighlightText', () => {
   it('matches snapshot', () => {
-    const highlightText = shallow(<HighlightText text="Hello world" find="ello" replace="woot" />);
+    const { container } = render(<HighlightText text="Hello world" find="ello" replace="woot" />);
 
-    expect(highlightText).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

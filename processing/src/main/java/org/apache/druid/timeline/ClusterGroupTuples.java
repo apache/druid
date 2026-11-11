@@ -43,7 +43,7 @@ import java.util.Objects;
  * segment pruning can make use of this information.
  * <p>
  * The compact constructor validates {@code clusteringColumns}, interns the virtual columns through
- * {@link DataSegment#virtualColumnInterner()}, and canonicalizes every tuple value to its declared
+ * {@link DataSegment#internVirtualColumns}, and canonicalizes every tuple value to its declared
  * {@link ColumnType} via {@link #coerceValue} so {@link Object#equals} works across the JSON/programmatic boundary.
  */
 public record ClusterGroupTuples(
@@ -58,7 +58,7 @@ public record ClusterGroupTuples(
     if (clusteringColumns == null || clusteringColumns.size() == 0) {
       throw InvalidInput.exception("clusteringColumns must not be null or empty");
     }
-    virtualColumns = internVirtualColumns(virtualColumns);
+    virtualColumns = DataSegment.internVirtualColumns(virtualColumns);
     tuples = canonicalizeTuples(clusteringColumns, tuples);
   }
 
@@ -122,18 +122,6 @@ public record ClusterGroupTuples(
         "Unsupported clustering column type [%s] for column [%s]; supported types are STRING, LONG, DOUBLE, FLOAT",
         type,
         columnName
-    );
-  }
-
-  private static VirtualColumns internVirtualColumns(@Nullable VirtualColumns virtualColumns)
-  {
-    if (virtualColumns == null || virtualColumns.isEmpty()) {
-      return VirtualColumns.EMPTY;
-    }
-    return VirtualColumns.create(
-        Arrays.stream(virtualColumns.getVirtualColumns())
-              .map(DataSegment.virtualColumnInterner()::intern)
-              .toList()
     );
   }
 

@@ -201,11 +201,13 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? ioConfig.getEarlyMessageRejectionPeriod().get().toPeriod() : null,
         ioConfig.getLateMessageRejectionStartDateTime().isPresent() ? ioConfig.getLateMessageRejectionStartDateTime().get() : null,
         ioConfig.getConfigOverrides(),
+        ioConfig.getHeaderBasedFilterConfig(),
         ioConfig.getIdleConfig(),
         ioConfig.getStopTaskCount(),
         ioConfig.isEmitTimeLagMetrics(),
         ioConfig.getServerPriorityToReplicas(),
-        boundedStreamConfig
+        boundedStreamConfig,
+        null
     );
     return new KafkaSupervisorSpec(
         backfillId,
@@ -266,5 +268,43 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
            ", context=" + getContext() +
            ", suspend=" + isSuspended() +
            '}';
+  }
+
+  @Override
+  public Builder toBuilder()
+  {
+    return new Builder().copyFrom(this);
+  }
+
+  public static class Builder extends SeekableStreamSupervisorSpec.Builder<Builder>
+  {
+    @Override
+    protected Builder self()
+    {
+      return this;
+    }
+
+    @Override
+    public KafkaSupervisorSpec build()
+    {
+      return new KafkaSupervisorSpec(
+          id,
+          null,
+          dataSchema,
+          (KafkaSupervisorTuningConfig) tuningConfig,
+          (KafkaSupervisorIOConfig) ioConfig,
+          context,
+          suspended,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+    }
   }
 }

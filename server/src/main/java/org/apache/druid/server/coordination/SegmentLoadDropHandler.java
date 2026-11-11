@@ -161,16 +161,31 @@ public class SegmentLoadDropHandler
         currentDropLatch.cancelOrAwait();
       }
 
+      final DataSegment loaded;
       try {
-        segmentManager.loadSegment(segment);
+        loaded = segmentManager.loadSegment(segment);
       }
       catch (Exception e) {
-        removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+        // decides whether to clean up a failed load; a load request for a segment this server already serves is a
+        // reload, not a new load, and we only want to discard the half-materialized state a failed *new* load leaves
+        // behind.
+        if (segmentManager.isSegmentLoaded(segment)) {
+          log.warn(
+              e,
+              "Failed to load segment[%s], but it is serving already; leaving it in place to be retried.",
+              segment.getId()
+          );
+        } else {
+          removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+        }
         throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
       }
       try {
-        // Announce segment even if the segment file already exists.
-        announcer.announceSegment(segment);
+        // Announce segment even if the segment file already exists. loadSegment returns a
+        // PartialLoadedDataSegment wrapper when the historical actually materialized a partial-load footprint;
+        // announcing that wrapper lets SegmentChangeRequestLoad.forAnnouncement stamp accurate loadedBytes on
+        // the wire form, so the coordinator's inventory sees the partial footprint rather than segment.getSize().
+        announcer.announceSegment(loaded);
       }
       catch (IOException e) {
         throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
@@ -293,12 +308,22 @@ public class SegmentLoadDropHandler
 
     CustomSettableFuture future = new CustomSettableFuture(waitingFutures, statuses);
 
+    if (!isAnyRequestDone) {
+      synchronized (waitingFutures) {
+        // A request may have finished after its status was checked above, in which case its callback has already
+        // called resolveWaitingFutures() and would never resolve this future. Check again while holding the lock that
+        // resolveWaitingFutures() uses, so that the future is registered only if no request has finished yet.
+        isAnyRequestDone = statuses.values().stream().anyMatch(
+            status -> status.get().getState() != SegmentChangeStatus.State.PENDING
+        );
+        if (!isAnyRequestDone) {
+          waitingFutures.add(future);
+        }
+      }
+    }
+
     if (isAnyRequestDone) {
       future.resolve();
-    } else {
-      synchronized (waitingFutures) {
-        waitingFutures.add(future);
-      }
     }
 
     return future;

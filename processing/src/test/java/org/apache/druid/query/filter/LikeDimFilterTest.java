@@ -32,29 +32,28 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.io.IOException;
 import java.util.Arrays;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class LikeDimFilterTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
-
   @Test
   public void testSerde() throws IOException
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     final DimFilter filter = new LikeDimFilter("foo", "bar%", "@", new SubstringDimExtractionFn(1, 2));
     final DimFilter filter2 = objectMapper.readValue(objectMapper.writeValueAsString(filter), DimFilter.class);
-    Assert.assertEquals(filter, filter2);
+    Assertions.assertEquals(filter, filter2);
   }
 
   @Test
@@ -63,8 +62,8 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     final DimFilter filter = new LikeDimFilter("foo", "bar%", "@", new SubstringDimExtractionFn(1, 2));
     final DimFilter filter2 = new LikeDimFilter("foo", "bar%", "@", new SubstringDimExtractionFn(1, 2));
     final DimFilter filter3 = new LikeDimFilter("foo", "bar%", null, new SubstringDimExtractionFn(1, 2));
-    Assert.assertArrayEquals(filter.getCacheKey(), filter2.getCacheKey());
-    Assert.assertFalse(Arrays.equals(filter.getCacheKey(), filter3.getCacheKey()));
+    Assertions.assertArrayEquals(filter.getCacheKey(), filter2.getCacheKey());
+    Assertions.assertFalse(Arrays.equals(filter.getCacheKey(), filter3.getCacheKey()));
   }
 
   @Test
@@ -73,17 +72,17 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     final DimFilter filter = new LikeDimFilter("foo", "bar%", "@", new SubstringDimExtractionFn(1, 2));
     final DimFilter filter2 = new LikeDimFilter("foo", "bar%", "@", new SubstringDimExtractionFn(1, 2));
     final DimFilter filter3 = new LikeDimFilter("foo", "bar%", null, new SubstringDimExtractionFn(1, 2));
-    Assert.assertEquals(filter, filter2);
-    Assert.assertNotEquals(filter, filter3);
-    Assert.assertEquals(filter.hashCode(), filter2.hashCode());
-    Assert.assertNotEquals(filter.hashCode(), filter3.hashCode());
+    Assertions.assertEquals(filter, filter2);
+    Assertions.assertNotEquals(filter, filter3);
+    Assertions.assertEquals(filter.hashCode(), filter2.hashCode());
+    Assertions.assertNotEquals(filter.hashCode(), filter3.hashCode());
   }
 
   @Test
   public void testGetRequiredColumns()
   {
     final DimFilter filter = new LikeDimFilter("foo", "bar%", "@", new SubstringDimExtractionFn(1, 2));
-    Assert.assertEquals(filter.getRequiredColumns(), Sets.newHashSet("foo"));
+    Assertions.assertEquals(filter.getRequiredColumns(), Sets.newHashSet("foo"));
   }
 
   @Test
@@ -126,7 +125,7 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     ).thenReturn(bitmapColumnIndex);
 
     final BitmapColumnIndex retVal = likeFilter.getBitmapColumnIndex(indexSelector);
-    Assert.assertSame("likeFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
+    Assertions.assertSame(bitmapColumnIndex, retVal, "likeFilter returns the intended bitmapColumnIndex");
   }
 
   @Test
@@ -147,7 +146,7 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     Mockito.when(valueIndex.forValue("f")).thenReturn(bitmapColumnIndex);
 
     final BitmapColumnIndex retVal = likeFilter.getBitmapColumnIndex(indexSelector);
-    Assert.assertSame("likeFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
+    Assertions.assertSame(bitmapColumnIndex, retVal, "likeFilter returns the intended bitmapColumnIndex");
   }
 
   @Test
@@ -329,7 +328,7 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   public void testGetDimensionRangeSet_literalPattern()
   {
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar", null, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableRangeSet.of(Range.singleton("bar")),
         filter.getDimensionRangeSet("foo")
     );
@@ -339,7 +338,7 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   public void testGetDimensionRangeSet_prefixPattern()
   {
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar%", null, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableRangeSet.of(Range.closedOpen("bar", "bas")),
         filter.getDimensionRangeSet("foo")
     );
@@ -349,21 +348,21 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   public void testGetDimensionRangeSet_midPatternWildcard_returnsNull()
   {
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar%baz", null, null);
-    Assert.assertNull(filter.getDimensionRangeSet("foo"));
+    Assertions.assertNull(filter.getDimensionRangeSet("foo"));
   }
 
   @Test
   public void testGetDimensionRangeSet_suffixPattern_returnsNull()
   {
     final LikeDimFilter filter = new LikeDimFilter("foo", "%bar", null, null);
-    Assert.assertNull(filter.getDimensionRangeSet("foo"));
+    Assertions.assertNull(filter.getDimensionRangeSet("foo"));
   }
 
   @Test
   public void testGetDimensionRangeSet_singleWildcard_returnsAll()
   {
     final LikeDimFilter filter = new LikeDimFilter("foo", "%", null, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableRangeSet.of(Range.all()),
         filter.getDimensionRangeSet("foo")
     );
@@ -373,32 +372,32 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   public void testGetDimensionRangeSet_otherDimension_returnsNull()
   {
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar%", null, null);
-    Assert.assertNull(filter.getDimensionRangeSet("other"));
+    Assertions.assertNull(filter.getDimensionRangeSet("other"));
   }
 
   @Test
   public void testGetDimensionRangeSet_withExtractionFn_returnsNull()
   {
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar%", null, new SubstringDimExtractionFn(0, 3));
-    Assert.assertNull(filter.getDimensionRangeSet("foo"));
+    Assertions.assertNull(filter.getDimensionRangeSet("foo"));
   }
 
   @Test
   public void testPrefixRange_singleLowercaseChar()
   {
-    Assert.assertEquals(Range.closedOpen("foo", "fop"), LikeDimFilter.prefixRange("foo"));
+    Assertions.assertEquals(Range.closedOpen("foo", "fop"), LikeDimFilter.prefixRange("foo"));
   }
 
   @Test
   public void testPrefixRange_uppercaseCarryStaysWithinAscii()
   {
-    Assert.assertEquals(Range.closedOpen("foZ", "fo["), LikeDimFilter.prefixRange("foZ"));
+    Assertions.assertEquals(Range.closedOpen("foZ", "fo["), LikeDimFilter.prefixRange("foZ"));
   }
 
   @Test
   public void testPrefixRange_trailingMaxValue_carriesPastIt()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Range.closedOpen("foo￿", "fop"),
         LikeDimFilter.prefixRange("foo￿")
     );
@@ -407,61 +406,61 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testPrefixRange_allMaxValue_fallsBackToAtLeast()
   {
-    Assert.assertEquals(Range.atLeast("￿￿"), LikeDimFilter.prefixRange("￿￿"));
+    Assertions.assertEquals(Range.atLeast("￿￿"), LikeDimFilter.prefixRange("￿￿"));
   }
 
   @Test
   public void testPrefixRange_empty_throws()
   {
-    Assert.assertThrows(DruidException.class, () -> LikeDimFilter.prefixRange(""));
+    Assertions.assertThrows(DruidException.class, () -> LikeDimFilter.prefixRange(""));
   }
 
   @Test
   public void testPrefixRange_enclosesAllPrefixedStrings()
   {
     final Range<String> range = LikeDimFilter.prefixRange("foo");
-    Assert.assertTrue(range.contains("foo"));
-    Assert.assertTrue(range.contains("foo0"));
-    Assert.assertTrue(range.contains("foobar"));
-    Assert.assertTrue(range.contains("foozzz"));
-    Assert.assertFalse(range.contains("fo"));
-    Assert.assertFalse(range.contains("fop"));
-    Assert.assertFalse(range.contains("fox"));
+    Assertions.assertTrue(range.contains("foo"));
+    Assertions.assertTrue(range.contains("foo0"));
+    Assertions.assertTrue(range.contains("foobar"));
+    Assertions.assertTrue(range.contains("foozzz"));
+    Assertions.assertFalse(range.contains("fo"));
+    Assertions.assertFalse(range.contains("fop"));
+    Assertions.assertFalse(range.contains("fox"));
   }
 
   @Test
   public void testLexicographicSuccessor_basic()
   {
-    Assert.assertEquals("fop", LikeDimFilter.lexicographicSuccessor("foo"));
+    Assertions.assertEquals("fop", LikeDimFilter.lexicographicSuccessor("foo"));
   }
 
   @Test
   public void testLexicographicSuccessor_empty_returnsNullChar()
   {
-    Assert.assertEquals("\u0000", LikeDimFilter.lexicographicSuccessor(""));
+    Assertions.assertEquals("\u0000", LikeDimFilter.lexicographicSuccessor(""));
   }
 
   @Test
   public void testLexicographicSuccessor_singleMaxValue_returnsNull()
   {
-    Assert.assertNull(LikeDimFilter.lexicographicSuccessor("￿"));
+    Assertions.assertNull(LikeDimFilter.lexicographicSuccessor("￿"));
   }
 
   @Test
   public void testLexicographicSuccessor_trailingMaxValues_truncatedAndCarried()
   {
-    Assert.assertEquals("fop", LikeDimFilter.lexicographicSuccessor("foo￿￿"));
+    Assertions.assertEquals("fop", LikeDimFilter.lexicographicSuccessor("foo￿￿"));
   }
 
   private void assertCompilation(String pattern, String expected)
   {
     LikeDimFilter.LikeMatcher matcher = LikeDimFilter.LikeMatcher.from(pattern, '\\');
-    Assert.assertEquals(pattern + " => " + expected, matcher.describeCompilation());
+    Assertions.assertEquals(pattern + " => " + expected, matcher.describeCompilation());
   }
 
   private void assertMatch(String pattern, String value, DruidPredicateMatch expected)
   {
     LikeDimFilter.LikeMatcher matcher = LikeDimFilter.LikeMatcher.from(pattern, '\\');
-    Assert.assertEquals(matcher + " matches " + value, expected, matcher.matches(value));
+    Assertions.assertEquals(expected, matcher.matches(value), matcher + " matches " + value);
   }
 }

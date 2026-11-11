@@ -31,8 +31,8 @@ import org.apache.druid.query.ExecutorServiceMonitor;
 import org.apache.druid.query.NoopQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.utils.RuntimeInfo;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.nio.ByteBuffer;
@@ -48,9 +48,9 @@ public class PeonProcessingModuleTest
         .withProcessingBuffers()
         .withProcessingThreads()
         .withMergeBuffers();
-    Assert.assertTrue(config.hasProcessingBuffers());
-    Assert.assertTrue(config.hasProcessingThreads());
-    Assert.assertTrue(config.hasMergeBuffers());
+    Assertions.assertTrue(config.hasProcessingBuffers());
+    Assertions.assertTrue(config.hasProcessingThreads());
+    Assertions.assertTrue(config.hasMergeBuffers());
   }
 
   @Test
@@ -66,7 +66,7 @@ public class PeonProcessingModuleTest
         new ExecutorServiceMonitor(),
         new Lifecycle()
     );
-    Assert.assertSame(NoopQueryProcessingPool.instance(), pool);
+    Assertions.assertSame(NoopQueryProcessingPool.instance(), pool);
   }
 
   @Test
@@ -83,7 +83,7 @@ public class PeonProcessingModuleTest
         new ExecutorServiceMonitor(),
         new Lifecycle()
     );
-    Assert.assertSame(NoopQueryProcessingPool.instance(), pool);
+    Assertions.assertSame(NoopQueryProcessingPool.instance(), pool);
   }
 
   @Test
@@ -94,7 +94,7 @@ public class PeonProcessingModuleTest
     final RuntimeInfo runtimeInfo = Mockito.mock(RuntimeInfo.class);
 
     final NonBlockingPool<ByteBuffer> pool = module.getIntermediateResultsPool(task, config, runtimeInfo);
-    Assert.assertSame(DummyNonBlockingPool.instance(), pool);
+    Assertions.assertSame(DummyNonBlockingPool.instance(), pool);
   }
 
   @Test
@@ -106,7 +106,7 @@ public class PeonProcessingModuleTest
     final RuntimeInfo runtimeInfo = Mockito.mock(RuntimeInfo.class);
 
     final BlockingPool<ByteBuffer> pool = module.getMergeBufferPool(task, config, runtimeInfo);
-    Assert.assertSame(DummyBlockingPool.instance(), pool);
+    Assertions.assertSame(DummyBlockingPool.instance(), pool);
   }
 
   @Test
@@ -120,6 +120,6 @@ public class PeonProcessingModuleTest
     final RuntimeInfo runtimeInfo = Mockito.mock(RuntimeInfo.class);
 
     final BlockingPool<ByteBuffer> pool = module.getMergeBufferPool(task, config, runtimeInfo);
-    Assert.assertSame(DummyBlockingPool.instance(), pool);
+    Assertions.assertSame(DummyBlockingPool.instance(), pool);
   }
 }

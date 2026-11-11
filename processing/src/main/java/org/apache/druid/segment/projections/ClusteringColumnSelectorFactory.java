@@ -26,17 +26,18 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.RowIdSupplier;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -47,6 +48,12 @@ import java.util.function.Supplier;
  * carrying the group's constant value, while delegating all other column lookups to a wrapped factory. This is the
  * mechanism by which a cluster group's clustering columns, which are NOT stored in the per-group column data since
  * they're constant across the group, are made visible to query engines as if they were ordinary columns.
+ * <p>
+ * A clustering column whose name is also a query virtual column's output is NOT intercepted; it is left to the delegate
+ * (which resolves virtual columns before physical columns), so a shadowing VC — and anything reading it — observes the
+ * computed value rather than the constant. Names that were remapped away (a query VC equivalent to a materialized
+ * column) never reach this wrapper: the enclosing {@code RemapColumnSelectorFactory} rewrites them to their materialized
+ * target first.
  */
 public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
 {
@@ -79,20 +86,42 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   };
 
   private final RowSignature clusteringColumns;
+  // Query virtual columns whose output names shadow a clustering column are deferred to the delegate; see class doc.
+  private final VirtualColumns queryVirtualColumns;
+  private final MultiGroupColumnInspector capabilities;
   private ColumnSelectorFactory delegate;
   private Object[] clusteringValues;
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
   // cached inner state
   private long generation;
+  private final RowIdSupplier rowIdSupplier = new DelegatingRowIdSupplier(this);
 
+  /**
+   * Creates a factory over one cluster group, which {@link #setDelegate} may later move to others. Capabilities of
+   * non-clustering columns come from {@code allGroupsInspector}, which must therefore cover every group the factory
+   * may be moved to; see {@link MultiGroupColumnInspector}.
+   */
   public ClusteringColumnSelectorFactory(
       ColumnSelectorFactory delegate,
       RowSignature clusteringColumns,
-      Object[] clusteringValues
+      Object[] clusteringValues,
+      VirtualColumns queryVirtualColumns,
+      ColumnInspector allGroupsInspector
   )
   {
     this.clusteringColumns = clusteringColumns;
+    this.queryVirtualColumns = queryVirtualColumns;
+    this.capabilities = new MultiGroupColumnInspector(clusteringColumns, queryVirtualColumns, allGroupsInspector);
     setDelegate(delegate, clusteringValues);
+  }
+
+  /**
+   * Whether {@code name} should be served as this group's clustering constant: a clustering column not shadowed by a
+   * query virtual column of the same output name (see class doc).
+   */
+  private boolean servesClusteringConstant(String name)
+  {
+    return clusteringColumns.indexOf(name) >= 0 && !queryVirtualColumns.exists(name);
   }
 
   /**
@@ -127,20 +156,20 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
-    final int idx = clusteringColumns.indexOf(dimensionSpec.getDimension());
-    if (idx < 0) {
+    final String name = dimensionSpec.getDimension();
+    if (!servesClusteringConstant(name)) {
       return new DelegatingDimensionSelector(this, dimensionSpec);
     }
-    return new ClusteringDimensionSelector(this, idx, dimensionSpec);
+    return new ClusteringDimensionSelector(this, clusteringColumns.indexOf(name), dimensionSpec);
   }
 
   @Override
   public ColumnValueSelector makeColumnValueSelector(String columnName)
   {
-    final int idx = clusteringColumns.indexOf(columnName);
-    if (idx < 0) {
+    if (!servesClusteringConstant(columnName)) {
       return new DelegatingColumnValueSelector(this, columnName);
     }
+    final int idx = clusteringColumns.indexOf(columnName);
     return new ClusteringColumnValueSelector(this, idx, clusteringColumns.getColumnType(idx).orElseThrow());
   }
 
@@ -148,27 +177,58 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
-      return delegate.getColumnCapabilities(column);
-    }
-    final ColumnType type = clusteringColumns.getColumnType(idx).orElseThrow();
-    if (type.is(ValueType.STRING)) {
-      return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
-    }
-    return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
+    return capabilities.getColumnCapabilities(column);
   }
 
   @Nullable
   @Override
   public RowIdSupplier getRowIdSupplier()
   {
-    return delegate.getRowIdSupplier();
+    // A delegate may not support row-id caching; mirror that so callers skip caching (null)
+    return delegate.getRowIdSupplier() == null ? null : rowIdSupplier;
   }
 
   Object currentValue(int idx)
   {
     return clusteringValues[idx];
+  }
+
+  /**
+   * A {@link RowIdSupplier} bound to the factory, {@link #getRowId} follows whichever delegate is current, so a
+   * supplier grabbed once keeps tracking the active group across {@code ConcatenatingCursor} transitions.
+   */
+  private static final class DelegatingRowIdSupplier implements RowIdSupplier
+  {
+    private final ClusteringColumnSelectorFactory parent;
+    private long rowId = INIT;
+    private long lastDelegateRowId = INIT;
+    private RowIdSupplier lastDelegate;
+
+    private DelegatingRowIdSupplier(ClusteringColumnSelectorFactory parent)
+    {
+      this.parent = parent;
+    }
+
+    @Override
+    public long getRowId()
+    {
+      final RowIdSupplier delegate = parent.getDelegate().getRowIdSupplier();
+      if (delegate == null) {
+        // getRowIdSupplier() only hands out this wrapper when the delegate supports row ids; clustered groups are
+        // homogeneous, so a null here would mean a group mid-cursor stopped supporting them.
+        throw DruidException.defensive("delegate row id supplier became null across a cluster-group transition");
+      }
+      final long id = delegate.getRowId();
+      if (id == INIT) {
+        return INIT;
+      }
+      if (delegate != lastDelegate || id != lastDelegateRowId) {
+        lastDelegate = delegate;
+        lastDelegateRowId = id;
+        rowId++;
+      }
+      return rowId;
+    }
   }
 
   /**
@@ -266,7 +326,11 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
     @Override
     public int getValueCardinality()
     {
-      return currentSelector().getValueCardinality();
+      // The per-group constant selector reports cardinality 1 and always returns id 0, but that id is NOT stable
+      // across the concatenating cursor: id 0 resolves to a different clustering value in each group. Forwarding it
+      // would let the group-by engine take the dictionary-id-keyed (array) path and silently conflate every group
+      // into the single id-0 bucket.
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
     }
 
     @Nullable
@@ -279,14 +343,14 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
     @Override
     public boolean nameLookupPossibleInAdvance()
     {
-      return currentSelector().nameLookupPossibleInAdvance();
+      return false;
     }
 
     @Nullable
     @Override
     public IdLookup idLookup()
     {
-      return currentSelector().idLookup();
+      return null;
     }
 
     @Nullable
@@ -477,7 +541,12 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
     @Override
     public int getValueCardinality()
     {
-      return currentInner().getValueCardinality();
+      // The dictionary is per cluster group and NOT stable across the concatenating cursor (the same local id means
+      // different values in different groups). Reporting CARDINALITY_UNKNOWN forces query engines onto the
+      // value-based (rather than dictionary-id-keyed) path, which is correct across groups; a dictionary-id-keyed
+      // group-by would otherwise conflate distinct values that share an id. lookupName() still resolves per-row
+      // against the current group, so value-based grouping reads the right value.
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
     }
 
     @Nullable
@@ -490,14 +559,16 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
     @Override
     public boolean nameLookupPossibleInAdvance()
     {
-      return currentInner().nameLookupPossibleInAdvance();
+      // Per-group dictionaries cannot be enumerated in advance across the concatenating cursor.
+      return false;
     }
 
     @Nullable
     @Override
     public IdLookup idLookup()
     {
-      return currentInner().idLookup();
+      // No stable id<->name mapping across groups; callers must resolve by value.
+      return null;
     }
 
     @Nullable

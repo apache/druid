@@ -20,9 +20,8 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.metadata.PasswordProvider;
-
-import javax.validation.constraints.NotNull;
 
 /**
  */

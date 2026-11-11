@@ -22,7 +22,7 @@ expectedOperators:
       frame: { type: "rows" }
       aggregations:
         - { type: "doubleMin", name: "w0", fieldName: "_v0" }
-        - { type: "longMin", name: "w1", fieldName: "v1" }
+        - { type: "longMin", name: "w1", fieldName: "v2" }
 
 expectedResults:
   - ["_",42.0,11]

@@ -31,18 +31,21 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Properties;
 
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class BrokerProcessingModuleTest
 {
   private Injector injector;
@@ -52,7 +55,7 @@ public class BrokerProcessingModuleTest
   @Mock
   private CachePopulatorStats cachePopulatorStats;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     target = new BrokerProcessingModule();
@@ -86,10 +89,10 @@ public class BrokerProcessingModuleTest
   public void testCachePopulatorAsSingleton()
   {
     CachePopulator cachePopulator = injector.getInstance(CachePopulator.class);
-    Assert.assertNotNull(cachePopulator);
+    Assertions.assertNotNull(cachePopulator);
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testMemoryCheckThrowsException()
   {
     // JDK 9 and above do not support checking for direct memory size
@@ -98,15 +101,18 @@ public class BrokerProcessingModuleTest
       JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
     }
     catch (UnsupportedOperationException e) {
-      Assume.assumeNoException(e);
+      Assumptions.assumeTrue(false, e::getMessage);
     }
-    Properties props = new Properties();
-    props.setProperty("druid.processing.buffer.sizeBytes", "3GiB");
-    Injector injector1 = makeInjector(props);
 
-    DruidProcessingConfig processingBufferConfig = injector1.getInstance(DruidProcessingConfig.class);
-    BrokerProcessingModule module = new BrokerProcessingModule();
-    module.getMergeBufferPool(processingBufferConfig, JvmUtils.getRuntimeInfo());
+    Assertions.assertThrows(ProvisionException.class, () -> {
+      Properties props = new Properties();
+      props.setProperty("druid.processing.buffer.sizeBytes", "3GiB");
+      Injector injector1 = makeInjector(props);
+
+      DruidProcessingConfig processingBufferConfig = injector1.getInstance(DruidProcessingConfig.class);
+      BrokerProcessingModule module = new BrokerProcessingModule();
+      module.getMergeBufferPool(processingBufferConfig, JvmUtils.getRuntimeInfo());
+    });
   }
 
   private Injector makeInjector(Properties props)
@@ -132,4 +138,3 @@ public class BrokerProcessingModuleTest
     return injector;
   }
 }
-

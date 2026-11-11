@@ -19,8 +19,10 @@
 
 package org.apache.druid.msq.sql;
 
+import com.google.inject.Inject;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.querykit.DataSourcePlanners;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.query.Query;
@@ -28,6 +30,14 @@ import org.apache.druid.query.QueryContext;
 
 public class DartQueryKitSpecFactory implements QueryKitSpecFactory
 {
+  private final DataSourcePlanners dataSourcePlanners;
+
+  @Inject
+  public DartQueryKitSpecFactory(final DataSourcePlanners dataSourcePlanners)
+  {
+    this.dataSourcePlanners = dataSourcePlanners;
+  }
+
   @Override
   public QueryKitSpec makeQueryKitSpec(
       final QueryKit<Query<?>> queryKit,
@@ -36,6 +46,6 @@ public class DartQueryKitSpecFactory implements QueryKitSpecFactory
       final QueryContext queryContext
   )
   {
-    return new QueryKitSpec(queryKit, queryId);
+    return new QueryKitSpec(queryKit, dataSourcePlanners, queryId);
   }
 }

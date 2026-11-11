@@ -26,9 +26,10 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -49,7 +50,7 @@ public class SegmentPublishResultTest
 
     final String json = objectMapper.writeValueAsString(original);
     final SegmentPublishResult fromJson = objectMapper.readValue(json, SegmentPublishResult.class);
-    Assert.assertEquals(original, fromJson);
+    Assertions.assertEquals(original, fromJson);
   }
 
   @Test
@@ -59,21 +60,14 @@ public class SegmentPublishResultTest
 
     final String json = objectMapper.writeValueAsString(original);
     final SegmentPublishResult fromJson = objectMapper.readValue(json, SegmentPublishResult.class);
-    Assert.assertEquals(original, fromJson);
+    Assertions.assertEquals(original, fromJson);
   }
 
   private static DataSegment segment(Interval interval)
   {
-    return new DataSegment(
-        "ds",
-        interval,
-        "version",
-        null,
-        null,
-        null,
-        null,
-        9,
-        10L
-    );
+    return DataSegment.builder(SegmentId.of("ds", interval, "version", 0))
+                      .binaryVersion(9)
+                      .size(10L)
+                      .build();
   }
 }

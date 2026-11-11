@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -44,7 +43,8 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -58,12 +58,11 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -97,12 +96,10 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -216,9 +213,6 @@ public class ClientQuerySegmentWalkerTest
 
   private static final String DUMMY_QUERY_ID = "dummyQueryId";
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private Closer closer;
   private QueryRunnerFactoryConglomerate conglomerate;
   private final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
@@ -232,7 +226,7 @@ public class ClientQuerySegmentWalkerTest
 
   private ObservableQueryScheduler scheduler;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     closer = Closer.create();
@@ -247,7 +241,7 @@ public class ClientQuerySegmentWalkerTest
     initWalker(ImmutableMap.of(), scheduler);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     closer.close();
@@ -262,7 +256,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -272,10 +266,10 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), 10L})
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -287,7 +281,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -298,7 +292,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -308,10 +302,10 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), 10L})
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -332,10 +326,10 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), 10L})
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(0, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(0, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -376,10 +370,10 @@ public class ClientQuerySegmentWalkerTest
 
     // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
     // invocation of either the cluster or local walker in ClientQuerySegmentWalker
-    Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(2, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -410,10 +404,10 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{3L})
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -444,10 +438,10 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{3L})
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(0, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(0, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -488,10 +482,10 @@ public class ClientQuerySegmentWalkerTest
 
     // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
     // invocation of either the cluster or local walker in ClientQuerySegmentWalker
-    Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(2, scheduler.getTotalRun().get());
+    Assertions.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -521,10 +515,10 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -587,10 +581,10 @@ public class ClientQuerySegmentWalkerTest
 
     // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
     // invocation of either the cluster or local walker in ClientQuerySegmentWalker
-    Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(2, scheduler.getTotalRun().get());
+    Assertions.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -684,10 +678,10 @@ public class ClientQuerySegmentWalkerTest
 
     // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
     // invocation of either the cluster or local walker in ClientQuerySegmentWalker
-    Assert.assertEquals(4, scheduler.getTotalRun().get());
-    Assert.assertEquals(4, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(4, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(4, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(4, scheduler.getTotalRun().get());
+    Assertions.assertEquals(4, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(4, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(4, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -734,10 +728,10 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(2, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -784,82 +778,85 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(2, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
   public void testJoinOnTableErrorCantInlineTable()
   {
-    final GroupByQuery query =
-        (GroupByQuery) GroupByQuery.builder()
-                                   .setDataSource(
-                                       JoinDataSource.create(
-                                           new TableDataSource(FOO),
-                                           new TableDataSource(BAR),
-                                           "j.",
-                                           "\"j.s\" == \"s\"",
-                                           JoinType.INNER,
-                                           null,
-                                           ExprMacroTable.nil(),
-                                           null,
-                                           JoinAlgorithm.BROADCAST
-                                       )
-                                   )
-                                   .setGranularity(Granularities.ALL)
-                                   .setInterval(Intervals.ONLY_ETERNITY)
-                                   .setDimensions(DefaultDimensionSpec.of("s"), DefaultDimensionSpec.of("j.s"))
-                                   .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
-                                   .build()
-                                   .withId(DUMMY_QUERY_ID);
+    Throwable exception = Assertions.assertThrows(IllegalStateException.class, () -> {
+      final GroupByQuery query =
+          (GroupByQuery) GroupByQuery.builder()
+              .setDataSource(
+                  JoinDataSource.create(
+                      new TableDataSource(FOO),
+                      new TableDataSource(BAR),
+                      "j.",
+                      "\"j.s\" == \"s\"",
+                      JoinType.INNER,
+                      null,
+                      ExprMacroTable.nil(),
+                      null,
+                      JoinAlgorithm.BROADCAST
+                  )
+              )
+              .setGranularity(Granularities.ALL)
+              .setInterval(Intervals.ONLY_ETERNITY)
+              .setDimensions(DefaultDimensionSpec.of("s"), DefaultDimensionSpec.of("j.s"))
+              .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
+              .build()
+              .withId(DUMMY_QUERY_ID);
 
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Cannot handle subquery structure for dataSource");
-
-    testQuery(query, ImmutableList.of(), ImmutableList.of());
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+    });
+    Assertions.assertTrue(exception.getMessage().contains("Cannot handle subquery structure for dataSource"));
   }
 
   @Test
   public void testTimeseriesOnGroupByOnTableErrorTooManyRows()
   {
-    initWalker(ImmutableMap.of("maxSubqueryRows", "2"));
+    Throwable exception = Assertions.assertThrows(ResourceLimitExceededException.class, () -> {
+      initWalker(QueryContext.ofMap(QueryContextParameters.MAX_SUBQUERY_ROWS, 2));
 
-    final GroupByQuery subquery =
-        GroupByQuery.builder()
-                    .setDataSource(FOO)
-                    .setGranularity(Granularities.ALL)
-                    .setInterval(Collections.singletonList(INTERVAL))
-                    .setDimensions(DefaultDimensionSpec.of("s"))
-                    .build();
+      final GroupByQuery subquery =
+          GroupByQuery.builder()
+              .setDataSource(FOO)
+              .setGranularity(Granularities.ALL)
+              .setInterval(Collections.singletonList(INTERVAL))
+              .setDimensions(DefaultDimensionSpec.of("s"))
+              .build();
 
-    final TimeseriesQuery query =
-        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
-                                .dataSource(new QueryDataSource(subquery))
-                                .granularity(Granularities.ALL)
-                                .intervals(Intervals.ONLY_ETERNITY)
-                                .aggregators(new CountAggregatorFactory("cnt"))
-                                .build()
-                                .withId(DUMMY_QUERY_ID);
+      final TimeseriesQuery query =
+          (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+              .dataSource(new QueryDataSource(subquery))
+              .granularity(Granularities.ALL)
+              .intervals(Intervals.ONLY_ETERNITY)
+              .aggregators(new CountAggregatorFactory("cnt"))
+              .build()
+              .withId(DUMMY_QUERY_ID);
 
-    expectedException.expect(ResourceLimitExceededException.class);
-    expectedException.expectMessage(
-        "Cannot issue the query, subqueries generated results beyond maximum[2] rows. Try setting the "
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+    });
+    Assertions.assertTrue(exception.getMessage().contains("Cannot issue the query, subqueries generated results beyond maximum[2] rows. Try setting the "
         + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
         + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
         + "or 'maxSubqueryRows' in the query context. Manually alter the value carefully as it can cause the broker to go out "
-        + "of memory."
-    );
-
-    testQuery(query, ImmutableList.of(), ImmutableList.of());
+        + "of memory."));
   }
 
   @Test // Regression test for bug fixed in https://github.com/apache/druid/pull/15300
   public void testScanOnScanWithStringExpression()
   {
     initWalker(
-        ImmutableMap.of(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1", QueryContexts.MAX_SUBQUERY_BYTES_KEY, "1000"),
+        QueryContext.ofMap(
+            QueryContextParameters.MAX_SUBQUERY_ROWS,
+            1,
+            QueryContextParameters.MAX_SUBQUERY_BYTES,
+            "1000"
+        ),
         scheduler
     );
 
@@ -915,42 +912,40 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(2, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
   public void testTimeseriesOnGroupByOnTableErrorTooLarge()
   {
-    final GroupByQuery subquery =
-        GroupByQuery.builder()
-                    .setDataSource(FOO)
-                    .setGranularity(Granularities.ALL)
-                    .setInterval(Collections.singletonList(INTERVAL))
-                    .setDimensions(DefaultDimensionSpec.of("s"))
-                    .build();
+    Throwable exception = Assertions.assertThrows(ResourceLimitExceededException.class, () -> {
+      final GroupByQuery subquery =
+          GroupByQuery.builder()
+              .setDataSource(FOO)
+              .setGranularity(Granularities.ALL)
+              .setInterval(Collections.singletonList(INTERVAL))
+              .setDimensions(DefaultDimensionSpec.of("s"))
+              .build();
 
-    final TimeseriesQuery query =
-        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
-                                .dataSource(new QueryDataSource(subquery))
-                                .granularity(Granularities.ALL)
-                                .intervals(Intervals.ONLY_ETERNITY)
-                                .aggregators(new CountAggregatorFactory("cnt"))
-                                .context(ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "1"))
-                                .build()
-                                .withId(DUMMY_QUERY_ID);
+      final TimeseriesQuery query =
+          (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+              .dataSource(new QueryDataSource(subquery))
+              .granularity(Granularities.ALL)
+              .intervals(Intervals.ONLY_ETERNITY)
+              .aggregators(new CountAggregatorFactory("cnt"))
+              .context(QueryContext.ofMap(QueryContextParameters.MAX_SUBQUERY_BYTES, "1"))
+              .build()
+              .withId(DUMMY_QUERY_ID);
 
-    expectedException.expect(ResourceLimitExceededException.class);
-    expectedException.expectMessage(
-        "Cannot issue the query, subqueries generated results beyond maximum[1] bytes. Increase the "
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+    });
+    Assertions.assertTrue(exception.getMessage().contains("Cannot issue the query, subqueries generated results beyond maximum[1] bytes. Increase the "
         + "JVM's memory or set the 'maxSubqueryBytes' in the query context to increase the space "
         + "allocated for subqueries to materialize their results. Manually alter the value carefully as it can cause "
-        + "the broker to go out of memory."
-    );
-
-    testQuery(query, ImmutableList.of(), ImmutableList.of());
+        + "the broker to go out of memory."));
   }
 
   @Test
@@ -992,11 +987,11 @@ public class ClientQuerySegmentWalkerTest
     for (ServiceMetricEvent event : emitter.getMetricEvents(ClientQuerySegmentWalker.ROWS_COUNT_METRIC)) {
       EventMap map = event.toMap();
       if (ClientQuerySegmentWalker.ROWS_COUNT_METRIC.equals(map.get("metric"))) {
-        Assert.assertTrue(map.containsKey("host"));
-        Assert.assertTrue(map.containsKey("service"));
-        Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
-        Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
-        Assert.assertEquals(3, map.get("value"));
+        Assertions.assertTrue(map.containsKey("host"));
+        Assertions.assertTrue(map.containsKey("service"));
+        Assertions.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
+        Assertions.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
+        Assertions.assertEquals(3, map.get("value"));
       }
     }
   }
@@ -1018,7 +1013,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Intervals.ONLY_ETERNITY)
                                 .aggregators(new CountAggregatorFactory("cnt"))
-                                .context(ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "10000"))
+                                .context(QueryContext.ofMap(QueryContextParameters.MAX_SUBQUERY_BYTES, "10000"))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -1040,20 +1035,20 @@ public class ClientQuerySegmentWalkerTest
 
     for (ServiceMetricEvent event : emitter.getMetricEvents(ClientQuerySegmentWalker.ROWS_COUNT_METRIC)) {
       EventMap map = event.toMap();
-      Assert.assertTrue(map.containsKey("host"));
-      Assert.assertTrue(map.containsKey("service"));
-      Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
-      Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
-      Assert.assertEquals(3, map.get("value"));
+      Assertions.assertTrue(map.containsKey("host"));
+      Assertions.assertTrue(map.containsKey("service"));
+      Assertions.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
+      Assertions.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
+      Assertions.assertEquals(3, map.get("value"));
     }
 
     for (ServiceMetricEvent event : emitter.getMetricEvents(ClientQuerySegmentWalker.BYTES_COUNT_METRIC)) {
       EventMap map = event.toMap();
-      Assert.assertTrue(map.containsKey("host"));
-      Assert.assertTrue(map.containsKey("service"));
-      Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
-      Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
-      Assert.assertEquals(43L, map.get("value"));
+      Assertions.assertTrue(map.containsKey("host"));
+      Assertions.assertTrue(map.containsKey("service"));
+      Assertions.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
+      Assertions.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
+      Assertions.assertEquals(43L, map.get("value"));
     }
   }
 
@@ -1138,10 +1133,10 @@ public class ClientQuerySegmentWalkerTest
           )
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -1226,10 +1221,10 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -1308,37 +1303,35 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
 
   @Test
   public void testTopNArraysDoubles()
   {
-    final TopNQuery query =
-        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
-                                          .granularity(Granularities.ALL)
-                                          .intervals(Intervals.ONLY_ETERNITY)
-                                          .dimension(DefaultDimensionSpec.of("ad"))
-                                          .metric("sum_n")
-                                          .threshold(1000)
-                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
-                                          .build()
-                                          .withId(DUMMY_QUERY_ID);
+    Throwable exception = Assertions.assertThrows(RuntimeException.class, () -> {
+      final TopNQuery query =
+          (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
+              .granularity(Granularities.ALL)
+              .intervals(Intervals.ONLY_ETERNITY)
+              .dimension(DefaultDimensionSpec.of("ad"))
+              .metric("sum_n")
+              .threshold(1000)
+              .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+              .build()
+              .withId(DUMMY_QUERY_ID);
 
-
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<DOUBLE>]");
-
-    testQuery(
-        query,
-        ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
-    );
+      testQuery(
+          query,
+          ImmutableList.of(ExpectedQuery.cluster(query)),
+          ImmutableList.of()
+      );
+    });
+    Assertions.assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<DOUBLE>]"));
   }
 
   @Test
@@ -1371,35 +1364,34 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
   public void testTopNOnArraysLongs()
   {
-    final TopNQuery query =
-        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
-                                          .granularity(Granularities.ALL)
-                                          .intervals(Intervals.ONLY_ETERNITY)
-                                          .dimension(DefaultDimensionSpec.of("al"))
-                                          .metric("sum_n")
-                                          .threshold(1000)
-                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
-                                          .build()
-                                          .withId(DUMMY_QUERY_ID);
+    Throwable exception = Assertions.assertThrows(RuntimeException.class, () -> {
+      final TopNQuery query =
+          (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
+              .granularity(Granularities.ALL)
+              .intervals(Intervals.ONLY_ETERNITY)
+              .dimension(DefaultDimensionSpec.of("al"))
+              .metric("sum_n")
+              .threshold(1000)
+              .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+              .build()
+              .withId(DUMMY_QUERY_ID);
 
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<LONG>]");
-
-    testQuery(
-        query,
-        ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
-    );
+      testQuery(
+          query,
+          ImmutableList.of(ExpectedQuery.cluster(query)),
+          ImmutableList.of()
+      );
+    });
+    Assertions.assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<LONG>]"));
   }
 
   @Test
@@ -1432,36 +1424,34 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
   public void testTopNOnArraysStrings()
   {
-    final TopNQuery query =
-        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
-                                          .granularity(Granularities.ALL)
-                                          .intervals(Intervals.ONLY_ETERNITY)
-                                          .dimension(DefaultDimensionSpec.of("as"))
-                                          .metric("sum_n")
-                                          .threshold(1000)
-                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
-                                          .build()
-                                          .withId(DUMMY_QUERY_ID);
+    Throwable exception = Assertions.assertThrows(RuntimeException.class, () -> {
+      final TopNQuery query =
+          (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
+              .granularity(Granularities.ALL)
+              .intervals(Intervals.ONLY_ETERNITY)
+              .dimension(DefaultDimensionSpec.of("as"))
+              .metric("sum_n")
+              .threshold(1000)
+              .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+              .build()
+              .withId(DUMMY_QUERY_ID);
 
-
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<STRING>]");
-
-    testQuery(
-        query,
-        ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
-    );
+      testQuery(
+          query,
+          ImmutableList.of(ExpectedQuery.cluster(query)),
+          ImmutableList.of()
+      );
+    });
+    Assertions.assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<STRING>]"));
   }
 
   @Test
@@ -1494,10 +1484,10 @@ public class ClientQuerySegmentWalkerTest
         )
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -1509,7 +1499,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "al"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -1520,10 +1510,10 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), null})
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -1535,7 +1525,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "al"))
-                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -1546,10 +1536,10 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), null})
     );
 
-    Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(1, scheduler.getTotalRun().get());
+    Assertions.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -1560,7 +1550,7 @@ public class ClientQuerySegmentWalkerTest
         .granularity(Granularities.ALL)
         .intervals(Collections.singletonList(INTERVAL))
         .aggregators(new LongSumAggregatorFactory("sum", "n"))
-        .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+        .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
         .build()
         .withId(DUMMY_QUERY_ID);
     TimeseriesQuery subQuery2 = (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
@@ -1568,7 +1558,7 @@ public class ClientQuerySegmentWalkerTest
         .granularity(Granularities.ALL)
         .intervals(Collections.singletonList(INTERVAL))
         .aggregators(new LongSumAggregatorFactory("sum", "n"))
-        .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+        .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, false))
         .build()
         .withId(DUMMY_QUERY_ID);
     final Query query = Druids.newScanQueryBuilder()
@@ -1598,16 +1588,16 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[] {10L}, new Object[] {10L})
     );
 
-    Assert.assertEquals(3, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
-    Assert.assertEquals(3, scheduler.getTotalAcquired().get());
-    Assert.assertEquals(3, scheduler.getTotalReleased().get());
+    Assertions.assertEquals(3, scheduler.getTotalRun().get());
+    Assertions.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assertions.assertEquals(3, scheduler.getTotalAcquired().get());
+    Assertions.assertEquals(3, scheduler.getTotalReleased().get());
   }
 
   /**
    * Initialize (or reinitialize) our {@link #walker} and {@link #closer} with default scheduler.
    */
-  private void initWalker(final Map<String, String> serverProperties)
+  private void initWalker(final Map<String, ?> serverProperties)
   {
     initWalker(serverProperties, QueryStackTests.DEFAULT_NOOP_SCHEDULER);
   }
@@ -1615,7 +1605,7 @@ public class ClientQuerySegmentWalkerTest
   /**
    * Initialize (or reinitialize) our {@link #walker} and {@link #closer}.
    */
-  private void initWalker(final Map<String, String> serverProperties, QueryScheduler schedulerForTest)
+  private void initWalker(final Map<String, ?> serverProperties, QueryScheduler schedulerForTest)
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final ServerConfig serverConfig = jsonMapper.convertValue(serverProperties, ServerConfig.class);
@@ -1755,7 +1745,7 @@ public class ClientQuerySegmentWalkerTest
     }
 
     QueryToolChestTestHelper.assertArrayResultsEquals(expectedResults, Sequences.simple(arrays));
-    Assert.assertEquals(expectedQueries, issuedQueries);
+    Assertions.assertEquals(expectedQueries, issuedQueries);
   }
 
   private enum ClusterOrLocal
@@ -1773,20 +1763,20 @@ public class ClientQuerySegmentWalkerTest
     {
       Query<?> modifiedQuery;
       // Need to blast various parameters that will vary and aren't important to test for.
-      ImmutableMap.Builder<String, Object> contextBuilder = ImmutableMap.builder();
-      contextBuilder.put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
-                    .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
-                    .put(QueryContexts.FINALIZE_KEY, true)
-                    .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0L)
-                    .put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)
-                    .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
-                    .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
-                    .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
-                    .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
-                    .put(QueryContexts.QUERY_RESOURCE_ID, "dummy")
-                    .put(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, "blast");
+      final QueryContextBuilder contextBuilder = QueryContext.builder();
+      contextBuilder.put(QueryContextParameters.DEFAULT_TIMEOUT, 0L)
+                    .put(QueryContextParameters.FINALIZE, true)
+                    .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 0L)
+                    .put(QueryContextParameters.QUERY_RESOURCE_ID, "dummy")
+                    .put(QueryContextParameters.QUERY_FAIL_TIME, 0L)
+                    .put(QueryContextParameters.SORT_BY_DIMS_FIRST, false)
+                    .put(QueryContextParameters.RESULT_AS_ARRAY, true)
+                    .put(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, true)
+                    .put(QueryContextParameters.GROUP_BY_OUTERMOST, true)
+                    .put(QueryContextParameters.FUDGE_TIMESTAMP, "1979")
+                    .put(QueryContextParameters.SERIALIZATION, ResultSerializationMode.ROWS);
 
-      modifiedQuery = query.withOverriddenContext(contextBuilder.build());
+      modifiedQuery = query.withOverriddenContext(contextBuilder.toMap());
 
       if (modifiedQuery.getDataSource() instanceof FrameBasedInlineDataSource) {
         // Do round-trip serialization in order to replace FrameBasedInlineDataSource with InlineDataSource, so
@@ -1883,4 +1873,3 @@ public class ClientQuerySegmentWalkerTest
     return timeline;
   }
 }
-

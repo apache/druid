@@ -60,6 +60,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -67,8 +68,8 @@ import org.apache.druid.utils.Streams;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -206,15 +207,15 @@ public class NewestSegmentFirstPolicyTest
       Interval prevInterval = null;
       for (DataSegment segment : segments) {
         if (prevInterval != null && !prevInterval.getStart().equals(segment.getInterval().getStart())) {
-          Assert.assertEquals(prevInterval.getEnd(), segment.getInterval().getStart());
+          Assertions.assertEquals(prevInterval.getEnd(), segment.getInterval().getStart());
         }
 
         prevInterval = segment.getInterval();
       }
     }
 
-    Assert.assertNotNull(lastInterval);
-    Assert.assertEquals(Intervals.of("2017-11-05T00:00:00/2017-11-05T01:00:00"), lastInterval);
+    Assertions.assertNotNull(lastInterval);
+    Assertions.assertEquals(Intervals.of("2017-11-05T00:00:00/2017-11-05T01:00:00"), lastInterval);
   }
 
   @Test
@@ -246,15 +247,15 @@ public class NewestSegmentFirstPolicyTest
       Interval prevInterval = null;
       for (DataSegment segment : segments) {
         if (prevInterval != null && !prevInterval.getStart().equals(segment.getInterval().getStart())) {
-          Assert.assertEquals(prevInterval.getEnd(), segment.getInterval().getStart());
+          Assertions.assertEquals(prevInterval.getEnd(), segment.getInterval().getStart());
         }
 
         prevInterval = segment.getInterval();
       }
     }
 
-    Assert.assertNotNull(lastInterval);
-    Assert.assertEquals(Intervals.of("2017-12-03T11:00:00/2017-12-03T12:00:00"), lastInterval);
+    Assertions.assertNotNull(lastInterval);
+    Assertions.assertEquals(Intervals.of("2017-12-03T11:00:00/2017-12-03T12:00:00"), lastInterval);
   }
 
   @Test
@@ -337,7 +338,7 @@ public class NewestSegmentFirstPolicyTest
     Set<List<DataSegment>> observedSegments = Streams.sequentialStreamFrom(iterator)
                                                      .map(CompactionCandidate::getSegments)
                                                      .collect(Collectors.toSet());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(expectedSegmentsToCompact, expectedSegmentsToCompact2),
         observedSegments
     );
@@ -358,7 +359,7 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -376,7 +377,7 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -404,11 +405,11 @@ public class NewestSegmentFirstPolicyTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14/2017-12-02"), Partitions.ONLY_COMPLETE)
     );
 
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
                                                         .flatMap(s -> s.getSegments().stream())
                                                         .collect(Collectors.toSet());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         observedSegmentsToCompact
     );
@@ -443,11 +444,11 @@ public class NewestSegmentFirstPolicyTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14/P1D"), Partitions.ONLY_COMPLETE)
     );
 
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> actual = iterator.next().getSegments();
-    Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertEquals(expectedSegmentsToCompact.size(), actual.size());
+    Assertions.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -478,11 +479,11 @@ public class NewestSegmentFirstPolicyTest
         )
     );
 
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
                                                         .flatMap(s -> s.getSegments().stream())
                                                         .collect(Collectors.toSet());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         observedSegmentsToCompact
     );
@@ -531,6 +532,39 @@ public class NewestSegmentFirstPolicyTest
         Intervals.of("2017-11-14T01:00:00/2017-11-14T02:00:00"),
         Intervals.of("2017-11-14T23:00:00/2017-11-15T00:00:00"),
         true
+    );
+  }
+
+  @Test
+  public void testConfiguredSkipIntervalsAreHonoredWithNoExternalSkipIntervals()
+  {
+    final SegmentTimeline timeline = createTimeline(
+        createSegments().forIntervals(4, Granularities.DAY)
+                        .startingAt("2017-12-01")
+                        .withNumPartitions(1)
+    );
+
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder()
+            .withSkipIntervals(List.of(Intervals.of("2017-12-02/2017-12-03")))
+            .build(),
+        timeline
+    );
+
+    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01/2017-12-02"), Partitions.ONLY_COMPLETE)
+    );
+    expectedSegmentsToCompact.addAll(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-03/2017-12-05"), Partitions.ONLY_COMPLETE)
+    );
+
+    Assertions.assertTrue(iterator.hasNext());
+    final Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
+                                                              .flatMap(s -> s.getSegments().stream())
+                                                              .collect(Collectors.toSet());
+    Assertions.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        observedSegmentsToCompact
     );
   }
 
@@ -601,43 +635,43 @@ public class NewestSegmentFirstPolicyTest
     // However, we only need to iterator 3 times (once for each month) since the new configured segmentGranularity is MONTH.
     // and hence iterator would return all segments bucketed to the configured segmentGranularity
     // Month of Dec
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-12-01T00:00:00/2017-12-31T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // Month of Nov
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-11-01T00:00:00/2017-12-01T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // Month of Oct
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-11-01T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -660,20 +694,20 @@ public class NewestSegmentFirstPolicyTest
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-28/2020-02-15"), Partitions.ONLY_COMPLETE)
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> actual = iterator.next().getSegments();
-    Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
+    Assertions.assertEquals(expectedSegmentsToCompact.size(), actual.size());
+    Assertions.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     // Month of Jan
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-01/2020-02-03"), Partitions.ONLY_COMPLETE)
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     actual = iterator.next().getSegments();
-    Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
+    Assertions.assertEquals(expectedSegmentsToCompact.size(), actual.size());
+    Assertions.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -694,13 +728,13 @@ public class NewestSegmentFirstPolicyTest
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(
+    Assertions.assertTrue(iterator.hasNext());
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // Iterator should return only once since all the "minute" interval of the iterator contains the same interval
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -719,19 +753,19 @@ public class NewestSegmentFirstPolicyTest
     );
 
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -747,11 +781,21 @@ public class NewestSegmentFirstPolicyTest
     final SegmentTimeline timeline = createTimeline(
         createSegments()
             .startingAt("2017-10-01")
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
             .withNumPartitions(4),
         createSegments()
             .startingAt("2017-10-02")
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
             .withNumPartitions(4)
     );
 
@@ -760,7 +804,7 @@ public class NewestSegmentFirstPolicyTest
         createConfigWithSegmentGranularity(Granularities.DAY),
         timeline
     );
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -773,17 +817,15 @@ public class NewestSegmentFirstPolicyTest
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState = new CompactionState(
-        partitionsSpec,
-        null,
-        null,
-        null,
-        indexSpec,
-        mapper.convertValue(ImmutableMap.of("segmentGranularity", "day"), GranularitySpec.class),
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(partitionsSpec)
+                       .indexSpec(indexSpec)
+                       .granularitySpec(mapper.convertValue(
+                           ImmutableMap.of("segmentGranularity", "day"),
+                           GranularitySpec.class
+                       ))
+                       .build();
     final SegmentTimeline timeline = createTimeline(
         createSegments()
             .forIntervals(2, Granularities.DAY)
@@ -797,7 +839,7 @@ public class NewestSegmentFirstPolicyTest
         createConfigWithSegmentGranularity(Granularities.DAY),
         timeline
     );
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -810,17 +852,11 @@ public class NewestSegmentFirstPolicyTest
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState = new CompactionState(
-        partitionsSpec,
-        null,
-        null,
-        null,
-        indexSpec,
-        null,
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(partitionsSpec)
+                       .indexSpec(indexSpec)
+                       .build();
     final SegmentTimeline timeline = createTimeline(
         createSegments()
             .forIntervals(2, Granularities.DAY)
@@ -835,19 +871,19 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -860,17 +896,15 @@ public class NewestSegmentFirstPolicyTest
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState = new CompactionState(
-        partitionsSpec,
-        null,
-        null,
-        null,
-        indexSpec,
-        mapper.convertValue(ImmutableMap.of("segmentGranularity", "day"), GranularitySpec.class),
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(partitionsSpec)
+                       .indexSpec(indexSpec)
+                       .granularitySpec(mapper.convertValue(
+                           ImmutableMap.of("segmentGranularity", "day"),
+                           GranularitySpec.class
+                       ))
+                       .build();
     final SegmentTimeline timeline = createTimeline(
         createSegments()
             .forIntervals(2, Granularities.DAY)
@@ -885,19 +919,19 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -915,7 +949,12 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Duration of new segmentGranularity is the same as before (P1D),
@@ -935,19 +974,19 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -965,7 +1004,12 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Duration of new segmentGranularity is the same as before (P1D), but we changed the origin in the autocompaction spec
@@ -984,19 +1028,19 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1017,47 +1061,35 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-01")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                new UniformGranularitySpec(null, null, false, null),
-                null,
-                null,
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(new UniformGranularitySpec(null, null, false, null))
+                               .build()
+            ),
         createSegments()
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                new UniformGranularitySpec(null, null, true, null),
-                null,
-                null,
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(new UniformGranularitySpec(null, null, true, null))
+                               .build()
+            ),
         createSegments()
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-03")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                new UniformGranularitySpec(null, null, false, null),
-                null,
-                null,
-                null
-            ))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(new UniformGranularitySpec(null, null, false, null))
+                               .build()
+            )
     );
 
     // Auto compaction config sets rollup=true
@@ -1068,30 +1100,30 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1112,53 +1144,41 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-01")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                mapper.convertValue(
-                    ImmutableMap.of("queryGranularity", "day"),
-                    GranularitySpec.class
-                ),
-                null,
-                null,
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(mapper.convertValue(
+                                   ImmutableMap.of("queryGranularity", "day"),
+                                   GranularitySpec.class
+                               ))
+                               .build()
+            ),
         createSegments()
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                mapper.convertValue(
-                    ImmutableMap.of("queryGranularity", "minute"),
-                    GranularitySpec.class
-                ),
-                null,
-                null,
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(mapper.convertValue(
+                                   ImmutableMap.of("queryGranularity", "minute"),
+                                   GranularitySpec.class
+                               ))
+                               .build()
+            ),
         createSegments()
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-03")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                mapper.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                null,
-                null,
-                null
-            ))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(mapper.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                               .build()
+            )
     );
 
     // Auto compaction config sets queryGranularity=MINUTE
@@ -1169,30 +1189,30 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1214,55 +1234,45 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                        "bar",
-                        "foo"
-                    ))),
-                    null,
-                    null,
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                   "bar",
+                                   "foo"
+                               ))))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-02")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
-                    null,
-                    null,
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                   "foo"))))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-03")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                DimensionsSpec.EMPTY,
-                null,
-                null,
-                indexSpec,
-                null,
-                null,
-                null,
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(DimensionsSpec.EMPTY)
+                               .indexSpec(indexSpec)
+                               .build()
+            ),
         createSegments()
             .startingAt("2017-10-04")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Auto compaction config sets Dimensions=["foo"]
@@ -1273,41 +1283,41 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
 
     // Auto compaction config sets Dimensions=null
     iterator = createIterator(
@@ -1317,7 +1327,7 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1341,43 +1351,31 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                        "dim2",
-                        "dim4",
-                        "dim3",
-                        "dim1"
-                    ))),
-                    null,
-                    null,
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                   "dim2",
+                                   "dim4",
+                                   "dim3",
+                                   "dim1"
+                               ))))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-02")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                        "dim2",
-                        "dim4",
-                        "dim1",
-                        "dim3"
-                    ))),
-                    null,
-                    null,
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                   "dim2",
+                                   "dim4",
+                                   "dim1",
+                                   "dim3"
+                               ))))
+                               .indexSpec(indexSpec)
+                               .build()
             )
     );
 
@@ -1419,19 +1417,19 @@ public class NewestSegmentFirstPolicyTest
     );
     // We should get only interval 2017-10-01T00:00:00/2017-10-02T00:00:00 since 2017-10-02T00:00:00/2017-10-03T00:00:00
     // has dimension order as expected post reordering of partition dimensions.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1453,54 +1451,47 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    null,
-                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null),
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .transformSpec(new CompactionTransformSpec(
+                                   new SelectorDimFilter("dim1", "foo", null),
+                                   null
+                               ))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-02")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    null,
-                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null), null),
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .transformSpec(new CompactionTransformSpec(
+                                   new SelectorDimFilter("dim1", "bar", null),
+                                   null
+                               ))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-03")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    null,
-                    new CompactionTransformSpec(null, null),
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .transformSpec(new CompactionTransformSpec(null, null))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-04")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Auto compaction config sets filter=SelectorDimFilter("dim1", "bar", null)
@@ -1511,41 +1502,41 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
 
     // Auto compaction config sets filter=null
     iterator = createIterator(
@@ -1555,7 +1546,7 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1581,57 +1572,44 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    List.of(new CountAggregatorFactory("cnt")),
-                    null,
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .metricsSpec(List.of(new CountAggregatorFactory("cnt")))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-02")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    List.of(
-                        new CountAggregatorFactory("cnt"),
-                        new LongSumAggregatorFactory("val", "val")
-                    ),
-                    null,
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .metricsSpec(List.of(
+                                   new CountAggregatorFactory("cnt"),
+                                   new LongSumAggregatorFactory("val", "val")
+                               ))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-03")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    List.of(),
-                    null,
-                    indexSpec,
-                    null,
-                    null,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .metricsSpec(List.of())
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-04")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Auto compaction config sets metricsSpec={CountAggregatorFactory("cnt"), LongSumAggregatorFactory("val", "val")}
@@ -1642,41 +1620,41 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
 
     // Auto compaction config sets metricsSpec=null
     iterator = createIterator(
@@ -1684,7 +1662,7 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1706,19 +1684,19 @@ public class NewestSegmentFirstPolicyTest
     // Although the first iteration only covers the last hour of 2017-10-01 (2017-10-01T23:00:00/2017-10-02T00:00:00),
     // the iterator will returns all segment as the umbrella interval the DAY segment (2017-10-01T00:00:00/2017-10-02T00:00:00)
     // also convers the HOUR segment (2017-10-01T01:00:00/2017-10-01T02:00:00)
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1735,7 +1713,12 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, newIndexSpec, null, null, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(newIndexSpec)
+                               .build()
+            )
     );
 
     // Duration of new segmentGranularity is the same as before (P1D)
@@ -1754,19 +1737,19 @@ public class NewestSegmentFirstPolicyTest
         timeline
     );
     // We should get all segments in timeline back since indexSpec changed
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(
             Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"),
             Partitions.ONLY_COMPLETE
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1780,7 +1763,10 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(partitionsSpec, null, null, null, IndexSpec.getDefault(), null, null, null, null)
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(IndexSpec.getDefault())
+                               .build()
             )
     );
 
@@ -1810,7 +1796,7 @@ public class NewestSegmentFirstPolicyTest
         ).build(),
         timeline
     );
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
 
     iterator = createIterator(
         configBuilder().withTuningConfig(
@@ -1838,7 +1824,7 @@ public class NewestSegmentFirstPolicyTest
         ).build(),
         timeline
     );
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1847,22 +1833,19 @@ public class NewestSegmentFirstPolicyTest
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            Intervals.ETERNITY,
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.ETERNITY, "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1871,22 +1854,19 @@ public class NewestSegmentFirstPolicyTest
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")),
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")), "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1895,22 +1875,19 @@ public class NewestSegmentFirstPolicyTest
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX),
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX), "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1921,22 +1898,19 @@ public class NewestSegmentFirstPolicyTest
             new UserCompactionTaskGranularityConfig(Granularities.ALL, null, null)
         ).build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            Intervals.ETERNITY,
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.ETERNITY, "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -1947,60 +1921,48 @@ public class NewestSegmentFirstPolicyTest
             new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
         ).build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
-                                        new DataSegment(
-                                            TestDataSource.WIKI,
-                                            Intervals.ETERNITY,
-                                            "0",
-                                            new HashMap<>(),
-                                            new ArrayList<>(),
-                                            new ArrayList<>(),
-                                            new NumberedShardSpec(0, 0),
-                                            0,
-                                            100
-                                        )
+                                        DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.ETERNITY, "0", 0))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(0, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build()
                                     )
         )
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
   public void testSkipCompactionForIntervalsContainingSingleTombstone()
   {
-    final DataSegment tombstone2023 = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2023/2024"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
-    final DataSegment dataSegment2023 = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2023/2024"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        new NumberedShardSpec(1, 0),
-        0,
-        100
-    );
-    final DataSegment tombstone2024 = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2024/2025"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
+    final DataSegment tombstone2023 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2023/2024"), "0", 0))
+                                                 .loadSpec(new HashMap<>())
+                                                 .dimensions(new ArrayList<>())
+                                                 .metrics(new ArrayList<>())
+                                                 .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                 .binaryVersion(0)
+                                                 .size(1)
+                                                 .build();
+    final DataSegment dataSegment2023 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2023/2024"), "0", 1))
+                                                   .loadSpec(new HashMap<>())
+                                                   .dimensions(new ArrayList<>())
+                                                   .metrics(new ArrayList<>())
+                                                   .shardSpec(new NumberedShardSpec(1, 0))
+                                                   .binaryVersion(0)
+                                                   .size(100)
+                                                   .build();
+    final DataSegment tombstone2024 = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2024/2025"), "0", 0))
+                                                 .loadSpec(new HashMap<>())
+                                                 .dimensions(new ArrayList<>())
+                                                 .metrics(new ArrayList<>())
+                                                 .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                 .binaryVersion(0)
+                                                 .size(1)
+                                                 .build();
 
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().withGranularitySpec(
@@ -2011,44 +1973,35 @@ public class NewestSegmentFirstPolicyTest
 
     // Skips 2024/2025 since it has a single tombstone and no data.
     // Return all segments in 2023/2024 since at least one of them has data despite there being a tombstone.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(tombstone2023, dataSegment2023),
         iterator.next().getSegments()
     );
 
-    final DataSegment tombstone2025Jan = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2025-01-01/2025-02-01"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
-    final DataSegment tombstone2025Feb = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2025-02-01/2025-03-01"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
-    final DataSegment tombstone2025Mar = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2025-03-01/2025-04-01"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        TombstoneShardSpec.INSTANCE,
-        0,
-        1
-    );
+    final DataSegment tombstone2025Jan = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2025-01-01/2025-02-01"), "0", 0))
+                                                    .loadSpec(new HashMap<>())
+                                                    .dimensions(new ArrayList<>())
+                                                    .metrics(new ArrayList<>())
+                                                    .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                    .binaryVersion(0)
+                                                    .size(1)
+                                                    .build();
+    final DataSegment tombstone2025Feb = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2025-02-01/2025-03-01"), "0", 0))
+                                                    .loadSpec(new HashMap<>())
+                                                    .dimensions(new ArrayList<>())
+                                                    .metrics(new ArrayList<>())
+                                                    .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                    .binaryVersion(0)
+                                                    .size(1)
+                                                    .build();
+    final DataSegment tombstone2025Mar = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2025-03-01/2025-04-01"), "0", 0))
+                                                    .loadSpec(new HashMap<>())
+                                                    .dimensions(new ArrayList<>())
+                                                    .metrics(new ArrayList<>())
+                                                    .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                    .binaryVersion(0)
+                                                    .size(1)
+                                                    .build();
     iterator = createIterator(
         configBuilder().withGranularitySpec(
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
@@ -2063,7 +2016,7 @@ public class NewestSegmentFirstPolicyTest
         ))
     );
     // Does not skip the tombstones in 2025 since there are multiple of them which could potentially be condensed to one
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(tombstone2025Jan, tombstone2025Feb, tombstone2025Mar),
         iterator.next().getSegments()
     );
@@ -2102,15 +2055,15 @@ public class NewestSegmentFirstPolicyTest
     );
 
     // Verify that the segments of WIKI are preferred even though they are older
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     CompactionCandidate next = iterator.next();
-    Assert.assertEquals(TestDataSource.WIKI, next.getDataSource());
-    Assert.assertEquals(Intervals.of("2012-01-01/P1D"), next.getUmbrellaInterval());
+    Assertions.assertEquals(TestDataSource.WIKI, next.getDataSource());
+    Assertions.assertEquals(Intervals.of("2012-01-01/P1D"), next.getUmbrellaInterval());
 
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     next = iterator.next();
-    Assert.assertEquals(TestDataSource.KOALA, next.getDataSource());
-    Assert.assertEquals(Intervals.of("2013-01-01/P1D"), next.getUmbrellaInterval());
+    Assertions.assertEquals(TestDataSource.KOALA, next.getDataSource());
+    Assertions.assertEquals(Intervals.of("2013-01-01/P1D"), next.getUmbrellaInterval());
   }
 
   private CompactionSegmentIterator createIterator(DataSourceCompactionConfig config, SegmentTimeline timeline)
@@ -2137,11 +2090,11 @@ public class NewestSegmentFirstPolicyTest
       final List<DataSegment> segments = iterator.next().getSegments();
 
       final Interval firstInterval = segments.get(0).getInterval();
-      Assert.assertTrue(
-          "Intervals should be same or abutting",
+      Assertions.assertTrue(
           segments.stream().allMatch(
               segment -> segment.getInterval().isEqual(firstInterval) || segment.getInterval().abuts(firstInterval)
-          )
+          ),
+          "Intervals should be same or abutting"
       );
 
       final List<Interval> expectedIntervals = new ArrayList<>(segments.size());
@@ -2153,7 +2106,7 @@ public class NewestSegmentFirstPolicyTest
       }
       expectedIntervals.sort(Comparators.intervalsByStartThenEnd());
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           expectedIntervals,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
       );
@@ -2165,7 +2118,7 @@ public class NewestSegmentFirstPolicyTest
     }
 
     if (assertLast) {
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 

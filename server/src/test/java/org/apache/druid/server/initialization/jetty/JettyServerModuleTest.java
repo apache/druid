@@ -32,12 +32,13 @@ import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 public class JettyServerModuleTest
 {
@@ -114,7 +115,7 @@ public class JettyServerModuleTest
         certificateChecker
     );
 
-    Assert.assertNotNull(server);
+    Assertions.assertNotNull(server);
   }
 
   @Test
@@ -167,7 +168,7 @@ public class JettyServerModuleTest
         certificateChecker
     );
 
-    Assert.assertNotNull(server);
+    Assertions.assertNotNull(server);
 
     // Verify that custom SSL context factory was used
     Mockito.verify(provider).get();
@@ -231,7 +232,7 @@ public class JettyServerModuleTest
         certificateChecker
     );
 
-    Assert.assertNotNull(server);
+    Assertions.assertNotNull(server);
 
     // Verify that custom SSL context factory was used
     Mockito.verify(provider).get();
@@ -243,5 +244,17 @@ public class JettyServerModuleTest
     Mockito.verify(customSslContextFactory, Mockito.never()).setCertAlias("druid");
     Mockito.verify(customSslContextFactory, Mockito.never()).setExcludeCipherSuites("TLS_RSA_WITH_NULL_SHA256");
     Mockito.verify(customSslContextFactory, Mockito.never()).setExcludeProtocols("TLSv1", "TLSv1.1");
+  }
+
+  @Test
+  public void testIsGracefulShutdownTimeout()
+  {
+    Assertions.assertTrue(JettyServerModule.isGracefulShutdownTimeout(new TimeoutException()));
+    Assertions.assertFalse(JettyServerModule.isGracefulShutdownTimeout(new IllegalStateException()));
+
+    // Other failures during stop are attached as suppressed exceptions, and should still be reported.
+    final TimeoutException withOtherFailure = new TimeoutException();
+    withOtherFailure.addSuppressed(new IllegalStateException());
+    Assertions.assertFalse(JettyServerModule.isGracefulShutdownTimeout(withOtherFailure));
   }
 }

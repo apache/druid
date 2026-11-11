@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -29,11 +28,10 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.TaskLookup;
 import org.easymock.EasyMock;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -43,7 +41,7 @@ public class IndexerMetadataStorageAdapterTest
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     indexerMetadataStorageCoordinator = EasyMock.strictMock(IndexerMetadataStorageCoordinator.class);
@@ -82,7 +80,7 @@ public class IndexerMetadataStorageAdapterTest
         .andReturn(10);
     EasyMock.replay(taskStorage, indexerMetadataStorageCoordinator);
 
-    Assert.assertEquals(10, indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval));
+    Assertions.assertEquals(10, indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval));
   }
 
   @Test
@@ -115,16 +113,18 @@ public class IndexerMetadataStorageAdapterTest
         .andReturn(10);
     EasyMock.replay(taskStorage, indexerMetadataStorageCoordinator);
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Cannot delete pendingSegments for datasource[dataSource] as there is at least one active task[id1]"
-            + " created at[2017-11-01T00:00:00.000Z] that overlaps with the delete "
-            + "interval[2017-01-01T00:00:00.000Z/2017-12-01T00:00:00.000Z]. Please retry when there are no active tasks."
-        )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(
+        "Cannot delete pendingSegments for datasource[dataSource] as there is at least one active task[id1]"
+        + " created at[2017-11-01T00:00:00.000Z] that overlaps with the delete "
+        + "interval[2017-01-01T00:00:00.000Z/2017-12-01T00:00:00.000Z]. Please retry when there are no active tasks.",
+        exception.getMessage()
     );
   }
 
@@ -158,16 +158,18 @@ public class IndexerMetadataStorageAdapterTest
         .andReturn(10);
     EasyMock.replay(taskStorage, indexerMetadataStorageCoordinator);
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Cannot delete pendingSegments for datasource[dataSource] as there is at least one active task[id2]"
-            + " created at[2017-11-01T00:00:00.000Z] that overlaps with the delete"
-            + " interval[2017-01-01T00:00:00.000Z/2018-12-01T00:00:00.000Z]. Please retry when there are no active tasks."
-        )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(
+        "Cannot delete pendingSegments for datasource[dataSource] as there is at least one active task[id2]"
+        + " created at[2017-11-01T00:00:00.000Z] that overlaps with the delete"
+        + " interval[2017-01-01T00:00:00.000Z/2018-12-01T00:00:00.000Z]. Please retry when there are no active tasks.",
+        exception.getMessage()
     );
   }
 }

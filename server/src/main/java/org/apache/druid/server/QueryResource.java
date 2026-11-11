@@ -21,12 +21,19 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -38,6 +45,7 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -91,6 +99,7 @@ public class QueryResource implements QueryCountStatsProvider
   protected final QueryScheduler queryScheduler;
   protected final AuthorizerMapper authorizerMapper;
 
+  private final ServerConfig serverConfig;
   private final QueryResourceQueryResultPusherFactory queryResultPusherFactory;
   protected final ResourceIOReaderWriterFactory resourceIOReaderWriterFactory;
 
@@ -107,7 +116,8 @@ public class QueryResource implements QueryCountStatsProvider
       QueryScheduler queryScheduler,
       AuthorizerMapper authorizerMapper,
       QueryResourceQueryResultPusherFactory queryResultPusherFactory,
-      ResourceIOReaderWriterFactory resourceIOReaderWriterFactory
+      ResourceIOReaderWriterFactory resourceIOReaderWriterFactory,
+      ServerConfig serverConfig
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
@@ -116,6 +126,7 @@ public class QueryResource implements QueryCountStatsProvider
     this.authorizerMapper = authorizerMapper;
     this.queryResultPusherFactory = queryResultPusherFactory;
     this.resourceIOReaderWriterFactory = resourceIOReaderWriterFactory;
+    this.serverConfig = serverConfig;
   }
 
   @DELETE
@@ -182,15 +193,7 @@ public class QueryResource implements QueryCountStatsProvider
         authResult = queryLifecycle.authorize(req);
       }
       catch (RuntimeException e) {
-        final QueryException qe;
-
-        if (e instanceof QueryException) {
-          qe = (QueryException) e;
-        } else {
-          qe = new QueryInterruptedException(e);
-        }
-
-        return io.getResponseWriter().buildNonOkResponse(qe.getFailType().getExpectedStatus(), qe);
+        return handleAuthorizeFailure(queryLifecycle, io, req, e);
       }
 
       if (!authResult.allowBasicAccess()) {
@@ -239,6 +242,43 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
+  /**
+   * Builds the response for a query that failed during {@link QueryLifecycle#authorize}, before a
+   * {@link QueryResultPusher} exists to do it. The pusher is what normally records the failure, so this has to emit the
+   * logs, metrics and counters itself; otherwise the caller gets a response but nothing is recorded server-side.
+   * <p>
+   * A {@link DruidException} is reported under its own category. Everything else goes through the {@link QueryException}
+   * conversion below, which resolves anything it does not recognise to
+   * {@link QueryException#UNKNOWN_EXCEPTION_ERROR_CODE} and therefore a 500.
+   */
+  private Response handleAuthorizeFailure(
+      final QueryLifecycle queryLifecycle,
+      final ResourceIOReaderWriterFactory.ResourceIOReaderWriter io,
+      final HttpServletRequest req,
+      final RuntimeException e
+  ) throws IOException
+  {
+    // Logs the exception with the query id, which doubles as the error id below.
+    queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
+
+    if (e instanceof DruidException) {
+      final DruidException druidException = (DruidException) e;
+      QueryResultPusher.incrementQueryCounterForException(counter, druidException);
+
+      final String queryId = queryLifecycle.getQueryId();
+      return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
+          serverConfig.getErrorResponseTransformStrategy().sanitizeForClient(druidException, queryId),
+          MediaType.valueOf(io.getResponseWriter().getResponseType()),
+          ImmutableMap.of(QUERY_ID_RESPONSE_HEADER, queryId)
+      );
+    }
+
+    final QueryException qe = e instanceof QueryException ? (QueryException) e : new QueryInterruptedException(e);
+    // Converted only to reuse the category mapping; the response body stays in the legacy QueryException format.
+    QueryResultPusher.incrementQueryCounterForException(counter, DruidException.fromFailure(new QueryExceptionCompat(qe)));
+    return io.getResponseWriter().buildNonOkResponse(qe.getFailType().getExpectedStatus(), qe);
+  }
+
   public interface QueryMetricCounter
   {
     void incrementSuccess();
@@ -250,6 +290,25 @@ public class QueryResource implements QueryCountStatsProvider
     void incrementTimedOut();
   }
 
+  /**
+   * Whether {@code e} wraps an exception that Druid code threw while binding a query, such as a
+   * {@link NullPointerException} from a deserializer or setter, rather than a rejection of the input. Jackson wraps
+   * those in a plain {@link JsonMappingException} with the original exception as its cause, while its own input
+   * errors are subclasses such as {@link com.fasterxml.jackson.databind.exc.MismatchedInputException}.
+   */
+  private static boolean isServerErrorDuringBinding(final JsonMappingException e)
+  {
+    final Throwable cause = e.getCause();
+    if (e.getClass() != JsonMappingException.class || cause == null) {
+      return false;
+    }
+    if (cause instanceof IllegalArgumentException || cause instanceof JsonProcessingException) {
+      return false;
+    }
+    return !(cause instanceof DruidException
+             && ((DruidException) cause).getTargetPersona() == DruidException.Persona.USER);
+  }
+
   private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
@@ -259,6 +318,22 @@ public class QueryResource implements QueryCountStatsProvider
     final Query<?> baseQuery;
     try {
       baseQuery = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
+    }
+    catch (ValueInstantiationException e) {
+      throw new BadJsonQueryException(e);
+    }
+    catch (InvalidDefinitionException e) {
+      // A query class that Jackson cannot bind to is a server-side defect, not a bad request, so leave it to the
+      // catch-all in doPost to log and return as a 500.
+      throw e;
+    }
+    catch (JsonMappingException e) {
+      if (isServerErrorDuringBinding(e)) {
+        // Leave it to the catch-all in doPost to log and return as a 500.
+        throw e;
+      }
+      // Well-formed JSON that cannot be bound to a query, such as an unknown query type or a field of the wrong type.
+      throw new BadJsonQueryException(e);
     }
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);

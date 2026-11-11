@@ -46,6 +46,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -66,6 +67,10 @@ public class KafkaEmitter implements Emitter
   private final AtomicLong previousRequestLost;
   private final AtomicLong previousSegmentMetadataLost;
   private final AtomicLong previousInvalidLost;
+  private final AtomicLong metricSampled;
+  private final AtomicLong previousMetricSampled;
+  private final AtomicLong metricEmitted;
+  private final AtomicLong previousMetricEmitted;
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
@@ -103,6 +108,10 @@ public class KafkaEmitter implements Emitter
     this.previousRequestLost = new AtomicLong(0);
     this.previousSegmentMetadataLost = new AtomicLong(0);
     this.previousInvalidLost = new AtomicLong(0);
+    this.metricSampled = new AtomicLong(0);
+    this.previousMetricSampled = new AtomicLong(0);
+    this.metricEmitted = new AtomicLong(0);
+    this.previousMetricEmitted = new AtomicLong(0);
   }
 
   private Callback setProducerCallback(AtomicLong lostCounter)
@@ -175,6 +184,21 @@ public class KafkaEmitter implements Emitter
         currentSegmentMetadataLost - previousSegmentMetadataLost.getAndSet(currentSegmentMetadataLost);
     long deltaInvalidLost = currentInvalidLost - previousInvalidLost.getAndSet(currentInvalidLost);
 
+    long currentMetricSampled = metricSampled.get();
+    long deltaMetricSampled = currentMetricSampled - previousMetricSampled.getAndSet(currentMetricSampled);
+    // Advance the emitted baseline every interval, even when nothing was sampled, so that each summary
+    // only covers the latest interval.
+    long currentMetricEmitted = metricEmitted.get();
+    long deltaMetricEmitted = currentMetricEmitted - previousMetricEmitted.getAndSet(currentMetricEmitted);
+
+    if (deltaMetricSampled > 0) {
+      long deltaTotal = deltaMetricSampled + deltaMetricEmitted;
+      log.info(
+          "Metrics sampling for past %d minutes: total=[%d], emitted=[%d], sampledOut=[%d], cumulativeSampledOut=[%d]",
+          DEFAULT_SEND_LOST_INTERVAL_MINUTES,
+          deltaTotal, deltaMetricEmitted, deltaMetricSampled, currentMetricSampled);
+    }
+
     // Refrain from clogging logs when there are no lost messages.
     if (deltaMetricLost + deltaAlertLost + deltaRequestLost + deltaSegmentMetadataLost + deltaInvalidLost > 0) {
       log.info(
@@ -229,6 +253,11 @@ public class KafkaEmitter implements Emitter
   public void emit(final Event event)
   {
     if (event != null) {
+      // Decide on sampling first, so sampled-out metrics skip serialization entirely.
+      if (event instanceof ServiceMetricEvent && shouldSampleOut((ServiceMetricEvent) event)) {
+        metricSampled.incrementAndGet();
+        return;
+      }
       try {
         EventMap map = event.toMap();
         map = addExtraDimensionsToEvent(map);
@@ -244,6 +273,8 @@ public class KafkaEmitter implements Emitter
         if (event instanceof ServiceMetricEvent) {
           if (!eventTypes.contains(EventType.METRICS) || !metricQueue.offer(objectContainer)) {
             metricLost.incrementAndGet();
+          } else {
+            metricEmitted.incrementAndGet();
           }
         } else if (event instanceof AlertEvent) {
           if (!eventTypes.contains(EventType.ALERTS) || !alertQueue.offer(objectContainer)) {
@@ -266,6 +297,55 @@ public class KafkaEmitter implements Emitter
         log.warn(e, "Exception while serializing event");
       }
     }
+  }
+
+  /**
+   * Determines whether a {@link ServiceMetricEvent} should be sampled out (i.e., dropped).
+   * <p>
+   * Sampling is skipped (event is always emitted) when:
+   * <ul>
+   *   <li>{@code samplingRate} is 100 (no sampling)</li>
+   *   <li>The metric name is null</li>
+   *   <li>The metric name is not in the configured {@code sampledMetrics} set (exact match only)</li>
+   *   <li>The event's service is not in the configured {@code sampledServiceTypes} set (when configured)</li>
+   * </ul>
+   * When sampling applies, if the event has an {@code id} user dimension, consistent hash-based
+   * sampling is used so that the same id always gets the same sampling decision. Otherwise,
+   * random sampling is used.
+   *
+   * @return true if the event should be dropped, false if it should be emitted
+   */
+  @VisibleForTesting
+  boolean shouldSampleOut(ServiceMetricEvent serviceMetricEvent)
+  {
+    int samplingRate = config.getSamplingRate();
+    Set<String> sampledMetrics = config.getSampledMetrics();
+    Set<String> sampledServiceTypes = config.getSampledServiceTypes();
+
+    // No sampling when rate is 100 or metric is null
+    if (samplingRate == 100
+        || serviceMetricEvent.getMetric() == null) {
+      return false;
+    }
+
+    // If sampledMetrics is configured, the metric must be in the set
+    if (!sampledMetrics.isEmpty() && !sampledMetrics.contains(serviceMetricEvent.getMetric())) {
+      return false;
+    }
+
+    // If sampledServiceTypes is configured, the service must be in the set
+    if (!sampledServiceTypes.isEmpty()
+        && (serviceMetricEvent.getService() == null
+            || !sampledServiceTypes.contains(serviceMetricEvent.getService()))) {
+      return false;
+    }
+
+    // Use consistent hashing on "id" dimension if available, otherwise random
+    Object id = serviceMetricEvent.getUserDims().get("id");
+    if (id == null) {
+      return ThreadLocalRandom.current().nextInt(100) >= samplingRate;
+    }
+    return Math.abs(id.hashCode() % 100) >= samplingRate;
   }
 
   private EventMap addExtraDimensionsToEvent(EventMap map)
@@ -322,6 +402,16 @@ public class KafkaEmitter implements Emitter
     return segmentMetadataLost.get();
   }
 
+  public long getMetricSampledCount()
+  {
+    return metricSampled.get();
+  }
+
+  public long getMetricEmittedCount()
+  {
+    return metricEmitted.get();
+  }
+
   @VisibleForTesting
   protected long getPreviousMetricLostCount()
   {
@@ -350,5 +440,17 @@ public class KafkaEmitter implements Emitter
   protected long getPreviousInvalidLostCount()
   {
     return previousInvalidLost.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousMetricSampledCount()
+  {
+    return previousMetricSampled.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousMetricEmittedCount()
+  {
+    return previousMetricEmitted.get();
   }
 }

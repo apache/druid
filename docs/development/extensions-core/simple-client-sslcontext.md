@@ -23,7 +23,7 @@ title: "Simple SSLContext Provider Module"
   -->
 
 
-This Apache Druid module contains a simple implementation of [SSLContext](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/javax/net/ssl/SSLContext.html)
+This Apache&circledR; Druid module contains a simple implementation of [SSLContext](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/javax/net/ssl/SSLContext.html)
 that will be injected to be used with HttpClient that Druid processes use internally to communicate with each other. To learn more about
 Java's SSL support, please refer to [this](https://docs.oracle.com/en/java/javase/17/security/java-secure-socket-extension-jsse-reference-guide.html) guide.
 

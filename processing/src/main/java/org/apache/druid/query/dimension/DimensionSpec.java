@@ -79,7 +79,7 @@ public interface DimensionSpec extends Cacheable
   }
 
   /**
-   * Vectorized analog of {@link #decorate(DimensionSelector) for {@link MultiValueDimensionVectorSelector}, most likely
+   * Vectorized analog of {@link #decorate(DimensionSelector)} for {@link MultiValueDimensionVectorSelector}, most likely
    * produced with
    * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory#makeMultiValueDimensionSelector(DimensionSpec)}
    *

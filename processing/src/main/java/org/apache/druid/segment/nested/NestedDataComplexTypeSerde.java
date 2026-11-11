@@ -159,7 +159,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public DimensionSchema getColumnSchema(String columnName)
     {
-      return new NestedDataColumnSchema(columnName, 5);
+      return new NestedDataColumnSchema(columnName, NestedDataColumnSchema.DEFAULT_FORMAT_VERSION);
     }
 
     @Override
@@ -173,6 +173,18 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     public ColumnCapabilities toColumnCapabilities()
     {
       return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA).setHasNulls(true);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      return o != null && getClass() == o.getClass();
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return NestedColumnFormatV4.class.hashCode();
     }
   }
 }

@@ -48,10 +48,8 @@ import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
-import org.apache.druid.java.util.metrics.NoopSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
-import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
 import java.time.Duration;
@@ -168,17 +166,6 @@ public class MetricsModule implements Module
   public JvmThreadsMonitor getJvmThreadsMonitor()
   {
     return new JvmThreadsMonitor();
-  }
-
-  @Provides
-  @ManageLifecycle
-  public SysMonitor getSysMonitor(@Self Set<NodeRole> nodeRoles, Properties properties)
-  {
-    if (nodeRoles.contains(NodeRole.PEON) && isManagedPeon(properties)) {
-      return new NoopSysMonitor();
-    } else {
-      return new SysMonitor();
-    }
   }
 
   @Provides

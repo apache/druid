@@ -39,6 +39,8 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -282,7 +284,14 @@ public class VirtualColumns implements Cacheable
       toCheckForEquivalence = otherVirtualColumn.rewriteRequiredColumns(equivalenceRewriteMap);
     }
 
-    return equivalence.get().get(toCheckForEquivalence.getEquivalanceKey());
+    VirtualColumn matched = equivalence.get().get(toCheckForEquivalence.getEquivalanceKey());
+    if (matched != null &&
+        // guardrail check for expression collision when a virtual column shadows the physical column
+        // e.x. otherNode v0 = dim1 and VCs dim1 = dim2 plus q = dim1, q can be treated as equivalent to v0 even though it reads physical column dim2
+        getNode(matched.getOutputName()).getDependencies().size() == otherNode.getDependencies().size()) {
+      return matched;
+    }
+    return null;
   }
 
   /**
@@ -537,6 +546,43 @@ public class VirtualColumns implements Cacheable
   public List<String> getColumnNames()
   {
     return virtualColumnNames;
+  }
+
+  /**
+   * Returns these virtual columns with the given ones layered on top.
+   */
+  public VirtualColumns plus(final VirtualColumns other)
+  {
+    final List<VirtualColumn> combined = new ArrayList<>();
+    for (final VirtualColumn virtualColumn : virtualColumns) {
+      if (!other.virtualColumnNames.contains(virtualColumn.getOutputName())) {
+        combined.add(virtualColumn);
+      }
+    }
+    combined.addAll(other.virtualColumns);
+    return create(combined);
+  }
+
+  /**
+   * Returns the signature of a base with these virtual columns layered on top: the base's columns, other than those
+   * that these virtual columns shadow, followed by these virtual columns.
+   *
+   * @param baseSignature signature of the base
+   * @param baseInspector inspector for the base, from which the types of these virtual columns are derived
+   */
+  public RowSignature wrappedSignature(final RowSignature baseSignature, final ColumnInspector baseInspector)
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (int i = 0; i < baseSignature.size(); i++) {
+      final String column = baseSignature.getColumnName(i);
+      if (!exists(column)) {
+        builder.add(column, baseSignature.getColumnType(i).orElse(null));
+      }
+    }
+    for (final String column : virtualColumnNames) {
+      builder.add(column, ColumnType.fromCapabilities(getColumnCapabilitiesWithFallback(baseInspector, column)));
+    }
+    return builder.build();
   }
 
   private VirtualColumn getVirtualColumnForSelector(String columnName)

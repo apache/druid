@@ -20,9 +20,16 @@
 package org.apache.druid.indexing.overlord.http;
 
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskQueryTool;
+import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
@@ -33,17 +40,17 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class OverlordDataSourcesResourceTest
 {
@@ -55,21 +62,28 @@ public class OverlordDataSourcesResourceTest
                           .eachOfSizeInMb(500);
 
   private TestIndexerMetadataStorageCoordinator storageCoordinator;
+  private TaskMaster taskMaster;
+  private TaskQueue taskQueue;
+  private TaskQueryTool taskQueryTool;
 
   private OverlordDataSourcesResource dataSourcesResource;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     AuditManager auditManager = EasyMock.createStrictMock(AuditManager.class);
     storageCoordinator = new TestIndexerMetadataStorageCoordinator();
+    taskQueue = EasyMock.createStrictMock(TaskQueue.class);
+    taskQueryTool = EasyMock.createMock(TaskQueryTool.class);
 
-    TaskMaster taskMaster = new TaskMaster(null, null);
+    taskMaster = new TaskMaster(null, null);
     dataSourcesResource = new OverlordDataSourcesResource(
         taskMaster,
+        taskQueryTool,
         storageCoordinator,
         auditManager
     );
+    taskMaster.becomeHalfLeader(null, taskQueue);
     taskMaster.becomeFullLeader();
 
     storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_10X1D), null);
@@ -92,8 +106,8 @@ public class OverlordDataSourcesResourceTest
         TestDataSource.WIKI,
         "some<script>Segment"
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         "Could not parse Segment ID[some&lt;script&gt;Segment] for DataSource[wiki]",
         response.getEntity()
     );
@@ -196,8 +210,8 @@ public class OverlordDataSourcesResourceTest
         TestDataSource.WIKI,
         "some<script>Segment"
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         "Could not parse Segment ID[some&lt;script&gt;Segment] for DataSource[wiki]",
         response.getEntity()
     );
@@ -210,7 +224,7 @@ public class OverlordDataSourcesResourceTest
     final String version2 = WIKI_SEGMENTS_10X1D.get(0).getVersion() + "__2";
     final List<DataSegment> wikiSegmentsV2 = WIKI_SEGMENTS_10X1D.stream().map(
         segment -> DataSegment.builder(segment).version(version2).build()
-    ).collect(Collectors.toList());
+    ).toList();
 
     storageCoordinator.commitSegments(Set.copyOf(wikiSegmentsV2), null);
 
@@ -230,9 +244,9 @@ public class OverlordDataSourcesResourceTest
 
     final Collection<DataSegment> usedSegments =
         storageCoordinator.retrieveAllUsedSegments(TestDataSource.WIKI, Segments.INCLUDING_OVERSHADOWED);
-    Assert.assertEquals(10, usedSegments.size());
+    Assertions.assertEquals(10, usedSegments.size());
     for (DataSegment segment : usedSegments) {
-      Assert.assertEquals(version2, segment.getVersion());
+      Assertions.assertEquals(version2, segment.getVersion());
     }
   }
 
@@ -305,8 +319,8 @@ public class OverlordDataSourcesResourceTest
   {
     final Response response
         = dataSourcesResource.markNonOvershadowedSegmentsAsUsed(TestDataSource.WIKI, null);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
         + " Optionally, include 'versions' only when 'interval' is provided.",
         response.getEntity()
@@ -326,38 +340,82 @@ public class OverlordDataSourcesResourceTest
         TestDataSource.WIKI,
         new SegmentsToUpdateFilter(null, null, null)
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(expectedErrorMessage, response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(expectedErrorMessage, response.getEntity());
 
     // interval is null and segmentIds is empty
     response = dataSourcesResource.markNonOvershadowedSegmentsAsUsed(
         TestDataSource.WIKI,
         new SegmentsToUpdateFilter(null, Collections.emptySet(), null)
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(expectedErrorMessage, response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(expectedErrorMessage, response.getEntity());
 
     // Both interval and segmentIds are specified
     response = dataSourcesResource.markNonOvershadowedSegmentsAsUsed(
         TestDataSource.WIKI,
         new SegmentsToUpdateFilter(Intervals.of("1000/2000"), Collections.singleton(segmentId), null)
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(expectedErrorMessage, response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(expectedErrorMessage, response.getEntity());
 
     // versions are specified with segmentIds
     response = dataSourcesResource.markNonOvershadowedSegmentsAsUsed(
         TestDataSource.WIKI,
         new SegmentsToUpdateFilter(null, Collections.singleton(segmentId), Collections.singletonList("v1"))
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(expectedErrorMessage, response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(expectedErrorMessage, response.getEntity());
+  }
+
+  @Test
+  public void testShutdownAllTasks_shutsDownEveryActiveTask()
+  {
+    final Task task1 = NoopTask.forDatasource(TestDataSource.WIKI);
+    final Task task2 = NoopTask.forDatasource(TestDataSource.WIKI);
+    EasyMock.expect(taskQueryTool.getActiveTaskInfo(TestDataSource.WIKI))
+            .andReturn(List.of(createActiveTaskInfo(task1), createActiveTaskInfo(task2)));
+    taskQueue.shutdown(task1.getId(), "Shutdown request from user");
+    taskQueue.shutdown(task2.getId(), "Shutdown request from user");
+    EasyMock.replay(taskQueryTool, taskQueue);
+
+    final Response response = dataSourcesResource.shutdownTasksForDataSource(TestDataSource.WIKI);
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(Map.of("dataSource", TestDataSource.WIKI), response.getEntity());
+    EasyMock.verify(taskQueryTool, taskQueue);
+  }
+
+  @Test
+  public void testShutdownAllTasks_withNoActiveTasks_returnsNotFound()
+  {
+    EasyMock.expect(taskQueryTool.getActiveTaskInfo(TestDataSource.WIKI)).andReturn(List.of());
+    EasyMock.replay(taskQueryTool, taskQueue);
+
+    final Response response = dataSourcesResource.shutdownTasksForDataSource(TestDataSource.WIKI);
+    Assertions.assertEquals(404, response.getStatus());
+    EasyMock.verify(taskQueryTool, taskQueue);
+  }
+
+  @Test
+  public void testShutdownAllTasks_whenNotLeader_returnsServiceUnavailable()
+  {
+    taskMaster.stopBeingLeader();
+    EasyMock.replay(taskQueryTool, taskQueue);
+
+    final Response response = dataSourcesResource.shutdownTasksForDataSource(TestDataSource.WIKI);
+    Assertions.assertEquals(503, response.getStatus());
+    EasyMock.verify(taskQueryTool, taskQueue);
+  }
+
+  private static TaskInfo createActiveTaskInfo(Task task)
+  {
+    return new TaskInfo(DateTimes.nowUtc(), TaskStatus.running(task.getId()), task);
   }
 
   private void verifyNumSegmentsUpdated(int expectedUpdatedCount, Response response)
   {
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new SegmentUpdateResponse(expectedUpdatedCount), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(new SegmentUpdateResponse(expectedUpdatedCount), response.getEntity());
   }
 
   private static HttpServletRequest createHttpServletRequest()

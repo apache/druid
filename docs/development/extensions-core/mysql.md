@@ -23,7 +23,7 @@ title: "MySQL metadata store"
   -->
 
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
+To use this Apache&circledR; Druid extension, [include](../../configuration/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
 
 With the MySQL extension, you can use MySQL as a metadata store or ingest from a MySQL database.
 
@@ -55,25 +55,30 @@ Copy or create a symbolic link to this file inside the `lib` folder in the distr
 ### Install MariaDB Connector/J
 
 This extension also supports using the MariaDB connector jar.
-The current version of Druid uses version 2.7.3.
+The current version of Druid uses version 4.0.0.
 Other versions may not work with this extension.
 
 You can download the library from one of the following sources:
 
-- [MariaDB website](https://mariadb.com/downloads/connectors/connectors-data-access/java8-connector)  
+- [MariaDB website](https://mariadb.com/downloads/connectors/java8-connector/)  
   Click **Show All Files** to access older product versions.
-- [Maven Central (direct download)](https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/2.7.3/mariadb-java-client-2.7.3.jar)
+- [Maven Central (direct download)](https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/4.0.0/mariadb-java-client-4.0.0.jar)
 
-The download includes the MariaDB connector JAR file with a name like `maria-java-client-2.7.3.jar`.
+The download includes the MariaDB connector JAR file with a name like `mariadb-java-client-4.0.0.jar`.
 Copy or create a symbolic link to this file inside the `lib` folder in the distribution root directory.
 
 To configure the `mysql-metadata-storage` extension to use the MariaDB connector library instead of MySQL, set `druid.metadata.mysql.driver.driverClassName=org.mariadb.jdbc.Driver`.
 
-The protocol of the connection string is `jdbc:mysql:` or `jdbc:mariadb:`,
-depending on your specific version of the MariaDB client library.
+MariaDB Connector/J 3.x and later accept `jdbc:mariadb:` connection strings by default.
+To use a `jdbc:mysql:` connection string, add the `permitMysqlScheme` option to the URL.
 For more information on the parameters to configure a connection,
-[see the MariaDB documentation](https://mariadb.com/kb/en/about-mariadb-connector-j/#connection-strings)
+[see the MariaDB documentation](https://mariadb.com/docs/connectors/mariadb-connector-j/about-mariadb-connector-j#connection-strings)
 for your connector version.
+
+MariaDB Connector/J 4.x enables TLS by default (`sslMode=verify-full`).
+The metadata storage connection sets `useSSL` from `druid.metadata.mysql.ssl.useSSL`, which defaults to `false`, so it stays unencrypted unless you enable SSL.
+JDBC lookups and the SQL input source use the connection URI as written.
+To connect them to a server without TLS, add `sslMode=disable` to the URI.
 
 
 ## Set up MySQL

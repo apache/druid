@@ -29,18 +29,18 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class OssDataSegmentKillerTest extends EasyMockSupport
 {
   private static final String KEY_1 = "key1";
@@ -83,7 +83,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
     catch (ISE e) {
       thrownISEException = true;
     }
-    Assert.assertTrue(thrownISEException);
+    Assertions.assertTrue(thrownISEException);
     EasyMock.verify(client, segmentPusherConfig, inputDataConfig);
   }
 
@@ -200,7 +200,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assertions.assertTrue(ioExceptionThrown);
     EasyMock.verify(client, segmentPusherConfig, inputDataConfig);
   }
 }

@@ -40,9 +40,11 @@ module.exports={
     "disableHeaderTitle": true
   },
   "onBrokenLinks": "log",
-  "onBrokenMarkdownLinks": "throw",
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: "throw"
+    }
   },
   "presets": [
     [
@@ -160,5 +162,10 @@ module.exports={
         "src": "img/favicon.png"
       }
     },
-  }
+  },
+  future: {
+    v4: {
+      fasterByDefault: true,
+      removeLegacyPostBuildHeadAttribute: true
+    }}    
 }

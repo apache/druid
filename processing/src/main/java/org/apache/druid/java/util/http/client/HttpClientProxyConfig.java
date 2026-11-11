@@ -20,9 +20,8 @@
 package org.apache.druid.java.util.http.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 public class HttpClientProxyConfig
 {

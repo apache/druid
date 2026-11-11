@@ -23,8 +23,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -44,9 +44,9 @@ public class MaxPostAggregatorTest extends InitializedNullHandlingTest
         MaxPostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
-    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
@@ -67,10 +67,10 @@ public class MaxPostAggregatorTest extends InitializedNullHandlingTest
     metricValues.put(aggName, histo2);
     Object after = max.compute(metricValues);
 
-    Assert.assertEquals(-1, comp.compare(before, after));
-    Assert.assertEquals(0, comp.compare(before, before));
-    Assert.assertEquals(0, comp.compare(after, after));
-    Assert.assertEquals(1, comp.compare(after, before));
+    Assertions.assertEquals(-1, comp.compare(before, after));
+    Assertions.assertEquals(0, comp.compare(before, before));
+    Assertions.assertEquals(0, comp.compare(after, after));
+    Assertions.assertEquals(1, comp.compare(after, before));
   }
 
   @Test
@@ -79,7 +79,7 @@ public class MaxPostAggregatorTest extends InitializedNullHandlingTest
     PostAggregator postAgg =
         new MaxPostAggregator("max", "test_field");
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "MaxPostAggregator{fieldName='test_field'}",
         postAgg.toString()
     );

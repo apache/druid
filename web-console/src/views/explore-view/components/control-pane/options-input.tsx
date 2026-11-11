@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Classes, Icon, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
+import { Classes, Icon, Menu, MenuItem, PopoverNext, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 
@@ -45,9 +45,9 @@ export const OptionsInput = function OptionsInput(props: OptionsInputProps) {
     <div className={classNames('options-input', Classes.INPUT, Classes.TAG_INPUT, Classes.FILL)}>
       <div className={Classes.TAG_INPUT_VALUES}>
         {selectedOptions.map((selectedOption, i) => (
-          <Popover
+          <PopoverNext
             key={i}
-            position={Position.BOTTOM}
+            placement="bottom"
             content={
               <Menu>
                 {(allowDuplicates
@@ -67,6 +67,8 @@ export const OptionsInput = function OptionsInput(props: OptionsInputProps) {
                 ))}
               </Menu>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Tag
               interactive
@@ -80,10 +82,10 @@ export const OptionsInput = function OptionsInput(props: OptionsInputProps) {
             >
               {optionLabel(selectedOption)}
             </Tag>
-          </Popover>
+          </PopoverNext>
         ))}
-        <Popover
-          position={Position.BOTTOM}
+        <PopoverNext
+          placement="bottom"
           content={
             <Menu>
               {availableOptions.map((ao, i) => (
@@ -97,9 +99,11 @@ export const OptionsInput = function OptionsInput(props: OptionsInputProps) {
               ))}
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <Tag icon={IconNames.PLUS} interactive />
-        </Popover>
+        </PopoverNext>
       </div>
     </div>
   );

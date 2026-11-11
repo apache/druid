@@ -45,7 +45,6 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -585,7 +584,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    assertThat(
+    assertDruidException(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
@@ -605,7 +604,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L))
         )
     );
-    assertThat(
+    assertDruidException(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [2])")
     );
@@ -627,10 +626,39 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
+    assertDruidException(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
+  }
+
+  @Test
+  public void testSumWithNonNumericStringParameter()
+  {
+    DruidException exception = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql("SELECT SUM(?) FROM druid.foo")
+            .parameters(ImmutableList.of(new SqlParameter(SqlType.VARCHAR, "abc")))
+            .run()
+    );
+    assertDruidException(
+        exception,
+        DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+            "Function [SUM] argument [1] must be numeric, got string literal ['abc']."
+            + " If you meant to refer to a column, use double quotes."
+        )
+    );
+  }
+
+  @Test
+  public void testSumWithNumericStringParameter()
+  {
+    testBuilder()
+        .sql("SELECT SUM(?) FROM druid.foo")
+        .parameters(ImmutableList.of(new SqlParameter(SqlType.VARCHAR, "1.5")))
+        .expectedResults(ImmutableList.of(new Object[]{9.0}))
+        .run();
   }
 
   @Test

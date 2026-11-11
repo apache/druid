@@ -31,6 +31,11 @@ public class TestDruidViewMacroFactory implements DruidViewMacroFactory
       String viewSql
   )
   {
-    return new DruidViewMacro(plannerFactory, viewSql, CalciteTests.DRUID_SCHEMA_NAME);
+    return new DruidViewMacro(
+        plannerFactory,
+        viewSql,
+        CalciteTests.DRUID_SCHEMA_NAME,
+        CalciteTests.TEST_AUTHENTICATOR_ESCALATOR
+    );
   }
 }

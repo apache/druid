@@ -29,9 +29,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -40,7 +40,7 @@ public class AvroOCFInputFormatTest
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private JSONPathSpec flattenSpec;
 
-  @Before
+  @BeforeEach
   public void before()
   {
     flattenSpec = new JSONPathSpec(
@@ -70,7 +70,7 @@ public class AvroOCFInputFormatTest
         NestedInputFormat.class
     );
 
-    Assert.assertEquals(inputFormat, inputFormat2);
+    Assertions.assertEquals(inputFormat, inputFormat2);
   }
 
   @Test
@@ -101,7 +101,7 @@ public class AvroOCFInputFormatTest
         NestedInputFormat.class
     );
 
-    Assert.assertEquals(inputFormat, inputFormat2);
+    Assertions.assertEquals(inputFormat, inputFormat2);
   }
 
   @Test
@@ -115,7 +115,7 @@ public class AvroOCFInputFormatTest
         false
     );
     long unweightedSize = 100L;
-    Assert.assertEquals(
+    Assertions.assertEquals(
         unweightedSize * AvroOCFInputFormat.SCALE_FACTOR,
         format.getWeightedSize("file.avro", unweightedSize)
     );

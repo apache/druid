@@ -21,26 +21,30 @@ package org.apache.druid.curator;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.zookeeper.CreateMode;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 public class CuratorUtilsTest extends CuratorTestBase
 {
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     setupServerAndCurator();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     tearDownServerAndCurator();
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCreateIfNotExists() throws Exception
   {
     curator.start();
@@ -53,7 +57,7 @@ public class CuratorUtilsTest extends CuratorTestBase
         StringUtils.toUtf8("baz"),
         CuratorUtils.DEFAULT_MAX_ZNODE_BYTES
     );
-    Assert.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
+    Assertions.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
 
     CuratorUtils.createIfNotExists(
         curator,
@@ -62,10 +66,11 @@ public class CuratorUtilsTest extends CuratorTestBase
         StringUtils.toUtf8("qux"),
         CuratorUtils.DEFAULT_MAX_ZNODE_BYTES
     );
-    Assert.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
+    Assertions.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCreateIfNotExistsPayloadTooLarge() throws Exception
   {
     curator.start();
@@ -85,17 +90,18 @@ public class CuratorUtilsTest extends CuratorTestBase
       thrown = e;
     }
 
-    Assert.assertTrue(thrown instanceof IllegalArgumentException);
-    Assert.assertNull(curator.checkExists().forPath("/foo/bar"));
+    Assertions.assertTrue(thrown instanceof IllegalArgumentException);
+    Assertions.assertNull(curator.checkExists().forPath("/foo/bar"));
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCreateOrSet() throws Exception
   {
     curator.start();
     curator.blockUntilConnected();
 
-    Assert.assertNull(curator.checkExists().forPath("/foo/bar"));
+    Assertions.assertNull(curator.checkExists().forPath("/foo/bar"));
 
     CuratorUtils.createOrSet(
         curator,
@@ -104,7 +110,7 @@ public class CuratorUtilsTest extends CuratorTestBase
         StringUtils.toUtf8("baz"),
         3
     );
-    Assert.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
+    Assertions.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
 
     CuratorUtils.createOrSet(
         curator,
@@ -113,10 +119,11 @@ public class CuratorUtilsTest extends CuratorTestBase
         StringUtils.toUtf8("qux"),
         3
     );
-    Assert.assertEquals("qux", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
+    Assertions.assertEquals("qux", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCreateOrSetPayloadTooLarge() throws Exception
   {
     curator.start();
@@ -136,7 +143,7 @@ public class CuratorUtilsTest extends CuratorTestBase
       thrown = e;
     }
 
-    Assert.assertTrue(thrown instanceof IllegalArgumentException);
-    Assert.assertNull(curator.checkExists().forPath("/foo/bar"));
+    Assertions.assertTrue(thrown instanceof IllegalArgumentException);
+    Assertions.assertNull(curator.checkExists().forPath("/foo/bar"));
   }
 }

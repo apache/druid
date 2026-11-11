@@ -24,8 +24,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
 public class ArrayOfDoublesSketchConstantPostAggregatorTest
@@ -38,7 +38,7 @@ public class ArrayOfDoublesSketchConstantPostAggregatorTest
         "constant_sketch",
         value
     );
-    Assert.assertNotNull(postAgg.getSketchValue());
+    Assertions.assertNotNull(postAgg.getSketchValue());
   }
 
 
@@ -50,7 +50,7 @@ public class ArrayOfDoublesSketchConstantPostAggregatorTest
         "AQEJAwgBzJP/////////fwIAAAAAAAAAzT6NGdX0aWUOJvS5EIhpLwAAAAAAAAAAAAAAAAAAAAA="
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ArrayOfDoublesSketchConstantPostAggregator{name='constant_sketch', value='AQEJAwgBzJP/////////fwIAAAAAAAAAzT6NGdX0aWUOJvS5EIhpLwAAAAAAAAAAAAAAAAAAAAA='}",
         postAgg.toString()
     );
@@ -64,7 +64,7 @@ public class ArrayOfDoublesSketchConstantPostAggregatorTest
         "AQEJAwgBzJP/////////fwIAAAAAAAAAzT6NGdX0aWUOJvS5EIhpLwAAAAAAAAAAAAAAAAAAAAA="
     );
 
-    Assert.assertEquals(Comparators.alwaysEqual(), postAgg.getComparator());
+    Assertions.assertEquals(Comparators.alwaysEqual(), postAgg.getComparator());
   }
 
   @Test
@@ -81,8 +81,8 @@ public class ArrayOfDoublesSketchConstantPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test

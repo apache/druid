@@ -23,20 +23,22 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "zip = {0}")
+@MethodSource("constructorFeeder")
 public class LocalDataSegmentKillerTest
 {
   private static final String DATASOURCE_NAME = "ds";
@@ -48,14 +50,13 @@ public class LocalDataSegmentKillerTest
     this.zip = zip;
   }
 
-  @Parameterized.Parameters(name = "zip = {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(new Object[]{false}, new Object[]{true});
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testKill() throws Exception
@@ -91,26 +92,26 @@ public class LocalDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(partition011Dir));
 
-    Assert.assertFalse(partition011Dir.exists());
-    Assert.assertTrue(partition111Dir.exists());
-    Assert.assertTrue(partition021Dir.exists());
-    Assert.assertTrue(partition012Dir.exists());
+    Assertions.assertFalse(partition011Dir.exists());
+    Assertions.assertTrue(partition111Dir.exists());
+    Assertions.assertTrue(partition021Dir.exists());
+    Assertions.assertTrue(partition012Dir.exists());
 
     killer.kill(getSegmentWithPath(partition111Dir));
 
-    Assert.assertFalse(version11Dir.exists());
-    Assert.assertTrue(partition021Dir.exists());
-    Assert.assertTrue(partition012Dir.exists());
+    Assertions.assertFalse(version11Dir.exists());
+    Assertions.assertTrue(partition021Dir.exists());
+    Assertions.assertTrue(partition012Dir.exists());
 
     killer.kill(getSegmentWithPath(partition021Dir));
 
-    Assert.assertFalse(interval1Dir.exists());
-    Assert.assertTrue(partition012Dir.exists());
+    Assertions.assertFalse(interval1Dir.exists());
+    Assertions.assertTrue(partition012Dir.exists());
 
     killer.kill(getSegmentWithPath(partition012Dir));
 
-    Assert.assertFalse(dataSourceDir.exists());
-    Assert.assertTrue(dataSourceDir.getParentFile().exists());
+    Assertions.assertFalse(dataSourceDir.exists());
+    Assertions.assertTrue(dataSourceDir.getParentFile().exists());
   }
 
   @Test
@@ -129,15 +130,15 @@ public class LocalDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(uuidDir));
 
-    Assert.assertFalse(uuidDir.exists());
-    Assert.assertFalse(partitionDir.exists());
-    Assert.assertFalse(versionDir.exists());
-    Assert.assertFalse(intervalDir.exists());
-    Assert.assertFalse(dataSourceDir.exists());
+    Assertions.assertFalse(uuidDir.exists());
+    Assertions.assertFalse(partitionDir.exists());
+    Assertions.assertFalse(versionDir.exists());
+    Assertions.assertFalse(intervalDir.exists());
+    Assertions.assertFalse(dataSourceDir.exists());
 
     // Verify that we stop after the datasource dir, even though the parent is empty.
-    Assert.assertTrue(emptyParentDir.exists());
-    Assert.assertEquals(0, emptyParentDir.listFiles().length);
+    Assertions.assertTrue(emptyParentDir.exists());
+    Assertions.assertEquals(0, emptyParentDir.listFiles().length);
   }
 
   @Test
@@ -157,15 +158,15 @@ public class LocalDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(uuidDir));
 
-    Assert.assertFalse(uuidDir.exists());
-    Assert.assertFalse(partitionDir.exists());
-    Assert.assertFalse(versionDir.exists());
-    Assert.assertFalse(intervalDir.exists());
-    Assert.assertFalse(dataSourceDir.exists());
+    Assertions.assertFalse(uuidDir.exists());
+    Assertions.assertFalse(partitionDir.exists());
+    Assertions.assertFalse(versionDir.exists());
+    Assertions.assertFalse(intervalDir.exists());
+    Assertions.assertFalse(dataSourceDir.exists());
 
     // Verify that we stop at 4 pruned paths, even if we don't encounter the datasource-named directory.
-    Assert.assertTrue(emptyParentDir.exists());
-    Assert.assertEquals(0, emptyParentDir.listFiles().length);
+    Assertions.assertTrue(emptyParentDir.exists());
+    Assertions.assertEquals(0, emptyParentDir.listFiles().length);
   }
 
   private void makePartitionDirWithIndex(File path) throws IOException
@@ -173,9 +174,9 @@ public class LocalDataSegmentKillerTest
     FileUtils.mkdirp(path);
 
     if (zip) {
-      Assert.assertTrue(new File(path, LocalDataSegmentPusher.INDEX_ZIP_FILENAME).createNewFile());
+      Assertions.assertTrue(new File(path, LocalDataSegmentPusher.INDEX_ZIP_FILENAME).createNewFile());
     } else {
-      Assert.assertTrue(new File(path, LocalDataSegmentPusher.INDEX_DIR).mkdir());
+      Assertions.assertTrue(new File(path, LocalDataSegmentPusher.INDEX_DIR).mkdir());
     }
   }
 
@@ -183,19 +184,16 @@ public class LocalDataSegmentKillerTest
   {
     final String fileName = zip ? LocalDataSegmentPusher.INDEX_ZIP_FILENAME : LocalDataSegmentPusher.INDEX_DIR;
     final File path = new File(baseDirectory, fileName);
-    return new DataSegment(
-        DATASOURCE_NAME,
-        Intervals.of("2000/3000"),
-        "ver",
-        ImmutableMap.of(
-            "type", "local",
-            "path", path.toURI().getPath()
-        ),
-        ImmutableList.of("product"),
-        ImmutableList.of("visited_sum", "unique_hosts"),
-        NoneShardSpec.instance(),
-        9,
-        12334
-    );
+    return DataSegment.builder(SegmentId.of(DATASOURCE_NAME, Intervals.of("2000/3000"), "ver", 0))
+                      .loadSpec(ImmutableMap.of(
+                              "type", "local",
+                              "path", path.toURI().getPath()
+                          ))
+                      .dimensions(ImmutableList.of("product"))
+                      .metrics(ImmutableList.of("visited_sum", "unique_hosts"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(12334)
+                      .build();
   }
 }

@@ -22,7 +22,6 @@ package org.apache.druid.server.initialization.jetty;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
-import org.eclipse.jetty.ee8.servlets.QoSFilter;
 import org.eclipse.jetty.server.Handler;
 
 import javax.servlet.DispatcherType;
@@ -44,13 +43,25 @@ public class JettyBindings
 
   public static void addQosFilter(Binder binder, String[] paths, int maxRequests)
   {
+    addQosFilter(binder, paths, maxRequests, null);
+  }
+
+  /**
+   * Registers a QoS filter for the given {@code paths}, exempting any request
+   * that matches one of {@code excludedPaths} (servlet path-specs) from QoS
+   * throttling. Exclusions are needed because servlet filter mappings cannot
+   * express a "match this prefix except this sub-path" rule; see
+   * {@link PathExcludingQoSFilter}.
+   */
+  public static void addQosFilter(Binder binder, String[] paths, int maxRequests, String[] excludedPaths)
+  {
     if (maxRequests <= 0) {
       return;
     }
 
     Multibinder.newSetBinder(binder, QosFilterHolder.class)
                .addBinding()
-               .toInstance(new QosFilterHolder(paths, maxRequests));
+               .toInstance(new QosFilterHolder(paths, maxRequests, excludedPaths));
   }
 
   public static void addHandler(Binder binder, Class<? extends Handler> handlerClass)
@@ -67,28 +78,46 @@ public class JettyBindings
 
     private final long timeoutMs;
 
-    public QosFilterHolder(String[] paths, int maxRequests, long timeoutMs)
+    private final String[] excludedPaths;
+
+    public QosFilterHolder(String[] paths, int maxRequests, long timeoutMs, String[] excludedPaths)
     {
       this.paths = paths;
       this.maxRequests = maxRequests;
       this.timeoutMs = timeoutMs;
+      this.excludedPaths = excludedPaths == null ? new String[0] : excludedPaths;
+    }
+
+    public QosFilterHolder(String[] paths, int maxRequests, long timeoutMs)
+    {
+      this(paths, maxRequests, timeoutMs, null);
+    }
+
+    public QosFilterHolder(String[] paths, int maxRequests, String[] excludedPaths)
+    {
+      this(paths, maxRequests, -1, excludedPaths);
     }
 
     public QosFilterHolder(String[] paths, int maxRequests)
     {
-      this(paths, maxRequests, -1);
+      this(paths, maxRequests, -1, null);
     }
 
     @Override
     public Filter getFilter()
     {
-      return new QoSFilter();
+      return new PathExcludingQoSFilter(excludedPaths);
     }
 
     @Override
     public Class<? extends Filter> getFilterClass()
     {
-      return QoSFilter.class;
+      return PathExcludingQoSFilter.class;
+    }
+
+    public String[] getExcludedPaths()
+    {
+      return excludedPaths;
     }
 
     @Override

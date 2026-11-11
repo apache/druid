@@ -25,13 +25,15 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,12 +47,13 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StorageLocationVirtualStorageManagerTest
 {
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private StorageLocation location;
   private StorageLocationVirtualStorageManager manager;
@@ -58,8 +61,7 @@ public class StorageLocationVirtualStorageManagerTest
   @BeforeEach
   public void setup() throws IOException
   {
-    File locationPath = new File(tempFolder, "storage");
-    Files.createDirectories(locationPath.toPath());
+    File locationPath = temporaryFolder.newFolder("storage");
     location = new StorageLocation(locationPath, 10_000_000L, null);
     manager = new StorageLocationVirtualStorageManager(
         Collections.singletonList(location),
@@ -88,10 +90,99 @@ public class StorageLocationVirtualStorageManagerTest
     }
   }
 
+  private void withAsyncManager(AsyncManagerConsumer testLogic) throws Exception
+  {
+    final StorageLoadingThreadPool pool = StorageLoadingThreadPool.createFromConfig(
+        SegmentLoaderConfig.builder().virtualStorage(true).build()
+    );
+    try {
+      testLogic.accept(
+          new StorageLocationVirtualStorageManager(
+              Collections.singletonList(location),
+              new LeastBytesUsedStorageLocationSelectorStrategy(Collections.singletonList(location)),
+              pool
+          )
+      );
+    }
+    finally {
+      pool.stop();
+    }
+  }
   @FunctionalInterface
   private interface ExecutorConsumer
   {
     void accept(ExecutorService executor) throws Exception;
+  }
+
+  @FunctionalInterface
+  private interface AsyncManagerConsumer
+  {
+    void accept(StorageLocationVirtualStorageManager asyncManager) throws Exception;
+  }
+
+  @Test
+  public void testReserveAndPopulateAsyncPopulatesOnThePool() throws Exception
+  {
+    withAsyncManager(asyncManager -> {
+      final AsyncResource<CachedFile> resource = asyncManager.reserveAndPopulateAsync(
+          "async-file",
+          () -> 1000L,
+          file -> Files.write(file.toPath(), new byte[]{1, 2, 3})
+      );
+
+      // The resource owns the CachedFile, so it is closed through the resource rather than directly.
+      final CachedFile cachedFile = resource.await();
+      Assertions.assertTrue(cachedFile.getFile().exists());
+      resource.close();
+    });
+  }
+
+  @Test
+  public void testReserveAndPopulateAsyncReleasesTheHoldWhenAbandonedMidPopulate() throws Exception
+  {
+    withAsyncManager(asyncManager -> {
+      final long capacity = location.availableSizeBytes();
+      final long smallSize = capacity / 4;
+      final long bigSize = capacity - 100;
+
+      final CountDownLatch started = new CountDownLatch(1);
+      final AtomicBoolean release = new AtomicBoolean(false);
+
+      final AsyncResource<CachedFile> resource = asyncManager.reserveAndPopulateAsync(
+          "abandoned",
+          () -> smallSize,
+          file -> {
+            started.countDown();
+            while (!release.get()) {
+              Thread.onSpinWait();
+            }
+            // Model a populate that finishes despite the cancellation: clearing the interrupt keeps the write below
+            // from aborting, so the task really does produce a CachedFile after its consumer has gone away.
+            Thread.interrupted();
+            Files.write(file.toPath(), new byte[]{1, 2, 3});
+          }
+      );
+
+      Assertions.assertTrue(started.await(30, TimeUnit.SECONDS), "populate must be underway before abandoning it");
+      resource.close();
+      release.set(true);
+
+      // The abandoned CachedFile has a reservation hold. If it is leaked the entry stays pinned, and reserving a
+      // file that needs its space can never succeed; retry until the populate finishes so this fails only on a leak.
+      final long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+      CachedFile big = null;
+      while (big == null && System.nanoTime() < deadlineNanos) {
+        try {
+          big = manager.reserveAndPopulate("big", () -> bigSize, file -> Files.write(file.toPath(), new byte[]{4}));
+        }
+        catch (DruidException e) {
+          // Still pinned: either the populate is in flight, or its hold leaked.
+        }
+      }
+
+      Assertions.assertNotNull(big, "the abandoned populate's reservation hold must be released, not leaked");
+      big.close();
+    });
   }
 
   @Test

@@ -19,14 +19,24 @@
 
 package org.apache.druid.client.indexing;
 
+import org.apache.druid.query.context.QueryContextParameters;
+
 /**
- * This class copies over MSQ context parameters from the MSQ extension. This is required to validate the submitted
- * compaction config at the coordinator. The values used here should be kept in sync with those in
- * {@link org.apache.druid.msq.util.MultiStageQueryContext}
+ * MSQ values used to validate the submitted compaction config at the coordinator. MSQ query context parameters, such
+ * as {@link org.apache.druid.query.context.QueryContextParameters#MAX_NUM_TASKS}, are declared in
+ * {@link org.apache.druid.query.context.QueryContextParameters}.
  */
 public class ClientMSQContext
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#MAX_NUM_TASKS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
+  /**
+   * @deprecated Use the default value of {@link QueryContextParameters#MAX_NUM_TASKS} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_MAX_NUM_TASKS = 2;
   /**
    * Limit to ensure that an MSQ compaction task doesn't take up all task slots in a cluster.

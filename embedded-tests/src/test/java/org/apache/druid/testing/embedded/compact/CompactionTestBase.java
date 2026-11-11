@@ -48,6 +48,7 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .useDefaultTimeoutForLatchableEmitter(60)
                                .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(new EmbeddedIndexer())
@@ -97,8 +98,8 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
 
   protected void verifySegmentsCount(int numExpectedSegments)
   {
-    // Ensure that Broker has synced latest segments from the Coordinator
-    broker.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
+    // The Overlord state is verified immediately; the Broker-side sys.segments view is polled
+    // until it matches, since a single metadata cache sync may still observe the previous state.
     cluster.callApi().verifyNumVisibleSegmentsIs(numExpectedSegments, dataSource, overlord);
   }
 

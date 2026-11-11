@@ -209,7 +209,7 @@ public class MultipleKubernetesTaskRunnerFactoryTest
         new NoopServiceEmitter(),
         () -> null,
         configManager,
-        new TaskConfig(null, null, false, null, null, null, false, null, false, null, false),
+        new TaskConfig(null, null, false, null, null, null, false, null, false, null, false, null),
         new StartupLoggingConfig(),
         new DruidNode("test-overlord", "localhost", false, 8080, null, true, false),
         new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig(), objectMapper)

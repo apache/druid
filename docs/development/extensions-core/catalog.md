@@ -43,6 +43,355 @@ allowing queries to be more concise, and simpler to write. This also allows the 
 written into a defined column of the table is consistent with that columns definition, minimizing errors where unexpected
 data is written into a particular column of the table.
 
+### Effects of a table definition
+
+A table definition takes effect when it is read, not when it is written: changing one, whether through SQL DDL or the
+REST API, rewrites nothing by itself. What it affects:
+
+- **SELECT queries** report each declared column with its declared type, in declared order. Segments that store a
+  column as a different physical type are converted to the declared type at query time. Columns present in segments
+  but not declared in the catalog remain queryable, and follow the declared columns with their physical types.
+- **INSERT and REPLACE** (the catalog applies only to SQL-based ingestion) validate against the definition rather
+  than merely defaulting from it. A query column targeting a declared column must be convertible to the declared type
+  without changing it: inserting a `BIGINT` value into a column declared `VARCHAR` stores the value as a string, while
+  inserting a `VARCHAR` value into a column declared `BIGINT` is an error. Columns the query produces that the table
+  does not declare are rejected when the table is [`sealed`](#table-properties) and ingested normally otherwise.
+  Table properties such as `segmentGranularity` and `clusterKeys` act as defaults that an individual statement may
+  override, such as with its own `PARTITIONED BY`.
+- **Streaming and native batch ingestion** do not consult the catalog; their specs are unaffected by any table
+  definition.
+- **Existing segments** are rewritten to match the definition only if the datasource is configured for
+  [catalog-based compaction](#catalog-based-compaction), which is off unless you set it up. Without it, a definition
+  never changes data that is already stored.
+
+### SQL DDL
+
+Tables can be defined with SQL instead of by posting a table specification. `CREATE TABLE` and `ALTER TABLE` are
+submitted to the Broker like any other SQL statement, and write the same catalog metadata the REST API does. They
+return no rows.
+
+These statements change catalog metadata only. They do not themselves create, modify, or delete segments: defining a
+table does not ingest anything, and altering a column does not rewrite existing data. Changes take effect for
+subsequent queries and ingestion, as described in [Effects of a table definition](#effects-of-a-table-definition). If
+the datasource is configured for [catalog-based compaction](#catalog-based-compaction), compaction later rewrites
+existing segments to match the new definition in the background.
+
+These statements are disabled by default. Set `druid.sql.planner.enableCatalogDdl` to `true` on the Broker to enable
+them. They require both `READ` and `WRITE` permission on the datasource, the same permissions the catalog API
+requires for its write operations, so enabling them lets anyone who can ingest into a datasource also change its
+catalog definition; leave them disabled if you manage catalog entries with your own tooling. The setting cannot be
+overridden per query.
+
+The `druid-catalog` extension must be loaded on both the Broker and the Coordinator; without it, these statements
+report that the extension is not available.
+
+```sql
+CREATE [OR REPLACE] TABLE [IF NOT EXISTS] <table>
+  [ [ SEALED ] ( <table element> [, ...] ) ]
+  [ PARTITIONED BY <granularity> ]
+  [ CLUSTERED BY <column> [, ...] ]
+
+<table element> ::=
+    <column> <type>
+  | PROJECTION <name> AS ( <select> )
+```
+
+`OR REPLACE` replaces the specification of an existing table; `IF NOT EXISTS` leaves an existing table unchanged.
+The two cannot be combined. `PARTITIONED BY` sets [`segmentGranularity`](#table-properties) and `CLUSTERED BY` sets
+`clusterKeys`, both of which a later `INSERT` or `REPLACE` inherits unless it states its own. `SEALED` sets
+[`sealed`](#table-properties), which requires every ingested column to be declared. It is written just before the
+column list because that is what it describes: the list is the table's whole schema, so the statement does not accept
+`SEALED` without one. (The `sealed` property itself can still be set on any table through `SET PROPERTIES` or the
+REST API.)
+
+Note that the table-level `CLUSTERED BY` is a sort order applied to each ingestion, which is a different thing from
+the `CLUSTERED BY` inside a [`__base` projection](#the-base-table), which defines how segments physically group rows.
+
+Column types are written as SQL types, such as `VARCHAR`, `BIGINT`, `DOUBLE`, or `VARCHAR ARRAY`. The `__time` column
+is written as `TIMESTAMP`. Types that have no SQL spelling, such as complex types, use `TYPE('...')` with the Druid
+native type string:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  __time TIMESTAMP,
+  user_id VARCHAR,
+  pages_visited BIGINT,
+  sketch TYPE('COMPLEX<thetaSketch>')
+)
+PARTITIONED BY DAY
+CLUSTERED BY user_id
+```
+
+A complex type must be provided by a loaded extension: the statement fails if the named type is not registered, so a
+typo or a missing extension surfaces when the table is defined rather than at the first ingestion or query that
+touches the column. The extension must be loaded on the Coordinator, which validates catalog writes.
+
+`ALTER TABLE` supports one change per statement, so that each statement is a single atomic catalog operation:
+
+```sql
+ALTER TABLE <table> ADD COLUMN <column> <type>
+ALTER TABLE <table> DROP COLUMN <column>
+ALTER TABLE <table> ALTER COLUMN <column> SET DATA TYPE <type>
+ALTER TABLE <table> ADD PROJECTION [IF NOT EXISTS] <name> AS ( <select> )
+ALTER TABLE <table> DROP PROJECTION [IF EXISTS] <name>
+ALTER TABLE <table> SET PROPERTIES ( <property> = <value> [, ...] )
+```
+
+`ADD COLUMN` fails if the column already exists, and `ALTER COLUMN` fails if it does not, so a misspelled column name
+is reported rather than quietly creating or replacing a column. Each statement is also checked against the rest of the
+table definition, not only the part it changes: adding a column, changing a type, or setting a property is rejected if
+the resulting table would be invalid, such as a segment granularity coarser than a projection the table declares.
+
+`DROP COLUMN` removes the column's declaration, not its data. A table's SQL schema is the declared columns followed by
+any other columns present in its segments, so a dropped column that still has data remains queryable: it loses its
+declared type and position and appears after the declared columns, like any column the catalog does not know about.
+Whether it can still be ingested then follows the usual rule: rejected if the table is sealed, accepted as an
+undeclared column otherwise. To remove a column from query results without rewriting data, use the catalog's
+`hiddenColumns` property instead, which currently has no SQL spelling and is set through the REST API.
+
+#### Projections
+
+A table may declare [projections](../../querying/projections.md), which are pre-aggregated views stored inside each
+segment. A projection is written as a `SELECT` over the table's own columns, with no `FROM` clause:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  __time TIMESTAMP,
+  user_id VARCHAR,
+  user_agent VARCHAR,
+  pages_visited BIGINT,
+  PROJECTION daily_by_agent AS (
+    SELECT TIME_FLOOR(__time, 'P1D'), user_agent, SUM(pages_visited) AS total_pages
+    WHERE user_agent IS NOT NULL
+    GROUP BY 1, 2
+  )
+)
+PARTITIONED BY DAY
+```
+
+The body is planned exactly as the equivalent query would be, so a projection matches the queries it was written to
+serve. Every aggregate needs an alias, which becomes the name of the stored column. Time granularity is expressed
+with `TIME_FLOOR`, as it would be in a query.
+
+Because the body is planned like a query, it is planned under the statement's own query context, including any `SET`
+clauses. Only context parameters that affect planning can change the stored definition; parameters that only affect
+query execution have no effect, since the body is planned and stored rather than run. The context itself is not part
+of the definition: what the catalog stores is the projection the body planned to, so nothing from the statement's
+context is carried over to queries that later use it. Note also that a projection is matched to a query by its shape,
+so a definition planned under a context that changes that shape only matches queries run under the same context.
+
+A projection body accepts a select list, an optional `WHERE` and an optional `GROUP BY`. It cannot use `ORDER BY`,
+`LIMIT` or `HAVING`: a projection's ordering follows its grouping columns and is not something you choose. It also
+cannot use joins, subqueries, or expressions computed over aggregates, such as `SUM(x) / COUNT(x)`: store the two
+aggregates as separate columns and divide at query time. A projection can store the same
+[aggregation functions that are supported for rollup at ingestion time](../../multi-stage-query/concepts.md#rollup).
+
+Projections may also be added to and removed from an existing table:
+
+```sql
+ALTER TABLE "druid"."visits" ADD PROJECTION [IF NOT EXISTS] by_agent AS (
+  SELECT user_agent, SUM(pages_visited) AS total_pages GROUP BY user_agent
+)
+ALTER TABLE "druid"."visits" DROP PROJECTION [IF EXISTS] by_agent
+```
+
+Both take effect for subsequent ingestion. Segments already built keep whatever projections they were built with, so
+dropping a projection does not rewrite data.
+
+#### The base table
+
+The reserved projection name `__base` describes the table's own physical layout rather than an additional
+pre-aggregation. Its body lists the columns in the order segments store them, so it must name every declared column.
+The shape of the body chooses the layout: a bare select declares a plain table, `GROUP BY` declares a
+[rollup](../../ingestion/rollup.md) table, and `CLUSTERED BY` declares a clustered table. Whatever the layout, a
+`__base` body cannot filter as the base table represents every ingested row.
+
+##### Plain tables
+
+By default, a table stores rows as they arrive, sorted by `__time`. Declaring a plain `__base` projection makes the
+declared column order the segment sort order, and allows declaring a query granularity. The only expression it
+accepts is `TIME_FLOOR(__time, <period>)` selected as `__time`, which declares the table's query granularity (the
+granularity ingested timestamps are floored to). A query granularity must be a period granularity in the UTC time zone,
+matching the UTC-stored `__time` column:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  user_id VARCHAR,
+  __time TIMESTAMP,
+  pages_visited BIGINT,
+  PROJECTION __base AS (
+    SELECT user_id, TIME_FLOOR(__time, 'PT1H') AS __time, pages_visited
+  )
+)
+PARTITIONED BY DAY
+```
+
+##### Rollup tables
+
+A rollup table aggregates rows with identical grouping values into a single row at ingest time, expressed as a
+`GROUP BY` query. The query divides the table's declared columns into grouping columns and metric columns. A column
+written as an aggregate is a metric column, and every other column is a grouping column, selected as-is. The time
+column may instead be grouped as `TIME_FLOOR(__time, <period>)`, which floors rows to that granularity before grouping
+and declares the table's query granularity. Each aggregate is named for the metric column it fills, and reads that
+same column. In the example below, ingestion supplies `total` values and the table sums them:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  user_id VARCHAR,
+  __time TIMESTAMP,
+  total BIGINT,
+  PROJECTION __base AS (
+    SELECT user_id, TIME_FLOOR(__time, 'PT1H') AS __time, SUM(total) AS total
+    GROUP BY 1, 2
+  )
+)
+PARTITIONED BY DAY
+```
+
+The metric columns must be declared after the grouping columns, because the declared order is the physical order. A
+rollup body accepts the same
+[aggregation functions that are supported for rollup at ingestion time](../../multi-stage-query/concepts.md#rollup)
+and, like an aggregate projection, cannot compute expressions over aggregates. The body describes a transformation of
+the table's own columns (the query that rolls the table up onto itself) not of whatever input first produced the
+rows. This is what lets the table aggregate its rows again later, for example when compaction merges segments. An
+aggregate whose output it cannot re-aggregate, such as `COUNT(*)`, is rejected: two counts combine by adding, so store
+a count by summing a count column, as in `SUM(cnt) AS cnt`. A body that groups without any
+aggregates collapses duplicate rows. A rollup table cannot also declare `CLUSTERED BY`.
+
+##### Clustered tables
+
+A clustered table stores the rows of each segment internally partitioned by the clustering columns, which must be the
+leading columns of the table. An item written as `<expr> AS <name>` makes that column computed at ingest time, from the
+columns it reads:
+
+```sql
+CREATE TABLE "druid"."events" SEALED (
+  tenant VARCHAR,
+  bucket BIGINT,
+  __time TIMESTAMP,
+  user_id BIGINT,
+  payload TYPE('COMPLEX<json>'),
+  PROJECTION __base AS (
+    SELECT tenant, MOD(ABS(user_id), 128) AS bucket, __time, user_id, payload
+    CLUSTERED BY tenant, bucket
+  )
+)
+PARTITIONED BY DAY
+```
+
+Computed columns, like `bucket` in the example above, are computed based on inputs provided by the `INSERT` or
+`REPLACE`. In terms of the example, the `INSERT` or `REPLACE` command should provide `user_id`, not `bucket`. Only a
+clustered table materializes computed columns.
+
+For every layout, `SEALED` is optional: a column the ingestion query produces but the table does not declare is
+stored after the declared layout, in the order it arrives (for a rollup table, as an additional grouping column).
+Declare `SEALED` to reject such columns instead.
+
+`ALTER TABLE ... ADD PROJECTION __base AS ( ... )` gives an existing table a layout, and
+`ALTER TABLE ... DROP PROJECTION __base` removes it. Both affect future segments, plus any existing segments that
+[catalog-based compaction](#catalog-based-compaction) later rewrites.
+
+Every other name beginning with `__` remains reserved.
+
+#### Setting table properties
+
+`SET PROPERTIES` merges the given [table properties](#table-properties) into the table. A value of `NULL` removes a
+property. Values must be literals:
+
+```sql
+ALTER TABLE "druid"."visits" SET PROPERTIES (targetSegmentRows = 3000000, sealed = TRUE)
+ALTER TABLE "druid"."visits" SET PROPERTIES (sealed = NULL)
+```
+
+Both statements require `READ` and `WRITE` permission on the datasource, the same permissions the REST API checks. Table
+names may be unqualified or qualified with the `druid` schema; other schemas are rejected. Names are case-sensitive.
+
+There is no `DROP TABLE`. Deleting a table's catalog entry without deleting its data would be a surprising meaning
+for the statement, so removing a specification is left to the [delete API](#delete-a-table) until the semantics are
+settled.
+
+### Catalog-based compaction
+
+By default, a table definition only shapes data on its way in, and segments written before the definition changed keep
+whatever they were written with. However, [Automatic compaction](../../data-management/automatic-compaction.md) can be
+configured to use the catalog, so that it rewrites existing segments toward the current definition as it compacts them.
+A datasource opts in with a compaction config of type `catalog`, which reads the live table definition on every
+compaction run rather than repeating the schema in the compaction config:
+
+```json
+{
+  "type": "catalog",
+  "dataSource": "events",
+  "engine": "msq"
+}
+```
+
+Once this is configured, editing the table definition becomes a background data change: the next compaction run
+notices that existing segments no longer match the definition and rewrites them. The edit is still not immediate, and
+it only reaches intervals that compaction actually visits.
+
+Not every [table property](#table-properties) drives compaction. These do:
+
+| Property | Effect on existing segments |
+|---|---|
+| `segmentGranularity` | Segments are re-partitioned in time to the declared granularity. |
+| `clusterKeys` | Segments are range-partitioned by the key columns, in the declared order. With the MSQ task engine, which a `baseTable` layout requires, every key column must be `VARCHAR` and hold a single value per row; compaction rejects anything else. |
+| `targetSegmentRows` | Rewritten segments are sized to this row count, the same size an `INSERT` produces. |
+| `projections` | Once the table declares any [projection](#projections), the declared set is authoritative: those are built and any others are dropped. A table that declares none keeps whatever the segments already have, unless it is sealed, in which case it is taken to have none and existing projections are dropped. |
+| `baseTable` | The table's physical layout, written in SQL as the [`__base` projection](#the-base-table). The stored column order, clustering, query granularity, and computed columns are rewritten to match it, along with the declared column list it combines with. |
+| `sealed` | On a `__base` table, declares the catalog to be the table's complete description: columns and projections it does not declare are dropped rather than carried over, so compaction does not read the segments looking for them. See below. |
+
+Everything else a table can declare is ignored by compaction today, including `hiddenColumns` and, on a table with no
+`__base` projection, the column list itself. A plain catalog table's columns therefore never trim: compaction infers
+its schema from the segments it is rewriting, so a column dropped from the definition survives in the data and stays
+queryable.
+
+Dropping a column trims it from storage only on a table that has both a `__base` projection and `SEALED`:
+
+| Table | Effect of dropping a declared column |
+|---|---|
+| No `__base` projection | Column is kept. Compaction takes its schema from the segments. |
+| `__base`, not sealed | Column is kept. Compaction reads the segments for columns the definition omits and appends them after the declared ones, the same as at ingest. |
+| `__base` with `SEALED` | **Column is trimmed.** The declaration is treated as complete, so the rewritten segments no longer store it. |
+
+That last row is the case to be careful with: on a sealed clustered table, `ALTER TABLE ... DROP COLUMN` eventually
+deletes data, just not at the moment the statement runs.
+
+Sealing decides this for projections too, not only columns. A sealed table is the complete description of itself, so
+compaction infers nothing from the segments: projections it does not declare are dropped the same way undeclared
+columns are. Note that before sealing a table that already has projections it has never declared, because they go on
+the next compaction; declare them with `ADD PROJECTION` first to keep them.
+
+Sealing makes compaction skip reading the segments entirely. Importantly, this includes the one thing the catalog cannot
+currently state, which is whether a string column holds more than one value per row. A sealed table's `VARCHAR` columns
+are taken to hold a single value each, because there is no way to declare otherwise yet. Where the stored data
+disagrees, the compaction task fails rather than writing something that was not asked for:
+
+- a [`clusterKeys`](#table-properties) column that turns out to be multi-valued fails once the data has been read,
+  because the MSQ task engine cannot range-partition by one
+- a [rollup table](#rollup-tables) grouping column that turns out to be multi-valued fails at the grouping step,
+  because grouping by such a column requires converting it to an array first
+
+Neither is detected before the task runs, and a non-sealed table avoids both by reading the segments to find out.
+
+A non-sealed [rollup table](#rollup-tables) appends metric columns not declared in the columns list as additional
+aggregators. Any other layout has no metric columns at all, so if the segments store metrics and the table's layout
+cannot, compaction fails rather than discarding them; seal the table to drop them deliberately, or declare a rollup
+layout to keep them.
+
+The other column statements behave the same way — nothing on a plain table, a background rewrite on a `__base` table:
+
+- `ADD COLUMN` changes nothing by itself either way. The column has no data in existing segments, and compaction does
+  not invent any.
+- `ALTER COLUMN ... SET DATA TYPE` rewrites the column to the declared type on a `__base` table, since the declared
+  types are what the layout is built from. On a plain table the stored type is left alone and the declared type
+  continues to apply at query time only.
+- Reordering a `__base` body, or changing which columns it clusters by, re-sorts and re-groups the rows of every
+  segment compaction rewrites.
+
+Catalog-based compaction requires the [MSQ task engine](../../multi-stage-query/index.md) for a table with a `__base`
+projection; the native engine rejects the layout.
+
 ### API Objects
 
 #### TableSpec
@@ -60,7 +409,12 @@ A tableSpec defines a table
 | PropertyKeyName      | PropertyValueType | Description                                                                                                                                                                                                                                                                                                                                              | Required | Default |
 |----------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
 | `segmentGranularity` | String            | determines how time-based partitioning is done. See [Partitioning by time](../../multi-stage-query/concepts.md#partitioning-by-time). Can specify any of the values as permitted for [PARTITIONED BY](../../multi-stage-query/reference.md#partitioned-by). This property value may be overridden at query time, by specifying the PARTITIONED BY clause. | no       | null    |
-| `sealed`             | boolean           | require all columns in the table schema to be fully declared before data is ingested. Setting this to true will cause failure when DML queries attempt to add undefined columns to the table.                                                                                                                                                            | no       | false   |
+| `targetSegmentRows`  | Integer           | the number of rows to aim for in each segment. Applied unless the query sets `msqRowsPerSegment` itself. If unset, the system default is used.                                                                                                                                                                                                          | no       | null    |
+| `clusterKeys`        | List&lt;Object\>      | the columns each new segment is clustered by, as objects of the form `{"column": "<name>", "desc": false}`. Acts as a default that an individual statement may override with its own CLUSTERED BY clause. Only ascending order is supported; a key with `"desc": true` is rejected.                                                                     | no       | null    |
+| `hiddenColumns`      | List&lt;String\>      | names of columns present in the segments to hide from the SQL layer, so that unwanted columns can be removed from the table's schema without rewriting existing segments. The data remains stored. `__time` cannot be hidden.                                                                                                                            | no       | null    |
+| `sealed`             | boolean           | require all columns in the table schema to be fully declared before data is ingested. Setting this to true will cause failure when DML queries attempt to add undefined columns to the table. On a table with a `__base` projection it also decides whether [compaction](#catalog-based-compaction) keeps undeclared columns.                             | no       | false   |
+| `projections`        | List&lt;Object\>      | the table's [projections](#projections), as objects of the form `{"spec": {<projection spec>}}`. Usually written with `ADD PROJECTION` rather than set directly.                                                                                                                                                                                        | no       | null    |
+| `baseTable`          | Object            | the table's physical layout, described in SQL as the [`__base` projection](#the-base-table). Combines with the declared column list, which remains the source of truth for column names, types, and order. Usually written with `ADD PROJECTION __base` rather than set directly.                                                                        | no       | null    |
 
 #### ColumnSpec
 
@@ -90,10 +444,11 @@ The endpoint supports a set of optional query parameters to enforce optimistic l
 is meant to update a table rather than create a new one. In the default case, with no query parameters set, this request
 will return an error if a table of the same name already exists in the schema specified.
 
-| Parameter   | Type    | Description                                                                                                                   |
-|-------------|---------|-------------------------------------------------------------------------------------------------------------------------------|
-| `version`   | Long    | the expected version of an existing table. The version must match. If not (or if the table does not exist), returns an error. |
-| `overwrite` | boolean | if true, then overwrites any existing table. Otherwise, the operation fails if the table already exists.                      |
+| Parameter     | Type    | Description                                                                                                                   |
+|---------------|---------|-------------------------------------------------------------------------------------------------------------------------------|
+| `version`     | Long    | the expected version of an existing table. The version must match. If not (or if the table does not exist), returns an error. |
+| `overwrite`   | boolean | if true, then overwrites any existing table. Otherwise, the operation fails if the table already exists.                      |
+| `ifNotExists` | boolean | if true, then leaves an existing table unchanged and reports a version of 0. Otherwise, the operation fails if the table already exists. |
 
 ##### Responses
 

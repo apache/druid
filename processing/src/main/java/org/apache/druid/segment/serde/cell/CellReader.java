@@ -56,7 +56,7 @@ import java.nio.ByteOrder;
  *      processPayload(payload); // may deserialize and peform work
  *    }
  *  }
- *  </pre>
+ *  }</pre>
  *
  *  While you may allocate your own 64k buffers, it is recommended you use {@code NativeClearedByteBufferProvider}
  *  which provides direct 64k ByteBuffers from a pool, wrapped in a ResourceHolder. These objects may be

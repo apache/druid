@@ -22,9 +22,10 @@ package org.apache.druid.java.util.common;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -32,7 +33,6 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -57,8 +57,8 @@ public class ByteBufferUtilsTest
       "fox"
   );
 
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testAllocateDirect()
@@ -75,7 +75,7 @@ public class ByteBufferUtilsTest
   @Test
   public void testUnmapDoesntCrashJVM() throws Exception
   {
-    final File file = tempDir.resolve("some_mmap_file").toFile();
+    final File file = temporaryFolder.newFile("some_mmap_file");
     try (final OutputStream os = new BufferedOutputStream(new FileOutputStream(file))) {
       final byte[] data = new byte[4096];
       Arrays.fill(data, (byte) 0x5A);

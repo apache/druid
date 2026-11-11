@@ -37,10 +37,11 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -81,12 +82,12 @@ public class TombstoneHelperTest
 
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
     List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(pushedSegments, dataSchema);
-    Assert.assertTrue(tombstoneIntervals.isEmpty());
+    Assertions.assertTrue(tombstoneIntervals.isEmpty());
 
     Map<Interval, SegmentIdWithShardSpec> intervalToLockVersion = Collections.emptyMap();
     Set<DataSegment> tombstones = tombstoneHelper.computeTombstones(dataSchema, intervalToLockVersion);
 
-    Assert.assertEquals(0, tombstones.size());
+    Assertions.assertEquals(0, tombstones.size());
 
   }
 
@@ -107,19 +108,16 @@ public class TombstoneHelperTest
 
     // Assume used segments exist:
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(interval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", interval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(pushedSegments, dataSchema);
-    Assert.assertEquals(3, tombstoneIntervals.size());
+    Assertions.assertEquals(3, tombstoneIntervals.size());
     Map<Interval, SegmentIdWithShardSpec> intervalToVersion = new HashMap<>();
     for (Interval ti : tombstoneIntervals) {
       intervalToVersion.put(
@@ -128,8 +126,8 @@ public class TombstoneHelperTest
       );
     }
     Set<DataSegment> tombstones = tombstoneHelper.computeTombstones(dataSchema, intervalToVersion);
-    Assert.assertEquals(3, tombstones.size());
-    tombstones.forEach(ts -> Assert.assertTrue(ts.isTombstone()));
+    Assertions.assertEquals(3, tombstones.size());
+    tombstones.forEach(ts -> Assertions.assertTrue(ts.isTombstone()));
   }
 
   @Test
@@ -141,13 +139,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -159,7 +154,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-03-05/2020-03-06"),
             Intervals.of("2020-03-06/2020-03-07")
@@ -180,10 +175,7 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.MONTH;
 
     List<DataSegment> existingUsedSegments = usedIntervals.stream().map(
-        usedInterval -> DataSegment.builder()
-                                   .dataSource("test")
-                                   .interval(usedInterval)
-                                   .version("oldVersion")
+        usedInterval -> DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                                    .size(100)
                                    .build()
     ).collect(Collectors.toList());
@@ -197,7 +189,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-03-01/2020-04-01"),
             Intervals.of("2020-07-01/2020-08-01"),
@@ -216,13 +208,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -234,7 +223,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-02-01/2020-02-02")), tombstoneIntervals);
+    Assertions.assertEquals(ImmutableSet.of(Intervals.of("2020-02-01/2020-02-02")), tombstoneIntervals);
   }
 
   @Test
@@ -246,13 +235,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -264,7 +250,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(ImmutableSet.of(), tombstoneIntervals);
+    Assertions.assertEquals(ImmutableSet.of(), tombstoneIntervals);
   }
 
   @Test
@@ -276,13 +262,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -294,7 +277,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-12-25/2020-12-26"),
             Intervals.of("2020-12-26/2020-12-27"),
@@ -316,13 +299,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -334,7 +314,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-01-01/2020-01-02"),
             Intervals.of("2020-01-02/2020-01-03"),
@@ -357,13 +337,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -375,7 +352,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-01-01/2020-01-02"),
             Intervals.of("2020-01-02/2020-01-03"),
@@ -402,13 +379,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -420,7 +394,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-01-01/2020-01-02"),
             Intervals.of("2020-01-02/2020-01-03"),
@@ -440,13 +414,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -458,7 +429,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-12-25/2020-12-26"),
             Intervals.of("2020-12-26/2020-12-27"),
@@ -483,13 +454,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -501,7 +469,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("-146136543-09-08T08:23:32.096Z/1970-01-01T00:00:00.000Z"),
             Intervals.of("1970-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")
@@ -523,13 +491,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -541,7 +506,7 @@ public class TombstoneHelperTest
         replaceGranularity,
         MAX_BUCKETS
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             Intervals.of("-146136543-09-08T08:23:32.096Z/2000-01-01T00:00:00.000Z"),
             Intervals.of("3000-01-01/3000-01-02"),
@@ -564,13 +529,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.YEAR;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
 
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
@@ -584,7 +546,7 @@ public class TombstoneHelperTest
         MAX_BUCKETS
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(Intervals.ETERNITY),
         tombstoneIntervals
     );
@@ -602,18 +564,15 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         TooManyBucketsException.class,
         () -> tombstoneHelper.computeTombstoneIntervalsForReplace(
             dropIntervals,
@@ -637,13 +596,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
@@ -657,7 +613,7 @@ public class TombstoneHelperTest
     );
 
     // (365 * 2) ~= 730 day intervals
-    Assert.assertEquals(
+    Assertions.assertEquals(
         dropIntervals.stream()
                      .mapToLong(interval -> interval.toDuration().getStandardDays())
                      .sum(),
@@ -677,27 +633,21 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment1 =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval1)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval1, "oldVersion", 0))
                    .size(100)
                    .build();
     DataSegment existingUsedSegment2 =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval2)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval2, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment1.isTombstone());
-    Assert.assertFalse(existingUsedSegment2.isTombstone());
+    Assertions.assertFalse(existingUsedSegment1.isTombstone());
+    Assertions.assertFalse(existingUsedSegment2.isTombstone());
 
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Arrays.asList(existingUsedSegment1, existingUsedSegment2));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         TooManyBucketsException.class,
         () -> tombstoneHelper.computeTombstoneIntervalsForReplace(
             dropIntervals,
@@ -721,21 +671,15 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment1 =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval1)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval1, "oldVersion", 0))
                    .size(100)
                    .build();
     DataSegment existingUsedSegment2 =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval2)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval2, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment1.isTombstone());
-    Assert.assertFalse(existingUsedSegment2.isTombstone());
+    Assertions.assertFalse(existingUsedSegment1.isTombstone());
+    Assertions.assertFalse(existingUsedSegment2.isTombstone());
 
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Arrays.asList(existingUsedSegment1, existingUsedSegment2));
@@ -750,7 +694,7 @@ public class TombstoneHelperTest
     );
 
     // (365 * 2) ~= 730 day intervals
-    Assert.assertEquals(
+    Assertions.assertEquals(
         usedInterval1.toDuration().getStandardDays() + usedInterval2.toDuration().getStandardDays(),
         tombstoneIntervals.size()
     );
@@ -765,13 +709,10 @@ public class TombstoneHelperTest
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
+        DataSegment.builder(SegmentId.of("test", usedInterval, "oldVersion", 0))
                    .size(100)
                    .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Assertions.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(RetrieveUsedSegmentsAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     Mockito.when(taskActionClient.submit(any(LockListAction.class)))
@@ -779,7 +720,7 @@ public class TombstoneHelperTest
 
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ISE.class,
         () -> tombstoneHelper.computeTombstoneSegmentsForReplace(
             ImmutableList.of(dropInterval),

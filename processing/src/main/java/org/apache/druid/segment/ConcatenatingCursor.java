@@ -21,10 +21,12 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@link Cursor} that walks a sequence of per-group cursors back-to-back, presenting them to the caller as a single
@@ -40,16 +42,20 @@ public final class ConcatenatingCursor implements Cursor
   private final List<Supplier<CursorHolder>> holderSuppliers;
   private final List<Object[]> clusteringValuesByGroup;
   private final ClusteringColumnSelectorFactory wrapperFactory;
+  private final ColumnSelectorFactory exposedFactory;
 
   private int currentIdx;
   @Nullable
   private Cursor currentCursor;
   private boolean initialized;
+  // Whether the wrapper has been given a real delegate; stays true across reset() since that delegate remains usable
+  private boolean delegateSet;
 
   public ConcatenatingCursor(
       List<Supplier<CursorHolder>> holderSuppliers,
       List<Object[]> clusteringValuesByGroup,
-      ClusteringColumnSelectorFactory wrapperFactory
+      ClusteringColumnSelectorFactory wrapperFactory,
+      Map<String, String> virtualColumnRemap
   )
   {
     if (holderSuppliers.size() != clusteringValuesByGroup.size()) {
@@ -65,6 +71,9 @@ public final class ConcatenatingCursor implements Cursor
     this.holderSuppliers = holderSuppliers;
     this.clusteringValuesByGroup = clusteringValuesByGroup;
     this.wrapperFactory = wrapperFactory;
+    this.exposedFactory = virtualColumnRemap.isEmpty()
+                          ? wrapperFactory
+                          : new RemapColumnSelectorFactory(wrapperFactory, virtualColumnRemap);
     this.currentIdx = -1;
   }
 
@@ -81,6 +90,9 @@ public final class ConcatenatingCursor implements Cursor
    * Open the next group whose cursor has at least one row. Sets {@code currentCursor = null} when all groups are
    * exhausted. The wrapper deliberately keeps the last group's delegate at exhaustion: selector values are
    * undefined after {@link #isDone()} anyway, but factory metadata (getColumnCapabilities) must stay answerable.
+   * <p>
+   * If every group is empty, the wrapper still needs a usable delegate, since engines may build selectors on a cursor
+   * that is done from the start. It gets the all-null factory of an {@link EmptyCursorHolder}.
    */
   private void advanceToNextNonEmptyGroup()
   {
@@ -90,18 +102,28 @@ public final class ConcatenatingCursor implements Cursor
       if (cursor != null && !cursor.isDone()) {
         currentCursor = cursor;
         wrapperFactory.setDelegate(cursor.getColumnSelectorFactory(), clusteringValuesByGroup.get(currentIdx));
+        delegateSet = true;
         return;
       }
       // Group has no rows after filter application; try the next.
     }
     currentCursor = null;
+    if (!delegateSet) {
+      wrapperFactory.setDelegate(
+          EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN, RowSignature.empty())
+                           .asCursor()
+                           .getColumnSelectorFactory(),
+          clusteringValuesByGroup.get(holderSuppliers.size() - 1)
+      );
+      delegateSet = true;
+    }
   }
 
   @Override
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     initializeIfNeeded();
-    return wrapperFactory;
+    return exposedFactory;
   }
 
   @Override

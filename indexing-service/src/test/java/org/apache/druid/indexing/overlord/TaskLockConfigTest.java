@@ -36,9 +36,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 
@@ -46,7 +46,7 @@ public class TaskLockConfigTest
 {
   private TaskStorage taskStorage;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
@@ -58,12 +58,12 @@ public class TaskLockConfigTest
     final TaskQueue taskQueue = createTaskQueue(null);
     taskQueue.start();
     final Task task = NoopTask.create();
-    Assert.assertTrue(taskQueue.add(task));
+    Assertions.assertTrue(taskQueue.add(task));
     taskQueue.stop();
     final Optional<Task> optionalTask = taskStorage.getTask(task.getId());
-    Assert.assertTrue(optionalTask.isPresent());
+    Assertions.assertTrue(optionalTask.isPresent());
     final Task fromTaskStorage = optionalTask.get();
-    Assert.assertTrue(fromTaskStorage.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY));
+    Assertions.assertTrue(Boolean.TRUE.equals(fromTaskStorage.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY)));
   }
 
   @Test
@@ -72,12 +72,12 @@ public class TaskLockConfigTest
     final TaskQueue taskQueue = createTaskQueue(false);
     taskQueue.start();
     final Task task = NoopTask.create();
-    Assert.assertTrue(taskQueue.add(task));
+    Assertions.assertTrue(taskQueue.add(task));
     taskQueue.stop();
     final Optional<Task> optionalTask = taskStorage.getTask(task.getId());
-    Assert.assertTrue(optionalTask.isPresent());
+    Assertions.assertTrue(optionalTask.isPresent());
     final Task fromTaskStorage = optionalTask.get();
-    Assert.assertFalse(fromTaskStorage.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY));
+    Assertions.assertFalse(Boolean.TRUE.equals(fromTaskStorage.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY)));
   }
 
   @Test
@@ -87,12 +87,12 @@ public class TaskLockConfigTest
     taskQueue.start();
     final Task task = NoopTask.create();
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false);
-    Assert.assertTrue(taskQueue.add(task));
+    Assertions.assertTrue(taskQueue.add(task));
     taskQueue.stop();
     final Optional<Task> optionalTask = taskStorage.getTask(task.getId());
-    Assert.assertTrue(optionalTask.isPresent());
+    Assertions.assertTrue(optionalTask.isPresent());
     final Task fromTaskStorage = optionalTask.get();
-    Assert.assertFalse(fromTaskStorage.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY));
+    Assertions.assertFalse(Boolean.TRUE.equals(fromTaskStorage.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY)));
   }
 
   private TaskQueue createTaskQueue(@Nullable Boolean forceTimeChunkLock)

@@ -25,8 +25,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StorageCountersTest
 {
@@ -36,12 +36,12 @@ public class StorageCountersTest
     final StorageCounters counters = new StorageCounters(null);
     final StorageCounters.Snapshot snapshot = (StorageCounters.Snapshot) counters.snapshot();
 
-    Assert.assertNull(snapshot.getLocalBytesMax());
-    Assert.assertEquals(0, snapshot.getLocalBytesReserved());
-    Assert.assertEquals(0, snapshot.getLocalFilesWritten());
-    Assert.assertEquals(0, snapshot.getLocalBytesWritten());
-    Assert.assertEquals(0, snapshot.getDurableFileCount());
-    Assert.assertEquals(0, snapshot.getDurableBytesWritten());
+    Assertions.assertNull(snapshot.getLocalBytesMax());
+    Assertions.assertEquals(0, snapshot.getLocalBytesReserved());
+    Assertions.assertEquals(0, snapshot.getLocalFilesWritten());
+    Assertions.assertEquals(0, snapshot.getLocalBytesWritten());
+    Assertions.assertEquals(0, snapshot.getDurableFileCount());
+    Assertions.assertEquals(0, snapshot.getDurableBytesWritten());
   }
 
   @Test
@@ -53,8 +53,8 @@ public class StorageCountersTest
     final StorageCounters counters = new StorageCounters(tracker);
 
     final StorageCounters.Snapshot snapshot = (StorageCounters.Snapshot) counters.snapshot();
-    Assert.assertEquals(1000L, (long) snapshot.getLocalBytesMax());
-    Assert.assertEquals(300, snapshot.getLocalBytesReserved());
+    Assertions.assertEquals(1000L, (long) snapshot.getLocalBytesMax());
+    Assertions.assertEquals(300, snapshot.getLocalBytesReserved());
   }
 
   @Test
@@ -67,14 +67,14 @@ public class StorageCountersTest
 
     // Take first snapshot
     final StorageCounters.Snapshot snapshot1 = (StorageCounters.Snapshot) counters.snapshot();
-    Assert.assertEquals(300, snapshot1.getLocalBytesReserved());
+    Assertions.assertEquals(300, snapshot1.getLocalBytesReserved());
 
     // Change tracker state
     tracker.reserve(200);
 
     // Second snapshot reflects new state
     final StorageCounters.Snapshot snapshot2 = (StorageCounters.Snapshot) counters.snapshot();
-    Assert.assertEquals(500, snapshot2.getLocalBytesReserved());
+    Assertions.assertEquals(500, snapshot2.getLocalBytesReserved());
   }
 
   @Test
@@ -87,10 +87,10 @@ public class StorageCountersTest
     counters.incrementLocalBytes(300);
 
     final StorageCounters.Snapshot snapshot = (StorageCounters.Snapshot) counters.snapshot();
-    Assert.assertEquals(2, snapshot.getLocalFilesWritten());
-    Assert.assertEquals(800, snapshot.getLocalBytesWritten());
-    Assert.assertEquals(0, snapshot.getDurableFileCount());
-    Assert.assertEquals(0, snapshot.getDurableBytesWritten());
+    Assertions.assertEquals(2, snapshot.getLocalFilesWritten());
+    Assertions.assertEquals(800, snapshot.getLocalBytesWritten());
+    Assertions.assertEquals(0, snapshot.getDurableFileCount());
+    Assertions.assertEquals(0, snapshot.getDurableBytesWritten());
   }
 
   @Test
@@ -103,10 +103,10 @@ public class StorageCountersTest
     counters.incrementDurableBytes(2000);
 
     final StorageCounters.Snapshot snapshot = (StorageCounters.Snapshot) counters.snapshot();
-    Assert.assertEquals(0, snapshot.getLocalFilesWritten());
-    Assert.assertEquals(0, snapshot.getLocalBytesWritten());
-    Assert.assertEquals(2, snapshot.getDurableFileCount());
-    Assert.assertEquals(3000, snapshot.getDurableBytesWritten());
+    Assertions.assertEquals(0, snapshot.getLocalFilesWritten());
+    Assertions.assertEquals(0, snapshot.getLocalBytesWritten());
+    Assertions.assertEquals(2, snapshot.getDurableFileCount());
+    Assertions.assertEquals(3000, snapshot.getDurableBytesWritten());
   }
 
   @Test
@@ -120,7 +120,7 @@ public class StorageCountersTest
     final String json = mapper.writeValueAsString(snapshot);
     final StorageCounters.Snapshot deserialized = mapper.readValue(json, StorageCounters.Snapshot.class);
 
-    Assert.assertEquals(snapshot, deserialized);
+    Assertions.assertEquals(snapshot, deserialized);
   }
 
   @Test
@@ -136,7 +136,7 @@ public class StorageCountersTest
     final String json = mapper.writeValueAsString(tree);
     final CounterSnapshotsTree deserialized = mapper.readValue(json, CounterSnapshotsTree.class);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         snapshot,
         deserialized.copyMap().get(0).get(0).getMap().get(CounterNames.storage())
     );
@@ -152,13 +152,13 @@ public class StorageCountersTest
 
     // First call creates the counter
     final StorageCounters counters = counterTracker.storage(tracker1);
-    Assert.assertSame(tracker1, counters.getLocalByteTracker());
+    Assertions.assertSame(tracker1, counters.getLocalByteTracker());
 
     // Second call with same tracker succeeds
-    Assert.assertSame(counters, counterTracker.storage(tracker1));
+    Assertions.assertSame(counters, counterTracker.storage(tracker1));
 
     // Call with different tracker fails
-    Assert.assertThrows(IllegalStateException.class, () -> counterTracker.storage(tracker2));
+    Assertions.assertThrows(IllegalStateException.class, () -> counterTracker.storage(tracker2));
   }
 
   @Test

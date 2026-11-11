@@ -44,7 +44,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryConfigProvider;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
@@ -118,6 +118,18 @@ public class DruidMeta extends MetaImpl
   }
 
   private static final Logger LOG = new Logger(DruidMeta.class);
+
+  private static final ThreadLocal<String> THREAD_LOCAL_REMOTE_ADDRESS = new ThreadLocal<>();
+
+  public static void setThreadLocalRemoteAddress(String remoteAddress)
+  {
+    THREAD_LOCAL_REMOTE_ADDRESS.set(remoteAddress);
+  }
+
+  public static void clearThreadLocalRemoteAddress()
+  {
+    THREAD_LOCAL_REMOTE_ADDRESS.remove();
+  }
 
   /**
    * Items passed in via the connection context which are not query
@@ -220,7 +232,7 @@ public class DruidMeta extends MetaImpl
     // Don't stringify arrays for JDBC because Avatica needs to handle arrays.
     // When using query context security, all JDBC users must have permission on
     // this context key.
-    contextMap.put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false);
+    QueryContextParameters.SQL_STRINGIFY_ARRAYS.set(contextMap, false);
     try {
       openDruidConnection(ch.id, secret, contextMap);
     }
@@ -267,7 +279,11 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final DruidJdbcStatement druidStatement = getDruidConnection(ch.id)
-          .createStatement(sqlStatementFactory, queryConfigProvider.getContext(), fetcherFactory);
+          .createStatement(
+              sqlStatementFactory,
+              queryConfigProvider.getContext(),
+              fetcherFactory
+          );
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
     catch (Throwable t) {
@@ -300,7 +316,8 @@ public class DruidMeta extends MetaImpl
           sqlReq,
           queryConfigProvider.getContext(),
           maxRowCount,
-          fetcherFactory
+          fetcherFactory,
+          THREAD_LOCAL_REMOTE_ADDRESS.get()
       );
       stmt.prepare();
       LOG.debug("Successfully prepared statement [%s] for execution", stmt.getStatementId());
@@ -317,6 +334,12 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult != null) {
       return authenticationResult;
     }
+
+    // Credentials are fixed at openConnection() and cannot be retried under the same
+    // connection id, so a failure here is terminal for this connection. Close it immediately
+    // rather than leaving it to occupy a connection slot until it times out, since it can
+    // never be reclaimed by closeIfEmpty() once a statement exists on it.
+    closeConnection(new ConnectionHandle(druidConnection.getConnectionId()));
 
     // Throw an error. Use the same text that will appear if the user is denied
     // access to any resource within the query. See mapException(). This consistency
@@ -371,7 +394,7 @@ public class DruidMeta extends MetaImpl
         final SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
                                                     .auth(authenticationResult)
                                                     .buildJdbc();
-        druidStatement.execute(sqlRequest, maxRowCount);
+        druidStatement.execute(sqlRequest, maxRowCount, THREAD_LOCAL_REMOTE_ADDRESS.get());
         final ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
         LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());
         return result;
@@ -494,7 +517,7 @@ public class DruidMeta extends MetaImpl
     try {
       final DruidJdbcPreparedStatement druidStatement =
           getDruidStatement(statement, DruidJdbcPreparedStatement.class);
-      druidStatement.execute(parameterValues);
+      druidStatement.execute(parameterValues, THREAD_LOCAL_REMOTE_ADDRESS.get());
       ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
       LOG.debug(
           "Successfully started execution of statement [%s]",

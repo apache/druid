@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
@@ -75,19 +76,18 @@ import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.hamcrest.core.StringContains;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ExpressionsTest extends CalciteTestBase
 {
@@ -158,6 +158,27 @@ public class ExpressionsTest extends CalciteTestBase
   {
     return operatorTable.lookupOperatorConversion(round);
   }
+  /**
+   * Expected result of SUBSTRING on a string column. The index and length are the Druid expression text of the
+   * arguments. The conversion keeps the node type and the (empty) arguments of the column expression, which cannot be
+   * built other than by mapping a column expression. The extraction function, the type and the expression text are
+   * spelled out here instead of being taken from the code under test.
+   *
+   * @param extractionFn expected extraction function of the result, null if it is not a simple extraction
+   */
+  private static DruidExpression expectedSubstring(
+      String column,
+      @Nullable ExtractionFn extractionFn,
+      String index,
+      String length
+  )
+  {
+    final SimpleExtraction expectedExtraction = extractionFn == null ? null : SimpleExtraction.of(column, extractionFn);
+    return DruidExpression.ofColumn(ColumnType.STRING, column).map(
+        extraction -> expectedExtraction,
+        expression -> StringUtils.format("substring(%s, %s, %s)", expression, index, length)
+    );
+  }
 
   @Test
   public void testConcat()
@@ -169,14 +190,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("bar")
         ),
-        DruidExpression.ofExpression(
-            ColumnType.STRING,
-            DruidExpression.functionCall("concat"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "s"),
-                DruidExpression.ofStringLiteral("bar")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "concat", testHelper.makeVariable("s"), "bar"),
         "foobar"
     );
   }
@@ -187,13 +201,7 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         SqlStdOperatorTable.CHARACTER_LENGTH,
         testHelper.makeInputRef("s"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("strlen"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "s")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "strlen", testHelper.makeVariable("s")),
         3L
     );
   }
@@ -201,127 +209,209 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testSubstring()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new SubstringOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1),
             testHelper.makeLiteral(2)
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new SubstringDimExtractionFn(0, 2)),
-            "substring(\"s\", 0, 2)"
-        ),
+        expectedSubstring("s", null, "0", "2"),
         "fo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new SubstringOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(2),
             testHelper.makeLiteral(1)
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new SubstringDimExtractionFn(1, 1)),
-            "substring(\"s\", 1, 1)"
-        ),
+        expectedSubstring("s", null, "1", "1"),
         "o"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new SubstringOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1)
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new SubstringDimExtractionFn(0, null)),
-            "substring(\"s\", 0, -1)"
-        ),
+        expectedSubstring("s", null, "0", "-1"),
         "foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new SubstringOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(2)
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new SubstringDimExtractionFn(1, null)),
-            "substring(\"s\", 1, -1)"
-        ),
+        expectedSubstring("s", null, "1", "-1"),
         "oo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new SubstringOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1),
             testHelper.makeInputRef("p") // p is 3
         ),
-        makeExpression("substring(\"s\", 0, \"p\")"),
+        expectedSubstring("s", null, "0", "\"p\""),
         "foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new SubstringOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("spacey"),
             testHelper.makeInputRef("p") // p is 3
         ),
-        makeExpression("substring(\"spacey\", (\"p\" - 1), -1)"),
+        expectedSubstring("spacey", null, "(\"p\" - 1)", "-1"),
         "hey there  "
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new SubstringOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("spacey"),
             testHelper.makeInputRef("p"), // p is 3
             testHelper.makeInputRef("p") // p is 3
         ),
-        makeExpression("substring(\"spacey\", (\"p\" - 1), \"p\")"),
+        expectedSubstring("spacey", null, "(\"p\" - 1)", "\"p\""),
         "hey"
+    );
+  }
+
+  @Test
+  public void testSubstringWithExtractionFns()
+  {
+    testHelper.testExpressionWithExtractionFns(
+        testHelper.makeCall(
+            new SubstringOperatorConversion().calciteOperator(),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1),
+            testHelper.makeLiteral(2)
+        ),
+        expectedSubstring("s", new SubstringDimExtractionFn(0, 2), "0", "2"),
+        "fo"
+    );
+
+    testHelper.testExpressionWithExtractionFns(
+        testHelper.makeCall(
+            new SubstringOperatorConversion().calciteOperator(),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(2)
+        ),
+        expectedSubstring("s", new SubstringDimExtractionFn(1, null), "1", "-1"),
+        "oo"
+    );
+
+    // Length is not a literal, so there is no extraction function even though they are enabled.
+    testHelper.testExpressionWithExtractionFns(
+        testHelper.makeCall(
+            new SubstringOperatorConversion().calciteOperator(),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1),
+            testHelper.makeInputRef("p") // p is 3
+        ),
+        expectedSubstring("s", null, "0", "\"p\""),
+        "foo"
+    );
+  }
+
+  @Test
+  public void testRegexpExtractWithExtractionFns()
+  {
+    testHelper.testExpressionWithExtractionFns(
+        testHelper.makeCall(
+            new RegexpExtractOperatorConversion().calciteOperator(),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("f(.)"),
+            testHelper.makeLiteral(1)
+        ),
+        DruidExpression.ofExpression(
+            ColumnType.STRING,
+            SimpleExtraction.of("s", new RegexDimExtractionFn("f(.)", 1, true, null)),
+            DruidExpression.functionCall("regexp_extract"),
+            ImmutableList.of(
+                DruidExpression.ofColumn(ColumnType.STRING, "s"),
+                DruidExpression.ofStringLiteral("f(.)"),
+                DruidExpression.ofLiteral(ColumnType.LONG, "1")
+            )
+        ),
+        "o"
+    );
+
+    // Without an index the whole match is returned.
+    testHelper.testExpressionWithExtractionFns(
+        testHelper.makeCall(
+            new RegexpExtractOperatorConversion().calciteOperator(),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("f(.)")
+        ),
+        DruidExpression.ofExpression(
+            ColumnType.STRING,
+            SimpleExtraction.of("s", new RegexDimExtractionFn("f(.)", 0, true, null)),
+            DruidExpression.functionCall("regexp_extract"),
+            ImmutableList.of(
+                DruidExpression.ofColumn(ColumnType.STRING, "s"),
+                DruidExpression.ofStringLiteral("f(.)")
+            )
+        ),
+        "fo"
+    );
+
+    // The input is not a simple column, so there is no extraction function even though they are enabled.
+    testHelper.testExpressionWithExtractionFns(
+        testHelper.makeCall(
+            new RegexpExtractOperatorConversion().calciteOperator(),
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("Z"),
+                testHelper.makeInputRef("s")
+            ),
+            testHelper.makeLiteral("Zf(.)")
+        ),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "regexp_extract",
+            testHelper.expectedFunctionCall(ColumnType.STRING, "concat", "Z", testHelper.makeVariable("s")),
+            "Zf(.)"
+        ),
+        "Zfo"
     );
   }
 
   @Test
   public void testRegexpExtract()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("x(.)"),
             testHelper.makeLiteral(1)
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new RegexDimExtractionFn("x(.)", 1, true, null)),
-            "regexp_extract(\"s\",'x(.)',1)"
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", testHelper.makeVariable("s"), "x(.)", 1),
         null
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("(o)"),
             testHelper.makeLiteral(1)
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new RegexDimExtractionFn("(o)", 1, true, null)),
-            "regexp_extract(\"s\",'(o)',1)"
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", testHelper.makeVariable("s"), "(o)", 1),
 
         // Column "s" contains an 'o', but not at the beginning; we do match this.
         "o"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
@@ -331,90 +421,83 @@ public class ExpressionsTest extends CalciteTestBase
             ),
             testHelper.makeLiteral("Zf(.)")
         ),
-        makeExpression("regexp_extract(concat('Z',\"s\"),'Zf(.)')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "regexp_extract",
+            testHelper.expectedFunctionCall(ColumnType.STRING, "concat", "Z", testHelper.makeVariable("s")),
+            "Zf(.)"
+        ),
         "Zfo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("f(.)"),
             testHelper.makeLiteral(1)
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new RegexDimExtractionFn("f(.)", 1, true, null)),
-            "regexp_extract(\"s\",'f(.)',1)"
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", testHelper.makeVariable("s"), "f(.)", 1),
         "o"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("f(.)")
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new RegexDimExtractionFn("f(.)", 0, true, null)),
-            "regexp_extract(\"s\",'f(.)')"
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", testHelper.makeVariable("s"), "f(.)"),
         "fo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("")
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
-            "regexp_extract(\"s\",'')"
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", testHelper.makeVariable("s"), ""),
         ""
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("")
         ),
-        makeExpression(
-            SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
-            "regexp_extract(\"s\",'')"
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", testHelper.makeVariable("s"), ""),
         ""
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("(.)")
         ),
-        makeExpression("regexp_extract(null,'(.)')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", null, "(.)"),
         null
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("")
         ),
-        makeExpression("regexp_extract(null,'')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", null, ""),
         null
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("null")
         ),
-        makeExpression("regexp_extract(null,'null')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_extract", null, "null"),
         null
     );
   }
@@ -422,29 +505,35 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRegexpReplace()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpReplaceOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("x(.)"),
             testHelper.makeLiteral("z")
         ),
-        makeExpression("regexp_replace(\"s\",'x(.)','z')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "regexp_replace",
+            testHelper.makeVariable("s"),
+            "x(.)",
+            "z"
+        ),
         "foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpReplaceOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("(o)"),
             testHelper.makeLiteral("z")
         ),
-        makeExpression("regexp_replace(\"s\",'(o)','z')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "regexp_replace", testHelper.makeVariable("s"), "(o)", "z"),
         "fzz"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpReplaceOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
@@ -455,18 +544,30 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("Zf(.)"),
             testHelper.makeLiteral("z")
         ),
-        makeExpression("regexp_replace(concat('Z',\"s\"),'Zf(.)','z')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "regexp_replace",
+            testHelper.expectedFunctionCall(ColumnType.STRING, "concat", "Z", testHelper.makeVariable("s")),
+            "Zf(.)",
+            "z"
+        ),
         "zo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpReplaceOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("f(.)"),
             testHelper.makeLiteral("$1")
         ),
-        makeExpression("regexp_replace(\"s\",'f(.)','$1')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "regexp_replace",
+            testHelper.makeVariable("s"),
+            "f(.)",
+            "$1"
+        ),
         "oo"
     );
   }
@@ -474,109 +575,130 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRegexpLike()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("f.")
         ),
-        makeExpression("regexp_like(\"s\",'f.')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", testHelper.makeVariable("s"), "f."),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("o")
         ),
-        makeExpression("regexp_like(\"s\",'o')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", testHelper.makeVariable("s"), "o"),
 
         // Column "s" contains an 'o', but not at the beginning; we do match this.
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("x.")
         ),
-        makeExpression("regexp_like(\"s\",'x.')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", testHelper.makeVariable("s"), "x."),
         0L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("")
         ),
-        makeExpression("regexp_like(\"s\",'')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", testHelper.makeVariable("s"), ""),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("beep\nboop"),
             testHelper.makeLiteral("^beep$")
         ),
-        makeExpression("regexp_like('beep\\u000Aboop','^beep$')"),
+        DruidExpression.ofFunctionCall(
+            ColumnType.LONG,
+            "regexp_like",
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.STRING, "'beep\\u000Aboop'"),
+                DruidExpression.ofLiteral(ColumnType.STRING, "'^beep$'")
+            )
+        ),
         0L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("beep\nboop"),
             testHelper.makeLiteral("^beep\\nboop$")
         ),
-        makeExpression("regexp_like('beep\\u000Aboop','^beep\\u005Cnboop$')"),
+        DruidExpression.ofFunctionCall(
+            ColumnType.LONG,
+            "regexp_like",
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.STRING, "'beep\\u000Aboop'"),
+                DruidExpression.ofLiteral(ColumnType.STRING, "'^beep\\u005Cnboop$'")
+            )
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("newliney"),
             testHelper.makeLiteral("^beep$")
         ),
-        makeExpression("regexp_like(\"newliney\",'^beep$')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", testHelper.makeVariable("newliney"), "^beep$"),
         0L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("newliney"),
             testHelper.makeLiteral("^beep\\nboop$")
         ),
-        makeExpression("regexp_like(\"newliney\",'^beep\\u005Cnboop$')"),
+        DruidExpression.ofFunctionCall(
+            ColumnType.LONG,
+            "regexp_like",
+            ImmutableList.of(
+                DruidExpression.ofColumn(ColumnType.STRING, "newliney"),
+                DruidExpression.ofLiteral(ColumnType.STRING, "'^beep\\u005Cnboop$'")
+            )
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("newliney"),
             testHelper.makeLiteral("boo")
         ),
-        makeExpression("regexp_like(\"newliney\",'boo')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", testHelper.makeVariable("newliney"), "boo"),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("newliney"),
             testHelper.makeLiteral("^boo")
         ),
-        makeExpression("regexp_like(\"newliney\",'^boo')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", testHelper.makeVariable("newliney"), "^boo"),
         0L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
@@ -586,37 +708,42 @@ public class ExpressionsTest extends CalciteTestBase
             ),
             testHelper.makeLiteral("x(.)")
         ),
-        makeExpression("regexp_like(concat('Z',\"s\"),'x(.)')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "regexp_like",
+            testHelper.expectedFunctionCall(ColumnType.STRING, "concat", "Z", testHelper.makeVariable("s")),
+            "x(.)"
+        ),
         0L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("(.)")
         ),
-        makeExpression("regexp_like(null,'(.)')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", null, "(.)"),
         null
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("")
         ),
-        makeExpression("regexp_like(null,'')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", null, ""),
         null
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("null")
         ),
-        makeExpression("regexp_like(null,'null')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "regexp_like", null, "null"),
         null
     );
   }
@@ -717,38 +844,38 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testStringFormat()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new StringFormatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("%x"),
             testHelper.makeInputRef("b")
         ),
-        makeExpression("format('%x',\"b\")"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "format", "%x", testHelper.makeVariable("b")),
         "19"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new StringFormatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("%s %,d"),
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1234)
         ),
-        makeExpression("format('%s %,d',\"s\",1234)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "format", "%s %,d", testHelper.makeVariable("s"), 1234),
         "foo 1,234"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new StringFormatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("%s %,d"),
             testHelper.makeInputRef("s")
         ),
-        makeExpression("format('%s %,d',\"s\")"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "format", "%s %,d", testHelper.makeVariable("s")),
         "%s %,d; foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new StringFormatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("%s %,d"),
@@ -756,11 +883,18 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral(1234),
             testHelper.makeLiteral(6789)
         ),
-        makeExpression("format('%s %,d',\"s\",1234,6789)"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "format",
+            "%s %,d",
+            testHelper.makeVariable("s"),
+            1234,
+            6789
+        ),
         "foo 1,234"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new StringFormatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("%.2f %.2f %.2f"),
@@ -768,7 +902,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral(123.4),
             testHelper.makeLiteral(123.456789)
         ),
-        makeExpression("format('%.2f %.2f %.2f',1234.0,123.4,123.456789)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "format", "%.2f %.2f %.2f", 1234.0, 123.4, 123.456789),
         "1234.00 123.40 123.46"
     );
   }
@@ -776,33 +910,66 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testStrpos()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new StrposOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("oo")
         ),
-        makeExpression("(strpos(\"s\",'oo') + 1)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(strpos(%s,%s) + 1)",
+                args.get(0).getExpression(),
+                args.get(1).getExpression()
+            ),
+            ImmutableList.of(
+                DruidExpression.ofColumn(ColumnType.STRING, "s"),
+                DruidExpression.ofLiteral(ColumnType.STRING, "'oo'")
+            )
+        ),
         2L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new StrposOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("ax")
         ),
-        makeExpression("(strpos(\"s\",'ax') + 1)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(strpos(%s,%s) + 1)",
+                args.get(0).getExpression(),
+                args.get(1).getExpression()
+            ),
+            ImmutableList.of(
+                DruidExpression.ofColumn(ColumnType.STRING, "s"),
+                DruidExpression.ofLiteral(ColumnType.STRING, "'ax'")
+            )
+        ),
         0L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new StrposOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("ax")
         ),
-        makeExpression("(strpos(null,'ax') + 1)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(strpos(%s,%s) + 1)",
+                args.get(0).getExpression(),
+                args.get(1).getExpression()
+            ),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.STRING, "null"),
+                DruidExpression.ofLiteral(ColumnType.STRING, "'ax'")
+            )
+        ),
         null
     );
   }
@@ -813,17 +980,11 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         new ParseLongOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("intstr"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("parse_long"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "intstr")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "parse_long", testHelper.makeVariable("intstr")),
         -100L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new ParseLongOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("hexstr"),
@@ -840,7 +1001,7 @@ public class ExpressionsTest extends CalciteTestBase
         239L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new ParseLongOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
@@ -854,14 +1015,7 @@ public class ExpressionsTest extends CalciteTestBase
             ColumnType.LONG,
             DruidExpression.functionCall("parse_long"),
             ImmutableList.of(
-                DruidExpression.ofExpression(
-                    ColumnType.STRING,
-                    DruidExpression.functionCall("concat"),
-                    ImmutableList.of(
-                        DruidExpression.ofStringLiteral("0x"),
-                        DruidExpression.ofColumn(ColumnType.STRING, "hexstr")
-                    )
-                ),
+                testHelper.expectedFunctionCall(ColumnType.STRING, "concat", "0x", testHelper.makeVariable("hexstr")),
                 DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(16))
             )
         ),
@@ -871,13 +1025,7 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         new ParseLongOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("hexstr"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("parse_long"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "hexstr")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "parse_long", testHelper.makeVariable("hexstr")),
         null
     );
   }
@@ -885,35 +1033,72 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testPosition()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.POSITION,
         ImmutableList.of(
             testHelper.makeLiteral("oo"),
             testHelper.makeInputRef("s")
         ),
-        makeExpression(ColumnType.LONG, "(strpos(\"s\",'oo',0) + 1)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(strpos(%s,%s,0) + 1)",
+                args.get(1).getExpression(),
+                args.get(0).getExpression()
+            ),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.STRING, "'oo'"),
+                DruidExpression.ofColumn(ColumnType.STRING, "s")
+            )
+        ),
         2L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.POSITION,
         ImmutableList.of(
             testHelper.makeLiteral("oo"),
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(BigDecimal.valueOf(2))
         ),
-        makeExpression(ColumnType.LONG, "(strpos(\"s\",'oo',(2 - 1)) + 1)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(strpos(%s,%s,(%s - 1)) + 1)",
+                args.get(1).getExpression(),
+                args.get(0).getExpression(),
+                args.get(2).getExpression()
+            ),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.STRING, "'oo'"),
+                DruidExpression.ofColumn(ColumnType.STRING, "s"),
+                DruidExpression.ofLiteral(ColumnType.LONG, "2")
+            )
+        ),
         2L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.POSITION,
         ImmutableList.of(
             testHelper.makeLiteral("oo"),
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(BigDecimal.valueOf(3))
         ),
-        makeExpression(ColumnType.LONG, "(strpos(\"s\",'oo',(3 - 1)) + 1)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(strpos(%s,%s,(%s - 1)) + 1)",
+                args.get(1).getExpression(),
+                args.get(0).getExpression(),
+                args.get(2).getExpression()
+            ),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.STRING, "'oo'"),
+                DruidExpression.ofColumn(ColumnType.STRING, "s"),
+                DruidExpression.ofLiteral(ColumnType.LONG, "3")
+            )
+        ),
         0L
     );
   }
@@ -921,13 +1106,13 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testPower()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.POWER,
         ImmutableList.of(
             testHelper.makeInputRef("a"),
             testHelper.makeLiteral(2)
         ),
-        makeExpression(ColumnType.DOUBLE, "pow(\"a\",2)"),
+        testHelper.expectedFunctionCall(ColumnType.DOUBLE, "pow", testHelper.makeVariable("a"), 2),
         100.0
     );
   }
@@ -938,52 +1123,28 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         testHelper.makeInputRef("a"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("floor"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "a")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "floor", testHelper.makeVariable("a")),
         10.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         testHelper.makeInputRef("x"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("floor"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "x")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "floor", testHelper.makeVariable("x")),
         2.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         testHelper.makeInputRef("y"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("floor"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "y")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "floor", testHelper.makeVariable("y")),
         3.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         testHelper.makeInputRef("z"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("floor"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "z")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "floor", testHelper.makeVariable("z")),
         -3.0
     );
   }
@@ -994,52 +1155,28 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         testHelper.makeInputRef("a"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("ceil"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "a")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "ceil", testHelper.makeVariable("a")),
         10.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         testHelper.makeInputRef("x"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("ceil"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "x")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "ceil", testHelper.makeVariable("x")),
         3.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         testHelper.makeInputRef("y"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("ceil"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "y")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "ceil", testHelper.makeVariable("y")),
         3.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         testHelper.makeInputRef("z"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("ceil"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "z")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "ceil", testHelper.makeVariable("z")),
         -2.0
     );
   }
@@ -1101,7 +1238,7 @@ public class ExpressionsTest extends CalciteTestBase
         -2.0
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         truncateFunction,
         ImmutableList.of(
             testHelper.makeInputRef("x"),
@@ -1118,7 +1255,7 @@ public class ExpressionsTest extends CalciteTestBase
         2.2
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         truncateFunction,
         ImmutableList.of(
             testHelper.makeInputRef("z"),
@@ -1135,7 +1272,7 @@ public class ExpressionsTest extends CalciteTestBase
         -2.2
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         truncateFunction,
         ImmutableList.of(
             testHelper.makeInputRef("b"),
@@ -1152,7 +1289,7 @@ public class ExpressionsTest extends CalciteTestBase
         20.0
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         truncateFunction,
         ImmutableList.of(
             testHelper.makeInputRef("z"),
@@ -1178,30 +1315,18 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("a"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "a")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "round", testHelper.makeVariable("a")),
         10L
     );
 
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("b"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "b")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "round", testHelper.makeVariable("b")),
         25L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         roundFunction,
         ImmutableList.of(
             testHelper.makeInputRef("b"),
@@ -1221,17 +1346,11 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("x"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "x")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "round", testHelper.makeVariable("x")),
         2.0
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         roundFunction,
         ImmutableList.of(
             testHelper.makeInputRef("x"),
@@ -1251,26 +1370,14 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("y"),
-        DruidExpression.ofExpression(
-            ColumnType.LONG,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "y")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "round", testHelper.makeVariable("y")),
         3L
     );
 
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("z"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "z")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "round", testHelper.makeVariable("z")),
         -2.0
     );
   }
@@ -1280,26 +1387,19 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
-        () -> testHelper.testExpressionString(
+        () -> testHelper.testExpression(
             roundFunction,
             ImmutableList.of(
                 testHelper.makeInputRef("x"),
                 testHelper.makeLiteral("foo")
             ),
-            DruidExpression.ofExpression(
-                ColumnType.FLOAT,
-                DruidExpression.functionCall("round"),
-                ImmutableList.of(
-                    DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
-                    DruidExpression.ofStringLiteral("foo")
-                )
-            ),
+            testHelper.expectedFunctionCall(ColumnType.FLOAT, "round", testHelper.makeVariable("x"), "foo"),
             "IAE Exception"
         )
     );
-    Assert.assertEquals("Function[round] second argument should be a LONG but got STRING instead", t.getMessage());
+    Assertions.assertEquals("Function[round] second argument should be a LONG but got STRING instead", t.getMessage());
   }
 
   @Test
@@ -1310,25 +1410,13 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("nan"),
-        DruidExpression.ofExpression(
-            ColumnType.DOUBLE,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.DOUBLE, "nan")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.DOUBLE, "round", testHelper.makeVariable("nan")),
         0D
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("fnan"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "fnan")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "round", testHelper.makeVariable("fnan")),
         0D
     );
   }
@@ -1342,49 +1430,25 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("inf"),
-        DruidExpression.ofExpression(
-            ColumnType.DOUBLE,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.DOUBLE, "inf")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.DOUBLE, "round", testHelper.makeVariable("inf")),
         Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("-inf"),
-        DruidExpression.ofExpression(
-            ColumnType.DOUBLE,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.DOUBLE, "-inf")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.DOUBLE, "round", testHelper.makeVariable("-inf")),
         -1 * Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("finf"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "finf")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "round", testHelper.makeVariable("finf")),
         Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("-finf"),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "-finf")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.FLOAT, "round", testHelper.makeVariable("-finf")),
         -1 * Double.MAX_VALUE
     );
     //CHECKSTYLE.ON: Regexp
@@ -1393,23 +1457,23 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testDateTrunc()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new DateTruncOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("hour"),
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
         ),
-        makeExpression(ColumnType.LONG, "timestamp_floor(949550706000,'PT1H',null,'UTC')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "timestamp_floor", 949550706000L, "PT1H", null, "UTC"),
         DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new DateTruncOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral("DAY"),
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
         ),
-        makeExpression(ColumnType.LONG, "timestamp_floor(949550706000,'P1D',null,'UTC')"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "timestamp_floor", 949550706000L, "P1D", null, "UTC"),
         DateTimes.of("2000-02-03T00:00:00").getMillis()
     );
   }
@@ -1417,36 +1481,36 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTrim()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.TRIM,
         ImmutableList.of(
             testHelper.makeFlag(SqlTrimFunction.Flag.BOTH),
             testHelper.makeLiteral(" "),
             testHelper.makeInputRef("spacey")
         ),
-        makeExpression("trim(\"spacey\",' ')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "trim", testHelper.makeVariable("spacey"), " "),
         "hey there"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.TRIM,
         ImmutableList.of(
             testHelper.makeFlag(SqlTrimFunction.Flag.LEADING),
             testHelper.makeLiteral(" h"),
             testHelper.makeInputRef("spacey")
         ),
-        makeExpression("ltrim(\"spacey\",' h')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "ltrim", testHelper.makeVariable("spacey"), " h"),
         "ey there  "
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.TRIM,
         ImmutableList.of(
             testHelper.makeFlag(SqlTrimFunction.Flag.TRAILING),
             testHelper.makeLiteral(" e"),
             testHelper.makeInputRef("spacey")
         ),
-        makeExpression("rtrim(\"spacey\",' e')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "rtrim", testHelper.makeVariable("spacey"), " e"),
         "  hey ther"
     );
   }
@@ -1454,25 +1518,25 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testPad()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new LPadOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(5),
             testHelper.makeLiteral("x")
         ),
-        makeExpression("lpad(\"s\",5,'x')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "lpad", testHelper.makeVariable("s"), 5, "x"),
         "xxfoo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RPadOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(5),
             testHelper.makeLiteral("x")
         ),
-        makeExpression("rpad(\"s\",5,'x')"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "rpad", testHelper.makeVariable("s"), 5, "x"),
         "fooxx"
     );
   }
@@ -1480,37 +1544,52 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testContains()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("there")
         ),
-        makeExpression("contains_string(\"spacey\",'there')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "contains_string",
+            testHelper.makeVariable("spacey"),
+            "there"
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("There")
         ),
-        makeExpression(ColumnType.LONG, "contains_string(\"spacey\",'There')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "contains_string",
+            testHelper.makeVariable("spacey"),
+            "There"
+        ),
         0L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         ContainsOperatorConversion.caseInsensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("There")
         ),
-        makeExpression(ColumnType.LONG, "icontains_string(\"spacey\",'There')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "icontains_string",
+            testHelper.makeVariable("spacey"),
+            "There"
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
@@ -1520,11 +1599,16 @@ public class ExpressionsTest extends CalciteTestBase
             ),
             testHelper.makeLiteral("what")
         ),
-        makeExpression(ColumnType.LONG, "contains_string(concat('what is',\"spacey\"),'what')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "contains_string",
+            testHelper.expectedFunctionCall(ColumnType.STRING, "concat", "what is", testHelper.makeVariable("spacey")),
+            "what"
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
@@ -1534,11 +1618,16 @@ public class ExpressionsTest extends CalciteTestBase
             ),
             testHelper.makeLiteral("there")
         ),
-        makeExpression(ColumnType.LONG, "contains_string(concat('what is',\"spacey\"),'there')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "contains_string",
+            testHelper.expectedFunctionCall(ColumnType.STRING, "concat", "what is", testHelper.makeVariable("spacey")),
+            "there"
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         ContainsOperatorConversion.caseInsensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
@@ -1548,11 +1637,16 @@ public class ExpressionsTest extends CalciteTestBase
             ),
             testHelper.makeLiteral("There")
         ),
-        makeExpression(ColumnType.LONG, "icontains_string(concat('what is',\"spacey\"),'There')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "icontains_string",
+            testHelper.expectedFunctionCall(ColumnType.STRING, "concat", "what is", testHelper.makeVariable("spacey")),
+            "There"
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.AND,
         ImmutableList.of(
             testHelper.makeCall(
@@ -1566,11 +1660,38 @@ public class ExpressionsTest extends CalciteTestBase
                 testHelper.makeLiteral("yes")
             )
         ),
-        makeExpression(ColumnType.LONG, "(contains_string(\"spacey\",'there') && ('yes' == 'yes'))"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(%s && %s)",
+                args.get(0).getExpression(),
+                args.get(1).getExpression()
+            ),
+            ImmutableList.of(
+                testHelper.expectedFunctionCall(
+                    ColumnType.LONG,
+                    "contains_string",
+                    testHelper.makeVariable("spacey"),
+                    "there"
+                ),
+                DruidExpression.ofExpression(
+                    ColumnType.LONG,
+                    (args) -> StringUtils.format(
+                        "(%s == %s)",
+                        args.get(0).getExpression(),
+                        args.get(1).getExpression()
+                    ),
+                    ImmutableList.of(
+                        DruidExpression.ofLiteral(ColumnType.STRING, "'yes'"),
+                        DruidExpression.ofLiteral(ColumnType.STRING, "'yes'")
+                    )
+                )
+            )
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.AND,
         ImmutableList.of(
             testHelper.makeCall(
@@ -1584,7 +1705,34 @@ public class ExpressionsTest extends CalciteTestBase
                 testHelper.makeLiteral("yes")
             )
         ),
-        makeExpression(ColumnType.LONG, "(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(%s && %s)",
+                args.get(0).getExpression(),
+                args.get(1).getExpression()
+            ),
+            ImmutableList.of(
+                testHelper.expectedFunctionCall(
+                    ColumnType.LONG,
+                    "icontains_string",
+                    testHelper.makeVariable("spacey"),
+                    "There"
+                ),
+                DruidExpression.ofExpression(
+                    ColumnType.LONG,
+                    (args) -> StringUtils.format(
+                        "(%s == %s)",
+                        args.get(0).getExpression(),
+                        args.get(1).getExpression()
+                    ),
+                    ImmutableList.of(
+                        DruidExpression.ofLiteral(ColumnType.STRING, "'yes'"),
+                        DruidExpression.ofLiteral(ColumnType.STRING, "'yes'")
+                    )
+                )
+            )
+        ),
         1L
     );
   }
@@ -1706,17 +1854,24 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeFloor()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeFloorOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             testHelper.makeLiteral("PT1H")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_floor(949550706000,'PT1H',null,'UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_floor",
+            949550706000L,
+            "PT1H",
+            testHelper.makeTypedNullLiteral(null),
+            "UTC"
+        ),
         DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeFloorOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
@@ -1724,7 +1879,14 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeNullLiteral(SqlTypeName.TIMESTAMP),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_floor(\"t\",'P1D',null,'America/Los_Angeles')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_floor",
+            testHelper.makeVariable("t"),
+            "P1D",
+            testHelper.makeTypedNullLiteral(null),
+            "America/Los_Angeles"
+        ),
         DateTimes.of("2000-02-02T08:00:00").getMillis()
     );
   }
@@ -1734,13 +1896,20 @@ public class ExpressionsTest extends CalciteTestBase
   {
     // FLOOR(__time TO unit)
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         ImmutableList.of(
             testHelper.makeInputRef("t"),
             testHelper.makeFlag(TimeUnitRange.YEAR)
         ),
-        makeExpression(ColumnType.LONG, "timestamp_floor(\"t\",'P1Y',null,'UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_floor",
+            testHelper.makeVariable("t"),
+            "P1Y",
+            testHelper.makeTypedNullLiteral(null),
+            "UTC"
+        ),
         DateTimes.of("2000").getMillis()
     );
   }
@@ -1748,17 +1917,24 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeCeil()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeCeilOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             testHelper.makeLiteral("PT1H")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_ceil(949550706000,'PT1H',null,'UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_ceil",
+            949550706000L,
+            "PT1H",
+            testHelper.makeTypedNullLiteral(null),
+            "UTC"
+        ),
         DateTimes.of("2000-02-03T05:00:00").getMillis()
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeCeilOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
@@ -1766,7 +1942,14 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeNullLiteral(SqlTypeName.TIMESTAMP),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_ceil(\"t\",'P1D',null,'America/Los_Angeles')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_ceil",
+            testHelper.makeVariable("t"),
+            "P1D",
+            testHelper.makeTypedNullLiteral(null),
+            "America/Los_Angeles"
+        ),
         DateTimes.of("2000-02-03T08:00:00").getMillis()
     );
   }
@@ -1776,13 +1959,20 @@ public class ExpressionsTest extends CalciteTestBase
   {
     // CEIL(__time TO unit)
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         ImmutableList.of(
             testHelper.makeInputRef("t"),
             testHelper.makeFlag(TimeUnitRange.YEAR)
         ),
-        makeExpression(ColumnType.LONG, "timestamp_ceil(\"t\",'P1Y',null,'UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_ceil",
+            testHelper.makeVariable("t"),
+            "P1Y",
+            testHelper.makeTypedNullLiteral(null),
+            "UTC"
+        ),
         DateTimes.of("2001").getMillis()
     );
   }
@@ -1790,18 +1980,25 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeShift()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeShiftOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
             testHelper.makeLiteral("PT2H"),
             testHelper.makeLiteral(-3)
         ),
-        makeExpression(ColumnType.LONG, "timestamp_shift(\"t\",'PT2H',-3,'UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_shift",
+            testHelper.makeVariable("t"),
+            "PT2H",
+            -3,
+            "UTC"
+        ),
         DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeShiftOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
@@ -1809,7 +2006,14 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral(-3),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_shift(\"t\",'PT2H',-3,'America/Los_Angeles')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_shift",
+            testHelper.makeVariable("t"),
+            "PT2H",
+            -3,
+            "America/Los_Angeles"
+        ),
         DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
   }
@@ -1817,35 +2021,53 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeExtract()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
             testHelper.makeLiteral("QUARTER")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'QUARTER','UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_extract",
+            testHelper.makeVariable("t"),
+            "QUARTER",
+            "UTC"
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
             testHelper.makeLiteral("DAY"),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_extract",
+            testHelper.makeVariable("t"),
+            "DAY",
+            "America/Los_Angeles"
+        ),
         2L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
             testHelper.makeLiteral("DAY"),
             testHelper.makeInputRef("timezone")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY',\"timezone\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_extract",
+            testHelper.makeVariable("t"),
+            "DAY",
+            testHelper.makeVariable("timezone")
+        ),
         2L
     );
   }
@@ -1855,7 +2077,7 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final Period period = new Period("P1DT1H1M");
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.DATETIME_PLUS,
         ImmutableList.of(
             testHelper.makeInputRef("t"),
@@ -1864,7 +2086,18 @@ public class ExpressionsTest extends CalciteTestBase
                 new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.MINUTE, SqlParserPos.ZERO)
             )
         ),
-        makeExpression(ColumnType.LONG, "(\"t\" + 90060000)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> StringUtils.format(
+                "(%s + %s)",
+                args.get(0).getExpression(),
+                args.get(1).getExpression()
+            ),
+            ImmutableList.of(
+                DruidExpression.ofColumn(ColumnType.LONG, "t"),
+                DruidExpression.ofLiteral(ColumnType.LONG, "90060000")
+            )
+        ),
         DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
   }
@@ -1874,7 +2107,7 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final Period period = new Period("P1Y1M");
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.DATETIME_PLUS,
         ImmutableList.of(
             testHelper.makeInputRef("t"),
@@ -1883,7 +2116,14 @@ public class ExpressionsTest extends CalciteTestBase
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
-        makeExpression(ColumnType.LONG, "timestamp_shift(\"t\",'P13M',1,'UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_shift",
+            testHelper.makeVariable("t"),
+            "P13M",
+            1,
+            "UTC"
+        ),
         DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
   }
@@ -1947,24 +2187,36 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeParse()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeParseOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("tstr"),
             testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_parse",
+            testHelper.makeVariable("tstr"),
+            "yyyy-MM-dd HH:mm:ss",
+            "UTC"
+        ),
         DateTimes.of("2000-02-03T04:05:06").getMillis()
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeParseOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("tstr"),
             testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss"),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_parse",
+            testHelper.makeVariable("tstr"),
+            "yyyy-MM-dd HH:mm:ss",
+            "America/Los_Angeles"
+        ),
         DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()
     );
   }
@@ -1972,24 +2224,36 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeFormat()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeFormatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
             testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
-        makeExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "timestamp_format",
+            testHelper.makeVariable("t"),
+            "yyyy-MM-dd HH:mm:ss",
+            "UTC"
+        ),
         "2000-02-03 04:05:06"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new TimeFormatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("t"),
             testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss"),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        makeExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "timestamp_format",
+            testHelper.makeVariable("t"),
+            "yyyy-MM-dd HH:mm:ss",
+            "America/Los_Angeles"
+        ),
         "2000-02-02 20:05:06"
     );
   }
@@ -1997,23 +2261,35 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testExtract()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.EXTRACT,
         ImmutableList.of(
             testHelper.makeFlag(TimeUnitRange.QUARTER),
             testHelper.makeInputRef("t")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'QUARTER','UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_extract",
+            testHelper.makeVariable("t"),
+            "QUARTER",
+            "UTC"
+        ),
         1L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         SqlStdOperatorTable.EXTRACT,
         ImmutableList.of(
             testHelper.makeFlag(TimeUnitRange.DAY),
             testHelper.makeInputRef("t")
         ),
-        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY','UTC')"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "timestamp_extract",
+            testHelper.makeVariable("t"),
+            "DAY",
+            "UTC"
+        ),
         3L
     );
   }
@@ -2063,14 +2339,12 @@ public class ExpressionsTest extends CalciteTestBase
                 testHelper.makeInputRef("t")
             )
         ),
-        DruidExpression.ofExpression(
+        testHelper.expectedFunctionCall(
             ColumnType.STRING,
-            DruidExpression.functionCall("timestamp_format"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "t"),
-                DruidExpression.ofStringLiteral("yyyy-MM-dd HH:mm:ss"),
-                DruidExpression.ofStringLiteral("UTC")
-            )
+            "timestamp_format",
+            testHelper.makeVariable("t"),
+            "yyyy-MM-dd HH:mm:ss",
+            "UTC"
         ),
         "2000-02-03 04:05:06"
     );
@@ -2196,52 +2470,28 @@ public class ExpressionsTest extends CalciteTestBase
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("s"),
-        DruidExpression.ofExpression(
-            ColumnType.STRING,
-            DruidExpression.functionCall("reverse"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "s")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "reverse", testHelper.makeVariable("s")),
         "oof"
     );
 
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("spacey"),
-        DruidExpression.ofExpression(
-            ColumnType.STRING,
-            DruidExpression.functionCall("reverse"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "spacey")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "reverse", testHelper.makeVariable("spacey")),
         "  ereht yeh  "
     );
 
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("tstr"),
-        DruidExpression.ofExpression(
-            ColumnType.STRING,
-            DruidExpression.functionCall("reverse"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "tstr")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "reverse", testHelper.makeVariable("tstr")),
         "60:50:40 30-20-0002"
     );
 
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("dstr"),
-        DruidExpression.ofExpression(
-            ColumnType.STRING,
-            DruidExpression.functionCall("reverse"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "dstr")
-            )
-        ),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "reverse", testHelper.makeVariable("dstr")),
         "30-20-0002"
     );
   }
@@ -2249,53 +2499,53 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRight()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RightOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1)
         ),
-        makeExpression("right(\"s\",1)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "right", testHelper.makeVariable("s"), 1),
         "o"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RightOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(2)
         ),
-        makeExpression("right(\"s\",2)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "right", testHelper.makeVariable("s"), 2),
         "oo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RightOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(3)
         ),
-        makeExpression("right(\"s\",3)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "right", testHelper.makeVariable("s"), 3),
         "foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RightOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(4)
         ),
-        makeExpression("right(\"s\",4)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "right", testHelper.makeVariable("s"), 4),
         "foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RightOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("tstr"),
             testHelper.makeLiteral(5)
         ),
-        makeExpression("right(\"tstr\",5)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "right", testHelper.makeVariable("tstr"), 5),
         "05:06"
     );
   }
@@ -2303,71 +2553,71 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalRightWithNegativeNumber()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
-        () -> testHelper.testExpressionString(
+        () -> testHelper.testExpression(
             new RightOperatorConversion().calciteOperator(),
             ImmutableList.of(
                 testHelper.makeInputRef("s"),
                 testHelper.makeLiteral(-1)
             ),
-            makeExpression("right(\"s\",-1)"),
+            testHelper.expectedFunctionCall(ColumnType.STRING, "right", testHelper.makeVariable("s"), -1),
             null
         )
     );
-    Assert.assertEquals("Function[right] needs a positive integer as the second argument", t.getMessage());
+    Assertions.assertEquals("Function[right] needs a positive integer as the second argument", t.getMessage());
   }
 
   @Test
   public void testLeft()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new LeftOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1)
         ),
-        makeExpression("left(\"s\",1)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "left", testHelper.makeVariable("s"), 1),
         "f"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new LeftOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(2)
         ),
-        makeExpression("left(\"s\",2)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "left", testHelper.makeVariable("s"), 2),
         "fo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new LeftOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(3)
         ),
-        makeExpression("left(\"s\",3)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "left", testHelper.makeVariable("s"), 3),
         "foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new LeftOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(4)
         ),
-        makeExpression("left(\"s\",4)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "left", testHelper.makeVariable("s"), 4),
         "foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new LeftOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("tstr"),
             testHelper.makeLiteral(10)
         ),
-        makeExpression("left(\"tstr\",10)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "left", testHelper.makeVariable("tstr"), 10),
         "2000-02-03"
     );
   }
@@ -2375,51 +2625,51 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalLeftWithNegativeNumber()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
-        () -> testHelper.testExpressionString(
+        () -> testHelper.testExpression(
             new LeftOperatorConversion().calciteOperator(),
             ImmutableList.of(
                 testHelper.makeInputRef("s"),
                 testHelper.makeLiteral(-1)
             ),
-            makeExpression("left(\"s\",-1)"),
+            testHelper.expectedFunctionCall(ColumnType.STRING, "left", testHelper.makeVariable("s"), -1),
             null
         )
     );
-    Assert.assertEquals("Function[left] needs a positive integer as the second argument", t.getMessage());
+    Assertions.assertEquals("Function[left] needs a positive integer as the second argument", t.getMessage());
   }
 
   @Test
   public void testRepeat()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RepeatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1)
         ),
-        makeExpression("repeat(\"s\",1)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "repeat", testHelper.makeVariable("s"), 1),
         "foo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RepeatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(3)
         ),
-        makeExpression("repeat(\"s\",3)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "repeat", testHelper.makeVariable("s"), 3),
         "foofoofoo"
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         new RepeatOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(-1)
         ),
-        makeExpression("repeat(\"s\",-1)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "repeat", testHelper.makeVariable("s"), -1),
         null
     );
   }
@@ -2427,30 +2677,30 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testOperatorConversionsDruidUnaryLongFn()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("a")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseComplement(\"a\")"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "bitwiseComplement", testHelper.makeVariable("a")),
         -11L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("x")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseComplement(\"x\")"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "bitwiseComplement", testHelper.makeVariable("x")),
         -3L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseComplement(\"s\")"),
+        testHelper.expectedFunctionCall(ColumnType.LONG, "bitwiseComplement", testHelper.makeVariable("s")),
         null
     );
   }
@@ -2458,33 +2708,45 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testOperatorConversionsDruidUnaryDoubleFn()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble")
                            .calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("a")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseConvertLongBitsToDouble(\"a\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.DOUBLE,
+            "bitwiseConvertLongBitsToDouble",
+            testHelper.makeVariable("a")
+        ),
         4.9E-323
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble")
                            .calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("x")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseConvertLongBitsToDouble(\"x\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.DOUBLE,
+            "bitwiseConvertLongBitsToDouble",
+            testHelper.makeVariable("x")
+        ),
         1.0E-323
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble")
                            .calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseConvertLongBitsToDouble(\"s\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.DOUBLE,
+            "bitwiseConvertLongBitsToDouble",
+            testHelper.makeVariable("s")
+        ),
         null
     );
   }
@@ -2492,33 +2754,48 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testOperatorConversionsDruidBinaryLongFn()
   {
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("a"),
             testHelper.makeInputRef("b")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseAnd(\"a\",\"b\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "bitwiseAnd",
+            testHelper.makeVariable("a"),
+            testHelper.makeVariable("b")
+        ),
         8L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("x"),
             testHelper.makeInputRef("y")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseAnd(\"x\",\"y\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "bitwiseAnd",
+            testHelper.makeVariable("x"),
+            testHelper.makeVariable("y")
+        ),
         2L
     );
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
             testHelper.makeInputRef("s")
         ),
-        makeExpression(ColumnType.LONG, "bitwiseAnd(\"s\",\"s\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.LONG,
+            "bitwiseAnd",
+            testHelper.makeVariable("s"),
+            testHelper.makeVariable("s")
+        ),
         null
     );
   }
@@ -2529,93 +2806,98 @@ public class ExpressionsTest extends CalciteTestBase
     /*
      * Basic Test
      */
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(1000)
         ),
-        makeExpression("human_readable_binary_byte_format(1000)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_binary_byte_format", 1000),
         "1000 B"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(1024)
         ),
-        makeExpression("human_readable_binary_byte_format(1024)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_binary_byte_format", 1024),
         "1.00 KiB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(Long.MAX_VALUE)
         ),
-        makeExpression("human_readable_binary_byte_format(9223372036854775807)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_binary_byte_format", 9223372036854775807L),
         "8.00 EiB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(Long.MIN_VALUE)
         ),
-        makeExpression("human_readable_binary_byte_format(-9223372036854775808)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_binary_byte_format", -9223372036854775808L),
         "-8.00 EiB"
     );
 
     /*
      * test input with variable reference
      */
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("b"),
             testHelper.makeInputRef("p")
         ),
-        makeExpression("human_readable_binary_byte_format(\"b\",\"p\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "human_readable_binary_byte_format",
+            testHelper.makeVariable("b"),
+            testHelper.makeVariable("p")
+        ),
         "25 B"
     );
 
     /*
      * test different precision
      */
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(45000),
             //precision 0
             testHelper.makeLiteral(0)
         ),
-        makeExpression("human_readable_binary_byte_format(45000,0)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_binary_byte_format", 45000, 0),
         "44 KiB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(45000),
             //precision 1
             testHelper.makeLiteral(1)
         ),
-        makeExpression("human_readable_binary_byte_format(45000,1)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_binary_byte_format", 45000, 1),
         "43.9 KiB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(45000),
             //precision 2
             testHelper.makeLiteral(2)
         ),
-        makeExpression("human_readable_binary_byte_format(45000,2)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_binary_byte_format", 45000, 2),
         "43.95 KiB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(45000),
             //precision 3
             testHelper.makeLiteral(3)
         ),
-        makeExpression("human_readable_binary_byte_format(45000,3)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_binary_byte_format", 45000, 3),
         "43.945 KiB"
     );
   }
@@ -2626,93 +2908,102 @@ public class ExpressionsTest extends CalciteTestBase
     /*
      * Basic Test
      */
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(999)
         ),
-        makeExpression("human_readable_decimal_byte_format(999)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_decimal_byte_format", 999),
         "999 B"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(1024)
         ),
-        makeExpression("human_readable_decimal_byte_format(1024)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_decimal_byte_format", 1024),
         "1.02 KB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(Long.MAX_VALUE)
         ),
-        makeExpression("human_readable_decimal_byte_format(9223372036854775807)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_decimal_byte_format", 9223372036854775807L),
         "9.22 EB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(Long.MIN_VALUE)
         ),
-        makeExpression("human_readable_decimal_byte_format(-9223372036854775808)"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "human_readable_decimal_byte_format",
+            -9223372036854775808L
+        ),
         "-9.22 EB"
     );
 
     /*
      * test input with variable reference
      */
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("b"),
             testHelper.makeInputRef("p")
         ),
-        makeExpression("human_readable_decimal_byte_format(\"b\",\"p\")"),
+        testHelper.expectedFunctionCall(
+            ColumnType.STRING,
+            "human_readable_decimal_byte_format",
+            testHelper.makeVariable("b"),
+            testHelper.makeVariable("p")
+        ),
         "25 B"
     );
 
     /*
      * test different precision
      */
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(45678),
             //precision 0
             testHelper.makeLiteral(0)
         ),
-        makeExpression("human_readable_decimal_byte_format(45678,0)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_decimal_byte_format", 45678, 0),
         "46 KB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(45678),
             //precision 1
             testHelper.makeLiteral(1)
         ),
-        makeExpression("human_readable_decimal_byte_format(45678,1)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_decimal_byte_format", 45678, 1),
         "45.7 KB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(45678),
             //precision 2
             testHelper.makeLiteral(2)
         ),
-        makeExpression("human_readable_decimal_byte_format(45678,2)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_decimal_byte_format", 45678, 2),
         "45.68 KB"
     );
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
         ImmutableList.of(
             testHelper.makeLiteral(45678),
             //precision 3
             testHelper.makeLiteral(3)
         ),
-        makeExpression("human_readable_decimal_byte_format(45678,3)"),
+        testHelper.expectedFunctionCall(ColumnType.STRING, "human_readable_decimal_byte_format", 45678, 3),
         "45.678 KB"
     );
   }
@@ -2739,12 +3030,12 @@ public class ExpressionsTest extends CalciteTestBase
         false
     );
 
-    CannotBuildQueryException t = Assert.assertThrows(
+    CannotBuildQueryException t = Assertions.assertThrows(
         CannotBuildQueryException.class,
         () -> testHelper.testExpression(rexNode, null, plannerContext)
     );
 
-    assertThat(t.getMessage(), StringContains.containsString("Unexpected OVER expression"));
+    Assertions.assertTrue(t.getMessage().contains("Unexpected OVER expression"));
   }
 
   @Test
@@ -2813,7 +3104,7 @@ public class ExpressionsTest extends CalciteTestBase
             plannerContext,
             rexBuilder.makeExactLiteral(
                 BigDecimal.valueOf(123L),
-                rexBuilder.getTypeFactory().createSqlType(SqlTypeName.DECIMAL)
+                rexBuilder.getTypeFactory().createSqlType(SqlTypeName.DECIMAL, 19, 0)
             )
         )
     );
@@ -2889,7 +3180,7 @@ public class ExpressionsTest extends CalciteTestBase
         )
     );
 
-    Assert.assertNull(
+    Assertions.assertNull(
         Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeCast(
@@ -2910,7 +3201,7 @@ public class ExpressionsTest extends CalciteTestBase
       final DruidLiteral actual
   )
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StringUtils.format("%s: %s", expected.type(), expected.value()),
         StringUtils.format("%s: %s", actual.type(), actual.value())
     );

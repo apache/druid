@@ -132,7 +132,6 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     );
   }
 
-  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   @Override
   public BitmapColumnIndex forSortedValuesUtf8(List<ByteBuffer> sortedValuesUtf8)
   {

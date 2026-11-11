@@ -40,13 +40,17 @@ import org.apache.druid.jackson.CommaListJoinSerializer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -67,15 +71,35 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   /**
-   * Shared canonical interner for {@link org.apache.druid.segment.VirtualColumn} instances embedded in segment-side
+   * Shared canonical interner for {@link VirtualColumn} instances embedded in segment-side
    * metadata that lives in broker/coordinator memory. Used by callers that carry virtual columns through
    * {@link DataSegment}'s wire form (clustering virtual columns on {@link ClusterGroupTuples},
    * {@link org.apache.druid.timeline.partition.BaseDimensionRangeShardSpec}'s range-clustering virtual columns) so
-   * identical VC definitions across segments collapse to a single instance in memory.
+   * identical VC definitions across segments collapse to a single instance in memory. Callers holding a whole
+   * {@link VirtualColumns} should use {@link #internVirtualColumns}.
    */
   public static Interner<VirtualColumn> virtualColumnInterner()
   {
     return VIRTUAL_COLUMN_INTERNER;
+  }
+
+  /**
+   * Returns a shared {@link VirtualColumns} instance equal to the given one, so segments with the same virtual column
+   * definitions reuse one object in memory instead of each holding its own copy. Returns {@link VirtualColumns#EMPTY}
+   * if the input is null or empty.
+   */
+  public static VirtualColumns internVirtualColumns(@Nullable VirtualColumns virtualColumns)
+  {
+    if (virtualColumns == null || virtualColumns.isEmpty()) {
+      return VirtualColumns.EMPTY;
+    }
+    return VIRTUAL_COLUMNS_INTERNER.intern(
+        VirtualColumns.create(
+            Arrays.stream(virtualColumns.getVirtualColumns())
+                  .map(VIRTUAL_COLUMN_INTERNER::intern)
+                  .toList()
+        )
+    );
   }
 
   /*
@@ -108,10 +132,31 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private static final Interner<List<String>> PROJECTIONS_INTERNER = Interners.newWeakInterner();
   private static final Interner<ClusterGroupTuples> CLUSTER_GROUPS_INTERNER = Interners.newWeakInterner();
   private static final Interner<VirtualColumn> VIRTUAL_COLUMN_INTERNER = Interners.newWeakInterner();
+  private static final Interner<VirtualColumns> VIRTUAL_COLUMNS_INTERNER = Interners.newWeakInterner();
   private static final Interner<CompactionState> COMPACTION_STATE_INTERNER = Interners.newWeakInterner();
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
       ""
+  );
+
+  /**
+   * Load spec keys, at any nesting level, whose values repeat across segments and so are interned, such as the type of
+   * the deep storage or the bucket it writes to. Values that are unique to each segment (such as the S3 {@code key}, or
+   * the {@code path} of HDFS and Google) are deliberately left out, since interning a string nothing else shares costs
+   * more than it saves.
+   */
+  private static final Set<String> INTERNED_LOAD_SPEC_VALUE_KEYS = Set.of(
+      // every load spec, including the partial load wrappers and their delegates
+      "type",
+      // S3, Google, and Aliyun OSS
+      "bucket",
+      // S3
+      "S3Schema",
+      // Azure
+      "containerName",
+      // partial load specs: the request fingerprint, and the selected projection names
+      "fingerprint",
+      "projections"
   );
 
   private final Integer binaryVersion;
@@ -151,117 +196,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
    */
   @Nullable
   private final String indexingStateFingerprint;
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      Map<String, Object> loadSpec,
-      List<String> dimensions,
-      List<String> metrics,
-      ShardSpec shardSpec,
-      Integer binaryVersion,
-      long size
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        null,
-        null,
-        shardSpec,
-        null,
-        binaryVersion,
-        size,
-        null,
-        null,
-        PruneSpecsHolder.DEFAULT
-    );
-  }
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      Map<String, Object> loadSpec,
-      List<String> dimensions,
-      List<String> metrics,
-      ShardSpec shardSpec,
-      @Nullable CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        null,
-        null,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        null,
-        null,
-        PruneSpecsHolder.DEFAULT
-    );
-  }
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      @Nullable Map<String, Object> loadSpec,
-      @Nullable List<String> dimensions,
-      @Nullable List<String> metrics,
-      @Nullable List<String> projections,
-      @Nullable ShardSpec shardSpec,
-      @Nullable CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size,
-      Integer totalRows,
-      String indexingStateFingerprint,
-      PruneSpecsHolder pruneSpecsHolder
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        projections,
-        null,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        totalRows,
-        indexingStateFingerprint,
-        pruneSpecsHolder
-    );
-  }
 
   @JsonCreator
   private DataSegment(
@@ -343,6 +277,26 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.indexingStateFingerprint = indexingStateFingerprint == null ?
                                     null :
                                     STRING_INTERNER.intern(indexingStateFingerprint);
+  }
+
+  /**
+   * Copies {@code other} by reference, for subclasses that decorate an existing segment. The copy shares the
+   * original's state rather than rebuilding it.
+   */
+  protected DataSegment(DataSegment other)
+  {
+    this.binaryVersion = other.binaryVersion;
+    this.id = other.id;
+    this.loadSpec = other.loadSpec;
+    this.dimensions = other.dimensions;
+    this.metrics = other.metrics;
+    this.projections = other.projections;
+    this.clusterGroups = other.clusterGroups;
+    this.shardSpec = other.shardSpec;
+    this.lastCompactionState = other.lastCompactionState;
+    this.size = other.size;
+    this.totalRows = other.totalRows;
+    this.indexingStateFingerprint = other.indexingStateFingerprint;
   }
 
   /**
@@ -572,6 +526,32 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return builder(this).indexingStateFingerprint(indexingStateFingerprint).build();
   }
 
+  /**
+   * Returns a copy of this segment with every optional top-level field that is not listed in {@code details} removed.
+   * The fields that are not optional are always retained; see {@link SegmentDetail} for the full split.
+   *
+   * @param details the optional details to retain; null retains all details and an empty set retains none
+   */
+  public DataSegment retainOnlyDetails(@Nullable final Set<SegmentDetail> details)
+  {
+    if (details == null) {
+      return this;
+    } else {
+      return builder(this)
+          .dimensions(details.contains(SegmentDetail.DIMENSIONS) ? dimensions : null)
+          .metrics(details.contains(SegmentDetail.METRICS) ? metrics : null)
+          .projections(details.contains(SegmentDetail.PROJECTIONS) ? projections : null)
+          .clusterGroups(details.contains(SegmentDetail.CLUSTER_GROUPS) ? clusterGroups : null)
+          .lastCompactionState(details.contains(SegmentDetail.COMPACTION_STATE) ? lastCompactionState : null)
+          .loadSpec(details.contains(SegmentDetail.LOAD_SPEC) ? loadSpec : null)
+          .totalRows(details.contains(SegmentDetail.ROW_COUNT) ? totalRows : null)
+          .indexingStateFingerprint(
+              details.contains(SegmentDetail.INDEXING_STATE_FINGERPRINT) ? indexingStateFingerprint : null
+          )
+          .build();
+    }
+  }
+
   public DataSegment.Builder toBuilder()
   {
     return builder(this);
@@ -624,12 +604,42 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     if (loadSpec == null) {
       return null;
     }
+    return prepareLoadSpecMap(loadSpec);
+  }
+
+  /**
+   * Compacts one level of a load spec, recursing into nested maps and lists (such as the {@code delegate} of a partial
+   * load spec, or the {@code members} of a composite one). Keys are interned, and so are the values of
+   * {@link #INTERNED_LOAD_SPEC_VALUE_KEYS}.
+   */
+  private static Map<String, Object> prepareLoadSpecMap(Map<?, ?> map)
+  {
     // Load spec is just of 3 entries on average; HashMap/LinkedHashMap consumes much more memory than ArrayMap
-    Map<String, Object> result = new Object2ObjectArrayMap<>(loadSpec.size());
-    for (Map.Entry<String, Object> e : loadSpec.entrySet()) {
-      result.put(STRING_INTERNER.intern(e.getKey()), e.getValue());
+    final Map<String, Object> result = new Object2ObjectArrayMap<>(map.size());
+    for (Map.Entry<?, ?> e : map.entrySet()) {
+      final String key = STRING_INTERNER.intern((String) e.getKey());
+      result.put(key, prepareLoadSpecValue(e.getValue(), INTERNED_LOAD_SPEC_VALUE_KEYS.contains(key)));
     }
     return result;
+  }
+
+  @Nullable
+  private static Object prepareLoadSpecValue(@Nullable Object value, boolean intern)
+  {
+    if (value instanceof Map<?, ?> map) {
+      return prepareLoadSpecMap(map);
+    }
+    if (value instanceof List<?> list) {
+      final List<Object> result = new ArrayList<>(list.size());
+      for (Object element : list) {
+        result.add(prepareLoadSpecValue(element, intern));
+      }
+      return result;
+    }
+    if (intern && value instanceof String s) {
+      return STRING_INTERNER.intern(s);
+    }
+    return value;
   }
 
   @Nullable
@@ -664,15 +674,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
                                .collect(ImmutableList.toImmutableList()));
   }
 
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public static Builder builder()
-  {
-    return new Builder();
-  }
-
   public static Builder builder(SegmentId segmentId)
   {
     return new Builder(segmentId);
@@ -705,22 +706,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private long size;
     private Integer totalRows;
     private String indexingStateFingerprint;
-
-    /**
-     * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
-     */
-    @Deprecated
-    private Builder()
-    {
-      this.loadSpec = ImmutableMap.of();
-      this.dimensions = ImmutableList.of();
-      this.metrics = ImmutableList.of();
-      // By default, segment is not projection-aware.
-      this.projections = null;
-      this.shardSpec = new NumberedShardSpec(0, 1);
-      this.size = -1;
-      this.totalRows = null;
-    }
 
     private Builder(SegmentId segmentId)
     {

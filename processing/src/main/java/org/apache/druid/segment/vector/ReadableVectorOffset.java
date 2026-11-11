@@ -25,8 +25,8 @@ package org.apache.druid.segment.vector;
  * A ReadableVectorOffset should be given to classes (e.g. column selector objects) by something which keeps a
  * reference to the base VectorOffset object and increments it.
  *
- * @see VectorOffset, the movable version.
- * @see org.apache.druid.segment.data.ReadableOffset, the non-vectorized version.
+ * @see VectorOffset the movable version.
+ * @see org.apache.druid.segment.data.ReadableOffset the non-vectorized version.
  */
 public interface ReadableVectorOffset extends ReadableVectorInspector
 {
@@ -47,9 +47,13 @@ public interface ReadableVectorOffset extends ReadableVectorInspector
 
   /**
    * If "isContiguous" is false, this method returns a batch of offsets. The array may be longer than the number of
-   * valid offsets, so callers need to check "getCurrentVectorSize" too.
+   * valid offsets, so callers need to check "getCurrentVectorSize" too. Entries at or past "getCurrentVectorSize" are
+   * not meaningful and must not be read.
    *
-   * Throws an exception if "isContiguous" is true.
+   * <p>Offsets in this array are always ascending, even if the cursor is descending
+   * (see {@link ReverseVectorColumnSelectorFactory}).
+   *
+   * <p>Throws an exception if "isContiguous" is true.
    */
   int[] getOffsets();
 

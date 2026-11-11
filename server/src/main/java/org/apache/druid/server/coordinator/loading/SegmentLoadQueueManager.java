@@ -105,10 +105,15 @@ public class SegmentLoadQueueManager
     }
   }
 
+  /**
+   * Moves the segment from serverA to serverB, optionally carrying the partial-load profile that serverA holds it
+   * under so that serverB is asked for the same parts of the segment rather than the whole of it.
+   */
   public boolean moveSegment(
       DataSegment segment,
       ServerHolder serverA,
-      ServerHolder serverB
+      ServerHolder serverB,
+      @Nullable PartialLoadProfile profile
   )
   {
     final LoadQueuePeon peonA = serverA.getPeon();
@@ -117,7 +122,7 @@ public class SegmentLoadQueueManager
     if (!serverA.startOperation(SegmentAction.MOVE_FROM, segment)) {
       return false;
     }
-    if (!serverB.startOperation(SegmentAction.MOVE_TO, segment)) {
+    if (!serverB.startOperation(SegmentAction.MOVE_TO, segment, profile)) {
       serverA.cancelOperation(SegmentAction.MOVE_FROM, segment);
       return false;
     }
@@ -132,6 +137,7 @@ public class SegmentLoadQueueManager
       peonB.loadSegment(
           segment,
           SegmentAction.MOVE_TO,
+          profile,
           success -> {
             // Drop segment only if:
             // (1) segment load was successful on serverB

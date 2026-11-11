@@ -22,15 +22,20 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Maps;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 
 /**
  * Consolidated metadata for a V10 segment format container file. This is built by {@link SegmentFileBuilderV10}, and
@@ -59,41 +64,109 @@ import java.util.Map;
 public class SegmentFileMetadata
 {
   private final List<SegmentFileContainerMetadata> containers;
-  private final Map<String, SegmentInternalFileMetadata> files;
+  private final SegmentInternalFileMap files;
   private final String interval;
-  private final Map<String, ColumnDescriptor> columnDescriptors;
+  private final SortedMap<String, ColumnDescriptor> columnDescriptors;
+  private final SortedMap<String, List<String>> columnFiles;
   private final List<ProjectionMetadata> projections;
   private final BitmapSerdeFactory bitmapEncoding;
 
+  /**
+   * Creates metadata. Maps are copied into immutable maps sorted by key, so that written headers are deterministic.
+   */
   @JsonCreator
   public SegmentFileMetadata(
       @JsonProperty("containers") List<SegmentFileContainerMetadata> containers,
       @JsonProperty("files") Map<String, SegmentInternalFileMetadata> files,
       @JsonProperty("interval") @Nullable String interval,
       @JsonProperty("columnDescriptors") @Nullable Map<String, ColumnDescriptor> columnDescriptors,
+      @JsonProperty("columnFiles") @Nullable Map<String, List<String>> columnFiles,
       @JsonProperty("projections") @Nullable List<ProjectionMetadata> projections,
       @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding
   )
   {
     this.containers = containers;
-    this.files = internKeys(files);
+    this.files = files == null ? null : SegmentInternalFileMap.copyOf(files);
     this.interval = interval;
     this.columnDescriptors = internKeys(columnDescriptors);
+    this.columnFiles = internColumnFiles(columnFiles);
     this.projections = projections;
     this.bitmapEncoding = bitmapEncoding;
+
+    // fail fast on inconsistent metadata: a columnFiles entry naming a file absent from the files map would
+    // otherwise silently plan no download and only surface later as a null buffer during column deserialization
+    if (this.columnFiles != null) {
+      for (Map.Entry<String, List<String>> entry : this.columnFiles.entrySet()) {
+        for (String file : entry.getValue()) {
+          if (this.files == null || !this.files.containsKey(file)) {
+            throw DruidException.defensive(
+                "columnFiles for column[%s] references file[%s] which is not present in files",
+                entry.getKey(),
+                file
+            );
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Copies the given metadata with different column descriptors, which must have the same keys.
+   */
+  private SegmentFileMetadata(SegmentFileMetadata other, SortedMap<String, ColumnDescriptor> columnDescriptors)
+  {
+    this.containers = other.containers;
+    this.files = other.files;
+    this.interval = other.interval;
+    this.columnDescriptors = columnDescriptors;
+    this.columnFiles = other.columnFiles;
+    this.projections = other.projections;
+    this.bitmapEncoding = other.bitmapEncoding;
+  }
+
+  /**
+   * Returns a copy of this metadata in which each column descriptor is replaced by its canonical instance from the
+   * given interner.
+   */
+  SegmentFileMetadata withInternedColumnDescriptors(Interner<ColumnDescriptor> interner)
+  {
+    if (columnDescriptors == null) {
+      return this;
+    }
+    return new SegmentFileMetadata(
+        this,
+        ImmutableSortedMap.copyOfSorted(Maps.transformValues(columnDescriptors, interner::intern))
+    );
   }
 
   @Nullable
-  private static <V> Map<String, V> internKeys(@Nullable Map<String, V> map)
+  private static <V> SortedMap<String, V> internKeys(@Nullable Map<String, V> map)
   {
     if (map == null) {
       return null;
     }
-    final Map<String, V> interned = new HashMap<>();
+    final ImmutableSortedMap.Builder<String, V> interned = ImmutableSortedMap.naturalOrder();
     for (Map.Entry<String, V> entry : map.entrySet()) {
       interned.put(SmooshedFileMapper.STRING_INTERNER.intern(entry.getKey()), entry.getValue());
     }
-    return interned;
+    return interned.build();
+  }
+
+  @Nullable
+  private static SortedMap<String, List<String>> internColumnFiles(@Nullable Map<String, List<String>> map)
+  {
+    if (map == null) {
+      return null;
+    }
+    final ImmutableSortedMap.Builder<String, List<String>> interned = ImmutableSortedMap.naturalOrder();
+    for (Map.Entry<String, List<String>> entry : map.entrySet()) {
+      final List<String> internedFiles = new ArrayList<>(entry.getValue().size());
+      for (String file : entry.getValue()) {
+        internedFiles.add(SmooshedFileMapper.STRING_INTERNER.intern(file));
+      }
+      interned.put(SmooshedFileMapper.STRING_INTERNER.intern(entry.getKey()), List.copyOf(internedFiles));
+    }
+    return interned.build();
   }
 
   @JsonProperty
@@ -103,7 +176,7 @@ public class SegmentFileMetadata
   }
 
   @JsonProperty
-  public Map<String, SegmentInternalFileMetadata> getFiles()
+  public SegmentInternalFileMap getFiles()
   {
     return files;
   }
@@ -136,6 +209,27 @@ public class SegmentFileMetadata
   public Map<String, ColumnDescriptor> getColumnDescriptors()
   {
     return columnDescriptors;
+  }
+
+  /**
+   * Mapping of column name (same key space as {@link #getColumnDescriptors()}, prefixed by owning projection) to the
+   * complete list of {@link #files} written for that column, in write order with the column's primary file first.
+   * A column's list is self-contained: it names every internal file needed to deserialize the column via its
+   * {@link ColumnDescriptor}, including sub-files whose names are otherwise only reconstructable from serde-specific
+   * naming conventions (nested-format {@code .__field_N} and dictionary/index sub-files,
+   * {@link org.apache.druid.segment.data.GenericIndexedWriter} multi-file splits, etc.).
+   * <p>
+   * Null for segments written before this field existed (readers must always tolerate its absence, falling back to
+   * coarser on-demand loading, so this field stays optional forever); when present, every column in
+   * {@link #getColumnDescriptors()} has a complete entry, since the writer attributes each column's files as it writes
+   * them.
+   */
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Map<String, List<String>> getColumnFiles()
+  {
+    return columnFiles;
   }
 
   @JsonProperty

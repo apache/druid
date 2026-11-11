@@ -27,14 +27,24 @@ import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.LongArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collections;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class AppendableRowsAndColumnsTest extends SemanticTestBase
 {
+  public static Stream<Object[]> constructorFeeder()
+  {
+    return SemanticTestBase.parameterFeed();
+  }
+
   public AppendableRowsAndColumnsTest(
       String name,
       Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn
@@ -90,7 +100,7 @@ public class AppendableRowsAndColumnsTest extends SemanticTestBase
     final ClusteredGroupPartitioner parter = ClusteredGroupPartitioner.fromRAC(appender);
     final int[] boundaries = parter.computeBoundaries(Collections.singletonList("sorted"));
 
-    Assert.assertArrayEquals(new int[]{0, 3, 5, 6, 9}, boundaries);
+    Assertions.assertArrayEquals(new int[]{0, 3, 5, 6, 9}, boundaries);
   }
 
 }

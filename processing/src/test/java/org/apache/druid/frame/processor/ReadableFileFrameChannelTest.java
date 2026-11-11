@@ -30,16 +30,15 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
@@ -50,8 +49,8 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
   private FrameReader frameReader;
   private FrameFile frameFile;
 
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp() throws IOException
@@ -62,7 +61,7 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
                             .frameType(FrameType.latestRowBased())
                             .maxRowsPerFrame(ROWS_PER_FRAME)
                             .frames(),
-        Files.createTempFile(tempDir, "junit", null).toFile()
+        temporaryFolder.newFile()
     );
     allRows = FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList();
     frameReader = FrameReader.create(cursorFactory.getRowSignature());

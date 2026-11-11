@@ -20,13 +20,17 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.query.Query;
 
-import javax.validation.constraints.Min;
 import java.util.List;
 
 public class CacheConfig
 {
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#POPULATE_CACHE} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String POPULATE_CACHE = "populateCache";
   // The defaults defined here for cache related parameters are different from the QueryContext defaults due to legacy reasons.
   // They should be made the same at some point in the future.
@@ -41,6 +45,14 @@ public class CacheConfig
 
   @JsonProperty
   private boolean populateResultLevelCache = false;
+
+  /**
+   * When true, the Broker's result-level cache key includes the query's datasource and intervals, so that queries which
+   * differ only by interval or datasource no longer share (and overwrite) one cache entry. Off by default, since
+   * changing the key invalidates existing result-level cache entries.
+   */
+  @JsonProperty
+  private boolean includeDatasourceAndIntervalsInResultLevelCacheKey = false;
 
   @JsonProperty
   @Min(0)
@@ -81,6 +93,11 @@ public class CacheConfig
   public boolean isUseResultLevelCache()
   {
     return useResultLevelCache;
+  }
+
+  public boolean isIncludeDatasourceAndIntervalsInResultLevelCacheKey()
+  {
+    return includeDatasourceAndIntervalsInResultLevelCacheKey;
   }
 
   public int getNumBackgroundThreads()

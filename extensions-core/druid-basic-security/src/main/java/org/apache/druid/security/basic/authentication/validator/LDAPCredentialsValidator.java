@@ -41,6 +41,8 @@ import javax.naming.Context;
 import javax.naming.Name;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
@@ -77,7 +79,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       @JsonProperty("credentialIterations") Integer credentialIterations,
       @JsonProperty("credentialVerifyDuration") Integer credentialVerifyDuration,
       @JsonProperty("credentialMaxDuration") Integer credentialMaxDuration,
-      @JsonProperty("credentialCacheSize") Integer credentialCacheSize
+      @JsonProperty("credentialCacheSize") Integer credentialCacheSize,
+      @JsonProperty("groupBaseDn") String groupBaseDn,
+      @JsonProperty("groupSearch") String groupSearch
   )
   {
     this.ldapConfig = new BasicAuthLDAPConfig(
@@ -90,7 +94,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
         credentialVerifyDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS : credentialVerifyDuration,
         credentialMaxDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS : credentialMaxDuration,
-        credentialCacheSize == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE : credentialCacheSize
+        credentialCacheSize == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE : credentialCacheSize,
+        groupBaseDn,
+        groupSearch
     );
 
     this.cache = new LruBlockCache(
@@ -200,6 +206,10 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         throw new BasicSecurityAuthenticationException(Access.DEFAULT_ERROR_MESSAGE);
       }
 
+      if (this.ldapConfig.isGroupSearchConfigured() && !hasMemberOfAttribute(userResult)) {
+        enrichWithGroupSearch(userResult);
+      }
+
       byte[] salt = BasicAuthUtils.generateSalt();
       byte[] hash = hashGenerator.getOrComputePasswordHash(password, salt, this.ldapConfig.getCredentialIterations());
       LdapUserPrincipal newPrincipal = new LdapUserPrincipal(
@@ -237,19 +247,87 @@ public class LDAPCredentialsValidator implements CredentialsValidator
           ldapConfig.getBaseDn(),
           StringUtils.format(ldapConfig.getUserSearch(), encodedUsername),
           sc);
+      final SearchResult userResult;
       try {
         if (!results.hasMore()) {
           return null;
         }
-        return results.next();
+        userResult = results.next();
       }
       finally {
         results.close();
       }
+      return userResult;
     }
     catch (NamingException e) {
       LOG.debug(e, "Unable to find user '%s'", username);
       return null;
+    }
+  }
+
+  private static boolean hasMemberOfAttribute(SearchResult userResult)
+  {
+    return userResult.getAttributes() != null
+        && userResult.getAttributes().get("memberOf") != null;
+  }
+
+  @SuppressWarnings("BanJNDI")
+  private void enrichWithGroupSearch(SearchResult userResult)
+  {
+    final ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
+    InitialDirContext dirContext = null;
+    try {
+      Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+      dirContext = new InitialDirContext(bindProperties(this.ldapConfig));
+
+      final String userDn = userResult.getNameInNamespace();
+      final SearchControls sc = new SearchControls();
+      sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
+      sc.setReturningAttributes(new String[]{"1.1"});
+
+      final String filter = StringUtils.format(this.ldapConfig.getGroupSearch(), encodeForLDAP(userDn, true));
+      final NamingEnumeration<SearchResult> groupResults = dirContext.search(
+          this.ldapConfig.getGroupBaseDn(),
+          filter,
+          sc
+      );
+
+      final BasicAttribute memberOfAttr = new BasicAttribute("memberOf");
+      try {
+        while (groupResults.hasMore()) {
+          memberOfAttr.add(groupResults.next().getNameInNamespace());
+        }
+      }
+      finally {
+        groupResults.close();
+      }
+
+      if (memberOfAttr.size() > 0) {
+        if (userResult.getAttributes() == null) {
+          userResult.setAttributes(new BasicAttributes(true));
+        }
+        userResult.getAttributes().put(memberOfAttr);
+        LOG.debug(
+            "Populated memberOf for user '%s' with %d groups from reverse group search",
+            userDn,
+            memberOfAttr.size()
+        );
+      }
+    }
+    catch (NamingException e) {
+      LOG.error(e, "Exception during reverse group lookup, proceeding without group memberships");
+    }
+    finally {
+      try {
+        if (dirContext != null) {
+          dirContext.close();
+        }
+      }
+      catch (Exception ignored) {
+        LOG.warn("Exception closing LDAP context");
+        // ignored
+      }
+      Thread.currentThread().setContextClassLoader(currentClassLoader);
     }
   }
 

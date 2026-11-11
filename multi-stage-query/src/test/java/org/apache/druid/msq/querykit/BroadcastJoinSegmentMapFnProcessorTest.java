@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.querykit;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
@@ -45,6 +44,7 @@ import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.CursorFactory;
@@ -52,16 +52,13 @@ import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -72,8 +69,8 @@ import java.util.stream.Collectors;
 
 public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private CursorFactory cursorFactory;
   private File testDataFile1;
@@ -81,7 +78,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
   private FrameReader frameReader1;
   private FrameReader frameReader2;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     final ArenaMemoryAllocator allocator = ArenaMemoryAllocator.createOnHeap(10_000);
@@ -137,7 +134,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
         25_000_000L // High enough memory limit that we won't hit it
     );
 
-    Assert.assertEquals(ImmutableSet.of(1, 2), broadcastJoinReader.getSideChannelNumbers());
+    Assertions.assertEquals(ImmutableSet.of(1, 2), broadcastJoinReader.getSideChannelNumbers());
 
     boolean doneReading = false;
     while (!doneReading) {
@@ -148,27 +145,27 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
       doneReading = broadcastJoinReader.buildBroadcastTablesIncrementally(readableInputs);
     }
 
-    Assert.assertTrue(channels.get(1).isFinished());
-    Assert.assertTrue(channels.get(2).isFinished());
+    Assertions.assertTrue(channels.get(1).isFinished());
+    Assertions.assertTrue(channels.get(2).isFinished());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new InputNumberDataSource(0),
         broadcastJoinReader.inlineChannelData(new InputNumberDataSource(0))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new InputNumberDataSource(1),
         broadcastJoinReader.inlineChannelData(new InputNumberDataSource(1))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new InputNumberDataSource(2),
         broadcastJoinReader.inlineChannelData(new InputNumberDataSource(2))
     );
 
     final List<Object[]> rowsFromStage3 =
         ((InlineDataSource) broadcastJoinReader.inlineChannelData(new InputNumberDataSource(3))).getRowsAsList();
-    Assert.assertEquals(1209, rowsFromStage3.size());
+    Assertions.assertEquals(1209, rowsFromStage3.size());
 
     FrameTestUtil.assertRowsEqual(
         FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
@@ -177,7 +174,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
 
     final List<Object[]> rowsFromStage4 =
         ((InlineDataSource) broadcastJoinReader.inlineChannelData(new InputNumberDataSource(4))).getRowsAsList();
-    Assert.assertEquals(2, rowsFromStage4.size());
+    Assertions.assertEquals(2, rowsFromStage4.size());
 
     FrameTestUtil.assertRowsEqual(
         FrameTestUtil.readRowsFromCursorFactory(cursorFactory).limit(2),
@@ -197,12 +194,9 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
         )
     );
 
-    MatcherAssert.assertThat(
-        ((JoinDataSource) inlinedJoinDataSource).getRight(),
-        CoreMatchers.instanceOf(InlineDataSource.class)
-    );
+    Assertions.assertInstanceOf(InlineDataSource.class, ((JoinDataSource) inlinedJoinDataSource).getRight());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2,
         ((InlineDataSource) ((JoinDataSource) inlinedJoinDataSource).getRight()).getRowsAsList().size()
     );
@@ -229,9 +223,9 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
         100_000 // Low memory limit; we will hit this
     );
 
-    Assert.assertEquals(ImmutableSet.of(0), broadcastJoinHelper.getSideChannelNumbers());
+    Assertions.assertEquals(ImmutableSet.of(0), broadcastJoinHelper.getSideChannelNumbers());
 
-    final MSQException e = Assert.assertThrows(
+    final MSQException e = Assertions.assertThrows(
         MSQException.class,
         () -> {
           boolean doneReading = false;
@@ -242,7 +236,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
         }
     );
 
-    Assert.assertEquals(new BroadcastTablesTooLargeFault(100_000, null), e.getFault());
+    Assertions.assertEquals(new BroadcastTablesTooLargeFault(100_000, null), e.getFault());
   }
 
   /**
@@ -264,12 +258,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     // Query: used only to retrieve configured join from context
     final Query<?> mockQuery = EasyMock.mock(Query.class);
     EasyMock.expect(mockQuery.context()).andReturn(
-        QueryContext.of(
-            ImmutableMap.of(
-                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
-                JoinAlgorithm.SORT_MERGE.getId()
-            )
-        )
+        QueryContext.of(QueryContextParameters.SQL_JOIN_ALGORITHM, JoinAlgorithm.SORT_MERGE)
     );
     EasyMock.replay(mockQuery);
     final BroadcastJoinSegmentMapFnProcessor broadcastJoinHelper = new BroadcastJoinSegmentMapFnProcessor(
@@ -281,9 +270,9 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
         100_000 // Low memory limit; we will hit this
     );
 
-    Assert.assertEquals(ImmutableSet.of(0), broadcastJoinHelper.getSideChannelNumbers());
+    Assertions.assertEquals(ImmutableSet.of(0), broadcastJoinHelper.getSideChannelNumbers());
 
-    final MSQException e = Assert.assertThrows(
+    final MSQException e = Assertions.assertThrows(
         MSQException.class,
         () -> {
           boolean doneReading = false;
@@ -294,7 +283,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
         }
     );
 
-    Assert.assertEquals(new BroadcastTablesTooLargeFault(100_000, JoinAlgorithm.SORT_MERGE), e.getFault());
+    Assertions.assertEquals(new BroadcastTablesTooLargeFault(100_000, JoinAlgorithm.SORT_MERGE), e.getFault());
     EasyMock.verify(mockQuery);
   }
 

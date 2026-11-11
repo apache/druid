@@ -23,13 +23,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.segment.CloserRule;
+import org.apache.druid.segment.CloserExtension;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,13 +38,14 @@ import java.util.Map;
 
 /**
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
 {
   public final IncrementalIndexCreator indexCreator;
 
-  @Rule
-  public final CloserRule closer = new CloserRule(false);
+  @RegisterExtension
+  public final CloserExtension closer = new CloserExtension(false);
 
   public IncrementalIndexRowSizeTest(String indexType) throws JsonProcessingException
   {
@@ -57,7 +58,6 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
     );
   }
 
-  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
     return IncrementalIndexCreator.getAppendableIndexTypes();
@@ -76,7 +76,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
         "B"  // 50 Bytes
     ));
     IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
-    Assert.assertEquals(196, td1.estimateBytesInMemory());
+    Assertions.assertEquals(196, td1.estimateBytesInMemory());
   }
 
   @Test
@@ -92,7 +92,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
         Arrays.asList("A", "B") // 100 Bytes
     ));
     IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
-    Assert.assertEquals(262, td1.estimateBytesInMemory());
+    Assertions.assertEquals(262, td1.estimateBytesInMemory());
   }
 
   @Test
@@ -108,7 +108,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
         Arrays.asList("123", "abcdef") // 54 + 60 Bytes
     ));
     IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
-    Assert.assertEquals(286, td1.estimateBytesInMemory());
+    Assertions.assertEquals(286, td1.estimateBytesInMemory());
   }
 
   @Test
@@ -122,7 +122,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
         ""
     ));
     IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
-    Assert.assertEquals(108, td1.estimateBytesInMemory());
+    Assertions.assertEquals(108, td1.estimateBytesInMemory());
   }
 
   private MapBasedInputRow toMapRow(long time, Object... dimAndVal)

@@ -25,7 +25,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.QueryTestRunner;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,16 +70,16 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
           }
           // For a single run, only a single query results containing a single row must be fetched, since UNION is not
           // currently supported by MSQ
-          Assert.assertEquals(
-              "Found multiple rows, cannot extract the actual results from the reports",
+          Assertions.assertEquals(
               1,
-              queryResults.size()
+              queryResults.size(),
+              "Found multiple rows, cannot extract the actual results from the reports"
           );
           Object[] row = queryResults.get(0);
-          Assert.assertEquals(
-              "Found multiple taskIds, cannot extract the actual results from the reports",
+          Assertions.assertEquals(
               1,
-              row.length
+              row.length,
+              "Found multiple taskIds, cannot extract the actual results from the reports"
           );
           String taskId = row[0].toString();
           MSQTaskReportPayload payload = (MSQTaskReportPayload) overlordClient.getReportForTask(taskId)

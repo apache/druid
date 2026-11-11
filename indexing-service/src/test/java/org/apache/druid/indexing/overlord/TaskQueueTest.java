@@ -68,6 +68,9 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerTest;
 import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateTest;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
@@ -87,17 +90,22 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -113,6 +121,7 @@ public class TaskQueueTest extends IngestionTestBase
   private StubServiceEmitter serviceEmitter;
   private Map<String, Object> defaultTaskContext;
 
+  @BeforeEach
   @Override
   public void setUpIngestionTestBase() throws IOException
   {
@@ -143,7 +152,8 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.setActive(true);
   }
 
-  @Test(timeout = 30_000)
+  @Timeout(30)
+  @Test
   public void testManageQueuedTasksReleaseLockWhenTaskIsNotReady() throws Exception
   {
     // task1 emulates a case when there is a task that was issued before task2 and acquired locks conflicting
@@ -151,13 +161,13 @@ public class TaskQueueTest extends IngestionTestBase
     final TestTask task1 = new TestTask("t1", Intervals.of("2021-01/P1M"));
     // Manually get locks for task1. task2 cannot be ready because of task1.
     prepareTaskForLocking(task1);
-    Assert.assertTrue(task1.isReady(actionClientFactory.create(task1)));
+    Assertions.assertTrue(task1.isReady(actionClientFactory.create(task1)));
 
     final TestTask task2 = new TestTask("t2", Intervals.of("2021-01-31/P1M"));
     taskQueue.add(task2);
     taskQueue.manageQueuedTasks();
-    Assert.assertFalse(task2.isDone());
-    Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
+    Assertions.assertFalse(task2.isDone());
+    Assertions.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
 
     // task3 can run because task2 is still blocked by task1.
     final TestTask task3 = new TestTask("t3", Intervals.of("2021-02-01/P1M"));
@@ -167,9 +177,9 @@ public class TaskQueueTest extends IngestionTestBase
     // Wait for task3 to exit.
     waitForTaskToExit(task3);
 
-    Assert.assertFalse(task2.isDone());
-    Assert.assertTrue(task3.isDone());
-    Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
+    Assertions.assertFalse(task2.isDone());
+    Assertions.assertTrue(task3.isDone());
+    Assertions.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
 
     // Shut down task1 and release its locks.
     shutdownTask(task1);
@@ -177,7 +187,7 @@ public class TaskQueueTest extends IngestionTestBase
     // Now task2 should run.
     taskQueue.manageQueuedTasks();
     waitForTaskToExit(task2);
-    Assert.assertTrue(task2.isDone());
+    Assertions.assertTrue(task2.isDone());
 
     // Sleep to allow all metrics to be emitted
     Thread.sleep(100);
@@ -187,8 +197,8 @@ public class TaskQueueTest extends IngestionTestBase
     verifyFailedTaskCount(taskQueue, 0);
 
     final CoordinatorRunStats stats = taskQueue.getQueueStats();
-    Assert.assertEquals(2, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
-    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
+    Assertions.assertEquals(2, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assertions.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -205,12 +215,12 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.manageQueuedTasks();
 
     // Verify task was NOT started (it should still be incomplete)
-    Assert.assertFalse(task.isDone());
+    Assertions.assertFalse(task.isDone());
 
     // Verify task is still in queue
     final Optional<TaskInfo> taskInfo = taskQueue.getActiveTaskInfo(task.getId());
-    Assert.assertTrue(taskInfo.isPresent());
-    Assert.assertEquals(TaskState.RUNNING, taskInfo.get().getStatus().getStatusCode());
+    Assertions.assertTrue(taskInfo.isPresent());
+    Assertions.assertEquals(TaskState.RUNNING, taskInfo.get().getStatus().getStatusCode());
 
     // Verify no metrics were emitted since no tasks were processed
     serviceEmitter.verifyNotEmitted("task/waiting/time");
@@ -231,18 +241,18 @@ public class TaskQueueTest extends IngestionTestBase
         new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task, task.interval, null)
     );
     final List<TaskLock> locksForTask = getLockbox().findLocksForTask(task);
-    Assert.assertEquals(1, locksForTask.size());
-    Assert.assertEquals(task.interval, locksForTask.get(0).getInterval());
+    Assertions.assertEquals(1, locksForTask.size());
+    Assertions.assertEquals(task.interval, locksForTask.get(0).getInterval());
 
     // Verify that locks are removed on calling shutdown
     taskQueue.shutdown(task.getId(), "Shutdown Task test");
-    Assert.assertTrue(getLockbox().findLocksForTask(task).isEmpty());
+    Assertions.assertTrue(getLockbox().findLocksForTask(task).isEmpty());
 
     Optional<TaskStatus> statusOptional = getTaskStorage().getStatus(task.getId());
-    Assert.assertTrue(statusOptional.isPresent());
-    Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
-    Assert.assertNotNull(statusOptional.get().getErrorMsg());
-    Assert.assertEquals("Shutdown Task test", statusOptional.get().getErrorMsg());
+    Assertions.assertTrue(statusOptional.isPresent());
+    Assertions.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
+    Assertions.assertNotNull(statusOptional.get().getErrorMsg());
+    Assertions.assertEquals("Shutdown Task test", statusOptional.get().getErrorMsg());
   }
 
   @Test
@@ -254,7 +264,7 @@ public class TaskQueueTest extends IngestionTestBase
     }
 
     // Verify that adding another task throws an exception
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> taskQueue.add(new TestTask("tx", Intervals.of("2021-01/P1M")))
     );
@@ -302,7 +312,7 @@ public class TaskQueueTest extends IngestionTestBase
     char[] contextLarge = new char[100 * 1024 * 1024];
     Arrays.fill(contextLarge, 'a');
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> maxPayloadTaskQueue.add(
             new TestTask(
@@ -334,10 +344,12 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.add(task);
 
     final List<Task> tasks = taskQueue.getTasks();
-    Assert.assertEquals(1, tasks.size());
+    Assertions.assertEquals(1, tasks.size());
     final Task queuedTask = tasks.get(0);
-    Assert.assertTrue(
-        queuedTask.getContextValue(SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY)
+    Assertions.assertTrue(
+        Boolean.TRUE.equals(
+            queuedTask.getContextValue(SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY)
+        )
     );
   }
 
@@ -351,10 +363,12 @@ public class TaskQueueTest extends IngestionTestBase
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
     taskQueue.add(task);
     final List<Task> tasks = taskQueue.getTasks();
-    Assert.assertEquals(1, tasks.size());
+    Assertions.assertEquals(1, tasks.size());
     final Task queuedTask = tasks.get(0);
-    Assert.assertFalse(
-        queuedTask.getContextValue(SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY)
+    Assertions.assertFalse(
+        Boolean.TRUE.equals(
+            queuedTask.getContextValue(SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY)
+        )
     );
   }
 
@@ -371,10 +385,12 @@ public class TaskQueueTest extends IngestionTestBase
     );
     taskQueue.add(task);
     final List<Task> tasks = taskQueue.getTasks();
-    Assert.assertEquals(1, tasks.size());
+    Assertions.assertEquals(1, tasks.size());
     final Task queuedTask = tasks.get(0);
-    Assert.assertFalse(
-        queuedTask.getContextValue(SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY)
+    Assertions.assertFalse(
+        Boolean.TRUE.equals(
+            queuedTask.getContextValue(SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY)
+        )
     );
   }
 
@@ -385,9 +401,9 @@ public class TaskQueueTest extends IngestionTestBase
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
     taskQueue.add(task);
     final List<Task> tasks = taskQueue.getTasks();
-    Assert.assertEquals(1, tasks.size());
+    Assertions.assertEquals(1, tasks.size());
     final Task queuedTask = tasks.get(0);
-    Assert.assertTrue(queuedTask.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY));
+    Assertions.assertTrue(Boolean.TRUE.equals(queuedTask.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY)));
   }
 
   @Test
@@ -403,9 +419,9 @@ public class TaskQueueTest extends IngestionTestBase
     );
     taskQueue.add(task);
     final List<Task> tasks = taskQueue.getTasks();
-    Assert.assertEquals(1, tasks.size());
+    Assertions.assertEquals(1, tasks.size());
     final Task queuedTask = tasks.get(0);
-    Assert.assertFalse(queuedTask.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY));
+    Assertions.assertFalse(Boolean.TRUE.equals(queuedTask.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY)));
   }
 
   @Test
@@ -424,10 +440,10 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.manageQueuedTasks();
 
     Optional<TaskStatus> statusOptional = getTaskStorage().getStatus(task.getId());
-    Assert.assertTrue(statusOptional.isPresent());
-    Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
-    Assert.assertNotNull(statusOptional.get().getErrorMsg());
-    Assert.assertTrue(
+    Assertions.assertTrue(statusOptional.isPresent());
+    Assertions.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
+    Assertions.assertNotNull(statusOptional.get().getErrorMsg());
+    Assertions.assertTrue(
         statusOptional.get().getErrorMsg().contains(exceptionMsg)
     );
 
@@ -436,8 +452,8 @@ public class TaskQueueTest extends IngestionTestBase
     verifyFailedTaskCount(taskQueue, 1);
 
     final CoordinatorRunStats stats = taskQueue.getQueueStats();
-    Assert.assertEquals(0, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
-    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
+    Assertions.assertEquals(0, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assertions.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -498,8 +514,8 @@ public class TaskQueueTest extends IngestionTestBase
     verifyFailedTaskCount(taskQueue, 1);
 
     final CoordinatorRunStats stats = taskQueue.getQueueStats();
-    Assert.assertEquals(1, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
-    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
+    Assertions.assertEquals(1, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assertions.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -510,17 +526,17 @@ public class TaskQueueTest extends IngestionTestBase
 
     // Active task: status should come from activeTasks map
     final Optional<TaskStatus> activeStatus = taskQueue.getTaskStatus(task.getId());
-    Assert.assertTrue(activeStatus.isPresent());
-    Assert.assertEquals(TaskState.RUNNING, activeStatus.get().getStatusCode());
-    Assert.assertEquals(task.getId(), activeStatus.get().getId());
+    Assertions.assertTrue(activeStatus.isPresent());
+    Assertions.assertEquals(TaskState.RUNNING, activeStatus.get().getStatusCode());
+    Assertions.assertEquals(task.getId(), activeStatus.get().getId());
 
     // Run the task so it completes
     taskQueue.manageQueuedTasks();
     waitForTaskToExit(task);
 
     final Optional<TaskStatus> completedStatus = taskQueue.getTaskStatus(task.getId());
-    Assert.assertTrue(completedStatus.isPresent());
-    Assert.assertEquals(TaskState.SUCCESS, completedStatus.get().getStatusCode());
+    Assertions.assertTrue(completedStatus.isPresent());
+    Assertions.assertEquals(TaskState.SUCCESS, completedStatus.get().getStatusCode());
   }
 
   @Test
@@ -540,16 +556,16 @@ public class TaskQueueTest extends IngestionTestBase
     waitForTaskToExit(task);
 
     final Optional<TaskStatus> failedStatus = taskQueue.getTaskStatus(task.getId());
-    Assert.assertTrue(failedStatus.isPresent());
-    Assert.assertEquals(TaskState.FAILED, failedStatus.get().getStatusCode());
-    Assert.assertEquals("intentional failure", failedStatus.get().getErrorMsg());
+    Assertions.assertTrue(failedStatus.isPresent());
+    Assertions.assertEquals(TaskState.FAILED, failedStatus.get().getStatusCode());
+    Assertions.assertEquals("intentional failure", failedStatus.get().getErrorMsg());
   }
 
   @Test
   public void testGetTaskStatus_unknownTask()
   {
     final Optional<TaskStatus> unknownStatus = taskQueue.getTaskStatus("unknownTask");
-    Assert.assertFalse(unknownStatus.isPresent());
+    Assertions.assertFalse(unknownStatus.isPresent());
   }
 
   @Test
@@ -621,22 +637,22 @@ public class TaskQueueTest extends IngestionTestBase
         null,
         false
     );
-    Assert.assertTrue(mapper.writeValueAsString(taskWithPassword).contains(password));
+    Assertions.assertTrue(mapper.writeValueAsString(taskWithPassword).contains(password));
 
     taskQueue.start();
     taskQueue.add(taskWithPassword);
 
     final Optional<Task> taskInStorage = taskStorage.getTask(taskWithPassword.getId());
-    Assert.assertTrue(taskInStorage.isPresent());
+    Assertions.assertTrue(taskInStorage.isPresent());
     final String taskInStorageAsString = mapper.writeValueAsString(taskInStorage.get());
-    Assert.assertFalse(taskInStorageAsString.contains(password));
+    Assertions.assertFalse(taskInStorageAsString.contains(password));
 
     final Optional<Task> taskInQueue = taskQueue.getActiveTask(taskWithPassword.getId());
-    Assert.assertTrue(taskInQueue.isPresent());
+    Assertions.assertTrue(taskInQueue.isPresent());
     final String taskInQueueAsString = mapper.writeValueAsString(taskInQueue.get());
-    Assert.assertFalse(taskInQueueAsString.contains(password));
+    Assertions.assertFalse(taskInQueueAsString.contains(password));
 
-    Assert.assertEquals(taskInStorageAsString, taskInQueueAsString);
+    Assertions.assertEquals(taskInStorageAsString, taskInQueueAsString);
   }
 
   @Test
@@ -648,15 +664,15 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.add(task);
 
     final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
-    Assert.assertTrue(activeInfoOpt.isPresent());
-    Assert.assertEquals(TaskState.RUNNING, activeInfoOpt.get().getStatus().getStatusCode());
+    Assertions.assertTrue(activeInfoOpt.isPresent());
+    Assertions.assertEquals(TaskState.RUNNING, activeInfoOpt.get().getStatus().getStatusCode());
 
     taskQueue.shutdown(task.getId(), shutdownReason);
 
     final Optional<TaskInfo> afterShutdownInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
-    Assert.assertTrue(afterShutdownInfoOpt.isPresent());
-    Assert.assertEquals(shutdownStatus, afterShutdownInfoOpt.get().getStatus());
-    Assert.assertEquals(shutdownStatus, getTaskStorage().getStatus(task.getId()).get());
+    Assertions.assertTrue(afterShutdownInfoOpt.isPresent());
+    Assertions.assertEquals(shutdownStatus, afterShutdownInfoOpt.get().getStatus());
+    Assertions.assertEquals(shutdownStatus, getTaskStorage().getStatus(task.getId()).get());
   }
 
   @Test
@@ -669,12 +685,12 @@ public class TaskQueueTest extends IngestionTestBase
 
     // ensure success callback has fired
     Thread.sleep(100);
-    Assert.assertTrue(task.isDone());
+    Assertions.assertTrue(task.isDone());
 
     final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
-    Assert.assertTrue(activeInfoOpt.isPresent());
-    Assert.assertEquals(successStatus, activeInfoOpt.get().getStatus());
-    Assert.assertEquals(successStatus, getTaskStorage().getStatus(task.getId()).get());
+    Assertions.assertTrue(activeInfoOpt.isPresent());
+    Assertions.assertEquals(successStatus, activeInfoOpt.get().getStatus());
+    Assertions.assertEquals(successStatus, getTaskStorage().getStatus(task.getId()).get());
   }
 
   @Test
@@ -696,12 +712,12 @@ public class TaskQueueTest extends IngestionTestBase
 
     // ensure failed callback has fired
     Thread.sleep(100);
-    Assert.assertTrue(task.isDone());
+    Assertions.assertTrue(task.isDone());
 
     final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
-    Assert.assertTrue(activeInfoOpt.isPresent());
-    Assert.assertEquals(failedStatus, activeInfoOpt.get().getStatus());
-    Assert.assertEquals(failedStatus, getTaskStorage().getStatus(task.getId()).get());
+    Assertions.assertTrue(activeInfoOpt.isPresent());
+    Assertions.assertEquals(failedStatus, activeInfoOpt.get().getStatus());
+    Assertions.assertEquals(failedStatus, getTaskStorage().getStatus(task.getId()).get());
   }
 
   @Test
@@ -710,7 +726,7 @@ public class TaskQueueTest extends IngestionTestBase
     // task1 acquires a lock that will block task2
     final TestTask task1 = new TestTask("t1", Intervals.of("2021-01/P1M"));
     prepareTaskForLocking(task1);
-    Assert.assertTrue(task1.isReady(actionClientFactory.create(task1)));
+    Assertions.assertTrue(task1.isReady(actionClientFactory.create(task1)));
 
     // task2 will not be ready because of task1's lock
     final TestTask task2 = new TestTask("t2", Intervals.of("2021-01-31/P1M"));
@@ -751,7 +767,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testTaskSubmissionToTaskRunnerBasedOnPriority() throws Exception
+  public void testTaskSubmissionToTaskRunnerBasedOnPriority()
   {
     final RecordingTaskRunner recordingRunner = new RecordingTaskRunner(serviceEmitter);
     final TaskQueue priorityQueue = new TaskQueue(
@@ -772,7 +788,9 @@ public class TaskQueueTest extends IngestionTestBase
     final NoopTask lowPriority2 = NoopTask.ofPriority(10);
     final NoopTask medPriority = NoopTask.ofPriority(50);
     final NoopTask highPriority1 = NoopTask.ofPriority(90);
-    final NoopTask highPriority2 = NoopTask.ofPriority(100);
+
+    // Create a task with a String priority value to verify that it gets coerced as an integer
+    final NoopTask highPriority2 = new NoopTask(null, null, null, 0, 0, Map.of(Tasks.PRIORITY_KEY, "100"));
 
     priorityQueue.add(lowPriority1);
     priorityQueue.add(medPriority);
@@ -783,12 +801,68 @@ public class TaskQueueTest extends IngestionTestBase
     priorityQueue.manageQueuedTasks();
 
     final List<String> submitted = recordingRunner.getSubmittedTaskIds();
-    Assert.assertEquals(5, submitted.size());
-    Assert.assertEquals(highPriority2.getId(), submitted.get(0));
-    Assert.assertEquals(highPriority1.getId(), submitted.get(1));
-    Assert.assertEquals(medPriority.getId(), submitted.get(2));
-    Assert.assertEquals(lowPriority2.getId(), submitted.get(3));
-    Assert.assertEquals(lowPriority1.getId(), submitted.get(4));
+    Assertions.assertEquals(5, submitted.size());
+    Assertions.assertEquals(highPriority2.getId(), submitted.get(0));
+    Assertions.assertEquals(highPriority1.getId(), submitted.get(1));
+    Assertions.assertEquals(medPriority.getId(), submitted.get(2));
+    Assertions.assertEquals(lowPriority2.getId(), submitted.get(3));
+    Assertions.assertEquals(lowPriority1.getId(), submitted.get(4));
+  }
+
+  @Test
+  public void testRunningAndPendingTaskCountForCompletedAndRemovedTasks()
+  {
+    final TestTask activeTask = new TestTask("active", Intervals.of("2021-01/P1M"));
+    final TestTask completedTask = new TestTask("completed", Intervals.of("2021-02/P1M"));
+    final TestSeekableStreamIndexTask completedStreamTask = createStreamTask("completedStream");
+    final TestSeekableStreamIndexTask removedStreamTask = createStreamTask("removedStream");
+
+    final TaskRunner taskRunner = EasyMock.createNiceMock(TaskRunner.class);
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(List.of(
+        workItem(activeTask),
+        workItem(completedTask),
+        workItem(completedStreamTask),
+        workItemWithTask(removedStreamTask)
+    )).anyTimes();
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(List.of(
+        new RemoteTaskRunnerWorkItem("unknown", "index_kafka", null, null, "wiki")
+    )).anyTimes();
+    EasyMock.replay(taskRunner);
+
+    final TaskQueue queue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null, null),
+        new DefaultTaskConfig(),
+        getTaskStorage(),
+        taskRunner,
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    queue.setActive(true);
+    queue.add(removedStreamTask);
+    queue.shutdown(removedStreamTask.getId(), "test shutdown");
+    queue.syncFromStorage();
+    Assertions.assertFalse(queue.getActiveTaskInfo(removedStreamTask.getId()).isPresent());
+
+    queue.add(activeTask);
+    queue.add(completedTask);
+    queue.add(completedStreamTask);
+    queue.shutdown(completedTask.getId(), "test shutdown");
+    queue.shutdown(completedStreamTask.getId(), "test shutdown");
+
+    Assertions.assertEquals(
+        Map.of(
+            RowKey.with(Dimension.DATASOURCE, "datasource").and(Dimension.TASK_TYPE, "test"), 2L,
+            RowKey.with(Dimension.DATASOURCE, "stream")
+                  .with(Dimension.TASK_TYPE, "test_seekable_stream")
+                  .and(Dimension.SUPERVISOR_ID, "supervisor"), 2L
+        ),
+        queue.getRunningTaskCount()
+    );
+    Assertions.assertEquals(Map.of(RowKey.empty(), 1L), queue.getPendingTaskCount());
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
@@ -825,7 +899,7 @@ public class TaskQueueTest extends IngestionTestBase
 
   private static void verifySuccessfulTaskCount(final TaskQueue taskQueue, int successCount)
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         successCount,
         taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum()
     );
@@ -833,9 +907,45 @@ public class TaskQueueTest extends IngestionTestBase
 
   private static void verifyFailedTaskCount(final TaskQueue taskQueue, int failureCount)
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         failureCount,
         taskQueue.getFailedTaskCount().values().stream().mapToLong(Long::longValue).sum()
+    );
+  }
+
+  private static TaskRunnerWorkItem workItem(final Task task)
+  {
+    return new RemoteTaskRunnerWorkItem(task.getId(), task.getType(), null, null, task.getDataSource());
+  }
+
+  private static TaskRunnerWorkItem workItemWithTask(final Task task)
+  {
+    return new RemoteTaskRunnerWorkItem(task.getId(), task.getType(), null, null, task.getDataSource())
+    {
+      @Override
+      public Task getTask()
+      {
+        return task;
+      }
+    };
+  }
+
+  private static TestSeekableStreamIndexTask createStreamTask(final String id)
+  {
+    return new TestSeekableStreamIndexTask(
+        id,
+        "supervisor",
+        null,
+        DataSchema.builder()
+                  .withDataSource("stream")
+                  .withTimestamp(TimestampSpec.DEFAULT)
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
+                  .build(),
+        SeekableStreamSupervisorStateTest.createSupervisorTuningConfig().convertToTaskTuningConfig(),
+        new TestSeekableStreamIndexTaskIOConfig(),
+        null,
+        null
     );
   }
 

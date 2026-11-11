@@ -35,6 +35,8 @@ import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
@@ -273,10 +275,8 @@ public class TombstoneHelper
 
     // Several fields do not apply to tombstones...
     DataSegment.Builder dataSegmentBuilder =
-        DataSegment.builder()
-                   .dataSource(dataSource)
-                   .interval(timeChunkInterval) // interval is different
-                   .version(version)
+        DataSegment.builder(SegmentId.of(dataSource, timeChunkInterval, version, shardSpec)) // interval is different
+                   .binaryVersion(null)
                    .shardSpec(shardSpec)
                    .loadSpec(tombstoneLoadSpec) // load spec is special for tombstone
                    .size(1) // in case coordinator segment balancing chokes with zero size
@@ -310,7 +310,8 @@ public class TombstoneHelper
       Collection<DataSegment> usedSegmentsInInputInterval =
           taskActionClient.submit(new RetrieveUsedSegmentsAction(
               dataSource,
-              condensedInputIntervals
+              condensedInputIntervals,
+              SegmentDetail.none()
           ));
       for (DataSegment usedSegment : usedSegmentsInInputInterval) {
         for (Interval condensedInputInterval : condensedInputIntervals) {

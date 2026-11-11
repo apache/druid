@@ -37,7 +37,10 @@ import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 
-public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> implements Comparable<KafkaDataSourceMetadata>
+// Natural ordering intentionally compares offsets only; inherited equality also includes the non-ordering stream config.
+// codeql[java/inconsistent-compareto-and-equals]
+public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>
+    implements Comparable<KafkaDataSourceMetadata>
 {
   private static final Logger LOGGER = new Logger(KafkaDataSourceMetadata.class);
 

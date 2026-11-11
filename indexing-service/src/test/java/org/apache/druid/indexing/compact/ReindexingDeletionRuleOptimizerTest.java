@@ -382,17 +382,10 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter notFilter = new NotDimFilter(orFilter);
     CompactionTransformSpec transformSpec = new CompactionTransformSpec(notFilter, null);
 
-    return new CompactionState(
-        null,
-        null,
-        null,
-        transformSpec,
-        IndexSpec.getDefault(),
-        null,
-        null,
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .transformSpec(transformSpec)
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 
   private CompactionState createStateWithSingleFilter(DimFilter filter)
@@ -400,32 +393,17 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter notFilter = new NotDimFilter(filter);
     CompactionTransformSpec transformSpec = new CompactionTransformSpec(notFilter, null);
 
-    return new CompactionState(
-        null,
-        null,
-        null,
-        transformSpec,
-        IndexSpec.getDefault(),
-        null,
-        null,
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .transformSpec(transformSpec)
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 
   private CompactionState createStateWithoutFilters()
   {
-    return new CompactionState(
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null,
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 
   @Test

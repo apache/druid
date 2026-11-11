@@ -32,8 +32,8 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -69,17 +69,17 @@ public class HybridCacheTest
         )
     );
     final CacheProvider cacheProvider = injector.getInstance(Key.get(CacheProvider.class, Global.class));
-    Assert.assertNotNull(cacheProvider);
-    Assert.assertEquals(HybridCacheProvider.class, cacheProvider.getClass());
+    Assertions.assertNotNull(cacheProvider);
+    Assertions.assertEquals(HybridCacheProvider.class, cacheProvider.getClass());
 
     final Cache cache = cacheProvider.get();
-    Assert.assertNotNull(cache);
+    Assertions.assertNotNull(cache);
 
-    Assert.assertFalse(cache.isLocal());
-    Assert.assertFalse(((HybridCacheProvider) cacheProvider).getUseL2());
-    Assert.assertTrue(((HybridCacheProvider) cacheProvider).getPopulateL2());
-    Assert.assertEquals(LocalCacheProvider.class, ((HybridCacheProvider) cacheProvider).level1.getClass());
-    Assert.assertEquals(MemcachedCacheProvider.class, ((HybridCacheProvider) cacheProvider).level2.getClass());
+    Assertions.assertFalse(cache.isLocal());
+    Assertions.assertFalse(((HybridCacheProvider) cacheProvider).getUseL2());
+    Assertions.assertTrue(((HybridCacheProvider) cacheProvider).getPopulateL2());
+    Assertions.assertEquals(LocalCacheProvider.class, ((HybridCacheProvider) cacheProvider).level1.getClass());
+    Assertions.assertEquals(MemcachedCacheProvider.class, ((HybridCacheProvider) cacheProvider).level2.getClass());
   }
 
   @Test
@@ -104,84 +104,84 @@ public class HybridCacheTest
 
     // test put puts to both
     cache.put(key1, value1);
-    Assert.assertEquals(value1, l1.get(key1));
-    Assert.assertEquals(value1, l2.get(key1));
-    Assert.assertEquals(value1, cache.get(key1));
+    Assertions.assertEquals(value1, l1.get(key1));
+    Assertions.assertEquals(value1, l2.get(key1));
+    Assertions.assertEquals(value1, cache.get(key1));
 
     int hits = 0;
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
-    Assert.assertEquals(++hits, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(++hits, cache.getStats().getNumHits());
 
     // test l1
     l1.put(key2, value2);
-    Assert.assertEquals(value2, cache.get(key2));
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
-    Assert.assertEquals(++hits, cache.getStats().getNumHits());
+    Assertions.assertEquals(value2, cache.get(key2));
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(++hits, cache.getStats().getNumHits());
 
     // test l2
     l2.put(key3, value3);
-    Assert.assertEquals(value3, cache.get(key3));
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
-    Assert.assertEquals(++hits, cache.getStats().getNumHits());
+    Assertions.assertEquals(value3, cache.get(key3));
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(++hits, cache.getStats().getNumHits());
 
 
     // test bulk get with l1 and l2
     {
       final HashSet<Cache.NamedKey> keys = Sets.newHashSet(key1, key2, key3);
       Map<Cache.NamedKey, byte[]> res = cache.getBulk(keys);
-      Assert.assertNotNull(res);
-      Assert.assertEquals(keys, res.keySet());
-      Assert.assertArrayEquals(value1, res.get(key1));
-      Assert.assertArrayEquals(value2, res.get(key2));
-      Assert.assertArrayEquals(value3, res.get(key3));
+      Assertions.assertNotNull(res);
+      Assertions.assertEquals(keys, res.keySet());
+      Assertions.assertArrayEquals(value1, res.get(key1));
+      Assertions.assertArrayEquals(value2, res.get(key2));
+      Assertions.assertArrayEquals(value3, res.get(key3));
 
       hits += 3;
-      Assert.assertEquals(0, cache.getStats().getNumMisses());
-      Assert.assertEquals(hits, cache.getStats().getNumHits());
+      Assertions.assertEquals(0, cache.getStats().getNumMisses());
+      Assertions.assertEquals(hits, cache.getStats().getNumHits());
     }
 
     // test bulk get with l1 entries only
     {
       final HashSet<Cache.NamedKey> keys = Sets.newHashSet(key1, key2);
       Map<Cache.NamedKey, byte[]> res = cache.getBulk(keys);
-      Assert.assertNotNull(res);
-      Assert.assertEquals(keys, res.keySet());
-      Assert.assertArrayEquals(value1, res.get(key1));
-      Assert.assertArrayEquals(value2, res.get(key2));
+      Assertions.assertNotNull(res);
+      Assertions.assertEquals(keys, res.keySet());
+      Assertions.assertArrayEquals(value1, res.get(key1));
+      Assertions.assertArrayEquals(value2, res.get(key2));
 
       hits += 2;
-      Assert.assertEquals(0, cache.getStats().getNumMisses());
-      Assert.assertEquals(hits, cache.getStats().getNumHits());
+      Assertions.assertEquals(0, cache.getStats().getNumMisses());
+      Assertions.assertEquals(hits, cache.getStats().getNumHits());
     }
 
     int misses = 0;
-    Assert.assertNull(cache.get(key4));
-    Assert.assertEquals(++misses, cache.getStats().getNumMisses());
+    Assertions.assertNull(cache.get(key4));
+    Assertions.assertEquals(++misses, cache.getStats().getNumMisses());
 
-    Assert.assertTrue(cache.getBulk(Sets.newHashSet(key4)).isEmpty());
-    Assert.assertEquals(++misses, cache.getStats().getNumMisses());
+    Assertions.assertTrue(cache.getBulk(Sets.newHashSet(key4)).isEmpty());
+    Assertions.assertEquals(++misses, cache.getStats().getNumMisses());
 
     {
       final Map<Cache.NamedKey, byte[]> res = cache.getBulk(Sets.newHashSet(key1, key4));
-      Assert.assertEquals(Sets.newHashSet(key1), res.keySet());
-      Assert.assertArrayEquals(value1, res.get(key1));
+      Assertions.assertEquals(Sets.newHashSet(key1), res.keySet());
+      Assertions.assertArrayEquals(value1, res.get(key1));
 
-      Assert.assertEquals(++hits, cache.getStats().getNumHits());
-      Assert.assertEquals(++misses, cache.getStats().getNumMisses());
+      Assertions.assertEquals(++hits, cache.getStats().getNumHits());
+      Assertions.assertEquals(++misses, cache.getStats().getNumMisses());
     }
 
     {
       final Map<Cache.NamedKey, byte[]> res = cache.getBulk(Sets.newHashSet(key3, key4));
-      Assert.assertEquals(Sets.newHashSet(key3), res.keySet());
-      Assert.assertArrayEquals(value3, res.get(key3));
+      Assertions.assertEquals(Sets.newHashSet(key3), res.keySet());
+      Assertions.assertArrayEquals(value3, res.get(key3));
 
-      Assert.assertEquals(hits + 1, cache.getStats().getNumHits());
-      Assert.assertEquals(misses + 1, cache.getStats().getNumMisses());
+      Assertions.assertEquals(hits + 1, cache.getStats().getNumHits());
+      Assertions.assertEquals(misses + 1, cache.getStats().getNumMisses());
     }
 
     // test close
     cache.close();
-    Assert.assertEquals("l1 size after close()", 0, l1Map.size());
-    Assert.assertEquals("l2 size after close()", 0, l2Map.size());
+    Assertions.assertEquals(0, l1Map.size(), "l1 size after close()");
+    Assertions.assertEquals(0, l2Map.size(), "l2 size after close()");
   }
 }

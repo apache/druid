@@ -34,16 +34,16 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -53,8 +53,8 @@ import java.util.Map;
  */
 public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testRacMethodThrowsWithoutDeserializerForRacEntry() throws IOException
@@ -87,7 +87,7 @@ public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
     final List<Frame> frameList = frames.toList();
 
     // Write frame file with useWireTransferableForFrames = true (RAC format)
-    final File file = Files.createTempFile(tempDir, "junit", null).toFile();
+    final File file = temporaryFolder.newFile();
     try (final FrameFileWriter writer = FrameFileWriter.open(
         Channels.newChannel(Files.newOutputStream(file.toPath())),
         null,

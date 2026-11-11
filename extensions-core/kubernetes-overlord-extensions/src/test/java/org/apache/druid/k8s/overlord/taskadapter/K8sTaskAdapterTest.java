@@ -75,7 +75,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -323,36 +322,35 @@ class K8sTaskAdapterTest
         jsonMapper,
         taskLogs
     );
+    // task id contains a space, as it does for datasources whose name contains a space
     Task task = new NoopTask(
+        "noop_my ds_id",
         "id",
-        "id",
-        "datasource",
+        "my ds",
         0,
         0,
         ImmutableMap.of("context", RandomStringUtils.randomAlphanumeric((int) DruidK8sConstants.MAX_ENV_VARIABLE_KBS * 20))
     );
     Job job = adapter.fromTask(task);
+    final Container mainContainer = job.getSpec().getTemplate().getSpec().getContainers().get(0);
     // TASK_JSON should not be set in env variables
     Assertions.assertFalse(
-        job.getSpec()
-            .getTemplate()
-            .getSpec()
-            .getContainers()
-            .get(0).getEnv()
-            .stream().anyMatch(env -> env.getName().equals(DruidK8sConstants.TASK_JSON_ENV))
+        mainContainer.getEnv()
+                     .stream().anyMatch(env -> env.getName().equals(DruidK8sConstants.TASK_JSON_ENV))
     );
 
-    // --taskId <TASK_ID> should be passed to the peon command args
-    Assertions.assertTrue(
-        Arrays.stream(job.getSpec()
-            .getTemplate()
-            .getSpec()
-            .getContainers()
-            .get(0)
-            .getArgs()
-            .get(0).split(" ")).collect(Collectors.toSet())
-            .containsAll(ImmutableList.of("--taskId", task.getId()))
+    // TASK_ID should be passed through env, so that peon.sh can pass it to CliPeon as a single --taskId argument
+    Assertions.assertEquals(
+        Collections.singletonList(task.getId()),
+        mainContainer.getEnv()
+                     .stream()
+                     .filter(env -> env.getName().equals(DruidK8sConstants.TASK_ID_ENV))
+                     .map(EnvVar::getValue)
+                     .collect(Collectors.toList())
     );
+
+    // --taskId should not be in the "sh -c" command string, where a task id containing a space would be split
+    Assertions.assertFalse(mainContainer.getArgs().get(0).contains("--taskId"));
   }
 
   @Test

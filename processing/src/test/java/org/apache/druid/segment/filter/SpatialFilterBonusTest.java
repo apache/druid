@@ -60,9 +60,9 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -78,7 +78,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class SpatialFilterBonusTest
 {
   public static final int NUM_POINTS = 5000;
@@ -96,7 +97,6 @@ public class SpatialFilterBonusTest
     this.segment = segment;
   }
 
-  @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
     List<Object[]> argumentArrays = new ArrayList<>();
@@ -246,10 +246,8 @@ public class SpatialFilterBonusTest
   private static QueryableIndex makeQueryableIndex(IndexSpec indexSpec, IndexMerger indexMerger, IndexIO indexIO)
       throws IOException
   {
-    IncrementalIndex theIndex = makeIncrementalIndex();
-    File tmpFile = File.createTempFile("billy", "yay");
-    tmpFile.delete();
-    FileUtils.mkdirp(tmpFile);
+    final IncrementalIndex theIndex = makeIncrementalIndex();
+    final File tmpFile = FileUtils.createTempDir("spatial-filter");
     tmpFile.deleteOnExit();
 
     indexMerger.persist(theIndex, tmpFile, indexSpec, null);
@@ -424,8 +422,8 @@ public class SpatialFilterBonusTest
       }
 
 
-      File tmpFile = File.createTempFile("yay", "who");
-      tmpFile.delete();
+      final File tmpFile = FileUtils.createTempDir("spatial-filter-merge");
+      tmpFile.deleteOnExit();
 
       File firstFile = new File(tmpFile, "first");
       File secondFile = new File(tmpFile, "second");

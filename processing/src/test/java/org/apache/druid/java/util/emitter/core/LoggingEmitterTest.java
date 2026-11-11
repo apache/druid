@@ -24,11 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,8 +42,8 @@ import java.util.List;
 
 public class LoggingEmitterTest
 {
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private List<Object> serializedObjects;
   private ObjectMapper trackingMapper;
@@ -121,6 +122,21 @@ public class LoggingEmitterTest
     emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
 
     Assertions.assertEquals(1, serializedObjects.size(), "Only the allowed metric should be serialized");
+  }
+
+  /**
+   * The pre-ingestion "ingest/events/filtered" metric must be present in the bundled default allowlist so it is
+   * not silently dropped by the LoggingEmitter's default-filtered configuration.
+   */
+  @Test
+  public void testDefaultResourceAllowsIngestEventsFiltered()
+  {
+    createEmitter(true, null);
+
+    emitter.emit(ServiceMetricEvent.builder().setMetric("ingest/events/filtered", 4).build("test", "localhost"));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
+
+    Assertions.assertEquals(1, serializedObjects.size(), "ingest/events/filtered should be allowed by the default list");
   }
 
   /**
@@ -203,7 +219,7 @@ public class LoggingEmitterTest
 
   private File createAllowlistFile(String jsonContent) throws IOException
   {
-    final File file = new File(tempFolder, "allowedMetrics.json");
+    final File file = temporaryFolder.newFile("allowedMetrics.json");
     try (Writer writer = new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)) {
       writer.write(jsonContent);
     }

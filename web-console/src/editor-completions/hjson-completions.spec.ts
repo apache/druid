@@ -1,0 +1,135 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { NATIVE_JSON_QUERY_COMPLETIONS } from '../druid-models';
+import { hjson } from '../editor-languages/hjson';
+import { completionContextAt } from '../test-utils/completion-context';
+
+import { getHjsonCompletions } from './hjson-completions';
+
+describe('getHjsonCompletions', () => {
+  // The completions with the cursor at the |
+  function completionsAt(textWithCursor: string) {
+    const [context, word] = completionContextAt(hjson(), textWithCursor);
+    return getHjsonCompletions(context, word, NATIVE_JSON_QUERY_COMPLETIONS);
+  }
+
+  it('returns empty array for comments', () => {
+    expect(completionsAt('{ "queryType": "scan", // This is a comment with S|')).toEqual([]);
+    expect(completionsAt('{ "queryType": "scan", /* S| */')).toEqual([]);
+  });
+
+  it('returns root level property suggestions', () => {
+    const completions = completionsAt('{|');
+
+    const completionValues = completions.map(c => c.label);
+    expect(completionValues).toContain('queryType');
+    expect(completionValues).toContain('dataSource');
+  });
+
+  it('returns queryType value suggestions', () => {
+    const completions = completionsAt('{ "queryType": |');
+
+    const completionValues = completions.map(c => c.label);
+    expect(completionValues).toContain('timeseries');
+    expect(completionValues).toContain('topN');
+    expect(completionValues).toContain('groupBy');
+    expect(completionValues).toContain('scan');
+  });
+
+  it('sees the properties after the cursor', () => {
+    const completionValues = completionsAt('{\n  |\n  "queryType": "timeseries"\n}').map(
+      c => c.label,
+    );
+    expect(completionValues).toContain('granularity');
+    expect(completionValues).not.toContain('queryType');
+  });
+
+  it('returns query-specific properties based on queryType', () => {
+    const completions = completionsAt('{ "queryType": "timeseries", |');
+
+    const completionValues = completions.map(c => c.label);
+    expect(completionValues).toContain('granularity');
+    expect(completionValues).toContain('aggregations');
+    expect(completionValues).toContain('intervals');
+
+    // Should not suggest properties that already exist
+    expect(completionValues).not.toContain('queryType');
+  });
+
+  it('returns granularity value suggestions', () => {
+    const completions = completionsAt('{ "queryType": "timeseries", "granularity": |');
+
+    const completionValues = completions.map(c => c.label);
+    expect(completionValues).toContain('hour');
+    expect(completionValues).toContain('day');
+    expect(completionValues).toContain('all');
+  });
+
+  it('returns aggregation properties in array context', () => {
+    const completions = completionsAt('{ "queryType": "timeseries", "aggregations": [{ |');
+
+    const completionValues = completions.map(c => c.label);
+    expect(completionValues).toContain('type');
+    expect(completionValues).toContain('name');
+  });
+
+  it('returns aggregation type values', () => {
+    const completions = completionsAt('{ "queryType": "timeseries", "aggregations": [{ "type": |');
+
+    const completionValues = completions.map(c => c.label);
+    expect(completionValues).toContain('count');
+    expect(completionValues).toContain('longSum');
+    expect(completionValues).toContain('doubleSum');
+  });
+
+  it('returns fieldName for field-based aggregators', () => {
+    const completions = completionsAt(
+      '{ "queryType": "timeseries", "aggregations": [{ "type": "longSum", |',
+    );
+
+    const completionValues = completions.map(c => c.label);
+    expect(completionValues).toContain('fieldName');
+    expect(completionValues).toContain('name');
+
+    // Should not suggest properties that already exist
+    expect(completionValues).not.toContain('type');
+  });
+
+  it('handles quoted vs unquoted completions', () => {
+    const unquotedCompletions = completionsAt('{ |');
+    const quotedCompletions = completionsAt('{ "|');
+
+    // Unquoted should include quotes for property names
+    const unquotedValues = unquotedCompletions.map(c => c.label);
+    expect(unquotedValues.some(v => v.includes('"'))).toBe(false); // Simple property names don't need quotes
+
+    // Quoted completions should not add extra quotes
+    const quotedValues = quotedCompletions.map(c => c.label);
+    expect(quotedValues).toContain('queryType');
+    expect(quotedValues).toContain('dataSource');
+  });
+
+  it('provides documentation for completions', () => {
+    const completions = completionsAt('{|');
+
+    const queryTypeCompletion = completions.find(c => c.label === 'queryType');
+    expect(queryTypeCompletion).toBeDefined();
+    expect(queryTypeCompletion?.detail).toBe('property');
+  });
+});

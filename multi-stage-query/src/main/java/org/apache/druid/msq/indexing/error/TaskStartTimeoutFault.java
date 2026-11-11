@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -53,7 +53,7 @@ public class TaskStartTimeoutFault extends BaseMSQFault
         pendingTasks,
         totalTasks,
         TimeUnit.MILLISECONDS.toSeconds(timeout),
-        MultiStageQueryContext.CTX_MAX_NUM_TASKS
+        QueryContextParameters.MAX_NUM_TASKS
     );
     this.pendingTasks = pendingTasks;
     this.totalTasks = totalTasks;

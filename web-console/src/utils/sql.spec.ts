@@ -80,35 +80,35 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 23,
-            "endRowColumn": {
-              "column": 14,
-              "row": 1,
+            "endLineColumn": {
+              "column": 15,
+              "line": 2,
             },
+            "endOffset": 23,
             "index": 0,
             "sql": "SELECT *
         FROM wikipedia",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
           {
-            "endOffset": 49,
-            "endRowColumn": {
-              "column": 7,
-              "row": 5,
+            "endLineColumn": {
+              "column": 8,
+              "line": 6,
             },
+            "endOffset": 49,
             "index": 1,
             "sql": "SELECT *
         FROM w2
         LIMIT 5",
-            "startOffset": 25,
-            "startRowColumn": {
-              "column": 0,
-              "row": 3,
+            "startLineColumn": {
+              "column": 1,
+              "line": 4,
             },
+            "startOffset": 25,
           },
         ]
       `);
@@ -129,11 +129,11 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 101,
-            "endRowColumn": {
-              "column": 15,
-              "row": 5,
+            "endLineColumn": {
+              "column": 16,
+              "line": 6,
             },
+            "endOffset": 101,
             "index": 0,
             "sql": "SELECT
           "channel",
@@ -141,25 +141,25 @@ describe('sql', () => {
         FROM (SELECT * FROM "wikipedia")
         GROUP BY 1
         ORDER BY 2 DESC",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
           {
-            "endOffset": 73,
-            "endRowColumn": {
-              "column": 31,
-              "row": 3,
+            "endLineColumn": {
+              "column": 32,
+              "line": 4,
             },
+            "endOffset": 73,
             "index": 1,
             "sql": "SELECT * FROM "wikipedia"",
-            "startOffset": 48,
-            "startRowColumn": {
-              "column": 6,
-              "row": 3,
+            "startLineColumn": {
+              "column": 7,
+              "line": 4,
             },
+            "startOffset": 48,
           },
         ]
       `);
@@ -183,11 +183,11 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 124,
-            "endRowColumn": {
-              "column": 15,
-              "row": 8,
+            "endLineColumn": {
+              "column": 16,
+              "line": 9,
             },
+            "endOffset": 124,
             "index": 0,
             "sql": "WITH w1 AS (
           SELECT channel, page FROM "wikipedia"
@@ -198,32 +198,32 @@ describe('sql', () => {
         FROM w1
         GROUP BY 1
         ORDER BY 2 DESC",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
           {
-            "endOffset": 52,
-            "endRowColumn": {
-              "column": 39,
-              "row": 1,
+            "endLineColumn": {
+              "column": 40,
+              "line": 2,
             },
+            "endOffset": 52,
             "index": 1,
             "sql": "SELECT channel, page FROM "wikipedia"",
-            "startOffset": 15,
-            "startRowColumn": {
-              "column": 2,
-              "row": 1,
+            "startLineColumn": {
+              "column": 3,
+              "line": 2,
             },
+            "startOffset": 15,
           },
           {
-            "endOffset": 124,
-            "endRowColumn": {
-              "column": 15,
-              "row": 8,
+            "endLineColumn": {
+              "column": 16,
+              "line": 9,
             },
+            "endOffset": 124,
             "index": 2,
             "sql": "SELECT
           page,
@@ -231,11 +231,11 @@ describe('sql', () => {
         FROM w1
         GROUP BY 1
         ORDER BY 2 DESC",
-            "startOffset": 55,
-            "startRowColumn": {
-              "column": 0,
-              "row": 3,
+            "startLineColumn": {
+              "column": 1,
+              "line": 4,
             },
+            "startOffset": 55,
           },
         ]
       `);
@@ -268,25 +268,25 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 29,
-            "endRowColumn": {
-              "column": 7,
-              "row": 2,
+            "endLineColumn": {
+              "column": 8,
+              "line": 3,
             },
+            "endOffset": 29,
             "index": 0,
             "sql": "SELECT * FROM "wiki"",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
           {
-            "endOffset": 401,
-            "endRowColumn": {
-              "column": 18,
-              "row": 17,
+            "endLineColumn": {
+              "column": 19,
+              "line": 18,
             },
+            "endOffset": 401,
             "index": 1,
             "sql": "REPLACE INTO "wikipedia" OVERWRITE ALL
         WITH "ext" AS (
@@ -304,18 +304,18 @@ describe('sql', () => {
           "channel"
         FROM "ext"
         PARTITIONED BY DAY",
-            "startOffset": 22,
-            "startRowColumn": {
-              "column": 0,
-              "row": 2,
+            "startLineColumn": {
+              "column": 1,
+              "line": 3,
             },
+            "startOffset": 22,
           },
           {
-            "endOffset": 382,
-            "endRowColumn": {
-              "column": 10,
-              "row": 16,
+            "endLineColumn": {
+              "column": 11,
+              "line": 17,
             },
+            "endOffset": 382,
             "index": 2,
             "sql": "WITH "ext" AS (
           SELECT *
@@ -331,18 +331,18 @@ describe('sql', () => {
           "isRobot",
           "channel"
         FROM "ext"",
-            "startOffset": 61,
-            "startRowColumn": {
-              "column": 0,
-              "row": 3,
+            "startLineColumn": {
+              "column": 1,
+              "line": 4,
             },
+            "startOffset": 61,
           },
           {
-            "endOffset": 298,
-            "endRowColumn": {
-              "column": 70,
-              "row": 10,
+            "endLineColumn": {
+              "column": 71,
+              "line": 11,
             },
+            "endOffset": 298,
             "index": 3,
             "sql": "SELECT *
           FROM TABLE(
@@ -351,29 +351,29 @@ describe('sql', () => {
               '{"type":"json"}'
             )
           ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)",
-            "startOffset": 79,
-            "startRowColumn": {
-              "column": 2,
-              "row": 4,
+            "startLineColumn": {
+              "column": 3,
+              "line": 5,
             },
+            "startOffset": 79,
           },
           {
-            "endOffset": 382,
-            "endRowColumn": {
-              "column": 10,
-              "row": 16,
+            "endLineColumn": {
+              "column": 11,
+              "line": 17,
             },
+            "endOffset": 382,
             "index": 4,
             "sql": "SELECT
           TIME_PARSE("timestamp") AS "__time",
           "isRobot",
           "channel"
         FROM "ext"",
-            "startOffset": 301,
-            "startRowColumn": {
-              "column": 0,
-              "row": 12,
+            "startLineColumn": {
+              "column": 1,
+              "line": 13,
             },
+            "startOffset": 301,
           },
         ]
       `);
@@ -406,11 +406,11 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 404,
-            "endRowColumn": {
-              "column": 22,
-              "row": 17,
+            "endLineColumn": {
+              "column": 23,
+              "line": 18,
             },
+            "endOffset": 404,
             "index": 0,
             "sql": "EXPLAIN PLAN FOR
         INSERT INTO "wikipedia"
@@ -430,18 +430,18 @@ describe('sql', () => {
         FROM "ext"
         PARTITIONED BY DAY
         CLUSTERED BY "channel"",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
           {
-            "endOffset": 404,
-            "endRowColumn": {
-              "column": 22,
-              "row": 17,
+            "endLineColumn": {
+              "column": 23,
+              "line": 18,
             },
+            "endOffset": 404,
             "index": 1,
             "sql": "INSERT INTO "wikipedia"
         WITH "ext" AS (
@@ -460,18 +460,18 @@ describe('sql', () => {
         FROM "ext"
         PARTITIONED BY DAY
         CLUSTERED BY "channel"",
-            "startOffset": 17,
-            "startRowColumn": {
-              "column": 0,
-              "row": 1,
+            "startLineColumn": {
+              "column": 1,
+              "line": 2,
             },
+            "startOffset": 17,
           },
           {
-            "endOffset": 362,
-            "endRowColumn": {
-              "column": 10,
-              "row": 15,
+            "endLineColumn": {
+              "column": 11,
+              "line": 16,
             },
+            "endOffset": 362,
             "index": 2,
             "sql": "WITH "ext" AS (
           SELECT *
@@ -487,18 +487,18 @@ describe('sql', () => {
           "isRobot",
           "channel"
         FROM "ext"",
-            "startOffset": 41,
-            "startRowColumn": {
-              "column": 0,
-              "row": 2,
+            "startLineColumn": {
+              "column": 1,
+              "line": 3,
             },
+            "startOffset": 41,
           },
           {
-            "endOffset": 278,
-            "endRowColumn": {
-              "column": 70,
-              "row": 9,
+            "endLineColumn": {
+              "column": 71,
+              "line": 10,
             },
+            "endOffset": 278,
             "index": 3,
             "sql": "SELECT *
           FROM TABLE(
@@ -507,29 +507,29 @@ describe('sql', () => {
               '{"type":"json"}'
             )
           ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)",
-            "startOffset": 59,
-            "startRowColumn": {
-              "column": 2,
-              "row": 3,
+            "startLineColumn": {
+              "column": 3,
+              "line": 4,
             },
+            "startOffset": 59,
           },
           {
-            "endOffset": 362,
-            "endRowColumn": {
-              "column": 10,
-              "row": 15,
+            "endLineColumn": {
+              "column": 11,
+              "line": 16,
             },
+            "endOffset": 362,
             "index": 4,
             "sql": "SELECT
           TIME_PARSE("timestamp") AS "__time",
           "isRobot",
           "channel"
         FROM "ext"",
-            "startOffset": 281,
-            "startRowColumn": {
-              "column": 0,
-              "row": 11,
+            "startLineColumn": {
+              "column": 1,
+              "line": 12,
             },
+            "startOffset": 281,
           },
         ]
       `);
@@ -553,68 +553,68 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 40,
-            "endRowColumn": {
-              "column": 14,
-              "row": 2,
+            "endLineColumn": {
+              "column": 15,
+              "line": 3,
             },
+            "endOffset": 40,
             "index": 0,
             "sql": "EXPLAIN PLAN FOR
         SELECT *
         FROM wikipedia",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
           {
-            "endOffset": 40,
-            "endRowColumn": {
-              "column": 14,
-              "row": 2,
+            "endLineColumn": {
+              "column": 15,
+              "line": 3,
             },
+            "endOffset": 40,
             "index": 1,
             "sql": "SELECT *
         FROM wikipedia",
-            "startOffset": 17,
-            "startRowColumn": {
-              "column": 0,
-              "row": 1,
+            "startLineColumn": {
+              "column": 1,
+              "line": 2,
             },
+            "startOffset": 17,
           },
           {
-            "endOffset": 83,
-            "endRowColumn": {
-              "column": 7,
-              "row": 7,
+            "endLineColumn": {
+              "column": 8,
+              "line": 8,
             },
+            "endOffset": 83,
             "index": 2,
             "sql": "EXPLAIN PLAN FOR
         SELECT *
         FROM w2
         LIMIT 5",
-            "startOffset": 42,
-            "startRowColumn": {
-              "column": 0,
-              "row": 4,
+            "startLineColumn": {
+              "column": 1,
+              "line": 5,
             },
+            "startOffset": 42,
           },
           {
-            "endOffset": 83,
-            "endRowColumn": {
-              "column": 7,
-              "row": 7,
+            "endLineColumn": {
+              "column": 8,
+              "line": 8,
             },
+            "endOffset": 83,
             "index": 3,
             "sql": "SELECT *
         FROM w2
         LIMIT 5",
-            "startOffset": 59,
-            "startRowColumn": {
-              "column": 0,
-              "row": 5,
+            "startLineColumn": {
+              "column": 1,
+              "line": 6,
             },
+            "startOffset": 59,
           },
         ]
       `);
@@ -632,20 +632,20 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 60,
-            "endRowColumn": {
-              "column": 23,
-              "row": 2,
+            "endLineColumn": {
+              "column": 24,
+              "line": 3,
             },
+            "endOffset": 60,
             "index": 0,
             "sql": "SET timeout = 100;
         SET timeout = 50;
         SELECT * FROM wikipedia",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
         ]
       `);
@@ -667,35 +667,35 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 42,
-            "endRowColumn": {
-              "column": 23,
-              "row": 1,
+            "endLineColumn": {
+              "column": 24,
+              "line": 2,
             },
+            "endOffset": 42,
             "index": 0,
             "sql": "SET timeout = 100;
         SELECT * FROM wikipedia",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
           {
-            "endOffset": 115,
-            "endRowColumn": {
-              "column": 23,
-              "row": 6,
+            "endLineColumn": {
+              "column": 24,
+              "line": 7,
             },
+            "endOffset": 115,
             "index": 1,
             "sql": "SET timeout = 50;
         SET sqlTimeZone = 'Etc/UTC';
         SELECT * FROM wikipedia",
-            "startOffset": 45,
-            "startRowColumn": {
-              "column": 0,
-              "row": 4,
+            "startLineColumn": {
+              "column": 1,
+              "line": 5,
             },
+            "startOffset": 45,
           },
         ]
       `);
@@ -745,11 +745,11 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         [
           {
-            "endOffset": 655,
-            "endRowColumn": {
-              "column": 18,
-              "row": 34,
+            "endLineColumn": {
+              "column": 19,
+              "line": 35,
             },
+            "endOffset": 655,
             "index": 0,
             "sql": "SET finalizeAggregations = FALSE;
         SET groupByEnableMultiValueUnnesting = FALSE;
@@ -786,18 +786,18 @@ describe('sql', () => {
           "window"
         FROM "ext"
         PARTITIONED BY DAY",
-            "startOffset": 0,
-            "startRowColumn": {
-              "column": 0,
-              "row": 0,
+            "startLineColumn": {
+              "column": 1,
+              "line": 1,
             },
+            "startOffset": 0,
           },
           {
-            "endOffset": 636,
-            "endRowColumn": {
-              "column": 10,
-              "row": 33,
+            "endLineColumn": {
+              "column": 11,
+              "line": 34,
             },
+            "endOffset": 636,
             "index": 1,
             "sql": "SELECT
           TIME_PARSE("timestamp") AS "__time",
@@ -830,11 +830,11 @@ describe('sql', () => {
           "timezone_offset",
           "window"
         FROM "ext"",
-            "startOffset": 128,
-            "startRowColumn": {
-              "column": 0,
-              "row": 3,
+            "startLineColumn": {
+              "column": 1,
+              "line": 4,
             },
+            "startOffset": 128,
           },
         ]
       `);

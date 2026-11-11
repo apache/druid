@@ -28,12 +28,13 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PostgresqlInputSourceDatabaseConnectorTest
 {
@@ -44,9 +45,6 @@ public class PostgresqlInputSourceDatabaseConnectorTest
     MAPPER.registerModules(new PostgreSQLMetadataStorageModule().getJacksonModules());
     MAPPER.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTED_CONF));
   }
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
 
 
   @Test
@@ -68,7 +66,7 @@ public class PostgresqlInputSourceDatabaseConnectorTest
         MAPPER.writeValueAsString(connector),
         PostgresqlInputSourceDatabaseConnector.class
     );
-    Assert.assertEquals(connector, andBack);
+    Assertions.assertEquals(connector, andBack);
   }
 
   @Test
@@ -124,24 +122,24 @@ public class PostgresqlInputSourceDatabaseConnectorTest
   @Test
   public void testFailWhenNoAllowlistAndHaveProperty()
   {
-    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
-    {
-      @Override
-      public String getConnectURI()
+    Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+      MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
       {
-        return "jdbc:postgresql://localhost:3306/test?user=maytas&password=secret&keyonly";
-      }
-    };
+        @Override
+        public String getConnectURI()
+        {
+          return "jdbc:postgresql://localhost:3306/test?user=maytas&password=secret&keyonly";
+        }
+      };
 
-    JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of(""));
+      JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of(""));
 
-    expectedException.expectMessage("is not in the allowed list");
-    expectedException.expect(IllegalArgumentException.class);
-
-    new PostgresqlInputSourceDatabaseConnector(
-        connectorConfig,
-        securityConfig
-    );
+      new PostgresqlInputSourceDatabaseConnector(
+          connectorConfig,
+          securityConfig
+      );
+    });
+    assertTrue(exception.getMessage().contains("is not in the allowed list"));
   }
 
   @Test
@@ -169,47 +167,47 @@ public class PostgresqlInputSourceDatabaseConnectorTest
   @Test
   public void testFailOnlyInvalidProperty()
   {
-    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
-    {
-      @Override
-      public String getConnectURI()
+    Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+      MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
       {
-        return "jdbc:postgresql://localhost:3306/test?user=maytas&password=secret&keyonly";
-      }
-    };
+        @Override
+        public String getConnectURI()
+        {
+          return "jdbc:postgresql://localhost:3306/test?user=maytas&password=secret&keyonly";
+        }
+      };
 
-    JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("none", "nonenone"));
+      JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("none", "nonenone"));
 
-    expectedException.expectMessage("is not in the allowed list");
-    expectedException.expect(IllegalArgumentException.class);
-
-    new PostgresqlInputSourceDatabaseConnector(
-        connectorConfig,
-        securityConfig
-    );
+      new PostgresqlInputSourceDatabaseConnector(
+          connectorConfig,
+          securityConfig
+      );
+    });
+    assertTrue(exception.getMessage().contains("is not in the allowed list"));
   }
 
   @Test
   public void testFailValidAndInvalidProperty()
   {
-    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
-    {
-      @Override
-      public String getConnectURI()
+    Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+      MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
       {
-        return "jdbc:postgresql://localhost:3306/test?user=maytas&password=secret&keyonly";
-      }
-    };
+        @Override
+        public String getConnectURI()
+        {
+          return "jdbc:postgresql://localhost:3306/test?user=maytas&password=secret&keyonly";
+        }
+      };
 
-    JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
+      JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
 
-    expectedException.expectMessage("is not in the allowed list");
-    expectedException.expect(IllegalArgumentException.class);
-
-    new PostgresqlInputSourceDatabaseConnector(
-        connectorConfig,
-        securityConfig
-    );
+      new PostgresqlInputSourceDatabaseConnector(
+          connectorConfig,
+          securityConfig
+      );
+    });
+    assertTrue(exception.getMessage().contains("is not in the allowed list"));
   }
 
   @Test

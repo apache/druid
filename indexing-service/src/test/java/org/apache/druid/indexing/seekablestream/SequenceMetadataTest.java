@@ -33,20 +33,21 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Set;
 
-@RunWith(MockitoJUnitRunner.class)
 public class SequenceMetadataTest
 {
   @Mock
@@ -63,15 +64,27 @@ public class SequenceMetadataTest
 
   @Mock
   private TaskToolbox mockTaskToolbox;
+  private AutoCloseable mocks;
+
+  @BeforeEach
+  public void setup()
+  {
+    mocks = MockitoAnnotations.openMocks(this);
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception
+  {
+    if (mocks != null) {
+      mocks.close();
+    }
+  }
 
   @Test
   public void testPublishAnnotatedSegmentsThrowExceptionIfOverwriteSegmentsNotNullAndNotEmpty()
   {
-    DataSegment dataSegment = DataSegment.builder()
-                                         .dataSource("foo")
-                                         .interval(Intervals.of("2001/P1D"))
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001/P1D"), "b", 1))
                                          .shardSpec(new LinearShardSpec(1))
-                                         .version("b")
                                          .size(0)
                                          .build();
 
@@ -88,11 +101,11 @@ public class SequenceMetadataTest
     TransactionalSegmentPublisher transactionalSegmentPublisher
         = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
 
-    ISE exception = Assert.assertThrows(
+    ISE exception = Assertions.assertThrows(
         ISE.class,
         () -> transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, ImmutableSet.of(), null, null)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Stream ingestion task unexpectedly attempted to overwrite segments: "
         + SegmentUtils.commaSeparatedIdentifiers(notNullNotEmptySegment),
         exception.getMessage()
@@ -117,11 +130,8 @@ public class SequenceMetadataTest
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getStream()).thenReturn("stream");
     Mockito.when(mockTaskToolbox.getTaskActionClient()).thenReturn(mockTaskActionClient);
-    DataSegment dataSegment = DataSegment.builder()
-                                         .dataSource("foo")
-                                         .interval(Intervals.of("2001/P1D"))
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2001/P1D"), "b", 1))
                                          .shardSpec(new LinearShardSpec(1))
-                                         .version("b")
                                          .size(0)
                                          .build();
 
@@ -166,10 +176,10 @@ public class SequenceMetadataTest
 
     Mockito.when(mockSeekableStreamIndexTaskRunner.createSequenceNumber(ArgumentMatchers.any())).thenReturn(makeSequenceNumber("1", false));
     Mockito.when(mockSeekableStreamIndexTaskRunner.isEndOffsetExclusive()).thenReturn(true);
-    Assert.assertFalse(sequenceMetadata.canHandle(mockSeekableStreamIndexTaskRunner, record));
+    Assertions.assertFalse(sequenceMetadata.canHandle(mockSeekableStreamIndexTaskRunner, record));
 
     Mockito.when(mockSeekableStreamIndexTaskRunner.isEndOffsetExclusive()).thenReturn(false);
-    Assert.assertFalse(sequenceMetadata.canHandle(mockSeekableStreamIndexTaskRunner, record));
+    Assertions.assertFalse(sequenceMetadata.canHandle(mockSeekableStreamIndexTaskRunner, record));
   }
 
   private OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)

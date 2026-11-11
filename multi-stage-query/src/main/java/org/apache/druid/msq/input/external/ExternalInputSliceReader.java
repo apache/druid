@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -59,6 +60,7 @@ import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -146,6 +148,15 @@ public class ExternalInputSliceReader implements InputSliceReader
         ColumnsFilter.all()
     );
 
+    // Some extern sources will need to download the source files to the specified temporaryDirectory.
+    // The fetch runs lazily when the cursor is created, and the directory must exist to avoid task failure.
+    try {
+      FileUtils.mkdirp(temporaryDirectory);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     final String description = StringUtils.format("external[%s]", inputSource.toString());
     final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.ETERNITY, "0", 0);
     final List<InputFilePointer> filePointers = inputSource.asFilePointers();
@@ -189,8 +200,11 @@ public class ExternalInputSliceReader implements InputSliceReader
                         signature
                     );
 
+                    // The ExternalSegment itself owns no resources (the fetched files are owned by the collected
+                    // resources, whose close is folded into the delivered segment by AdaptedLoadableSegment), so it
+                    // is delivered unmanaged.
                     return new AcquireSegmentResult(
-                        ReferenceCountedSegmentProvider.of(segment),
+                        ReferenceCountedSegmentProvider.unmanaged(segment),
                         totalSize,
                         0L,
                         System.nanoTime() - startTime
@@ -206,8 +220,8 @@ public class ExternalInputSliceReader implements InputSliceReader
                     if (VirtualStorageManager.isInsufficientStorage(e)) {
                       log.noStackTrace()
                          .info(e, "Insufficient storage space to prefetch[%s]; streaming instead.", description);
-                      return AcquireSegmentResult.cached(
-                          ReferenceCountedSegmentProvider.of(
+                      return AcquireSegmentResult.of(
+                          ReferenceCountedSegmentProvider.unmanaged(
                               new ExternalSegment(
                                   inputSource,
                                   makeReader(schema, inputSource, inputFormat, channelCounters),

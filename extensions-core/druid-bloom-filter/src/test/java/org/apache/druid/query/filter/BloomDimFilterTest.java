@@ -39,23 +39,30 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.BaseFilterTest;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class BloomDimFilterTest extends BaseFilterTest
 {
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
   private static final String TIMESTAMP_COLUMN = "timestamp";
   private static final InputRowSchema SCHEMA = new InputRowSchema(
       new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
@@ -81,7 +88,7 @@ public class BloomDimFilterTest extends BaseFilterTest
       BaseFilterTest.makeSchemaRow(SCHEMA, ROW_SIGNATURE, "5", "abc")
   );
 
-  private static DefaultObjectMapper mapper = new DefaultObjectMapper();
+  private static final DefaultObjectMapper MAPPER = new DefaultObjectMapper();
 
   public BloomDimFilterTest(
       String testName,
@@ -104,13 +111,13 @@ public class BloomDimFilterTest extends BaseFilterTest
     );
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass()
   {
-    mapper.registerModule(new BloomFilterSerializersModule());
+    MAPPER.registerModule(new BloomFilterSerializersModule());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(BloomDimFilterTest.class.getName());
@@ -127,13 +134,13 @@ public class BloomDimFilterTest extends BaseFilterTest
         holder,
         new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
     );
-    DimFilter filter = mapper.readValue(mapper.writeValueAsBytes(bloomDimFilter), DimFilter.class);
-    Assert.assertTrue(filter instanceof BloomDimFilter);
+    DimFilter filter = MAPPER.readValue(MAPPER.writeValueAsBytes(bloomDimFilter), DimFilter.class);
+    Assertions.assertTrue(filter instanceof BloomDimFilter);
     BloomDimFilter serde = (BloomDimFilter) filter;
-    Assert.assertEquals(bloomDimFilter.getDimension(), serde.getDimension());
-    Assert.assertEquals(bloomDimFilter.getExtractionFn(), serde.getExtractionFn());
-    Assert.assertTrue(bloomDimFilter.getBloomKFilter().testString("myTestString"));
-    Assert.assertFalse(bloomDimFilter.getBloomKFilter().testString("not_match"));
+    Assertions.assertEquals(bloomDimFilter.getDimension(), serde.getDimension());
+    Assertions.assertEquals(bloomDimFilter.getExtractionFn(), serde.getExtractionFn());
+    Assertions.assertTrue(bloomDimFilter.getBloomKFilter().testString("myTestString"));
+    Assertions.assertFalse(bloomDimFilter.getBloomKFilter().testString("not_match"));
   }
 
   @Test
@@ -331,18 +338,18 @@ public class BloomDimFilterTest extends BaseFilterTest
     byte[] bloomFilterBytes = BloomFilterSerializersModule.bloomKFilterToBytes(bloomFilter);
 
     // serialized filter can be quite large for high capacity bloom filters...
-    Assert.assertTrue(bloomFilterBytes.length > 7794000);
+    Assertions.assertTrue(bloomFilterBytes.length > 7794000);
 
     // actual size is 86 bytes instead of 7794075 bytes of old key format
     final int actualSize = bloomDimFilter.getCacheKey().length;
-    Assert.assertTrue(actualSize < 100);
+    Assertions.assertTrue(actualSize < 100);
   }
 
   @Test
   public void testStringHiveCompat() throws IOException
   {
     org.apache.hive.common.util.BloomKFilter hiveFilter =
-        new org.apache.hive.common.util.BloomKFilter(1500);
+        org.apache.hive.common.util.BloomKFilter.build(1500);
     hiveFilter.addString("myTestString");
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     org.apache.hive.common.util.BloomKFilter.serialize(byteArrayOutputStream, hiveFilter);
@@ -350,16 +357,16 @@ public class BloomDimFilterTest extends BaseFilterTest
 
     BloomKFilter druidFilter = BloomFilterSerializersModule.bloomKFilterFromBytes(bytes);
 
-    Assert.assertTrue(druidFilter.testString("myTestString"));
-    Assert.assertFalse(druidFilter.testString("not_match"));
+    Assertions.assertTrue(druidFilter.testString("myTestString"));
+    Assertions.assertFalse(druidFilter.testString("not_match"));
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testFloatHiveCompat() throws IOException
   {
     org.apache.hive.common.util.BloomKFilter hiveFilter =
-        new org.apache.hive.common.util.BloomKFilter(1500);
+        org.apache.hive.common.util.BloomKFilter.build(1500);
     hiveFilter.addFloat(32.0F);
     hiveFilter.addFloat(66.4F);
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -368,9 +375,9 @@ public class BloomDimFilterTest extends BaseFilterTest
 
     BloomKFilter druidFilter = BloomFilterSerializersModule.bloomKFilterFromBytes(bytes);
 
-    Assert.assertTrue(druidFilter.testFloat(32.0F));
-    Assert.assertTrue(druidFilter.testFloat(66.4F));
-    Assert.assertFalse(druidFilter.testFloat(0.3F));
+    Assertions.assertTrue(druidFilter.testFloat(32.0F));
+    Assertions.assertTrue(druidFilter.testFloat(66.4F));
+    Assertions.assertFalse(druidFilter.testFloat(0.3F));
   }
 
 
@@ -378,7 +385,7 @@ public class BloomDimFilterTest extends BaseFilterTest
   public void testDoubleHiveCompat() throws IOException
   {
     org.apache.hive.common.util.BloomKFilter hiveFilter =
-        new org.apache.hive.common.util.BloomKFilter(1500);
+        org.apache.hive.common.util.BloomKFilter.build(1500);
     hiveFilter.addDouble(32.0D);
     hiveFilter.addDouble(66.4D);
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -387,16 +394,16 @@ public class BloomDimFilterTest extends BaseFilterTest
 
     BloomKFilter druidFilter = BloomFilterSerializersModule.bloomKFilterFromBytes(bytes);
 
-    Assert.assertTrue(druidFilter.testDouble(32.0D));
-    Assert.assertTrue(druidFilter.testDouble(66.4D));
-    Assert.assertFalse(druidFilter.testDouble(0.3D));
+    Assertions.assertTrue(druidFilter.testDouble(32.0D));
+    Assertions.assertTrue(druidFilter.testDouble(66.4D));
+    Assertions.assertFalse(druidFilter.testDouble(0.3D));
   }
 
   @Test
   public void testLongHiveCompat() throws IOException
   {
     org.apache.hive.common.util.BloomKFilter hiveFilter =
-        new org.apache.hive.common.util.BloomKFilter(1500);
+        org.apache.hive.common.util.BloomKFilter.build(1500);
     hiveFilter.addLong(32L);
     hiveFilter.addLong(664L);
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -405,9 +412,9 @@ public class BloomDimFilterTest extends BaseFilterTest
 
     BloomKFilter druidFilter = BloomFilterSerializersModule.bloomKFilterFromBytes(bytes);
 
-    Assert.assertTrue(druidFilter.testLong(32L));
-    Assert.assertTrue(druidFilter.testLong(664L));
-    Assert.assertFalse(druidFilter.testLong(3L));
+    Assertions.assertTrue(druidFilter.testLong(32L));
+    Assertions.assertTrue(druidFilter.testLong(664L));
+    Assertions.assertFalse(druidFilter.testLong(3L));
   }
 
   private static BloomKFilterHolder bloomKFilter(int expectedEntries, String... values) throws IOException

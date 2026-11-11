@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
@@ -37,14 +36,17 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
@@ -57,7 +59,6 @@ import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
 import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
 import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -66,11 +67,8 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.sql.http.SqlParameter;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matcher;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -83,20 +81,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 @SqlTestFrameworkConfig.ComponentSupplier(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =
-      ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
-                  .build();
+      QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID);
 
-  public static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(
-      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+  public static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = QueryContext.ofMap(
+      QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY,
       "{\"type\":\"all\"}"
   );
 
@@ -233,9 +228,9 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       granularityString = queryJsonMapper.writeValueAsString(granularity);
     }
     catch (JsonProcessingException e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    return ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, granularityString);
+    return QueryContext.ofMap(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY, granularityString);
   }
 
   protected IngestionDmlTester testIngestionQuery()
@@ -253,7 +248,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     private RowSignature expectedTargetSignature;
     private List<ResourceAction> expectedResources;
     private Query<?> expectedQuery;
-    private Matcher<Throwable> validationErrorMatcher;
+    private Consumer<Throwable> validationErrorVerifier;
     private String expectedLogicalPlanResource;
     private List<SqlParameter> parameters;
     private AuthConfig authConfig;
@@ -275,6 +270,12 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       args[0] = arg;
       System.arraycopy(otherArgs, 0, args, 1, otherArgs.length);
       this.sql = StringUtils.format(sqlPattern, args);
+      return this;
+    }
+
+    public IngestionDmlTester plannerConfig(final PlannerConfig plannerConfig)
+    {
+      this.plannerConfig = plannerConfig;
       return this;
     }
 
@@ -325,25 +326,31 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       return this;
     }
 
-    public IngestionDmlTester expectValidationError(Matcher<Throwable> validationErrorMatcher)
+    public IngestionDmlTester expectValidationError(Consumer<Throwable> validationErrorVerifier)
     {
-      this.validationErrorMatcher = validationErrorMatcher;
+      this.validationErrorVerifier = validationErrorVerifier;
       return this;
+    }
+
+    public IngestionDmlTester expectValidationError(DruidExceptionMatcher exceptionMatcher)
+    {
+      return expectValidationError(e -> {
+        Assertions.assertInstanceOf(DruidException.class, e);
+        assertDruidException((DruidException) e, exceptionMatcher);
+      });
     }
 
     public IngestionDmlTester expectValidationError(Class<? extends Throwable> clazz)
     {
-      return expectValidationError(CoreMatchers.instanceOf(clazz));
+      return expectValidationError(e -> Assertions.assertInstanceOf(clazz, e));
     }
 
     public IngestionDmlTester expectValidationError(Class<? extends Throwable> clazz, String message)
     {
-      return expectValidationError(
-          CoreMatchers.allOf(
-              CoreMatchers.instanceOf(clazz),
-              ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(message))
-          )
-      );
+      return expectValidationError(e -> {
+        Assertions.assertInstanceOf(clazz, e);
+        Assertions.assertEquals(message, e.getMessage());
+      });
     }
 
     public IngestionDmlTester expectLogicalPlanFrom(String resource)
@@ -369,7 +376,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       try {
         log.info("SQL: %s", sql);
 
-        if (validationErrorMatcher != null) {
+        if (validationErrorVerifier != null) {
           verifyValidationError();
         } else {
           verifySuccess();
@@ -397,14 +404,14 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must not have expectedQuery");
       }
 
-      final Throwable e = Assert.assertThrows(
+      final Throwable e = Assertions.assertThrows(
           Throwable.class,
           () -> {
             getSqlStatementFactory(plannerConfig, authConfig).directStatement(sqlQuery()).execute();
           }
       );
 
-      assertThat(e, validationErrorMatcher);
+      validationErrorVerifier.accept(e);
     }
 
     private void verifySuccess()

@@ -32,7 +32,7 @@ import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.skife.jdbi.v2.PreparedBatch;
 
 import java.util.Arrays;
@@ -214,14 +214,14 @@ public class SegmentSchemaTestUtils
       SchemaPayload schemaPayload = entry.getValue().getSchemaPayload();
       Long numRows = entry.getValue().getNumRows();
 
-      Assert.assertTrue(segmentStats.containsKey(id));
-      Assert.assertEquals(numRows, segmentStats.get(id).rhs);
-      Assert.assertTrue(schemaRepresentationMap.containsKey(segmentStats.get(id).lhs));
+      Assertions.assertTrue(segmentStats.containsKey(id));
+      Assertions.assertEquals(numRows, segmentStats.get(id).rhs);
+      Assertions.assertTrue(schemaRepresentationMap.containsKey(segmentStats.get(id).lhs));
 
       SegmentSchemaRecord schemaRepresentation = schemaRepresentationMap.get(segmentStats.get(id).lhs);
-      Assert.assertEquals(schemaPayload, schemaRepresentation.schemaPayload);
-      Assert.assertTrue(schemaRepresentation.isUsed);
-      Assert.assertEquals(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION, schemaRepresentation.version);
+      Assertions.assertEquals(schemaPayload, schemaRepresentation.schemaPayload);
+      Assertions.assertTrue(schemaRepresentation.isUsed);
+      Assertions.assertEquals(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION, schemaRepresentation.version);
     }
   }
 

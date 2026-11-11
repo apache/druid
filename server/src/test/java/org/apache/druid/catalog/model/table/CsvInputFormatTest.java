@@ -28,7 +28,8 @@ import org.apache.druid.catalog.model.table.TableFunction.ParameterDefn;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,9 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 
 public class CsvInputFormatTest extends BaseExternTableTest
 {
@@ -56,10 +54,10 @@ public class CsvInputFormatTest extends BaseExternTableTest
     InputFormatDefn defn = registry.inputFormatDefnFor(CsvInputFormat.TYPE_KEY);
     InputFormat inputFormat = defn.convertFromTable(new ResolvedExternalTable(resolved));
     CsvInputFormat csvFormat = (CsvInputFormat) inputFormat;
-    assertEquals(0, csvFormat.getSkipHeaderRows());
-    assertFalse(csvFormat.isFindColumnsFromHeader());
-    assertNull(csvFormat.getListDelimiter());
-    assertEquals(Collections.singletonList("a"), csvFormat.getColumns());
+    Assertions.assertEquals(0, csvFormat.getSkipHeaderRows());
+    Assertions.assertFalse(csvFormat.isFindColumnsFromHeader());
+    Assertions.assertNull(csvFormat.getListDelimiter());
+    Assertions.assertEquals(Collections.singletonList("a"), csvFormat.getColumns());
   }
 
   @Test
@@ -79,10 +77,10 @@ public class CsvInputFormatTest extends BaseExternTableTest
     InputFormatDefn defn = registry.inputFormatDefnFor(CsvInputFormat.TYPE_KEY);
     InputFormat inputFormat = defn.convertFromTable(new ResolvedExternalTable(resolved));
     CsvInputFormat csvFormat = (CsvInputFormat) inputFormat;
-    assertEquals(1, csvFormat.getSkipHeaderRows());
-    assertFalse(csvFormat.isFindColumnsFromHeader());
-    assertEquals(";", csvFormat.getListDelimiter());
-    assertEquals(Arrays.asList("a", "b"), csvFormat.getColumns());
+    Assertions.assertEquals(1, csvFormat.getSkipHeaderRows());
+    Assertions.assertFalse(csvFormat.isFindColumnsFromHeader());
+    Assertions.assertEquals(";", csvFormat.getListDelimiter());
+    Assertions.assertEquals(Arrays.asList("a", "b"), csvFormat.getColumns());
   }
 
   @Test
@@ -90,7 +88,7 @@ public class CsvInputFormatTest extends BaseExternTableTest
   {
     InputFormatDefn defn = registry.inputFormatDefnFor(CsvInputFormat.TYPE_KEY);
     List<ParameterDefn> params = defn.parameters();
-    assertEquals(2, params.size());
+    Assertions.assertEquals(2, params.size());
   }
 
   @Test
@@ -103,9 +101,9 @@ public class CsvInputFormatTest extends BaseExternTableTest
     List<ColumnSpec> columns = Collections.singletonList(new ColumnSpec("a", null, null));
     InputFormat inputFormat = defn.convertFromArgs(args, columns, mapper);
     CsvInputFormat csvFormat = (CsvInputFormat) inputFormat;
-    assertEquals(1, csvFormat.getSkipHeaderRows());
-    assertFalse(csvFormat.isFindColumnsFromHeader());
-    assertEquals(";", csvFormat.getListDelimiter());
-    assertEquals(Collections.singletonList("a"), csvFormat.getColumns());
+    Assertions.assertEquals(1, csvFormat.getSkipHeaderRows());
+    Assertions.assertFalse(csvFormat.isFindColumnsFromHeader());
+    Assertions.assertEquals(";", csvFormat.getListDelimiter());
+    Assertions.assertEquals(Collections.singletonList("a"), csvFormat.getColumns());
   }
 }

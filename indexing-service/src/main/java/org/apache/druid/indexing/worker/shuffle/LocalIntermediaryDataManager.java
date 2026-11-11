@@ -301,7 +301,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     final BucketNumberedShardSpec<?> bucketNumberedShardSpec = (BucketNumberedShardSpec<?>) segment.getShardSpec();
 
     //noinspection unused
-    try (final Closer resourceCloser = closer) {
+    try (final Closer ignoredCloser = closer) {
       FileUtils.mkdirp(taskTempDir);
 
       // Temporary compressed file. Will be removed when taskTempDir is deleted.

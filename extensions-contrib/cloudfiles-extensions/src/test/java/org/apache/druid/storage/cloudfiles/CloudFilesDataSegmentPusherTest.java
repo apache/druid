@@ -23,13 +23,13 @@ import com.google.common.io.Files;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.jclouds.openstack.swift.v1.features.ObjectApi;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -45,8 +45,8 @@ import static org.mockito.Mockito.when;
  */
 public class CloudFilesDataSegmentPusherTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   @Test
   public void testPush() throws Exception
@@ -66,27 +66,24 @@ public class CloudFilesDataSegmentPusherTest
     CloudFilesDataSegmentPusher pusher = new CloudFilesDataSegmentPusher(api, config, new DefaultObjectMapper());
 
     // Create a mock segment on disk
-    File tmp = tempFolder.newFile("version.bin");
+    final File tmp = new File(tempFolder, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
     Files.write(data, tmp);
     final long size = data.length;
 
-    DataSegment segmentToPush = new DataSegment(
-        "foo",
-        Intervals.of("2015/2016"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        size
-    );
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, false);
+    DataSegment segment = pusher.push(tempFolder, segmentToPush, false);
 
-    Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
+    Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
 
     verify(objectApi, atLeastOnce()).put(any(), any());
     verify(api, atLeastOnce()).getObjectApi(any(), any());

@@ -1,43 +1,55 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`ExecutionErrorPane matches snapshot 1`] = `
-<Blueprint5.Callout
-  className="execution-error-pane"
-  icon="error"
+<div
+  class="bp6-callout execution-error-pane bp6-callout-has-body-content bp6-callout-icon"
 >
-  <p
-    className="error-message-text"
+  <span
+    aria-hidden="true"
+    class="bp6-icon bp6-icon-error"
+    tabindex="-1"
   >
-    <React.Fragment>
-      <Memo(ExternalLink)
-        href="https://druid.apache.org/docs/latest/multi-stage-query/reference#error_TooManyWarnings"
-      >
-        TooManyWarnings
-      </Memo(ExternalLink)>
-      : 
-    </React.Fragment>
+    <svg
+      data-icon="error"
+    />
+  </span>
+  <p
+    class="error-message-text"
+  >
+    <a
+      href="https://druid.apache.org/docs/latest/multi-stage-query/reference#error_TooManyWarnings"
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      TooManyWarnings
+    </a>
+    : 
     Too many warnings of type CannotParseExternalData generated (max = 2)
   </p>
   <div>
     Failed task ID: 
-    <Memo(ClickToCopy)
-      text="query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0"
-    />
-    <React.Fragment>
-       (on host: 
-      <Memo(ClickToCopy)
-        text="localhost"
-      />
-      )
-    </React.Fragment>
+    <a
+      class="click-to-copy"
+      data-tooltip="Click to copy:
+query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0"
+    >
+      query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0
+    </a>
+     (on host: 
+    <a
+      class="click-to-copy"
+      data-tooltip="Click to copy:
+localhost"
+    >
+      localhost
+    </a>
+    )
   </div>
   <div>
     Debug: 
-    <a
-      onClick={[Function]}
-    >
+    <a>
       get query detail archive
     </a>
   </div>
-</Blueprint5.Callout>
+</div>
 `;

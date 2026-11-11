@@ -21,27 +21,26 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
-import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
-import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -57,7 +56,7 @@ public class DruidOverlord
   private final DruidLeaderSelector overlordLeaderSelector;
   private final DruidLeaderSelector.Listener leadershipListener;
   private final SegmentMetadataCache segmentMetadataCache;
-  private final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
+  private final OverlordMode overlordMode;
 
   private final ReentrantLock giant = new ReentrantLock(true);
 
@@ -70,6 +69,12 @@ public class DruidOverlord
    */
   private volatile boolean initialized;
 
+  /**
+   * Whether {@link #stop()} has been called.
+   */
+  @GuardedBy("giant")
+  private boolean stopped;
+
   @Inject
   public DruidOverlord(
       final TaskMaster taskMaster,
@@ -80,22 +85,21 @@ public class DruidOverlord
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
       final TaskRunnerFactory runnerFactory,
-      final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
+      final OverlordMode overlordMode,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
       final SegmentMetadataCache segmentMetadataCache,
-      final CompactionScheduler compactionScheduler,
-      final ScheduledBatchTaskManager scheduledBatchTaskManager,
+      final Set<LeaderOverlordService> overlordServices,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )
   {
     this.overlordLeaderSelector = overlordLeaderSelector;
     this.segmentMetadataCache = segmentMetadataCache;
-    this.coordinatorOverlordServiceConfig = coordinatorOverlordServiceConfig;
+    this.overlordMode = overlordMode;
 
     this.leadershipListener = new DruidLeaderSelector.Listener()
     {
@@ -104,10 +108,15 @@ public class DruidOverlord
       {
         giant.lock();
 
-        // I AM THE MASTER OF THE UNIVERSE.
-        log.info("By the power of Grayskull, I have the power. I am the leader");
-
         try {
+          if (stopped) {
+            log.info("Not becoming leader, since this Overlord is stopped.");
+            return;
+          }
+
+          // I AM THE MASTER OF THE UNIVERSE.
+          log.info("By the power of Grayskull, I have the power. I am the leader");
+
           final TaskRunner taskRunner = runnerFactory.build();
           final TaskQueue taskQueue = new TaskQueue(
               taskLockConfig,
@@ -161,8 +170,7 @@ public class DruidOverlord
                 public void start()
                 {
                   taskMaster.becomeFullLeader();
-                  compactionScheduler.becomeLeader();
-                  scheduledBatchTaskManager.start();
+                  overlordServices.forEach(LeaderOverlordService::becomeLeader);
 
                   // Mark ready only after all the services have been initialized
                   initialized = true;
@@ -171,8 +179,7 @@ public class DruidOverlord
                 @Override
                 public void stop()
                 {
-                  scheduledBatchTaskManager.stop();
-                  compactionScheduler.stopBeingLeader();
+                  overlordServices.forEach(LeaderOverlordService::stopBeingLeader);
                   taskMaster.downgradeToHalfLeader();
                 }
               }
@@ -238,8 +245,20 @@ public class DruidOverlord
     giant.lock();
 
     try {
+      stopped = true;
       gracefulStopLeaderLifecycle();
-      overlordLeaderSelector.unregisterListener();
+    }
+    finally {
+      giant.unlock();
+    }
+
+    // Unregister without holding the giant lock. When using K8sDruidLeaderSelector, it will call
+    // stopBeingLeader() from another thread and wait for it, which needs the same lock.
+    overlordLeaderSelector.unregisterListener();
+
+    giant.lock();
+
+    try {
       if (isStandalone()) {
         segmentMetadataCache.stop();
       }
@@ -289,7 +308,7 @@ public class DruidOverlord
 
   private boolean isStandalone()
   {
-    return !coordinatorOverlordServiceConfig.isEnabled();
+    return overlordMode == OverlordMode.STANDALONE;
   }
 
 }

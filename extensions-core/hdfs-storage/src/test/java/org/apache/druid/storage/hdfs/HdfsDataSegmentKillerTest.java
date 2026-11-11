@@ -26,23 +26,23 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class HdfsDataSegmentKillerTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testKill() throws Exception
@@ -91,26 +91,26 @@ public class HdfsDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(new Path(partition011Dir, "index.zip").toString()));
 
-    Assert.assertFalse(fs.exists(partition011Dir));
-    Assert.assertTrue(fs.exists(partition111Dir));
-    Assert.assertTrue(fs.exists(partition021Dir));
-    Assert.assertTrue(fs.exists(partition012Dir));
+    Assertions.assertFalse(fs.exists(partition011Dir));
+    Assertions.assertTrue(fs.exists(partition111Dir));
+    Assertions.assertTrue(fs.exists(partition021Dir));
+    Assertions.assertTrue(fs.exists(partition012Dir));
 
     killer.kill(getSegmentWithPath(new Path(partition111Dir, "index.zip").toString()));
 
-    Assert.assertFalse(fs.exists(version11Dir));
-    Assert.assertTrue(fs.exists(partition021Dir));
-    Assert.assertTrue(fs.exists(partition012Dir));
+    Assertions.assertFalse(fs.exists(version11Dir));
+    Assertions.assertTrue(fs.exists(partition021Dir));
+    Assertions.assertTrue(fs.exists(partition012Dir));
 
     killer.kill(getSegmentWithPath(new Path(partition021Dir, "index.zip").toString()));
 
-    Assert.assertFalse(fs.exists(interval1Dir));
-    Assert.assertTrue(fs.exists(partition012Dir));
+    Assertions.assertFalse(fs.exists(interval1Dir));
+    Assertions.assertTrue(fs.exists(partition012Dir));
 
     killer.kill(getSegmentWithPath(new Path(partition012Dir, "index.zip").toString()));
 
-    Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.delete(dataSourceDir, false));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.delete(dataSourceDir, false));
   }
 
   @Test
@@ -135,17 +135,17 @@ public class HdfsDataSegmentKillerTest
     Path interval1Dir = new Path(dataSourceDir, "intervalNew");
     Path version11Dir = new Path(interval1Dir, "v1");
 
-    Assert.assertTrue(fs.mkdirs(version11Dir));
+    Assertions.assertTrue(fs.mkdirs(version11Dir));
     fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_index.zip", 3)));
 
     killer.kill(getSegmentWithPath(new Path(version11Dir, "3_index.zip").toString()));
 
-    Assert.assertFalse(fs.exists(version11Dir));
-    Assert.assertFalse(fs.exists(interval1Dir));
-    Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.exists(new Path("/tmp")));
-    Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.delete(dataSourceDir, false));
+    Assertions.assertFalse(fs.exists(version11Dir));
+    Assertions.assertFalse(fs.exists(interval1Dir));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.exists(new Path("/tmp")));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.delete(dataSourceDir, false));
   }
 
   @Test
@@ -171,17 +171,53 @@ public class HdfsDataSegmentKillerTest
     Path version11Dir = new Path(interval1Dir, "v1");
     String uuid = UUID.randomUUID().toString().substring(0, 5);
 
-    Assert.assertTrue(fs.mkdirs(version11Dir));
+    Assertions.assertTrue(fs.mkdirs(version11Dir));
     fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_%s_index.zip", 3, uuid)));
 
     killer.kill(getSegmentWithPath(new Path(version11Dir, StringUtils.format("%s_%s_index.zip", 3, uuid)).toString()));
 
-    Assert.assertFalse(fs.exists(version11Dir));
-    Assert.assertFalse(fs.exists(interval1Dir));
-    Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.exists(new Path("/tmp")));
-    Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.delete(dataSourceDir, false));
+    Assertions.assertFalse(fs.exists(version11Dir));
+    Assertions.assertFalse(fs.exists(interval1Dir));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.exists(new Path("/tmp")));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.delete(dataSourceDir, false));
+  }
+
+  @Test
+  public void testKillLz4Segment() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path versionDir = new Path(testRoot.getAbsolutePath(), "dataSource/interval/v1");
+    final Path segmentPath = new Path(versionDir, "3_index.lz4");
+    try {
+      Assertions.assertTrue(fs.mkdirs(versionDir));
+      fs.createNewFile(segmentPath);
+
+      killer.kill(getSegmentWithPath(segmentPath.toString()));
+
+      Assertions.assertFalse(fs.exists(segmentPath));
+      Assertions.assertFalse(fs.exists(versionDir));
+      Assertions.assertFalse(fs.exists(versionDir.getParent()));
+      Assertions.assertTrue(fs.exists(new Path(testRoot.getAbsolutePath(), "dataSource")));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
   }
 
   @Test
@@ -225,11 +261,11 @@ public class HdfsDataSegmentKillerTest
 
       final Path workspaceRoot = new Path(testRoot.getAbsolutePath(), "workspace");
       final Path nested = new Path(workspaceRoot, "evil");
-      Assert.assertTrue(fs.mkdirs(nested));
+      Assertions.assertTrue(fs.mkdirs(nested));
       fs.createNewFile(new Path(nested, "probe"));
 
       final Path stagingRun = new Path(new Path(testRoot.getAbsolutePath(), "staging"), "some_run_id");
-      Assert.assertTrue(fs.mkdirs(stagingRun));
+      Assertions.assertTrue(fs.mkdirs(stagingRun));
 
       killerWithStorage.killRecursively(null);
       killerWithStorage.killRecursively("");
@@ -241,8 +277,8 @@ public class HdfsDataSegmentKillerTest
       killerWithStorage.killRecursively("workspace//evil");
       killerWithStorage.killRecursively("workspace/evil/");
 
-      Assert.assertTrue("workspace/evil should survive null constructHdfsDeletePath cases", fs.exists(nested));
-      Assert.assertTrue(fs.exists(stagingRun));
+      Assertions.assertTrue(fs.exists(nested), "workspace/evil should survive null constructHdfsDeletePath cases");
+      Assertions.assertTrue(fs.exists(stagingRun));
 
       final HdfsDataSegmentKiller killerNoStorage = new HdfsDataSegmentKiller(
           config,
@@ -256,7 +292,7 @@ public class HdfsDataSegmentKillerTest
           }
       );
       killerNoStorage.killRecursively("staging/some_run_id");
-      Assert.assertTrue("paths must not be deleted when storage directory is unset", fs.exists(stagingRun));
+      Assertions.assertTrue(fs.exists(stagingRun), "paths must not be deleted when storage directory is unset");
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
@@ -310,14 +346,14 @@ public class HdfsDataSegmentKillerTest
     try {
       Path parentDir = new Path(testRoot.getAbsolutePath(), "export");
       Path taskDir = new Path(new Path(parentDir, "run_a"), "leaf");
-      Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
+      Assertions.assertTrue(fs.mkdirs(taskDir.getParent()));
       fs.createNewFile(taskDir);
 
       killer.killRecursively("export/run_a");
 
-      Assert.assertFalse(fs.exists(new Path(parentDir, "run_a")));
-      Assert.assertTrue(fs.exists(parentDir));
-      Assert.assertTrue(fs.delete(parentDir, true));
+      Assertions.assertFalse(fs.exists(new Path(parentDir, "run_a")));
+      Assertions.assertTrue(fs.exists(parentDir));
+      Assertions.assertTrue(fs.delete(parentDir, true));
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
@@ -354,14 +390,14 @@ public class HdfsDataSegmentKillerTest
       Path taskDir = new Path(
           testRoot.getAbsolutePath() + Path.SEPARATOR + onDiskRelativePath + Path.SEPARATOR + "leaf"
       );
-      Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
+      Assertions.assertTrue(fs.mkdirs(taskDir.getParent()));
       fs.createNewFile(taskDir);
 
       killer.killRecursively(relativePathWithColons);
 
-      Assert.assertFalse(fs.exists(new Path(testRoot.getAbsolutePath() + Path.SEPARATOR + onDiskRelativePath)));
-      Assert.assertTrue(fs.exists(batchRoot));
-      Assert.assertTrue(fs.delete(batchRoot, true));
+      Assertions.assertFalse(fs.exists(new Path(testRoot.getAbsolutePath() + Path.SEPARATOR + onDiskRelativePath)));
+      Assertions.assertTrue(fs.exists(batchRoot));
+      Assertions.assertTrue(fs.delete(batchRoot, true));
     }
     finally {
       fs.delete(new Path(testRoot.getAbsolutePath()), true);
@@ -369,24 +405,24 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testKillNonZipSegment() throws Exception
+  public void testKillNonZipSegment()
   {
-    Configuration config = new Configuration();
-    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
-        config,
-        new HdfsDataSegmentPusherConfig()
-        {
-          @Override
-          public String getStorageDirectory()
+    Throwable exception = assertThrows(SegmentLoadingException.class, () -> {
+      Configuration config = new Configuration();
+      HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+          config,
+          new HdfsDataSegmentPusherConfig()
           {
-            return "/tmp";
+            @Override
+            public String getStorageDirectory()
+            {
+              return "/tmp";
+            }
           }
-        }
-    );
-
-    expectedException.expect(SegmentLoadingException.class);
-    expectedException.expectMessage("Unknown file type");
-    killer.kill(getSegmentWithPath(new Path("/xxx/", "index.beep").toString()));
+      );
+      killer.kill(getSegmentWithPath(new Path("/xxx/", "index.beep").toString()));
+    });
+    assertTrue(exception.getMessage().contains("Unknown file type"));
   }
 
   @Test
@@ -411,7 +447,7 @@ public class HdfsDataSegmentKillerTest
     Path interval1Dir = new Path(dataSourceDir, "intervalNew");
     Path version11Dir = new Path(interval1Dir, "v1");
 
-    Assert.assertTrue(fs.mkdirs(version11Dir));
+    Assertions.assertTrue(fs.mkdirs(version11Dir));
     fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_index.zip", 3)));
 
     // 'kill' should work even if storageDirectory is not set.
@@ -419,40 +455,35 @@ public class HdfsDataSegmentKillerTest
 
     // Verify the segment no longer exists, but that its datasource directory does.
     // Then delete its datasource directory.
-    Assert.assertFalse(fs.exists(version11Dir));
-    Assert.assertFalse(fs.exists(interval1Dir));
-    Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.exists(new Path("/tmp")));
-    Assert.assertTrue(fs.exists(dataSourceDir));
-    Assert.assertTrue(fs.delete(dataSourceDir, false));
+    Assertions.assertFalse(fs.exists(version11Dir));
+    Assertions.assertFalse(fs.exists(interval1Dir));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.exists(new Path("/tmp")));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.delete(dataSourceDir, false));
 
-    // killAll should *not* work when storageDirectory is not set.
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Cannot delete all segment files since druid.storage.storageDirectory is not set");
-    killer.killAll();
+    Throwable exception = assertThrows(IllegalStateException.class, killer::killAll);
+    assertTrue(exception.getMessage().contains("Cannot delete all segment files since druid.storage.storageDirectory is not set"));
   }
 
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException
   {
-    Assert.assertTrue(fs.mkdirs(path));
+    Assertions.assertTrue(fs.mkdirs(path));
     fs.createNewFile(new Path(path, "index.zip"));
   }
 
   private DataSegment getSegmentWithPath(String path)
   {
-    return new DataSegment(
-        "dataSource",
-        Intervals.of("2000/3000"),
-        "ver",
-        ImmutableMap.of(
-            "type", "hdfs",
-            "path", path
-        ),
-        ImmutableList.of("product"),
-        ImmutableList.of("visited_sum", "unique_hosts"),
-        NoneShardSpec.instance(),
-        9,
-        12334
-    );
+    return DataSegment.builder(SegmentId.of("dataSource", Intervals.of("2000/3000"), "ver", 0))
+                      .loadSpec(ImmutableMap.of(
+                              "type", "hdfs",
+                              "path", path
+                          ))
+                      .dimensions(ImmutableList.of("product"))
+                      .metrics(ImmutableList.of("visited_sum", "unique_hosts"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(12334)
+                      .build();
   }
 }

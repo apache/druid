@@ -23,8 +23,8 @@ import org.apache.commons.dbcp2.ConnectionFactory;
 import org.assertj.core.util.Lists;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.sql.Driver;
 import java.util.List;
@@ -73,17 +73,17 @@ public class BasicDataSourceExtTest
     expectedProps.put("user", connectorConfig.getUser());
 
 
-    Assert.assertNull(connectionFactory.createConnection());
-    Assert.assertEquals(connectorConfig.getConnectURI(), uriArg.getValue());
+    Assertions.assertNull(connectionFactory.createConnection());
+    Assertions.assertEquals(connectorConfig.getConnectURI(), uriArg.getValue());
 
     expectedProps.put("password", "pwd1");
-    Assert.assertEquals(expectedProps, propsArg.getValue());
+    Assertions.assertEquals(expectedProps, propsArg.getValue());
 
-    Assert.assertNull(connectionFactory.createConnection());
-    Assert.assertEquals(connectorConfig.getConnectURI(), uriArg.getValue());
+    Assertions.assertNull(connectionFactory.createConnection());
+    Assertions.assertEquals(connectorConfig.getConnectURI(), uriArg.getValue());
 
     expectedProps.put("password", "pwd2");
-    Assert.assertEquals(expectedProps, propsArg.getValue());
+    Assertions.assertEquals(expectedProps, propsArg.getValue());
   }
 
   @Test
@@ -93,7 +93,7 @@ public class BasicDataSourceExtTest
     Properties expectedProps = new Properties();
 
     basicDataSourceExt.setConnectionProperties("");
-    Assert.assertEquals(expectedProps, basicDataSourceExt.getConnectionProperties());
+    Assertions.assertEquals(expectedProps, basicDataSourceExt.getConnectionProperties());
 
     basicDataSourceExt.setConnectionProperties("p0;p1=v1;p2=v2;p3=v3");
     basicDataSourceExt.addConnectionProperty("p4", "v4");
@@ -106,7 +106,7 @@ public class BasicDataSourceExtTest
     expectedProps.put("p3", "v3");
     expectedProps.put("p4", "v4");
 
-    Assert.assertEquals(expectedProps, basicDataSourceExt.getConnectionProperties());
+    Assertions.assertEquals(expectedProps, basicDataSourceExt.getConnectionProperties());
 
 
   }

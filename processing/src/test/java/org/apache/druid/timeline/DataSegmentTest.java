@@ -40,6 +40,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -48,10 +49,12 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +69,7 @@ public class DataSegmentTest
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final int TEST_VERSION = 0x9;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
@@ -84,27 +87,29 @@ public class DataSegmentTest
     final SegmentId segmentId = SegmentId.of("something", interval, "1", shardSpec);
 
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
-    final CompactionState compactionState = new CompactionState(
-        new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))),
-        ImmutableList.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(
-            new SelectorDimFilter("dim1", "foo", null),
-            VirtualColumns.create(
-                new ExpressionVirtualColumn(
-                    "isRobotFiltered",
-                    "concat(isRobot, '_filtered')",
-                    ColumnType.STRING,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-        MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")))
+                       .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                           "dim1",
+                           "bar",
+                           "foo"
+                       ))))
+                       .metricsSpec(ImmutableList.of(new CountAggregatorFactory("count")))
+                       .transformSpec(new CompactionTransformSpec(
+                           new SelectorDimFilter("dim1", "foo", null),
+                           VirtualColumns.create(
+                               new ExpressionVirtualColumn(
+                                   "isRobotFiltered",
+                                   "concat(isRobot, '_filtered')",
+                                   ColumnType.STRING,
+                                   ExprMacroTable.nil()
+                               )
+                           )
+                       ))
+                       .indexSpec(MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class))
+                       .granularitySpec(MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                       .build();
     final DataSegment segment = DataSegment.builder(segmentId)
                                            .loadSpec(loadSpec)
                                            .dimensions(Arrays.asList("dim1", "dim2"))
@@ -121,30 +126,30 @@ public class DataSegmentTest
         MAPPER.writeValueAsString(segment),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    Assert.assertEquals(13, objectMap.size());
-    Assert.assertEquals("something_2011-10-01T00:00:00.000Z_2011-10-02T00:00:00.000Z_1_3", objectMap.get("identifier"));
-    Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(interval.toString(), objectMap.get("interval"));
-    Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
-    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
-    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals("proj1,proj2", objectMap.get("projections"));
-    Assert.assertEquals(
+    Assertions.assertEquals(13, objectMap.size());
+    Assertions.assertEquals("something_2011-10-01T00:00:00.000Z_2011-10-02T00:00:00.000Z_1_3", objectMap.get("identifier"));
+    Assertions.assertEquals("something", objectMap.get("dataSource"));
+    Assertions.assertEquals(interval.toString(), objectMap.get("interval"));
+    Assertions.assertEquals("1", objectMap.get("version"));
+    Assertions.assertEquals(loadSpec, objectMap.get("loadSpec"));
+    Assertions.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assertions.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assertions.assertEquals("proj1,proj2", objectMap.get("projections"));
+    Assertions.assertEquals(
         ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0),
         objectMap.get("shardSpec")
     );
-    Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
-    Assert.assertEquals(123, objectMap.get("size"));
-    Assert.assertEquals(12, objectMap.get("totalRows"));
-    Assert.assertEquals(6, ((Map) objectMap.get("lastCompactionState")).size());
+    Assertions.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
+    Assertions.assertEquals(123, objectMap.get("size"));
+    Assertions.assertEquals(12, objectMap.get("totalRows"));
+    Assertions.assertEquals(6, ((Map) objectMap.get("lastCompactionState")).size());
     // another act & assert
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
-    Assert.assertEquals(segment.toString(), deserializedSegment.toString());
-    Assert.assertEquals(segment, deserializedSegment);
-    Assert.assertEquals(0, segment.compareTo(deserializedSegment));
-    Assert.assertEquals(0, deserializedSegment.compareTo(segment));
-    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+    Assertions.assertEquals(segment.toString(), deserializedSegment.toString());
+    Assertions.assertEquals(segment, deserializedSegment);
+    Assertions.assertEquals(0, segment.compareTo(deserializedSegment));
+    Assertions.assertEquals(0, deserializedSegment.compareTo(segment));
+    Assertions.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
   }
 
   @Test
@@ -159,29 +164,42 @@ public class DataSegmentTest
                                      .dimensions(Arrays.asList("dim1", "dim2"))
                                      .metrics(Arrays.asList("met1", "met2"))
                                      .shardSpec(new NumberedShardSpec(3, 0))
-                                     .lastCompactionState(new CompactionState(
-                                         new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-                                         new DimensionsSpec(
-                                             DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
-                                         ),
-                                         ImmutableList.of(new CountAggregatorFactory("count")),
-                                         new CompactionTransformSpec(
-                                             new SelectorDimFilter("dim1", "foo", null),
-                                             VirtualColumns.create(
-                                                 new ExpressionVirtualColumn(
-                                                     "isRobotFiltered",
-                                                     "concat(isRobot, '_filtered')",
-                                                     ColumnType.STRING,
-                                                     ExprMacroTable.nil()
-                                                 )
-                                             )
-                                         ),
-                                         MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                                         MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                                         null,
-                                         null,
-                                         null
-                                     ))
+                                     .lastCompactionState(
+                                         CompactionState.builder()
+                                                        .partitionsSpec(new HashedPartitionsSpec(
+                                                            100000,
+                                                            null,
+                                                            ImmutableList.of("dim1")
+                                                        ))
+                                                        .dimensionsSpec(new DimensionsSpec(
+                                                            DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                                                "dim1",
+                                                                "bar",
+                                                                "foo"
+                                                            ))
+                                                        ))
+                                                        .metricsSpec(ImmutableList.of(new CountAggregatorFactory("count")))
+                                                        .transformSpec(new CompactionTransformSpec(
+                                                            new SelectorDimFilter("dim1", "foo", null),
+                                                            VirtualColumns.create(
+                                                                new ExpressionVirtualColumn(
+                                                                    "isRobotFiltered",
+                                                                    "concat(isRobot, '_filtered')",
+                                                                    ColumnType.STRING,
+                                                                    ExprMacroTable.nil()
+                                                                )
+                                                            )
+                                                        ))
+                                                        .indexSpec(MAPPER.convertValue(
+                                                            ImmutableMap.of(),
+                                                            IndexSpec.class
+                                                        ))
+                                                        .granularitySpec(MAPPER.convertValue(
+                                                            ImmutableMap.of(),
+                                                            GranularitySpec.class
+                                                        ))
+                                                        .build()
+                                     )
                                      .binaryVersion(TEST_VERSION)
                                      .size(1)
                                      .build();
@@ -191,27 +209,27 @@ public class DataSegmentTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(11, objectMap.size());
-    Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(interval.toString(), objectMap.get("interval"));
-    Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
-    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
-    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(
+    Assertions.assertEquals(11, objectMap.size());
+    Assertions.assertEquals("something", objectMap.get("dataSource"));
+    Assertions.assertEquals(interval.toString(), objectMap.get("interval"));
+    Assertions.assertEquals("1", objectMap.get("version"));
+    Assertions.assertEquals(loadSpec, objectMap.get("loadSpec"));
+    Assertions.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assertions.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assertions.assertEquals(
         ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0),
         objectMap.get("shardSpec")
     );
-    Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
-    Assert.assertEquals(1, objectMap.get("size"));
-    Assert.assertEquals(6, ((Map) objectMap.get("lastCompactionState")).size());
+    Assertions.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
+    Assertions.assertEquals(1, objectMap.get("size"));
+    Assertions.assertEquals(6, ((Map) objectMap.get("lastCompactionState")).size());
 
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
-    Assert.assertEquals(segment.toString(), deserializedSegment.toString());
-    Assert.assertEquals(segment, deserializedSegment);
-    Assert.assertEquals(0, segment.compareTo(deserializedSegment));
-    Assert.assertEquals(0, deserializedSegment.compareTo(segment));
-    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+    Assertions.assertEquals(segment.toString(), deserializedSegment.toString());
+    Assertions.assertEquals(segment, deserializedSegment);
+    Assertions.assertEquals(0, segment.compareTo(deserializedSegment));
+    Assertions.assertEquals(0, deserializedSegment.compareTo(segment));
+    Assertions.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
   }
 
   @Test
@@ -224,17 +242,23 @@ public class DataSegmentTest
                                      .dimensions(Arrays.asList("dim1", "dim2"))
                                      .metrics(Arrays.asList("met1", "met2"))
                                      .shardSpec(new NumberedShardSpec(3, 0))
-                                     .lastCompactionState(new CompactionState(
-                                         new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-                                         null,
-                                         null,
-                                         null,
-                                         MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                                         MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                                         null,
-                                         null,
-                                         null
-                                     ))
+                                     .lastCompactionState(
+                                         CompactionState.builder()
+                                                        .partitionsSpec(new HashedPartitionsSpec(
+                                                            100000,
+                                                            null,
+                                                            ImmutableList.of("dim1")
+                                                        ))
+                                                        .indexSpec(MAPPER.convertValue(
+                                                            ImmutableMap.of(),
+                                                            IndexSpec.class
+                                                        ))
+                                                        .granularitySpec(MAPPER.convertValue(
+                                                            ImmutableMap.of(),
+                                                            GranularitySpec.class
+                                                        ))
+                                                        .build()
+                                     )
                                      .binaryVersion(TEST_VERSION)
                                      .size(1)
                                      .build();
@@ -273,34 +297,34 @@ public class DataSegmentTest
         lastCompactionStateWithNullSpecs,
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    Assert.assertEquals(11, objectMap.size());
-    Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(interval.toString(), objectMap.get("interval"));
-    Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
-    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
-    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(
+    Assertions.assertEquals(11, objectMap.size());
+    Assertions.assertEquals("something", objectMap.get("dataSource"));
+    Assertions.assertEquals(interval.toString(), objectMap.get("interval"));
+    Assertions.assertEquals("1", objectMap.get("version"));
+    Assertions.assertEquals(loadSpec, objectMap.get("loadSpec"));
+    Assertions.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assertions.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assertions.assertEquals(
         ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0),
         objectMap.get("shardSpec")
     );
-    Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
-    Assert.assertEquals(1, objectMap.get("size"));
-    Assert.assertEquals(3, ((Map) objectMap.get("lastCompactionState")).size());
+    Assertions.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
+    Assertions.assertEquals(1, objectMap.get("size"));
+    Assertions.assertEquals(3, ((Map) objectMap.get("lastCompactionState")).size());
 
     DataSegment deserializedSegment = MAPPER.readValue(lastCompactionStateWithNullSpecs, DataSegment.class);
-    Assert.assertEquals(segment.toString(), deserializedSegment.toString());
-    Assert.assertEquals(segment, deserializedSegment);
-    Assert.assertNotNull(segment.getLastCompactionState());
-    Assert.assertNull(segment.getLastCompactionState().getDimensionsSpec());
-    Assert.assertNull(segment.getLastCompactionState().getTransformSpec());
-    Assert.assertNull(segment.getLastCompactionState().getMetricsSpec());
-    Assert.assertNotNull(deserializedSegment.getLastCompactionState());
-    Assert.assertNull(deserializedSegment.getLastCompactionState().getDimensionsSpec());
+    Assertions.assertEquals(segment.toString(), deserializedSegment.toString());
+    Assertions.assertEquals(segment, deserializedSegment);
+    Assertions.assertNotNull(segment.getLastCompactionState());
+    Assertions.assertNull(segment.getLastCompactionState().getDimensionsSpec());
+    Assertions.assertNull(segment.getLastCompactionState().getTransformSpec());
+    Assertions.assertNull(segment.getLastCompactionState().getMetricsSpec());
+    Assertions.assertNotNull(deserializedSegment.getLastCompactionState());
+    Assertions.assertNull(deserializedSegment.getLastCompactionState().getDimensionsSpec());
 
-    Assert.assertEquals(0, segment.compareTo(deserializedSegment));
-    Assert.assertEquals(0, deserializedSegment.compareTo(segment));
-    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+    Assertions.assertEquals(0, segment.compareTo(deserializedSegment));
+    Assertions.assertEquals(0, deserializedSegment.compareTo(segment));
+    Assertions.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
   }
 
   @Test
@@ -315,7 +339,7 @@ public class DataSegmentTest
                                            .shardSpec(NoneShardSpec.instance())
                                            .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z",
         segment.getId().toString()
     );
@@ -333,7 +357,7 @@ public class DataSegmentTest
                                            .shardSpec(new NumberedShardSpec(0, 0))
                                            .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z",
         segment.getId().toString()
     );
@@ -351,7 +375,7 @@ public class DataSegmentTest
                                            .shardSpec(new NumberedShardSpec(7, 0))
                                            .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z_7",
         segment.getId().toString()
     );
@@ -368,34 +392,35 @@ public class DataSegmentTest
     )).build();
 
     final DataSegment segment2 = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
-    Assert.assertEquals("empty dimensions", ImmutableList.of(), segment2.getDimensions());
-    Assert.assertEquals("empty metrics", ImmutableList.of(), segment2.getMetrics());
+    Assertions.assertEquals(ImmutableList.of(), segment2.getDimensions(), "empty dimensions");
+    Assertions.assertEquals(ImmutableList.of(), segment2.getMetrics(), "empty metrics");
   }
 
   @Test
   public void testWithLastCompactionState()
   {
-    final CompactionState compactionState = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-        ImmutableList.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(
-            new SelectorDimFilter("dim1", "foo", null),
-            VirtualColumns.create(
-                new ExpressionVirtualColumn(
-                    "isRobotFiltered",
-                    "concat(isRobot, '_filtered')",
-                    ColumnType.STRING,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class),
-        MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class),
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(new DynamicPartitionsSpec(null, null))
+                       .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                           "bar",
+                           "foo"
+                       ))))
+                       .metricsSpec(ImmutableList.of(new CountAggregatorFactory("count")))
+                       .transformSpec(new CompactionTransformSpec(
+                           new SelectorDimFilter("dim1", "foo", null),
+                           VirtualColumns.create(
+                               new ExpressionVirtualColumn(
+                                   "isRobotFiltered",
+                                   "concat(isRobot, '_filtered')",
+                                   ColumnType.STRING,
+                                   ExprMacroTable.nil()
+                               )
+                           )
+                       ))
+                       .indexSpec(MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class))
+                       .granularitySpec(MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class))
+                       .build();
     final DataSegment segment1 = DataSegment.builder(SegmentId.of(
                                                 "foo",
                                                 Intervals.of("2012-01-01/2012-01-02"),
@@ -411,7 +436,7 @@ public class DataSegmentTest
                                                 0
                                             ))
                                             .build();
-    Assert.assertEquals(segment1.toString(), segment2.withLastCompactionState(compactionState).toString());
+    Assertions.assertEquals(segment1.toString(), segment2.withLastCompactionState(compactionState).toString());
   }
 
   @Test
@@ -434,17 +459,15 @@ public class DataSegmentTest
     IndexSpec indexSpec = MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class).getEffectiveSpec();
     GranularitySpec granularitySpec = MAPPER.convertValue(Map.of("test2", "map"), GranularitySpec.class);
 
-    final CompactionState compactionState = new CompactionState(
-        dynamicPartitionsSpec,
-        dimensionsSpec,
-        metricsSpec,
-        transformSpec,
-        indexSpec,
-        granularitySpec,
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(dynamicPartitionsSpec)
+                       .dimensionsSpec(dimensionsSpec)
+                       .metricsSpec(metricsSpec)
+                       .transformSpec(transformSpec)
+                       .indexSpec(indexSpec)
+                       .granularitySpec(granularitySpec)
+                       .build();
 
     final Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFunction =
         CompactionState.addCompactionStateToSegments(
@@ -475,7 +498,7 @@ public class DataSegmentTest
                                             ))
                                             .build();
     final DataSegment annotatedSegment = Iterables.getOnlyElement(addCompactionStateFunction.apply(Set.of(segment2)));
-    Assert.assertEquals(segment1.toString(), annotatedSegment.toString());
+    Assertions.assertEquals(segment1.toString(), annotatedSegment.toString());
   }
 
   @Test
@@ -491,8 +514,8 @@ public class DataSegmentTest
                                             .shardSpec(new TombstoneShardSpec())
                                             .loadSpec(Map.of("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE))
                                             .build();
-    Assert.assertTrue(segment1.isTombstone());
-    Assert.assertFalse(segment1.hasData());
+    Assertions.assertTrue(segment1.isTombstone());
+    Assertions.assertFalse(segment1.hasData());
 
     final DataSegment segment2 = DataSegment.builder(SegmentId.of(
                                                 "foo",
@@ -504,8 +527,8 @@ public class DataSegmentTest
                                             .loadSpec(Map.of("type", "foo"))
                                             .build();
 
-    Assert.assertFalse(segment2.isTombstone());
-    Assert.assertTrue(segment2.hasData());
+    Assertions.assertFalse(segment2.isTombstone());
+    Assertions.assertTrue(segment2.hasData());
 
     final DataSegment segment3 = DataSegment.builder(SegmentId.of(
                                                 "foo",
@@ -516,8 +539,8 @@ public class DataSegmentTest
                                             .shardSpec(new NumberedShardSpec(7, 0))
                                             .build();
 
-    Assert.assertFalse(segment3.isTombstone());
-    Assert.assertTrue(segment3.hasData());
+    Assertions.assertFalse(segment3.isTombstone());
+    Assertions.assertTrue(segment3.hasData());
 
   }
 
@@ -543,12 +566,12 @@ public class DataSegmentTest
         MAPPER.writeValueAsString(segment),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    Assert.assertEquals(fingerprint, objectMap.get("indexingStateFingerprint"));
+    Assertions.assertEquals(fingerprint, objectMap.get("indexingStateFingerprint"));
 
     // Verify deserialization preserves fingerprint
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
-    Assert.assertEquals(fingerprint, deserializedSegment.getIndexingStateFingerprint());
-    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+    Assertions.assertEquals(fingerprint, deserializedSegment.getIndexingStateFingerprint());
+    Assertions.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
   }
 
   @Test
@@ -572,13 +595,15 @@ public class DataSegmentTest
         MAPPER.writeValueAsString(segment),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    Assert.assertFalse("indexingStateFingerprint should not be in JSON when null",
-                       objectMap.containsKey("indexingStateFingerprint"));
+    Assertions.assertFalse(
+        objectMap.containsKey("indexingStateFingerprint"),
+        "indexingStateFingerprint should not be in JSON when null"
+    );
 
     // Verify deserialization handles missing fingerprint
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
-    Assert.assertNull(deserializedSegment.getIndexingStateFingerprint());
-    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+    Assertions.assertNull(deserializedSegment.getIndexingStateFingerprint());
+    Assertions.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
   }
 
   @Test
@@ -598,10 +623,12 @@ public class DataSegmentTest
                                     + "}";
 
     DataSegment deserializedSegment = MAPPER.readValue(jsonWithoutFingerprint, DataSegment.class);
-    Assert.assertNull("indexingStateFingerprint should be null for backward compatibility",
-                      deserializedSegment.getIndexingStateFingerprint());
-    Assert.assertEquals("something", deserializedSegment.getDataSource());
-    Assert.assertEquals(Intervals.of("2011-10-01/2011-10-02"), deserializedSegment.getInterval());
+    Assertions.assertNull(
+        deserializedSegment.getIndexingStateFingerprint(),
+        "indexingStateFingerprint should be null for backward compatibility"
+    );
+    Assertions.assertEquals("something", deserializedSegment.getDataSource());
+    Assertions.assertEquals(Intervals.of("2011-10-01/2011-10-02"), deserializedSegment.getInterval());
   }
 
   @Test
@@ -622,7 +649,56 @@ public class DataSegmentTest
                                             .build();
 
     DataSegment withFingerprint = segment2.withIndexingStateFingerprint(fingerprint);
-    Assert.assertEquals(fingerprint, withFingerprint.getIndexingStateFingerprint());
-    Assert.assertEquals(segment1, withFingerprint);
+    Assertions.assertEquals(fingerprint, withFingerprint.getIndexingStateFingerprint());
+    Assertions.assertEquals(segment1, withFingerprint);
+  }
+
+  @Test
+  public void testCopyConstructorSharesEveryField() throws IllegalAccessException
+  {
+    final ShardSpec shardSpec = new NumberedShardSpec(3, 0);
+    final DataSegment segment =
+        DataSegment.builder(SegmentId.of("something", Intervals.of("2011-10-01/2011-10-02"), "1", shardSpec))
+                   .loadSpec(ImmutableMap.of("type", "local", "path", "/tmp/segment"))
+                   .dimensions(List.of("dim1", "dim2"))
+                   .metrics(List.of("met1"))
+                   .projections(List.of("proj1"))
+                   .clusterGroups(
+                       new ClusterGroupTuples(
+                           RowSignature.builder().add("tenant", ColumnType.STRING).build(),
+                           List.of(List.of("acme"))
+                       )
+                   )
+                   .shardSpec(shardSpec)
+                   .lastCompactionState(
+                       CompactionState.builder().partitionsSpec(new DynamicPartitionsSpec(null, null)).build()
+                   )
+                   .binaryVersion(TEST_VERSION)
+                   .size(123L)
+                   .totalRows(12)
+                   .indexingStateFingerprint("fingerprint")
+                   .build();
+
+    // a decorating subclass that uses the copy constructor
+    final DataSegment copy = new DataSegment(segment)
+    {
+    };
+
+    // reflective, so a field added to DataSegment but not to the copy constructor fails here
+    for (Field field : DataSegment.class.getDeclaredFields()) {
+      if (Modifier.isStatic(field.getModifiers())) {
+        continue;
+      }
+      field.setAccessible(true);
+      final Object original = field.get(segment);
+      Assertions.assertNotNull(original, "field[" + field.getName() + "] must be set for this test to check it");
+      if (field.getType().isPrimitive()) {
+        Assertions.assertEquals(original, field.get(copy), field.getName());
+      } else {
+        Assertions.assertSame(original, field.get(copy), field.getName());
+      }
+    }
+    Assertions.assertEquals(segment, copy);
+    Assertions.assertEquals(segment.toString(), copy.toString());
   }
 }

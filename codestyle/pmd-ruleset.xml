@@ -29,4 +29,31 @@ This ruleset defines the PMD rules for the Apache Druid project.
 
   <rule ref="category/java/codestyle.xml/UnnecessaryImport" />
   <rule ref="category/java/codestyle.xml/TooManyStaticImports" />
+  <rule ref="category/java/bestpractices.xml/UnusedFormalParameter" />
+  <rule ref="category/java/bestpractices.xml/UnusedLocalVariable" />
+  <rule ref="category/java/bestpractices.xml/MissingOverride" />
+  <rule name="ConfusingMethodName"
+        language="java"
+        message="Methods in the same class must not differ only by capitalization"
+        class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+    <description>
+      Prevent case-only method-name differences, which are easy to confuse at call sites.
+      Methods that override inherited APIs are excluded because their names cannot be changed.
+    </description>
+    <priority>2</priority>
+    <properties>
+      <property name="xpath">
+        <value>
+<![CDATA[
+for $method in //MethodDeclaration[@Overridden = false()]
+return $method[
+  some $other in $method/preceding-sibling::MethodDeclaration[@Overridden = false()]
+  satisfies lower-case($method/@Name) = lower-case($other/@Name)
+            and $method/@Name != $other/@Name
+]
+]]>
+        </value>
+      </property>
+    </properties>
+  </rule>
 </ruleset>

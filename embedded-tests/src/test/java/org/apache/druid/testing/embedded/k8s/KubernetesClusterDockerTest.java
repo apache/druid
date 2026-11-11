@@ -56,10 +56,10 @@ public class KubernetesClusterDockerTest extends IngestionSmokeTest implements L
     return cluster
         .useContainerFriendlyHostname()
         .useDefaultTimeoutForLatchableEmitter(60)
+        .addServer(eventCollector)
         .addResource(k3sCluster)
         .addServer(overlord)
         .addServer(broker)
-        .addServer(eventCollector)
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\", \"postgresql-metadata-storage\"]"

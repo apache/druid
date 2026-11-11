@@ -14,3 +14,4 @@
 # limitations under the License.
 
 org.apache.druid.k8s.overlord.KubernetesOverlordModule
+org.apache.druid.k8s.overlord.KubernetesPeonMetricsModule

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.vector;
 
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IdLookup;
 
 import javax.annotation.Nullable;
@@ -28,12 +28,13 @@ import java.util.Arrays;
 public class NilVectorSelector
     implements VectorValueSelector, VectorObjectSelector, SingleValueDimensionVectorSelector, IdLookup
 {
-  private static final boolean[] DEFAULT_NULLS_VECTOR = new boolean[QueryContexts.DEFAULT_VECTOR_SIZE];
-  private static final int[] DEFAULT_INT_VECTOR = new int[QueryContexts.DEFAULT_VECTOR_SIZE];
-  private static final long[] DEFAULT_LONG_VECTOR = new long[QueryContexts.DEFAULT_VECTOR_SIZE];
-  private static final float[] DEFAULT_FLOAT_VECTOR = new float[QueryContexts.DEFAULT_VECTOR_SIZE];
-  private static final double[] DEFAULT_DOUBLE_VECTOR = new double[QueryContexts.DEFAULT_VECTOR_SIZE];
-  private static final Object[] DEFAULT_OBJECT_VECTOR = new Object[QueryContexts.DEFAULT_VECTOR_SIZE];
+  private static final int DEFAULT_VECTOR_SIZE = QueryContextParameters.VECTOR_SIZE.getLiteralDefault();
+  private static final boolean[] DEFAULT_NULLS_VECTOR = new boolean[DEFAULT_VECTOR_SIZE];
+  private static final int[] DEFAULT_INT_VECTOR = new int[DEFAULT_VECTOR_SIZE];
+  private static final long[] DEFAULT_LONG_VECTOR = new long[DEFAULT_VECTOR_SIZE];
+  private static final float[] DEFAULT_FLOAT_VECTOR = new float[DEFAULT_VECTOR_SIZE];
+  private static final double[] DEFAULT_DOUBLE_VECTOR = new double[DEFAULT_VECTOR_SIZE];
+  private static final Object[] DEFAULT_OBJECT_VECTOR = new Object[DEFAULT_VECTOR_SIZE];
 
   static {
     Arrays.fill(DEFAULT_NULLS_VECTOR, true);
@@ -68,7 +69,7 @@ public class NilVectorSelector
 
   public static NilVectorSelector create(final VectorSizeInspector vectorSizeInspector)
   {
-    if (vectorSizeInspector.getMaxVectorSize() <= QueryContexts.DEFAULT_VECTOR_SIZE) {
+    if (vectorSizeInspector.getMaxVectorSize() <= DEFAULT_VECTOR_SIZE) {
       // Reuse static vars when possible.
       return new NilVectorSelector(
           vectorSizeInspector,

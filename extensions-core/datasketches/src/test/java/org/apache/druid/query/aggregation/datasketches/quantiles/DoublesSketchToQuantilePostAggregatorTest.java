@@ -24,8 +24,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DoublesSketchToQuantilePostAggregatorTest
 {
@@ -44,8 +44,8 @@ public class DoublesSketchToQuantilePostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -57,7 +57,7 @@ public class DoublesSketchToQuantilePostAggregatorTest
         0.5
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "DoublesSketchToQuantilePostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, fraction=0.5}",
         postAgg.toString()
     );

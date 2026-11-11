@@ -174,7 +174,6 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
    * <p/>
    * The order of the dimension is the order returned by {@code getOrderedDimValues()}
    * Note that this name will be sanitized by replacing all the `.` or space by `_` {@link AmbariMetricsEmitter#sanitize(String)}
-   * </p>
    */
 
   @Override

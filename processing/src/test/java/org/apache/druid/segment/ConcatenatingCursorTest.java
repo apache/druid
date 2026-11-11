@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -34,10 +35,29 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 class ConcatenatingCursorTest
 {
   private static final RowSignature CLUSTER_SIGNATURE = RowSignature.builder().add("tenant", ColumnType.STRING).build();
+
+  /**
+   * Creates a wrapper with no query virtual columns, whose capabilities cover only the clustering columns.
+   */
+  private static ClusteringColumnSelectorFactory makeWrapper(
+      ColumnSelectorFactory delegate,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues
+  )
+  {
+    return new ClusteringColumnSelectorFactory(
+        delegate,
+        clusteringColumns,
+        clusteringValues,
+        VirtualColumns.EMPTY,
+        column -> null
+    );
+  }
 
   private final Closer closer = Closer.create();
 
@@ -47,7 +67,7 @@ class ConcatenatingCursorTest
     FakeCursorHolder a = new FakeCursorHolder(List.of("a1", "a2"));
     FakeCursorHolder b = new FakeCursorHolder(List.of("b1"));
 
-    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
         new FakeFactory(List.of(), new int[]{0}),
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -56,7 +76,8 @@ class ConcatenatingCursorTest
     ConcatenatingCursor c = new ConcatenatingCursor(
         List.of(holderSupplier(a), holderSupplier(b)),
         List.of(new Object[]{"acme"}, new Object[]{"globex"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     ColumnValueSelector tenant = c.getColumnSelectorFactory().makeColumnValueSelector("tenant");
@@ -90,7 +111,7 @@ class ConcatenatingCursorTest
     FakeCursorHolder empty = new FakeCursorHolder(List.of());
     FakeCursorHolder full = new FakeCursorHolder(List.of("x"));
 
-    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
         new FakeFactory(List.of(), new int[]{0}),
         CLUSTER_SIGNATURE,
         new Object[]{"placeholder"}
@@ -99,7 +120,8 @@ class ConcatenatingCursorTest
     ConcatenatingCursor c = new ConcatenatingCursor(
         List.of(holderSupplier(empty), holderSupplier(full)),
         List.of(new Object[]{"a"}, new Object[]{"b"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     ColumnValueSelector tenant = c.getColumnSelectorFactory().makeColumnValueSelector("tenant");
@@ -118,7 +140,7 @@ class ConcatenatingCursorTest
     FakeCursorHolder full = new FakeCursorHolder(List.of("x"));
     FakeCursorHolder empty = new FakeCursorHolder(List.of());
 
-    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
         new FakeFactory(List.of(), new int[]{0}),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -127,7 +149,8 @@ class ConcatenatingCursorTest
     ConcatenatingCursor c = new ConcatenatingCursor(
         List.of(holderSupplier(full), holderSupplier(empty)),
         List.of(new Object[]{"a"}, new Object[]{"b"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     ColumnValueSelector tenant = c.getColumnSelectorFactory().makeColumnValueSelector("tenant");
@@ -143,7 +166,7 @@ class ConcatenatingCursorTest
     FakeCursorHolder e1 = new FakeCursorHolder(List.of());
     FakeCursorHolder e2 = new FakeCursorHolder(List.of());
 
-    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
         new FakeFactory(List.of(), new int[]{0}),
         CLUSTER_SIGNATURE,
         new Object[]{"placeholder"}
@@ -152,10 +175,38 @@ class ConcatenatingCursorTest
     ConcatenatingCursor c = new ConcatenatingCursor(
         List.of(holderSupplier(e1), holderSupplier(e2)),
         List.of(new Object[]{"a"}, new Object[]{"b"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     Assertions.assertTrue(c.isDone());
+  }
+
+  @Test
+  void testAllEmptyGroupsStillBuildSelectorsFromUninitializedWrapper()
+  {
+    FakeCursorHolder e1 = new FakeCursorHolder(List.of());
+    FakeCursorHolder e2 = new FakeCursorHolder(List.of());
+
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
+        ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
+        CLUSTER_SIGNATURE,
+        new Object[]{"a"}
+    );
+
+    ConcatenatingCursor c = new ConcatenatingCursor(
+        List.of(holderSupplier(e1), holderSupplier(e2)),
+        List.of(new Object[]{"a"}, new Object[]{"b"}),
+        wrapper,
+        Map.of()
+    );
+
+    Assertions.assertTrue(c.isDone());
+    ColumnValueSelector metric = c.getColumnSelectorFactory().makeColumnValueSelector("metric");
+    Assertions.assertNull(metric.getObject());
+    Assertions.assertDoesNotThrow(
+        () -> new EqualityFilter("metric", ColumnType.STRING, "someval", null).makeMatcher(c.getColumnSelectorFactory())
+    );
   }
 
   @Test
@@ -163,7 +214,7 @@ class ConcatenatingCursorTest
   {
     FakeCursorHolder only = new FakeCursorHolder(List.of("x", "y"));
 
-    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
         new FakeFactory(List.of(), new int[]{0}),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -172,7 +223,8 @@ class ConcatenatingCursorTest
     ConcatenatingCursor c = new ConcatenatingCursor(
         List.of(holderSupplier(only)),
         List.<Object[]>of(new Object[]{"a"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     ColumnValueSelector tenant = c.getColumnSelectorFactory().makeColumnValueSelector("tenant");
@@ -193,7 +245,7 @@ class ConcatenatingCursorTest
     FakeCursorHolder a = new FakeCursorHolder(List.of("a1"));
     FakeCursorHolder b = new FakeCursorHolder(List.of("b1"));
 
-    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
         new FakeFactory(List.of(), new int[]{0}),
         CLUSTER_SIGNATURE,
         new Object[]{"x"}
@@ -202,7 +254,8 @@ class ConcatenatingCursorTest
     ConcatenatingCursor c = new ConcatenatingCursor(
         List.of(holderSupplier(a), holderSupplier(b)),
         List.of(new Object[]{"x"}, new Object[]{"y"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     // Walk through, opens both holders.
@@ -220,7 +273,7 @@ class ConcatenatingCursorTest
     final boolean[] secondOpened = {false};
     FakeCursorHolder first = new FakeCursorHolder(List.of("x"));
 
-    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
         new FakeFactory(List.of(), new int[]{0}),
         CLUSTER_SIGNATURE,
         new Object[]{"a"}
@@ -236,7 +289,8 @@ class ConcatenatingCursorTest
     ConcatenatingCursor c = new ConcatenatingCursor(
         suppliers,
         List.of(new Object[]{"a"}, new Object[]{"b"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     // Init opens first group only. Second is still untouched.
@@ -256,7 +310,7 @@ class ConcatenatingCursorTest
     FakeCursorHolder a = new FakeCursorHolder(List.of("a1", "a2"));
     FakeCursorHolder b = new FakeCursorHolder(List.of("b1"));
 
-    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory wrapper = makeWrapper(
         new FakeFactory(List.of(), new int[]{0}),
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
@@ -265,7 +319,8 @@ class ConcatenatingCursorTest
     ConcatenatingCursor c = new ConcatenatingCursor(
         List.of(holderSupplier(a), holderSupplier(b)),
         List.of(new Object[]{"acme"}, new Object[]{"globex"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     ColumnValueSelector tenant = c.getColumnSelectorFactory().makeColumnValueSelector("tenant");

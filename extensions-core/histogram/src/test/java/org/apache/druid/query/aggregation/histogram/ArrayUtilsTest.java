@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ArrayUtilsTest
 {
@@ -32,9 +32,9 @@ public class ArrayUtilsTest
     int hash3 = ArrayUtils.hashCode(new long[]{1L, 2L, 3L}, 0, 1);
     int hash4 = ArrayUtils.hashCode(new long[]{1L, 2L, 3L}, 0, 1);
 
-    Assert.assertEquals(hash1, hash2);
-    Assert.assertNotEquals(hash1, hash3);
-    Assert.assertEquals(hash3, hash4);
+    Assertions.assertEquals(hash1, hash2);
+    Assertions.assertNotEquals(hash1, hash3);
+    Assertions.assertEquals(hash3, hash4);
   }
 
   @Test
@@ -45,9 +45,9 @@ public class ArrayUtilsTest
     int hash3 = ArrayUtils.hashCode(new float[]{1.0f, 2.0f, 3.0f}, 0, 1);
     int hash4 = ArrayUtils.hashCode(new float[]{1.0f, 2.0f, 3.0f}, 0, 1);
 
-    Assert.assertEquals(hash1, hash2);
-    Assert.assertNotEquals(hash1, hash3);
-    Assert.assertEquals(hash3, hash4);
+    Assertions.assertEquals(hash1, hash2);
+    Assertions.assertNotEquals(hash1, hash3);
+    Assertions.assertEquals(hash3, hash4);
   }
 
   @Test
@@ -58,8 +58,8 @@ public class ArrayUtilsTest
     int hash3 = ArrayUtils.hashCode(new double[]{1.0, 2.0, 3.0}, 0, 1);
     int hash4 = ArrayUtils.hashCode(new double[]{1.0, 2.0, 3.0}, 0, 1);
 
-    Assert.assertEquals(hash1, hash2);
-    Assert.assertNotEquals(hash1, hash3);
-    Assert.assertEquals(hash3, hash4);
+    Assertions.assertEquals(hash1, hash2);
+    Assertions.assertNotEquals(hash1, hash3);
+    Assertions.assertEquals(hash3, hash4);
   }
 }

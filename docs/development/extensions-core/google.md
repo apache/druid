@@ -28,7 +28,7 @@ This extension allows you to do 2 things:
 * [Ingest data](#reading-data-from-google-cloud-storage) from files stored in Google Cloud Storage.
 * Write segments to [deep storage](#deep-storage) in GCS.
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-google-extensions` in the extensions load list.
+To use this Apache&circledR; Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-google-extensions` in the extensions load list.
 
 ### Required Configuration
 
@@ -53,3 +53,4 @@ To configure connectivity to google cloud, run druid processes with `GOOGLE_APPL
 |`druid.google.bucket`||Google Storage bucket name.|Must be set.|
 |`druid.google.prefix`|A prefix string that will be prepended to the blob names for the segments published to Google deep storage| |""|
 |`druid.google.maxListingLength`|maximum number of input files matching a given prefix to retrieve at a time| |1024|
+|`druid.storage.zip`|Whether segments are written as directories of objects (`false`) or as a single `index.zip` object (`true`). Writing segments unzipped requires permission to delete objects under the segment path, so that a push replaces the segment already there.|`true`, `false`|`true`|

@@ -25,13 +25,13 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import com.google.inject.multibindings.ProvidesIntoSet;
+import com.google.inject.name.Named;
+import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
@@ -43,7 +43,6 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.messages.server.MessageRelayMonitor;
 import org.apache.druid.messages.server.MessageRelayResource;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.messages.server.OutboxImpl;
@@ -57,6 +56,7 @@ import org.apache.druid.msq.dart.worker.DartSegmentsInputSliceReaderProvider;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactory;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
+import org.apache.druid.msq.dart.worker.DartWorkerService;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.guice.MSQBinders;
@@ -67,6 +67,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import java.io.File;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -78,8 +79,13 @@ import java.util.concurrent.ExecutorService;
 @LoadScope(roles = NodeRole.HISTORICAL_JSON_NAME)
 public class DartWorkerModule implements DruidModule
 {
-  @Inject
   private Properties properties;
+
+  @Inject
+  public void setProperties(Properties properties)
+  {
+    this.properties = properties;
+  }
 
   @Override
   public void configure(Binder binder)
@@ -94,10 +100,8 @@ public class DartWorkerModule implements DruidModule
     @Override
     public void configure(Binder binder)
     {
-      JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".worker", DartWorkerConfig.class);
       Jerseys.addResource(binder, DartWorkerResource.class);
       LifecycleModule.register(binder, DartWorkerRunner.class);
-      LifecycleModule.registerKey(binder, Key.get(MessageRelayMonitor.class, Dart.class));
 
       binder.bind(DartWorkerContextFactory.class)
             .to(DartWorkerContextFactoryImpl.class)
@@ -113,16 +117,30 @@ public class DartWorkerModule implements DruidModule
                 .in(LazySingleton.class);
     }
 
+    /**
+     * Advertise {@link DartWorkerService} in node discovery. Contributed from {@link ActualModule}, which is only
+     * installed when Dart is enabled, so advertisement tracks actually running a Dart worker. Merges into the same
+     * {@code @Named("historical")} service set announced by
+     * {@link org.apache.druid.guice.HistoricalServiceModule}.
+     */
+    @ProvidesIntoSet
+    @Named(NodeRole.HISTORICAL_JSON_NAME)
+    public Class<? extends DruidService> getDartWorkerService()
+    {
+      return DartWorkerService.class;
+    }
+
     @Provides
     @ManageLifecycle
     public DartWorkerRunner createWorkerRunner(
         @Self final DruidNode selfNode,
         final DartWorkerContextFactory workerFactory,
-        final DruidNodeDiscoveryProvider discoveryProvider,
+        final Outbox<ControllerMessage> outbox,
         final DruidProcessingConfig processingConfig,
         @Dart final ResourcePermissionMapper permissionMapper,
         final MemoryIntrospector memoryIntrospector,
-        final AuthorizerMapper authorizerMapper
+        final AuthorizerMapper authorizerMapper,
+        final DartWorkerConfig workerConfig
     )
     {
       final ExecutorService exec = Execs.multiThreaded(memoryIntrospector.numTasksInJvm(), "dart-worker-%s");
@@ -131,21 +149,14 @@ public class DartWorkerModule implements DruidModule
       return new DartWorkerRunner(
           workerFactory,
           MoreExecutors.listeningDecorator(exec),
-          discoveryProvider,
+          outbox,
           permissionMapper,
           authorizerMapper,
-          baseTempDir
+          workerConfig,
+          baseTempDir,
+          Clock.systemUTC(),
+          Execs.scheduledSingleThreaded("dart-worker-reaper-%s")
       );
-    }
-
-    @Provides
-    @Dart
-    public MessageRelayMonitor createMessageRelayMonitor(
-        final DruidNodeDiscoveryProvider discoveryProvider,
-        final Outbox<ControllerMessage> outbox
-    )
-    {
-      return new MessageRelayMonitor(discoveryProvider, outbox, NodeRole.BROKER);
     }
 
     /**

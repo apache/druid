@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Menu, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
@@ -39,7 +39,7 @@ export const MoreButton = React.memo(function MoreButton(props: MoreButtonProps)
   });
 
   return (
-    <Popover
+    <PopoverNext
       className="more-button"
       isOpen={Boolean(openState)}
       content={
@@ -48,13 +48,15 @@ export const MoreButton = React.memo(function MoreButton(props: MoreButtonProps)
           {openState === 'alt-open' && altExtra}
         </Menu>
       }
-      position={Position.BOTTOM_LEFT}
+      placement="bottom-start"
       onInteraction={(nextOpenState, e: any) => {
         if (!e) return; // For some reason this function is always called twice once with e and once without
         setOpenState(nextOpenState ? (e.altKey ? 'alt-open' : 'open') : undefined);
       }}
+      lazy
+      shouldReturnFocusOnClose={false}
     >
       <Button icon={IconNames.MORE} disabled={!childCount} title="More actions" />
-    </Popover>
+    </PopoverNext>
   );
 });

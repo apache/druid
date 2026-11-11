@@ -1,0 +1,177 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.sql.calcite.planner;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCallBinding;
+import org.apache.calcite.sql.SqlCharStringLiteral;
+import org.apache.calcite.sql.type.SqlTypeCoercionRule;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.sql.validate.implicit.TypeCoercion;
+import org.apache.calcite.sql.validate.implicit.TypeCoercionImpl;
+import org.apache.druid.java.util.common.StringUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Druid's custom {@link TypeCoercion} and {@link SqlTypeCoercionRule}.
+ */
+public class DruidTypeCoercion extends TypeCoercionImpl
+{
+  /**
+   * Custom {@link SqlTypeCoercionRule} that allows booleans (and boolean arrays) to be coerced to
+   * numerics (and numeric arrays).
+   */
+  public static final SqlTypeCoercionRule TYPE_COERCION_RULE = buildCoercionRule();
+
+  public DruidTypeCoercion(RelDataTypeFactory typeFactory, SqlValidator validator)
+  {
+    super(typeFactory, validator);
+  }
+
+  @Override
+  @Nullable
+  public RelDataType commonTypeForBinaryComparison(@Nullable RelDataType type1, @Nullable RelDataType type2)
+  {
+    // For ARRAY <-> ARRAY comparisons, compare using the element type given
+    // by druidCommonElementType.
+    if (type1 != null && type2 != null
+        && type1.getSqlTypeName() == SqlTypeName.ARRAY
+        && type2.getSqlTypeName() == SqlTypeName.ARRAY) {
+      final RelDataType e1 = type1.getComponentType();
+      final RelDataType e2 = type2.getComponentType();
+      if (e1 != null && e2 != null) {
+        final RelDataType commonElement = druidCommonElementType(e1, e2);
+        if (commonElement != null) {
+          final boolean anyNullable = type1.isNullable() || type2.isNullable();
+          return factory.createTypeWithNullability(
+              factory.createArrayType(commonElement, -1),
+              anyNullable
+          );
+        }
+      }
+    }
+
+    return super.commonTypeForBinaryComparison(type1, type2);
+  }
+
+  /**
+   * Rejects a string literal that cannot be parsed as a number when it is passed as the input of an aggregate function
+   * that expects a number, such as {@code SUM('abc')}. Otherwise the literal is cast to a number, which turns it into
+   * a null, and the aggregator silently returns null. Explicit CASTs are not checked, since they are the user's intent.
+   *
+   * Only the first operand of aggregate functions is checked. Scalar functions keep their current behavior, and other
+   * aggregator operands, such as the maxBytes of ARRAY_AGG, are validated by the aggregators themselves.
+   */
+  @Override
+  public boolean builtinFunctionCoercion(
+      SqlCallBinding binding,
+      List<RelDataType> operandTypes,
+      List<SqlTypeFamily> expectedFamilies
+  )
+  {
+    if (binding.getOperator().isAggregator()
+        && binding.getOperandCount() > 0
+        && binding.operand(0) instanceof SqlCharStringLiteral) {
+      final RelDataType implicitType = implicitCast(operandTypes.get(0), expectedFamilies.get(0));
+      final String value = ((SqlCharStringLiteral) binding.operand(0)).getValueAs(String.class);
+      if (implicitType != null && SqlTypeUtil.isNumeric(implicitType) && !Calcites.isNumericString(value)) {
+        throw Calcites.nonNumericStringLiteralError(
+            StringUtils.format("Function [%s] argument [1]", binding.getOperator().getName()),
+            value
+        );
+      }
+    }
+
+    return super.builtinFunctionCoercion(binding, operandTypes, expectedFamilies);
+  }
+
+  /**
+   * Casts the operand at the given index of a call to the target type, if a cast is needed. Exposes
+   * {@link #coerceOperandType(SqlValidatorScope, SqlCall, int, RelDataType)} to operand type checkers, such as
+   * {@link org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker}.
+   *
+   * @return true if the operand was cast
+   */
+  public boolean coerceOperand(
+      @Nullable SqlValidatorScope scope,
+      SqlCall call,
+      int index,
+      RelDataType targetType
+  )
+  {
+    return coerceOperandType(scope, call, index, targetType);
+  }
+
+  /**
+   * Choose a common array element type for comparisons.
+   */
+  @Nullable
+  private RelDataType druidCommonElementType(RelDataType e1, RelDataType e2)
+  {
+    if (SqlTypeUtil.isBoolean(e1) && SqlTypeUtil.isNumeric(e2)) {
+      return e2;
+    } else if (SqlTypeUtil.isBoolean(e2) && SqlTypeUtil.isNumeric(e1)) {
+      return e1;
+    } else if (SqlTypeUtil.isCharacter(e1) && SqlTypeUtil.isNumeric(e2)) {
+      return e1;
+    } else if (SqlTypeUtil.isCharacter(e2) && SqlTypeUtil.isNumeric(e1)) {
+      return e2;
+    } else {
+      return factory.leastRestrictive(ImmutableList.of(e1, e2));
+    }
+  }
+
+  /**
+   * Create a coercion rule that allows coercing booleans to numeric types. This matches Druid's execution layer,
+   * where booleans are represented as integers.
+   */
+  private static SqlTypeCoercionRule buildCoercionRule()
+  {
+    // Start with the default mapping.
+    final Map<SqlTypeName, ImmutableSet<SqlTypeName>> mapping =
+        new HashMap<>(SqlTypeCoercionRule.instance().getTypeMapping());
+
+    // Ensure all NUMERIC_TYPES have a coercion mapping from BOOLEAN.
+    for (final SqlTypeName target : SqlTypeName.NUMERIC_TYPES) {
+      final Set<SqlTypeName> current = mapping.getOrDefault(target, ImmutableSet.of());
+      if (!current.contains(SqlTypeName.BOOLEAN)) {
+        mapping.put(
+            target,
+            ImmutableSet.<SqlTypeName>builder().addAll(current).add(SqlTypeName.BOOLEAN).build()
+        );
+      }
+    }
+
+    return SqlTypeCoercionRule.instance(mapping);
+  }
+}

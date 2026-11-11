@@ -20,8 +20,7 @@
 package org.apache.druid.grpc.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Max;
+import jakarta.validation.constraints.Max;
 
 /**
  * Grpc configs for the extension.

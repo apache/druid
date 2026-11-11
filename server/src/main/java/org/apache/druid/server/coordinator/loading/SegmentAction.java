@@ -48,7 +48,6 @@ public enum SegmentAction
    *   <li>this action can be throttled by the {@code replicationThrottleLimit}</li>
    *   <li>it is given lower priority than LOAD on the load queue peon</li>
    * </ul>
-   * For all other purposes, REPLICATE is treated the same as LOAD.
    */
   REPLICATE(true),
 

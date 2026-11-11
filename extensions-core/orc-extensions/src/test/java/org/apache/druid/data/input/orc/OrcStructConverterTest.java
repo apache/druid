@@ -38,8 +38,8 @@ import org.apache.orc.mapred.OrcList;
 import org.apache.orc.mapred.OrcMap;
 import org.apache.orc.mapred.OrcStruct;
 import org.apache.orc.mapred.OrcTimestamp;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.sql.Date;
@@ -454,23 +454,23 @@ public class OrcStructConverterTest
   )
   {
     final Object field = converter.convertRootField(orcStruct, fieldName);
-    Assert.assertNotNull(field);
-    Assert.assertEquals(expectedValue, field);
+    Assertions.assertNotNull(field);
+    Assertions.assertEquals(expectedValue, field);
 
 
     final int fieldIndex = orcStruct.getSchema().getFieldNames().indexOf(fieldName);
     TypeDescription fieldDescription = orcStruct.getSchema().getChildren().get(fieldIndex);
     if (fieldDescription.getCategory().isPrimitive()) {
       final Object simple = converter.tryConvertPrimitive(orcStruct.getFieldValue(fieldIndex));
-      Assert.assertNotNull(simple);
-      Assert.assertEquals(expectedValue, simple);
+      Assertions.assertNotNull(simple);
+      Assertions.assertEquals(expectedValue, simple);
     }
   }
 
   private static void assertNullValue(OrcStructConverter converter, OrcStruct orcStruct, String fieldName)
   {
     final Object field = converter.convertRootField(orcStruct, fieldName);
-    Assert.assertNull(field);
+    Assertions.assertNull(field);
   }
 
 }

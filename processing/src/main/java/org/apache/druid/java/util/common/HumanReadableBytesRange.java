@@ -19,10 +19,11 @@
 
 package org.apache.druid.java.util.common;
 
-import javax.validation.Constraint;
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
-import javax.validation.Payload;
+import jakarta.validation.Constraint;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
+import jakarta.validation.Payload;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -37,7 +38,7 @@ import java.lang.annotation.Target;
  *
  * <code>
  *   class Size {
- *     @HumanReadableBytesRange( min = 5, max = 1024 )
+ *     &#64;HumanReadableBytesRange( min = 5, max = 1024 )
  *     private HumanReadableBytes size;
  *   }
  * </code>

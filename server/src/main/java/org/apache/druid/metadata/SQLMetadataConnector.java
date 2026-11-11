@@ -25,9 +25,11 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -49,7 +51,6 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -73,8 +74,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final String PAYLOAD_TYPE = "BLOB";
   private static final String COLLATION = "";
 
-  static final int QUIET_RETRIES = 2;
-  static final int DEFAULT_MAX_TRIES = 3;
+  public static final int QUIET_RETRIES = 2;
+  public static final int DEFAULT_MAX_TRIES = 3;
 
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
@@ -170,7 +171,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      Throwables.propagateIfPossible(e);
+      throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
   }
@@ -193,7 +194,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      Throwables.propagateIfPossible(e);
+      throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
   }
@@ -391,11 +392,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     createIndex(
         tableName,
-        "IDX_%S_USED",
-        List.of("used")
-    );
-    createIndex(
-        tableName,
         "IDX_%S_DATASOURCE_USED_END_START",
         List.of(
             "dataSource",
@@ -403,6 +399,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             quoteColumn("end"),
             "start"
         )
+    );
+    // Covering index for the used-segment ID scan performed on every metadata
+    // cache sync (SELECT id, dataSource, used_status_last_updated WHERE used=true).
+    // Includes id explicitly so the scan is index-only on all backends (not only
+    // engines like InnoDB that append the primary key to secondary indexes).
+    // Its leading 'used' column also serves plain 'WHERE used = ?' lookups, so a
+    // separate IDX_%S_USED index is not created.
+    createIndex(
+        tableName,
+        "IDX_%S_USED_USLU_DATASOURCE",
+        List.of("used", "used_status_last_updated", "dataSource", "id")
     );
   }
 
@@ -663,6 +670,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         "IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
         List.of("dataSource", "upgraded_from_segment_id")
     );
+    // Migration for existing tables: covering index backing the used-segment ID
+    // scan on every cache sync (see createSegmentTable).
+    createIndex(
+        tableName,
+        "IDX_%S_USED_USLU_DATASOURCE",
+        List.of("used", "used_status_last_updated", "dataSource", "id")
+    );
+    // The covering index above leads with 'used', so it supersedes the single-column
+    // IDX_%S_USED. Drop the now-redundant index on existing tables.
+    dropIndex(tableName, "IDX_%S_USED", List.of("used"));
   }
 
   @Override
@@ -958,7 +975,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      Throwables.throwIfUnchecked(e);
+      throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
   }
@@ -1036,6 +1053,51 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (config.get().isCreateTables()) {
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
     }
+  }
+
+  /**
+   * Returns the columns of the given table, in the order reported by the database, or an empty list if the table
+   * does not exist. Throws if the database metadata cannot be read, so that a caller which acts on a table being
+   * absent does not mistake a failed lookup for an absent table.
+   *
+   * The lookup is scoped to the schema returned by {@link #getMetadataTableSchema(Connection)}, which is the schema
+   * an unqualified table name resolves to. Rather than passing the table name as a search pattern, in which '_' is a
+   * wildcard and which is case-sensitive while the database folds unquoted identifiers, the returned table names are
+   * compared to the given one ignoring case. The schema is a search pattern too, so the returned schema is compared
+   * to it as well, in case the configured schema contains a '_' or '%' which would otherwise match other schemas.
+   */
+  public List<String> getTableColumns(final String tableName)
+  {
+    return getDBI().withHandle(handle -> {
+      final List<String> columns = new ArrayList<>();
+      if (tableExists(handle, tableName)) {
+        final Connection conn = handle.getConnection();
+        final String schema = getMetadataTableSchema(conn);
+        try (ResultSet rs = conn.getMetaData().getColumns(null, schema, null, null)) {
+          while (rs.next()) {
+            if (tableName.equalsIgnoreCase(rs.getString("TABLE_NAME"))
+                && (schema == null || schema.equals(rs.getString("TABLE_SCHEM")))) {
+              columns.add(rs.getString("COLUMN_NAME"));
+            }
+          }
+        }
+      }
+      return columns;
+    });
+  }
+
+  /**
+   * Returns the schema that the Druid metadata tables live in, i.e. the schema that an unqualified
+   * table name in a Druid SQL statement resolves to, or null if the schema is unknown and lookups
+   * should not be scoped to a schema.
+   *
+   * Connectors that scope {@link #tableExists} to a configured schema must override this so that
+   * both lookups agree.
+   */
+  @Nullable
+  public String getMetadataTableSchema(final Connection connection) throws SQLException
+  {
+    return connection.getSchema();
   }
 
   @Override
@@ -1257,6 +1319,59 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
+   * Drops an index on {@code tableName} if it exists, under either the full or
+   * short naming convention (see {@link #createIndex}). No-op if absent, so it is
+   * safe to call on every startup.
+   *
+   * @param tableName           Name of the table the index is on
+   * @param fullIndexNameFormat Same format string that was passed to {@link #createIndex}
+   * @param indexCols           Same columns that were passed to {@link #createIndex}
+   */
+  public void dropIndex(
+      final String tableName,
+      final String fullIndexNameFormat,
+      final List<String> indexCols
+  )
+  {
+    final Set<String> createdIndexSet = getIndexOnTable(tableName);
+    final String shortIndexName = generateShortIndexName(tableName, indexCols);
+    final String fullIndexName = StringUtils.toUpperCase(StringUtils.format(fullIndexNameFormat, tableName));
+
+    final String indexName;
+    if (createdIndexSet.contains(fullIndexName)) {
+      indexName = fullIndexName;
+    } else if (createdIndexSet.contains(shortIndexName)) {
+      indexName = shortIndexName;
+    } else {
+      log.info("Index[%s] on table[%s] does not exist, skipping drop.", fullIndexName, tableName);
+      return;
+    }
+
+    try {
+      retryWithHandle(
+          (HandleCallback<Void>) handle -> {
+            final String dropSQL = getDropIndexStatement(indexName, tableName);
+            log.info("Dropping index[%s] on table[%s] using SQL[%s].", indexName, tableName, dropSQL);
+            handle.execute(dropSQL);
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Could not drop index[%s] on table[%s]", indexName, tableName);
+    }
+  }
+
+  /**
+   * SQL to drop an index. Standard SQL / Derby / PostgreSQL use {@code DROP INDEX <name>};
+   * MySQL requires the {@code ON <table>} clause (see {@code MySQLConnector}).
+   */
+  protected String getDropIndexStatement(String indexName, String tableName)
+  {
+    return StringUtils.format("DROP INDEX %s", indexName);
+  }
+
+  /**
    * Checks table metadata to determine if the given column exists in the table.
    *
    * @return true if the column exists in the table, false otherwise
@@ -1318,6 +1433,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     } else {
       // do nothing
     }
+  }
+
+  private static void throwIfUnchecked(Throwable t)
+  {
+    final Throwable rootCause = Throwables.getRootCause(t);
+    if (rootCause instanceof DruidException druidException) {
+      throw druidException;
+    }
+    Throwables.throwIfUnchecked(t);
   }
 
   public static boolean isStatementException(Throwable e)

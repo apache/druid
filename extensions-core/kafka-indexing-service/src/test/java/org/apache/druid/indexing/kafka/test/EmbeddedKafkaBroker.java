@@ -36,7 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class EmbeddedKafkaBroker implements Closeable
 {
   private static final String KAFKA_IMAGE =
-      System.getProperty("druid.testing.kafka.image", "apache/kafka:4.2.0");
+      System.getProperty("druid.testing.kafka.image", "apache/kafka:4.3.0");
 
   private final KafkaContainer container;
 

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
@@ -34,6 +35,7 @@ import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterTuning;
@@ -47,12 +49,12 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,14 +63,15 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters(name = "{0}:vectorize={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    final List<BiFunction<TemporaryFolder, Closer, List<Segment>>> segmentsGenerators =
-        NestedDataTestUtils.getSegmentGenerators(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE);
+    final List<BiFunction<TemporaryFolderExtension, Closer, List<Segment>>> segmentsGenerators =
+        NestedDataTestUtils.getSegmentGeneratorsWithTempDir(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE);
 
     return QueryRunnerTestHelper.cartesian(
         // runners
@@ -83,18 +86,18 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final Closer closer;
   private final AggregationTestHelper helper;
 
-  private final BiFunction<TemporaryFolder, Closer, List<Segment>> segmentsGenerator;
+  private final BiFunction<TemporaryFolderExtension, Closer, List<Segment>> segmentsGenerator;
   private final QueryContexts.Vectorize vectorize;
   private final String segmentsName;
 
   public NestedDataTimeseriesQueryTest(
-      BiFunction<TemporaryFolder, Closer, List<Segment>> segmentsGenerator,
+      BiFunction<TemporaryFolderExtension, Closer, List<Segment>> segmentsGenerator,
       String vectorize
   )
   {
@@ -104,15 +107,17 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     );
     this.segmentsGenerator = segmentsGenerator;
     this.segmentsName = segmentsGenerator.toString();
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
+    this.vectorize = QueryContextParameters.VECTORIZE.parse(vectorize);
     this.closer = Closer.create();
   }
 
   public Map<String, Object> getContext()
   {
-    return ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize.toString(),
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize.toString()
+    return QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        vectorize,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorize
     );
   }
 
@@ -706,8 +711,8 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
 
     if (!allCanVectorize) {
       if (vectorize == QueryContexts.Vectorize.FORCE) {
-        Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);
-        Assert.assertEquals(
+        Throwable t = Assertions.assertThrows(RuntimeException.class, runner::get);
+        Assertions.assertEquals(
             "org.apache.druid.java.util.common.ISE: Cannot vectorize!",
             t.getMessage()
         );

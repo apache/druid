@@ -31,8 +31,8 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -64,14 +64,14 @@ public class KafkaSeekableStreamEndSequenceNumbersTest
         new TypeReference<>() {}
     );
 
-    Assert.assertEquals(
-        "Round trip",
+    Assertions.assertEquals(
         partitions,
         new KafkaSeekableStreamEndSequenceNumbers(partitions2.getStream(),
             partitions2.getTopic(),
             partitions2.getPartitionSequenceNumberMap(),
             partitions2.getPartitionOffsetMap()
-        )
+        ),
+        "Round trip"
     );
 
     // Check backwards compatibility.
@@ -80,15 +80,15 @@ public class KafkaSeekableStreamEndSequenceNumbersTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(stream, asMap.get("stream"));
-    Assert.assertEquals(stream, asMap.get("topic"));
+    Assertions.assertEquals(stream, asMap.get("stream"));
+    Assertions.assertEquals(stream, asMap.get("topic"));
 
     // Jackson will deserialize the maps as string -> int maps, not int -> long.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         offsetMap,
         OBJECT_MAPPER.convertValue(asMap.get("partitionSequenceNumberMap"), new TypeReference<Map<KafkaTopicPartition, Long>>() {})
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         offsetMap,
         OBJECT_MAPPER.convertValue(asMap.get("partitionOffsetMap"), new TypeReference<Map<KafkaTopicPartition, Long>>() {})
     );
@@ -106,7 +106,7 @@ public class KafkaSeekableStreamEndSequenceNumbersTest
       expectedExceptionThrown = true;
     }
 
-    Assert.assertTrue("KafkaSeekableStreamEndSequenceNumbers should not be registered type", expectedExceptionThrown);
+    Assertions.assertTrue(expectedExceptionThrown, "KafkaSeekableStreamEndSequenceNumbers should not be registered type");
   }
 
   private static ObjectMapper createObjectMapper()

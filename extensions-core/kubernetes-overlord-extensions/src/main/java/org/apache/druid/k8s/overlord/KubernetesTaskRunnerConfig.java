@@ -19,11 +19,11 @@
 
 package org.apache.druid.k8s.overlord;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.joda.time.Period;
 
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -97,6 +97,12 @@ public interface KubernetesTaskRunnerConfig
    */
   boolean isAllowTaskPodTemplateSelection();
 
+  /**
+   * Plaintext port reported in task pod {@code TaskLocation}s, e.g. a sidecar proxy port; null uses {@code DruidK8sConstants.PORT}.
+   */
+  @Nullable
+  Integer getAdvertisedPlaintextPort();
+
   static Builder builder()
   {
     return new Builder();
@@ -128,6 +134,7 @@ public interface KubernetesTaskRunnerConfig
     private boolean useK8sSharedInformers;
     private Period k8sSharedInformerResyncPeriod;
     private boolean allowTaskPodTemplateSelection;
+    private Integer advertisedPlaintextPort;
 
     public Builder()
     {
@@ -278,6 +285,12 @@ public interface KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withAdvertisedPlaintextPort(Integer advertisedPlaintextPort)
+    {
+      this.advertisedPlaintextPort = advertisedPlaintextPort;
+      return this;
+    }
+
     public KubernetesTaskRunnerStaticConfig build()
     {
       return new KubernetesTaskRunnerStaticConfig(
@@ -304,7 +317,8 @@ public interface KubernetesTaskRunnerConfig
           this.taskJoinTimeout,
           this.useK8sSharedInformers,
           this.k8sSharedInformerResyncPeriod,
-          this.allowTaskPodTemplateSelection
+          this.allowTaskPodTemplateSelection,
+          this.advertisedPlaintextPort
       );
     }
   }

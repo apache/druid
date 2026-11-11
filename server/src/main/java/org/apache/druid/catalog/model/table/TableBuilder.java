@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableId;
@@ -139,6 +140,11 @@ public class TableBuilder
   public TableBuilder clusterColumns(ClusterKeySpec... clusterKeys)
   {
     return property(DatasourceDefn.CLUSTER_KEYS_PROPERTY, Arrays.asList(clusterKeys));
+  }
+
+  public TableBuilder baseTable(DatasourceBaseTableMetadata baseTable)
+  {
+    return property(DatasourceDefn.BASE_TABLE_PROPERTY, baseTable);
   }
 
   public TableBuilder hiddenColumns(List<String> hiddenColumns)

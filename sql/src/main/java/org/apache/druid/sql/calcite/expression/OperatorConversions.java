@@ -345,7 +345,7 @@ public class OperatorConversions
     // For operand type checking
     private SqlOperandTypeChecker operandTypeChecker;
     private List<String> operandNames = Collections.emptyList();
-    private List<SqlTypeFamily> operandTypes;
+    private List<OperandType> operandTypes;
     private Integer requiredOperandCount;
     private int[] literalOperands;
     private SqlOperandTypeInference operandTypeInference;
@@ -471,7 +471,8 @@ public class OperatorConversions
     /**
      * Provide customized operand type checking logic.
      *
-     * Either {@link #operandTypes(SqlTypeFamily...)} or this method must be used before calling {@link #build()}.
+     * Either {@link #operandTypes(SqlTypeFamily...)}, {@link #operandTypes(OperandType...)} or this method must be used
+     * before calling {@link #build()}.
      * These methods cannot be mixed; you must call exactly one.
      */
     public OperatorBuilder<T> operandTypeChecker(final SqlOperandTypeChecker operandTypeChecker)
@@ -501,6 +502,16 @@ public class OperatorConversions
      * For deeper control, use {@link #operandTypeChecker(SqlOperandTypeChecker)} instead.
      */
     public OperatorBuilder<T> operandTypes(final SqlTypeFamily... operandTypes)
+    {
+      return operandTypes(Arrays.stream(operandTypes).map(OperandType::of).toArray(OperandType[]::new));
+    }
+
+    /**
+     * Equivalent to calling {@link DefaultOperandTypeChecker.Builder#operandTypes(OperandType...)}. Like
+     * {@link #operandTypes(SqlTypeFamily...)}, but the operand types may accept complex types or coerce strings, such
+     * as {@code OperandType.numeric().orComplex(type).coerceStrings()}.
+     */
+    public OperatorBuilder<T> operandTypes(final OperandType... operandTypes)
     {
       this.operandTypes = Arrays.asList(operandTypes);
       return this;
@@ -572,8 +583,8 @@ public class OperatorConversions
         return DefaultOperandTypeChecker
             .builder()
             .operandNames(operandNames)
-            .operandTypes(operandTypes)
-            .requiredOperandCount(requiredOperandCount == null ? operandTypes.size() : requiredOperandCount)
+            .operandTypes(operandTypes.toArray(new OperandType[0]))
+            .requiredOperandCount(getRequiredOperandCount())
             .literalOperands(literalOperands)
             .build();
       } else if (operandNames.isEmpty()
@@ -589,11 +600,17 @@ public class OperatorConversions
       }
     }
 
+    private int getRequiredOperandCount()
+    {
+      return requiredOperandCount == null ? operandTypes.size() : requiredOperandCount;
+    }
+
     protected SqlOperandTypeInference buildOperandTypeInference()
     {
-      final IntSet nullableOperands = requiredOperandCount == null
+      // operandTypes is null if an operandTypeChecker was passed in instead, e.g. GREATEST and LEAST.
+      final IntSet nullableOperands = operandTypes == null
           ? new IntArraySet()
-          : DefaultOperandTypeChecker.buildNullableOperands(requiredOperandCount, operandTypes.size(), new IntArraySet());
+          : DefaultOperandTypeChecker.buildNullableOperands(getRequiredOperandCount(), operandTypes, new IntArraySet());
       if (operandTypeInference == null) {
         SqlOperandTypeInference defaultInference = new DefaultOperandTypeInference(operandTypes, nullableOperands);
         return (callBinding, returnType, types) -> {
@@ -685,10 +702,10 @@ public class OperatorConversions
    */
   private static class DefaultOperandTypeInference implements SqlOperandTypeInference
   {
-    private final List<SqlTypeFamily> operandTypes;
+    private final List<OperandType> operandTypes;
     private final IntSet nullableOperands;
 
-    DefaultOperandTypeInference(final List<SqlTypeFamily> operandTypes, final IntSet nullableOperands)
+    DefaultOperandTypeInference(final List<OperandType> operandTypes, final IntSet nullableOperands)
     {
       this.operandTypes = operandTypes;
       this.nullableOperands = nullableOperands;
@@ -715,7 +732,7 @@ public class OperatorConversions
           if (nullableOperands.contains(i)) {
             inferredType = Calcites.createSqlTypeWithNullability(
                 callBinding.getTypeFactory(),
-                defaultTypeForFamily(operandTypes.get(i)),
+                defaultTypeForFamily(operandTypes.get(i).getFamily()),
                 true
             );
           } else {

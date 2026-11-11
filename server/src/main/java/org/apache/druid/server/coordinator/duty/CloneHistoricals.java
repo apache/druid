@@ -22,13 +22,16 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CloneStatusManager;
+import org.apache.druid.server.coordinator.CloneSyncCriteria;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -38,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,6 +49,13 @@ import java.util.stream.Collectors;
  * Handles cloning of historicals. Given the historical to historical clone mappings, based on
  * {@link CoordinatorDynamicConfig#getCloneServers()}, copies any segments load or unload requests from the source
  * historical to the target historical.
+ * <p>
+ * Under a partial-load rule the source holds only part of a segment, so copying its load state means copying the
+ * {@link PartialLoadProfile} it holds the segment under, not just the segment id. Replicas are therefore compared by
+ * profile fingerprint: a clone whose replica was loaded under a different profile than the source's is re-loaded with
+ * the source's profile, including a source that has stopped loading partially, for which the clone is re-loaded
+ * without one. Clone targets are excluded from rule-driven assignment
+ * ({@link DruidCluster#getManagedHistoricals()}), so this duty is the only thing that can correct them.
  */
 public class CloneHistoricals implements CoordinatorDuty
 {
@@ -85,6 +96,7 @@ public class CloneHistoricals implements CoordinatorDuty
                                                                      serverHolder -> serverHolder
                                                                  ));
 
+    final Map<String, CloningStats> targetHistoricalStats = new HashMap<>();
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetHistoricalName = entry.getKey();
       final ServerHolder targetServer = hostToHistoricalMap.get(targetHistoricalName);
@@ -101,12 +113,24 @@ public class CloneHistoricals implements CoordinatorDuty
         continue;
       }
 
+      final CloningStats cloningStats = new CloningStats(sourceServer.getServer().getNumSegments());
+      targetHistoricalStats.put(targetHistoricalName, cloningStats);
+
       final Set<DataSegment> sourceProjectedSegments = sourceServer.getProjectedSegments();
       final Set<DataSegment> targetProjectedSegments = targetServer.getProjectedSegments();
-      // Load any segments missing in the clone target.
+      // Load any segment that the clone target is missing, or that it holds under a different partial-load profile
+      // than the source. Segment identity alone can't tell those apart: two replicas of the same segment id may hold
+      // different parts of it.
       for (DataSegment segment : sourceProjectedSegments) {
-        if (!targetProjectedSegments.contains(segment)) {
-          loadSegmentOnTargetServer(segment, targetServer, params);
+        final PartialLoadProfile sourceProfile = sourceServer.getProjectedProfile(segment);
+        if (shouldLoadSegmentOnTargetServer(segment, sourceProfile, targetServer, targetProjectedSegments)) {
+          loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
+        }
+
+        if (params.isUsedSegment(segment)
+            && targetServer.isLoadingSegment(segment)
+            && sourceServer.isServingSegment(segment)) {
+          cloningStats.incrementMissingSegmentCount(sourceServer.isServingSegment(segment));
         }
       }
 
@@ -118,20 +142,31 @@ public class CloneHistoricals implements CoordinatorDuty
       }
     }
 
-    final Map<String, ServerCloneStatus> newStatusMap = createCurrentStatusMap(hostToHistoricalMap, cloneServers);
+    final Map<String, ServerCloneStatus> newStatusMap = createCurrentStatusMap(
+        hostToHistoricalMap,
+        cloneServers,
+        targetHistoricalStats,
+        params
+    );
     cloneStatusManager.updateStatus(newStatusMap);
 
     return params;
   }
 
+  /**
+   * Queues a load of {@code segment} on the clone target, asking for the same parts of the segment that the source
+   * holds. A null {@code sourceProfile} means the source holds the whole segment, which is the regular full load.
+   */
   private void loadSegmentOnTargetServer(
       DataSegment segment,
+      @Nullable PartialLoadProfile sourceProfile,
       ServerHolder targetServer,
       DruidCoordinatorRuntimeParams params
   )
   {
     final RowKey.Builder rowKey = RowKey
         .with(Dimension.SERVER, targetServer.getServer().getName())
+        .with(Dimension.TIER, targetServer.getServer().getTier())
         .with(Dimension.DATASOURCE, segment.getDataSource());
 
     final DataSegment loadableSegment = getLoadableSegment(segment, params);
@@ -141,13 +176,24 @@ public class CloneHistoricals implements CoordinatorDuty
           rowKey.and(Dimension.DESCRIPTION, "Segment not found in metadata cache"),
           1L
       );
-    } else if (loadQueueManager.loadSegment(loadableSegment, targetServer, SegmentAction.LOAD)) {
+    } else if (loadQueueManager.loadSegment(
+        loadableSegment,
+        targetServer,
+        SegmentAction.LOAD,
+        sourceProfile == null ? null : sourceProfile.asCloneRequest()
+    )) {
       params.getCoordinatorStats().add(
           Stats.Segments.ASSIGNED_TO_CLONE,
           rowKey.build(),
           1L
       );
     }
+  }
+
+  @Nullable
+  private static String fingerprintOf(@Nullable PartialLoadProfile profile)
+  {
+    return profile == null ? null : profile.fingerprint();
   }
 
   private void dropSegmentFromTargetServer(
@@ -157,11 +203,15 @@ public class CloneHistoricals implements CoordinatorDuty
   )
   {
     if (targetServer.isLoadingSegment(segment)) {
-      targetServer.cancelOperation(SegmentAction.LOAD, segment);
+      targetServer.cancelLoad(segment);
     } else if (loadQueueManager.dropSegment(segment, targetServer)) {
+      final RowKey rowKey = RowKey
+          .with(Dimension.SERVER, targetServer.getServer().getName())
+          .with(Dimension.TIER, targetServer.getServer().getTier())
+          .and(Dimension.DATASOURCE, segment.getDataSource());
       params.getCoordinatorStats().add(
           Stats.Segments.DROPPED_FROM_CLONE,
-          RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
+          rowKey,
           1L
       );
     }
@@ -193,10 +243,13 @@ public class CloneHistoricals implements CoordinatorDuty
    */
   private Map<String, ServerCloneStatus> createCurrentStatusMap(
       Map<String, ServerHolder> historicalMap,
-      Map<String, String> cloneServers
+      Map<String, String> cloneServers,
+      Map<String, CloningStats> targetHistoricalStats,
+      DruidCoordinatorRuntimeParams params
   )
   {
     final Map<String, ServerCloneStatus> newStatusMap = new HashMap<>();
+    final CloneSyncCriteria cloneSyncCriteria = params.getCoordinatorDynamicConfig().getCloneSyncCriteria();
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetServerName = entry.getKey();
@@ -211,10 +264,12 @@ public class CloneHistoricals implements CoordinatorDuty
       if (targetServer == null) {
         newStatus = ServerCloneStatus.unknown(sourceServerName, targetServerName);
       } else {
-
         ServerCloneStatus.State state;
+        final CloningStats stats = targetHistoricalStats.getOrDefault(targetServerName, new CloningStats(0));
         if (!historicalMap.containsKey(sourceServerName)) {
           state = ServerCloneStatus.State.SOURCE_SERVER_MISSING;
+        } else if (isSynced(stats, cloneSyncCriteria)) {
+          state = ServerCloneStatus.State.SYNCED;
         } else {
           state = ServerCloneStatus.State.IN_PROGRESS;
         }
@@ -227,11 +282,102 @@ public class CloneHistoricals implements CoordinatorDuty
             segmentDrop += 1;
           }
         }
-        newStatus = new ServerCloneStatus(sourceServerName, targetServerName, state, segmentLoad, segmentDrop, bytesLeft);
+        newStatus = new ServerCloneStatus(
+            sourceServerName,
+            targetServerName,
+            state,
+            segmentLoad,
+            segmentDrop,
+            stats.segmentsPendingSync,
+            stats.percentPendingSync(),
+            bytesLeft
+        );
+        collectMetrics(targetServer, newStatus, params.getCoordinatorStats());
       }
       newStatusMap.put(targetServerName, newStatus);
     }
 
     return newStatusMap;
+  }
+
+  /**
+   * Determine whether a segment should be loaded on the target server.
+   * <p>
+   * If the target server does not have the segment, it should be loaded. If the target server has the segment but with
+   * a different partial load profile than the source server, it should also be loaded.
+   * <p>
+   * The two conditions are separate because a null profile does not identify a missing replica: a target that does not
+   * have the segment and a target holding it as a regular full load both project no profile at all.
+   */
+  private boolean shouldLoadSegmentOnTargetServer(
+      DataSegment segment,
+      @Nullable PartialLoadProfile sourceProfile,
+      ServerHolder targetServer,
+      Set<DataSegment> targetProjectedSegments
+  )
+  {
+    if (!targetProjectedSegments.contains(segment)) {
+      return true;
+    }
+    final PartialLoadProfile targetProfile = targetServer.getProjectedProfile(segment);
+    return !Objects.equals(fingerprintOf(sourceProfile), fingerprintOf(targetProfile));
+  }
+
+  private boolean isSynced(CloningStats stats, CloneSyncCriteria criteria)
+  {
+    return stats.segmentsPendingSync <= criteria.getMaxSegmentsPendingSync()
+        && stats.percentPendingSync() <= criteria.getMaxPercentPendingSync();
+  }
+
+  /**
+   * Adds metrics for this clone to the run stats.
+   */
+  private void collectMetrics(
+      ServerHolder targetServer,
+      ServerCloneStatus newStatus,
+      CoordinatorRunStats stats
+  )
+  {
+    final String targetServerName = targetServer.getServer().getName();
+    final RowKey rowKey = RowKey.with(Dimension.SERVER, targetServerName)
+                                .and(Dimension.TIER, targetServer.getServer().getTier());
+    stats.add(Stats.Segments.PENDING_SYNC_ON_CLONE, rowKey, newStatus.segmentsPendingSync());
+
+    final boolean isSynced = newStatus.state() == ServerCloneStatus.State.SYNCED;
+    stats.add(Stats.Tier.CLONE_SYNCED, rowKey, isSynced ? 1L : 0L);
+  }
+
+  private static class CloningStats
+  {
+    final int totalSegmentsLoadedOnSource;
+
+    /**
+     * Number of segments already loaded on source server but not on target server.
+     */
+    int segmentsPendingSync = 0;
+
+    CloningStats(int totalSegmentsLoadedOnSource)
+    {
+      this.totalSegmentsLoadedOnSource = totalSegmentsLoadedOnSource;
+    }
+
+    void incrementMissingSegmentCount(boolean loadedOnSourceServer)
+    {
+      if (loadedOnSourceServer) {
+        ++segmentsPendingSync;
+      }
+    }
+
+    /**
+     * Percentage of segments pending sync.
+     */
+    double percentPendingSync()
+    {
+      if (totalSegmentsLoadedOnSource > 0) {
+        return (100.0 * segmentsPendingSync) / totalSegmentsLoadedOnSource;
+      } else {
+        return 0.0;
+      }
+    }
   }
 }

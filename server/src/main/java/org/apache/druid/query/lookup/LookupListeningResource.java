@@ -23,25 +23,40 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.ServletResourceUtils;
-import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.LookupResourceFilter;
 import org.apache.druid.server.listener.resource.AbstractListenerHandler;
 import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.LookupAuthorizationUtils;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Path(ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY)
-@ResourceFilters(ConfigResourceFilter.class)
+@ResourceFilters(LookupResourceFilter.class)
 class LookupListeningResource extends ListenerResource
 {
   private static final Logger LOG = new Logger(LookupListeningResource.class);
@@ -53,7 +68,11 @@ class LookupListeningResource extends ListenerResource
   public LookupListeningResource(
       final @Json ObjectMapper jsonMapper,
       final @Smile ObjectMapper smileMapper,
-      final LookupReferencesManager manager
+      final LookupReferencesManager manager,
+      final Provider<HttpServletRequest> requestProvider,
+      final AuthorizerMapper authorizerMapper,
+      final AuthConfig authConfig,
+      final LookupNodeService lookupNodeService
   )
   {
     super(
@@ -89,12 +108,29 @@ class LookupListeningResource extends ListenerResource
             }
 
             try {
+              final HttpServletRequest request = requestProvider.get();
+              final String tier = lookupNodeService.getLookupTier();
+              final Set<String> lookupNames = new LinkedHashSet<>(state.getToLoad().keySet());
+              lookupNames.addAll(state.getToDrop());
+              authorizeChanges(request, tier, lookupNames, authorizerMapper, authConfig);
               state.getToLoad().forEach(manager::add);
               state.getToDrop().forEach(lookName -> {
                 manager.remove(lookName, state.getToLoad().getOrDefault(lookName, null));
               });
 
-              return Response.status(Response.Status.ACCEPTED).entity(manager.getAllLookupsState()).build();
+              return Response.status(Response.Status.ACCEPTED)
+                             .entity(readableState(
+                                 request,
+                                 tier,
+                                 manager.getAllLookupsState(),
+                                 authorizerMapper,
+                                 authConfig,
+                                 true
+                             ))
+                             .build();
+            }
+            catch (ForbiddenException e) {
+              throw e;
             }
             catch (Exception e) {
               LOG.error(e, "Error handling request");
@@ -105,6 +141,17 @@ class LookupListeningResource extends ListenerResource
           @Override
           public Object post(final Map<String, LookupExtractorFactory> lookups)
           {
+            final HttpServletRequest request = requestProvider.get();
+            // Single lookup routes were already checked by LookupResourceFilter.
+            if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) == null) {
+              authorizeChanges(
+                  request,
+                  lookupNodeService.getLookupTier(),
+                  lookups.keySet(),
+                  authorizerMapper,
+                  authConfig
+              );
+            }
             final Map<String, LookupExtractorFactory> failedUpdates = new HashMap<>();
             for (final Map.Entry<String, LookupExtractorFactory> lookup : lookups.entrySet()) {
 
@@ -127,7 +174,14 @@ class LookupListeningResource extends ListenerResource
           @Override
           public LookupsState<LookupExtractorFactoryContainer> getAll()
           {
-            return manager.getAllLookupsState();
+            return readableState(
+                requestProvider.get(),
+                lookupNodeService.getLookupTier(),
+                manager.getAllLookupsState(),
+                authorizerMapper,
+                authConfig,
+                false
+            );
           }
 
           @Override
@@ -138,5 +192,65 @@ class LookupListeningResource extends ListenerResource
           }
         }
     );
+  }
+
+  /**
+   * Checks the lookup names in an update before the manager changes node state.
+   */
+  static void authorizeChanges(
+      HttpServletRequest request,
+      String tier,
+      Set<String> lookups,
+      AuthorizerMapper authorizerMapper,
+      AuthConfig authConfig
+  )
+  {
+    if (!authConfig.isEnableLookupAuthorization()) {
+      return;
+    }
+    final List<ResourceAction> actions = lookups.stream()
+                                                .map(lookup -> lookupAction(
+                                                    LookupResourceFilter.resourceName(tier, lookup),
+                                                    Action.WRITE
+                                                ))
+                                                .collect(Collectors.toList());
+    if (actions.isEmpty()) {
+      actions.add(lookupAction(LookupResourceFilter.resourceName(tier, null), Action.WRITE));
+    }
+    LookupAuthorizationUtils.authorizeResourceActions(request, actions, authorizerMapper);
+  }
+
+  /**
+   * Filters a node state by READ grants. A write response uses the existing request identity
+   * because its WRITE check already marked the request as authorized.
+   */
+  static <T> LookupsState<T> readableState(
+      HttpServletRequest request,
+      String tier,
+      LookupsState<T> state,
+      AuthorizerMapper authorizerMapper,
+      AuthConfig authConfig,
+      boolean writeResponse
+  )
+  {
+    if (!authConfig.isEnableLookupAuthorization()
+        || writeResponse && request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
+      return state;
+    }
+    final Set<String> names = new LinkedHashSet<>();
+    LookupAuthorizationUtils.addStateNames(names, tier, state);
+    if (names.isEmpty()) {
+      names.add(LookupResourceFilter.resourceName(tier, null));
+    }
+    return LookupAuthorizationUtils.filterState(
+        LookupAuthorizationUtils.readableNames(request, names, authorizerMapper, writeResponse),
+        tier,
+        state
+    );
+  }
+
+  private static ResourceAction lookupAction(String name, Action action)
+  {
+    return new ResourceAction(new Resource(name, ResourceType.LOOKUP), action);
   }
 }

@@ -31,10 +31,11 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,8 +50,8 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
     BuiltInTypesModule.registerHandlersAndSerde();
   }
 
-  @TempDir
-  File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testReadSegmentWithBuggyPaths() throws IOException
@@ -61,7 +62,7 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
     // prior to https://github.com/apache/druid/pull/19072 this would fail with an error like
     // org.apache.druid.error.DruidException: jq path [$[''].a] is invalid, path parts separated by '.' must not be empty
     // (which was also incorrect since it is a JSONPath not jq path)
-    File tmpLocation = new File(tempDir, "druid.segment");
+    File tmpLocation = temporaryFolder.newFile("druid.segment");
     Files.copy(
         NestedDataColumnSupplierEmptyFieldsBugTest.class.getClassLoader()
                                                         .getResourceAsStream("nested_segment_empty_fieldname_bug/druid.segment"),
@@ -69,7 +70,9 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
         StandardCopyOption.REPLACE_EXISTING
     );
     try (Closer closer = Closer.create()) {
-      QueryableIndex theIndex = closer.register(TestHelper.getTestIndexIO().loadIndex(tempDir));
+      QueryableIndex theIndex = closer.register(
+          TestHelper.getTestIndexIO().loadIndex(temporaryFolder.getRoot())
+      );
       ColumnHolder columnHolder = theIndex.getColumnHolder("obj");
       Assertions.assertNotNull(columnHolder);
       NestedDataColumnV5<?, ?> v5 = closer.register((NestedDataColumnV5<?, ?>) columnHolder.getColumn());

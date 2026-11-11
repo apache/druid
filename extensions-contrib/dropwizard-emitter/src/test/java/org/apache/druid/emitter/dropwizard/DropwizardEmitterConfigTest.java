@@ -26,9 +26,9 @@ import org.apache.druid.emitter.dropwizard.reporters.DropwizardConsoleReporter;
 import org.apache.druid.emitter.dropwizard.reporters.DropwizardJMXReporter;
 import org.apache.druid.guice.JsonConfigTesterBase;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -36,9 +36,10 @@ public class DropwizardEmitterConfigTest extends JsonConfigTesterBase<Dropwizard
 {
   private ObjectMapper mapper = new DefaultObjectMapper();
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  public void setUp() throws IllegalAccessException
   {
+    super.setup();
     testProperties.put(getPropertyKey("reporters"), "[{\"type\":\"jmx\", \"domain\" : \"mydomain\"}]");
     propertyValues.put(getPropertyKey("reporters"), "[DropwizardJMXReporter{domain='mydomain'}]");
     propertyValues.put(getPropertyKey("includeHost"), "true");
@@ -46,6 +47,25 @@ public class DropwizardEmitterConfigTest extends JsonConfigTesterBase<Dropwizard
         ObjectMapper.class,
         new DefaultObjectMapper()
     ));
+  }
+
+  @Test
+  public void testSimpleInjection()
+  {
+    configProvider.inject(testProperties, configurator);
+    DropwizardEmitterConfig config = configProvider.get();
+    Assertions.assertEquals(propertyValues.get(getPropertyKey("reporters")), config.getReporters().toString());
+    Assertions.assertEquals(propertyValues.get(getPropertyKey("prefix")), config.getPrefix());
+    Assertions.assertEquals(propertyValues.get(getPropertyKey("includeHost")), String.valueOf(config.getIncludeHost()));
+    Assertions.assertEquals(
+        propertyValues.get(getPropertyKey("dimensionMapPath")),
+        String.valueOf(config.getDimensionMapPath())
+    );
+    Assertions.assertEquals(propertyValues.get(getPropertyKey("alertEmitters")), config.getAlertEmitters().toString());
+    Assertions.assertEquals(
+        propertyValues.get(getPropertyKey("maxMetricsRegistrySize")),
+        String.valueOf(config.getMaxMetricsRegistrySize())
+    );
   }
 
   @Test
@@ -63,7 +83,7 @@ public class DropwizardEmitterConfigTest extends JsonConfigTesterBase<Dropwizard
     DropwizardEmitterConfig dropwizardEmitterConfigExpected = mapper.readerFor(DropwizardEmitterConfig.class).readValue(
         dropwizardEmitterConfigString
     );
-    Assert.assertEquals(dropwizardEmitterConfigExpected, dropwizardEmitterConfig);
+    Assertions.assertEquals(dropwizardEmitterConfigExpected, dropwizardEmitterConfig);
   }
 
   @Test
@@ -75,12 +95,10 @@ public class DropwizardEmitterConfigTest extends JsonConfigTesterBase<Dropwizard
     testProperties.putAll(propertyValues);
     configProvider.inject(testProperties, configurator);
     DropwizardEmitterConfig config = configProvider.get();
-    Assert.assertTrue("IncludeHost", config.getIncludeHost());
-    Assert.assertEquals("test-prefix", config.getPrefix());
-    Assert.assertEquals(1, config.getReporters().size());
-    Assert.assertTrue("jmx reporter", config.getReporters().get(0) instanceof DropwizardJMXReporter);
+    Assertions.assertTrue(config.getIncludeHost(), "IncludeHost");
+    Assertions.assertEquals("test-prefix", config.getPrefix());
+    Assertions.assertEquals(1, config.getReporters().size());
+    Assertions.assertTrue(config.getReporters().get(0) instanceof DropwizardJMXReporter, "jmx reporter");
   }
 
 }
-
-

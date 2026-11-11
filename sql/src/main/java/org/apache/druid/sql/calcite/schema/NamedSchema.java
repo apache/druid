@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.Resource;
 
 import javax.annotation.Nullable;
 
@@ -35,15 +36,11 @@ public interface NamedSchema
   String getSchemaName();
 
   /**
-   * For a given name of a table, function, etc of this schema, return the value most appropriate to use for
-   * {@link org.apache.druid.server.security.Resource#getType()} for the resource, used during authorization. If this
-   * method returns null then the resource does not need any authorization.
+   * For a given name of a table, function, etc of this schema, return {@link Resource} to use
+   * during authorization. If this method returns null then the resource does not need any authorization.
    */
   @Nullable
-  default String getSchemaResourceType(String resourceName)
-  {
-    return null;
-  }
+  Resource getSchemaResource(String resourceName);
 
   /**
    * @return The Schema that Calcite should use.

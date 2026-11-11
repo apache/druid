@@ -22,7 +22,7 @@ package org.apache.druid.query;
 import java.util.Map;
 
 /**
- * Provides the default query config applied to all incoming queries before per-query overrides are merged in.
+ * Provides the default query context applied to all incoming queries before per-query overrides are merged in.
  *
  * <p>On non-broker nodes this is backed by static runtime properties ({@link DefaultQueryConfig}).
  * On brokers, it is backed by {@code BrokerViewOfBrokerConfig}, which merges the static defaults with
@@ -31,4 +31,22 @@ import java.util.Map;
 public interface QueryConfigProvider
 {
   Map<String, Object> getContext();
+
+  /**
+   * {@link #getContext()} together with the overrides that operators set at runtime, such as through the Broker dynamic
+   * configuration, read from the same configuration generation so that the two agree.
+   */
+  default ContextWithOverrides getContextWithOverrides()
+  {
+    return new ContextWithOverrides(getContext(), Map.of());
+  }
+
+  /**
+   * @param context          the default query context, as returned by {@link #getContext()}
+   * @param dynamicOverrides the runtime overrides merged over the static defaults into {@code context}. A {@code null}
+   *                         value unsets the key in {@code context}. Empty when there are no runtime overrides.
+   */
+  record ContextWithOverrides(Map<String, Object> context, Map<String, Object> dynamicOverrides)
+  {
+  }
 }

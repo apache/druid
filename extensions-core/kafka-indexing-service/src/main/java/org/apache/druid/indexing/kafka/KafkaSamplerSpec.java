@@ -74,7 +74,10 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
           objectMapper,
           kafkaSupervisorIOConfig.getConfigOverrides(),
           kafkaSupervisorIOConfig.isMultiTopic(),
-          null
+          null,
+          // Apply the same header-based filter during sampling so sampled records match what ingestion tasks keep.
+          kafkaSupervisorIOConfig.getHeaderBasedFilterConfig(),
+          kafkaSupervisorIOConfig.getPartitionIds()
       );
     }
     finally {

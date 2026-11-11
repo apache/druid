@@ -20,10 +20,14 @@
 package org.apache.druid.testing.embedded.msq;
 
 import org.apache.druid.guice.ClusterTestingModule;
+import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.metrics.LatchableEmitter;
+import org.apache.druid.testing.cluster.task.FaultyOverlordClient;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -33,10 +37,12 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test to verify that cancelled worker tasks are retried when fault tolerance
@@ -46,6 +52,8 @@ import java.util.Map;
  */
 public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 {
+  private static final long CONTROLLER_RETRY_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(60);
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
@@ -94,35 +102,56 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
     final EmbeddedIndexer faultyIndexer = new EmbeddedIndexer()
         .addProperty("druid.plaintextPort", "7091")
         .addProperty("druid.unsafe.cluster.testing", "true")
+        // Keep the faulty worker's task-status request blocked until cancellation is observed.
         .addProperty("druid.unsafe.cluster.testing.overlordClient.taskStatusDelay", "PT1H")
         .addProperty("druid.worker.capacity", "1");
     cluster.addServer(faultyIndexer);
     faultyIndexer.start();
+    final FaultyOverlordClient faultyOverlordClient =
+        (FaultyOverlordClient) faultyIndexer.bindings().getInstance(OverlordClient.class);
 
     // Let the worker run for a bit so that controller task moves to READING_INPUT phase
     final ServiceMetricEvent matchingEvent = faultyIndexer.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("ingest/count")
     );
     final String workerTaskId = (String) matchingEvent.getUserDims().get(DruidMetrics.TASK_ID);
-    Thread.sleep(100);
+    try {
+      Assertions.assertTrue(
+          faultyOverlordClient.awaitTaskStatusDelayEntered(30, TimeUnit.SECONDS),
+          "The faulty indexer did not enter the delayed task-status call"
+      );
 
-    // Add a functional Indexer where the worker can be relaunched
-    final EmbeddedIndexer functionalIndexer = new EmbeddedIndexer()
-        .addProperty("druid.plaintextPort", "6091")
-        .addProperty("druid.worker.capacity", "1");
-    cluster.addServer(functionalIndexer);
-    functionalIndexer.start();
+      // Add a functional Indexer where the worker can be relaunched
+      final EmbeddedIndexer functionalIndexer = new EmbeddedIndexer()
+          .addProperty("druid.plaintextPort", "6091")
+          .addProperty("druid.worker.capacity", "1");
+      cluster.addServer(functionalIndexer);
+      functionalIndexer.start();
 
-    // Cancel the worker task and verify that it has failed
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(workerTaskId));
+      // Cancel the worker task and verify that it has failed
+      cluster.callApi().onLeaderOverlord(o -> o.cancelTask(workerTaskId));
+      overlord.latchableEmitter().waitForEvent(
+          event -> event.hasMetricName("task/run/time")
+                        .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                        .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
+      );
+    }
+    finally {
+      faultyOverlordClient.releaseTaskStatusDelay();
+      faultyIndexer.stop();
+    }
+
+    // The controller must detect the failed worker and relaunch it on the functional Indexer,
+    // which can take much longer than the default 10s wait on a busy machine
+    final LatchableEmitter.EventMatcher controllerFinished = new LatchableEmitter.EventMatcher()
+        .hasMetricName(TaskMetrics.RUN_DURATION)
+        .hasDimension(DruidMetrics.TASK_ID, taskStatus.getTaskId());
     overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/run/time")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
+        event -> event instanceof ServiceMetricEvent && controllerFinished.test((ServiceMetricEvent) event),
+        CONTROLLER_RETRY_TIMEOUT_MILLIS
     );
-    faultyIndexer.stop();
 
-    // Verify that the controller task eventually succeeds
+    // Verify that the controller task succeeds
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 

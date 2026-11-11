@@ -22,8 +22,8 @@ package org.apache.druid.msq.counters;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CpuCountersTest
 {
@@ -34,7 +34,7 @@ public class CpuCountersTest
     final CpuCounter counter = counters.forName("xyz");
     counter.run(() -> { /* Nothing in particular */ });
     final CpuCounters.Snapshot snapshot = counters.snapshot();
-    Assert.assertEquals(ImmutableSet.of("xyz"), snapshot.getCountersMap().keySet());
+    Assertions.assertEquals(ImmutableSet.of("xyz"), snapshot.getCountersMap().keySet());
   }
 
   @Test
@@ -42,9 +42,9 @@ public class CpuCountersTest
   {
     final CpuCounters counters = new CpuCounters();
     final CpuCounter counter = counters.forName("xyz");
-    Assert.assertEquals("boo", counter.run(() -> "boo"));
+    Assertions.assertEquals("boo", counter.run(() -> "boo"));
     final CpuCounters.Snapshot snapshot = counters.snapshot();
-    Assert.assertEquals(ImmutableSet.of("xyz"), snapshot.getCountersMap().keySet());
+    Assertions.assertEquals(ImmutableSet.of("xyz"), snapshot.getCountersMap().keySet());
   }
 
   @Test
@@ -54,7 +54,7 @@ public class CpuCountersTest
     final CpuCounter counter = counters.forName("xyz");
     counter.accumulate(1L, 1L);
     final CpuCounters.Snapshot snapshot = counters.snapshot();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of("xyz", new CpuCounter.Snapshot(1L, 1L)),
         snapshot.getCountersMap()
     );

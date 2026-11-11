@@ -25,8 +25,8 @@ import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.Pair;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -43,7 +43,7 @@ public class MemoryOpenHashTableTest
   @Test
   public void testMemoryNeeded()
   {
-    Assert.assertEquals(512, MemoryOpenHashTable.memoryNeeded(128, 4));
+    Assertions.assertEquals(512, MemoryOpenHashTable.memoryNeeded(128, 4));
   }
 
   @Test
@@ -51,9 +51,9 @@ public class MemoryOpenHashTableTest
   {
     final MemoryOpenHashTable table = createTable(8, .75, 4, 4);
 
-    Assert.assertEquals(8, table.numBuckets());
-    Assert.assertEquals(72, table.memory().getCapacity());
-    Assert.assertEquals(9, table.bucketSize());
+    Assertions.assertEquals(8, table.numBuckets());
+    Assertions.assertEquals(72, table.memory().getCapacity());
+    Assertions.assertEquals(9, table.bucketSize());
     assertEqualsMap(ImmutableMap.of(), table);
   }
 
@@ -73,7 +73,7 @@ public class MemoryOpenHashTableTest
         int bucket = table.findBucket(HashTableUtils.hashMemory(keyMemory, 0, Integer.BYTES), keyMemory, 0);
 
         if (bucket < 0) {
-          Assert.assertTrue(table.canInsertNewBucket());
+          Assertions.assertTrue(table.canInsertNewBucket());
           bucket = -(bucket + 1);
           table.initBucket(bucket, keyMemory, 0);
           final int valuePosition = table.bucketMemoryPosition(bucket) + table.bucketValueOffset();
@@ -111,7 +111,7 @@ public class MemoryOpenHashTableTest
 
       // Find bucket for key (which should not already exist).
       final int bucket = findAndInitBucket(table, key);
-      Assert.assertTrue("bucket < 0 for key " + key, bucket < 0);
+      Assertions.assertTrue(bucket < 0, "bucket < 0 for key " + key);
 
       // Insert bucket and write value.
       writeValueToBucket(table, -(bucket + 1), value);
@@ -121,7 +121,7 @@ public class MemoryOpenHashTableTest
     }
 
     // This table should fill up at 255 elements (256 buckets, .999 load factor)
-    Assert.assertEquals("expected size", 255, table.size());
+    Assertions.assertEquals(255, table.size(), "expected size");
     assertEqualsMap(expectedMap, table);
   }
 
@@ -141,14 +141,14 @@ public class MemoryOpenHashTableTest
     // Populate table1.
     for (Int2IntMap.Entry entry : expectedMap.int2IntEntrySet()) {
       final int bucket = findAndInitBucket(table1, entry.getIntKey());
-      Assert.assertTrue("bucket < 0 for key " + entry.getIntKey(), bucket < 0);
+      Assertions.assertTrue(bucket < 0, "bucket < 0 for key " + entry.getIntKey());
       writeValueToBucket(table1, -(bucket + 1), entry.getIntValue());
     }
 
     // Copy to table2.
     table1.copyTo(table2, ((oldBucket, newBucket, oldTable, newTable) -> {
-      Assert.assertSame(table1, oldTable);
-      Assert.assertSame(table2, newTable);
+      Assertions.assertSame(table1, oldTable);
+      Assertions.assertSame(table2, newTable);
     }));
 
     // Compute expected map to compare these tables to.
@@ -178,7 +178,7 @@ public class MemoryOpenHashTableTest
     // Populate table.
     for (Int2IntMap.Entry entry : expectedMap.int2IntEntrySet()) {
       final int bucket = findAndInitBucket(table, entry.getIntKey());
-      Assert.assertTrue("bucket < 0 for key " + entry.getIntKey(), bucket < 0);
+      Assertions.assertTrue(bucket < 0, "bucket < 0 for key " + entry.getIntKey());
       writeValueToBucket(table, -(bucket + 1), entry.getIntValue());
     }
 
@@ -316,14 +316,14 @@ public class MemoryOpenHashTableTest
 
   private static void assertEqualsMap(final Map<ByteBuffer, ByteBuffer> expected, final MemoryOpenHashTable actual)
   {
-    Assert.assertEquals("size", expected.size(), actual.size());
-    Assert.assertEquals(
-        "entries",
+    Assertions.assertEquals(expected.size(), actual.size(), "size");
+    Assertions.assertEquals(
         expected.entrySet()
                 .stream()
                 .map(entry -> new ByteBufferPair(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toSet()),
-        pairSet(actual)
+        pairSet(actual),
+        "entries"
     );
   }
 

@@ -93,6 +93,12 @@ public class RecoverAsyncResource<T> implements AsyncResource<T>
     try {
       value = sourceResource.get();
     }
+    catch (AsyncResourceCanceledException e) {
+      // The source was closed before it became available, so this callback is firing from its close() and there is no
+      // consumer left to recover for.
+      targetResource.setException(e);
+      return;
+    }
     catch (Throwable e) {
       final T recovered;
       try {

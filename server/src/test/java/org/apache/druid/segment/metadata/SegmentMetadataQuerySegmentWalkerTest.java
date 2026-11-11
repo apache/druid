@@ -45,6 +45,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -63,10 +64,10 @@ import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -90,10 +91,10 @@ public class SegmentMetadataQuerySegmentWalkerTest
   private TestCoordinatorServerView testCoordinatorServerView;
   private Module module;
 
-  @ClassRule
-  public static QueryStackTests.Junit4ConglomerateRule conglomerateRule = new QueryStackTests.Junit4ConglomerateRule();
+  @RegisterExtension
+  public static QueryStackTests.ConglomerateExtension conglomerateRule = new QueryStackTests.ConglomerateExtension();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     DruidHttpClientConfig httpClientConfig = new DruidHttpClientConfig()
@@ -149,7 +150,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
         new MultipleSpecificSegmentSpec(segmentDescriptors),
         new AllColumnIncluderator(),
         false,
-        QueryContexts.override(Collections.emptyMap(), QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        QueryContexts.override(Collections.emptyMap(), QueryContextParameters.ENABLE_PARALLEL_MERGE, false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
@@ -172,7 +173,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
                                                           .map(ServerExpectation::getSegment)
                                                           .map(segment -> segment.getId().toString())
                                                           .collect(Collectors.toSet());
-    Assert.assertEquals(expectedSegmentIds, actualSegmentIds);
+    Assertions.assertEquals(expectedSegmentIds, actualSegmentIds);
   }
 
   @Test
@@ -203,7 +204,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
         new MultipleSpecificSegmentSpec(segmentDescriptors),
         new AllColumnIncluderator(),
         false,
-        QueryContexts.override(Collections.emptyMap(), QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        QueryContexts.override(Collections.emptyMap(), QueryContextParameters.ENABLE_PARALLEL_MERGE, false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
@@ -226,7 +227,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
                                                           .map(ServerExpectation::getSegment)
                                                           .map(segment -> segment.getId().toString())
                                                           .collect(Collectors.toSet());
-    Assert.assertEquals(expectedSegmentIds, actualSegmentIds);
+    Assertions.assertEquals(expectedSegmentIds, actualSegmentIds);
   }
 
   @Test
@@ -270,7 +271,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
         new MultipleSpecificSegmentSpec(segmentDescriptors),
         new AllColumnIncluderator(),
         false,
-        QueryContexts.override(Collections.emptyMap(), QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        QueryContexts.override(Collections.emptyMap(), QueryContextParameters.ENABLE_PARALLEL_MERGE, false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
@@ -294,7 +295,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
                              .map(ServerExpectation::getSegment)
                              .map(segment -> segment.getId().toString())
                              .collect(Collectors.toSet());
-    Assert.assertEquals(expectedSegmentIds, actualSegmentIds);
+    Assertions.assertEquals(expectedSegmentIds, actualSegmentIds);
   }
 
   private Map<String, ServerExpectations> populateTimeline(

@@ -1,52 +1,31 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`TimedButton matches snapshot 1`] = `
-<Blueprint5.ButtonGroup
-  className="timed-button"
+<div
+  class="bp6-button-group timed-button"
 >
-  <Blueprint5.Button
-    onClick={[Function]}
+  <button
+    class="bp6-button"
+    type="button"
   />
-  <Blueprint5.Popover
-    boundary="clippingParents"
-    captureDismiss={false}
-    content={
-      <Blueprint5.Menu>
-        <Blueprint5.MenuDivider
-          title="Select delay"
-        />
-        <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
-          icon="tick-circle"
-          multiline={false}
-          onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
-          text="timeValue"
-        />
-      </Blueprint5.Menu>
-    }
-    defaultIsOpen={false}
-    disabled={false}
-    fill={false}
-    hasBackdrop={false}
-    hoverCloseDelay={300}
-    hoverOpenDelay={150}
-    inheritDarkTheme={true}
-    interactionKind="click"
-    matchTargetWidth={false}
-    minimal={false}
-    openOnTargetFocus={true}
-    positioningStrategy="absolute"
-    shouldReturnFocusOnClose={false}
-    targetTagName="span"
-    transitionDuration={300}
-    usePortal={true}
+  <span
+    class="bp6-popover-target"
   >
-    <Blueprint5.Button
-      rightIcon="caret-down"
-    />
-  </Blueprint5.Popover>
-</Blueprint5.ButtonGroup>
+    <button
+      aria-expanded="false"
+      aria-haspopup="menu"
+      class="bp6-button"
+      type="button"
+    >
+      <span
+        aria-hidden="true"
+        class="bp6-icon bp6-icon-caret-down"
+      >
+        <svg
+          data-icon="caret-down"
+        />
+      </span>
+    </button>
+  </span>
+</div>
 `;

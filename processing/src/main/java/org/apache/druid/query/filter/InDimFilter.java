@@ -141,7 +141,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   {
     this(
         dimension,
-        values instanceof ValuesSet ? (ValuesSet) values : new ValuesSet(values),
+        values instanceof ValuesSet valuesSet ? valuesSet : new ValuesSet(values),
         null,
         null,
         null
@@ -161,7 +161,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   {
     this(
         dimension,
-        values instanceof ValuesSet ? (ValuesSet) values : new ValuesSet(values),
+        values instanceof ValuesSet valuesSet ? valuesSet : new ValuesSet(values),
         extractionFn,
         null,
         null
@@ -820,7 +820,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
-    public boolean add(String s)
+    public boolean add(@Nullable final String s)
     {
       return delegate().add(s);
     }

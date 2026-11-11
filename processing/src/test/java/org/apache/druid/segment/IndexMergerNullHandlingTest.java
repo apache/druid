@@ -37,13 +37,13 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.roaringbitmap.IntIterator;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -62,8 +62,8 @@ public class IndexMergerNullHandlingTest
   private IndexSpec indexSpec;
 
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp()
@@ -113,8 +113,9 @@ public class IndexMergerNullHandlingTest
         toPersist.add(new MapBasedInputRow(0L, ImmutableList.of("d"), m));
       }
 
-      final File tempDir = temporaryFolder;
-      try (QueryableIndex index = indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))) {
+      try (QueryableIndex index = indexIO.loadIndex(
+          indexMerger.persist(toPersist, temporaryFolder.getRoot(), indexSpec, null)
+      )) {
         final ColumnHolder columnHolder = index.getColumnHolder("d");
 
         if (nullFlavors.containsAll(subsetList)) {

@@ -32,8 +32,8 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Set;
@@ -69,8 +69,7 @@ public class KafkaSeekableStreamStartSequenceNumbersTest
         new TypeReference<>() {}
     );
 
-    Assert.assertEquals(
-        "Round trip",
+    Assertions.assertEquals(
         partitions,
         new KafkaSeekableStreamStartSequenceNumbers(
             partitions2.getStream(),
@@ -78,7 +77,8 @@ public class KafkaSeekableStreamStartSequenceNumbersTest
             partitions2.getPartitionSequenceNumberMap(),
             partitions2.getPartitionOffsetMap(),
             partitions2.getExclusivePartitions()
-        )
+        ),
+        "Round trip"
     );
 
     // Check backwards compatibility.
@@ -87,20 +87,20 @@ public class KafkaSeekableStreamStartSequenceNumbersTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(stream, asMap.get("stream"));
-    Assert.assertEquals(stream, asMap.get("topic"));
+    Assertions.assertEquals(stream, asMap.get("stream"));
+    Assertions.assertEquals(stream, asMap.get("topic"));
 
     // Jackson will deserialize the maps as string -> int maps, not int -> long.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         offsetMap,
         OBJECT_MAPPER.convertValue(asMap.get("partitionSequenceNumberMap"), new TypeReference<Map<KafkaTopicPartition, Long>>() {})
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         offsetMap,
         OBJECT_MAPPER.convertValue(asMap.get("partitionOffsetMap"), new TypeReference<Map<KafkaTopicPartition, Long>>() {})
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         exclusivePartitions,
         OBJECT_MAPPER.convertValue(asMap.get("exclusivePartitions"), new TypeReference<Set<KafkaTopicPartition>>() {})
     );
@@ -118,7 +118,7 @@ public class KafkaSeekableStreamStartSequenceNumbersTest
       expectedExceptionThrown = true;
     }
 
-    Assert.assertTrue("KafkaSeekableStreamStartSequenceNumbers should not be registered type", expectedExceptionThrown);
+    Assertions.assertTrue(expectedExceptionThrown, "KafkaSeekableStreamStartSequenceNumbers should not be registered type");
   }
 
   private static ObjectMapper createObjectMapper()

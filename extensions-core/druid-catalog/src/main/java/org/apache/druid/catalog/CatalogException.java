@@ -20,6 +20,8 @@
 package org.apache.druid.catalog;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.ws.rs.core.Response;
@@ -84,6 +86,19 @@ public class CatalogException extends Exception
         msg,
         args
     );
+  }
+
+  /**
+   * Converts a table validation failure into a bad request: {@link IAE} (the traditional catalog validation
+   * exception) and invalid-input {@link DruidException}s become bad requests; a {@link DruidException} of any other
+   * category is a genuine server error, and is rethrown rather than being misreported as a problem with the request.
+   */
+  public static CatalogException validationError(RuntimeException e)
+  {
+    if (e instanceof DruidException && ((DruidException) e).getCategory() != DruidException.Category.INVALID_INPUT) {
+      throw e;
+    }
+    return badRequest(e.getMessage());
   }
 
   public Response toResponse()

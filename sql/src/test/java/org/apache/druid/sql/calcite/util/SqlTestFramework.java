@@ -104,18 +104,19 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.CatalogTableWriter;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.DruidSchemaProvider;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchemaProvider;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
@@ -126,6 +127,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.inject.Named;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -218,6 +220,11 @@ public class SqlTestFramework
     default CatalogResolver createCatalogResolver()
     {
       return CatalogResolver.NULL_RESOLVER;
+    }
+
+    default CatalogTableWriter createCatalogTableWriter()
+    {
+      return CatalogTableWriter.NOT_AVAILABLE;
     }
 
     /**
@@ -506,19 +513,23 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private DruidSchema makeDruidSchema(
+                private DruidSchemaProvider makeDruidSchemaProvider(
                     final Injector injector,
                     QueryRunnerFactoryConglomerate conglomerate,
                     QuerySegmentWalker walker,
                     Builder builder,
+                    PlannerConfig plannerConfig,
+                    AuthorizerMapper authorizerMapper,
                     TimelineServerView timelineServerView
                 )
                 {
-                  return QueryFrameworkUtils.createMockSchema(
+                  return QueryFrameworkUtils.createMockSchemaProvider(
                       injector,
                       conglomerate,
                       (SpecificSegmentsQuerySegmentWalker) walker,
                       builder.componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
+                      plannerConfig,
+                      authorizerMapper,
                       builder.catalogResolver,
                       timelineServerView
                   );
@@ -526,12 +537,19 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private SystemSchema makeSystemSchema(
+                private SystemSchemaProvider makeSystemSchema(
+                    DruidSchemaProvider druidSchemaProvider,
+                    TimelineServerView timelineServerView,
                     AuthorizerMapper authorizerMapper,
-                    DruidSchema druidSchema,
-                    TimelineServerView timelineServerView)
+                    PlannerConfig plannerConfig
+                )
                 {
-                  return CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
+                  return CalciteTests.createMockSystemSchemaProvider(
+                      druidSchemaProvider.getSegmentMetadataCache(),
+                      timelineServerView,
+                      authorizerMapper,
+                      plannerConfig
+                  );
                 }
 
                 @Provides
@@ -550,26 +568,25 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private DruidSchemaCatalog makeCatalog(
-                    final PlannerConfig plannerConfig,
+                private DruidSchemaCatalogProvider makeCatalogProvider(
                     final ViewManager viewManager,
                     AuthorizerMapper authorizerMapper,
-                    DruidSchema druidSchema,
-                    SystemSchema systemSchema,
+                    DruidSchemaProvider druidSchemaProvider,
+                    SystemSchemaProvider systemSchemaProvider,
                     LookupSchema lookupSchema,
-                    DruidOperatorTable createOperatorTable
+                    DruidOperatorTable createOperatorTable,
+                    PlannerConfig plannerConfig
                 )
                 {
-                  final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
-                      plannerConfig,
+                  return QueryFrameworkUtils.createMockRootSchemaProvider(
                       viewManager,
                       authorizerMapper,
-                      druidSchema,
-                      systemSchema,
+                      druidSchemaProvider,
+                      systemSchemaProvider,
                       lookupSchema,
-                      createOperatorTable
+                      createOperatorTable,
+                      plannerConfig
                   );
-                  return rootSchema;
                 }
               }
           ),
@@ -751,6 +768,7 @@ public class SqlTestFramework
     private final QueryComponentSupplier componentSupplier;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
+    private CatalogTableWriter catalogTableWriter = CatalogTableWriter.NOT_AVAILABLE;
     private List<Module> overrideModules = new ArrayList<>();
     private SqlTestFrameworkConfig config;
     private Closer resourceCloser = Closer.create();
@@ -769,6 +787,12 @@ public class SqlTestFramework
     public Builder catalogResolver(CatalogResolver catalogResolver)
     {
       this.catalogResolver = catalogResolver;
+      return this;
+    }
+
+    public Builder catalogTableWriter(CatalogTableWriter catalogTableWriter)
+    {
+      this.catalogTableWriter = catalogTableWriter;
       return this;
     }
 
@@ -799,6 +823,11 @@ public class SqlTestFramework
       return catalogResolver;
     }
 
+    public CatalogTableWriter getCatalogTableWriter()
+    {
+      return catalogTableWriter;
+    }
+
     public Closer getResourceCloser()
     {
       return resourceCloser;
@@ -825,7 +854,7 @@ public class SqlTestFramework
     )
     {
       this.viewManager = componentSupplier.createViewManager();
-      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+      final DruidSchemaCatalogProvider schemaProvider = QueryFrameworkUtils.createMockRootSchemaProvider(
           framework.injector,
           framework.conglomerate(),
           framework.walker(),
@@ -838,7 +867,7 @@ public class SqlTestFramework
       );
 
       this.plannerFactory = new PlannerFactory(
-          rootSchema,
+          schemaProvider,
           framework.operatorTable(),
           framework.macroTable(),
           plannerConfig,
@@ -848,6 +877,7 @@ public class SqlTestFramework
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
           framework.injector.getInstance(JoinableFactoryWrapper.class),
           framework.builder.catalogResolver,
+          framework.builder.catalogTableWriter,
           authConfig != null ? authConfig : new AuthConfig(),
           NoopPolicyEnforcer.instance(),
           new DruidHookDispatcher()

@@ -29,7 +29,8 @@ import org.apache.druid.catalog.model.table.InputFormats.FlatTextFormatDefn;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.IAE;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,10 +38,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 public class InlineInputSourceDefnTest extends BaseExternTableTest
 {
@@ -54,7 +51,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
         .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -66,7 +63,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
         .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -77,7 +74,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
         .inputFormat(CSV_FORMAT)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -97,10 +94,10 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
   {
     InputSourceDefn defn = registry.inputSourceDefnFor(InlineInputSourceDefn.TYPE_KEY);
     TableFunction fn = defn.adHocTableFn();
-    assertNotNull(fn);
-    assertTrue(hasParam(fn, InlineInputSourceDefn.DATA_PROPERTY));
-    assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
-    assertTrue(hasParam(fn, FlatTextFormatDefn.LIST_DELIMITER_PARAMETER));
+    Assertions.assertNotNull(fn);
+    Assertions.assertTrue(hasParam(fn, InlineInputSourceDefn.DATA_PROPERTY));
+    Assertions.assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, FlatTextFormatDefn.LIST_DELIMITER_PARAMETER));
   }
 
   @Test
@@ -108,7 +105,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
   {
     InputSourceDefn defn = registry.inputSourceDefnFor(InlineInputSourceDefn.TYPE_KEY);
     TableFunction fn = defn.adHocTableFn();
-    assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
   }
 
   @Test
@@ -118,7 +115,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     TableFunction fn = defn.adHocTableFn();
     Map<String, Object> args = new HashMap<>();
     args.put(InlineInputSourceDefn.DATA_PROPERTY, "a");
-    assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
   }
 
   @Test
@@ -137,17 +134,17 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     final TableFunction fn = defn.adHocTableFn();
     ExternalTableSpec extern = fn.apply("x", args, columns, mapper);
 
-    assertTrue(extern.inputSource instanceof InlineInputSource);
+    Assertions.assertTrue(extern.inputSource instanceof InlineInputSource);
     InlineInputSource inputSource = (InlineInputSource) extern.inputSource;
-    assertEquals("a,b\nc,d\n", inputSource.getData());
-    assertTrue(extern.inputFormat instanceof CsvInputFormat);
+    Assertions.assertEquals("a,b\nc,d\n", inputSource.getData());
+    Assertions.assertTrue(extern.inputFormat instanceof CsvInputFormat);
     CsvInputFormat format = (CsvInputFormat) extern.inputFormat;
-    assertEquals(Arrays.asList("a", "b"), format.getColumns());
-    assertEquals(2, extern.signature.size());
-    assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceTypesSupplier.get());
+    Assertions.assertEquals(Arrays.asList("a", "b"), format.getColumns());
+    Assertions.assertEquals(2, extern.signature.size());
+    Assertions.assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceTypesSupplier.get());
 
     // Fails if no columns are provided.
-    assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
   }
 
   @Test
@@ -167,26 +164,26 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     TableFunction fn = ((ExternalTableDefn) resolved.defn()).tableFn(resolved);
 
     // Inline is always fully defined: no arguments needed
-    assertTrue(fn.parameters().isEmpty());
+    Assertions.assertTrue(fn.parameters().isEmpty());
 
     // Verify the conversion
     ExternalTableSpec extern = fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper);
 
-    assertTrue(extern.inputSource instanceof InlineInputSource);
+    Assertions.assertTrue(extern.inputSource instanceof InlineInputSource);
     InlineInputSource inputSource = (InlineInputSource) extern.inputSource;
-    assertEquals("a,b\nc,d\n", inputSource.getData());
-    assertTrue(extern.inputFormat instanceof CsvInputFormat);
+    Assertions.assertEquals("a,b\nc,d\n", inputSource.getData());
+    Assertions.assertTrue(extern.inputFormat instanceof CsvInputFormat);
     CsvInputFormat actualFormat = (CsvInputFormat) extern.inputFormat;
-    assertEquals(Arrays.asList("a", "b"), actualFormat.getColumns());
-    assertEquals(2, extern.signature.size());
-    assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceTypesSupplier.get());
+    Assertions.assertEquals(Arrays.asList("a", "b"), actualFormat.getColumns());
+    Assertions.assertEquals(2, extern.signature.size());
+    Assertions.assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceTypesSupplier.get());
 
     // Cannot supply columns with the function
     List<ColumnSpec> columns = Arrays.asList(
         new ColumnSpec("a", Columns.STRING, null),
         new ColumnSpec("b", Columns.STRING, null)
     );
-    assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), columns, mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), columns, mapper));
   }
 
   @Test
@@ -208,13 +205,13 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     ExternalTableSpec extern = ((ExternalTableDefn) resolved.defn()).convert(resolved);
 
     // Verify the conversion
-    assertTrue(extern.inputSource instanceof InlineInputSource);
+    Assertions.assertTrue(extern.inputSource instanceof InlineInputSource);
     InlineInputSource inputSource = (InlineInputSource) extern.inputSource;
-    assertEquals("a,b\nc,d\n", inputSource.getData());
-    assertTrue(extern.inputFormat instanceof CsvInputFormat);
+    Assertions.assertEquals("a,b\nc,d\n", inputSource.getData());
+    Assertions.assertTrue(extern.inputFormat instanceof CsvInputFormat);
     CsvInputFormat actualFormat = (CsvInputFormat) extern.inputFormat;
-    assertEquals(Arrays.asList("a", "b"), actualFormat.getColumns());
-    assertEquals(2, extern.signature.size());
-    assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceTypesSupplier.get());
+    Assertions.assertEquals(Arrays.asList("a", "b"), actualFormat.getColumns());
+    Assertions.assertEquals(2, extern.signature.size());
+    Assertions.assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceTypesSupplier.get());
   }
 }

@@ -21,14 +21,18 @@ package org.apache.druid.msq.dart.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import io.netty.handler.codec.http.HttpMethod;
 import it.unimi.dsi.fastutil.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.BaseWorkerClientImpl;
 import org.apache.druid.rpc.FixedServiceLocator;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
@@ -37,14 +41,19 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.utils.CloseableUtils;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Dart implementation of {@link WorkerClient}. Uses the same {@link BaseWorkerClientImpl} as the task-based engine.
@@ -53,6 +62,17 @@ import java.util.Map;
 public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWorkerClient
 {
   private static final Logger log = new Logger(DartWorkerClientImpl.class);
+
+  /**
+   * Timeout for controller-to-worker requests other than {@link #stopWorker}.
+   */
+  static final Duration CONTROLLER_REQUEST_TIMEOUT = Duration.standardSeconds(60);
+
+  /**
+   * Timeout for {@link #stopWorker}. Shorter than {@link #CONTROLLER_REQUEST_TIMEOUT}, since workers that
+   * miss their stop request are canceled by syncs anyway.
+   */
+  static final Duration STOP_WORKER_TIMEOUT = Duration.standardSeconds(10);
 
   private final String queryId;
   private final ServiceClientFactory clientFactory;
@@ -64,10 +84,17 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   @GuardedBy("clientMap")
   private final Map<String, Pair<ServiceClient, Closeable>> clientMap = new HashMap<>();
 
+  @GuardedBy("clientMap")
+  private boolean closed;
+
+  private final Set<ListenableFuture<?>> activeRequests = ConcurrentHashMap.newKeySet();
+  private final Set<ListenableFuture<Void>> activeWorkOrders = ConcurrentHashMap.newKeySet();
+  private volatile boolean isStopping = false;
+
   /**
    * Create a worker client.
    *
-   * @param queryId        dart query ID. see {@link org.apache.druid.query.QueryContexts#CTX_DART_QUERY_ID}
+   * @param queryId        dart query ID. see {@link org.apache.druid.query.context.QueryContextParameters#DART_QUERY_ID}
    * @param clientFactory  service client factor
    * @param smileMapper    Smile object mapper
    * @param controllerHost Controller host (see {@link DartWorkerResource#HEADER_CONTROLLER_HOST}) if this is a
@@ -86,39 +113,31 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
     this.controllerHost = controllerHost;
 
     if (controllerHost == null) {
-      // worker -> worker client. Retry HTTP 503 in case worker A starts up before worker B, and needs to
-      // contact it immediately.
-      this.retryPolicy = new DartWorkerRetryPolicy(true);
+      // worker -> worker client, which retries as long as the query is running.
+      this.retryPolicy = new DartWorkerRetryPolicy();
     } else {
-      // controller -> worker client. Do not retry any HTTP error codes. If we retry HTTP 503 for controller -> worker,
-      // we can get stuck trying to contact workers that have exited.
-      this.retryPolicy = new DartWorkerRetryPolicy(false);
+      // controller -> worker client, which does not retry. Lost workers fail the query either way, and retries would
+      // only delay the failure.
+      this.retryPolicy = StandardRetryPolicy.noRetries();
     }
   }
 
   @Override
   protected ServiceClient getClient(final String workerIdString)
   {
-    final WorkerId workerId = WorkerId.fromString(workerIdString);
-    if (!queryId.equals(workerId.getQueryId())) {
-      throw DruidException.defensive("Unexpected queryId[%s]. Expected queryId[%s]", workerId.getQueryId(), queryId);
-    }
-
-    synchronized (clientMap) {
-      return clientMap.computeIfAbsent(workerId.getHostAndPort(), ignored -> makeNewClient(workerId)).left();
-    }
+    return getClientAndLocator(workerIdString).left();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public void closeClient(final String workerHost)
+  public void closeClient(final String workerIdString)
   {
+    // Close, but do not remove from clientMap, so it stays closed. Note that if closeClient is called before
+    // getClient(), then the client will be created and immediately closed. This is intentional, since it allows
+    // server-removed notifications to be respected even if we haven't tried to contact a worker yet.
     synchronized (clientMap) {
-      final Pair<ServiceClient, Closeable> clientPair = clientMap.remove(workerHost);
-      if (clientPair != null) {
-        CloseableUtils.closeAndWrapExceptions(clientPair.right());
+      // Do nothing if we have already been closed; in this case we know there are no clients active.
+      if (!closed) {
+        CloseableUtils.closeAndWrapExceptions(getClientAndLocator(workerIdString).right());
       }
     }
   }
@@ -130,6 +149,13 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   public void close()
   {
     synchronized (clientMap) {
+      closed = true;
+
+      // Cancel requests before closing locators so in-flight requests do not continue retrying.
+      final List<ListenableFuture<?>> requests = new ArrayList<>(activeRequests);
+      activeRequests.clear();
+      requests.forEach(request -> request.cancel(true));
+
       for (Map.Entry<String, Pair<ServiceClient, Closeable>> entry : clientMap.entrySet()) {
         CloseableUtils.closeAndSuppressExceptions(
             entry.getValue().right(),
@@ -141,16 +167,47 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public ListenableFuture<?> stopWorker(String workerId)
+  public ListenableFuture<Void> postWorkOrder(final String workerId, final WorkOrder workOrder)
   {
+    synchronized (clientMap) {
+      if (isStopping) {
+        return Futures.immediateCancelledFuture();
+      }
+
+      final ListenableFuture<Void> future = super.postWorkOrder(workerId, workOrder);
+
+      activeWorkOrders.add(future);
+      future.addListener(() -> activeWorkOrders.remove(future), MoreExecutors.directExecutor());
+
+      return future;
+    }
+  }
+
+  @Override
+  public ListenableFuture<?> stopWorker(final String workerId)
+  {
+    synchronized (clientMap) {
+      isStopping = true;
+      activeWorkOrders.forEach(future -> future.cancel(true));
+    }
+
     return getClient(workerId).asyncRequest(
-        new RequestBuilder(HttpMethod.POST, "/stop"),
+        newRequest(HttpMethod.POST, "/stop").timeout(STOP_WORKER_TIMEOUT),
         IgnoreHttpResponseHandler.INSTANCE
     );
+  }
+
+  @Override
+  protected RequestBuilder newRequest(final HttpMethod method, final String encodedPathAndQueryString)
+  {
+    final RequestBuilder requestBuilder = super.newRequest(method, encodedPathAndQueryString);
+
+    if (controllerHost != null) {
+      requestBuilder.timeout(CONTROLLER_REQUEST_TIMEOUT);
+    }
+
+    return requestBuilder;
   }
 
   /**
@@ -170,7 +227,56 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
       client = baseClient;
     }
 
-    return Pair.of(client, locator);
+    return Pair.of(new RequestTrackingClient(client, activeRequests), locator);
+  }
+
+  private Pair<ServiceClient, Closeable> getClientAndLocator(final String workerIdString)
+  {
+    final WorkerId workerId = WorkerId.fromString(workerIdString);
+    if (!queryId.equals(workerId.getQueryId())) {
+      throw DruidException.defensive("Unexpected queryId[%s]. Expected queryId[%s]", workerId.getQueryId(), queryId);
+    }
+
+    synchronized (clientMap) {
+      if (closed) {
+        throw DruidException.defensive("%s is closed", getClass().getName());
+      }
+
+      return clientMap.computeIfAbsent(workerId.getHostAndPort(), ignored -> makeNewClient(workerId));
+    }
+  }
+
+  private static class RequestTrackingClient implements ServiceClient
+  {
+    private final ServiceClient delegate;
+    private final Set<ListenableFuture<?>> activeRequests;
+
+    private RequestTrackingClient(
+        final ServiceClient delegate,
+        final Set<ListenableFuture<?>> activeRequests
+    )
+    {
+      this.delegate = delegate;
+      this.activeRequests = activeRequests;
+    }
+
+    @Override
+    public <IntermediateType, FinalType> ListenableFuture<FinalType> asyncRequest(
+        final RequestBuilder requestBuilder,
+        final HttpResponseHandler<IntermediateType, FinalType> handler
+    )
+    {
+      final ListenableFuture<FinalType> future = delegate.asyncRequest(requestBuilder, handler);
+      activeRequests.add(future);
+      future.addListener(() -> activeRequests.remove(future), MoreExecutors.directExecutor());
+      return future;
+    }
+
+    @Override
+    public ServiceClient withRetryPolicy(final ServiceRetryPolicy retryPolicy)
+    {
+      return new RequestTrackingClient(delegate.withRetryPolicy(retryPolicy), activeRequests);
+    }
   }
 
   /**

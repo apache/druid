@@ -27,26 +27,29 @@ import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * TODO convert benchmarks to JMH
@@ -59,11 +62,10 @@ public class BalanceSegmentsProfiler
   private ImmutableDruidServer druidServer2;
   List<DataSegment> segments = new ArrayList<>();
   ServiceEmitter emitter;
-  MetadataRuleManager manager;
   PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, ImmutableMap.of("normal", 3), null);
   List<Rule> rules = ImmutableList.of(loadRule);
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     loadQueueManager = new SegmentLoadQueueManager(null, null);
@@ -71,7 +73,6 @@ public class BalanceSegmentsProfiler
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
-    manager = EasyMock.createMock(MetadataRuleManager.class);
   }
 
   public void bigProfiler()
@@ -79,26 +80,18 @@ public class BalanceSegmentsProfiler
     Stopwatch watch = Stopwatch.createUnstarted();
     int numSegments = 55000;
     int numServers = 50;
-    EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.of("test", rules)).anyTimes();
-    EasyMock.expect(manager.getRules(EasyMock.anyObject())).andReturn(rules).anyTimes();
-    EasyMock.expect(manager.getRulesWithDefault(EasyMock.anyObject())).andReturn(rules).anyTimes();
-    EasyMock.replay(manager);
-
     List<ServerHolder> serverHolderList = new ArrayList<>();
     List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       segments.add(
-          new DataSegment(
-              "datasource" + i,
-              new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)),
-              (DateTimes.of("2012-03-01")).toString(),
-              new HashMap<>(),
-              new ArrayList<>(),
-              new ArrayList<>(),
-              NoneShardSpec.instance(),
-              0,
-              4L
-          )
+          DataSegment.builder(SegmentId.of("datasource" + i, new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)), (DateTimes.of("2012-03-01")).toString(), 0))
+                     .loadSpec(new HashMap<>())
+                     .dimensions(new ArrayList<>())
+                     .metrics(new ArrayList<>())
+                     .shardSpec(NoneShardSpec.instance())
+                     .binaryVersion(0)
+                     .size(4L)
+                     .build()
       );
     }
 
@@ -130,6 +123,12 @@ public class BalanceSegmentsProfiler
         .builder()
         .withDruidCluster(druidCluster)
         .withUsedSegments(segments)
+        .withRetentionRulesSnapshot(
+            new RetentionRulesSnapshot(
+                Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, rules),
+                MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+            )
+        )
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
@@ -142,7 +141,7 @@ public class BalanceSegmentsProfiler
         .build();
 
     BalanceSegments tester = new BalanceSegments(Duration.standardMinutes(1));
-    RunRules runner = new RunRules((ds, set) -> set.size(), manager::getRulesWithDefault);
+    RunRules runner = new RunRules((ds, set) -> set.size());
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);

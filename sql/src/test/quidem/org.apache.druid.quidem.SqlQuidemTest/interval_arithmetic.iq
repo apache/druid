@@ -1,0 +1,180 @@
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set outputformat mysql
+!use druidtest:///
+
+SELECT __time FROM foo
+WHERE __time >= CURRENT_TIMESTAMP - INTERVAL '2' DAY
+  AND __time <  CURRENT_TIMESTAMP + INTERVAL '2' DAY
+ORDER BY __time;
++-------------------------+
+| __time                  |
++-------------------------+
+| 2000-01-01 00:00:00.000 |
+| 2000-01-02 00:00:00.000 |
++-------------------------+
+(2 rows)
+
+!ok
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "1999-12-30T00:00:00.000Z/2000-01-03T00:00:00.000Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "order" : "ascending",
+  "columns" : [ "__time" ],
+  "columnTypes" : [ "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan
+
+SELECT __time FROM foo
+WHERE __time >= CURRENT_TIMESTAMP - INTERVAL '2' WEEK
+  AND __time <  CURRENT_TIMESTAMP + INTERVAL '2' WEEK
+ORDER BY __time;
++-------------------------+
+| __time                  |
++-------------------------+
+| 2000-01-01 00:00:00.000 |
+| 2000-01-02 00:00:00.000 |
+| 2000-01-03 00:00:00.000 |
++-------------------------+
+(3 rows)
+
+!ok
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "1999-12-18T00:00:00.000Z/2000-01-15T00:00:00.000Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "order" : "ascending",
+  "columns" : [ "__time" ],
+  "columnTypes" : [ "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan
+
+SELECT __time FROM foo
+WHERE __time >= CURRENT_TIMESTAMP - INTERVAL '2' MONTH
+  AND __time <  CURRENT_TIMESTAMP + INTERVAL '2' MONTH
+ORDER BY __time;
++-------------------------+
+| __time                  |
++-------------------------+
+| 2000-01-01 00:00:00.000 |
+| 2000-01-02 00:00:00.000 |
+| 2000-01-03 00:00:00.000 |
++-------------------------+
+(3 rows)
+
+!ok
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "1999-11-01T00:00:00.000Z/2000-03-01T00:00:00.000Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "order" : "ascending",
+  "columns" : [ "__time" ],
+  "columnTypes" : [ "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan
+
+SELECT __time FROM foo
+WHERE __time >= CURRENT_TIMESTAMP - INTERVAL '2' QUARTER
+  AND __time <  CURRENT_TIMESTAMP + INTERVAL '2' QUARTER
+ORDER BY __time;
++-------------------------+
+| __time                  |
++-------------------------+
+| 2000-01-01 00:00:00.000 |
+| 2000-01-02 00:00:00.000 |
+| 2000-01-03 00:00:00.000 |
++-------------------------+
+(3 rows)
+
+!ok
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "1999-07-01T00:00:00.000Z/2000-07-01T00:00:00.000Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "order" : "ascending",
+  "columns" : [ "__time" ],
+  "columnTypes" : [ "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan
+
+SELECT __time FROM foo
+WHERE __time >= CURRENT_TIMESTAMP - INTERVAL '2' YEAR
+  AND __time <  CURRENT_TIMESTAMP + INTERVAL '2' YEAR
+ORDER BY __time;
++-------------------------+
+| __time                  |
++-------------------------+
+| 2000-01-01 00:00:00.000 |
+| 2000-01-02 00:00:00.000 |
+| 2000-01-03 00:00:00.000 |
+| 2001-01-01 00:00:00.000 |
+| 2001-01-02 00:00:00.000 |
+| 2001-01-03 00:00:00.000 |
++-------------------------+
+(6 rows)
+
+!ok
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "1998-01-01T00:00:00.000Z/2002-01-01T00:00:00.000Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "order" : "ascending",
+  "columns" : [ "__time" ],
+  "columnTypes" : [ "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

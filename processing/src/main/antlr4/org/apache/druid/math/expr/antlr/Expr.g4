@@ -61,11 +61,11 @@ EXP: [eE] [-]? LONG;
 // DOUBLE provides partial support for java double format
 // see: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Double.html#valueOf(java.lang.String)
 DOUBLE : 'NaN' | 'Infinity' | (LONG '.' LONG?) | (LONG EXP) | (LONG '.' LONG? EXP);
-IDENTIFIER : [_$a-zA-Z][_$a-zA-Z0-9]* | '"' (ESC | ~ [\"\\])* '"';
+IDENTIFIER : [_$a-zA-Z][_$a-zA-Z0-9]* | '"' (ESC | ~ ["\\])* '"';
 WS : [ \t\r\n]+ -> skip ;
 
-STRING : '\'' (ESC | ~ [\'\\])* '\'';
-fragment ESC : '\\' ([\'\"\\/bfnrt] | UNICODE) ;
+STRING : '\'' (ESC | ~ ['\\])* '\'';
+fragment ESC : '\\' (['"\\/bfnrt] | UNICODE) ;
 fragment UNICODE : 'u' HEX HEX HEX HEX ;
 fragment HEX : [0-9a-fA-F] ;
 

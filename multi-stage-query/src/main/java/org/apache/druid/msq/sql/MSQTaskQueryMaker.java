@@ -26,12 +26,14 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.MetadataCatalog;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Intervals;
@@ -59,15 +61,13 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
@@ -96,6 +96,10 @@ import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#USER} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String USER_KEY = "__user";
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
@@ -280,10 +284,10 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // Add task-specific overrides.
     if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination)) {
-      context.put(MultiStageQueryContext.CTX_IS_REINDEX, true);
+      QueryContextParameters.IS_REINDEX.set(context, true);
     }
 
-    context.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
+    QueryContextParameters.USER.set(context, plannerContext.getAuthenticationResult().getIdentity());
 
     return context;
   }
@@ -425,7 +429,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static Object getSegmentGranularity(PlannerContext plannerContext)
   {
     Object segmentGranularity =
-        Optional.ofNullable(plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY))
+        Optional.ofNullable(plannerContext.queryContext().get(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY))
                 .orElseGet(() -> {
                   try {
                     return plannerContext.getJsonMapper().writeValueAsString(DEFAULT_SEGMENT_GRANULARITY);
@@ -442,7 +446,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static List<Interval> getReplaceIntervals(QueryContext sqlQueryContext)
   {
     final List<Interval> replaceTimeChunks =
-        Optional.ofNullable(sqlQueryContext.get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
+        Optional.ofNullable(sqlQueryContext.get(QueryContextParameters.SQL_REPLACE_TIME_CHUNKS))
                 .map(
                     s -> {
                       if (s instanceof String && "all".equals(StringUtils.toLowerCase((String) s))) {
@@ -467,7 +471,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   {
     final MSQDestination destination;
     ExportDestination exportDestination = targetDataSource;
-    ResultFormat format = ResultFormat.fromString(sqlQueryContext.getString(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT));
+    ResultFormat format = ResultFormat.fromString(sqlQueryContext.get(QueryContextParameters.EXPORT_FILE_FORMAT));
 
     destination = new ExportMSQDestination(
         exportDestination.getStorageConnectorProvider(),
@@ -510,7 +514,9 @@ public class MSQTaskQueryMaker implements QueryMaker
     );
 
 
-    final List<AggregateProjectionSpec> projectionSpecs = getProjections(targetDataSource, plannerContext);
+    final ResolvedTable tableMetadata = getTableMetadata(targetDataSource, plannerContext);
+    final BaseTableProjectionSpec baseTable = getBaseTable(tableMetadata);
+    final List<AggregateProjectionSpec> projectionSpecs = getProjections(tableMetadata);
 
     final DataSourceMSQDestination dataSourceDestination = new DataSourceMSQDestination(
         targetDataSource.getDestinationName(),
@@ -518,6 +524,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         segmentSortOrder,
         replaceTimeChunks,
         null,
+        baseTable,
         projectionSpecs,
         terminalStageSpecFactory.createTerminalStageSpec(
             plannerContext
@@ -550,16 +557,19 @@ public class MSQTaskQueryMaker implements QueryMaker
     return tuningConfig;
   }
 
-  private static List<AggregateProjectionSpec> getProjections(
-      IngestDestination targetDataSource,
-      PlannerContext plannerContext
-  )
+  @Nullable
+  private static ResolvedTable getTableMetadata(IngestDestination targetDataSource, PlannerContext plannerContext)
   {
-    final List<AggregateProjectionSpec> projectionSpecs;
     final MetadataCatalog metadataCatalog = plannerContext.getPlannerToolbox().catalogResolver().getMetadataCatalog();
-    final ResolvedTable tableMetadata = metadataCatalog.resolveTable(
+    return metadataCatalog.resolveTable(
         TableId.datasource(targetDataSource.getDestinationName())
     );
+  }
+
+  @Nullable
+  private static List<AggregateProjectionSpec> getProjections(@Nullable ResolvedTable tableMetadata)
+  {
+    final List<AggregateProjectionSpec> projectionSpecs;
     if (tableMetadata != null) {
       final List<DatasourceProjectionMetadata> projectionMetadata = tableMetadata.decodeProperty(
           DatasourceDefn.PROJECTIONS_KEYS_PROPERTY
@@ -575,5 +585,25 @@ public class MSQTaskQueryMaker implements QueryMaker
       projectionSpecs = null;
     }
     return projectionSpecs;
+  }
+
+  /**
+   * Derives the physical base table spec for the target datasource from the catalog, if the table declares a
+   * {@link DatasourceDefn#BASE_TABLE_PROPERTY} layout; combines the layout with the declared catalog columns via
+   * {@link DatasourceBaseTableMetadata#createSpec}.
+   */
+  @Nullable
+  private static BaseTableProjectionSpec getBaseTable(@Nullable ResolvedTable tableMetadata)
+  {
+    if (tableMetadata == null) {
+      return null;
+    }
+    final DatasourceBaseTableMetadata baseTableMetadata = tableMetadata.decodeProperty(
+        DatasourceDefn.BASE_TABLE_PROPERTY
+    );
+    if (baseTableMetadata == null) {
+      return null;
+    }
+    return baseTableMetadata.createSpec(tableMetadata.spec().columns());
   }
 }

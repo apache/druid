@@ -27,7 +27,7 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid. Tasks are individual jobs performed by Druid to complete operations such as ingestion, querying, and compaction.
+This document describes the API endpoints for task retrieval, submission, and deletion for Apache&circledR; Druid. Tasks are individual jobs performed by Druid to complete operations such as ingestion, querying, and compaction.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for the Router service address and port. For example, on the quickstart configuration, use `http://localhost:8888`.
 

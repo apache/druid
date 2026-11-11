@@ -32,13 +32,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.guava.FutureUtils;
@@ -48,7 +51,9 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -107,7 +112,6 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -126,6 +130,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -221,6 +226,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
     boolean handoffEarly = false; // set by SupervisorManager.stopTaskGroupEarly
+
+    final AtomicBoolean completed = new AtomicBoolean(false);
+    final List<Runnable> completionListeners = new ArrayList<>();
 
     TaskGroup(
         int groupId,
@@ -355,6 +363,33 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return baseSequenceName;
     }
 
+    /**
+     * Called when this TaskGroup is removed from {@link #pendingCompletionTaskGroups}.
+     */
+    public void onCompleted()
+    {
+      if (completed.compareAndSet(false, true)) {
+        runCompletionListeners();
+      }
+    }
+
+    private synchronized void addCompletionListener(Runnable runnable)
+    {
+      if (completed.get()) {
+        runnable.run();
+      } else {
+        completionListeners.add(runnable);
+      }
+    }
+
+    private synchronized void runCompletionListeners()
+    {
+      for (Runnable runnable : completionListeners) {
+        runnable.run();
+      }
+      completionListeners.clear();
+    }
+
     @Override
     public String toString()
     {
@@ -379,6 +414,37 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
              ", startTime=" + startTime +
              ", checkpointSequences=" + currentSequences +
              '}';
+    }
+  }
+
+  /**
+   * Represents a task that waits until all prior task groups that were publishing
+   * to overlapping partitions have completed.
+   */
+  private class TaskWaitingToPublish
+  {
+    final CountDownLatch latch;
+    final SettableFuture<Boolean> readyToPublish = SettableFuture.create();
+    final ConcurrentHashMap<TaskGroup, Set<PartitionIdType>> blockingTaskGroups;
+
+    TaskWaitingToPublish(String taskId, Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups)
+    {
+      this.latch = new CountDownLatch(blockingTaskGroups.size());
+      this.blockingTaskGroups = new ConcurrentHashMap<>(blockingTaskGroups);
+
+      tasksWaitingToPublish.put(taskId, this);
+
+      for (TaskGroup group : blockingTaskGroups.keySet()) {
+        group.addCompletionListener(() -> {
+          latch.countDown();
+          this.blockingTaskGroups.remove(group);
+
+          if (latch.getCount() == 0) {
+            readyToPublish.set(true);
+            tasksWaitingToPublish.remove(taskId);
+          }
+        });
+      }
     }
   }
 
@@ -489,23 +555,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  // change taskCount without resubmitting.
+  /**
+   * Notice to scale up or down the number of tasks as dictated by the auto-scaler.
+   * Scaling takes effect only if there is no task currently pending completion
+   * and the respective scaling cooldown has elapsed. But these restrictions do
+   * not apply if task rollover (i.e. task restart after completion of taskDuration)
+   * is already in progress.
+   */
   private class DynamicAllocationTasksNotice implements Notice
   {
-    Callable<Integer> computeDesiredTaskCount;
-    ServiceEmitter emitter;
-    Runnable onSuccessfulScale;
+    final Callable<Integer> computeDesiredTaskCount;
+    final Runnable onSuccessfulScale;
+    final boolean isRolloverInProgress;
+
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
     DynamicAllocationTasksNotice(
         Callable<Integer> computeDesiredTaskCount,
         Runnable onSuccessfulScale,
-        ServiceEmitter emitter
+        boolean isRolloverInProgress
     )
     {
       this.computeDesiredTaskCount = computeDesiredTaskCount;
       this.onSuccessfulScale = onSuccessfulScale;
-      this.emitter = emitter;
+      this.isRolloverInProgress = isRolloverInProgress;
     }
 
     /**
@@ -521,39 +594,33 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           long nowTime = System.currentTimeMillis();
           if (spec.isSuspended()) {
             log.info(
-                "Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is suspended",
+                "Skipping DynamicAllocationTasksNotice execution because supervisor[%s] is suspended",
                 supervisorId
             );
             return;
           }
           if (SupervisorStateManager.BasicState.IDLE == getState()) {
             log.info(
-                "Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is idle",
+                "Skipping DynamicAllocationTasksNotice execution because supervisor[%s] is idle",
                 supervisorId
             );
             return;
           }
-          log.debug("PendingCompletionTaskGroups is [%s] for supervisor[%s] for dataSource[%s]", pendingCompletionTaskGroups,
-                    supervisorId,
-                    dataSource
+          log.debug(
+              "PendingCompletionTaskGroups is [%s] for supervisor[%s] for dataSource[%s]",
+              pendingCompletionTaskGroups, supervisorId, dataSource
           );
           final int desiredTaskCount = computeDesiredTaskCount.call();
           final int currentTaskCount = getCurrentTaskCount();
 
-          ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
-                                                               .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
-
           if (desiredTaskCount <= 0) {
             log.warn(
-                "Auto-scaler returned pathological taskCount[%d] for supervisor[%s] for dataSource[%s]; skipping scale.",
+                "Auto-scaler returned invalid taskCount[%d] for supervisor[%s], dataSource[%s]; skipping scale.",
                 desiredTaskCount,
                 supervisorId,
                 dataSource
             );
-            emitter.emit(event.setDimension(AUTOSCALER_SKIP_REASON_DIMENSION, "Auto-scaler failed to compute a task count")
-                             .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            emitRequiredTaskCountMetric(desiredTaskCount, "Auto-scaler failed to compute a task count");
             return;
           }
 
@@ -593,8 +660,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 taskCountMin,
                 taskCountMax
             );
-            emitter.emit(event.setDimension(AUTOSCALER_SKIP_REASON_DIMENSION, skipReason)
-                             .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            emitRequiredTaskCountMetric(desiredTaskCount, skipReason);
             return;
           }
 
@@ -603,18 +669,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // We want to avoid killing any old generation tasks preemptively, as that might cause the current generation tasks' offsets to become invalid.
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
             // There are expected to be pending tasks if this scaling is happening on task rollover
-            if (!list.isEmpty() && !isScalingTasksOnRollover.get()) {
+            if (!list.isEmpty() && !isRolloverInProgress) {
               log.info(
                   "Skipping DynamicAllocationTasksNotice execution for supervisor[%s] for datasource[%s] because following tasks are pending [%s]",
                   supervisorId,
                   dataSource,
                   list
               );
-              emitter.emit(event.setDimension(
-                                    AUTOSCALER_SKIP_REASON_DIMENSION,
-                                    "There are tasks pending completion"
-                                )
-                                .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+              emitRequiredTaskCountMetric(desiredTaskCount, "There are tasks pending completion");
               return;
             }
           }
@@ -636,7 +698,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             cooldownMillis = autoScalerConfig.getMinScaleDownDelay().getMillis();
           }
 
-          if (nowTime - dynamicTriggerLastScaleRunTime < cooldownMillis) {
+          // Ignore scaling cooldown on task rollover. Since tasks are being
+          // restarted anyway, we might as well consider changing the taskCount.
+          if (!isRolloverInProgress && (nowTime - dynamicTriggerLastScaleRunTime) < cooldownMillis) {
             log.info(
                 "DynamicAllocationTasksNotice submitted again in [%d]ms, [%s] cooldown is [%d]ms for supervisor[%s] for dataSource[%s], skipping it! scaler wants [%d] (clamped [%d]), current task count is [%d]",
                 nowTime - dynamicTriggerLastScaleRunTime,
@@ -649,16 +713,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 currentTaskCount
             );
 
-            emitter.emit(event.setDimension(
-                                  AUTOSCALER_SKIP_REASON_DIMENSION,
-                                  "Scale cooldown not elapsed yet"
-                              )
-                              .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            emitRequiredTaskCountMetric(desiredTaskCount, "Scale cooldown not elapsed yet");
             return;
           }
 
           // Emit the scaler's unclamped preferred count so operators see what it wants.
-          emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+          emitRequiredTaskCountMetric(desiredTaskCount, null);
 
           boolean allocationSuccess = changeTaskCount(clampedTaskCount);
           if (allocationSuccess) {
@@ -670,6 +730,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           log.warn(ex, "Error parsing DynamicAllocationTasksNotice");
         }
       }
+    }
+
+    private void emitRequiredTaskCountMetric(int desiredTaskCount, @Nullable String skipReason)
+    {
+      final ServiceMetricEvent.Builder event = ServiceMetricEvent
+          .builder()
+          .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+          .setDimension(DruidMetrics.DATASOURCE, dataSource)
+          .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
+      if (skipReason != null) {
+        event.setDimension(AUTOSCALER_SKIP_REASON_DIMENSION, skipReason);
+      }
+      event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount);
+      emitter.emit(event);
     }
 
     @Override
@@ -1006,6 +1080,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // Map<{group id}, List<{pending completion task groups}>>
   private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
 
+  /**
+   * Tasks waiting on other task groups to finish publishing to overlapping partitions.
+   * Map from taskId to {@link TaskWaitingToPublish}.
+   */
+  private final ConcurrentHashMap<String, TaskWaitingToPublish> tasksWaitingToPublish = new ConcurrentHashMap<>();
+
   // We keep two separate maps for tracking the current state of partition->task group mappings [partitionGroups] and partition->offset
   // mappings [partitionOffsets]. The starting offset for a new partition in [partitionOffsets] is initially set to getNotSetMarker(). When a new task group
   // is created and is assigned partitions, if the offset for an assigned partition in [partitionOffsets] is getNotSetMarker() it will take the starting
@@ -1086,7 +1166,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Wired by {@link SupervisorManager} after supervisor creation.
    */
   private volatile SupervisorTaskAutoScaler taskAutoScaler;
-  private final AtomicBoolean isScalingTasksOnRollover = new AtomicBoolean(false);
 
   // snapshots latest sequences from the stream to be verified in the next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
@@ -1361,9 +1440,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     });
   }
 
+  protected void validatePartitionReset(@Nullable DataSourceMetadata metadata)
+  {
+    // Stream implementations may restrict which partitions can be reset.
+  }
+
   @Override
   public void reset(@Nullable final DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     log.info("Posting ResetNotice with datasource metadata [%s]", dataSourceMetadata);
     addNotice(new ResetNotice(dataSourceMetadata));
   }
@@ -1378,6 +1463,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @Override
   public void resetOffsets(@Nonnull DataSourceMetadata resetDataSourceMetadata)
   {
+    validatePartitionReset(resetDataSourceMetadata);
     if (resetDataSourceMetadata == null) {
       throw InvalidInput.exception("Reset dataSourceMetadata is required for resetOffsets.");
     }
@@ -1415,26 +1501,100 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
-  public void registerNewVersionOfPendingSegment(
+  /**
+   * Notifies every running task in the matching task group(s) of an upgraded pending segment.
+   *
+   * @return the number of tasks notified
+   */
+  public int registerNewVersionOfPendingSegment(
       PendingSegmentRecord pendingSegmentRecord
   )
   {
+    final String taskAllocatorId = pendingSegmentRecord.getTaskAllocatorId();
+    int notifiedTasks = 0;
+
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
-      if (taskGroup.baseSequenceName.equals(pendingSegmentRecord.getTaskAllocatorId())) {
+      if (taskGroup.baseSequenceName.equals(taskAllocatorId)) {
         for (String taskId : taskGroup.taskIds()) {
-          taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord);
+          notifyTaskOfUpgradedPendingSegment(taskId, pendingSegmentRecord);
+          notifiedTasks++;
         }
       }
     }
     for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
       for (TaskGroup taskGroup : taskGroupList) {
-        if (taskGroup.baseSequenceName.equals(pendingSegmentRecord.getTaskAllocatorId())) {
+        if (taskGroup.baseSequenceName.equals(taskAllocatorId)) {
           for (String taskId : taskGroup.taskIds()) {
-            taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord);
+            notifyTaskOfUpgradedPendingSegment(taskId, pendingSegmentRecord);
+            notifiedTasks++;
           }
         }
       }
     }
+
+    if (notifiedTasks == 0) {
+      // No running task matched: the segment will not be re-announced until handoff.
+      // This may happen if there are multiple supervisors for the same datasource
+      // or due to race conditions while events such as changing the state of a TaskGroup
+      // from actively reading to pending completion, etc.
+      // This is a potential silent-loss window where data will not be queryable until handoff.
+      log.info(
+              "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
+                      + " (upgradedFrom[%s]); it will not be re-announced until handoff.",
+              taskAllocatorId,
+              supervisorId,
+              pendingSegmentRecord.getId(),
+              pendingSegmentRecord.getUpgradedFromSegmentId()
+      );
+      emitter.emit(
+          IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                        .setMetric(SegmentUpgradeMetrics.UNMATCHED, 1)
+      );
+    }
+    return notifiedTasks;
+  }
+
+  /**
+   * Sends an upgraded pending segment to a single task, emitting {@link SegmentUpgradeMetrics#NOTIFIED} for the
+   * notification attempt and {@link SegmentUpgradeMetrics#SEND_FAILED} if the request fails to reach the task. Both
+   * are per-task (keyed by {@code taskId}), so {@code notified} can be reconciled against the per-task
+   * {@code announced}, {@code skipped} and {@code sendFailed} outcomes.
+   */
+  private void notifyTaskOfUpgradedPendingSegment(String taskId, PendingSegmentRecord pendingSegmentRecord)
+  {
+    emitter.emit(
+        IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                      .setDimension(DruidMetrics.TASK_ID, taskId)
+                      .setMetric(SegmentUpgradeMetrics.NOTIFIED, 1)
+    );
+    Futures.addCallback(
+        taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord),
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(Boolean result)
+          {
+            // The request reached the task; what the task does with it (announce or skip) is reported by the task's
+            // own announced/skipped metrics, so there is nothing to record here.
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            log.warn(
+                t,
+                "Failed to register upgraded pending segment[%s] on task[%s] of supervisor[%s].",
+                pendingSegmentRecord.getId(), taskId, supervisorId
+            );
+            emitter.emit(
+                IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                              .setDimension(DruidMetrics.TASK_ID, taskId)
+                              .setMetric(SegmentUpgradeMetrics.SEND_FAILED, 1)
+            );
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
   }
 
   public ReentrantLock getRecordSupplierLock()
@@ -1535,21 +1695,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   public Runnable buildDynamicAllocationTask(
       Callable<Integer> scaleAction,
-      Runnable onSuccessfulScale,
-      ServiceEmitter emitter
+      Runnable onSuccessfulScale
   )
   {
-    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, false));
   }
 
   @VisibleForTesting
   void handleDynamicAllocationTasksNotice(
       Callable<Integer> scaleAction,
       Runnable onSuccessfulScale,
-      ServiceEmitter emitter
+      boolean isRolloverInProgress
   )
   {
-    new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter).handle();
+    new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, isRolloverInProgress).handle();
   }
 
   private Runnable buildRunTask()
@@ -1580,7 +1739,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       boolean includeOffsets
   )
   {
-    int numPartitions = partitionGroups.values().stream().mapToInt(Set::size).sum();
+    final int numPartitions = getKnownPartitionCount();
 
     final SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> payload = createReportPayload(
         numPartitions,
@@ -1847,9 +2006,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig();
-    SeekableStreamSupervisorIOConfig oo = spec.getSpec().getIOConfig();
-
     // store a limited number of parse exceptions, keeping the most recent ones
     int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxSavedParseExceptions() *
                           spec.getSpec().getIOConfig().getTaskCount();
@@ -2025,13 +2181,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
 
             @Override
-            public void locationChanged(final String taskId, final TaskLocation newLocation)
+            public void locationChanged(final Task task, final TaskLocation newLocation)
             {
               // do nothing
             }
 
             @Override
-            public void statusChanged(String taskId, TaskStatus status)
+            public void statusChanged(Task task, TaskStatus status)
             {
               addNotice(new RunNotice());
             }
@@ -2061,6 +2217,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void resetInternal(DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     if (dataSourceMetadata == null) {
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(supervisorId);
@@ -2186,6 +2343,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     log.info("Reset offsets for supervisor[%s] for dataSource[%s] with metadata[%s]", supervisorId, dataSource, dataSourceMetadata);
 
     @SuppressWarnings("unchecked")
@@ -2252,10 +2410,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             StringUtils.format(reasonFormat, args)
         );
       } else {
+        unblockPublishAsNotReady(id);
         taskQueue.get().shutdown(id, reasonFormat, args);
       }
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
+    }
+  }
+
+  /**
+   * Completes the pending publish wait of the given task, if any, with a "not ready"
+   * response so that a task which is being stopped or killed does not commit its offsets.
+   */
+  private void unblockPublishAsNotReady(String taskId)
+  {
+    final TaskWaitingToPublish waitingTask = tasksWaitingToPublish.remove(taskId);
+    if (waitingTask != null) {
+      waitingTask.readyToPublish.set(false);
     }
   }
 
@@ -2271,6 +2442,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             StringUtils.format(reasonFormat, args)
         );
       } else {
+        unblockPublishAsNotReady(id);
         taskQueue.get().shutdownWithSuccess(id, reasonFormat, args);
       }
     } else {
@@ -2385,6 +2557,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   getStatusAndPossiblyEndOffsets(taskId),
                   new Function<>()
                   {
+                    @Nullable
                     @Override
                     public Boolean apply(Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>> pair)
                     {
@@ -2787,7 +2960,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
             // OR if there is an older publishing task for another groupId, use the first sequenceId of this task
             // since the offsets persisted in metadata store might still be behind the checkpoints of this task
-            || (isAnotherTaskGroupPublishingToPartitions(taskId, Set.copyOf(taskGroup.startingSequences.keySet()))
+            || (isOlderTaskGroupPublishingToPartitions(taskId, Map.copyOf(taskGroup.startingSequences))
                 && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))
         ) {
           final SortedMap<Integer, Map<PartitionIdType, SequenceOffsetType>> latestCheckpoints = new TreeMap<>(
@@ -2850,47 +3023,104 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
-   * publishing to any of the given partitions. If this method returns true, it
-   * indicates that the current task would need to wait for the other tasks to
+   * Checks if there is an older task group (which does not contain {@code taskId})
+   * publishing to any of the given partitions. If this method returns a non-empty map,it
+   * indicates that the current task would need to wait for the older tasks to
    * finish publishing before it can publish its own offsets.
+   *
+   * @return Map containing the conflicting TaskGroups that are publishing to
+   * overlapping partitions.
    */
-  public boolean isAnotherTaskGroupPublishingToPartitions(String taskId, Set<Object> partitions)
+  private Map<TaskGroup, Set<PartitionIdType>> getOlderTaskGroupsPublishingToPartitions(
+      String taskId,
+      Map<PartitionIdType, SequenceOffsetType> taskStartOffsets
+  )
   {
     // Identify all the partitions that are being published by other taskGroups
-    final Map<PartitionIdType, Set<TaskGroup>> partitionIdToPublishingGroups = new HashMap<>();
+    final Map<PartitionIdType, Map<TaskGroup, SequenceOffsetType>> partitionIdToPublishingGroups = new HashMap<>();
     pendingCompletionTaskGroups.values().stream().flatMap(Collection::stream).forEach(group -> {
       // Do not consider this taskId or its replicas
       if (group.taskIds().contains(taskId)) {
         return;
       }
-      for (PartitionIdType partitionId : group.startingSequences.keySet()) {
-        partitionIdToPublishingGroups.computeIfAbsent(partitionId, p -> new HashSet<>()).add(group);
-      }
+      group.startingSequences.forEach(
+          (partitionId, offset) -> partitionIdToPublishingGroups
+              .computeIfAbsent(partitionId, p -> new HashMap<>()).put(group, offset)
+      );
     });
 
     if (partitionIdToPublishingGroups.isEmpty()) {
-      return false;
+      return Map.of();
     }
 
     // Check if any of the partitions of this taskId are being published by other taskGroups
-    for (Object partition : partitions) {
-      @SuppressWarnings("unchecked")
-      final PartitionIdType partitionId = (PartitionIdType) partition;
+    final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups = new HashMap<>();
+    taskStartOffsets.forEach((partitionId, taskOffset) -> {
       if (partitionIdToPublishingGroups.containsKey(partitionId)) {
-        log.info(
-            "Task[%s] needs to wait before publishing as other taskGroups[%s] are currently publishing to partition[%s].",
-            taskId,
-            partitionIdToPublishingGroups.get(partitionId),
-            partitionId
-        );
-        return true;
+        partitionIdToPublishingGroups.get(partitionId).forEach((taskGroup, pendingGroupOffset) -> {
+          // Consider only task groups which are reading from offsets
+          // strictly smaller than the candidate taskId
+          if (!isOffsetAtOrBeyond(pendingGroupOffset, taskOffset)) {
+            blockingTaskGroups.computeIfAbsent(taskGroup, _ -> new HashSet<>())
+                              .add(partitionId);
+          }
+        });
       }
-    }
+    });
 
-    return false;
+    return blockingTaskGroups;
   }
 
+  private boolean isOlderTaskGroupPublishingToPartitions(
+      String taskId,
+      Map<PartitionIdType, SequenceOffsetType> taskStartOffsets
+  )
+  {
+    return !getOlderTaskGroupsPublishingToPartitions(taskId, taskStartOffsets).isEmpty();
+  }
+
+  /**
+   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
+   * publishing to any of the given partitions.
+   *
+   * @return A future that completes when the current task is ready to publish
+   * its segments since all previous tasks that were reading from an overlapping
+   * set of partitions have already published their offsets.
+   */
+  public ListenableFuture<Boolean> isTaskReadyToPublishSegments(String taskId, DataSourceMetadata startMetadata)
+  {
+    if (!(startMetadata instanceof SeekableStreamDataSourceMetadata<?, ?> streamStartMetadata)) {
+      throw InvalidInput.exception(
+          "Start metadata[%s] of type[%s] is not valid streaming metadata",
+          startMetadata, startMetadata == null ? null : startMetadata.getClass()
+      );
+    }
+
+    @SuppressWarnings("unchecked")
+    final Map<PartitionIdType, SequenceOffsetType> taskStartOffsets =
+        (Map<PartitionIdType, SequenceOffsetType>) streamStartMetadata
+            .getSeekableStreamSequenceNumbers()
+            .getPartitionSequenceNumberMap();
+
+    final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups =
+        getOlderTaskGroupsPublishingToPartitions(taskId, taskStartOffsets);
+
+    // No tasks writing to overlapping partitions, task may proceed with publish
+    if (blockingTaskGroups.isEmpty()) {
+      return Futures.immediateFuture(true);
+    } else {
+      final TaskWaitingToPublish waitingTask = new TaskWaitingToPublish(taskId, blockingTaskGroups);
+
+      log.info(
+          "Task[%s] needs to wait before publishing as [%d] other taskGroups are"
+          + " currently publishing to partitions[%s].",
+          taskId,
+          blockingTaskGroups.size(),
+          blockingTaskGroups.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())
+      );
+      return waitingTask.readyToPublish;
+    }
+  }
 
   @VisibleForTesting
   protected void addDiscoveredTaskToPendingCompletionTaskGroups(
@@ -2994,6 +3224,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private ListenableFuture<Void> stopTask(final String id, final boolean publish)
   {
+    if (!publish) {
+      unblockPublishAsNotReady(id);
+    }
     return Futures.transform(
         taskClient.stopAsync(id, publish), new Function<>()
         {
@@ -3010,6 +3243,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         },
         MoreExecutors.directExecutor()
     );
+  }
+
+  /** Whether a task's partitions match what its group now owns; if not, the task is replaced. Default: always true. */
+  protected boolean isTaskPartitionSetCurrent(int taskGroupId, Set<PartitionIdType> taskPartitions)
+  {
+    return true;
   }
 
   /**
@@ -3040,6 +3279,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @SuppressWarnings("unchecked")
     SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task =
         (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) genericTask;
+
+    if (!isTaskPartitionSetCurrent(
+        taskGroupId,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet()
+    )) {
+      return false;
+    }
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
@@ -3120,6 +3366,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  /**
+   * The number of partitions as last fetched from the underlying stream.
+   * This method differs from {@link #getPartitionCount()} as it does not
+   * refetch the current partition count from the stream, thus avoiding the
+   * need for locks or a network call.
+   */
+  public int getKnownPartitionCount()
+  {
+    return partitionIds.size();
+  }
+
+  /**
+   * Fetches the current partition count from the underlying stream using the
+   * {@link #recordSupplier}.
+   */
   public int getPartitionCount()
   {
     recordSupplierLock.lock();
@@ -3318,7 +3579,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Converts a map with string keys from BoundedStreamConfig to a properly typed map.
-   * The BoundedStreamConfig uses Map<?, ?> which Jackson deserializes as Map<String, Object>.
+   * The BoundedStreamConfig uses {@code Map<?, ?>} which Jackson deserializes as {@code Map<String, Object>}.
    * This method converts string keys to partition IDs and offset values to the appropriate types.
    *
    * @param rawMap the raw map from BoundedStreamConfig
@@ -3811,17 +4072,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             "Updating taskCount for supervisor[%s] from [%d] to [%d] during rollover.",
             supervisorId, currentTaskCount, rolloverTaskCount
         );
-        isScalingTasksOnRollover.set(true);
-        try {
-          new DynamicAllocationTasksNotice(
-              () -> rolloverTaskCount,
-              () -> {},
-              emitter
-          ).handle();
-        }
-        finally {
-          isScalingTasksOnRollover.set(false);
-        }
+        handleDynamicAllocationTasksNotice(
+            () -> rolloverTaskCount,
+            () -> {},
+            true
+        );
+      } else if (rolloverTaskCount != SupervisorTaskAutoScaler.CANNOT_COMPUTE) {
+        // Reset last scale time even if taskCount is not being changed.
+        // Otherwise, we might have a scaling event right after the task rollover.
+        dynamicTriggerLastScaleRunTime = System.currentTimeMillis();
       }
     }
   }
@@ -4099,7 +4358,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // kill all the tasks in this pending completion group
           killTasksInGroup(
               group,
-              "No task in pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              "No successful task in taskGroup within completion timeout",
               groupId
           );
           // set a flag so the other pending completion groups for this set of partitions will also stop
@@ -4108,7 +4367,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // kill all the tasks in the currently reading task group and remove the bad task group
           killTasksInGroup(
               activelyReadingTaskGroups.remove(groupId),
-              "No task in the corresponding pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              "No successful task in prior taskGroup within completion timeout",
               groupId
           );
           toRemove.add(group);
@@ -4116,6 +4375,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
 
       taskGroupList.removeAll(toRemove);
+      toRemove.forEach(TaskGroup::onCompleted);
     }
 
     // Ignore return value; just await.
@@ -4132,6 +4392,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Entry<Integer, TaskGroup> taskGroupEntry = iTaskGroups.next();
       Integer groupId = taskGroupEntry.getKey();
       TaskGroup taskGroup = taskGroupEntry.getValue();
+
+      if (!isTaskPartitionSetCurrent(groupId, taskGroup.startingSequences.keySet())) {
+        futures.add(stopTasksInGroup(taskGroup, "Task group partition selection has changed"));
+        iTaskGroups.remove();
+        continue;
+      }
 
       // Iterate the list of known tasks in this group and:
       //   1) Kill any tasks which are not "current" (have the partitions, starting sequences, and minimumMessageTime
@@ -4399,6 +4665,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
 
       if (ioConfig.getReplicas() > taskGroup.tasks.size()) {
+        // In bounded mode, do not top up replicas for a task group that has already reached its end offsets.
+        // Otherwise, as completed replicas exit, this loop keeps recreating replacement replicas whose start
+        // offsets are already at the bounded end, producing an endless churn of tasks that complete instantly.
+        // This mirrors the completion guard on the task-group recreation path in this method. The bounded-end
+        // check (a metadata-store lookup) is intentionally kept inside this branch so it only runs when a top-up
+        // would otherwise happen, not for every active group on every run.
+        if (ioConfig.isBounded() && hasTaskGroupReachedBoundedEnd(groupId)) {
+          log.info(
+              "Bounded taskGroup[%d] has reached end offsets, skipping replica top-up",
+              groupId
+          );
+          continue;
+        }
         log.info(
             "Number of tasks[%d] does not match configured numReplicas[%d] in taskGroup[%d], creating more tasks.",
             taskGroup.tasks.size(), ioConfig.getReplicas(), groupId
@@ -5332,11 +5611,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     StreamPartition<PartitionIdType> streamPartition = StreamPartition.of(ioConfig.getStream(), partition);
     OrderedSequenceNumber<SequenceOffsetType> sequenceNumber = makeSequenceNumber(offsetFromMetadata);
     recordSupplierLock.lock();
-    if (!recordSupplier.getAssignment().contains(streamPartition)) {
-      // this shouldn't happen, but in case it does...
-      throw new IllegalStateException("Record supplier does not match current known partitions");
-    }
     try {
+      if (!recordSupplier.getAssignment().contains(streamPartition)) {
+        // this shouldn't happen, but in case it does...
+        throw new IllegalStateException("Record supplier does not match current known partitions");
+      }
       return recordSupplier.isOffsetAvailable(streamPartition, sequenceNumber);
     }
     finally {

@@ -26,13 +26,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 public class CursorBuildSpecTest
 {
@@ -56,21 +56,21 @@ public class CursorBuildSpecTest
                                            )
                                            .build();
     // fail if cursor isn't fully ordered by the preferred ordering of the spec
-    Assert.assertFalse(spec1.isCompatibleOrdering(ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME))));
+    Assertions.assertFalse(spec1.isCompatibleOrdering(ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME))));
     // pass if the cursor ordering exactly matches
-    Assert.assertTrue(
+    Assertions.assertTrue(
         spec1.isCompatibleOrdering(
             ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("x"))
         )
     );
     // pass if the cursor ordering is exactly the reverse
-    Assert.assertTrue(
+    Assertions.assertTrue(
         spec1.isCompatibleOrdering(
             ImmutableList.of(OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.descending("x"))
         )
     );
     // pass if the cursor ordering includes additional ordering not specified by the spec preferred ordering
-    Assert.assertTrue(
+    Assertions.assertTrue(
         spec1.isCompatibleOrdering(
             ImmutableList.of(
                 OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME),
@@ -80,7 +80,7 @@ public class CursorBuildSpecTest
         )
     );
     // fail if the cursor ordering is different
-    Assert.assertFalse(
+    Assertions.assertFalse(
         spec1.isCompatibleOrdering(
             ImmutableList.of(
                 OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME),
@@ -90,7 +90,7 @@ public class CursorBuildSpecTest
         )
     );
     // fail if the cursor ordering is different
-    Assert.assertFalse(
+    Assertions.assertFalse(
         spec1.isCompatibleOrdering(
             ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.descending("x"))
         )
@@ -100,7 +100,7 @@ public class CursorBuildSpecTest
     CursorBuildSpec spec2 = CursorBuildSpec.builder()
                                            .setPhysicalColumns(ImmutableSet.of(ColumnHolder.TIME_COLUMN_NAME, "x", "y"))
                                            .build();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         spec2.isCompatibleOrdering(
             ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("x"))
         )
@@ -124,10 +124,10 @@ public class CursorBuildSpecTest
                            )
                        );
 
-    builder.andFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
+    builder.andBaseFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(new EqualityFilter("z", ColumnType.STRING, "hello", null), builder.getFilter());
-    Assert.assertEquals(
+    Assertions.assertEquals(new EqualityFilter("z", ColumnType.STRING, "hello", null), builder.getFilter());
+    Assertions.assertEquals(
         ImmutableSet.of("x", "y", "z"),
         builder.getPhysicalColumns()
     );
@@ -150,10 +150,10 @@ public class CursorBuildSpecTest
                            )
                        );
 
-    builder.andFilter(new EqualityFilter("x", ColumnType.STRING, "hello", null));
+    builder.andBaseFilter(new EqualityFilter("x", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(new EqualityFilter("x", ColumnType.STRING, "hello", null), builder.getFilter());
-    Assert.assertEquals(
+    Assertions.assertEquals(new EqualityFilter("x", ColumnType.STRING, "hello", null), builder.getFilter());
+    Assertions.assertEquals(
         ImmutableSet.of("x", "y"),
         builder.getPhysicalColumns()
     );
@@ -177,9 +177,9 @@ public class CursorBuildSpecTest
                            )
                        );
 
-    builder.andFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
+    builder.andBaseFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new AndFilter(
             ImmutableList.of(
                 new EqualityFilter("x", ColumnType.STRING, "foo", null),
@@ -188,7 +188,7 @@ public class CursorBuildSpecTest
         ),
         builder.getFilter()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("x", "y", "z"),
         builder.getPhysicalColumns()
     );
@@ -200,10 +200,10 @@ public class CursorBuildSpecTest
     CursorBuildSpec.CursorBuildSpecBuilder builder =
         CursorBuildSpec.builder();
 
-    builder.andFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
+    builder.andBaseFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(new EqualityFilter("z", ColumnType.STRING, "hello", null), builder.getFilter());
-    Assert.assertNull(
+    Assertions.assertEquals(new EqualityFilter("z", ColumnType.STRING, "hello", null), builder.getFilter());
+    Assertions.assertNull(
         builder.getPhysicalColumns()
     );
   }
@@ -214,9 +214,9 @@ public class CursorBuildSpecTest
     CursorBuildSpec.CursorBuildSpecBuilder builder =
         CursorBuildSpec.builder().setFilter(new EqualityFilter("x", ColumnType.STRING, "foo", null));
 
-    builder.andFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
+    builder.andBaseFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new AndFilter(
             ImmutableList.of(
                 new EqualityFilter("x", ColumnType.STRING, "foo", null),
@@ -225,69 +225,7 @@ public class CursorBuildSpecTest
         ),
         builder.getFilter()
     );
-    Assert.assertNull(
-        builder.getPhysicalColumns()
-    );
-  }
-
-  @Test
-  public void testBuilderAndFilterNoExistingFilterUsingVirtualColumn()
-  {
-    CursorBuildSpec.CursorBuildSpecBuilder builder =
-        CursorBuildSpec.builder()
-                       .setPhysicalColumns(ImmutableSet.of("x", "y"))
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v0",
-                                   "y + 2",
-                                   ColumnType.LONG,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       );
-    builder.andFilter(new RangeFilter("v0", ColumnType.LONG, 1L, 3L, true, true, null));
-
-    Assert.assertEquals(
-        new RangeFilter("v0", ColumnType.LONG, 1L, 3L, true, true, null),
-        builder.getFilter()
-    );
-    Assert.assertEquals(
-        ImmutableSet.of("x", "y"),
-        builder.getPhysicalColumns()
-    );
-  }
-
-  @Test
-  public void testBuilderAndFilterExistingFilterNewFilterUsingVirtualColumn()
-  {
-    CursorBuildSpec.CursorBuildSpecBuilder builder =
-        CursorBuildSpec.builder()
-                       .setFilter(new EqualityFilter("x", ColumnType.STRING, "foo", null))
-                       .setPhysicalColumns(ImmutableSet.of("x", "y"))
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v0",
-                                   "y + 2",
-                                   ColumnType.LONG,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       );
-    builder.andFilter(new RangeFilter("v0", ColumnType.LONG, 1L, 3L, true, true, null));
-
-    Assert.assertEquals(
-        new AndFilter(
-            ImmutableList.of(
-                new EqualityFilter("x", ColumnType.STRING, "foo", null),
-                new RangeFilter("v0", ColumnType.LONG, 1L, 3L, true, true, null)
-            )
-        ),
-        builder.getFilter()
-    );
-    Assert.assertEquals(
-        ImmutableSet.of("x", "y"),
+    Assertions.assertNull(
         builder.getPhysicalColumns()
     );
   }
@@ -297,11 +235,107 @@ public class CursorBuildSpecTest
   {
     CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder();
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
-        () -> builder.andFilter(null)
+        () -> builder.andBaseFilter(null)
     );
 
-    Assert.assertEquals("filterToAdd must not be null", t.getMessage());
+    Assertions.assertEquals("filterToAdd must not be null", t.getMessage());
+  }
+
+  @Test
+  public void testAddBaseFilter()
+  {
+    final CursorBuildSpec spec =
+        CursorBuildSpec.builder()
+                       .setPhysicalColumns(ImmutableSet.of("x"))
+                       .setVirtualColumns(VirtualColumns.create(expression("v", "concat(x, 'a')")))
+                       .andBaseFilter(new EqualityFilter("y", ColumnType.STRING, "a", null))
+                       .build();
+
+    Assertions.assertEquals(new EqualityFilter("y", ColumnType.STRING, "a", null), spec.getFilter());
+    Assertions.assertEquals(ImmutableSet.of("x", "y"), spec.getPhysicalColumns());
+  }
+
+  @Test
+  public void testAddBaseFilterShadowed()
+  {
+    final CursorBuildSpec.CursorBuildSpecBuilder builder =
+        CursorBuildSpec.builder().setVirtualColumns(VirtualColumns.create(expression("y", "'a'")));
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> builder.andBaseFilter(new EqualityFilter("y", ColumnType.STRING, "a", null))
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    Assertions.assertEquals("Virtual column name[y] is not permitted", e.getMessage());
+  }
+
+  @Test
+  public void testAddBaseFilterShadowedByDotNotation()
+  {
+    // A virtual column that uses dot notation also takes the names that begin with its own, followed by a dot.
+    final VirtualColumn dotNotation = Mockito.mock(VirtualColumn.class);
+    Mockito.when(dotNotation.getOutputName()).thenReturn("m");
+    Mockito.when(dotNotation.requiredColumns()).thenReturn(ImmutableList.of());
+    Mockito.when(dotNotation.usesDotNotation()).thenReturn(true);
+    final CursorBuildSpec.CursorBuildSpecBuilder builder =
+        CursorBuildSpec.builder().setVirtualColumns(VirtualColumns.create(dotNotation));
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> builder.andBaseFilter(new EqualityFilter("m.k", ColumnType.STRING, "a", null))
+    );
+    Assertions.assertEquals("Virtual column name[m] is not permitted", e.getMessage());
+  }
+
+  @Test
+  public void testAddBaseVirtualColumns()
+  {
+    // "u" is one of ours, read by the spec as a physical column until now, and "w" reads it.
+    final CursorBuildSpec spec =
+        CursorBuildSpec.builder()
+                       .setPhysicalColumns(ImmutableSet.of("u", "z"))
+                       .setVirtualColumns(VirtualColumns.create(expression("w", "concat(u, 'a')")))
+                       .addBaseVirtualColumns(VirtualColumns.create(expression("u", "concat(x, y)")))
+                       .build();
+
+    Assertions.assertEquals(ImmutableList.of("u", "w"), spec.getVirtualColumns().getColumnNames());
+    Assertions.assertEquals(ImmutableSet.of("x", "y", "z"), spec.getPhysicalColumns());
+  }
+
+  @Test
+  public void testAddBaseVirtualColumnsNoPhysicalColumns()
+  {
+    final CursorBuildSpec spec =
+        CursorBuildSpec.builder()
+                       .addBaseVirtualColumns(VirtualColumns.create(expression("u", "concat(x, y)")))
+                       .build();
+
+    Assertions.assertEquals(ImmutableList.of("u"), spec.getVirtualColumns().getColumnNames());
+    Assertions.assertNull(spec.getPhysicalColumns());
+  }
+
+  @Test
+  public void testAddBaseVirtualColumnsShadowed()
+  {
+    final VirtualColumns ours = VirtualColumns.create(expression("u", "concat(x, 'a')"));
+
+    // A virtual column already set may take neither the name of one of ours, nor of a column one of ours reads.
+    for (final String name : ImmutableList.of("u", "x")) {
+      final CursorBuildSpec.CursorBuildSpecBuilder builder =
+          CursorBuildSpec.builder().setVirtualColumns(VirtualColumns.create(expression(name, "'q'")));
+      final DruidException e =
+          Assertions.assertThrows(DruidException.class, () -> builder.addBaseVirtualColumns(ours));
+      Assertions.assertEquals(
+          "Virtual column name[" + name + "] is not permitted",
+          e.getMessage()
+      );
+    }
+  }
+
+  private static VirtualColumn expression(final String name, final String expression)
+  {
+    return new ExpressionVirtualColumn(name, expression, ColumnType.STRING, TestExprMacroTable.INSTANCE);
   }
 }

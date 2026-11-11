@@ -23,7 +23,7 @@ import { QueryState } from '../../utils';
 
 import { SegmentTimeline } from './segment-timeline';
 
-jest.useFakeTimers('modern').setSystemTime(Date.parse('2024-11-19T12:34:56Z'));
+jest.useFakeTimers().setSystemTime(Date.parse('2024-11-19T12:34:56Z'));
 
 jest.mock('../../hooks', () => {
   return {

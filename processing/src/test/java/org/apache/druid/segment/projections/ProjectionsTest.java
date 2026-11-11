@@ -263,6 +263,52 @@ class ProjectionsTest
   }
 
   @Test
+  void testSchemaFilterRejectedWhenQueryFilterCannotBeRewritten()
+  {
+    // The query VC v0 := upper(b) is equivalent to the projection's b_upper, so matchQueryVirtualColumns remaps
+    // v0 -> b_upper. The query's filter references v0 but can't rewrite its required columns, so it can't be remapped
+    // into the projection's column namespace: the match must be rejected (fall back to the base table) rather than
+    // throwing from rewriteRequiredColumns.
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.LONG)
+                                         .add("b", ColumnType.STRING)
+                                         .add("c", ColumnType.LONG)
+                                         .build();
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .filter(new EqualityFilter("b", ColumnType.STRING, "foo", null))
+                               .virtualColumns(
+                                   new ExpressionVirtualColumn("b_upper", "upper(b)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                               )
+                               .groupingColumns(new StringDimensionSchema("b_upper"), new LongDimensionSchema("a"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
+                               .toMetadataSchema(),
+        12345
+    );
+    CursorBuildSpec query = CursorBuildSpec.builder()
+                                           .setVirtualColumns(
+                                               VirtualColumns.create(
+                                                   new ExpressionVirtualColumn("v0", "upper(b)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                                               )
+                                           )
+                                           .setFilter(new NoRewriteFilter("v0"))
+                                           .setPhysicalColumns(Set.of("b", "c"))
+                                           .setPreferredOrdering(List.of())
+                                           .build();
+
+    Assertions.assertNull(
+        Projections.matchAggregateProjection(
+            spec.getSchema(),
+            query,
+            Intervals.ETERNITY,
+            new RowSignatureChecker(baseTable)
+        )
+    );
+  }
+
+  @Test
   void testSchemaMatchFilterIncludedInProjection()
   {
     RowSignature baseTable = RowSignature.builder()
@@ -571,6 +617,16 @@ class ProjectionsTest
     );
     Assertions.assertEquals("__base$42/", Projections.getClusterGroupSegmentInternalFilePrefix(List.of(42)));
     Assertions.assertEquals("__base$1_2/", Projections.getClusterGroupSegmentInternalFilePrefix(List.of(1, 2)));
+  }
+
+  @Test
+  void testGetClusterGroupBundleNameIsInterned()
+  {
+    // loaded segments retain bundle names (cache entries, rule selections, column tables), so every caller must get
+    // the same instance for the same group rather than a fresh copy
+    final String name = Projections.getClusterGroupBundleName(List.of(0, 1));
+    Assertions.assertEquals("__base$0_1", name);
+    Assertions.assertSame(name, Projections.getClusterGroupBundleName(List.of(0, 1)));
   }
 
   @Test

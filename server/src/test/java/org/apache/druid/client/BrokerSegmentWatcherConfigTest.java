@@ -22,8 +22,8 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -44,9 +44,9 @@ public class BrokerSegmentWatcherConfigTest
         BrokerSegmentWatcherConfig.class
     );
 
-    Assert.assertNull(config.getWatchedTiers());
-    Assert.assertTrue(config.isWatchRealtimeTasks());
-    Assert.assertNull(config.getIgnoredTiers());
+    Assertions.assertNull(config.getWatchedTiers());
+    Assertions.assertTrue(config.isWatchRealtimeTasks());
+    Assertions.assertNull(config.getIgnoredTiers());
 
     //non-defaults
     json = "{ \"watchedTiers\": [\"t1\", \"t2\"], \"watchedDataSources\": [\"ds1\", \"ds2\"], \"watchRealtimeTasks\": false }";
@@ -58,10 +58,10 @@ public class BrokerSegmentWatcherConfigTest
         BrokerSegmentWatcherConfig.class
     );
 
-    Assert.assertEquals(ImmutableSet.of("t1", "t2"), config.getWatchedTiers());
-    Assert.assertNull(config.getIgnoredTiers());
-    Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
-    Assert.assertFalse(config.isWatchRealtimeTasks());
+    Assertions.assertEquals(ImmutableSet.of("t1", "t2"), config.getWatchedTiers());
+    Assertions.assertNull(config.getIgnoredTiers());
+    Assertions.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
+    Assertions.assertFalse(config.isWatchRealtimeTasks());
 
     // json with ignoredTiers
     json = "{ \"ignoredTiers\": [\"t3\", \"t4\"], \"watchedDataSources\": [\"ds1\", \"ds2\"] }";
@@ -73,9 +73,9 @@ public class BrokerSegmentWatcherConfigTest
         BrokerSegmentWatcherConfig.class
     );
 
-    Assert.assertNull(config.getWatchedTiers());
-    Assert.assertEquals(ImmutableSet.of("t3", "t4"), config.getIgnoredTiers());
-    Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
-    Assert.assertTrue(config.isWatchRealtimeTasks());
+    Assertions.assertNull(config.getWatchedTiers());
+    Assertions.assertEquals(ImmutableSet.of("t3", "t4"), config.getIgnoredTiers());
+    Assertions.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
+    Assertions.assertTrue(config.isWatchRealtimeTasks());
   }
 }

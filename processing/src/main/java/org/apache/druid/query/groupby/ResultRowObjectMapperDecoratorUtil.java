@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
@@ -96,7 +97,7 @@ public class ResultRowObjectMapperDecoratorUtil
       final GroupByQueryConfig groupByQueryConfig
   )
   {
-    final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
+    final boolean resultAsArray = query.context().getOrDefault(QueryContextParameters.RESULT_AS_ARRAY);
     final boolean intermediateCompatMode = groupByQueryConfig.isIntermediateResultAsMapCompat();
     final boolean arrayBasedRows = resultAsArray && !intermediateCompatMode;
     final boolean dimensionsRequireConversion = query.getDimensions()
@@ -185,7 +186,7 @@ public class ResultRowObjectMapperDecoratorUtil
       final GroupByQueryConfig groupByQueryConfig
   )
   {
-    final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
+    final boolean resultAsArray = query.context().getOrDefault(QueryContextParameters.RESULT_AS_ARRAY);
     final boolean intermediateCompatMode = groupByQueryConfig.isIntermediateResultAsMapCompat();
     final boolean arrayBasedRows = resultAsArray && !intermediateCompatMode;
     if (arrayBasedRows) {

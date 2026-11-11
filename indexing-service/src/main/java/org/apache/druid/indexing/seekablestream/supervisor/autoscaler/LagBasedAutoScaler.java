@@ -30,7 +30,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
@@ -49,15 +48,13 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   private final SupervisorSpec spec;
   private final SeekableStreamSupervisor supervisor;
   private final LagBasedAutoScalerConfig lagBasedAutoScalerConfig;
-  private final ServiceEmitter emitter;
 
   private static final ReentrantLock LOCK = new ReentrantLock(true);
 
   public LagBasedAutoScaler(
       SeekableStreamSupervisor supervisor,
       LagBasedAutoScalerConfig autoScalerConfig,
-      SupervisorSpec spec,
-      ServiceEmitter emitter
+      SupervisorSpec spec
   )
   {
     this.lagBasedAutoScalerConfig = autoScalerConfig;
@@ -73,7 +70,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     this.lagComputationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Computation-%d");
     this.spec = spec;
     this.supervisor = supervisor;
-    this.emitter = emitter;
   }
 
   @Override
@@ -114,7 +110,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     allocationExec.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale, emitter),
+        supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis() + lagBasedAutoScalerConfig
             .getLagCollectionRangeMillis(),
         lagBasedAutoScalerConfig.getScaleActionPeriodMillis(),

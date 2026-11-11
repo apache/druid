@@ -20,9 +20,9 @@
 package org.apache.druid.server.coordinator.loading;
 
 import org.apache.druid.error.DruidException;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
@@ -30,7 +30,7 @@ public class LoadingRateTrackerTest
 {
   private LoadingRateTracker tracker;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     tracker = new LoadingRateTracker();
@@ -39,11 +39,11 @@ public class LoadingRateTrackerTest
   @Test
   public void testUpdateThrowsExceptionIfBatchNotStarted()
   {
-    DruidException e = Assert.assertThrows(
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> tracker.incrementBytesLoadedInBatch(1000, 10)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "markBatchLoadingStarted() must be called before tracking load progress.",
         e.getMessage()
     );
@@ -52,7 +52,7 @@ public class LoadingRateTrackerTest
   @Test
   public void testRateIsZeroWhenEmpty()
   {
-    Assert.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
+    Assertions.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
   }
 
   @Test
@@ -60,10 +60,10 @@ public class LoadingRateTrackerTest
   {
     tracker.markBatchLoadingStarted();
     tracker.incrementBytesLoadedInBatch(1000, 10);
-    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
+    Assertions.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
     tracker.stop();
-    Assert.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
+    Assertions.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
   }
 
   @Test
@@ -71,10 +71,10 @@ public class LoadingRateTrackerTest
   {
     tracker.markBatchLoadingStarted();
     tracker.incrementBytesLoadedInBatch(1000, 10);
-    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
+    Assertions.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
     tracker.incrementBytesLoadedInBatch(1000, 15);
-    Assert.assertEquals(8 * 2000 / 15, tracker.getMovingAverageLoadRateKbps());
+    Assertions.assertEquals(8 * 2000 / 15, tracker.getMovingAverageLoadRateKbps());
   }
 
   @Test
@@ -82,12 +82,12 @@ public class LoadingRateTrackerTest
   {
     tracker.markBatchLoadingStarted();
     tracker.incrementBytesLoadedInBatch(1000, 10);
-    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
+    Assertions.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
     tracker.markBatchLoadingFinished();
 
     tracker.markBatchLoadingStarted();
     tracker.incrementBytesLoadedInBatch(1000, 5);
-    Assert.assertEquals(8 * 2000 / 15, tracker.getMovingAverageLoadRateKbps());
+    Assertions.assertEquals(8 * 2000 / 15, tracker.getMovingAverageLoadRateKbps());
     tracker.markBatchLoadingFinished();
   }
 
@@ -107,11 +107,11 @@ public class LoadingRateTrackerTest
       tracker.incrementBytesLoadedInBatch(updateBytes, monoticBatchDuration);
 
       totalUpdateBytes += updateBytes;
-      Assert.assertEquals(8 * totalUpdateBytes / monoticBatchDuration, tracker.getMovingAverageLoadRateKbps());
+      Assertions.assertEquals(8 * totalUpdateBytes / monoticBatchDuration, tracker.getMovingAverageLoadRateKbps());
     }
 
     tracker.markBatchLoadingFinished();
-    Assert.assertEquals(8 * totalUpdateBytes / monoticBatchDuration, tracker.getMovingAverageLoadRateKbps());
+    Assertions.assertEquals(8 * totalUpdateBytes / monoticBatchDuration, tracker.getMovingAverageLoadRateKbps());
   }
 
   @Test
@@ -136,7 +136,7 @@ public class LoadingRateTrackerTest
 
       tracker.markBatchLoadingStarted();
       tracker.incrementBytesLoadedInBatch(updateBytes[i], updateMillis[i]);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           8 * totalBytes / totalMillis,
           tracker.getMovingAverageLoadRateKbps()
       );
@@ -153,7 +153,7 @@ public class LoadingRateTrackerTest
     // Verify that the average window has moved
     totalBytes = totalBytes - updateBytes[0] + latestUpdateBytes;
     totalMillis = totalMillis - updateMillis[0] + latestUpdateMillis;
-    Assert.assertEquals(
+    Assertions.assertEquals(
         8 * totalBytes / totalMillis,
         tracker.getMovingAverageLoadRateKbps()
     );
@@ -182,7 +182,7 @@ public class LoadingRateTrackerTest
       tracker.markBatchLoadingFinished();
 
       // Verify that the average window doesn't move
-      Assert.assertEquals(
+      Assertions.assertEquals(
           8 * totalBytes / totalMillis,
           tracker.getMovingAverageLoadRateKbps()
       );

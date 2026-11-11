@@ -57,9 +57,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -397,10 +398,10 @@ public class JoinTestHelper
       }
     }
 
-    Assert.assertEquals("number of rows", expectedRows.size(), rows.size());
+    Assertions.assertEquals(expectedRows.size(), rows.size(), "number of rows");
 
     for (int i = 0; i < rows.size(); i++) {
-      Assert.assertArrayEquals("row #" + i, expectedRows.get(i), rows.get(i));
+      Assertions.assertArrayEquals(expectedRows.get(i), rows.get(i), "row #" + i);
     }
   }
 

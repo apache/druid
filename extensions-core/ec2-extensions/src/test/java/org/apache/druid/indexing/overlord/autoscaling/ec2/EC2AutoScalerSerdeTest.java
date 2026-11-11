@@ -27,8 +27,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -60,22 +60,22 @@ public class EC2AutoScalerSerdeTest
 
   private static void verifyAutoScaler(final EC2AutoScaler autoScaler)
   {
-    Assert.assertEquals(3, autoScaler.getMaxNumWorkers());
-    Assert.assertEquals(2, autoScaler.getMinNumWorkers());
-    Assert.assertEquals("westeros-east-1a", autoScaler.getEnvConfig().getAvailabilityZone());
+    Assertions.assertEquals(3, autoScaler.getMaxNumWorkers());
+    Assertions.assertEquals(2, autoScaler.getMinNumWorkers());
+    Assertions.assertEquals("westeros-east-1a", autoScaler.getEnvConfig().getAvailabilityZone());
 
     // nodeData
-    Assert.assertEquals("ami-abc", autoScaler.getEnvConfig().getNodeData().getAmiId());
-    Assert.assertEquals("t1.micro", autoScaler.getEnvConfig().getNodeData().getInstanceType());
-    Assert.assertEquals("iron", autoScaler.getEnvConfig().getNodeData().getKeyName());
-    Assert.assertEquals(1, autoScaler.getEnvConfig().getNodeData().getMaxInstances());
-    Assert.assertEquals(1, autoScaler.getEnvConfig().getNodeData().getMinInstances());
-    Assert.assertEquals(
+    Assertions.assertEquals("ami-abc", autoScaler.getEnvConfig().getNodeData().getAmiId());
+    Assertions.assertEquals("t1.micro", autoScaler.getEnvConfig().getNodeData().getInstanceType());
+    Assertions.assertEquals("iron", autoScaler.getEnvConfig().getNodeData().getKeyName());
+    Assertions.assertEquals(1, autoScaler.getEnvConfig().getNodeData().getMaxInstances());
+    Assertions.assertEquals(1, autoScaler.getEnvConfig().getNodeData().getMinInstances());
+    Assertions.assertEquals(
         Collections.singletonList("kingsguard"),
         autoScaler.getEnvConfig().getNodeData().getSecurityGroupIds()
     );
-    Assert.assertEquals("redkeep", autoScaler.getEnvConfig().getNodeData().getSubnetId());
-    Assert.assertEquals(
+    Assertions.assertEquals("redkeep", autoScaler.getEnvConfig().getNodeData().getSubnetId());
+    Assertions.assertEquals(
         "foo",
         autoScaler.getEnvConfig()
                   .getNodeData()
@@ -83,7 +83,7 @@ public class EC2AutoScalerSerdeTest
                   .toIamInstanceProfileSpecification()
                   .name()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "bar",
         autoScaler.getEnvConfig()
                   .getNodeData()
@@ -93,7 +93,7 @@ public class EC2AutoScalerSerdeTest
     );
 
     // userData
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "VERSION=1234\n",
         StringUtils.fromUtf8(
             StringUtils
@@ -132,6 +132,6 @@ public class EC2AutoScalerSerdeTest
     );
     verifyAutoScaler(roundTripAutoScaler);
 
-    Assert.assertEquals("Round trip equals", autoScaler, roundTripAutoScaler);
+    Assertions.assertEquals(autoScaler, roundTripAutoScaler, "Round trip equals");
   }
 }

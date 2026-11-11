@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -49,9 +51,7 @@ import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 /**
  * Allocates a pending segment for a given timestamp.
@@ -68,7 +68,7 @@ import java.util.stream.Collectors;
  * <p/>
  * If this action cannot acquire an appropriate task lock, or if it cannot expand an existing segment set, it returns
  * null.
- * </p>
+ * <p/>
  * Do NOT allocate WEEK granularity segments unless the preferred segment granularity is WEEK.
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
@@ -194,7 +194,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   }
 
   @Override
-  public Future<SegmentIdWithShardSpec> performAsync(Task task, TaskActionToolbox toolbox)
+  public ListenableFuture<SegmentIdWithShardSpec> performAsync(Task task, TaskActionToolbox toolbox)
   {
     if (!toolbox.canBatchSegmentAllocation()) {
       throw new ISE("Batched segment allocation is disabled");
@@ -241,6 +241,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
         identifier = tryAllocateSubsequentSegment(toolbox, task, rowInterval, usedSegmentsForRow.iterator().next());
       }
       if (identifier != null) {
+        IndexTaskUtils.emitSegmentAllocateMetric(identifier, task, toolbox.getEmitter());
         return identifier;
       }
 
@@ -287,7 +288,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     final List<Interval> tryIntervals = Granularity.granularitiesFinerThan(preferredSegmentGranularity)
                                                    .stream()
                                                    .map(granularity -> granularity.bucket(timestamp))
-                                                   .collect(Collectors.toList());
+                                                   .toList();
     for (Interval tryInterval : tryIntervals) {
       if (tryInterval.contains(rowInterval)) {
         final SegmentIdWithShardSpec identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);

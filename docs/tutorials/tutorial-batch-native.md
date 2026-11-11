@@ -24,7 +24,7 @@ sidebar_label: Load data with native batch ingestion
   -->
 
 
-This topic shows you how to load and query data files in Apache Druid using its native batch ingestion feature. 
+This topic shows you how to load and query data files in Apache&circledR; Druid using its native batch ingestion feature. 
 
 ## Prerequisites
 

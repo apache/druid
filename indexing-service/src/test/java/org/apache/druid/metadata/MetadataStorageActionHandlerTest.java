@@ -20,16 +20,16 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +44,7 @@ public class MetadataStorageActionHandlerTest
 
   private MetadataStorageActionHandler handler;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.handler = new MetadataStorageActionHandler()

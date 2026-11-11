@@ -19,6 +19,10 @@
 
 package org.apache.druid.metadata.segment;
 
+import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
+
+import java.util.function.Function;
+
 /**
  * Factory for {@link SegmentMetadataTransaction}s.
  */
@@ -41,4 +45,21 @@ public interface SegmentMetadataTransactionFactory
       String dataSource,
       SegmentMetadataTransaction.Callback<T> callback
   );
+
+
+  /**
+   * Performs a read-only transaction which queries the metadata store.
+   */
+  <T> T inReadOnlyNoCacheTransaction(
+      Function<SqlSegmentsMetadataQuery, T> sqlQuery
+  );
+
+  /**
+   * Performs a write transaction which updates the metadata store directly,
+   * and does not affect the cache.
+   */
+  <T> T inReadWriteNoCacheTransaction(
+      Function<SqlSegmentsMetadataQuery, T> sqlUpdate
+  );
+
 }

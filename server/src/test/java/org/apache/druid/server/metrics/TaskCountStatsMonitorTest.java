@@ -20,15 +20,18 @@
 package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
+import java.util.List;
 import java.util.Map;
 
 public class TaskCountStatsMonitorTest
@@ -41,7 +44,7 @@ public class TaskCountStatsMonitorTest
                                                        .with(Dimension.TASK_TYPE, "kill")
                                                        .build();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     statsProvider = new TaskCountStatsProvider()
@@ -94,7 +97,7 @@ public class TaskCountStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(9, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(9, emitter.getNumEmittedEvents());
 
     emitter.verifyValue("task/success/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
     emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
@@ -106,6 +109,33 @@ public class TaskCountStatsMonitorTest
 
     emitter.verifyValue(Stat.INFO_1.getMetricName(), 10L);
     emitter.verifyValue(Stat.DEBUG_1.getMetricName(), Map.of("tier", "hot", "dataSource", "wiki"), 20L);
+  }
+
+  @Test
+  public void testDimensionsDoNotLeakAcrossRows()
+  {
+    final RowKey streamingKey = RowKey.with(Dimension.DATASOURCE, "d1")
+                                      .with(Dimension.TASK_TYPE, "index_kafka")
+                                      .with(Dimension.SUPERVISOR_ID, "s1")
+                                      .build();
+    final TaskCountStatsProvider provider = Mockito.mock(TaskCountStatsProvider.class);
+    Mockito.when(provider.getRunningTaskCount())
+           .thenReturn(ImmutableMap.of(streamingKey, 3L, TASK_METRIC_KEY2, 1L, RowKey.empty(), 1L));
+
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    new TaskCountStatsMonitor(provider).doMonitor(emitter);
+
+    Assertions.assertEquals(
+        List.of(
+            Map.of("dataSource", "d1", "taskType", "index_kafka", "supervisorId", "s1"),
+            Map.of("dataSource", "d1", "taskType", "kill"),
+            Map.of()
+        ),
+        emitter.getMetricEvents("task/running/count")
+               .stream()
+               .map(ServiceMetricEvent::getUserDims)
+               .toList()
+    );
   }
 
   private static class Stat

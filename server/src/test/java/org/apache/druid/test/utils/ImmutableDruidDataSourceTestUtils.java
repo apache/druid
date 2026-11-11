@@ -20,7 +20,7 @@
 package org.apache.druid.test.utils;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -60,16 +60,20 @@ public class ImmutableDruidDataSourceTestUtils
    * test code
    * @param expected expected list
    * @param actual actual list
-   * @return
    */
-  public static boolean assertEquals(List<ImmutableDruidDataSource> expected, List<ImmutableDruidDataSource> actual)
+  public static void assertEquals(
+      @Nullable List<ImmutableDruidDataSource> expected,
+      @Nullable List<ImmutableDruidDataSource> actual
+  )
   {
     if (expected == null) {
-      return actual == null;
+      Assertions.assertNull(actual);
+      return;
     }
+    Assertions.assertNotNull(actual);
 
-    Assert.assertEquals("expected and actual ImmutableDruidDataSource lists should be of equal size",
-        expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size(),
+        "expected and actual ImmutableDruidDataSource lists should be of equal size");
 
     for (ImmutableDruidDataSource e : expected) {
       if (!contains(e, actual)) {
@@ -77,7 +81,6 @@ public class ImmutableDruidDataSourceTestUtils
           "ImmutableDruidDataSource's equalsForTesting()" + " method");
       }
     }
-    return true;
   }
 
   private static boolean contains(ImmutableDruidDataSource expected, List<ImmutableDruidDataSource> actualList)

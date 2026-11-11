@@ -27,14 +27,10 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.AuthorizationResult;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AuthorizationResultTest
 {
@@ -58,7 +54,7 @@ public class AuthorizationResultTest
                 RowFilterPolicy.from(new EqualityFilter("column1", ColumnType.STRING, "val1", null)))
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         "AuthorizationResult [permission=ALLOW_WITH_RESTRICTION, failureMessage=null, policyRestrictions={table1=Optional[NO_RESTRICTION], table2=Optional[RowFilterPolicy{rowFilter=column1 = val1}]}]",
         result.toString()
     );
@@ -68,35 +64,35 @@ public class AuthorizationResultTest
   public void testNoAccess()
   {
     AuthorizationResult result = AuthorizationResult.deny("this data source is not permitted");
-    assertFalse(result.allowBasicAccess());
-    assertFalse(result.allowAccessWithNoRestriction());
-    assertEquals("this data source is not permitted", result.getErrorMessage());
-    assertFalse(result.allowAccessWithNoRestriction());
+    Assertions.assertFalse(result.allowBasicAccess());
+    Assertions.assertFalse(result.allowAccessWithNoRestriction());
+    Assertions.assertEquals("this data source is not permitted", result.getErrorMessage());
+    Assertions.assertFalse(result.allowAccessWithNoRestriction());
   }
 
   @Test
   public void testFullAccess()
   {
     AuthorizationResult result = AuthorizationResult.allowWithRestriction(ImmutableMap.of());
-    assertTrue(result.allowBasicAccess());
-    assertTrue(result.allowAccessWithNoRestriction());
-    assertThrows(DruidException.class, result::getErrorMessage);
+    Assertions.assertTrue(result.allowBasicAccess());
+    Assertions.assertTrue(result.allowAccessWithNoRestriction());
+    Assertions.assertThrows(DruidException.class, result::getErrorMessage);
 
     AuthorizationResult resultWithEmptyPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",
         Optional.empty()
     ));
-    assertTrue(resultWithEmptyPolicy.allowBasicAccess());
-    assertTrue(resultWithEmptyPolicy.allowAccessWithNoRestriction());
-    assertThrows(DruidException.class, resultWithEmptyPolicy::getErrorMessage);
+    Assertions.assertTrue(resultWithEmptyPolicy.allowBasicAccess());
+    Assertions.assertTrue(resultWithEmptyPolicy.allowAccessWithNoRestriction());
+    Assertions.assertThrows(DruidException.class, resultWithEmptyPolicy::getErrorMessage);
 
     AuthorizationResult resultWithNoRestrictionPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",
         Optional.of(NoRestrictionPolicy.instance())
     ));
-    assertTrue(resultWithNoRestrictionPolicy.allowBasicAccess());
-    assertTrue(resultWithNoRestrictionPolicy.allowAccessWithNoRestriction());
-    assertThrows(DruidException.class, resultWithNoRestrictionPolicy::getErrorMessage);
+    Assertions.assertTrue(resultWithNoRestrictionPolicy.allowBasicAccess());
+    Assertions.assertTrue(resultWithNoRestrictionPolicy.allowAccessWithNoRestriction());
+    Assertions.assertThrows(DruidException.class, resultWithNoRestrictionPolicy::getErrorMessage);
   }
 
   @Test
@@ -111,8 +107,8 @@ public class AuthorizationResultTest
             null
         )))
     ));
-    assertTrue(result.allowBasicAccess());
-    assertFalse(result.allowAccessWithNoRestriction());
-    assertEquals("Unauthorized", result.getErrorMessage());
+    Assertions.assertTrue(result.allowBasicAccess());
+    Assertions.assertFalse(result.allowAccessWithNoRestriction());
+    Assertions.assertEquals("Unauthorized", result.getErrorMessage());
   }
 }

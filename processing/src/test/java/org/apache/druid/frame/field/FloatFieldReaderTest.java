@@ -37,46 +37,42 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class FloatFieldReaderTest extends InitializedNullHandlingTest
 {
   private static final long MEMORY_POSITION = 1;
-
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
-
   @Mock
   public BaseFloatColumnValueSelector writeSelector;
 
-  private final FrameType frameType;
+  @Parameter(0)
+  public FrameType frameType;
 
   private WritableMemory memory;
   private FieldWriter fieldWriter;
 
-  public FloatFieldReaderTest(FrameType frameType)
-  {
-    this.frameType = frameType;
-  }
-
-  @Parameterized.Parameters(name = "frameType = {0}")
-  public static Iterable<Object[]> constructorFeeder()
+  public static Stream<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (FrameType frameType : FrameType.values()) {
@@ -84,17 +80,17 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
         constructors.add(new Object[]{frameType});
       }
     }
-    return constructors;
+    return constructors.stream();
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
     fieldWriter = FloatFieldWriter.forPrimitive(writeSelector, frameType);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     fieldWriter.close();
@@ -104,7 +100,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_defaultOrNull()
   {
     writeToMemory(null);
-    Assert.assertTrue(FloatFieldReader.forPrimitive(frameType).isNull(memory, MEMORY_POSITION));
+    Assertions.assertTrue(FloatFieldReader.forPrimitive(frameType).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -121,9 +117,9 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
 
     for (int i = 1; i < rows.size(); i++) {
       if (Objects.equals(accessor.getObject(i - 1), accessor.getObject(i))) {
-        Assert.assertEquals(0, accessor.compareRows(i - 1, i));
+        Assertions.assertEquals(0, accessor.compareRows(i - 1, i));
       } else {
-        Assert.assertTrue(accessor.compareRows(i - 1, i) < 0);
+        Assertions.assertTrue(accessor.compareRows(i - 1, i) < 0);
       }
     }
   }
@@ -132,7 +128,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_aValue()
   {
     writeToMemory(5.1f);
-    Assert.assertFalse(FloatFieldReader.forPrimitive(frameType).isNull(memory, MEMORY_POSITION));
+    Assertions.assertFalse(FloatFieldReader.forPrimitive(frameType).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -144,7 +140,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
         FloatFieldReader.forPrimitive(frameType)
                         .makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
-    Assert.assertTrue(readSelector.isNull());
+    Assertions.assertTrue(readSelector.isNull());
   }
 
   @Test
@@ -156,7 +152,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
         FloatFieldReader.forPrimitive(frameType)
                         .makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
-    Assert.assertEquals(5.1f, readSelector.getObject());
+    Assertions.assertEquals(5.1f, readSelector.getObject());
   }
 
   @Test
@@ -170,21 +166,21 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
-    Assert.assertEquals(1, row.size());
-    Assert.assertEquals(null, readSelector.lookupName(0));
+    Assertions.assertEquals(1, row.size());
+    Assertions.assertEquals(null, readSelector.lookupName(0));
 
     // Informational method tests.
-    Assert.assertFalse(readSelector.supportsLookupNameUtf8());
-    Assert.assertFalse(readSelector.nameLookupPossibleInAdvance());
-    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
-    Assert.assertEquals(String.class, readSelector.classOfObject());
-    Assert.assertNull(readSelector.idLookup());
+    Assertions.assertFalse(readSelector.supportsLookupNameUtf8());
+    Assertions.assertFalse(readSelector.nameLookupPossibleInAdvance());
+    Assertions.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
+    Assertions.assertEquals(String.class, readSelector.classOfObject());
+    Assertions.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertFalse(readSelector.makeValueMatcher("0.0").matches(false));
-    Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches(false));
-    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.0")).matches(false));
-    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
+    Assertions.assertFalse(readSelector.makeValueMatcher("0.0").matches(false));
+    Assertions.assertTrue(readSelector.makeValueMatcher((String) null).matches(false));
+    Assertions.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.0")).matches(false));
+    Assertions.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
   }
 
   @Test
@@ -198,22 +194,22 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
-    Assert.assertEquals(1, row.size());
-    Assert.assertEquals("5.1", readSelector.lookupName(0));
+    Assertions.assertEquals(1, row.size());
+    Assertions.assertEquals("5.1", readSelector.lookupName(0));
 
     // Informational method tests.
-    Assert.assertFalse(readSelector.supportsLookupNameUtf8());
-    Assert.assertFalse(readSelector.nameLookupPossibleInAdvance());
-    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
-    Assert.assertEquals(String.class, readSelector.classOfObject());
-    Assert.assertNull(readSelector.idLookup());
+    Assertions.assertFalse(readSelector.supportsLookupNameUtf8());
+    Assertions.assertFalse(readSelector.nameLookupPossibleInAdvance());
+    Assertions.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
+    Assertions.assertEquals(String.class, readSelector.classOfObject());
+    Assertions.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("5.1").matches(false));
-    Assert.assertFalse(readSelector.makeValueMatcher("5").matches(false));
-    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5.1"))
+    Assertions.assertTrue(readSelector.makeValueMatcher("5.1").matches(false));
+    Assertions.assertFalse(readSelector.makeValueMatcher("5").matches(false));
+    Assertions.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5.1"))
                                   .matches(false));
-    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5")).matches(false));
+    Assertions.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5")).matches(false));
   }
 
   @Test
@@ -230,22 +226,22 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
-    Assert.assertEquals(1, row.size());
-    Assert.assertEquals("0.5", readSelector.lookupName(0));
+    Assertions.assertEquals(1, row.size());
+    Assertions.assertEquals("0.5", readSelector.lookupName(0));
 
     // Informational method tests.
-    Assert.assertFalse(readSelector.supportsLookupNameUtf8());
-    Assert.assertFalse(readSelector.nameLookupPossibleInAdvance());
-    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
-    Assert.assertEquals(String.class, readSelector.classOfObject());
-    Assert.assertNull(readSelector.idLookup());
+    Assertions.assertFalse(readSelector.supportsLookupNameUtf8());
+    Assertions.assertFalse(readSelector.nameLookupPossibleInAdvance());
+    Assertions.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
+    Assertions.assertEquals(String.class, readSelector.classOfObject());
+    Assertions.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("0.5").matches(false));
-    Assert.assertFalse(readSelector.makeValueMatcher("2").matches(false));
-    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.5"))
+    Assertions.assertTrue(readSelector.makeValueMatcher("0.5").matches(false));
+    Assertions.assertFalse(readSelector.makeValueMatcher("2").matches(false));
+    Assertions.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.5"))
                                   .matches(false));
-    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("2")).matches(false));
+    Assertions.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("2")).matches(false));
   }
 
   private void writeToMemory(final Float value)

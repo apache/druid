@@ -24,7 +24,7 @@ description: How to use LATEST_BY or deltas for up-to-date values.
   ~ under the License.
   -->
 
-This tutorial describes strategies in Apache Druid for use cases that might be handled by UPSERT in other databases. You can use the LATEST_BY aggregation at query time or "deltas" for numeric dimensions at insert time.
+This tutorial describes strategies in Apache&circledR; Druid for use cases that might be handled by UPSERT in other databases. You can use the LATEST_BY aggregation at query time or "deltas" for numeric dimensions at insert time.
 
 The [Update data](./tutorial-update-data.md) tutorial demonstrates how to use batch operations to update data according to the timestamp, including UPSERT cases. However, with streaming data, you can potentially use LATEST_BY or deltas to satisfy requirements otherwise handled with updates.
 

@@ -26,8 +26,8 @@ import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
@@ -43,37 +43,37 @@ public class SubqueryGuardrailHelperTest
   @Test
   public void testConvertSubqueryLimitStringToLongWithoutLookups()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         10737418L,
         fetchSubqueryLimitUtilsForNoLookups(humanReadableSizeToBytes("512MiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         13421772L,
         fetchSubqueryLimitUtilsForNoLookups(humanReadableSizeToBytes("640MiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         16106127L,
         fetchSubqueryLimitUtilsForNoLookups(humanReadableSizeToBytes("768MiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         21474836L,
         fetchSubqueryLimitUtilsForNoLookups(humanReadableSizeToBytes("1GiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         171798691L,
         fetchSubqueryLimitUtilsForNoLookups(humanReadableSizeToBytes("8GiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         429496729L,
         fetchSubqueryLimitUtilsForNoLookups(humanReadableSizeToBytes("20GiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
@@ -83,37 +83,37 @@ public class SubqueryGuardrailHelperTest
   @Test
   public void testConvertSubqueryLimitStringToLongWithLookups()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         10527703L,
         fetchSubqueryLimitUtilsForLookups(humanReadableSizeToBytes("512MiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         13212057L,
         fetchSubqueryLimitUtilsForLookups(humanReadableSizeToBytes("640MiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         15896412,
         fetchSubqueryLimitUtilsForLookups(humanReadableSizeToBytes("768MiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         21265121L,
         fetchSubqueryLimitUtilsForLookups(humanReadableSizeToBytes("1GiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         171588976L,
         fetchSubqueryLimitUtilsForLookups(humanReadableSizeToBytes("8GiB"), 25)
             .convertSubqueryLimitStringToLong("auto")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         429287014L,
         fetchSubqueryLimitUtilsForLookups(humanReadableSizeToBytes("20GiB"), 25)
             .convertSubqueryLimitStringToLong("auto")

@@ -90,6 +90,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -177,7 +178,7 @@ public class JettyServerModule extends JerseyServletModule
     return provider;
   }
 
-  static Server makeAndInitializeServer(
+  public static Server makeAndInitializeServer(
       Injector injector,
       Lifecycle lifecycle,
       DruidNode node,
@@ -384,7 +385,11 @@ public class JettyServerModule extends JerseyServletModule
       @Override
       public void lifeCycleFailure(LifeCycle event, Throwable cause)
       {
-        log.error(cause, "Jetty lifecycle event failed [%s]", event.getClass());
+        if (isGracefulShutdownTimeout(cause)) {
+          log.debug("Jetty graceful shutdown timed out [%s]", event.getClass());
+        } else {
+          log.error(cause, "Jetty lifecycle event failed [%s]", event.getClass());
+        }
       }
 
       @Override
@@ -404,6 +409,9 @@ public class JettyServerModule extends JerseyServletModule
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
     try {
       initializer.initialize(server, injector);
+      if (config.isEnableResponseIdentityHeaders()) {
+        server.setHandler(new ResponseIdentityHeaderHandler(node, server.getHandler()));
+      }
     }
     catch (Exception e) {
       throw new RE(e, "server initialization exception");
@@ -459,7 +467,14 @@ public class JettyServerModule extends JerseyServletModule
               throw new RE(e, "Interrupted waiting for jetty shutdown.");
             }
             catch (Exception e) {
-              log.warn(e, "Unable to stop Jetty server.");
+              if (isGracefulShutdownTimeout(e)) {
+                log.info(
+                    "Jetty graceful shutdown timed out after [%s] with requests still in flight. Stopped anyway.",
+                    config.getGracefulShutdownTimeout()
+                );
+              } else {
+                log.warn(e, "Unable to stop Jetty server.");
+              }
             }
           }
         },
@@ -482,6 +497,17 @@ public class JettyServerModule extends JerseyServletModule
       });
     }
 
+    if (config.isEnableResponseIdentityHeaders()) {
+      // Request parsing failures do not enter the server's handler chain, so add the identity at the error handler too.
+      final Request.Handler errorHandler = server.getErrorHandler() == null
+                                                   ? new ErrorHandler()
+                                                   : server.getErrorHandler();
+      server.setErrorHandler((request, response, callback) -> {
+        ResponseIdentityHeaderHandler.addIdentityHeaders(response, node);
+        return errorHandler.handle(request, response, callback);
+      });
+    }
+
     server.setRequestLog(new JettyRequestLog());
 
     return server;
@@ -493,6 +519,17 @@ public class JettyServerModule extends JerseyServletModule
     // ServerConnector
     int numServerConnector = (druidNode.isEnablePlaintextPort() ? 1 : 0) + (druidNode.isEnableTlsPort() ? 1 : 0);
     return numServerConnector * 8;
+  }
+
+  /**
+   * Whether the given exception, thrown by {@link Server#stop()}, means only that in-flight requests did not finish
+   * within the graceful shutdown timeout. Jetty finishes stopping the server before throwing it, and attaches any
+   * other failures as suppressed exceptions.
+   */
+  @VisibleForTesting
+  static boolean isGracefulShutdownTimeout(final Throwable t)
+  {
+    return t instanceof TimeoutException && t.getSuppressed().length == 0;
   }
 
   private static int getTCPAcceptQueueSize()

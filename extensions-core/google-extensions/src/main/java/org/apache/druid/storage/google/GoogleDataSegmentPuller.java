@@ -20,8 +20,11 @@
 package org.apache.druid.storage.google;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -32,17 +35,21 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Paths;
+import java.util.Iterator;
 
 public class GoogleDataSegmentPuller implements URIDataPuller
 {
   private static final Logger LOG = new Logger(GoogleDataSegmentPuller.class);
 
   protected final GoogleStorage storage;
+  private final GoogleInputDataConfig inputDataConfig;
 
   @Inject
-  public GoogleDataSegmentPuller(final GoogleStorage storage)
+  public GoogleDataSegmentPuller(final GoogleStorage storage, final GoogleInputDataConfig inputDataConfig)
   {
     this.storage = storage;
+    this.inputDataConfig = inputDataConfig;
   }
 
   FileUtils.FileCopyResult getSegmentFiles(final String bucket, final String path, File outDir)
@@ -53,13 +60,12 @@ public class GoogleDataSegmentPuller implements URIDataPuller
     try {
       FileUtils.mkdirp(outDir);
 
-      final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, path);
-      final FileUtils.FileCopyResult result = CompressionUtils.unzip(
-          byteSource,
-          outDir,
-          GoogleUtils::isRetryable,
-          false
-      );
+      // A trailing slash means the segment was pushed unzipped (druid.storage.zip=false), so the path names a
+      // directory of objects to pull individually rather than a single zip to unpack.
+      final FileUtils.FileCopyResult result = path.endsWith("/")
+                                              ? getSegmentFilesFromDirectory(bucket, path, outDir)
+                                              : unzipSegmentFiles(bucket, path, outDir);
+
       LOG.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
       return result;
     }
@@ -77,6 +83,44 @@ public class GoogleDataSegmentPuller implements URIDataPuller
       }
       throw new SegmentLoadingException(e, e.getMessage());
     }
+  }
+
+  private FileUtils.FileCopyResult unzipSegmentFiles(final String bucket, final String path, final File outDir)
+      throws IOException
+  {
+    final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, path);
+    return CompressionUtils.unzip(
+        byteSource,
+        outDir,
+        GoogleUtils::isRetryable,
+        false
+    );
+  }
+
+  private FileUtils.FileCopyResult getSegmentFilesFromDirectory(
+      final String bucket,
+      final String pathPrefix,
+      final File outDir
+  )
+  {
+    final Iterator<GoogleStorageObjectMetadata> objects = GoogleUtils.lazyFetchingStorageObjectsIterator(
+        storage,
+        ImmutableList.of(new CloudObjectLocation(bucket, pathPrefix).toUri(GoogleStorageDruidModule.SCHEME_GS))
+                     .iterator(),
+        inputDataConfig.getMaxListingLength()
+    );
+
+    final FileUtils.FileCopyResult copyResult = new FileUtils.FileCopyResult();
+    while (objects.hasNext()) {
+      final GoogleStorageObjectMetadata object = objects.next();
+      final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, object.getName());
+      final File outFile = new File(outDir, Paths.get(object.getName()).getFileName().toString());
+      copyResult.addFiles(
+          FileUtils.retryCopy(byteSource, outFile, GoogleUtils.GOOGLE_RETRY, RetryUtils.DEFAULT_MAX_TRIES).getFiles()
+      );
+    }
+
+    return copyResult;
   }
 
   @Override

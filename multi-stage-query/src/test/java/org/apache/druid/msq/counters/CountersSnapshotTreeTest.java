@@ -27,12 +27,11 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public class CountersSnapshotTreeTest
 {
@@ -46,7 +45,7 @@ public class CountersSnapshotTreeTest
     channelCounters.addFile(10, 13);
     channelCounters.addTotalFiles(14);
     // fake load to set some counters
-    channelCounters.addLoad(new AcquireSegmentResult(null, 1234L, 1L, 1L));
+    channelCounters.addLoad(new AcquireSegmentResult(Optional.empty(), 1234L, 1L, 1L));
 
     final CounterSnapshotsTree snapshotsTree = new CounterSnapshotsTree();
     snapshotsTree.put(1, 2, new CounterSnapshots(ImmutableMap.of("ctr", channelCounters.snapshot())));
@@ -73,13 +72,13 @@ public class CountersSnapshotTreeTest
     final CounterSnapshotsTree snapshotsTree2 = serializationMapper.readValue(json, CounterSnapshotsTree.class);
     final CounterSnapshotsTree snapshotsTree3 = deserializationMapper.readValue(json, CounterSnapshotsTree.class);
 
-    Assert.assertEquals(snapshotsTree.copyMap(), snapshotsTree2.copyMap());
-    Assert.assertNotEquals(snapshotsTree.copyMap(), snapshotsTree3.copyMap());
+    Assertions.assertEquals(snapshotsTree.copyMap(), snapshotsTree2.copyMap());
+    Assertions.assertNotEquals(snapshotsTree.copyMap(), snapshotsTree3.copyMap());
 
     // Confirm that deserializationMapper reads the TestCounterSnapshot as a NilQueryCounterSnapshot.
-    MatcherAssert.assertThat(
-        snapshotsTree3.copyMap().get(1).get(2).getMap().get("ctr"),
-        CoreMatchers.instanceOf(NilQueryCounterSnapshot.class)
+    Assertions.assertInstanceOf(
+        NilQueryCounterSnapshot.class,
+        snapshotsTree3.copyMap().get(1).get(2).getMap().get("ctr")
     );
   }
 

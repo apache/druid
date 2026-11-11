@@ -43,8 +43,10 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.ManageLifecycleAnnouncements;
 import org.apache.druid.guice.MiddleManagerServiceModule;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
@@ -56,6 +58,7 @@ import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerTaskManager;
+import org.apache.druid.indexing.worker.WorkerTaskManagerSyncStopper;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.http.TaskManagementResource;
 import org.apache.druid.indexing.worker.http.WorkerResource;
@@ -243,7 +246,8 @@ public class CliMiddleManager extends ServerRunnable
         new LookupSerdeModule(),
         new MSQIndexingModule(),
         new MSQDurableStorageModule(),
-        new MSQExternalDataSourceModule()
+        new MSQExternalDataSourceModule(),
+        new RegexEngineModule()
     );
   }
 
@@ -255,6 +259,11 @@ public class CliMiddleManager extends ServerRunnable
       public void configure(Binder binder)
       {
         binder.bind(WorkerTaskManager.class).in(ManageLifecycle.class);
+
+        // Must register in ManageLifecycleAnnouncements so this runs before the Jetty server is stopped (which
+        // happens in ManageLifecycleServer).
+        binder.bind(WorkerTaskManagerSyncStopper.class).in(ManageLifecycleAnnouncements.class);
+        LifecycleModule.register(binder, WorkerTaskManagerSyncStopper.class);
 
         Jerseys.addResource(binder, WorkerResource.class);
         Jerseys.addResource(binder, TaskManagementResource.class);

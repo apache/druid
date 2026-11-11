@@ -84,11 +84,6 @@ export class QueryState<T, E extends Error = Error, I = never> {
     return error.message;
   }
 
-  isEmpty(): boolean {
-    const { data } = this;
-    return Boolean(data && Array.isArray(data) && data.length === 0);
-  }
-
   getSomeData(): T | undefined {
     return this.data || this.lastData;
   }

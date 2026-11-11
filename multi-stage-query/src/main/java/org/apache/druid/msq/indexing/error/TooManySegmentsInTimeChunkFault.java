@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.joda.time.DateTime;
 
 import java.util.Objects;
@@ -57,7 +57,7 @@ public class TooManySegmentsInTimeChunkFault extends BaseMSQFault
         convertToGranularityString(segmentGranularity),
         numSegments,
         maxNumSegments,
-        MultiStageQueryContext.CTX_MAX_NUM_SEGMENTS
+        QueryContextParameters.MAX_NUM_SEGMENTS
     );
     this.timeChunk = timeChunk;
     this.numSegments = numSegments;

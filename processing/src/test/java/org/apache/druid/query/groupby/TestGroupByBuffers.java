@@ -53,7 +53,7 @@ public class TestGroupByBuffers implements Closeable
 
   public static TestGroupByBuffers createDefault()
   {
-    return createFromProcessingConfig(GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG);
+    return createFromProcessingConfig(GroupByQueryRunnerTestHelper.DEFAULT_PROCESSING_CONFIG);
   }
 
   public int getBufferSize()

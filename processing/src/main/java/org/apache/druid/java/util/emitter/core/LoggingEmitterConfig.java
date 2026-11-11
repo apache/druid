@@ -20,9 +20,9 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 
 /**
  */

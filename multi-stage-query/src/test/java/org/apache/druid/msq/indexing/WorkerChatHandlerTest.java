@@ -32,10 +32,10 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -43,6 +43,7 @@ import org.mockito.MockitoAnnotations;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.io.InputStream;
 
 public class WorkerChatHandlerTest
@@ -58,7 +59,7 @@ public class WorkerChatHandlerTest
 
   private final TestWorker worker = new TestWorker();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     authorizerMapper = CalciteTests.TEST_AUTHORIZER_MAPPER;
@@ -71,7 +72,7 @@ public class WorkerChatHandlerTest
   public void testFetchSnapshot()
   {
     WorkerChatHandler chatHandler = new WorkerChatHandler(worker, authorizerMapper, DATASOURCE);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ClusterByStatisticsSnapshot.empty(),
         chatHandler.httpFetchKeyStatistics(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), null, req)
                    .getEntity()
@@ -82,7 +83,7 @@ public class WorkerChatHandlerTest
   public void testFetchSnapshot404()
   {
     WorkerChatHandler chatHandler = new WorkerChatHandler(worker, authorizerMapper, DATASOURCE);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
         chatHandler.httpFetchKeyStatistics("123", 2, null, req)
                    .getStatus()
@@ -93,7 +94,7 @@ public class WorkerChatHandlerTest
   public void testFetchSnapshotWithTimeChunk()
   {
     WorkerChatHandler chatHandler = new WorkerChatHandler(worker, authorizerMapper, DATASOURCE);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ClusterByStatisticsSnapshot.empty(),
         chatHandler.httpFetchKeyStatisticsWithSnapshot(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), 1, null, req)
                    .getEntity()
@@ -104,7 +105,7 @@ public class WorkerChatHandlerTest
   public void testFetchSnapshotWithTimeChunk404()
   {
     WorkerChatHandler chatHandler = new WorkerChatHandler(worker, authorizerMapper, DATASOURCE);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
         chatHandler.httpFetchKeyStatisticsWithSnapshot("123", 2, 1, null, req)
                    .getStatus()
@@ -194,7 +195,7 @@ public class WorkerChatHandlerTest
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     try {

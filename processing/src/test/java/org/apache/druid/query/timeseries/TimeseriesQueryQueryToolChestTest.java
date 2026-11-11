@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.Result;
@@ -39,28 +40,30 @@ import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFac
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
   private static final String TIMESTAMP_RESULT_FIELD_NAME = "d0";
   private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
 
-  @Parameterized.Parameters(name = "descending={0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(Arrays.asList(false, true));
@@ -92,7 +95,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                 ),
                 ImmutableList.of(new ConstantPostAggregator("post", 10)),
                 0,
-                ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, "ts_field")
+                QueryContext.ofMap(QueryContextParameters.TIMESTAMP_RESULT_FIELD, "ts_field")
             )
         );
 
@@ -119,7 +122,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
 
     Result<TimeseriesResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    Assertions.assertEquals(result1, fromCacheResult);
 
     final Result<TimeseriesResultValue> result2 = new Result<>(
         // test timestamps that result in integer size millis
@@ -143,7 +146,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
 
     Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true)
                                                                     .apply(fromResultLevelCacheValue);
-    Assert.assertEquals(result2, fromResultLevelCacheRes);
+    Assertions.assertEquals(result2, fromResultLevelCacheRes);
 
     final Result<TimeseriesResultValue> result3 = new Result<>(
         // null timestamp similar to grandTotal
@@ -160,7 +163,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
     );
 
     fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
-    Assert.assertEquals(result3, fromResultLevelCacheRes);
+    Assertions.assertEquals(result3, fromResultLevelCacheRes);
   }
 
   @Test
@@ -193,7 +196,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                          .build();
 
     // Test for https://github.com/apache/druid/issues/4093.
-    Assert.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
@@ -266,13 +269,13 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                          )
                                          .build();
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
         )
     );
-    Assert.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeResultLevelCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeResultLevelCacheKey(query2)
@@ -312,7 +315,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                                  )
                                              )
                                          )
-                                         .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                         .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, true))
                                          .build();
 
     final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
@@ -344,16 +347,16 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                                  )
                                              )
                                          )
-                                         .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                         .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, true))
                                          .build();
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
         )
     );
-    Assert.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeResultLevelCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeResultLevelCacheKey(query2)
@@ -374,7 +377,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
               .postAggregators(QueryRunnerTestHelper.CONSTANT)
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("rows", ColumnType.LONG)
@@ -397,10 +400,10 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
               .granularity(Granularities.HOUR)
               .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
               .postAggregators(QueryRunnerTestHelper.CONSTANT)
-              .context(ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME))
+              .context(QueryContext.ofMap(QueryContextParameters.TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME))
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add(TIMESTAMP_RESULT_FIELD_NAME, ColumnType.LONG)
@@ -467,7 +470,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
     resultMap.put("a0", 0L);
     resultMap.put("a1", null);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new Result<>(
             DateTimes.of("2000"),
             new TimeseriesResultValue(resultMap)

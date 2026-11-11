@@ -48,10 +48,7 @@ public class TombstoneSegmentizerFactoryTest
   {
     Interval expectedInterval = Intervals.of("2021/2022");
     TombstoneSegmentizerFactory factory = new TombstoneSegmentizerFactory();
-    DataSegment tombstone = DataSegment.builder()
-        .dataSource("foo")
-        .interval(expectedInterval)
-        .version("1")
+    DataSegment tombstone = DataSegment.builder(SegmentId.of("foo", expectedInterval, "1", 0))
         .shardSpec(TombstoneShardSpec.INSTANCE)
         .loadSpec(ImmutableMap.of("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE))
         .size(1)

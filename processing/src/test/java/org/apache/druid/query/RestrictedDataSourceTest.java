@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.filter.TrueDimFilter;
@@ -30,10 +32,12 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Set;
 
 public class RestrictedDataSourceTest
 {
@@ -60,6 +64,19 @@ public class RestrictedDataSourceTest
   {
     Assertions.assertEquals(Collections.singleton("foo"), restrictedFooDataSource.getTableNames());
     Assertions.assertEquals(Collections.singleton("bar"), restrictedBarDataSource.getTableNames());
+  }
+
+  @Test
+  public void test_getReservedColumns()
+  {
+    Assertions.assertEquals(Set.of(), restrictedBarDataSource.getReservedColumns());
+    Assertions.assertEquals(
+        Set.of("dim1"),
+        RestrictedDataSource.create(
+            fooDataSource,
+            RowFilterPolicy.from(new EqualityFilter("dim1", ColumnType.STRING, "a", null))
+        ).getReservedColumns()
+    );
   }
 
   @Test
@@ -158,14 +175,27 @@ public class RestrictedDataSourceTest
   {
     Assertions.assertEquals(
         new FilterSegmentPruner(TrueDimFilter.instance(), null, VirtualColumns.EMPTY),
-        restrictedFooDataSource.createSegmentPruner()
+        restrictedFooDataSource.createSegmentPruner(null, VirtualColumns.EMPTY)
+    );
+  }
+
+  @Test
+  public void test_createSegmentPruner_withRowFilterPolicyAndFilter()
+  {
+    final DimFilter filter = new EqualityFilter("dim1", ColumnType.STRING, "a", null);
+
+    // The policy's pruner applies along with the filter's.
+    Assertions.assertEquals(
+        new FilterSegmentPruner(TrueDimFilter.instance(), null, VirtualColumns.EMPTY)
+            .combine(new FilterSegmentPruner(filter, null, VirtualColumns.EMPTY)),
+        restrictedFooDataSource.createSegmentPruner(filter, VirtualColumns.EMPTY)
     );
   }
 
   @Test
   public void test_createSegmentPruner_withNoRestrictionPolicy()
   {
-    SegmentPruner pruner = restrictedBarDataSource.createSegmentPruner();
+    SegmentPruner pruner = restrictedBarDataSource.createSegmentPruner(null, VirtualColumns.EMPTY);
     Assertions.assertNull(pruner);
   }
 

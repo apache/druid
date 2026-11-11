@@ -87,7 +87,12 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
           containerName,
           k -> new ArrayList<>()
       );
-      keysToDelete.add(blobPath);
+      if (blobPath.endsWith("/")) {
+        // segment was pushed unzipped, so the path names a directory of blobs; list them all to delete them
+        keysToDelete.addAll(azureStorage.listBlobs(containerName, blobPath, null, accountConfig.getMaxTries()));
+      } else {
+        keysToDelete.add(blobPath);
+      }
     }
 
     boolean shouldThrowException = false;
@@ -119,7 +124,9 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
     Map<String, Object> loadSpec = segment.getLoadSpec();
     final String containerName = MapUtils.getString(loadSpec, "containerName");
     final String blobPath = MapUtils.getString(loadSpec, "blobPath");
-    final String dirPath = Paths.get(blobPath).getParent().toString();
+    final String dirPath = blobPath.endsWith("/")
+                           ? blobPath
+                           : Paths.get(blobPath).getParent() + "/";
 
     try {
       azureStorage.emptyCloudBlobDirectory(containerName, dirPath);

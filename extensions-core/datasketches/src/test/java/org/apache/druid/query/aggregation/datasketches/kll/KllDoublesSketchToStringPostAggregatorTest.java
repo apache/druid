@@ -25,15 +25,13 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class KllDoublesSketchToStringPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws JsonProcessingException
@@ -49,8 +47,8 @@ public class KllDoublesSketchToStringPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -61,7 +59,7 @@ public class KllDoublesSketchToStringPostAggregatorTest
         new FieldAccessPostAggregator("field1", "sketch")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "KllDoublesSketchToStringPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}}",
         postAgg.toString()
     );
@@ -70,13 +68,14 @@ public class KllDoublesSketchToStringPostAggregatorTest
   @Test
   public void testComparator()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing sketch summaries is not supported");
-    final PostAggregator postAgg = new KllDoublesSketchToStringPostAggregator(
-        "post",
-        new FieldAccessPostAggregator("field1", "sketch")
-    );
-    postAgg.getComparator();
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      final PostAggregator postAgg = new KllDoublesSketchToStringPostAggregator(
+          "post",
+          new FieldAccessPostAggregator("field1", "sketch")
+      );
+      postAgg.getComparator();
+    });
+    assertTrue(exception.getMessage().contains("Comparing sketch summaries is not supported"));
   }
 
   @Test

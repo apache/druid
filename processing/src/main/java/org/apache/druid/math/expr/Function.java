@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.apache.druid.annotations.SuppressFBWarnings;
@@ -2172,7 +2171,6 @@ public interface Function extends NamedFunction
       return "case_searched";
     }
 
-    @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
     @Override
     public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
@@ -2193,6 +2191,17 @@ public interface Function extends NamedFunction
     public void validateArguments(List<Expr> args)
     {
       validationHelperCheckMinArgumentCount(args, 2);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // Only the WHEN args must be scalars. The THEN and ELSE args can be arrays.
+      final ImmutableSet.Builder<Expr> conditions = ImmutableSet.builder();
+      for (int i = 0; i + 1 < args.size(); i += 2) {
+        conditions.add(args.get(i));
+      }
+      return conditions.build();
     }
 
     @Nullable
@@ -3258,13 +3267,15 @@ public interface Function extends NamedFunction
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      Long left = args.get(0).eval(bindings).asLong();
-      Long right = args.get(1).eval(bindings).asLong();
-      DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
+      final ExprEval<?> leftEval = args.get(0).eval(bindings);
+      final ExprEval<?> rightEval = args.get(1).eval(bindings);
+      final DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
 
-      if (left == null || right == null) {
+      if (leftEval.isNumericNull() || rightEval.isNumericNull()) {
         return ExprEval.ofLong(null);
       } else {
+        final long left = leftEval.asLong();
+        final long right = rightEval.asLong();
         return ExprEval.of(DateTimes.subMonths(right, left, timeZone));
       }
 
@@ -4242,7 +4253,7 @@ public interface Function extends NamedFunction
             }
           };
         }
-        final Set<Object> set = new ObjectAVLTreeSet<>(lhsArrayType.getElementType().getNullableStrategy());
+        final Set<Object> set = new TreeSet<>(lhsArrayType.getElementType().getNullableStrategy());
         set.addAll(Arrays.asList(rhsArray));
         return new OverlapConstantArray(set);
       }

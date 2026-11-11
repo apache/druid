@@ -21,8 +21,8 @@ package org.apache.druid.server.lookup;
 
 import org.easymock.EasyMock;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class PollingLookupFactoryTest
 {
@@ -35,28 +35,28 @@ public class PollingLookupFactoryTest
   {
     EasyMock.expect(pollingLookup.isOpen()).andReturn(true).once();
     EasyMock.replay(pollingLookup);
-    Assert.assertTrue(pollingLookupFactory.start());
+    Assertions.assertTrue(pollingLookupFactory.start());
     pollingLookupFactory.awaitInitialization();
-    Assert.assertTrue(pollingLookupFactory.isInitialized());
+    Assertions.assertTrue(pollingLookupFactory.isInitialized());
     EasyMock.verify(pollingLookup);
   }
 
   @Test
   public void testClose()
   {
-    Assert.assertTrue(pollingLookupFactory.close());
+    Assertions.assertTrue(pollingLookupFactory.close());
   }
 
   @Test
   public void testReplacesWithNull()
   {
-    Assert.assertTrue(pollingLookupFactory.replaces(null));
+    Assertions.assertTrue(pollingLookupFactory.replaces(null));
   }
 
   @Test
   public void testReplaces()
   {
-    Assert.assertTrue(pollingLookupFactory.replaces(new PollingLookupFactory(
+    Assertions.assertTrue(pollingLookupFactory.replaces(new PollingLookupFactory(
         Period.millis(1),
         null,
         null,
@@ -67,7 +67,7 @@ public class PollingLookupFactoryTest
   @Test
   public void testGet()
   {
-    Assert.assertEquals(pollingLookup, pollingLookupFactory.get());
+    Assertions.assertEquals(pollingLookup, pollingLookupFactory.get());
   }
 
 }

@@ -26,10 +26,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -46,17 +47,14 @@ public class SegmentChangeRequestDropTest
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 
-    DataSegment segment = new DataSegment(
-        "something",
-        interval,
-        "1",
-        loadSpec,
-        Arrays.asList("dim1", "dim2"),
-        Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
-    );
+    DataSegment segment = DataSegment.builder(SegmentId.of("something", interval, "1", 0))
+                                     .loadSpec(loadSpec)
+                                     .dimensions(Arrays.asList("dim1", "dim2"))
+                                     .metrics(Arrays.asList("met1", "met2"))
+                                     .shardSpec(NoneShardSpec.instance())
+                                     .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                     .size(1)
+                                     .build();
 
     final SegmentChangeRequestDrop segmentDrop = new SegmentChangeRequestDrop(segment);
 
@@ -65,16 +63,16 @@ public class SegmentChangeRequestDropTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(11, objectMap.size());
-    Assert.assertEquals("drop", objectMap.get("action"));
-    Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(interval.toString(), objectMap.get("interval"));
-    Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
-    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
-    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
-    Assert.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
-    Assert.assertEquals(1, objectMap.get("size"));
+    Assertions.assertEquals(11, objectMap.size());
+    Assertions.assertEquals("drop", objectMap.get("action"));
+    Assertions.assertEquals("something", objectMap.get("dataSource"));
+    Assertions.assertEquals(interval.toString(), objectMap.get("interval"));
+    Assertions.assertEquals("1", objectMap.get("version"));
+    Assertions.assertEquals(loadSpec, objectMap.get("loadSpec"));
+    Assertions.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assertions.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assertions.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assertions.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
+    Assertions.assertEquals(1, objectMap.get("size"));
   }
 }

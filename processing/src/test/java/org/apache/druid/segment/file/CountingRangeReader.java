@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A {@link DirectoryBackedRangeReader} that tracks range-read activity across the partial-segment test suite. Records
@@ -37,6 +38,7 @@ public class CountingRangeReader extends DirectoryBackedRangeReader
 {
   private final AtomicInteger readCount = new AtomicInteger(0);
   private final AtomicInteger headerReadCount = new AtomicInteger(0);
+  private final AtomicLong readBytes = new AtomicLong(0);
   private final Set<String> readFilenames = ConcurrentHashMap.newKeySet();
 
   public CountingRangeReader(File directory)
@@ -54,6 +56,11 @@ public class CountingRangeReader extends DirectoryBackedRangeReader
     return headerReadCount.get();
   }
 
+  public long getReadBytes()
+  {
+    return readBytes.get();
+  }
+
   public Set<String> getReadFilenames()
   {
     return Set.copyOf(readFilenames);
@@ -63,6 +70,7 @@ public class CountingRangeReader extends DirectoryBackedRangeReader
   {
     readCount.set(0);
     headerReadCount.set(0);
+    readBytes.set(0);
     readFilenames.clear();
   }
 
@@ -73,6 +81,7 @@ public class CountingRangeReader extends DirectoryBackedRangeReader
     if (offset == 0) {
       headerReadCount.incrementAndGet();
     }
+    readBytes.addAndGet(length);
     readFilenames.add(filename);
     return super.readRange(filename, offset, length);
   }

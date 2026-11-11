@@ -35,7 +35,7 @@ public class DimensionComparisonUtilsTest
           if (a == null) {
             return b == null ? 0 : 1;
           }
-          return b == null ? -1 : -a.compareTo(b);
+          return b == null ? -1 : b.compareTo(a);
         }
     );
     Assertions.assertEquals(1, longArrayComparator.compare(new Object[]{1L, 2L}, new Object[]{5L, 6L}));

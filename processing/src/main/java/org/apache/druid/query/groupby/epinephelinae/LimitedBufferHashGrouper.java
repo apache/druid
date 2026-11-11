@@ -585,7 +585,21 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       size = numCopied;
       updateMaxMergeBufferUsedBytes();
       tableBuffer = newTableBuffer;
+      heapIndexUpdater.setHashTableBuffer(newTableBuffer);
       growthCount++;
+    }
+
+    /**
+     * The alternating table trims-and-swaps to keep the top-{@code limit} entries in memory and never spills via the
+     * fill path (see base {@link #recordsFillProximity()}), so suppress fill-proximity recording — such queries read
+     * 0.0. Its only spill signal is a rejection in {@link #findBucketWithAutoGrowth}, which does NOT fire on ordinary
+     * swaps: post-swap {@code size == numCopied <= limit}, and construction guarantees
+     * {@code regrowthThreshold >= limit + 1}, so the next insert always finds a bucket.
+     */
+    @Override
+    protected boolean recordsFillProximity()
+    {
+      return false;
     }
   }
 }

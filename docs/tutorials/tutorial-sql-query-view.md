@@ -24,7 +24,7 @@ sidebar_label: Get to know Query view
   -->
 
 
-This tutorial demonstrates some useful features built into Query view in Apache Druid.
+This tutorial demonstrates some useful features built into Query view in Apache&circledR; Druid.
 
 Query view lets you run [Druid SQL queries](../querying/sql.md) and [native (JSON-based) queries](../querying/querying.md) against ingested data.
 

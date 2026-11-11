@@ -71,10 +71,11 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -90,10 +91,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "numBackgroundThreads={0}")
+@MethodSource("constructorFeeder")
 public class CachingQueryRunnerTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters(name = "numBackgroundThreads={0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(5, 1, 0));
@@ -119,10 +120,17 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
   );
   private static final String CACHE_ID = "segment";
 
+  private final int numBackgroundThreads;
   private ObjectMapper objectMapper;
   private CachePopulator cachePopulator;
 
-  public CachingQueryRunnerTest(int numBackgroundThreads)
+  public CachingQueryRunnerTest(final int numBackgroundThreads)
+  {
+    this.numBackgroundThreads = numBackgroundThreads;
+  }
+
+  @BeforeEach
+  public void setUp()
   {
     objectMapper = new DefaultObjectMapper();
 
@@ -207,6 +215,39 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testQueryOnPartOfSegmentDoesNotUseWholeSegmentCacheEntry() throws IOException
+  {
+    final Query query = new TopNQueryBuilder()
+        .dataSource("ds")
+        .dimension("top_dim")
+        .metric("imps")
+        .threshold(3)
+        .intervals("2011-01-05/2011-01-10")
+        .aggregators(AGGS)
+        .granularity(Granularities.ALL)
+        .build();
+    final QueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
+    final CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query, null);
+    final byte[] cacheKeyPrefix = RandomUtils.nextBytes(10);
+
+    // Cache results under the key for the whole segment, as a query covering all of it would.
+    final Cache cache = MapCache.create(1024 * 1024);
+    cache.put(
+        CacheUtil.computeSegmentCacheKey(
+            CACHE_ID,
+            SEGMENT_DESCRIPTOR,
+            Bytes.concat(cacheKeyPrefix, cacheStrategy.computeCacheKey(query))
+        ),
+        toByteArray(
+            Iterables.transform(makeTopNResults(true, OBJECTS), cacheStrategy.prepareForSegmentLevelCache())
+        )
+    );
+
+    final CachingQueryRunner runner = makeCachingQueryRunner(cacheKeyPrefix, cache, toolchest, Sequences.empty());
+    Assertions.assertEquals(List.of(), runner.run(QueryPlus.wrap(query)).toList());
+  }
+
+  @Test
   public void testNullCacheKeyPrefix()
   {
     Query query = new TopNQueryBuilder()
@@ -223,8 +264,8 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     Cache cache = EasyMock.mock(Cache.class);
     EasyMock.replay(cache);
     CachingQueryRunner queryRunner = makeCachingQueryRunner(null, cache, toolchest, Sequences.empty());
-    Assert.assertFalse(queryRunner.canPopulateCache(query, toolchest.getCacheStrategy(query, null)));
-    Assert.assertFalse(queryRunner.canUseCache(query, toolchest.getCacheStrategy(query, null)));
+    Assertions.assertFalse(queryRunner.canPopulateCache(query, toolchest.getCacheStrategy(query, null)));
+    Assertions.assertFalse(queryRunner.canUseCache(query, toolchest.getCacheStrategy(query, null)));
     queryRunner.run(QueryPlus.wrap(query));
     EasyMock.verifyUnexpectedCalls(cache);
   }
@@ -247,8 +288,8 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     EasyMock.expect(toolchest.getCacheStrategy(EasyMock.eq(query), EasyMock.anyObject())).andReturn(null);
     EasyMock.replay(cache, toolchest);
     CachingQueryRunner queryRunner = makeCachingQueryRunner(new byte[0], cache, toolchest, Sequences.empty());
-    Assert.assertFalse(queryRunner.canPopulateCache(query, null));
-    Assert.assertFalse(queryRunner.canUseCache(query, null));
+    Assertions.assertFalse(queryRunner.canPopulateCache(query, null));
+    Assertions.assertFalse(queryRunner.canUseCache(query, null));
     queryRunner.run(QueryPlus.wrap(query));
     EasyMock.verifyUnexpectedCalls(cache);
   }
@@ -269,7 +310,7 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
           @Override
           public void before()
           {
-            Assert.assertFalse(closable.isClosed());
+            Assertions.assertFalse(closable.isClosed());
           }
 
           @Override
@@ -343,24 +384,24 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query, null);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
         CACHE_ID,
-        SEGMENT_DESCRIPTOR,
+        narrowSegmentDescriptor(query),
         Bytes.concat(keyPrefix, cacheStrategy.computeCacheKey(query))
     );
-    Assert.assertTrue(runner.canPopulateCache(query, cacheStrategy));
+    Assertions.assertTrue(runner.canPopulateCache(query, cacheStrategy));
     Sequence res = runner.run(QueryPlus.wrap(query));
     // base sequence is not closed yet
-    Assert.assertFalse("sequence must not be closed", closable.isClosed());
-    Assert.assertNull("cache must be empty", cache.get(cacheKey));
+    Assertions.assertFalse(closable.isClosed(), "sequence must not be closed");
+    Assertions.assertNull(cache.get(cacheKey), "cache must be empty");
 
     List results = res.toList();
-    Assert.assertTrue(closable.isClosed());
-    Assert.assertEquals(expectedRes.toString(), results.toString());
+    Assertions.assertTrue(closable.isClosed());
+    Assertions.assertEquals(expectedRes.toString(), results.toString());
 
     // wait for background caching finish
     // wait at most 10 seconds to fail the test to avoid block overall tests
-    Assert.assertTrue("cache must be populated", cacheMustBePutOnce.await(10, TimeUnit.SECONDS));
+    Assertions.assertTrue(cacheMustBePutOnce.await(10, TimeUnit.SECONDS), "cache must be populated");
     byte[] cacheValue = cache.get(cacheKey);
-    Assert.assertNotNull(cacheValue);
+    Assertions.assertNotNull(cacheValue);
 
     Function<Object, Result> fn = cacheStrategy.pullFromSegmentLevelCache();
     List<Result> cacheResults = Lists.newArrayList(
@@ -372,7 +413,7 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
             fn
         )
     );
-    Assert.assertEquals(expectedCacheRes.toString(), cacheResults.toString());
+    Assertions.assertEquals(expectedCacheRes.toString(), cacheResults.toString());
   }
 
   private void testUseCache(
@@ -387,7 +428,7 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query, null);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
         CACHE_ID,
-        SEGMENT_DESCRIPTOR,
+        narrowSegmentDescriptor(query),
         Bytes.concat(cacheKeyPrefix, cacheStrategy.computeCacheKey(query))
     );
 
@@ -400,9 +441,22 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
         toolchest,
         Sequences.empty()
     );
-    Assert.assertTrue(runner.canUseCache(query, toolchest.getCacheStrategy(query, null)));
+    Assertions.assertTrue(runner.canUseCache(query, toolchest.getCacheStrategy(query, null)));
     List<Result> results = runner.run(QueryPlus.wrap(query)).toList();
-    Assert.assertEquals(expectedResults.toString(), results.toString());
+    Assertions.assertEquals(expectedResults.toString(), results.toString());
+  }
+
+  /**
+   * Returns {@link #SEGMENT_DESCRIPTOR} narrowed to the interval of {@code query}, which is where the runner keys its
+   * cache entries.
+   */
+  private static SegmentDescriptor narrowSegmentDescriptor(final Query<?> query)
+  {
+    return new SegmentDescriptor(
+        Iterables.getOnlyElement(query.getIntervals()).overlap(SEGMENT_DESCRIPTOR.getInterval()),
+        SEGMENT_DESCRIPTOR.getVersion(),
+        SEGMENT_DESCRIPTOR.getPartitionNumber()
+    );
   }
 
   private CachingQueryRunner makeCachingQueryRunner(
@@ -515,8 +569,8 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     @Override
     public void close()
     {
-      Assert.assertFalse(closed.get());
-      Assert.assertTrue(closed.compareAndSet(false, true));
+      Assertions.assertFalse(closed.get());
+      Assertions.assertTrue(closed.compareAndSet(false, true));
     }
 
     public boolean isClosed()

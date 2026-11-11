@@ -23,10 +23,10 @@ import com.google.common.primitives.Ints;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.BufferUnderflowException;
@@ -35,10 +35,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class WriteOutBytesTest
 {
-  @Parameterized.Parameters
   public static Collection<Object[]> constructorFeeder() throws IOException
   {
     return Arrays.asList(
@@ -75,17 +76,17 @@ public class WriteOutBytesTest
     ByteBuffer bb = ByteBuffer.wrap(new byte[]{'a', 'b', 'c'});
     bb.position(2);
     writeOutBytes.write(bb);
-    Assert.assertEquals(3, bb.position());
+    Assertions.assertEquals(3, bb.position());
     verifyContents(writeOutBytes, "12345abc");
   }
 
   private void verifyContents(WriteOutBytes writeOutBytes, String expected) throws IOException
   {
-    Assert.assertEquals(expected, IOUtils.toString(writeOutBytes.asInputStream(), StandardCharsets.US_ASCII));
+    Assertions.assertEquals(expected, IOUtils.toString(writeOutBytes.asInputStream(), StandardCharsets.US_ASCII));
     ByteBuffer bb = ByteBuffer.allocate((int) writeOutBytes.size());
     writeOutBytes.readFully(0, bb);
     bb.flip();
-    Assert.assertEquals(expected, StringUtils.fromUtf8(bb));
+    Assertions.assertEquals(expected, StringUtils.fromUtf8(bb));
   }
 
   @Test
@@ -101,15 +102,17 @@ public class WriteOutBytesTest
     ByteBuffer bb = ByteBuffer.allocate(4);
     writeOutBytes.readFully(ByteBufferWriteOutBytes.BUFFER_SIZE - 1, bb);
     bb.flip();
-    Assert.assertEquals("0123", StringUtils.fromUtf8(bb));
+    Assertions.assertEquals("0123", StringUtils.fromUtf8(bb));
   }
 
-  @Test(expected = BufferUnderflowException.class)
+  @Test
   public void testReadFullyUnderflow() throws IOException
   {
-    WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
-    writeOutBytes.write('1');
-    writeOutBytes.readFully(0, ByteBuffer.allocate(2));
+    Assertions.assertThrows(BufferUnderflowException.class, () -> {
+      final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
+      writeOutBytes.write('1');
+      writeOutBytes.readFully(0, ByteBuffer.allocate(2));
+    });
   }
 
   @Test
@@ -127,6 +130,6 @@ public class WriteOutBytesTest
     writeOutBytes.write(new byte[] {0x01, 0x02, 0x03, 0x04}, 1, 2);
     ByteBuffer destination = ByteBuffer.allocate(2);
     writeOutBytes.readFully(0, destination);
-    Assert.assertArrayEquals(new byte[] {0x02, 0x03}, destination.array());
+    Assertions.assertArrayEquals(new byte[] {0x02, 0x03}, destination.array());
   }
 }

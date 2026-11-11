@@ -23,9 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.GeneratedMessageV3;
+import com.google.protobuf.GeneratedMessage;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.grpc.proto.QueryOuterClass;
@@ -42,6 +41,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -317,7 +318,7 @@ public class QueryDriver
                        .sql(request.getQuery())
                        .systemDefaultContext(queryConfigProvider.getContext())
                        .queryContext(translateContext(request))
-                       .sqlParameters(translateParameters(request))
+                       .parameters(translateParameters(request))
                        .auth(authResult)
                        .build();
   }
@@ -332,13 +333,9 @@ public class QueryDriver
    */
   private Map<String, Object> translateContext(QueryRequest request)
   {
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    if (request.getContextCount() > 0) {
-      for (Map.Entry<String, String> entry : request.getContextMap().entrySet()) {
-        builder.put(entry.getKey(), entry.getValue());
-      }
-    }
-    return builder.build();
+    final QueryContextBuilder builder = QueryContext.builder();
+    builder.putAll(request.getContextMap());
+    return builder.toMap();
   }
 
   /**
@@ -749,22 +746,26 @@ public class QueryDriver
   }
 
   @SuppressWarnings("unchecked")
-  private Class<GeneratedMessageV3> getProtobufClass(final QueryRequest request)
+  private Class<GeneratedMessage> getProtobufClass(final QueryRequest request)
   {
+    final Class<?> clazz;
     try {
-      return (Class<GeneratedMessageV3>) Class.forName(request.getProtobufMessageName());
+      // Class name is client-supplied: load without initializing so no static initializer of an arbitrary class runs.
+      clazz = Class.forName(request.getProtobufMessageName(), false, QueryDriver.class.getClassLoader());
     }
-    catch (ClassNotFoundException e) {
+    catch (ClassNotFoundException | LinkageError e) {
       throw new RequestError(
           "The Protobuf class [%s] is not known. Is your protobuf jar on the class path?",
           request.getProtobufMessageName()
       );
     }
-    catch (ClassCastException e) {
+    // The unchecked cast below never fails at runtime, so the type must be checked explicitly.
+    if (!GeneratedMessage.class.isAssignableFrom(clazz)) {
       throw new RequestError(
           "The class [%s] is not a Protobuf",
           request.getProtobufMessageName()
       );
     }
+    return (Class<GeneratedMessage>) clazz;
   }
 }

@@ -29,10 +29,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
@@ -62,13 +61,13 @@ public class DimensionSchemaUtils
 
   /**
    * Create a dimension schema for a dimension column, given the type that it was assigned in the query, and the
-   * current values of {@link MultiStageQueryContext#CTX_USE_AUTO_SCHEMAS} and
-   * {@link MultiStageQueryContext#CTX_ARRAY_INGEST_MODE}.
+   * current values of {@link QueryContextParameters#USE_AUTO_COLUMN_SCHEMAS} and
+   * {@link QueryContextParameters#ARRAY_INGEST_MODE}.
    *
    * @param column          column name
    * @param queryType       type of the column from the query
-   * @param useAutoType     active value of {@link MultiStageQueryContext#CTX_USE_AUTO_SCHEMAS}
-   * @param arrayIngestMode active value of {@link MultiStageQueryContext#CTX_ARRAY_INGEST_MODE}
+   * @param useAutoType     active value of {@link QueryContextParameters#USE_AUTO_COLUMN_SCHEMAS}
+   * @param arrayIngestMode active value of {@link QueryContextParameters#ARRAY_INGEST_MODE}
    */
   public static DimensionSchema createDimensionSchema(
       final String column,
@@ -81,9 +80,7 @@ public class DimensionSchemaUtils
       // for complex types that are not COMPLEX<json>, we still want to use the handler since 'auto' typing
       // only works for the 'standard' built-in types
       if (queryType != null && queryType.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(queryType)) {
-        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(queryType);
-        return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
-                                    .getDimensionSchema(capabilities);
+        return DimensionHandlerUtils.getComplexDimensionSchema(column, queryType);
       }
 
       if (queryType != null && (queryType.isPrimitive() || queryType.isPrimitiveArray())) {
@@ -111,9 +108,7 @@ public class DimensionSchemaUtils
       } else if (dimensionType.getType() == ValueType.ARRAY) {
         return new AutoTypeColumnSchema(column, dimensionType, null);
       } else {
-        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(dimensionType);
-        return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
-                                    .getDimensionSchema(capabilities);
+        return DimensionHandlerUtils.getComplexDimensionSchema(column, dimensionType);
       }
     }
   }
@@ -155,7 +150,7 @@ public class DimensionSchemaUtils
           throw InvalidInput.exception(
               "Numeric arrays can only be ingested when '%s' is set to 'array'. "
               + "Current value of the parameter is[%s]",
-              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
+              QueryContextParameters.ARRAY_INGEST_MODE,
               StringUtils.toLowerCase(arrayIngestMode.name())
           );
         }

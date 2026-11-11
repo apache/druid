@@ -27,10 +27,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +52,7 @@ public class ConnectionCountServerSelectorStrategyTest
     ServerSelector serverSelector = initSelector(s1, s2, s3);
 
     for (int i = 0; i < 100; ++i) {
-      Assert.assertEquals(s2, serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+      Assertions.assertEquals(s2, serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
     }
   }
 
@@ -66,9 +67,9 @@ public class ConnectionCountServerSelectorStrategyTest
     for (int i = 0; i < 100; ++i) {
       pickedServers.add(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES).getServer().getName());
     }
-    Assert.assertTrue(
-        "Multiple servers should be selected when the number of connections is equal.",
-        pickedServers.size() > 1
+    Assertions.assertTrue(
+        pickedServers.size() > 1,
+        "Multiple servers should be selected when the number of connections is equal."
     );
   }
 
@@ -95,17 +96,14 @@ public class ConnectionCountServerSelectorStrategyTest
   {
     TierSelectorStrategy strategy = new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy());
     ServerSelector selector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2025-01-01/2025-01-02"),
-            DateTimes.of("2025-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            new NumberedShardSpec(0, 0),
-            0,
-            0L
-        ), strategy,
+        DataSegment.builder(SegmentId.of("test", Intervals.of("2025-01-01/2025-01-02"), DateTimes.of("2025-01-01").toString(), 0))
+                   .loadSpec(new HashMap<>())
+                   .dimensions(new ArrayList<>())
+                   .metrics(new ArrayList<>())
+                   .shardSpec(new NumberedShardSpec(0, 0))
+                   .binaryVersion(0)
+                   .size(0L)
+                   .build(), strategy,
         HistoricalFilter.IDENTITY_FILTER
     );
     List<QueryableDruidServer> serverList = new ArrayList<>(Arrays.asList(servers));

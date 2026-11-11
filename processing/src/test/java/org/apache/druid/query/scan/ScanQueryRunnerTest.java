@@ -41,13 +41,14 @@ import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.Order;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -62,10 +63,10 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,7 +81,8 @@ import java.util.Set;
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 {
 
@@ -146,7 +148,6 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       new ScanQueryConfig()
   );
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
@@ -534,7 +535,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           )
           .limit(limit)
           .order(Order.ASCENDING)
-          .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
+          .context(QueryContext.ofMap(QueryContextParameters.SCAN_OUTERMOST, false))
           .build();
 
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
@@ -775,7 +776,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           )
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
           .order(Order.DESCENDING)
-          .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
+          .context(QueryContext.ofMap(QueryContextParameters.SCAN_OUTERMOST, false))
           .limit(limit)
           .build();
 
@@ -819,19 +820,19 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .context(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1L))
         .build();
     ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final long timeoutAt = System.currentTimeMillis();
     responseContext.putTimeoutTime(timeoutAt);
     try {
       runner.run(QueryPlus.wrap(query), responseContext).toList();
-      Assert.fail("didn't timeout");
+      Assertions.fail("didn't timeout");
     }
     catch (RuntimeException e) {
-      Assert.assertTrue(e instanceof QueryTimeoutException);
-      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
-      Assert.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
+      Assertions.assertTrue(e instanceof QueryTimeoutException);
+      Assertions.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+      Assertions.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
     }
   }
 
@@ -841,7 +842,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .context(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1L))
         .build();
     try {
       FACTORY.mergeRunners(
@@ -857,11 +858,11 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               })
       ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
 
-      Assert.fail("didn't timeout");
+      Assertions.fail("didn't timeout");
     }
     catch (RuntimeException e) {
-      Assert.assertTrue(e instanceof QueryTimeoutException);
-      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+      Assertions.assertTrue(e instanceof QueryTimeoutException);
+      Assertions.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
     }
   }
 
@@ -871,7 +872,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
+        .context(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 0L))
         .build();
 
     Iterable<ScanResultValue> results = FACTORY.mergeRunners(
@@ -941,7 +942,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                   Map<String, Object> event = new HashMap<>();
                   String[] values1 = input.split("\\t");
                   for (int i = 0; i < dimSpecs.length; i++) {
-                    if (dimSpecs[i] == null || i >= dimSpecs.length) {
+                    if (dimSpecs[i] == null) {
                       continue;
                     }
 
@@ -1062,11 +1063,11 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       ScanResultValue expected = expectedIter.next();
       ScanResultValue actual = actualIter.next();
 
-      Assert.assertEquals(expected.getSegmentId(), actual.getSegmentId());
+      Assertions.assertEquals(expected.getSegmentId(), actual.getSegmentId());
 
       Set exColumns = Sets.newTreeSet(expected.getColumns());
       Set acColumns = Sets.newTreeSet(actual.getColumns());
-      Assert.assertEquals(exColumns, acColumns);
+      Assertions.assertEquals(exColumns, acColumns);
 
       Iterator<Map<String, Object>> expectedEvts = ((List<Map<String, Object>>) expected.getEvents()).iterator();
       Iterator<Map<String, Object>> actualEvts = ((List<Map<String, Object>>) actual.getEvents()).iterator();
@@ -1084,22 +1085,22 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           Object exValue = ex.getValue();
           if (exValue instanceof Double || exValue instanceof Float) {
             final double expectedDoubleValue = ((Number) exValue).doubleValue();
-            Assert.assertNotNull(
+            Assertions.assertNotNull(
+                actVal,
                 StringUtils.format(
                     "invalid null value for %s (expected %f)",
                     ex.getKey(),
                     expectedDoubleValue
-                ),
-                actVal
+                )
             );
-            Assert.assertEquals(
-                "invalid value for " + ex.getKey(),
+            Assertions.assertEquals(
                 expectedDoubleValue,
                 ((Number) actVal).doubleValue(),
-                expectedDoubleValue * 1e-6
+                expectedDoubleValue * 1e-6,
+                "invalid value for " + ex.getKey()
             );
           } else {
-            Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
+            Assertions.assertEquals(ex.getValue(), actVal, "invalid value for " + ex.getKey());
           }
         }
 
@@ -1113,14 +1114,14 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
           if (exVal instanceof Double || exVal instanceof Float) {
             final double exDoubleValue = ((Number) exVal).doubleValue();
-            Assert.assertEquals(
-                "invalid value for " + ac.getKey(),
+            Assertions.assertEquals(
                 exDoubleValue,
                 ((Number) actVal).doubleValue(),
-                exDoubleValue * 1e-6
+                exDoubleValue * 1e-6,
+                "invalid value for " + ac.getKey()
             );
           } else {
-            Assert.assertEquals("invalid value for " + ac.getKey(), exVal, actVal);
+            Assertions.assertEquals(exVal, actVal, "invalid value for " + ac.getKey());
           }
         }
       }

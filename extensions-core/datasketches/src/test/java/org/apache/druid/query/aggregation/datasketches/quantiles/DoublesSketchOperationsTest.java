@@ -21,8 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import org.apache.datasketches.quantiles.DoublesUnion;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -36,13 +36,13 @@ public class DoublesSketchOperationsTest
     final byte[] bytes = union.getResult().toByteArray();
     final String base64 = StringUtils.encodeBase64String(bytes);
 
-    Assert.assertArrayEquals(bytes, DoublesSketchOperations.deserializeSafe(union.getResult()).toByteArray());
-    Assert.assertArrayEquals(bytes, DoublesSketchOperations.deserializeSafe(bytes).toByteArray());
-    Assert.assertArrayEquals(bytes, DoublesSketchOperations.deserializeSafe(base64).toByteArray());
+    Assertions.assertArrayEquals(bytes, DoublesSketchOperations.deserializeSafe(union.getResult()).toByteArray());
+    Assertions.assertArrayEquals(bytes, DoublesSketchOperations.deserializeSafe(bytes).toByteArray());
+    Assertions.assertArrayEquals(bytes, DoublesSketchOperations.deserializeSafe(base64).toByteArray());
 
     final byte[] trunacted = Arrays.copyOfRange(bytes, 0, 4);
-    Assert.assertThrows(IndexOutOfBoundsException.class, () -> DoublesSketchOperations.deserializeSafe(trunacted));
-    Assert.assertThrows(
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> DoublesSketchOperations.deserializeSafe(trunacted));
+    Assertions.assertThrows(
         IndexOutOfBoundsException.class,
         () -> DoublesSketchOperations.deserializeSafe(StringUtils.encodeBase64(trunacted))
     );

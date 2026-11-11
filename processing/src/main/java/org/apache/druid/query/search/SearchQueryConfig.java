@@ -20,15 +20,18 @@
 package org.apache.druid.query.search;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Min;
+import org.apache.druid.query.context.QueryContextParameters;
 
 /**
  */
 public class SearchQueryConfig
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#SEARCH_STRATEGY} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_KEY_STRATEGY = "searchStrategy";
-
   @JsonProperty
   @Min(1)
   private int maxSearchLimit = 1000;
@@ -55,7 +58,7 @@ public class SearchQueryConfig
   {
     final SearchQueryConfig newConfig = new SearchQueryConfig();
     newConfig.maxSearchLimit = query.getLimit();
-    newConfig.searchStrategy = query.context().getString(CTX_KEY_STRATEGY, searchStrategy);
+    newConfig.searchStrategy = query.context().getOrDefault(QueryContextParameters.SEARCH_STRATEGY, searchStrategy);
     return newConfig;
   }
 }

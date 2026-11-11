@@ -30,10 +30,10 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
 import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -72,7 +72,7 @@ public class WorkerSketchFetcherTest
   private static final String TASK_2 = "task-worker2_1";
   private static final List<String> TASK_IDS = ImmutableList.of(TASK_0, TASK_1, TASK_2);
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mocks = MockitoAnnotations.openMocks(this);
@@ -87,7 +87,7 @@ public class WorkerSketchFetcherTest
     doReturn(true).when(workerManager).isWorkerActive(any());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     mocks.close();
@@ -115,7 +115,7 @@ public class WorkerSketchFetcherTest
       latch.countDown();
     }, stageDefinition.getId(), ImmutableSet.copyOf(TASK_IDS), ((queryKernel, integer, msqFault) -> {}));
 
-    Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS));
 
   }
 
@@ -144,7 +144,7 @@ public class WorkerSketchFetcherTest
         ((queryKernel, integer, msqFault) -> {})
     );
 
-    Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS));
 
   }
 
@@ -154,7 +154,7 @@ public class WorkerSketchFetcherTest
 
     doReturn(false).when(completeKeyStatisticsInformation).isComplete();
     target = spy(new WorkerSketchFetcher(workerClient, workerManager, true, SketchEncoding.OCTET_STREAM));
-    Assert.assertThrows(ISE.class, () -> target.sequentialTimeChunkMerging(
+    Assertions.assertThrows(ISE.class, () -> target.sequentialTimeChunkMerging(
         (ignore) -> {},
         completeKeyStatisticsInformation,
         stageDefinition.getId(),
@@ -187,8 +187,8 @@ public class WorkerSketchFetcherTest
         })
     );
 
-    Assert.assertTrue(latch.await(500, TimeUnit.SECONDS));
-    Assert.assertTrue(retryLatch.await(500, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(500, TimeUnit.SECONDS));
+    Assertions.assertTrue(retryLatch.await(500, TimeUnit.SECONDS));
   }
 
   @Test
@@ -216,8 +216,8 @@ public class WorkerSketchFetcherTest
         })
     );
 
-    Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
-    Assert.assertTrue(retryLatch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(retryLatch.await(5, TimeUnit.SECONDS));
   }
 
   @Test
@@ -239,13 +239,13 @@ public class WorkerSketchFetcherTest
       );
     }
     catch (Exception e) {
-      Assert.assertTrue(e.getMessage().contains("Task fetch failed"));
+      Assertions.assertTrue(e.getMessage().contains("Task fetch failed"));
     }
 
     while (!target.executorService.isShutdown()) {
       Thread.sleep(100);
     }
-    Assert.assertTrue((target.getError().getMessage().contains("Task fetch failed")));
+    Assertions.assertTrue((target.getError().getMessage().contains("Task fetch failed")));
 
   }
 
@@ -268,13 +268,13 @@ public class WorkerSketchFetcherTest
       );
     }
     catch (Exception e) {
-      Assert.assertTrue(e.getMessage().contains("Task fetch failed"));
+      Assertions.assertTrue(e.getMessage().contains("Task fetch failed"));
     }
 
     while (!target.executorService.isShutdown()) {
       Thread.sleep(100);
     }
-    Assert.assertTrue((target.getError().getMessage().contains("Task fetch failed")));
+    Assertions.assertTrue((target.getError().getMessage().contains("Task fetch failed")));
 
   }
 
@@ -290,9 +290,8 @@ public class WorkerSketchFetcherTest
 
     try {
       target.sequentialTimeChunkMerging(
-          (kernelConsumer) -> {
-            kernelConsumer.accept(kernel);
-          },
+          (kernelConsumer) ->
+            kernelConsumer.accept(kernel),
           completeKeyStatisticsInformation,
           stageDefinition.getId(),
           ImmutableSet.copyOf(TASK_IDS),
@@ -302,13 +301,13 @@ public class WorkerSketchFetcherTest
       );
     }
     catch (Exception e) {
-      Assert.assertTrue(e.getMessage().contains("Task fetch failed"));
+      Assertions.assertTrue(e.getMessage().contains("Task fetch failed"));
     }
 
     while (!target.executorService.isShutdown()) {
       Thread.sleep(100);
     }
-    Assert.assertTrue(target.getError().getMessage().contains("Task fetch failed"));
+    Assertions.assertTrue(target.getError().getMessage().contains("Task fetch failed"));
 
   }
 
@@ -322,9 +321,8 @@ public class WorkerSketchFetcherTest
 
     try {
       target.sequentialTimeChunkMerging(
-          (kernelConsumer) -> {
-            kernelConsumer.accept(kernel);
-          },
+          (kernelConsumer) ->
+            kernelConsumer.accept(kernel),
           completeKeyStatisticsInformation,
           stageDefinition.getId(),
           ImmutableSet.copyOf(TASK_IDS),
@@ -334,13 +332,13 @@ public class WorkerSketchFetcherTest
       );
     }
     catch (Exception e) {
-      Assert.assertTrue(e.getMessage().contains("Task fetch failed"));
+      Assertions.assertTrue(e.getMessage().contains("Task fetch failed"));
     }
 
     while (!target.executorService.isShutdown()) {
       Thread.sleep(100);
     }
-    Assert.assertTrue(target.getError().getMessage().contains(TASK_1));
+    Assertions.assertTrue(target.getError().getMessage().contains(TASK_1));
 
   }
 

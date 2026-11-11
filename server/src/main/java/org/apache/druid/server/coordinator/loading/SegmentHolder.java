@@ -119,22 +119,11 @@ public class SegmentHolder implements Comparable<SegmentHolder>
     this.profile = profile;
     if (action == SegmentAction.DROP) {
       this.changeRequest = new SegmentChangeRequestDrop(segment);
-    } else if (profile != null && profile.wrappedLoadSpec() != null) {
+    } else if (profile != null) {
       // Stamp the wrapped load-spec map onto the outbound segment so the historical receives the partial-load
       // wrapper; identity (segment field) stays original so dedup in the load queue is unaffected.
       this.changeRequest = new SegmentChangeRequestLoad(segment.withLoadSpec(profile.wrappedLoadSpec()));
     } else {
-      if (profile != null) {
-        // Outbound profiles (forRequest / forLoaded) must always carry a non-null wrappedLoadSpec; only the inbound
-        // forFullFallback announcement uses the null sentinel, and those never reach this constructor. Log if it
-        // happens so the bug surfaces — we still proceed with a plain load request to avoid stalling the queue.
-        log.warn(
-            "Profile with null wrappedLoadSpec on outbound load for segment[%s], action[%s]; "
-            + "queuing as a regular load.",
-            segment.getId(),
-            action
-        );
-      }
       this.changeRequest = new SegmentChangeRequestLoad(segment);
     }
     if (callback != null) {

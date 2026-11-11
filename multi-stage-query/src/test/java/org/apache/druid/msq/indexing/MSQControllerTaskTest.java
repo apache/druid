@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
@@ -41,8 +43,8 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -76,21 +78,21 @@ public class MSQControllerTaskTest
   @Test
   public void testGetInputSourceResources()
   {
-    Assert.assertTrue(createControllerTask(msqSpecBuilder()).getInputSourceResources().isEmpty());
+    Assertions.assertTrue(createControllerTask(msqSpecBuilder()).getInputSourceResources().isEmpty());
   }
 
   @Test
   public void testGetDefaultLookupLoadingSpec()
   {
     MSQControllerTask controllerTask = createControllerTask(msqSpecBuilder());
-    Assert.assertEquals(LookupLoadingSpec.NONE, controllerTask.getLookupLoadingSpec());
+    Assertions.assertEquals(LookupLoadingSpec.NONE, controllerTask.getLookupLoadingSpec());
   }
 
   @Test
   public void testGetDefaultBroadcastDatasourceLoadingSpec()
   {
     MSQControllerTask controllerTask = createControllerTask(msqSpecBuilder());
-    Assert.assertEquals(BroadcastDatasourceLoadingSpec.NONE, controllerTask.getBroadcastDatasourceLoadingSpec());
+    Assertions.assertEquals(BroadcastDatasourceLoadingSpec.NONE, controllerTask.getBroadcastDatasourceLoadingSpec());
   }
 
   @Test
@@ -112,14 +114,14 @@ public class MSQControllerTaskTest
         .tuningConfig(MSQTuningConfig.defaultConfig());
 
     // Validate that MSQ Controller task doesn't load any lookups even if context has lookup info populated.
-    Assert.assertEquals(LookupLoadingSpec.NONE, createControllerTask(builder).getLookupLoadingSpec());
+    Assertions.assertEquals(LookupLoadingSpec.NONE, createControllerTask(builder).getLookupLoadingSpec());
   }
 
   @Test
   public void testGetTaskAllocatorId()
   {
     MSQControllerTask controllerTask = createControllerTask(msqSpecBuilder());
-    Assert.assertEquals(controllerTask.getId(), controllerTask.getTaskAllocatorId());
+    Assertions.assertEquals(controllerTask.getId(), controllerTask.getTaskAllocatorId());
   }
 
   @Test
@@ -127,14 +129,14 @@ public class MSQControllerTaskTest
   {
     final DataSourceMSQDestination appendDestination
         = new DataSourceMSQDestination("target", Granularities.DAY, null, null, null, null, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.SHARED,
         createControllerTask(msqSpecBuilder().destination(appendDestination)).getTaskLockType()
     );
 
     final DataSourceMSQDestination replaceDestination
         = new DataSourceMSQDestination("target", Granularities.DAY, null, INTERVALS, null, null, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.EXCLUSIVE,
         createControllerTask(msqSpecBuilder().destination(replaceDestination)).getTaskLockType()
     );
@@ -151,7 +153,7 @@ public class MSQControllerTaskTest
         null,
         taskContext
     );
-    Assert.assertEquals(TaskLockType.APPEND, appendTaskWithContext.getTaskLockType());
+    Assertions.assertEquals(TaskLockType.APPEND, appendTaskWithContext.getTaskLockType());
 
     final MSQControllerTask replaceTaskWithContext = new MSQControllerTask(
         null,
@@ -163,21 +165,21 @@ public class MSQControllerTaskTest
         null,
         taskContext
     );
-    Assert.assertEquals(TaskLockType.REPLACE, replaceTaskWithContext.getTaskLockType());
+    Assertions.assertEquals(TaskLockType.REPLACE, replaceTaskWithContext.getTaskLockType());
 
     // With 'useConcurrentLocks' in query context
-    final Map<String, Object> queryContext = Collections.singletonMap(Tasks.USE_CONCURRENT_LOCKS, true);
+    final Map<String, Object> queryContext = QueryContext.ofMap(QueryContextParameters.USE_CONCURRENT_LOCKS, true);
     final ScanQuery query = new Druids.ScanQueryBuilder()
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .intervals(new MultipleIntervalSegmentSpec(INTERVALS))
         .dataSource("target")
         .context(queryContext)
         .build();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.APPEND,
         createControllerTask(msqSpecBuilder().query(query).destination(appendDestination)).getTaskLockType()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.REPLACE,
         createControllerTask(msqSpecBuilder().query(query).destination(replaceDestination)).getTaskLockType()
     );
@@ -196,7 +198,7 @@ public class MSQControllerTaskTest
             0
         )
     );
-    Assert.assertTrue(createControllerTask(msqSpecBuilder()).isReady(taskActionClient));
+    Assertions.assertTrue(createControllerTask(msqSpecBuilder()).isReady(taskActionClient));
   }
 
   @Test
@@ -214,11 +216,11 @@ public class MSQControllerTaskTest
             true
         )
     );
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> controllerTask.isReady(taskActionClient)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Lock of type[REPLACE] for interval[2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z] was revoked",
         exception.getMessage()
     );

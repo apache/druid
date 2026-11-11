@@ -27,15 +27,13 @@ import com.google.common.io.Files;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,33 +42,24 @@ import java.util.Map;
 
 public class FileTaskLogsTest
 {
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSimple() throws Exception
   {
-    final File tmpDir = temporaryFolder.newFolder();
-    try {
-      final File logDir = new File(tmpDir, "druid/logs");
-      final File logFile = new File(tmpDir, "log");
-      Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
-      final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
-      taskLogs.pushTaskLog("foo", logFile);
+    final File tmpDir = temporaryFolder.getRoot();
+    final File logDir = new File(tmpDir, "druid/logs");
+    final File logFile = temporaryFolder.newFile("log");
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
+    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+    taskLogs.pushTaskLog("foo", logFile);
 
-      final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
-      for (Map.Entry<Long, String> entry : expected.entrySet()) {
-        final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get());
-        final String string = StringUtils.fromUtf8(bytes);
-        Assert.assertEquals(StringUtils.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
-      }
-    }
-    finally {
-      FileUtils.deleteDirectory(tmpDir);
+    final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
+    for (Map.Entry<Long, String> entry : expected.entrySet()) {
+      final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get());
+      final String string = StringUtils.fromUtf8(bytes);
+      Assertions.assertEquals(entry.getValue(), string, StringUtils.format("Read with offset %,d", entry.getKey()));
     }
   }
 
@@ -78,9 +67,9 @@ public class FileTaskLogsTest
   public void testSimpleReport() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpDir = temporaryFolder.getRoot();
     final File logDir = new File(tmpDir, "druid/logs");
-    final File reportFile = new File(tmpDir, "report.json");
+    final File reportFile = temporaryFolder.newFile("report.json");
 
     final String taskId = "myTask";
     final TestTaskReport testReport = new TestTaskReport(taskId);
@@ -90,7 +79,7 @@ public class FileTaskLogsTest
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
     taskLogs.pushTaskReports("foo", reportFile);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         testReportString,
         StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskReports("foo").get()))
     );
@@ -100,9 +89,9 @@ public class FileTaskLogsTest
   public void testSimpleStatus() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpDir = temporaryFolder.getRoot();
     final File logDir = new File(tmpDir, "druid/myTask");
-    final File statusFile = new File(tmpDir, "status.json");
+    final File statusFile = temporaryFolder.newFile("status.json");
 
     final String taskId = "myTask";
     final TaskStatus taskStatus = TaskStatus.success(taskId);
@@ -112,7 +101,7 @@ public class FileTaskLogsTest
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
     taskLogs.pushTaskStatus(taskId, statusFile);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         taskStatusString,
         StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskStatus(taskId).get()))
     );
@@ -121,50 +110,59 @@ public class FileTaskLogsTest
   @Test
   public void testPushTaskLogDirCreationFails() throws Exception
   {
-    final File tmpDir = temporaryFolder.newFolder();
-    final File logDir = new File(tmpDir, "druid/logs");
-    final File logFile = new File(tmpDir, "log");
-    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
+    final File tmpDir = temporaryFolder.getRoot();
+    try {
+      final File logDir = new File(tmpDir, "druid/logs");
+      final File logFile = temporaryFolder.newFile("log");
+      Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
 
-    if (!tmpDir.setWritable(false)) {
-      throw new RuntimeException("failed to make tmp dir read-only");
+      if (!tmpDir.setWritable(false)) {
+        throw new RuntimeException("failed to make tmp dir read-only");
+      }
+
+      final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+
+      final IOException exception = Assertions.assertThrows(
+          IOException.class,
+          () -> taskLogs.pushTaskLog("foo", logFile)
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot create directory"));
     }
-
-    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
-
-    expectedException.expect(IOException.class);
-    expectedException.expectMessage("Cannot create directory");
-    taskLogs.pushTaskLog("foo", logFile);
+    finally {
+      if (!tmpDir.setWritable(true)) {
+        throw new RuntimeException("failed to restore tmp dir write permissions");
+      }
+    }
   }
 
   @Test
   public void testKill() throws Exception
   {
-    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpDir = temporaryFolder.getRoot();
     final File logDir = new File(tmpDir, "logs");
-    final File logFile = new File(tmpDir, "log");
+    final File logFile = temporaryFolder.newFile("log");
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
 
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log1content");
     taskLogs.pushTaskLog("log1", logFile);
-    Assert.assertEquals("log1content", readLog(taskLogs, "log1", 0));
+    Assertions.assertEquals("log1content", readLog(taskLogs, "log1", 0));
 
     //File modification timestamp is only maintained to seconds resolution, so artificial delay
     //is necessary to separate 2 file creations by a timestamp that would result in only one
     //of them getting deleted
     Thread.sleep(1500);
-    long time = (System.currentTimeMillis() / 1000) * 1000;
-    Assert.assertTrue(new File(logDir, "log1.log").lastModified() < time);
+    final long time = (System.currentTimeMillis() / 1000) * 1000;
+    Assertions.assertTrue(new File(logDir, "log1.log").lastModified() < time);
 
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log2content");
     taskLogs.pushTaskLog("log2", logFile);
-    Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
-    Assert.assertTrue(new File(logDir, "log2.log").lastModified() >= time);
+    Assertions.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+    Assertions.assertTrue(new File(logDir, "log2.log").lastModified() >= time);
 
     taskLogs.killOlderThan(time);
 
-    Assert.assertFalse(taskLogs.streamTaskLog("log1", 0).isPresent());
-    Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+    Assertions.assertFalse(taskLogs.streamTaskLog("log1", 0).isPresent());
+    Assertions.assertEquals("log2content", readLog(taskLogs, "log2", 0));
 
   }
 

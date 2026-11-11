@@ -20,8 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.Sets;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -39,24 +37,22 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Set;
 
-@RunWith(JUnitParamsRunner.class)
 public class MarkOvershadowedSegmentsAsUnusedTest
 {
   private final DateTime start = DateTimes.of("2012-01-01");
 
-  private final DataSegment segmentV0 = DataSegment.builder().dataSource("test")
-                                                   .interval(new Interval(start, start.plusHours(1)))
-                                                   .version("0")
+  private final DataSegment segmentV0 = DataSegment.builder(SegmentId.of("test", new Interval(start, start.plusHours(1)), "0", 0))
                                                    .size(0)
                                                    .build();
   private final DataSegment segmentV1 = segmentV0.withVersion("1");
@@ -64,14 +60,14 @@ public class MarkOvershadowedSegmentsAsUnusedTest
 
   private TestSegmentsMetadataManager segmentsMetadataManager;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     segmentsMetadataManager = new TestSegmentsMetadataManager();
   }
 
-  @Test
-  @Parameters({"historical", "broker"})
+  @ParameterizedTest
+  @ValueSource(strings = {"historical", "broker"})
   public void testRun(String serverType)
   {
     segmentsMetadataManager.addSegment(segmentV0);
@@ -107,8 +103,8 @@ public class MarkOvershadowedSegmentsAsUnusedTest
                                                       .get("test");
 
     // Verify that the segments V0 and V1 are overshadowed
-    Assert.assertTrue(timeline.isOvershadowed(segmentV0));
-    Assert.assertTrue(timeline.isOvershadowed(segmentV1));
+    Assertions.assertTrue(timeline.isOvershadowed(segmentV0));
+    Assertions.assertTrue(timeline.isOvershadowed(segmentV1));
 
     // Run the duty and verify that the overshadowed segments are marked unused
     params = new MarkOvershadowedSegmentsAsUnused(
@@ -118,11 +114,11 @@ public class MarkOvershadowedSegmentsAsUnusedTest
     Set<DataSegment> updatedUsedSegments = Sets.newHashSet(
         segmentsMetadataManager.getRecentDataSourcesSnapshot().iterateAllUsedSegmentsInSnapshot()
     );
-    Assert.assertEquals(1, updatedUsedSegments.size());
-    Assert.assertTrue(updatedUsedSegments.contains(segmentV2));
+    Assertions.assertEquals(1, updatedUsedSegments.size());
+    Assertions.assertTrue(updatedUsedSegments.contains(segmentV2));
 
     CoordinatorRunStats runStats = params.getCoordinatorStats();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2L,
         runStats.get(Stats.Segments.OVERSHADOWED, RowKey.of(Dimension.DATASOURCE, "test"))
     );

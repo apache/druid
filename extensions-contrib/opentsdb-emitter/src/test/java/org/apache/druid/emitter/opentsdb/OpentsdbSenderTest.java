@@ -19,8 +19,8 @@
 
 package org.apache.druid.emitter.opentsdb;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class OpentsdbSenderTest
 {
@@ -29,6 +29,6 @@ public class OpentsdbSenderTest
   {
     OpentsdbSender sender = new OpentsdbSender("localhost", 9999, 2000, 2000, 100, 1000, 10000L);
     String expectedUrl = "http://localhost:9999/api/put";
-    Assert.assertEquals(expectedUrl, sender.getWebResource().getURI().toString());
+    Assertions.assertEquals(expectedUrl, sender.getWebResource().getURI().toString());
   }
 }

@@ -43,24 +43,13 @@ public class DataSegmentAndLoadProfile extends DataSegment
   @JsonIgnore
   private final PartialLoadProfile profile;
 
+  /**
+   * Shares every field of {@code delegate} by reference (including its {@link DataSegment#getId()} and
+   * {@link DataSegment#getLoadSpec()}), so the wrapper adds only itself and the profile reference.
+   */
   public DataSegmentAndLoadProfile(DataSegment delegate, PartialLoadProfile profile)
   {
-    super(
-        delegate.getDataSource(),
-        delegate.getInterval(),
-        delegate.getVersion(),
-        delegate.getLoadSpec(),
-        delegate.getDimensions(),
-        delegate.getMetrics(),
-        delegate.getProjections(),
-        delegate.getShardSpec(),
-        delegate.getLastCompactionState(),
-        delegate.getBinaryVersion(),
-        delegate.getSize(),
-        delegate.getTotalRows(),
-        delegate.getIndexingStateFingerprint(),
-        PruneSpecsHolder.DEFAULT
-    );
+    super(delegate);
     this.profile = Objects.requireNonNull(profile, "profile");
   }
 

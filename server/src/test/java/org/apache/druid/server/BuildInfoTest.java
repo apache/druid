@@ -19,8 +19,8 @@
 
 package org.apache.druid.server;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -33,7 +33,7 @@ public class BuildInfoTest
   public void testGetBuildRevisionReturnsEmptyStringOutsideJar()
   {
     // During mvn test the class loads from the filesystem, not a JAR, so this must return "".
-    Assert.assertEquals("", BuildInfo.getBuildRevision());
+    Assertions.assertEquals("", BuildInfo.getBuildRevision());
   }
 
   @Test
@@ -41,7 +41,7 @@ public class BuildInfoTest
   {
     String manifest = "Manifest-Version: 1.0\nBuild-Revision: abc123\n\n";
     InputStream is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8));
-    Assert.assertEquals("abc123", BuildInfo.readRevisionFromManifest(is));
+    Assertions.assertEquals("abc123", BuildInfo.readRevisionFromManifest(is));
   }
 
   @Test
@@ -49,6 +49,6 @@ public class BuildInfoTest
   {
     String manifest = "Manifest-Version: 1.0\n\n";
     InputStream is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8));
-    Assert.assertEquals("", BuildInfo.readRevisionFromManifest(is));
+    Assertions.assertEquals("", BuildInfo.readRevisionFromManifest(is));
   }
 }

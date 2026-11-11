@@ -30,10 +30,10 @@ import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.server.DruidNode;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -51,7 +51,7 @@ public class ConsulLeaderSelectorTest
   private ConsulDiscoveryConfig testConfig;
   private DruidNode selfNode;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     selfNode = new DruidNode(
@@ -70,7 +70,7 @@ public class ConsulLeaderSelectorTest
     leaderSelector = new ConsulLeaderSelector(selfNode, LOCK_KEY, testConfig, mockConsulClient);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     // Only unregister if we actually registered a listener
@@ -96,7 +96,7 @@ public class ConsulLeaderSelectorTest
     EasyMock.replay(mockConsulClient);
 
     String currentLeader = leaderSelector.getCurrentLeader();
-    Assert.assertEquals(leaderValue, currentLeader);
+    Assertions.assertEquals(leaderValue, currentLeader);
 
     EasyMock.verify(mockConsulClient);
   }
@@ -117,7 +117,7 @@ public class ConsulLeaderSelectorTest
     EasyMock.replay(mockConsulClient);
 
     String currentLeader = leaderSelector.getCurrentLeader();
-    Assert.assertNull(currentLeader);
+    Assertions.assertNull(currentLeader);
 
     EasyMock.verify(mockConsulClient);
   }
@@ -125,13 +125,13 @@ public class ConsulLeaderSelectorTest
   @Test
   public void testIsLeaderInitiallyFalse()
   {
-    Assert.assertFalse(leaderSelector.isLeader());
+    Assertions.assertFalse(leaderSelector.isLeader());
   }
 
   @Test
   public void testLocalTermInitiallyZero()
   {
-    Assert.assertEquals(0, leaderSelector.localTerm());
+    Assertions.assertEquals(0, leaderSelector.localTerm());
   }
 
   @Test
@@ -200,22 +200,22 @@ public class ConsulLeaderSelectorTest
     leaderSelector.registerListener(listener);
 
     // Wait for session creation and leader election
-    Assert.assertTrue("Session not created", sessionCreatedLatch.await(5, TimeUnit.SECONDS));
-    Assert.assertTrue("Did not become leader", becameLeaderLatch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(sessionCreatedLatch.await(5, TimeUnit.SECONDS), "Session not created");
+    Assertions.assertTrue(becameLeaderLatch.await(5, TimeUnit.SECONDS), "Did not become leader");
 
     // Verify we became leader
-    Assert.assertTrue(leaderSelector.isLeader());
-    Assert.assertEquals(1, leaderSelector.localTerm());
+    Assertions.assertTrue(leaderSelector.isLeader());
+    Assertions.assertEquals(1, leaderSelector.localTerm());
 
     // Verify session was created correctly
     NewSession createdSession = sessionCapture.getValue();
-    Assert.assertNotNull(createdSession);
-    Assert.assertEquals(Session.Behavior.DELETE, createdSession.getBehavior());
-    Assert.assertEquals(5L, createdSession.getLockDelay());
+    Assertions.assertNotNull(createdSession);
+    Assertions.assertEquals(Session.Behavior.DELETE, createdSession.getBehavior());
+    Assertions.assertEquals(5L, createdSession.getLockDelay());
 
     // Verify lock acquisition used the session
     PutParams putParams = putParamsCapture.getValue();
-    Assert.assertEquals(SESSION_ID, putParams.getAcquireSession());
+    Assertions.assertEquals(SESSION_ID, putParams.getAcquireSession());
 
     EasyMock.verify(mockConsulClient);
   }
@@ -293,7 +293,7 @@ public class ConsulLeaderSelectorTest
     leaderSelector.unregisterListener();
 
     // Verify session was destroyed
-    Assert.assertEquals(SESSION_ID, sessionIdCapture.getValue());
+    Assertions.assertEquals(SESSION_ID, sessionIdCapture.getValue());
 
     EasyMock.verify(mockConsulClient);
   }

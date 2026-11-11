@@ -19,7 +19,7 @@
 import classNames from 'classnames';
 import type { Column } from 'druid-query-toolkit';
 import type React from 'react';
-import { forwardRef, useState } from 'react';
+import { useState } from 'react';
 
 import { DragHelper } from '../../drag-helper';
 import type { Measure } from '../../models';
@@ -30,46 +30,45 @@ export interface DroppableContainerProps extends React.HTMLAttributes<HTMLDivEle
   onDropColumn(column: Column): void;
   onDropMeasure?(measure: Measure): void;
   children?: React.ReactNode;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
-export const DroppableContainer = forwardRef<HTMLDivElement, DroppableContainerProps>(
-  function DroppableContainer(props, ref) {
-    const { className, onDropColumn, onDropMeasure, children, ...rest } = props;
-    const [dropHover, setDropHover] = useState(false);
+export function DroppableContainer(props: DroppableContainerProps) {
+  const { ref, className, onDropColumn, onDropMeasure, children, ...rest } = props;
+  const [dropHover, setDropHover] = useState(false);
 
-    return (
-      <div
-        ref={ref}
-        className={classNames('droppable-container', className, { 'drop-hover': dropHover })}
-        {...rest}
-        onDragOver={e => {
-          if (!DragHelper.dragColumn && !(onDropMeasure && DragHelper.dragMeasure)) return;
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-          setDropHover(true);
-        }}
-        onDragLeave={e => {
-          const currentTarget = e.currentTarget;
-          const relatedTarget = e.relatedTarget;
-          if (currentTarget.contains(relatedTarget as any)) return;
-          setDropHover(false);
-        }}
-        onDrop={() => {
-          if (!DragHelper.dragColumn && !(onDropMeasure && DragHelper.dragMeasure)) return;
-          const dragColumn = DragHelper.dragColumn;
-          const dragMeasure = DragHelper.dragMeasure;
-          setDropHover(false);
-          if (dragColumn) {
-            DragHelper.dragColumn = undefined;
-            onDropColumn(dragColumn);
-          } else if (dragMeasure && onDropMeasure) {
-            DragHelper.dragMeasure = undefined;
-            onDropMeasure(dragMeasure);
-          }
-        }}
-      >
-        {children}
-      </div>
-    );
-  },
-);
+  return (
+    <div
+      ref={ref}
+      className={classNames('droppable-container', className, { 'drop-hover': dropHover })}
+      {...rest}
+      onDragOver={e => {
+        if (!DragHelper.dragColumn && !(onDropMeasure && DragHelper.dragMeasure)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDropHover(true);
+      }}
+      onDragLeave={e => {
+        const currentTarget = e.currentTarget;
+        const relatedTarget = e.relatedTarget;
+        if (currentTarget.contains(relatedTarget as any)) return;
+        setDropHover(false);
+      }}
+      onDrop={() => {
+        if (!DragHelper.dragColumn && !(onDropMeasure && DragHelper.dragMeasure)) return;
+        const dragColumn = DragHelper.dragColumn;
+        const dragMeasure = DragHelper.dragMeasure;
+        setDropHover(false);
+        if (dragColumn) {
+          DragHelper.dragColumn = undefined;
+          onDropColumn(dragColumn);
+        } else if (dragMeasure && onDropMeasure) {
+          DragHelper.dragMeasure = undefined;
+          onDropMeasure(dragMeasure);
+        }
+      }}
+    >
+      {children}
+    </div>
+  );
+}

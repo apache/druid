@@ -142,7 +142,7 @@ public class ConcatSequence<T> implements Sequence<T>
       @Override
       public void close() throws IOException
       {
-        try (Closeable toClose = yielderYielder) {
+        try (Closeable ignoredYielder = yielderYielder) {
           yielder.close();
         }
       }

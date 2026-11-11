@@ -19,8 +19,8 @@
 
 package org.apache.druid.server;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ServiceAnnouncementStateTest
 {
@@ -28,7 +28,7 @@ public class ServiceAnnouncementStateTest
   public void testInitialStateIsNotReady()
   {
     final ServiceAnnouncementState state = new ServiceAnnouncementState();
-    Assert.assertFalse(state.isReady());
+    Assertions.assertFalse(state.isReady());
   }
 
   @Test
@@ -36,7 +36,7 @@ public class ServiceAnnouncementStateTest
   {
     final ServiceAnnouncementState state = new ServiceAnnouncementState();
     state.markReady();
-    Assert.assertTrue(state.isReady());
+    Assertions.assertTrue(state.isReady());
   }
 
   @Test
@@ -44,9 +44,9 @@ public class ServiceAnnouncementStateTest
   {
     final ServiceAnnouncementState state = new ServiceAnnouncementState();
     state.markReady();
-    Assert.assertTrue(state.isReady());
+    Assertions.assertTrue(state.isReady());
     state.markNotReady();
-    Assert.assertFalse(state.isReady());
+    Assertions.assertFalse(state.isReady());
   }
 
   @Test
@@ -55,10 +55,10 @@ public class ServiceAnnouncementStateTest
     final ServiceAnnouncementState state = new ServiceAnnouncementState();
     state.markReady();
     state.markReady();
-    Assert.assertTrue(state.isReady());
+    Assertions.assertTrue(state.isReady());
     state.markNotReady();
-    Assert.assertFalse(state.isReady());
+    Assertions.assertFalse(state.isReady());
     state.markNotReady();
-    Assert.assertFalse(state.isReady());
+    Assertions.assertFalse(state.isReady());
   }
 }

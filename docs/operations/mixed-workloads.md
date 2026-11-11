@@ -23,7 +23,7 @@ sidebar_label: Mixed workloads
   ~ under the License.
   -->
 
-If you frequently run concurrent, heterogeneous workloads on your Apache Druid cluster, configure Druid to properly allocate cluster resources to optimize your overall query performance.
+If you frequently run concurrent, heterogeneous workloads on your Apache&circledR; Druid cluster, configure Druid to properly allocate cluster resources to optimize your overall query performance.
 
 Each Druid query consumes a certain amount of cluster resources, such as processing threads, memory buffers for intermediate query results, and HTTP threads for communicating between Brokers and data servers.
 "Heavy" queries that return large results are more resource-intensive than short-running, "light" queries.

@@ -28,8 +28,8 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class KafkaSupervisorTuningConfigTest
 {
@@ -56,21 +56,21 @@ public class KafkaSupervisorTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNull(config.getBasePersistDirectory());
-    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(150000, config.getMaxRowsInMemory());
-    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
-    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpecForIntermediatePersists());
-    Assert.assertFalse(config.isReportParseExceptions());
-    Assert.assertEquals(java.time.Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
-    Assert.assertNull(config.getWorkerThreads());
-    Assert.assertEquals(8L, (long) config.getChatRetries());
-    Assert.assertEquals(Duration.standardSeconds(10), config.getHttpTimeout());
-    Assert.assertEquals(Duration.standardSeconds(80), config.getShutdownTimeout());
-    Assert.assertEquals(Duration.standardSeconds(30), config.getOffsetFetchPeriod());
+    Assertions.assertNull(config.getBasePersistDirectory());
+    Assertions.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
+    Assertions.assertEquals(150000, config.getMaxRowsInMemory());
+    Assertions.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
+    Assertions.assertEquals(0, config.getMaxPendingPersists());
+    Assertions.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
+    Assertions.assertEquals(IndexSpec.getDefault(), config.getIndexSpecForIntermediatePersists());
+    Assertions.assertFalse(config.isReportParseExceptions());
+    Assertions.assertEquals(java.time.Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
+    Assertions.assertNull(config.getWorkerThreads());
+    Assertions.assertEquals(8L, (long) config.getChatRetries());
+    Assertions.assertEquals(Duration.standardSeconds(10), config.getHttpTimeout());
+    Assertions.assertEquals(Duration.standardSeconds(80), config.getShutdownTimeout());
+    Assertions.assertEquals(Duration.standardSeconds(30), config.getOffsetFetchPeriod());
   }
 
   @Test
@@ -105,24 +105,24 @@ public class KafkaSupervisorTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNull(config.getBasePersistDirectory());
-    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(100, config.getMaxRowsInMemory());
-    Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(100, config.getMaxPendingPersists());
-    Assert.assertTrue(config.isReportParseExceptions());
-    Assert.assertEquals(100, config.getHandoffConditionTimeout());
-    Assert.assertEquals(12, (int) config.getWorkerThreads());
-    Assert.assertEquals(14L, (long) config.getChatRetries());
-    Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
-    Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
-    Assert.assertEquals(Duration.standardSeconds(20), config.getOffsetFetchPeriod());
-    Assert.assertEquals(
+    Assertions.assertNull(config.getBasePersistDirectory());
+    Assertions.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
+    Assertions.assertEquals(100, config.getMaxRowsInMemory());
+    Assertions.assertEquals(100, config.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
+    Assertions.assertEquals(100, config.getMaxPendingPersists());
+    Assertions.assertTrue(config.isReportParseExceptions());
+    Assertions.assertEquals(100, config.getHandoffConditionTimeout());
+    Assertions.assertEquals(12, (int) config.getWorkerThreads());
+    Assertions.assertEquals(14L, (long) config.getChatRetries());
+    Assertions.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
+    Assertions.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
+    Assertions.assertEquals(Duration.standardSeconds(20), config.getOffsetFetchPeriod());
+    Assertions.assertEquals(
         IndexSpec.builder().withMetricCompression(CompressionStrategy.NONE).build(),
         config.getIndexSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         IndexSpec.builder().withDimensionCompression(CompressionStrategy.UNCOMPRESSED).build(),
         config.getIndexSpecForIntermediatePersists()
     );

@@ -92,7 +92,6 @@ FROM test_unnest,
         "resultFormat" : "compactedList",
         "columns" : [ "j0.unnest" ],
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -214,7 +213,6 @@ FROM
         "resultFormat" : "compactedList",
         "columns" : [ "__time", "c_str", "c_long", "c_float", "c_double", "c_mv_complex", "c_mv_num", "c_mv_complex_with_null_and_empty_val", "c_mv_num_with_null_and_empty_val", "c_mv_complex_with_null_and_empty_row", "c_mv_num_with_null_and_empty_row", "c_mv_all_null_and_empty_val", "j0.unnest" ],
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -366,7 +364,6 @@ GROUP BY c;
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -453,7 +450,6 @@ GROUP BY c;
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,

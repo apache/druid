@@ -108,6 +108,12 @@ public class ImmutableDruidDataSource
   }
 
   @JsonIgnore
+  public int getNumSegments()
+  {
+    return idToSegments.size();
+  }
+
+  @JsonIgnore
   @Nullable
   public DataSegment getSegment(SegmentId segmentId)
   {
@@ -151,7 +157,7 @@ public class ImmutableDruidDataSource
    * ImmutableDruidDataSource should be considered a container, not a data class. The idea is the same as behind
    * prohibiting/limiting equals() (and therefore usage as HashSet/HashMap keys) of DataSegment: see
    * https://github.com/apache/druid/issues/6358. When somebody wants to deduplicate ImmutableDruidDataSource
-   * objects, they would need to put them into a Map<String, ImmutableDruidDataSource> and resolve conflicts by name
+   * objects, they would need to put them into a {@code Map<String, ImmutableDruidDataSource>} and resolve conflicts by name
    * manually.
    *
    * See https://github.com/apache/druid/issues/7858
@@ -166,7 +172,7 @@ public class ImmutableDruidDataSource
    * ImmutableDruidDataSource should be considered a container, not a data class. The idea is the same as behind
    * prohibiting/limiting hashCode() (and therefore usage as HashSet/HashMap keys) of DataSegment: see
    * https://github.com/apache/druid/issues/6358. When somebody wants to deduplicate ImmutableDruidDataSource
-   * objects, they would need to put them into a Map<String, ImmutableDruidDataSource> and resolve conflicts by name
+   * objects, they would need to put them into a {@code Map<String, ImmutableDruidDataSource>} and resolve conflicts by name
    * manually.
    *
    * See https://github.com/apache/druid/issues/7858

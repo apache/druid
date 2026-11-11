@@ -38,6 +38,8 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class FaultyOverlordClient extends OverlordClientImpl
 {
@@ -46,6 +48,8 @@ public class FaultyOverlordClient extends OverlordClientImpl
   private final ObjectMapper jsonMapper;
   private final ServiceClient serviceClient;
   private final ClusterTestingTaskConfig.OverlordClientConfig testingConfig;
+  private final CountDownLatch taskStatusDelayEntered;
+  private final CountDownLatch taskStatusDelayReleased;
 
   @Inject
   public FaultyOverlordClient(
@@ -54,10 +58,29 @@ public class FaultyOverlordClient extends OverlordClientImpl
       @IndexingService final ServiceClient serviceClient
   )
   {
+    this(
+        testingConfig,
+        jsonMapper,
+        serviceClient,
+        new CountDownLatch(1),
+        new CountDownLatch(1)
+    );
+  }
+
+  private FaultyOverlordClient(
+      ClusterTestingTaskConfig.OverlordClientConfig testingConfig,
+      ObjectMapper jsonMapper,
+      ServiceClient serviceClient,
+      CountDownLatch taskStatusDelayEntered,
+      CountDownLatch taskStatusDelayReleased
+  )
+  {
     super(serviceClient, jsonMapper);
     this.jsonMapper = jsonMapper;
     this.serviceClient = serviceClient;
     this.testingConfig = testingConfig;
+    this.taskStatusDelayEntered = taskStatusDelayEntered;
+    this.taskStatusDelayReleased = taskStatusDelayReleased;
     log.info("Initialized FaultyOverlordClient with config[%s]", testingConfig);
   }
 
@@ -89,7 +112,23 @@ public class FaultyOverlordClient extends OverlordClientImpl
   @Override
   public OverlordClientImpl withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
-    return new FaultyOverlordClient(testingConfig, jsonMapper, serviceClient);
+    return new FaultyOverlordClient(
+        testingConfig,
+        jsonMapper,
+        serviceClient,
+        taskStatusDelayEntered,
+        taskStatusDelayReleased
+    );
+  }
+
+  public boolean awaitTaskStatusDelayEntered(long timeout, TimeUnit unit) throws InterruptedException
+  {
+    return taskStatusDelayEntered.await(timeout, unit);
+  }
+
+  public void releaseTaskStatusDelay()
+  {
+    taskStatusDelayReleased.countDown();
   }
 
   private void addDelayIfConfigured()
@@ -99,12 +138,16 @@ public class FaultyOverlordClient extends OverlordClientImpl
       return;
     }
 
+    taskStatusDelayEntered.countDown();
     try {
-      log.info("Sleeping for [%s] before calling Overlord", delay);
-      Thread.sleep(delay.getMillis());
+      log.info("Waiting for [%s] before calling Overlord", delay);
+      if (!taskStatusDelayReleased.await(delay.getMillis(), TimeUnit.MILLISECONDS)) {
+        log.info("Task status delay elapsed before release.");
+      }
     }
     catch (InterruptedException e) {
-      log.info("Interrupted while sleeping before task action.");
+      Thread.currentThread().interrupt();
+      log.info("Interrupted while waiting before task action.");
     }
   }
 }

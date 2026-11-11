@@ -140,8 +140,21 @@ FROM test_json_cols
 UNION ALL
 SELECT to_json_string('{"a": "A", "b": 123, "c": true, "d": null}') c
 FROM test_json_cols;
-Query could not be planned
-!error
++--------------------------------------------------------+
+| c                                                      |
++--------------------------------------------------------+
+| "{\"a\": \"A\", \"b\": 123, \"c\": true, \"d\": null}" |
+| "{\"a\": \"A\", \"b\": 123, \"c\": true, \"d\": null}" |
+| "{\"a\": \"A\", \"b\": 123, \"c\": true, \"d\": null}" |
+| "{\"a\": \"A\", \"b\": 123, \"c\": true, \"d\": null}" |
+| "{\"a\": \"A\", \"b\": 123, \"c\": true, \"d\": null}" |
+| "{\"a\": \"A\", \"b\": 123, \"c\": true, \"d\": null}" |
+| "{\"a\": \"A\", \"b\": 123, \"c\": true, \"d\": null}" |
+| "{\"a\": \"A\", \"b\": 123, \"c\": true, \"d\": null}" |
++--------------------------------------------------------+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_to_json_string TEST_ID: A059
@@ -190,7 +203,6 @@ FROM test_json_cols;
         "resultFormat" : "compactedList",
         "columns" : [ "v0" ],
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,

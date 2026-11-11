@@ -21,8 +21,8 @@ package org.apache.druid.storage.s3;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -189,11 +189,11 @@ public class ObjectSummaryIteratorTest
         1
     );
 
-    Assert.assertEquals(1, listCalls.get());
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(1, listCalls.get());
-    Assert.assertEquals("foo/file", iterator.next().getKey());
-    Assert.assertEquals(1, listCalls.get());
+    Assertions.assertEquals(1, listCalls.get());
+    Assertions.assertTrue(iterator.hasNext());
+    Assertions.assertEquals(1, listCalls.get());
+    Assertions.assertEquals("foo/file", iterator.next().getKey());
+    Assertions.assertEquals(1, listCalls.get());
   }
 
   private static void test(
@@ -225,10 +225,10 @@ public class ObjectSummaryIteratorTest
         )
     );
 
-    Assert.assertEquals(
-        prefixes.toString(),
+    Assertions.assertEquals(
         expectedObjects.stream().map(obj -> S3Utils.summaryToUri(obj, TEST_BUCKET)).collect(Collectors.toList()),
-        actualObjects.stream().map(obj -> S3Utils.summaryToUri(obj.getS3Object(), obj.getBucket())).collect(Collectors.toList())
+        actualObjects.stream().map(obj -> S3Utils.summaryToUri(obj.getS3Object(), obj.getBucket())).collect(Collectors.toList()),
+        prefixes.toString()
     );
   }
 

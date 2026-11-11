@@ -1,0 +1,51 @@
+!set requireTimeCondition true
+!use druidtest:///
+!set outputformat mysql
+
+# Positive: bounded nested-rollup. The inner GROUP BY owns the physical scan and
+# supplies the __time bound. Guards against regressions where the walker stops at
+# the outer query's segment spec.
+SELECT __time, SUM(cnt) AS cnt, dim1
+FROM (
+  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1
+  FROM druid.foo
+  WHERE __time >= '2000-01-01' AND __time < '2001-01-01'
+  GROUP BY TIME_FLOOR(__time, 'PT1H'), dim1
+)
+GROUP BY __time, dim1;
++-------------------------+-----+------+
+| __time                  | cnt | dim1 |
++-------------------------+-----+------+
+| 2000-01-01 00:00:00.000 |   1 |      |
+| 2000-01-02 00:00:00.000 |   1 | 10.1 |
+| 2000-01-03 00:00:00.000 |   1 | 2    |
++-------------------------+-----+------+
+(3 rows)
+
+!ok
+
+# Positive: bounded CTE. CTEs plan to nested subqueries; the inner has the __time
+# bound and owns the physical scan.
+WITH recent AS (
+  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1
+  FROM druid.foo
+  WHERE __time >= '2000-01-01' AND __time < '2001-01-01'
+  GROUP BY TIME_FLOOR(__time, 'PT1H'), dim1
+)
+SELECT __time, SUM(cnt) AS cnt, dim1 FROM recent GROUP BY __time, dim1;
++-------------------------+-----+------+
+| __time                  | cnt | dim1 |
++-------------------------+-----+------+
+| 2000-01-01 00:00:00.000 |   1 |      |
+| 2000-01-02 00:00:00.000 |   1 | 10.1 |
+| 2000-01-03 00:00:00.000 |   1 | 2    |
++-------------------------+-----+------+
+(3 rows)
+
+!ok
+
+# Negative: top-level unbounded. Verifies the formatted error message reaches the
+# JDBC client end-to-end through the Avatica path.
+SELECT dim1, SUM(cnt) FROM druid.foo GROUP BY dim1;
+requireTimeCondition is enabled: datasource 'foo' has no filter on the __time column
+!error

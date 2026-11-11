@@ -29,8 +29,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class BloomFilterAggregatorFactoryTest
 {
@@ -55,7 +55,7 @@ public class BloomFilterAggregatorFactoryTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)
@@ -78,8 +78,8 @@ public class BloomFilterAggregatorFactoryTest
         DefaultDimensionSpec.of("col"),
         1024
     );
-    Assert.assertEquals(factory, factory.withName("bloom"));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName("bloom"));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 
 
@@ -87,7 +87,7 @@ public class BloomFilterAggregatorFactoryTest
   public void testWithNameBloomFilterMergeAggFactory()
   {
     BloomFilterMergeAggregatorFactory factory = new BloomFilterMergeAggregatorFactory("bloomMerge", "bloom", 1024);
-    Assert.assertEquals(factory, factory.withName("bloomMerge"));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName("bloomMerge"));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

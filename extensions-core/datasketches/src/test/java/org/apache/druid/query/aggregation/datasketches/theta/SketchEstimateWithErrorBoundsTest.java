@@ -21,8 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -36,7 +36,7 @@ public class SketchEstimateWithErrorBoundsTest
 
     SketchEstimateWithErrorBounds est = new SketchEstimateWithErrorBounds(100.0, 101.5, 98.5, 2);
     
-    Assert.assertEquals(est, mapper.readValue(
+    Assertions.assertEquals(est, mapper.readValue(
             mapper.writeValueAsString(est), SketchEstimateWithErrorBounds.class));
   }
 

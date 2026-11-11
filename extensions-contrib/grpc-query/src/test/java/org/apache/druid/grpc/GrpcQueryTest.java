@@ -35,7 +35,6 @@ import org.apache.druid.grpc.server.GrpcQueryConfig;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -51,9 +50,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Simple test that runs the gRPC server, on top of a test SQL stack.
@@ -80,7 +79,7 @@ public class GrpcQueryTest extends BaseCalciteQueryTest
         plannerFixture.statementFactory(),
         new DefaultQueryConfig(Map.of()),
         sqlTestFramework.queryLifecycleFactory(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        TestServer.NOOP_SCHEDULER
     );
     AuthenticatorMapper authMapper = new AuthenticatorMapper(
         ImmutableMap.of(

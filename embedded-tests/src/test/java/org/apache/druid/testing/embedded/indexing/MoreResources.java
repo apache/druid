@@ -179,9 +179,11 @@ public class MoreResources
             );
   }
 
-  public static class ProbufData
+  public static class ProtobufData
   {
     public static final String WIKI_PROTOBUF_BYTES_DECODER_RESOURCE = "data/protobuf/wikipedia.desc";
     public static final String WIKI_PROTO_MESSAGE_TYPE = "Wikipedia";
+    public static final String PROTO3_EVENT_BYTES_DECODER_RESOURCE = "data/protobuf/proto3_event.desc";
+    public static final String PROTO3_EVENT_MESSAGE_TYPE = "Proto3Event";
   }
 }

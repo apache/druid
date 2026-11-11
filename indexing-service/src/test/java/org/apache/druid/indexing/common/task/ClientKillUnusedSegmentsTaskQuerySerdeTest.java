@@ -27,9 +27,9 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -37,7 +37,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
 {
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     objectMapper = new DefaultObjectMapper();
@@ -60,13 +60,13 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     );
     final byte[] json = objectMapper.writeValueAsBytes(taskQuery);
     final KillUnusedSegmentsTask fromJson = (KillUnusedSegmentsTask) objectMapper.readValue(json, Task.class);
-    Assert.assertEquals(taskQuery.getId(), fromJson.getId());
-    Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
-    Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
-    Assert.assertNull(taskQuery.getVersions());
-    Assert.assertEquals(taskQuery.getBatchSize(), Integer.valueOf(fromJson.getBatchSize()));
-    Assert.assertEquals(taskQuery.getLimit(), fromJson.getLimit());
-    Assert.assertEquals(taskQuery.getMaxUsedStatusLastUpdatedTime(), fromJson.getMaxUsedStatusLastUpdatedTime());
+    Assertions.assertEquals(taskQuery.getId(), fromJson.getId());
+    Assertions.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
+    Assertions.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
+    Assertions.assertNull(taskQuery.getVersions());
+    Assertions.assertEquals(taskQuery.getBatchSize(), Integer.valueOf(fromJson.getBatchSize()));
+    Assertions.assertEquals(taskQuery.getLimit(), fromJson.getLimit());
+    Assertions.assertEquals(taskQuery.getMaxUsedStatusLastUpdatedTime(), fromJson.getMaxUsedStatusLastUpdatedTime());
   }
 
   @Test
@@ -83,13 +83,13 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     );
     final byte[] json = objectMapper.writeValueAsBytes(taskQuery);
     final KillUnusedSegmentsTask fromJson = (KillUnusedSegmentsTask) objectMapper.readValue(json, Task.class);
-    Assert.assertEquals(taskQuery.getId(), fromJson.getId());
-    Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
-    Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
-    Assert.assertNull(taskQuery.getVersions());
-    Assert.assertEquals(100, fromJson.getBatchSize());
-    Assert.assertNull(taskQuery.getLimit());
-    Assert.assertNull(taskQuery.getMaxUsedStatusLastUpdatedTime());
+    Assertions.assertEquals(taskQuery.getId(), fromJson.getId());
+    Assertions.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
+    Assertions.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
+    Assertions.assertNull(taskQuery.getVersions());
+    Assertions.assertEquals(100, fromJson.getBatchSize());
+    Assertions.assertNull(taskQuery.getLimit());
+    Assertions.assertNull(taskQuery.getMaxUsedStatusLastUpdatedTime());
   }
 
   @Test
@@ -110,13 +110,13 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         json,
         ClientTaskQuery.class
     );
-    Assert.assertEquals(task.getId(), taskQuery.getId());
-    Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
-    Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
-    Assert.assertNull(taskQuery.getVersions());
-    Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
-    Assert.assertNull(taskQuery.getLimit());
-    Assert.assertNull(taskQuery.getMaxUsedStatusLastUpdatedTime());
+    Assertions.assertEquals(task.getId(), taskQuery.getId());
+    Assertions.assertEquals(task.getDataSource(), taskQuery.getDataSource());
+    Assertions.assertEquals(task.getInterval(), taskQuery.getInterval());
+    Assertions.assertNull(taskQuery.getVersions());
+    Assertions.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
+    Assertions.assertNull(taskQuery.getLimit());
+    Assertions.assertNull(taskQuery.getMaxUsedStatusLastUpdatedTime());
   }
 
   @Test
@@ -137,12 +137,12 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         json,
         ClientTaskQuery.class
     );
-    Assert.assertEquals(task.getId(), taskQuery.getId());
-    Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
-    Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
-    Assert.assertEquals(task.getVersions(), taskQuery.getVersions());
-    Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
-    Assert.assertEquals(task.getLimit(), taskQuery.getLimit());
-    Assert.assertEquals(task.getMaxUsedStatusLastUpdatedTime(), taskQuery.getMaxUsedStatusLastUpdatedTime());
+    Assertions.assertEquals(task.getId(), taskQuery.getId());
+    Assertions.assertEquals(task.getDataSource(), taskQuery.getDataSource());
+    Assertions.assertEquals(task.getInterval(), taskQuery.getInterval());
+    Assertions.assertEquals(task.getVersions(), taskQuery.getVersions());
+    Assertions.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
+    Assertions.assertEquals(task.getLimit(), taskQuery.getLimit());
+    Assertions.assertEquals(task.getMaxUsedStatusLastUpdatedTime(), taskQuery.getMaxUsedStatusLastUpdatedTime());
   }
 }

@@ -27,9 +27,9 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -77,7 +77,7 @@ public class RowBucketIterableTest
   private List<Row> rows = null;
   private List<Interval> intervals = new ArrayList<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     EVENT_M_10.put("gender", "m");
@@ -110,20 +110,20 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(JAN_1, actual.getDateTime());
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_2, actual.getDateTime());
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(JAN_2, actual.getDateTime());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_3, actual.getDateTime());
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(JAN_3, actual.getDateTime());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_4, actual.getDateTime());
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(JAN_4, actual.getDateTime());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -149,16 +149,16 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -186,16 +186,16 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -214,8 +214,8 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(expectedDay1, actual.getRows());
-    Assert.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
   }
 
   @Test
@@ -236,8 +236,8 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(JAN_1, actual.getDateTime());
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
   }
 
   @Test
@@ -257,12 +257,12 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(JAN_1, actual.getDateTime());
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_2, actual.getDateTime());
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(JAN_2, actual.getDateTime());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
   }
 
   @Test
@@ -286,20 +286,20 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(JAN_1, actual.getDateTime());
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_2, actual.getDateTime());
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(JAN_2, actual.getDateTime());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_3, actual.getDateTime());
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(JAN_3, actual.getDateTime());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_4, actual.getDateTime());
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(JAN_4, actual.getDateTime());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -322,20 +322,20 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(JAN_1, actual.getDateTime());
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_2, actual.getDateTime());
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(JAN_2, actual.getDateTime());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_3, actual.getDateTime());
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(JAN_3, actual.getDateTime());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_4, actual.getDateTime());
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(JAN_4, actual.getDateTime());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -358,20 +358,20 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(JAN_1, actual.getDateTime());
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_2, actual.getDateTime());
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(JAN_2, actual.getDateTime());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_3, actual.getDateTime());
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(JAN_3, actual.getDateTime());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_4, actual.getDateTime());
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(JAN_4, actual.getDateTime());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -396,24 +396,24 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(JAN_1, actual.getDateTime());
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_2, actual.getDateTime());
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(JAN_2, actual.getDateTime());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_3, actual.getDateTime());
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(JAN_3, actual.getDateTime());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_4, actual.getDateTime());
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(JAN_4, actual.getDateTime());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_5, actual.getDateTime());
-    Assert.assertEquals(expectedDay5, actual.getRows());
+    Assertions.assertEquals(JAN_5, actual.getDateTime());
+    Assertions.assertEquals(expectedDay5, actual.getRows());
   }
 
   @Test
@@ -437,17 +437,17 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_3, actual.getDateTime());
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(JAN_3, actual.getDateTime());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -471,20 +471,20 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(JAN_1, actual.getDateTime());
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(JAN_1, actual.getDateTime());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_2, actual.getDateTime());
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(JAN_2, actual.getDateTime());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_3, actual.getDateTime());
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(JAN_3, actual.getDateTime());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_4, actual.getDateTime());
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(JAN_4, actual.getDateTime());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -509,17 +509,17 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_4, actual.getDateTime());
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(JAN_4, actual.getDateTime());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -543,18 +543,18 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_3, actual.getDateTime());
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(JAN_3, actual.getDateTime());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(JAN_4, actual.getDateTime());
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(JAN_4, actual.getDateTime());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
   }
 
   @Test
@@ -589,25 +589,25 @@ public class RowBucketIterableTest
     Iterator<RowBucket> iter = rbi.iterator();
 
     RowBucket actual = iter.next();
-    Assert.assertEquals(expectedDay1, actual.getRows());
+    Assertions.assertEquals(expectedDay1, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay2, actual.getRows());
+    Assertions.assertEquals(expectedDay2, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay3, actual.getRows());
+    Assertions.assertEquals(expectedDay3, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay4, actual.getRows());
+    Assertions.assertEquals(expectedDay4, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay6, actual.getRows());
+    Assertions.assertEquals(expectedDay6, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay7, actual.getRows());
+    Assertions.assertEquals(expectedDay7, actual.getRows());
 
     actual = iter.next();
-    Assert.assertEquals(expectedDay8, actual.getRows());
+    Assertions.assertEquals(expectedDay8, actual.getRows());
   }
 
   @Test
@@ -623,8 +623,8 @@ public class RowBucketIterableTest
     RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
     Iterator<RowBucket> iter = rbi.iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     RowBucket actual = iter.next();
-    Assert.assertEquals(Collections.emptyList(), actual.getRows());
+    Assertions.assertEquals(Collections.emptyList(), actual.getRows());
   }
 }

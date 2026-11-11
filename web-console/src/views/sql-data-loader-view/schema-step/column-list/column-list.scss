@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../../../variables';
+@use '../../../../variables' as *;
 
 @mixin sunk-panel {
   background: rgba($dark-gray1, 0.5);

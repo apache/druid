@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
@@ -159,7 +160,7 @@ public class JoinFilterAnalyzer
   }
 
   /**
-   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis}
    * @param baseFilter - Filter on base table that was specified in the query itself
    *
    * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
@@ -223,7 +224,7 @@ public class JoinFilterAnalyzer
    * The clause is expected to be an OR filter or a leaf filter.
    *
    * @param filterClause                      Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
-   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis}
    * @param pushDownVirtualColumnsForLhsExprs Used when there are LHS expressions in the join equiconditions.
    *                                          If we rewrite an RHS filter such that it applies to the LHS expression instead,
    *                                          because the expression existed only in the equicondition, we must create a virtual column
@@ -312,7 +313,10 @@ public class JoinFilterAnalyzer
           VirtualColumn pushDownVirtualColumn = pushDownVirtualColumnsForLhsExprs.computeIfAbsent(
               correlatedBaseExpr,
               (expr) -> {
-                String vcName = getCorrelatedBaseExprVirtualColumnName(pushDownVirtualColumnsForLhsExprs.size());
+                String vcName = getCorrelatedBaseExprVirtualColumnName(
+                    pushDownVirtualColumnsForLhsExprs.size(),
+                    joinFilterPreAnalysis.getKey().getVirtualColumns()
+                );
                 return new ExpressionVirtualColumn(
                     vcName,
                     correlatedBaseExpr,
@@ -346,7 +350,7 @@ public class JoinFilterAnalyzer
    * the base table.
    *
    * @param orFilter                          OrFilter to be rewritten
-   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis}
    * @param pushDownVirtualColumnsForLhsExprs See comments on {@link #analyzeJoinFilterClause}
    *
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
@@ -412,7 +416,7 @@ public class JoinFilterAnalyzer
    * Rewrites a selector filter on a join table into an IN filter on the base table.
    *
    * @param selectorFilter                    SelectorFilter to be rewritten
-   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis}
    * @param pushDownVirtualColumnsForLhsExprs See comments on {@link #analyzeJoinFilterClause}
    *
    * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter
@@ -483,7 +487,10 @@ public class JoinFilterAnalyzer
           VirtualColumn pushDownVirtualColumn = pushDownVirtualColumnsForLhsExprs.computeIfAbsent(
               correlatedBaseExpr,
               (expr) -> {
-                String vcName = getCorrelatedBaseExprVirtualColumnName(pushDownVirtualColumnsForLhsExprs.size());
+                String vcName = getCorrelatedBaseExprVirtualColumnName(
+                    pushDownVirtualColumnsForLhsExprs.size(),
+                    joinFilterPreAnalysis.getKey().getVirtualColumns()
+                );
                 return new ExpressionVirtualColumn(
                     vcName,
                     correlatedBaseExpr,
@@ -512,10 +519,15 @@ public class JoinFilterAnalyzer
     );
   }
 
-  private static String getCorrelatedBaseExprVirtualColumnName(int counter)
+  private static String getCorrelatedBaseExprVirtualColumnName(int counter, VirtualColumns virtualColumns)
   {
-    // May want to have this check other column names to absolutely prevent name conflicts
-    return PUSH_DOWN_VIRTUAL_COLUMN_NAME_BASE + counter;
+    // Avoid the names of the virtual columns applied on top of the join, since those that read only base columns are
+    // pushed down alongside this one. May want to also check base column names to absolutely prevent name conflicts.
+    String name = PUSH_DOWN_VIRTUAL_COLUMN_NAME_BASE + counter;
+    while (virtualColumns.exists(name)) {
+      name = "_" + name;
+    }
+    return name;
   }
 
   private static boolean isColumnFromPostJoinVirtualColumns(

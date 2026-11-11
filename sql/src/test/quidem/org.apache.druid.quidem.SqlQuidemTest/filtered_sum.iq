@@ -52,7 +52,7 @@ SELECT COUNT(1)FILTER(WHERE l1=7),COUNT(1)FILTER(WHERE l1!=7),MIN(l2) is null,
 LogicalProject(EXPR$0=[$0], EXPR$1=[$1], EXPR$2=[IS NULL($2)], EXPR$3=[$3], EXPR$4=[$4])
   LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], EXPR$1=[COUNT() FILTER $1], agg#2=[MIN($2)], EXPR$3=[SUM($3)], EXPR$4=[SUM($2) FILTER $0])
     LogicalProject($f1=[IS TRUE(=($0, 7))], $f2=[IS TRUE(<>($0, 7))], l2=[$1], $f4=[CASE(=($0, 7), $1, 0:BIGINT)])
-      LogicalFilter(condition=[SEARCH($0, Sarg[(0..10)])])
+      LogicalFilter(condition=[SEARCH($0, Sarg[(0L:BIGINT..10L:BIGINT)]:BIGINT)])
         LogicalProject(l1=[$11], l2=[$12])
           LogicalTableScan(table=[[druid, numfoo]])
 
@@ -113,7 +113,7 @@ SELECT COUNT(1)FILTER(WHERE l1=7),COUNT(1)FILTER(WHERE l1!=7),MIN(l2) is null,
 LogicalProject(EXPR$0=[$0], EXPR$1=[$1], EXPR$2=[IS NULL($2)], EXPR$3=[$3], EXPR$4=[$4])
   LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], EXPR$1=[COUNT() FILTER $1], agg#2=[MIN($2)], EXPR$3=[SUM($3)], EXPR$4=[SUM($2) FILTER $0])
     LogicalProject($f1=[IS TRUE(=($0, 7))], $f2=[IS TRUE(<>($0, 7))], l2=[$1], $f4=[CASE(=($0, 7), $1, 0:BIGINT)])
-      LogicalFilter(condition=[SEARCH($0, Sarg[(0..10)])])
+      LogicalFilter(condition=[SEARCH($0, Sarg[(0L:BIGINT..10L:BIGINT)]:BIGINT)])
         LogicalProject(l1=[$11], l2=[$12])
           LogicalTableScan(table=[[druid, numfoo]])
 

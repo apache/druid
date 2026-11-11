@@ -24,9 +24,9 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
 import org.apache.druid.msq.kernel.StageId;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -36,7 +36,7 @@ public class IndexerFrameContextTest
 
   private ProcessingBuffersSet buffersSet;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     final ByteBuffer buffer = ByteBuffer.allocate(1024);
@@ -48,12 +48,12 @@ public class IndexerFrameContextTest
   {
     final IndexerFrameContext context = makeContext(null);
 
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> context.acquireProcessingBuffers(1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Stage[" + STAGE_ID + "] does not use processing buffers",
         e.getMessage()
     );
@@ -65,12 +65,12 @@ public class IndexerFrameContextTest
     final IndexerFrameContext context = makeContext(buffersSet);
     context.acquireProcessingBuffers(1);
 
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> context.acquireProcessingBuffers(1)
     );
 
-    Assert.assertEquals("Processing buffers already acquired", e.getMessage());
+    Assertions.assertEquals("Processing buffers already acquired", e.getMessage());
 
     context.close();
   }
@@ -80,12 +80,12 @@ public class IndexerFrameContextTest
   {
     final IndexerFrameContext context = makeContext(buffersSet);
 
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         context::processingBuffers
     );
 
-    Assert.assertEquals("Processing buffers not yet acquired", e.getMessage());
+    Assertions.assertEquals("Processing buffers not yet acquired", e.getMessage());
   }
 
   @Test
@@ -95,9 +95,9 @@ public class IndexerFrameContextTest
     context.acquireProcessingBuffers(1);
 
     final ProcessingBuffers buffers = context.processingBuffers();
-    Assert.assertNotNull(buffers);
-    Assert.assertNotNull(buffers.getBufferPool());
-    Assert.assertNotNull(buffers.getBouncer());
+    Assertions.assertNotNull(buffers);
+    Assertions.assertNotNull(buffers.getBufferPool());
+    Assertions.assertNotNull(buffers.getBouncer());
 
     context.close();
   }

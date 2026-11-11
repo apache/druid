@@ -20,7 +20,6 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
@@ -28,11 +27,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -43,7 +43,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -134,9 +134,7 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1")
-                     .setQueryContext(ImmutableMap.of(
-                         MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0
-                     ))
+                     .setQueryContext(QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 0L))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
                      .setExpectedMSQSpec(
@@ -156,7 +154,7 @@ public class MSQWarningsTest extends MSQTestBase
   @Test
   public void testSuccessWhenNoLimitEnforced()
   {
-    final Map<String, Object> userContext = ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, -1);
+    final Map<String, Object> userContext = QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, -1L);
 
     testSelectQuery().setSql("SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
@@ -193,7 +191,7 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1")
-                     .setQueryContext(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, -2))
+                     .setQueryContext(QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, -2L))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
@@ -222,7 +220,7 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1")
-                     .setQueryContext(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 4))
+                     .setQueryContext(QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 4L))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
                      .setExpectedMSQSpec(
@@ -239,7 +237,7 @@ public class MSQWarningsTest extends MSQTestBase
   @Test
   public void testSuccessWhenParseExceptionsOnLimit()
   {
-    final Map<String, Object> userContext = ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10);
+    final Map<String, Object> userContext = QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 10L);
 
     testSelectQuery().setSql("SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
@@ -267,10 +265,10 @@ public class MSQWarningsTest extends MSQTestBase
   public void testSuccessWhenParseExceptionsOnLimitOverridesMode()
   {
     final Map<String, Object> userContext =
-        ImmutableMap.of(
-            MultiStageQueryContext.CTX_MSQ_MODE, "strict",
-            MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10 // Takes precedence over "strict" mode
-        );
+        QueryContext.builder()
+                    .put(QueryContextParameters.MSQ_MODE, "strict")
+                    .put(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 10L) // Takes precedence over "strict" mode
+                    .toMap();
 
     testSelectQuery().setSql("SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
@@ -298,8 +296,8 @@ public class MSQWarningsTest extends MSQTestBase
   public void testSuccessInNonStrictMode()
   {
     final Map<String, Object> userContext =
-        QueryContexts.override(DEFAULT_MSQ_CONTEXT, ImmutableMap.of(MultiStageQueryContext.CTX_MSQ_MODE, "nonStrict"));
-    userContext.remove(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED);
+        QueryContexts.override(DEFAULT_MSQ_CONTEXT, QueryContext.ofMap(QueryContextParameters.MSQ_MODE, "nonStrict"));
+    userContext.remove(QueryContextParameters.MAX_PARSE_EXCEPTIONS.getName());
 
     testSelectQuery().setSql("SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
@@ -319,10 +317,7 @@ public class MSQWarningsTest extends MSQTestBase
                                 .query(
                                     defaultQuery.withOverriddenContext(userContext)
                                                 .withOverriddenContext(
-                                                    ImmutableMap.of(
-                                                        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
-                                                        -1
-                                                    )
+                                                    QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, -1L)
                                                 )
                                 )
                                 .columnMappings(defaultColumnMappings)
@@ -345,7 +340,7 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1")
-                     .setQueryContext(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0))
+                     .setQueryContext(QueryContext.ofMap(QueryContextParameters.MAX_PARSE_EXCEPTIONS, 0L))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
                      .setExpectedMSQSpec(
@@ -411,17 +406,16 @@ public class MSQWarningsTest extends MSQTestBase
                      .verifyResults();
 
     // Temporary directory should not contain any controller-related folders
-    Assert.assertEquals(0, localFileStorageDir.listFiles().length);
+    Assertions.assertEquals(0, localFileStorageDir.listFiles().length);
   }
 
   @Test
   public void testSuccessWhenModeIsOverridden()
   {
-    final Map<String, Object> userContext =
-        ImmutableMap.<String, Object>builder()
-                    .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, -1)
-                    .put(MultiStageQueryContext.CTX_MSQ_MODE, "strict")
-                    .build();
+    final Map<String, Object> userContext = QueryContext.builder()
+                                                        .put(QueryContextParameters.MAX_PARSE_EXCEPTIONS, -1L)
+                                                        .put(QueryContextParameters.MSQ_MODE, "strict")
+                                                        .toMap();
 
     testSelectQuery().setSql("SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"

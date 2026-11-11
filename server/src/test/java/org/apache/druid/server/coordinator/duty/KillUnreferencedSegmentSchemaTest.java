@@ -44,14 +44,13 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -61,11 +60,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@RunWith(MockitoJUnitRunner.class)
 public class KillUnreferencedSegmentSchemaTest
 {
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
+  private final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -75,12 +72,15 @@ public class KillUnreferencedSegmentSchemaTest
   private SegmentSchemaManager segmentSchemaManager;
   private FingerprintGenerator fingerprintGenerator;
   private SegmentSchemaTestUtils segmentSchemaTestUtils;
+  private AutoCloseable mocks;
   @Mock
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
+    mocks = MockitoAnnotations.openMocks(this);
+    derbyConnectorRule.before();
     derbyConnector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
@@ -92,6 +92,17 @@ public class KillUnreferencedSegmentSchemaTest
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
     CoordinatorRunStats runStats = new CoordinatorRunStats();
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception
+  {
+    try {
+      derbyConnectorRule.after();
+    }
+    finally {
+      mocks.close();
+    }
   }
 
   @Test
@@ -120,29 +131,23 @@ public class KillUnreferencedSegmentSchemaTest
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
     SchemaPayloadPlus schemaMetadata = new SchemaPayloadPlus(schemaPayload, (long) 1);
 
-    DataSegment segment1 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-01/2023-01-02"),
-        "2023-01-01",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-01-02"), "2023-01-01", 0))
+                                      .loadSpec(ImmutableMap.of("path", "a-1"))
+                                      .dimensions(ImmutableList.of("dim1"))
+                                      .metrics(ImmutableList.of("m1"))
+                                      .shardSpec(new LinearShardSpec(0))
+                                      .binaryVersion(9)
+                                      .size(100)
+                                      .build();
 
-    DataSegment segment2 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-02/2023-01-03"),
-        "2023-01-02",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment2 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-02/2023-01-03"), "2023-01-02", 0))
+                                      .loadSpec(ImmutableMap.of("path", "a-1"))
+                                      .dimensions(ImmutableList.of("dim1"))
+                                      .metrics(ImmutableList.of("m1"))
+                                      .shardSpec(new LinearShardSpec(0))
+                                      .binaryVersion(9)
+                                      .size(100)
+                                      .build();
 
     segments.add(segment1);
     segments.add(segment2);
@@ -183,7 +188,7 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should do nothing
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
 
     // delete segment2
     deleteSegment(schemaMetadataPluses.get(1).getSegmentId());
@@ -191,13 +196,13 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should mark the schema unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
 
     // this call should delete the schema
     duty.run(mockDruidCoordinatorRuntimeParams);
 
 
-    Assert.assertNull(getSchemaUsedStatus(fingerprint));
+    Assertions.assertNull(getSchemaUsedStatus(fingerprint));
   }
 
   @Test
@@ -236,25 +241,22 @@ public class KillUnreferencedSegmentSchemaTest
         }
     );
 
-    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
 
     // this call should mark the schema as unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
 
     // associate a segment to the schema
-    DataSegment segment1 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-02/2023-01-03"),
-        "2023-01-02",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-02/2023-01-03"), "2023-01-02", 0))
+                                      .loadSpec(ImmutableMap.of("path", "a-1"))
+                                      .dimensions(ImmutableList.of("dim1"))
+                                      .metrics(ImmutableList.of("m1"))
+                                      .shardSpec(new LinearShardSpec(0))
+                                      .binaryVersion(9)
+                                      .size(100)
+                                      .build();
 
     segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(segment1), Collections.emptyMap());
 
@@ -269,7 +271,7 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should make the schema used
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
   }
 
   @Test
@@ -328,21 +330,18 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should mark both the schema as unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintOldVersion));
-    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintNewVersion));
+    Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintOldVersion));
+    Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintNewVersion));
 
     // associate a segment to the schema
-    DataSegment segment1 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-02/2023-01-03"),
-        "2023-01-02",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-02/2023-01-03"), "2023-01-02", 0))
+                                      .loadSpec(ImmutableMap.of("path", "a-1"))
+                                      .dimensions(ImmutableList.of("dim1"))
+                                      .metrics(ImmutableList.of("m1"))
+                                      .shardSpec(new LinearShardSpec(0))
+                                      .binaryVersion(9)
+                                      .size(100)
+                                      .build();
 
     segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(segment1), Collections.emptyMap());
 
@@ -357,11 +356,11 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should make the referenced schema used
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprintNewVersion));
+    Assertions.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprintNewVersion));
 
     // this call should kill the schema
     duty.run(mockDruidCoordinatorRuntimeParams);
-    Assert.assertNull(getSchemaUsedStatus(fingerprintOldVersion));
+    Assertions.assertNull(getSchemaUsedStatus(fingerprintOldVersion));
   }
 
   private static class TestKillUnreferencedSegmentSchemas extends KillUnreferencedSegmentSchema

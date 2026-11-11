@@ -49,10 +49,10 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -70,11 +70,11 @@ import java.util.stream.Collectors;
 public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     IndexerSqlMetadataStorageCoordinatorTestBase
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
@@ -101,6 +101,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
         derbyConnector,
         new TestDruidLeaderSelector(),
         NoopSegmentMetadataCache.instance(),
+        new SegmentsMetadataManagerConfig(null, null, null),
         NoopServiceEmitter.instance()
     );
     coordinator = new IndexerSQLMetadataStorageCoordinator(
@@ -204,11 +205,11 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     // Commit the segment and verify the results
     SegmentPublishResult commitResult
         = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, "append", segmentSchemaMapping);
-    Assert.assertTrue(commitResult.isSuccess());
-    Assert.assertEquals(appendSegments, commitResult.getSegments());
+    Assertions.assertTrue(commitResult.isSuccess());
+    Assertions.assertEquals(appendSegments, commitResult.getSegments());
 
     // Verify the segments present in the metadata store
-    Assert.assertEquals(
+    Assertions.assertEquals(
         appendSegments,
         ImmutableSet.copyOf(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()))
     );
@@ -224,11 +225,11 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
         replaceTaskId,
         derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
-    Assert.assertEquals(expectedUpgradeSegmentIds, observedSegmentToLock.keySet());
+    Assertions.assertEquals(expectedUpgradeSegmentIds, observedSegmentToLock.keySet());
 
     final Set<String> observedLockVersions = new HashSet<>(observedSegmentToLock.values());
-    Assert.assertEquals(1, observedLockVersions.size());
-    Assert.assertEquals(replaceLock.getVersion(), Iterables.getOnlyElement(observedLockVersions));
+    Assertions.assertEquals(1, observedLockVersions.size());
+    Assertions.assertEquals(replaceLock.getVersion(), Iterables.getOnlyElement(observedLockVersions));
   }
 
   @Test
@@ -240,17 +241,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
 
     for (int i = 0; i < 105; i++) {
-      DataSegment segment = new DataSegment(
-          "fooDataSource",
-          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-          "version",
-          ImmutableMap.of(),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
+      DataSegment segment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", i))
+                                       .loadSpec(ImmutableMap.of())
+                                       .dimensions(ImmutableList.of("dim1"))
+                                       .metrics(ImmutableList.of("m1"))
+                                       .shardSpec(new LinearShardSpec(i))
+                                       .binaryVersion(9)
+                                       .size(100)
+                                       .build();
       segments.add(segment);
 
       int randomNum = random.nextInt();
@@ -271,7 +269,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
     coordinator.commitSegments(segments, segmentSchemaMapping);
     for (DataSegment segment : segments) {
-      Assert.assertArrayEquals(
+      Assertions.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
           derbyConnector.lookup(
               derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
@@ -287,10 +285,10 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
                                       .sorted(Comparator.naturalOrder())
                                       .collect(Collectors.toList());
 
-    Assert.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    Assertions.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
     // Should not update dataSource metadata.
-    Assert.assertEquals(0, metadataUpdateCounter.get());
+    Assertions.assertEquals(0, metadataUpdateCounter.get());
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
   }
@@ -326,17 +324,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Random permutationRandom = ThreadLocalRandom.current();
 
     for (int i = 0; i < 105; i++) {
-      DataSegment segment = new DataSegment(
-          "fooDataSource",
-          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-          "version",
-          ImmutableMap.of(),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
+      DataSegment segment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", i))
+                                       .loadSpec(ImmutableMap.of())
+                                       .dimensions(ImmutableList.of("dim1"))
+                                       .metrics(ImmutableList.of("m1"))
+                                       .shardSpec(new LinearShardSpec(i))
+                                       .binaryVersion(9)
+                                       .size(100)
+                                       .build();
       segments.add(segment);
 
       int randomNum = random.nextInt();
@@ -377,7 +372,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
     coordinator.commitSegments(segments, segmentSchemaMapping);
     for (DataSegment segment : segments) {
-      Assert.assertArrayEquals(
+      Assertions.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
           derbyConnector.lookup(
               derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
@@ -393,10 +388,10 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
                                       .sorted(Comparator.naturalOrder())
                                       .collect(Collectors.toList());
 
-    Assert.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    Assertions.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
     // Should not update dataSource metadata.
-    Assert.assertEquals(0, metadataUpdateCounter.get());
+    Assertions.assertEquals(0, metadataUpdateCounter.get());
 
     // verify that only a single schema is created
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
@@ -413,17 +408,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Map<String, SchemaPayload> schemaPayloadMapToPerist = new HashMap<>();
 
     for (int i = 0; i < 105; i++) {
-      DataSegment segment = new DataSegment(
-          "fooDataSource",
-          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-          "version",
-          ImmutableMap.of(),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
+      DataSegment segment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", i))
+                                       .loadSpec(ImmutableMap.of())
+                                       .dimensions(ImmutableList.of("dim1"))
+                                       .metrics(ImmutableList.of("m1"))
+                                       .shardSpec(new LinearShardSpec(i))
+                                       .binaryVersion(9)
+                                       .size(100)
+                                       .build();
       segments.add(segment);
 
       int randomNum = random.nextInt();
@@ -459,7 +451,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
     coordinator.commitSegments(segments, segmentSchemaMapping);
     for (DataSegment segment : segments) {
-      Assert.assertArrayEquals(
+      Assertions.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
           derbyConnector.lookup(
               derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
@@ -475,10 +467,10 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
                                       .sorted(Comparator.naturalOrder())
                                       .collect(Collectors.toList());
 
-    Assert.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    Assertions.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
     // Should not update dataSource metadata.
-    Assert.assertEquals(0, metadataUpdateCounter.get());
+    Assertions.assertEquals(0, metadataUpdateCounter.get());
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
   }
@@ -497,17 +489,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
 
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
-          "2023-01-0" + i,
-          ImmutableMap.of("path", "a-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(0),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)), "2023-01-0" + i, 0))
+                                             .loadSpec(ImmutableMap.of("path", "a-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new LinearShardSpec(0))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
 
       RowSignature rowSignature = RowSignature.builder().add("c6", ColumnType.FLOAT).build();
 
@@ -545,17 +534,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-02-01"),
-          "2023-02-01",
-          ImmutableMap.of("path", "b-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new NumberedShardSpec(i, 9),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01", i))
+                                             .loadSpec(ImmutableMap.of("path", "b-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new NumberedShardSpec(i, 9))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
       int randomNum = random.nextInt();
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
@@ -574,20 +560,20 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
     coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), segmentSchemaMapping);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
         retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()).size()
     );
 
     final Set<DataSegment> usedSegments = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
-    Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
+    Assertions.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
     usedSegments.removeAll(segmentsAppendedWithReplaceLock);
 
-    Assert.assertTrue(usedSegments.containsAll(replacingSegments));
+    Assertions.assertTrue(usedSegments.containsAll(replacingSegments));
     usedSegments.removeAll(replacingSegments);
 
-    Assert.assertEquals(segmentsAppendedWithReplaceLock.size(), usedSegments.size());
+    Assertions.assertEquals(segmentsAppendedWithReplaceLock.size(), usedSegments.size());
     for (DataSegment segmentReplicaWithNewVersion : usedSegments) {
       boolean hasBeenCarriedForward = false;
       for (DataSegment appendedSegment : segmentsAppendedWithReplaceLock) {
@@ -599,7 +585,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       RowSignature rowSignature = RowSignature.builder().add("c6", ColumnType.FLOAT).build();
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       segmentIdSchemaMap.put(segmentReplicaWithNewVersion.getId(), new SchemaPayloadPlus(schemaPayload, 6L));
-      Assert.assertTrue(hasBeenCarriedForward);
+      Assertions.assertTrue(hasBeenCarriedForward);
     }
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);

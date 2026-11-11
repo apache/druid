@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.BaseSketchBuildSegmentMetadataQueryTest;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 public class HllSketchBuildSegmentMetadataQueryTest extends BaseSketchBuildSegmentMetadataQueryTest
 {
@@ -51,24 +51,24 @@ public class HllSketchBuildSegmentMetadataQueryTest extends BaseSketchBuildSegme
   @Override
   protected void assertMergedSketchAggregator(AggregatorFactory aggregator, String sketchColumn)
   {
-    Assert.assertTrue(
-        "Sketch aggregator should be HllSketchMergeAggregatorFactory but was " + aggregator.getClass().getName(),
-        aggregator instanceof HllSketchMergeAggregatorFactory
+    Assertions.assertTrue(
+        aggregator instanceof HllSketchMergeAggregatorFactory,
+        "Sketch aggregator should be HllSketchMergeAggregatorFactory but was " + aggregator.getClass().getName()
     );
 
     HllSketchMergeAggregatorFactory hllAggregator = (HllSketchMergeAggregatorFactory) aggregator;
-    Assert.assertEquals("Aggregator name should match", sketchColumn, hllAggregator.getName());
-    Assert.assertEquals("Field name should match", sketchColumn, hllAggregator.getFieldName());
-    Assert.assertEquals("lgK should be default value", HllSketchAggregatorFactory.DEFAULT_LG_K, hllAggregator.getLgK());
-    Assert.assertEquals(
-        "tgtHllType should be default value",
+    Assertions.assertEquals(sketchColumn, hllAggregator.getName(), "Aggregator name should match");
+    Assertions.assertEquals(sketchColumn, hllAggregator.getFieldName(), "Field name should match");
+    Assertions.assertEquals(HllSketchAggregatorFactory.DEFAULT_LG_K, hllAggregator.getLgK(), "lgK should be default value");
+    Assertions.assertEquals(
         TgtHllType.HLL_4.name(),
-        hllAggregator.getTgtHllType()
+        hllAggregator.getTgtHllType(),
+        "tgtHllType should be default value"
     );
-    Assert.assertEquals(
-        "stringEncoding should be default value",
+    Assertions.assertEquals(
         StringEncoding.UTF16LE,
-        hllAggregator.getStringEncoding()
+        hllAggregator.getStringEncoding(),
+        "stringEncoding should be default value"
     );
   }
 }

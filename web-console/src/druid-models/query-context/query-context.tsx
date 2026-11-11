@@ -70,6 +70,32 @@ export const DEFAULT_SERVER_QUERY_CONTEXT: QueryContext = {
   includeAllCounters: false,
 };
 
+/**
+ * A query context parameter, as a row of `sys.query_context_parameters`
+ */
+export interface QueryContextParameterMetadata {
+  name: string;
+  type: string;
+  description: string;
+  default_value: string | null;
+  default_description: string | null;
+  effective_value: string | null;
+  effective_source:
+    | 'BUILT_IN'
+    | 'RUNTIME_PROPERTY'
+    | 'DEFAULT_CONTEXT_PROPERTY'
+    | 'BROKER_DYNAMIC_CONFIG'
+    | 'UNAUTHORIZED'
+    | null;
+  deprecation: string | null;
+  /** The query languages that can provide the parameter, such as SQL or JSON (native queries) */
+  query_languages: string[] | null;
+}
+
+export const QUERY_CONTEXT_PARAMETERS_QUERY = `SELECT "name", "type", "description", "default_value", "default_description", "effective_value", "effective_source", "deprecation", "query_languages"
+FROM sys.query_context_parameters
+WHERE "visibility" = 'PUBLIC'`;
+
 export interface QueryWithContext {
   queryString: string;
   queryContext?: QueryContext;

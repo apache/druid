@@ -70,8 +70,10 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -123,7 +125,7 @@ public class ClientCompactionTaskQuerySerdeTest
     final CompactionTask task = (CompactionTask) MAPPER.readValue(json, Task.class);
 
     // Verify that CompactionTask has added new parameters into the context because transformSpec was null.
-    Assert.assertNotEquals(query.getContext(), task.getContext());
+    Assertions.assertNotEquals(query.getContext(), task.getContext());
     query.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
     assertQueryToTask(query, task);
   }
@@ -138,7 +140,7 @@ public class ClientCompactionTaskQuerySerdeTest
     final byte[] json = MAPPER.writeValueAsBytes(task);
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
 
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -152,10 +154,10 @@ public class ClientCompactionTaskQuerySerdeTest
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
 
     // Verify that CompactionTask has added new parameters into the context
-    Assert.assertNotEquals(expected, actual);
+    Assertions.assertNotEquals(expected, actual);
 
     expected.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -183,6 +185,7 @@ public class ClientCompactionTaskQuerySerdeTest
         null,
         baseTable,
         null,
+        null,
         ImmutableMap.of(),
         new ClientCompactionRunnerInfo(CompactionEngine.MSQ)
     );
@@ -190,8 +193,49 @@ public class ClientCompactionTaskQuerySerdeTest
     final byte[] json = MAPPER.writeValueAsBytes(query);
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
 
-    Assert.assertEquals(baseTable, actual.getBaseTable());
-    Assert.assertEquals(query, actual);
+    Assertions.assertEquals(baseTable, actual.getBaseTable());
+    Assertions.assertEquals(query, actual);
+    // A query that says nothing about sealing declares a complete schema, which is what every pre-existing payload
+    // means.
+    Assertions.assertTrue(actual.isSealed());
+  }
+
+  @Test
+  public void testClientCompactionTaskQuerySealedSerde() throws IOException
+  {
+    // 'sealed' has to survive the round trip onto the task's own field, and a payload that omits it (every
+    // pre-existing one) has to mean a complete declaration.
+    Assertions.assertFalse(roundTripSealed(false));
+    Assertions.assertTrue(roundTripSealed(true));
+    Assertions.assertTrue(roundTripSealed(null));
+  }
+
+  private boolean roundTripSealed(@Nullable Boolean sealed) throws IOException
+  {
+    final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
+        "id",
+        "datasource",
+        new ClientCompactionIOConfig(
+            new ClientCompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"),
+            true
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        sealed,
+        ImmutableMap.of(),
+        new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
+    );
+
+    final byte[] json = MAPPER.writeValueAsBytes(query);
+    final boolean fromQuery = ((ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class)).isSealed();
+    final boolean fromTask = ((CompactionTask) MAPPER.readValue(json, Task.class)).isSealed();
+    Assertions.assertEquals(fromQuery, fromTask, "query and task must agree on 'sealed'");
+    return fromTask;
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
@@ -215,7 +259,7 @@ public class ClientCompactionTaskQuerySerdeTest
                   binder.bind(ChatHandlerProvider.class).toInstance(new ChatHandlerProvider());
                   binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
-                  binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
+                  binder.bind(SegmentCacheManagerFactory.class).toInstance(SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
                   binder.bind(OverlordClient.class).toInstance(new NoopOverlordClient());
                 }
@@ -229,104 +273,104 @@ public class ClientCompactionTaskQuerySerdeTest
 
   private void assertQueryToTask(ClientCompactionTaskQuery query, CompactionTask task)
   {
-    Assert.assertEquals(query.getId(), task.getId());
-    Assert.assertEquals(query.getDataSource(), task.getDataSource());
-    Assert.assertTrue(query.getIoConfig().getInputSpec() instanceof ClientCompactionIntervalSpec);
-    Assert.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
-    Assert.assertEquals(
+    Assertions.assertEquals(query.getId(), task.getId());
+    Assertions.assertEquals(query.getDataSource(), task.getDataSource());
+    Assertions.assertTrue(query.getIoConfig().getInputSpec() instanceof ClientCompactionIntervalSpec);
+    Assertions.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
+    Assertions.assertEquals(
         query.getIoConfig().getInputSpec().getInterval(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getInterval()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ((ClientCompactionIntervalSpec) query.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxRowsInMemory().intValue(),
         task.getTuningConfig().getMaxRowsInMemory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxBytesInMemory().longValue(),
         task.getTuningConfig().getMaxBytesInMemory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getSplitHintSpec(),
         task.getTuningConfig().getSplitHintSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getPartitionsSpec(),
         task.getTuningConfig().getPartitionsSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getIndexSpec(),
         task.getTuningConfig().getIndexSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getIndexSpecForIntermediatePersists(),
         task.getTuningConfig().getIndexSpecForIntermediatePersists()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getPushTimeout().longValue(),
         task.getTuningConfig().getPushTimeout()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getSegmentWriteOutMediumFactory(),
         task.getTuningConfig().getSegmentWriteOutMediumFactory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxNumConcurrentSubTasks().intValue(),
         task.getTuningConfig().getMaxNumConcurrentSubTasks()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxRetry().intValue(),
         task.getTuningConfig().getMaxRetry()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getTaskStatusCheckPeriodMs().longValue(),
         task.getTuningConfig().getTaskStatusCheckPeriodMs()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getChatHandlerTimeout(),
         task.getTuningConfig().getChatHandlerTimeout()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxNumSegmentsToMerge().intValue(),
         task.getTuningConfig().getMaxNumSegmentsToMerge()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getTotalNumMergeTasks().intValue(),
         task.getTuningConfig().getTotalNumMergeTasks()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec(),
         task.getGranularitySpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().getQueryGranularity(),
         task.getGranularitySpec().getQueryGranularity()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().getSegmentGranularity(),
         task.getGranularitySpec().getSegmentGranularity()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().isRollup(),
         task.getGranularitySpec().isRollup()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getIoConfig().isDropExisting(),
         task.getIoConfig().isDropExisting()
     );
-    Assert.assertEquals(query.getContext(), task.getContext());
-    Assert.assertEquals(
+    Assertions.assertEquals(query.getContext(), task.getContext());
+    Assertions.assertEquals(
         query.getDimensionsSpec().getDimensions(),
         task.getDimensionsSpec().getDimensions()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTransformSpec(),
         task.getTransformSpec()
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         query.getMetricsSpec(),
         task.getMetricsSpec()
     );
@@ -370,6 +414,7 @@ public class ClientCompactionTaskQuerySerdeTest
         transformSpec,
         null,
         null,
+        null,
         context,
         new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
     );
@@ -379,7 +424,7 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
         "datasource",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER)
+        SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, MAPPER)
     )
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(

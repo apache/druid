@@ -78,6 +78,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   private readonly swallowBackgroundError?: (e: Error) => boolean;
 
   private terminated = false;
+  private runInBackground = false;
   private nextQuery: Q | undefined;
   private lastQuery: Q | undefined;
   private lastIntermediateQuery: any;
@@ -124,6 +125,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   private async run(): Promise<void> {
     this.lastQuery = this.nextQuery;
     if (typeof this.lastQuery === 'undefined') return;
+    const background = this.runInBackground;
     this.currentQueryId++;
     const myQueryId = this.currentQueryId;
 
@@ -266,13 +268,15 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
       const numAuxiliaryQueries = auxiliaryQueries.length;
       data = data.result;
 
-      this.setState(
-        new QueryState<R, E>({
-          data,
-          auxiliaryLoading: true,
-          lastData,
-        }),
-      );
+      if (!background) {
+        this.setState(
+          new QueryState<R, E>({
+            data,
+            auxiliaryLoading: true,
+            lastData,
+          }),
+        );
+      }
 
       try {
         for (let i = 0; i < numAuxiliaryQueries; i++) {
@@ -282,7 +286,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
           data = await auxiliaryQueries[i](data, signal);
 
           if (this.currentQueryId !== myQueryId) return;
-          if (i < numAuxiliaryQueries - 1) {
+          if (!background && i < numAuxiliaryQueries - 1) {
             // Update data in intermediate state
             this.setState(
               new QueryState<R, E>({
@@ -307,6 +311,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   }
 
   private trigger() {
+    this.runInBackground = false;
     if (this.currentRunCancelFn && !this.state.auxiliaryLoading) {
       // Currently loading main query
       void this.runWhenLoading();
@@ -337,6 +342,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     if (runInBackground && this.currentRunCancelFn) return;
     this.nextQuery = this.lastQuery;
     if (runInBackground) {
+      this.runInBackground = true;
       void this.runWhenIdle();
     } else {
       this.trigger();

@@ -27,6 +27,10 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -40,25 +44,26 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
+import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -67,6 +72,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -161,14 +167,20 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         settableFuture
     );
 
+    expectCleanupOfCompletedJobs();
     replayAll();
 
-    runner.start();
+    try {
+      runner.start();
 
-    verifyAll();
+      verifyAll();
 
-    Assertions.assertNotNull(runner.tasks);
-    Assertions.assertEquals(1, runner.tasks.size());
+      Assertions.assertNotNull(runner.tasks);
+      Assertions.assertEquals(1, runner.tasks.size());
+    }
+    finally {
+      runner.stop();
+    }
   }
 
   @Test
@@ -247,14 +259,20 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         settableFuture
     );
 
+    expectCleanupOfCompletedJobs();
     replayAll();
 
-    runner.start();
+    try {
+      runner.start();
 
-    verifyAll();
+      verifyAll();
 
-    Assertions.assertNotNull(runner.tasks);
-    Assertions.assertEquals(1, runner.tasks.size());
+      Assertions.assertNotNull(runner.tasks);
+      Assertions.assertEquals(1, runner.tasks.size());
+    }
+    finally {
+      runner.stop();
+    }
   }
 
   @Test
@@ -286,14 +304,32 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
 
+    expectCleanupOfCompletedJobs();
     replayAll();
 
-    runner.start();
+    try {
+      runner.start();
 
-    verifyAll();
+      verifyAll();
 
-    Assertions.assertNotNull(runner.tasks);
-    Assertions.assertEquals(0, runner.tasks.size());
+      Assertions.assertNotNull(runner.tasks);
+      Assertions.assertEquals(0, runner.tasks.size());
+    }
+    finally {
+      runner.stop();
+    }
+  }
+
+  /**
+   * {@link KubernetesTaskRunner#start()} schedules the cleanup of completed peon jobs on a background executor with
+   * an initial delay of 1 ms. Whether the first cleanup runs before {@link #verifyAll()} depends on thread scheduling,
+   * so the call must be allowed any number of times to keep the tests deterministic.
+   */
+  private void expectCleanupOfCompletedJobs()
+  {
+    EasyMock.expect(peonClient.deleteCompletedPeonJobsOlderThan(EasyMock.anyLong(), EasyMock.eq(TimeUnit.MILLISECONDS)))
+            .andReturn(0)
+            .anyTimes();
   }
 
   @Test
@@ -473,6 +509,105 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     runner.shutdown(task.getId(), "");
     Assertions.assertEquals(1, runner.tasks.size());
     verifyAll();
+  }
+
+  @Test
+  public void test_shutdown_whileWaitingForCapacity_doesNotLaunchJob() throws Exception
+  {
+    final CountDownLatch capacityFreed = new CountDownLatch(1);
+    final ThreadPoolExecutor sharedExecutor = newExecutorAtCapacity(capacityFreed);
+    final KubernetesTaskRunner runner = newRunnerWithRealPeonLifecycles(sharedExecutor, null);
+
+    final K8sTaskId k8sTaskId = new K8sTaskId(config.getK8sTaskPodNamePrefix(), task);
+    EasyMock.expect(peonClient.getPeonLogWatcher(k8sTaskId)).andReturn(Optional.absent());
+    EasyMock.expect(peonClient.deletePeonJob(k8sTaskId)).andReturn(false);
+    replayAll();
+
+    try {
+      final ListenableFuture<TaskStatus> future = runner.run(task);
+      Assertions.assertEquals(RunnerTaskState.PENDING, runner.getRunnerTaskState(task.getId()));
+
+      runner.shutdown(task.getId(), "killed");
+      capacityFreed.countDown();
+
+      Assertions.assertTrue(future.get(10, TimeUnit.SECONDS).isFailure());
+      verifyAll();
+
+      runner.shutdown(task.getId(), "killed");
+      Assertions.assertTrue(runner.tasks.isEmpty());
+    }
+    finally {
+      runner.stop();
+      sharedExecutor.shutdownNow();
+    }
+  }
+
+  @Test
+  public void test_shutdown_whileWaitingForCapacity_deletesRestoredJobAndSavesLogs() throws Exception
+  {
+    final TaskLogs taskLogs = createMock(TaskLogs.class);
+    final LogWatch logWatch = createMock(LogWatch.class);
+    final CountDownLatch capacityFreed = new CountDownLatch(1);
+    final ThreadPoolExecutor sharedExecutor = newExecutorAtCapacity(capacityFreed);
+    final KubernetesTaskRunner runner = newRunnerWithRealPeonLifecycles(sharedExecutor, taskLogs);
+
+    final K8sTaskId k8sTaskId = new K8sTaskId(config.getK8sTaskPodNamePrefix(), task);
+    EasyMock.expect(peonClient.getPeonLogWatcher(k8sTaskId)).andReturn(Optional.of(logWatch));
+    EasyMock.expect(peonClient.deletePeonJob(k8sTaskId)).andReturn(true);
+    EasyMock.expect(logWatch.getOutput()).andReturn(IOUtils.toInputStream("", StandardCharsets.UTF_8));
+    taskLogs.pushTaskLog(EasyMock.eq(task.getId()), EasyMock.anyObject(File.class));
+    logWatch.close();
+    replayAll();
+
+    try {
+      final KubernetesWorkItem workItem = runner.joinAsync(task);
+
+      runner.shutdown(task.getId(), "killed");
+      capacityFreed.countDown();
+
+      Assertions.assertTrue(workItem.getResult().get(10, TimeUnit.SECONDS).isFailure());
+      verifyAll();
+    }
+    finally {
+      runner.stop();
+      sharedExecutor.shutdownNow();
+    }
+  }
+
+  /**
+   * Returns a single-thread executor whose only thread stays busy until {@code capacityFreed} counts down.
+   */
+  private static ThreadPoolExecutor newExecutorAtCapacity(CountDownLatch capacityFreed)
+  {
+    final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+        1,
+        1,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<>()
+    );
+    executor.submit(() -> {
+      capacityFreed.await();
+      return null;
+    });
+    return executor;
+  }
+
+  private KubernetesTaskRunner newRunnerWithRealPeonLifecycles(
+      ThreadPoolExecutor sharedExecutor,
+      @Nullable TaskLogs taskLogs
+  )
+  {
+    return new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, null, 1000L, null),
+        emitter,
+        sharedExecutor,
+        configManager
+    );
   }
 
   @Test

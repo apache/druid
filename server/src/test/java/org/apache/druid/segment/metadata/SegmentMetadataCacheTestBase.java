@@ -48,12 +48,12 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.List;
@@ -89,8 +89,8 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   public QueryRunnerFactoryConglomerate conglomerate;
   public Closer resourceCloser;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public QueryableIndex index1;
   public QueryableIndex index2;
@@ -215,42 +215,27 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
                              .buildMMappedIndex();
 
     segment1 =
-        DataSegment.builder()
-                   .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("2000/P1Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(DATASOURCE1, Intervals.of("2000/P1Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
     segment2 =
-        DataSegment.builder()
-                   .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("2001/P1Y"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(DATASOURCE1, Intervals.of("2001/P1Y"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
     segment3 =
-        DataSegment.builder()
-                   .dataSource(DATASOURCE2)
-                   .interval(index2.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(DATASOURCE2, index2.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
     segment4 =
-        DataSegment.builder()
-                   .dataSource(SOME_DATASOURCE)
-                   .interval(Intervals.of("2023-01-01T00Z/P1D"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(SOME_DATASOURCE, Intervals.of("2023-01-01T00Z/P1D"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();
     segment5 =
-        DataSegment.builder()
-                   .dataSource(SOME_DATASOURCE)
-                   .interval(Intervals.of("2023-01-02T00Z/P1D"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(SOME_DATASOURCE, Intervals.of("2023-01-02T00Z/P1D"), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build();

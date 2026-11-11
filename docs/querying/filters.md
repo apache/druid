@@ -29,13 +29,13 @@ Filters are commonly applied on dimensions, but can be applied on aggregated met
 By default, Druid uses SQL compatible three-value logic when filtering. See [Boolean logic](./sql-data-types.md#boolean-logic) for more details.
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes the native
  language. For information about aggregators available in SQL, refer to the
  [SQL documentation](sql-scalar.md).
 :::
 
-This topic describes the filter types supported in Apache Druid.
+This topic describes the filter types supported in Apache&circledR; Druid.
 
 ## Selector filter
 

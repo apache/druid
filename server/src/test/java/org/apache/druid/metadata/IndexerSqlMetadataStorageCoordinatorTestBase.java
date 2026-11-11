@@ -46,13 +46,14 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.PreparedBatchPart;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -71,234 +72,177 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
 
   protected final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-  protected final DataSegment defaultSegment = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
+  protected final DataSegment defaultSegment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", 0))
+                                                          .loadSpec(ImmutableMap.of())
+                                                          .dimensions(ImmutableList.of("dim1"))
+                                                          .metrics(ImmutableList.of("m1"))
+                                                          .shardSpec(new LinearShardSpec(0))
+                                                          .binaryVersion(9)
+                                                          .size(100)
+                                                          .build();
 
-  protected final DataSegment eternitySegment = new DataSegment(
-      "fooDataSource",
-      Intervals.ETERNITY,
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
+  protected final DataSegment eternitySegment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.ETERNITY, "version", 0))
+                                                           .loadSpec(ImmutableMap.of())
+                                                           .dimensions(ImmutableList.of("dim1"))
+                                                           .metrics(ImmutableList.of("m1"))
+                                                           .shardSpec(new LinearShardSpec(0))
+                                                           .binaryVersion(9)
+                                                           .size(100)
+                                                           .build();
 
 
-  protected final DataSegment firstHalfEternityRangeSegment = new DataSegment(
-      "fooDataSource",
-      new Interval(DateTimes.MIN, DateTimes.of("3000")),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
+  protected final DataSegment firstHalfEternityRangeSegment = DataSegment.builder(SegmentId.of("fooDataSource", new Interval(DateTimes.MIN, DateTimes.of("3000")), "version", 0))
+                                                                         .loadSpec(ImmutableMap.of())
+                                                                         .dimensions(ImmutableList.of("dim1"))
+                                                                         .metrics(ImmutableList.of("m1"))
+                                                                         .shardSpec(new LinearShardSpec(0))
+                                                                         .binaryVersion(9)
+                                                                         .size(100)
+                                                                         .build();
 
-  protected final DataSegment secondHalfEternityRangeSegment = new DataSegment(
-      "fooDataSource",
-      new Interval(DateTimes.of("1970"), DateTimes.MAX),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
-  protected final DataSegment defaultSegment2 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(1),
-      9,
-      100
-  );
+  protected final DataSegment secondHalfEternityRangeSegment = DataSegment.builder(SegmentId.of("fooDataSource", new Interval(DateTimes.of("1970"), DateTimes.MAX), "version", 0))
+                                                                          .loadSpec(ImmutableMap.of())
+                                                                          .dimensions(ImmutableList.of("dim1"))
+                                                                          .metrics(ImmutableList.of("m1"))
+                                                                          .shardSpec(new LinearShardSpec(0))
+                                                                          .binaryVersion(9)
+                                                                          .size(100)
+                                                                          .build();
+  protected final DataSegment defaultSegment2 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", 1))
+                                                           .loadSpec(ImmutableMap.of())
+                                                           .dimensions(ImmutableList.of("dim1"))
+                                                           .metrics(ImmutableList.of("m1"))
+                                                           .shardSpec(new LinearShardSpec(1))
+                                                           .binaryVersion(9)
+                                                           .size(100)
+                                                           .build();
 
-  protected final DataSegment defaultSegment2WithBiggerSize = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(1),
-      9,
-      200
-  );
+  protected final DataSegment defaultSegment2WithBiggerSize = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", 1))
+                                                                         .loadSpec(ImmutableMap.of())
+                                                                         .dimensions(ImmutableList.of("dim1"))
+                                                                         .metrics(ImmutableList.of("m1"))
+                                                                         .shardSpec(new LinearShardSpec(1))
+                                                                         .binaryVersion(9)
+                                                                         .size(200)
+                                                                         .build();
 
-  protected final DataSegment defaultSegment3 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      NoneShardSpec.instance(),
-      9,
-      100
-  );
+  protected final DataSegment defaultSegment3 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-03T00Z/2015-01-04T00Z"), "version", 0))
+                                                           .loadSpec(ImmutableMap.of())
+                                                           .dimensions(ImmutableList.of("dim1"))
+                                                           .metrics(ImmutableList.of("m1"))
+                                                           .shardSpec(NoneShardSpec.instance())
+                                                           .binaryVersion(9)
+                                                           .size(100)
+                                                           .build();
 
   // Overshadows defaultSegment, defaultSegment2
-  protected final DataSegment defaultSegment4 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
+  protected final DataSegment defaultSegment4 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "zversion", 0))
+                                                           .loadSpec(ImmutableMap.of())
+                                                           .dimensions(ImmutableList.of("dim1"))
+                                                           .metrics(ImmutableList.of("m1"))
+                                                           .shardSpec(new LinearShardSpec(0))
+                                                           .binaryVersion(9)
+                                                           .size(100)
+                                                           .build();
 
-  protected final DataSegment numberedSegment0of0 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 0),
-      9,
-      100
-  );
+  protected final DataSegment numberedSegment0of0 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "zversion", 0))
+                                                               .loadSpec(ImmutableMap.of())
+                                                               .dimensions(ImmutableList.of("dim1"))
+                                                               .metrics(ImmutableList.of("m1"))
+                                                               .shardSpec(new NumberedShardSpec(0, 0))
+                                                               .binaryVersion(9)
+                                                               .size(100)
+                                                               .build();
 
-  protected final DataSegment numberedSegment1of0 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(1, 0),
-      9,
-      100
-  );
+  protected final DataSegment numberedSegment1of0 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "zversion", 1))
+                                                               .loadSpec(ImmutableMap.of())
+                                                               .dimensions(ImmutableList.of("dim1"))
+                                                               .metrics(ImmutableList.of("m1"))
+                                                               .shardSpec(new NumberedShardSpec(1, 0))
+                                                               .binaryVersion(9)
+                                                               .size(100)
+                                                               .build();
 
-  protected final DataSegment numberedSegment2of0 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(2, 0),
-      9,
-      100
-  );
+  protected final DataSegment numberedSegment2of0 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "zversion", 2))
+                                                               .loadSpec(ImmutableMap.of())
+                                                               .dimensions(ImmutableList.of("dim1"))
+                                                               .metrics(ImmutableList.of("m1"))
+                                                               .shardSpec(new NumberedShardSpec(2, 0))
+                                                               .binaryVersion(9)
+                                                               .size(100)
+                                                               .build();
 
-  protected final DataSegment numberedSegment2of1 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(2, 1),
-      9,
-      100
-  );
+  protected final DataSegment numberedSegment2of1 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "zversion", 2))
+                                                               .loadSpec(ImmutableMap.of())
+                                                               .dimensions(ImmutableList.of("dim1"))
+                                                               .metrics(ImmutableList.of("m1"))
+                                                               .shardSpec(new NumberedShardSpec(2, 1))
+                                                               .binaryVersion(9)
+                                                               .size(100)
+                                                               .build();
 
-  protected final DataSegment numberedSegment3of1 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(3, 1),
-      9,
-      100
-  );
+  protected final DataSegment numberedSegment3of1 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "zversion", 3))
+                                                               .loadSpec(ImmutableMap.of())
+                                                               .dimensions(ImmutableList.of("dim1"))
+                                                               .metrics(ImmutableList.of("m1"))
+                                                               .shardSpec(new NumberedShardSpec(3, 1))
+                                                               .binaryVersion(9)
+                                                               .size(100)
+                                                               .build();
 
-  protected final DataSegment existingSegment1 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("1994-01-01T00Z/1994-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(1, 1),
-      9,
-      100
-  );
+  protected final DataSegment existingSegment1 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("1994-01-01T00Z/1994-01-02T00Z"), "zversion", 1))
+                                                            .loadSpec(ImmutableMap.of())
+                                                            .dimensions(ImmutableList.of("dim1"))
+                                                            .metrics(ImmutableList.of("m1"))
+                                                            .shardSpec(new NumberedShardSpec(1, 1))
+                                                            .binaryVersion(9)
+                                                            .size(100)
+                                                            .build();
 
-  protected final DataSegment existingSegment2 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("1994-01-02T00Z/1994-01-03T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(1, 1),
-      9,
-      100
-  );
+  protected final DataSegment existingSegment2 = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("1994-01-02T00Z/1994-01-03T00Z"), "zversion", 1))
+                                                            .loadSpec(ImmutableMap.of())
+                                                            .dimensions(ImmutableList.of("dim1"))
+                                                            .metrics(ImmutableList.of("m1"))
+                                                            .shardSpec(new NumberedShardSpec(1, 1))
+                                                            .binaryVersion(9)
+                                                            .size(100)
+                                                            .build();
 
-  protected final DataSegment hugeTimeRangeSegment1 = new DataSegment(
-      "hugeTimeRangeDataSource",
-      Intervals.of("-9994-01-02T00Z/1994-01-03T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
+  protected final DataSegment hugeTimeRangeSegment1 = DataSegment.builder(SegmentId.of("hugeTimeRangeDataSource", Intervals.of("-9994-01-02T00Z/1994-01-03T00Z"), "zversion", 0))
+                                                                 .loadSpec(ImmutableMap.of())
+                                                                 .dimensions(ImmutableList.of("dim1"))
+                                                                 .metrics(ImmutableList.of("m1"))
+                                                                 .shardSpec(new NumberedShardSpec(0, 1))
+                                                                 .binaryVersion(9)
+                                                                 .size(100)
+                                                                 .build();
 
-  protected final DataSegment hugeTimeRangeSegment2 = new DataSegment(
-      "hugeTimeRangeDataSource",
-      Intervals.of("2994-01-02T00Z/2994-01-03T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
+  protected final DataSegment hugeTimeRangeSegment2 = DataSegment.builder(SegmentId.of("hugeTimeRangeDataSource", Intervals.of("2994-01-02T00Z/2994-01-03T00Z"), "zversion", 0))
+                                                                 .loadSpec(ImmutableMap.of())
+                                                                 .dimensions(ImmutableList.of("dim1"))
+                                                                 .metrics(ImmutableList.of("m1"))
+                                                                 .shardSpec(new NumberedShardSpec(0, 1))
+                                                                 .binaryVersion(9)
+                                                                 .size(100)
+                                                                 .build();
 
-  protected final DataSegment hugeTimeRangeSegment3 = new DataSegment(
-      "hugeTimeRangeDataSource",
-      Intervals.of("29940-01-02T00Z/29940-01-03T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
+  protected final DataSegment hugeTimeRangeSegment3 = DataSegment.builder(SegmentId.of("hugeTimeRangeDataSource", Intervals.of("29940-01-02T00Z/29940-01-03T00Z"), "zversion", 0))
+                                                                 .loadSpec(ImmutableMap.of())
+                                                                 .dimensions(ImmutableList.of("dim1"))
+                                                                 .metrics(ImmutableList.of("m1"))
+                                                                 .shardSpec(new NumberedShardSpec(0, 1))
+                                                                 .binaryVersion(9)
+                                                                 .size(100)
+                                                                 .build();
 
-  protected final DataSegment hugeTimeRangeSegment4 = new DataSegment(
-      "hugeTimeRangeDataSource",
-      Intervals.of("1990-01-01T00Z/19940-01-01T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
+  protected final DataSegment hugeTimeRangeSegment4 = DataSegment.builder(SegmentId.of("hugeTimeRangeDataSource", Intervals.of("1990-01-01T00Z/19940-01-01T00Z"), "zversion", 0))
+                                                                 .loadSpec(ImmutableMap.of())
+                                                                 .dimensions(ImmutableList.of("dim1"))
+                                                                 .metrics(ImmutableList.of("m1"))
+                                                                 .shardSpec(new NumberedShardSpec(0, 1))
+                                                                 .binaryVersion(9)
+                                                                 .size(100)
+                                                                 .build();
 
   protected final Set<DataSegment> SEGMENTS = ImmutableSet.of(defaultSegment, defaultSegment2);
   protected final AtomicLong metadataUpdateCounter = new AtomicLong();
@@ -313,10 +257,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
 
   protected DataSegment createSegment(Interval interval, String version, ShardSpec shardSpec)
   {
-    return DataSegment.builder()
-                      .dataSource(TestDataSource.WIKI)
-                      .interval(interval)
-                      .version(version)
+    return DataSegment.builder(SegmentId.of(TestDataSource.WIKI, interval, version, shardSpec))
                       .shardSpec(shardSpec)
                       .size(100)
                       // hash to get a unique load spec as segmentId has not yet been generated
@@ -338,7 +279,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
     final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, null);
-    Assert.assertTrue(committedSegments.containsAll(segmentsSet));
+    Assertions.assertTrue(committedSegments.containsAll(segmentsSet));
 
     return segments;
   }
@@ -359,6 +300,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                handle,
                                                derbyConnector,
                                                tablesConfig,
+                                               new SegmentsMetadataManagerConfig(null, null, null),
                                                mapper
                                            )
                                            .retrieveUnusedSegments(
@@ -385,10 +327,11 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       MetadataStorageTablesConfig tablesConfig
   )
   {
+    final SegmentsMetadataManagerConfig managerConfig = new SegmentsMetadataManagerConfig(null, null, null);
     return derbyConnector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegmentPlus> iterator =
-                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, mapper)
+                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, managerConfig, mapper)
                                            .retrieveUnusedSegmentsPlus(
                                                TestDataSource.WIKI,
                                                intervals,
@@ -421,7 +364,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                                                               .getId(),
                                                                                         Function.identity()
                                                                                     ));
-    Assert.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
+    Assertions.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
       DataSegmentPlus segmentPlus = actualIdToSegmentPlus.get(e.getKey());
       return segmentPlus != null
              && !segmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
@@ -436,12 +379,12 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       DateTime usedStatusLastUpdatedTime
   )
   {
-    Assert.assertEquals(expectedSegments.size(), actualUnusedSegmentsPlus.size());
+    Assertions.assertEquals(expectedSegments.size(), actualUnusedSegmentsPlus.size());
     for (int i = 0; i < expectedSegments.size(); i++) {
       DataSegment expectedSegment = expectedSegments.get(i);
       DataSegmentPlus actualSegmentPlus = actualUnusedSegmentsPlus.get(i);
-      Assert.assertEquals(expectedSegment.getId(), actualSegmentPlus.getDataSegment().getId());
-      Assert.assertTrue(!actualSegmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
+      Assertions.assertEquals(expectedSegment.getId(), actualSegmentPlus.getDataSegment().getId());
+      Assertions.assertTrue(!actualSegmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
                         && actualSegmentPlus.getUsedStatusLastUpdatedDate() != null
                         && actualSegmentPlus.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime));
     }
@@ -469,7 +412,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   protected void markAllSegmentsUnused(Set<DataSegment> segments, DateTime usedStatusLastUpdatedTime)
   {
     for (final DataSegment segment : segments) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           1,
           segmentsTable.update(
               "UPDATE %s SET used = false, used_status_last_updated = ? WHERE id = ?",

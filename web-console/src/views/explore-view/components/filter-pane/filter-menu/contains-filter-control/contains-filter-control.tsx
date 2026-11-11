@@ -40,7 +40,7 @@ export const ContainsFilterControl = React.memo(function ContainsFilterControl(
   props: ContainsFilterControlProps,
 ) {
   const { querySource, extraFilter, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
-  const { column, negated, contains } = filterPattern;
+  const { column, contains } = filterPattern;
 
   const previewQuery = useMemo(
     () =>
@@ -56,8 +56,7 @@ export const ContainsFilterControl = React.memo(function ContainsFilterControl(
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
         .changeLimitValue(101)
         .toString(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- exclude 'makePattern' from deps
-    [querySource.query, extraFilter, filter, column, contains, negated],
+    [querySource, extraFilter, filter, column, contains, filterPattern],
   );
 
   const [previewState] = useQueryManager<string, string[]>({

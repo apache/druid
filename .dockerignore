@@ -35,3 +35,10 @@ target
 *.DS_Store
 _site
 dependency-reduced-pom.xml
+**/node_modules
+
+# Allow the host-built distribution to pass its binary tarball into
+# the Docker build while continuing to exclude all other build output.
+!distribution/target/
+distribution/target/*
+!distribution/target/apache-druid-*-bin.tar.gz

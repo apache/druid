@@ -26,7 +26,7 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-Datasources in Apache Druid are things that you can query. The most common kind of datasource is a table datasource,
+Datasources in Apache&circledR; Druid are things that you can query. The most common kind of datasource is a table datasource,
 and in many contexts the word "datasource" implicitly refers to table datasources. This is especially true
 [during data ingestion](../ingestion/index.md), where ingestion is always creating or writing into a table
 datasource. But at query time, there are many other types of datasources available.
@@ -160,16 +160,16 @@ Unions allow you to treat two or more tables as a single datasource. In SQL, thi
 applied directly to tables, called a ["table-level union"](sql.md#table-level). In native queries, this is done with a
 "union" datasource.
 
-With SQL [table-level unions](sql.md#table-level) the same columns must be selected from each table in the same order,
-and those columns must either have the same types, or types that can be implicitly cast to each other (such as different
-numeric types). For this reason, it is more robust to write your queries to select specific columns.
+With SQL [table-level unions](sql.md#table-level) the same number of columns must be selected from each table, matched up
+by position, and those columns must either have the same types, or types that can be implicitly cast to each other (such
+as different numeric types). For this reason, it is more robust to write your queries to select specific columns.
 
 With the native union datasource, the tables being unioned do not need to have identical schemas. If they do not fully
 match up, then columns that exist in one table but not another will be treated as if they contained all null values in
 the tables where they do not exist.
 
-In either case, features like expressions, column aliasing, JOIN, GROUP BY, ORDER BY, and so on cannot be used with
-table unions.
+With SQL table-level unions, each table can be filtered, and can have expressions and column aliases applied, but features
+like JOIN, GROUP BY, ORDER BY, and so on cannot be used within the union.
 
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.

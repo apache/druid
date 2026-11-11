@@ -1,32 +1,51 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`FancyNumericInput matches snapshot 1`] = `
-<Blueprint5.ControlGroup
-  className="fancy-numeric-input bp5-numeric-input"
+<div
+  class="bp6-control-group fancy-numeric-input bp6-numeric-input"
+  role="group"
 >
-  <Blueprint5.InputGroup
-    autoComplete="off"
-    onBlur={[Function]}
-    onChange={[Function]}
-    onKeyDown={[Function]}
-    value="5"
-  />
-  <Blueprint5.ButtonGroup
-    className="bp5-fixed"
-    vertical={true}
+  <div
+    class="bp6-input-group"
   >
-    <Blueprint5.Button
+    <input
+      autocomplete="off"
+      class="bp6-input"
+      type="text"
+      value="5"
+    />
+  </div>
+  <div
+    class="bp6-button-group bp6-vertical bp6-fixed"
+  >
+    <button
       aria-label="increment"
-      disabled={false}
-      icon="chevron-up"
-      onMouseDown={[Function]}
-    />
-    <Blueprint5.Button
+      class="bp6-button"
+      type="button"
+    >
+      <span
+        aria-hidden="true"
+        class="bp6-icon bp6-icon-chevron-up"
+      >
+        <svg
+          data-icon="chevron-up"
+        />
+      </span>
+    </button>
+    <button
       aria-label="decrement"
-      disabled={false}
-      icon="chevron-down"
-      onMouseDown={[Function]}
-    />
-  </Blueprint5.ButtonGroup>
-</Blueprint5.ControlGroup>
+      class="bp6-button"
+      type="button"
+    >
+      <span
+        aria-hidden="true"
+        class="bp6-icon bp6-icon-chevron-down"
+      >
+        <svg
+          data-icon="chevron-down"
+        />
+      </span>
+    </button>
+  </div>
+</div>
 `;

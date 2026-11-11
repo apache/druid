@@ -25,8 +25,8 @@ import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StageInputSliceTest
 {
@@ -42,7 +42,7 @@ public class StageInputSliceTest
         OutputChannelMode.MEMORY
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         slice,
         mapper.readValue(mapper.writeValueAsString(slice), InputSlice.class)
     );

@@ -21,22 +21,32 @@ package org.apache.druid.client.selector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.util.List;
+import java.util.Map;
+
 
 public class ServerSelectorTest
 {
-  @Before
+  @BeforeEach
   public void setUp()
   {
     TierSelectorStrategy tierSelectorStrategy = EasyMock.createMock(TierSelectorStrategy.class);
@@ -47,9 +57,7 @@ public class ServerSelectorTest
   public void testSegmentUpdate()
   {
     final ServerSelector selector = new ServerSelector(
-        DataSegment.builder()
-                   .dataSource("test_broker_server_view")
-                   .interval(Intervals.of("2012/2013"))
+        DataSegment.builder(SegmentId.of("test_broker_server_view", Intervals.of("2012/2013"), "v1", 0))
                    .loadSpec(
                        ImmutableMap.of(
                            "type",
@@ -58,7 +66,6 @@ public class ServerSelectorTest
                            "somewhere"
                        )
                    )
-                   .version("v1")
                    .dimensions(ImmutableList.of())
                    .metrics(ImmutableList.of())
                    .shardSpec(NoneShardSpec.instance())
@@ -74,10 +81,7 @@ public class ServerSelectorTest
             new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
             EasyMock.createMock(DirectDruidClient.class)
         ),
-        DataSegment.builder()
-                   .dataSource(
-                       "test_broker_server_view")
-                   .interval(Intervals.of("2012/2013"))
+        DataSegment.builder(SegmentId.of("test_broker_server_view", Intervals.of("2012/2013"), "v1", 0))
                    .loadSpec(
                        ImmutableMap.of(
                            "type",
@@ -86,7 +90,6 @@ public class ServerSelectorTest
                            "somewhere"
                        )
                    )
-                   .version("v1")
                    .dimensions(
                        ImmutableList.of(
                            "a",
@@ -101,33 +104,32 @@ public class ServerSelectorTest
                    .build()
     );
 
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), selector.getSegment().getDimensions());
+    Assertions.assertEquals(ImmutableList.of("a", "b", "c"), selector.getSegment().getDimensions());
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testSegmentCannotBeNull()
   {
-    final ServerSelector selector = new ServerSelector(
-        null,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
-        HistoricalFilter.IDENTITY_FILTER
-    );
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      final ServerSelector selector = new ServerSelector(
+          null,
+          new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+          HistoricalFilter.IDENTITY_FILTER
+      );
+    });
   }
 
   @Test
   public void testSegmentWithNoData()
   {
     final ServerSelector selector = new ServerSelector(
-        DataSegment.builder()
-                   .dataSource("test_broker_server_view")
-                   .interval(Intervals.of("2012/2013"))
+        DataSegment.builder(SegmentId.of("test_broker_server_view", Intervals.of("2012/2013"), "v1", 0))
                    .loadSpec(
                        ImmutableMap.of(
                            "type",
                            "tombstone"
                        )
                    )
-                   .version("v1")
                    .dimensions(ImmutableList.of())
                    .metrics(ImmutableList.of())
                    .shardSpec(new TombstoneShardSpec())
@@ -137,16 +139,14 @@ public class ServerSelectorTest
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         HistoricalFilter.IDENTITY_FILTER
     );
-    Assert.assertFalse(selector.hasData());
+    Assertions.assertFalse(selector.hasData());
   }
 
   @Test
   public void testSegmentWithData()
   {
     final ServerSelector selector = new ServerSelector(
-        DataSegment.builder()
-                   .dataSource("another segment") // fool the interner inside the selector
-                   .interval(Intervals.of("2012/2013"))
+        DataSegment.builder(SegmentId.of("another segment", Intervals.of("2012/2013"), "v1", 0)) // fool the interner inside the selector
                    .loadSpec(
                        ImmutableMap.of(
                            "type",
@@ -155,7 +155,6 @@ public class ServerSelectorTest
                            "somewhere"
                        )
                    )
-                   .version("v1")
                    .dimensions(ImmutableList.of())
                    .metrics(ImmutableList.of())
                    .shardSpec(NoneShardSpec.instance())
@@ -165,7 +164,80 @@ public class ServerSelectorTest
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         HistoricalFilter.IDENTITY_FILTER
     );
-    Assert.assertTrue(selector.hasData());
+    Assertions.assertTrue(selector.hasData());
   }
 
+  @Test
+  public void testPickFallsBackToRealtimeWhenEveryHistoricalIsExcluded()
+  {
+    final ServerSelector selector = makeSelector("test_clone_and_realtime");
+
+    final QueryableDruidServer cloneTarget = addServer(selector, "clone:8083", ServerType.HISTORICAL);
+    final QueryableDruidServer peon = addServer(selector, "peon:8100", ServerType.INDEXER_EXECUTOR);
+
+    Assertions.assertEquals(peon, selector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(
+        List.of(peon.getServer().getMetadata()),
+        selector.getCandidates(1, CloneQueryMode.EXCLUDECLONES)
+    );
+
+    // The clone target is queryable when clones are not excluded.
+    Assertions.assertEquals(cloneTarget, selector.pick(null, CloneQueryMode.INCLUDECLONES));
+  }
+
+  @Test
+  public void testPickReturnsNullWhenEveryHistoricalIsExcludedAndThereIsNoRealtimeServer()
+  {
+    final ServerSelector selector = makeSelector("test_clone_only");
+
+    addServer(selector, "clone:8083", ServerType.HISTORICAL);
+
+    Assertions.assertNull(selector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(List.of(), selector.getCandidates(1, CloneQueryMode.EXCLUDECLONES));
+  }
+
+  @Test
+  public void testPickPrefersHistoricalOverRealtimeWhenTheHistoricalIsNotExcluded()
+  {
+    final ServerSelector selector = makeSelector("test_source_and_realtime");
+
+    final QueryableDruidServer cloneSource = addServer(selector, "source:8083", ServerType.HISTORICAL);
+    addServer(selector, "peon:8100", ServerType.INDEXER_EXECUTOR);
+
+    Assertions.assertEquals(cloneSource, selector.pick(null, CloneQueryMode.EXCLUDECLONES));
+  }
+
+  /**
+   * Creates a selector whose {@link HistoricalFilter} treats "clone:8083" as a clone of "source:8083".
+   */
+  private static ServerSelector makeSelector(final String dataSource)
+  {
+    final BrokerViewOfCoordinatorConfig filter =
+        new BrokerViewOfCoordinatorConfig(Mockito.mock(CoordinatorClient.class));
+    filter.setDynamicConfig(
+        CoordinatorDynamicConfig.builder()
+                                .withCloneServers(Map.of("clone:8083", "source:8083"))
+                                .build()
+    );
+
+    return new ServerSelector(
+        DataSegment.builder(SegmentId.dummy(dataSource)).shardSpec(NoneShardSpec.instance()).build(),
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        filter
+    );
+  }
+
+  private static QueryableDruidServer addServer(
+      final ServerSelector selector,
+      final String host,
+      final ServerType serverType
+  )
+  {
+    final QueryableDruidServer server = new QueryableDruidServer(
+        new DruidServer(host, host, null, 0, null, serverType, DruidServer.DEFAULT_TIER, 0),
+        EasyMock.createMock(DirectDruidClient.class)
+    );
+    selector.addServerAndUpdateSegment(server, selector.getSegment());
+    return server;
+  }
 }

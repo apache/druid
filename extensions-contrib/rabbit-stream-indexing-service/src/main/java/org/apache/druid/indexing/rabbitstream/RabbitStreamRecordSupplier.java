@@ -275,11 +275,14 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
   {
     this.stopBackgroundFetch();
     // filter records in buffer and only retain ones whose partition was not seeked
-    BlockingQueue<OrderedPartitionableRecord<String, Long, ByteEntity>> newQ = new LinkedBlockingQueue<>(
+    final Set<String> partitionIds = partitions.stream()
+                                               .map(StreamPartition::getPartitionId)
+                                               .collect(Collectors.toSet());
+    final BlockingQueue<OrderedPartitionableRecord<String, Long, ByteEntity>> newQ = new LinkedBlockingQueue<>(
         recordBufferSize);
 
     queue.stream()
-        .filter(x -> !streamBuilders.containsKey(x.getPartitionId()))
+        .filter(x -> !partitionIds.contains(x.getPartitionId()))
         .forEachOrdered(newQ::offer);
 
     queue = newQ;

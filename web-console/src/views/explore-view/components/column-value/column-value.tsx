@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import { isDate } from 'date-fns';
-
 import { prettyFormatIsoDateWithMsIfNeeded } from '../../../../utils';
 
 import './column-value.scss';
@@ -33,7 +31,7 @@ export const ColumnValue = function ColumnValue(props: ColumnValueProps) {
     return <span className="column-value empty">empty</span>;
   } else if (value === null) {
     return <span className="column-value null">null</span>;
-  } else if (isDate(value)) {
+  } else if (value instanceof Date) {
     return <span className="column-value date">{prettyFormatIsoDateWithMsIfNeeded(value)}</span>;
   }
 

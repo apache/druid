@@ -28,8 +28,8 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -63,10 +63,10 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
 
     List<InputRow> rowsWithString = readAllRows(readerAsString);
     List<InputRow> rowsWithDate = readAllRows(readerAsDate);
-    Assert.assertEquals(rowsWithDate.size(), rowsWithString.size());
+    Assertions.assertEquals(rowsWithDate.size(), rowsWithString.size());
 
     for (int i = 0; i < rowsWithDate.size(); i++) {
-      Assert.assertEquals(rowsWithString.get(i).getTimestamp(), rowsWithDate.get(i).getTimestamp());
+      Assertions.assertEquals(rowsWithString.get(i).getTimestamp(), rowsWithDate.get(i).getTimestamp());
     }
 
     readerAsString = createReader(
@@ -88,8 +88,8 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
                                       + "  \"idx\" : 1,\n"
                                       + "  \"date_as_date\" : 1497744000000\n"
                                       + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()));
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()));
   }
 
   @Test
@@ -106,7 +106,7 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     InputEntityReader reader = createReader(file, schema, JSONPathSpec.DEFAULT);
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("2001-01-01T01:01:01.000Z", rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("2001-01-01T01:01:01.000Z", rows.get(0).getTimestamp().toString());
 
     reader = createReader(
         file,
@@ -117,7 +117,7 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"ts\" : 978310861000\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -136,7 +136,7 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("1970-01-01T00:00:00.010Z", rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("1970-01-01T00:00:00.010Z", rows.get(0).getTimestamp().toString());
 
     reader = createReader(
         file,
@@ -147,6 +147,6 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"time\" : 10\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 }

@@ -19,13 +19,18 @@
 
 package org.apache.druid.client.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.java.util.common.IAE;
 import redis.clients.jedis.ConnectionPoolConfig;
+import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.SslOptions;
+import redis.clients.jedis.SslVerifyMode;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -65,24 +70,12 @@ public class RedisCacheFactory
       poolConfig.setMaxIdle(config.getMaxIdleConnections());
       poolConfig.setMinIdle(config.getMinIdleConnections());
 
-      JedisCluster cluster;
-      if (config.getPassword() != null) {
-        cluster = new JedisCluster(
-            nodes,
-            config.getTimeout().getMillisecondsAsInt(), //connection timeout
-            config.getTimeout().getMillisecondsAsInt(), //read timeout
-            config.getCluster().getMaxRedirection(),
-            config.getPassword().getPassword(),
-            poolConfig
-        );
-      } else {
-        cluster = new JedisCluster(
-            nodes,
-            config.getTimeout().getMillisecondsAsInt(), //connection timeout and read timeout
-            config.getCluster().getMaxRedirection(),
-            poolConfig
-        );
-      }
+      JedisCluster cluster = new JedisCluster(
+          nodes,
+          buildClientConfig(config, 0),
+          config.getCluster().getMaxRedirection(),
+          poolConfig
+      );
 
       return new RedisClusterCache(cluster, config);
 
@@ -100,15 +93,31 @@ public class RedisCacheFactory
       return new RedisStandaloneCache(
           new JedisPool(
               poolConfig,
-              config.getHost(),
-              config.getPort(),
-              config.getTimeout().getMillisecondsAsInt(), //connection timeout and read timeout
-              config.getPassword() == null ? null : config.getPassword().getPassword(),
-              config.getDatabase(),
-              null
+              new HostAndPort(config.getHost(), config.getPort()),
+              buildClientConfig(config, config.getDatabase())
           ),
           config
       );
     }
+  }
+
+  @VisibleForTesting
+  static JedisClientConfig buildClientConfig(RedisCacheConfig config, int database)
+  {
+    DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig
+        .builder()
+        .connectionTimeoutMillis(config.getTimeout().getMillisecondsAsInt())
+        .socketTimeoutMillis(config.getTimeout().getMillisecondsAsInt())
+        .password(config.getPassword() == null ? null : config.getPassword().getPassword())
+        .database(database)
+        .ssl(config.getEnableTls());
+
+    if (config.getEnableTls()) {
+      SslVerifyMode verifyMode =
+          config.getSkipTlsHostnameVerification() ? SslVerifyMode.CA : SslVerifyMode.FULL;
+      builder.sslOptions(SslOptions.builder().sslVerifyMode(verifyMode).build());
+    }
+
+    return builder.build();
   }
 }

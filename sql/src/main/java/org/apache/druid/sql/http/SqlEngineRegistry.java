@@ -20,11 +20,11 @@
 package org.apache.druid.sql.http;
 
 import com.google.inject.Inject;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.error.InvalidSqlInput;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
-import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -44,7 +44,7 @@ public class SqlEngineRegistry
   @NotNull
   public SqlEngine getEngine(final String engineName)
   {
-    SqlEngine engine = engines.getOrDefault(engineName == null ? QueryContexts.DEFAULT_ENGINE : engineName, null);
+    SqlEngine engine = engines.getOrDefault(QueryContextParameters.ENGINE.parseOrDefault(engineName), null);
     if (engine == null) {
       throw InvalidSqlInput.exception("Unsupported engine[%s]", engineName);
     }

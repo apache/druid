@@ -26,10 +26,11 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.Cpu;
 import org.apache.druid.java.util.metrics.cgroups.CpuSet;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,8 +39,8 @@ import java.nio.file.Path;
 
 public class CpuAcctDeltaMonitorTest
 {
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private File cpuacctDir;
@@ -47,8 +48,8 @@ public class CpuAcctDeltaMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
+    cgroupDir = temporaryFolder.newFolder("cgroup");
+    procDir = temporaryFolder.newFolder("proc");
     TestUtils.setUpCgroups(procDir, cgroupDir);
     cpuacctDir = new File(
         cgroupDir,

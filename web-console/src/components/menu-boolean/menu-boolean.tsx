@@ -58,7 +58,7 @@ export function MenuBoolean(props: MenuBooleanProps) {
     optionsLabelElement = {},
     ...rest
   } = props;
-  const effectiveValue = showUndefined ? value : value ?? undefinedEffectiveValue;
+  const effectiveValue = showUndefined ? value : (value ?? undefinedEffectiveValue);
   const shouldDismiss = shouldDismissPopover ?? false;
 
   function formatValue(value: boolean | undefined): string {

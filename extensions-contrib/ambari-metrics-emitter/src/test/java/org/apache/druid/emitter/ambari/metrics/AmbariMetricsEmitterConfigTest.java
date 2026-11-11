@@ -22,9 +22,9 @@ package org.apache.druid.emitter.ambari.metrics;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -33,7 +33,7 @@ public class AmbariMetricsEmitterConfigTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(
@@ -63,7 +63,7 @@ public class AmbariMetricsEmitterConfigTest
     AmbariMetricsEmitterConfig serde = mapper.readerFor(AmbariMetricsEmitterConfig.class).readValue(
         mapper.writeValueAsBytes(config)
     );
-    Assert.assertEquals(config, serde);
+    Assertions.assertEquals(config, serde);
   }
 
   @Test
@@ -72,7 +72,7 @@ public class AmbariMetricsEmitterConfigTest
     SendAllTimelineEventConverter sendAllConverter = new SendAllTimelineEventConverter("prefix", "druid");
     DruidToTimelineMetricConverter serde = mapper.readerFor(DruidToTimelineMetricConverter.class)
                                                  .readValue(mapper.writeValueAsBytes(sendAllConverter));
-    Assert.assertEquals(sendAllConverter, serde);
+    Assertions.assertEquals(sendAllConverter, serde);
 
     WhiteListBasedDruidToTimelineEventConverter whiteListBasedDruidToTimelineEventConverter = new WhiteListBasedDruidToTimelineEventConverter(
         "prefix",
@@ -83,6 +83,6 @@ public class AmbariMetricsEmitterConfigTest
     serde = mapper.readerFor(DruidToTimelineMetricConverter.class)
                   .readValue(mapper.writeValueAsBytes(
                       whiteListBasedDruidToTimelineEventConverter));
-    Assert.assertEquals(whiteListBasedDruidToTimelineEventConverter, serde);
+    Assertions.assertEquals(whiteListBasedDruidToTimelineEventConverter, serde);
   }
 }

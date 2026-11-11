@@ -17,18 +17,30 @@
  */
 
 @use 'sass:math';
+@use 'colors' as *;
 
 // Namespace appended to the beginning of each CSS class: `.#{$ns}-button`.
 // Do not quote this value, for Less consumers.
-$ns: bp5;
+$ns: bp6;
+// Alias for the namespace (Blueprint defines it too)
+$bp-ns: $ns;
 
 // easily the most important variable, so it comes up top
 // (so other variables can use it to define themselves)
 $pt-grid-size: 10px;
 
 // see https://bitsofco.de/the-new-system-font-stack/
-$pt-font-family: 'Open Sans', -apple-system, 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen',
-  'Ubuntu', 'Cantarell', 'Helvetica Neue', 'Icons16',
+$pt-font-family:
+  'Open Sans',
+  -apple-system,
+  'BlinkMacSystemFont',
+  'Segoe UI',
+  'Roboto',
+  'Oxygen',
+  'Ubuntu',
+  'Cantarell',
+  'Helvetica Neue',
+  'Icons16',
   // support inline Palantir icons
   sans-serif;
 
@@ -99,7 +111,9 @@ $pt-transition-duration: 30ms;
 
 // Light theme styles
 
-$pt-input-box-shadow: 0 0 0 1px rgba($black, 0.12), inset 0 1px 3px 0 rgba($black, 0.12);
+$pt-input-box-shadow:
+  0 0 0 1px rgba($black, 0.12),
+  inset 0 1px 3px 0 rgba($black, 0.12);
 
 $pt-dialog-box-shadow: $pt-elevation-shadow-4;
 $pt-popover-box-shadow: $pt-elevation-shadow-3;
@@ -107,7 +121,9 @@ $pt-tooltip-box-shadow: $pt-popover-box-shadow;
 
 // Dark theme styles
 
-$pt-dark-input-box-shadow: 0 0 0 1px rgba($black, 0.4), inset 0 1px 3px 0 rgba($black, 0.5);
+$pt-dark-input-box-shadow:
+  0 0 0 1px rgba($black, 0.4),
+  inset 0 1px 3px 0 rgba($black, 0.5);
 
 $pt-dark-dialog-box-shadow: $pt-dark-elevation-shadow-4;
 $pt-dark-popover-box-shadow: $pt-dark-elevation-shadow-3;

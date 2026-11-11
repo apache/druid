@@ -35,13 +35,10 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.hamcrest.Matchers;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Collections;
@@ -61,12 +58,9 @@ public class PartialHashSegmentGenerateTaskTest
       ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS)
   );
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private PartialHashSegmentGenerateTask target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     target = new PartialHashSegmentGenerateTask(
@@ -92,13 +86,13 @@ public class PartialHashSegmentGenerateTaskTest
   public void hasCorrectPrefixForAutomaticId()
   {
     String id = target.getId();
-    Assert.assertThat(id, Matchers.startsWith(PartialHashSegmentGenerateTask.TYPE));
+    Assertions.assertTrue(id.startsWith(PartialHashSegmentGenerateTask.TYPE));
   }
 
   @Test
   public void hasCorrectInputSourceResources()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
                 LocalInputSource.TYPE_KEY,
@@ -127,9 +121,9 @@ public class PartialHashSegmentGenerateTaskTest
             new HashedPartitionsSpec(null, expectedNumBuckets, null),
             null
         );
-    Assert.assertEquals(intervals.size(), partitionAnalysis.getNumTimePartitions());
+    Assertions.assertEquals(intervals.size(), partitionAnalysis.getNumTimePartitions());
     for (Interval interval : intervals) {
-      Assert.assertEquals(expectedNumBuckets, partitionAnalysis.getBucketAnalysis(interval).intValue());
+      Assertions.assertEquals(expectedNumBuckets, partitionAnalysis.getBucketAnalysis(interval).intValue());
     }
   }
 
@@ -159,9 +153,9 @@ public class PartialHashSegmentGenerateTaskTest
             new HashedPartitionsSpec(null, null, null),
             intervalToNumShards
         );
-    Assert.assertEquals(intervals.size(), partitionAnalysis.getNumTimePartitions());
+    Assertions.assertEquals(intervals.size(), partitionAnalysis.getNumTimePartitions());
     for (Interval interval : intervals) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           intervalToNumShards.get(interval).intValue(),
           partitionAnalysis.getBucketAnalysis(interval).intValue()
       );
@@ -171,27 +165,28 @@ public class PartialHashSegmentGenerateTaskTest
   @Test
   public void requiresGranularitySpecInputIntervals()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Missing intervals in granularitySpec");
-
-    new PartialHashSegmentGenerateTask(
-        ParallelIndexTestingFactory.AUTOMATIC_ID,
-        ParallelIndexTestingFactory.GROUP_ID,
-        ParallelIndexTestingFactory.TASK_RESOURCE,
-        ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
-        ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
-        ParallelIndexTestingFactory.NUM_ATTEMPTS,
-        ParallelIndexTestingFactory.createIngestionSpec(
-            new LocalInputSource(new File("baseDir"), "filer"),
-            new JsonInputFormat(null, null, null, null, null),
-            TuningConfigBuilder.forParallelIndexTask()
-                               .withForceGuaranteedRollup(true)
-                               .withPartitionsSpec(new HashedPartitionsSpec(null, 2, null))
-                               .build(),
-            ParallelIndexTestingFactory.createDataSchema(null)
-        ),
-        ParallelIndexTestingFactory.CONTEXT,
-        null
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new PartialHashSegmentGenerateTask(
+            ParallelIndexTestingFactory.AUTOMATIC_ID,
+            ParallelIndexTestingFactory.GROUP_ID,
+            ParallelIndexTestingFactory.TASK_RESOURCE,
+            ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+            ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
+            ParallelIndexTestingFactory.NUM_ATTEMPTS,
+            ParallelIndexTestingFactory.createIngestionSpec(
+                new LocalInputSource(new File("baseDir"), "filer"),
+                new JsonInputFormat(null, null, null, null, null),
+                TuningConfigBuilder.forParallelIndexTask()
+                                   .withForceGuaranteedRollup(true)
+                                   .withPartitionsSpec(new HashedPartitionsSpec(null, 2, null))
+                                   .build(),
+                ParallelIndexTestingFactory.createDataSchema(null)
+            ),
+            ParallelIndexTestingFactory.CONTEXT,
+            null
+        )
     );
+    Assertions.assertTrue(exception.getMessage().contains("Missing intervals in granularitySpec"));
   }
 }

@@ -44,6 +44,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.OperandType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -181,7 +182,11 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
           DefaultOperandTypeChecker
               .builder()
               .operandNames("column", "quantile", "compression")
-              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC)
+              .operandTypes(
+                  OperandType.numeric().orComplex(TDigestSketchAggregatorFactory.TYPE).coerceStrings().nullable(),
+                  OperandType.of(SqlTypeFamily.NUMERIC),
+                  OperandType.of(SqlTypeFamily.NUMERIC)
+              )
               .literalOperands(1, 2)
               .requiredOperandCount(2)
               .build(),

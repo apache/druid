@@ -70,7 +70,7 @@ public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO druid.numfoo SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectTarget("numfoo", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("numfoo"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("numfoo"), dataSourceWrite("numfoo"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")

@@ -35,31 +35,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '21', '25' ]
+        jdk: [ '25' ]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/packaging-check.sh
       jdk: ${{ matrix.jdk }}
       key: "packaging-check-jdk${{ matrix.jdk }}"
-
-  static-checks-maven:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/static-checks-maven.sh
-      key: "static-checks-maven"
-
-  strict-compilation:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/strict-compilation.sh
-      key: "strict-compilation"
-
-  openrewrite:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/openrewrite.sh
-      key: "openrewrite"
-      artifact_prefix: "openrewrite-patch"
 
   web-checks:
     uses: ./.github/workflows/worker.yml

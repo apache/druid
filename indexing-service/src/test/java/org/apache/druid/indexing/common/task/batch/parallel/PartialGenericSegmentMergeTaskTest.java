@@ -23,21 +23,20 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collections;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "partitionLocation = {0}")
+@MethodSource("data")
 public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSupervisorTaskTest
 {
-  @Parameterized.Parameters(name = "partitionLocation = {0}")
   public static Iterable<?> data()
   {
     return Arrays.asList(
@@ -46,7 +45,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
     );
   }
 
-  @Parameterized.Parameter
+  @Parameter
   public PartitionLocation partitionLocation;
 
   private static final GenericPartitionLocation GENERIC_PARTITION_LOCATION = new GenericPartitionLocation(
@@ -65,9 +64,6 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
       ImmutableMap.of()
   );
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   private PartialGenericSegmentMergeTask target;
   private PartialSegmentMergeIOConfig ioConfig;
   private HashedPartitionsSpec partitionsSpec;
@@ -78,7 +74,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
     super(0.0, 0.0);
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     ioConfig = new PartialSegmentMergeIOConfig(Collections.singletonList(partitionLocation));
@@ -117,37 +113,38 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
   public void hasCorrectPrefixForAutomaticId()
   {
     String id = target.getId();
-    Assert.assertTrue(id.startsWith(PartialGenericSegmentMergeTask.TYPE));
+    Assertions.assertTrue(id.startsWith(PartialGenericSegmentMergeTask.TYPE));
   }
 
   @Test
   public void requiresGranularitySpecInputIntervals()
   {
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Missing intervals in granularitySpec");
-
-    new PartialGenericSegmentMergeTask(
-        ParallelIndexTestingFactory.AUTOMATIC_ID,
-        ParallelIndexTestingFactory.GROUP_ID,
-        ParallelIndexTestingFactory.TASK_RESOURCE,
-        ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
-        ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
-        ParallelIndexTestingFactory.NUM_ATTEMPTS,
-        new PartialSegmentMergeIngestionSpec(
-            ParallelIndexTestingFactory.createDataSchema(null),
-            ioConfig,
-            TuningConfigBuilder.forParallelIndexTask()
-                .withForceGuaranteedRollup(true)
-                .withPartitionsSpec(partitionsSpec)
-                .build()
-        ),
-        ParallelIndexTestingFactory.CONTEXT
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new PartialGenericSegmentMergeTask(
+            ParallelIndexTestingFactory.AUTOMATIC_ID,
+            ParallelIndexTestingFactory.GROUP_ID,
+            ParallelIndexTestingFactory.TASK_RESOURCE,
+            ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+            ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
+            ParallelIndexTestingFactory.NUM_ATTEMPTS,
+            new PartialSegmentMergeIngestionSpec(
+                ParallelIndexTestingFactory.createDataSchema(null),
+                ioConfig,
+                TuningConfigBuilder.forParallelIndexTask()
+                    .withForceGuaranteedRollup(true)
+                    .withPartitionsSpec(partitionsSpec)
+                    .build()
+            ),
+            ParallelIndexTestingFactory.CONTEXT
+        )
     );
+    Assertions.assertTrue(exception.getMessage().contains("Missing intervals in granularitySpec"));
   }
 
   @Test
   public void testGetInputSourceResources()
   {
-    Assert.assertTrue(target.getInputSourceResources().isEmpty());
+    Assertions.assertTrue(target.getInputSourceResources().isEmpty());
   }
 }

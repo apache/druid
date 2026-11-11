@@ -49,7 +49,7 @@ public class StringLastBufferAggregatorTest
 
     final long[] timestamps = {1526724600L, 1526724700L, 1526724800L, 1526725900L, 1526725000L};
     final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
-    Integer maxStringBytes = 1024;
+    final int maxStringBytes = 1024;
 
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
@@ -87,7 +87,7 @@ public class StringLastBufferAggregatorTest
   {
     final long[] timestamps = {1526724600L, 1526724700L, 1526724800L, 1526725900L, 1526725000L};
     final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
-    Integer maxStringBytes = 1024;
+    final int maxStringBytes = 1024;
 
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
@@ -125,7 +125,7 @@ public class StringLastBufferAggregatorTest
 
     final long[] timestamps = {1111L, 2222L, 6666L, 4444L, 5555L};
     final String[] strings = {"CCCC", "AAAA", "BBBB", null, "EEEE"};
-    Integer maxStringBytes = 1024;
+    final int maxStringBytes = 1024;
 
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
@@ -164,7 +164,7 @@ public class StringLastBufferAggregatorTest
 
     final long[] timestamps = {1526724000L, 1526724600L};
     final Double[] doubles = {null, 2.00};
-    Integer maxStringBytes = 1024;
+    final int maxStringBytes = 1024;
 
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<Double> objectColumnSelector = new TestObjectColumnSelector<>(doubles);

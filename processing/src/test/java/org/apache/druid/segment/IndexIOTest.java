@@ -40,11 +40,9 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -56,11 +54,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * This is mostly a test of the validator
  */
-@RunWith(Parameterized.class)
 public class IndexIOTest extends InitializedNullHandlingTest
 {
   private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
@@ -82,8 +81,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
     return outList;
   }
 
-  @Parameterized.Parameters(name = "{0}, {1}")
-  public static Iterable<Object[]> constructionFeeder()
+  public static Stream<Object[]> constructionFeeder()
   {
     final Map<String, Object> map = ImmutableMap.of();
 
@@ -106,7 +104,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
 
     final List<Map<String, Object>> maps = ImmutableList.of(map, map00, map10, map0null, map1null, mapAll);
 
-    return Iterables.concat(
+    final Iterable<Object[]> allParams = Iterables.concat(
         // First iterable tests permutations of the maps which are expected to be equal
         Iterables.concat(
             new Iterable<Iterable<Object[]>>()
@@ -225,6 +223,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
             }
         )
     );
+    return StreamSupport.stream(allParams.spliterator(), false);
   }
 
   public static List<Map> filterNullValues(List<Map<String, Object>> mapList)
@@ -232,53 +231,33 @@ public class IndexIOTest extends InitializedNullHandlingTest
     return Lists.transform(mapList, (Function<Map, Map>) input -> Maps.filterValues(input, Objects::nonNull));
   }
 
-  private final Collection<Map<String, Object>> events1;
-  private final Collection<Map<String, Object>> events2;
-  private final Class<? extends Exception> exception;
+  private static IncrementalIndex createIncrementalIndex()
+  {
+    return new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
+                .withMetrics(new CountAggregatorFactory("count"))
+                .withDimensionsSpec(
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
+                )
+                .build()
+        )
+        .setMaxRowCount(1000000)
+        .build();
+  }
 
-  public IndexIOTest(
+  @ParameterizedTest
+  @MethodSource("constructionFeeder")
+  public void testRowValidatorEquals(
       Collection<Map<String, Object>> events1,
       Collection<Map<String, Object>> events2,
       Class<? extends Exception> exception
-  )
+  ) throws Exception
   {
-    this.events1 = events1;
-    this.events2 = events2;
-    this.exception = exception;
-  }
+    final IncrementalIndex incrementalIndex1 = createIncrementalIndex();
+    final IncrementalIndex incrementalIndex2 = createIncrementalIndex();
 
-  final IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex.Builder()
-      .setIndexSchema(
-          new IncrementalIndexSchema.Builder()
-              .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
-              .withMetrics(new CountAggregatorFactory("count"))
-              .withDimensionsSpec(
-                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
-              )
-              .build()
-      )
-      .setMaxRowCount(1000000)
-      .build();
-
-  final IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex.Builder()
-      .setIndexSchema(
-          new IncrementalIndexSchema.Builder()
-              .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
-              .withMetrics(new CountAggregatorFactory("count"))
-              .withDimensionsSpec(
-                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
-              )
-              .build()
-      )
-      .setMaxRowCount(1000000)
-      .build();
-
-  IndexableAdapter adapter1;
-  IndexableAdapter adapter2;
-
-  @Before
-  public void setUp()
-  {
     long timestamp = 0L;
     for (Map<String, Object> event : events1) {
       incrementalIndex1.add(new MapBasedInputRow(timestamp++, Lists.newArrayList(event.keySet()), event));
@@ -289,22 +268,18 @@ public class IndexIOTest extends InitializedNullHandlingTest
       incrementalIndex2.add(new MapBasedInputRow(timestamp++, Lists.newArrayList(event.keySet()), event));
     }
 
-    adapter2 = new IncrementalIndexAdapter(
+    final IndexableAdapter adapter2 = new IncrementalIndexAdapter(
         DEFAULT_INTERVAL,
         incrementalIndex2,
         INDEX_SPEC.getBitmapSerdeFactory().getBitmapFactory()
     );
 
-    adapter1 = new IncrementalIndexAdapter(
+    final IndexableAdapter adapter1 = new IncrementalIndexAdapter(
         DEFAULT_INTERVAL,
         incrementalIndex1,
         INDEX_SPEC.getBitmapSerdeFactory().getBitmapFactory()
     );
-  }
 
-  @Test
-  public void testRowValidatorEquals() throws Exception
-  {
     Exception ex = null;
     try {
       TestHelper.getTestIndexIO().validateTwoSegments(adapter1, adapter2);
@@ -313,7 +288,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
       ex = e;
     }
     if (exception != null) {
-      Assert.assertNotNull("Exception was not thrown", ex);
+      Assertions.assertNotNull(ex, "Exception was not thrown");
       if (!exception.isAssignableFrom(ex.getClass())) {
         throw ex;
       }

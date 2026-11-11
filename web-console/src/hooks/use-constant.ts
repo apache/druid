@@ -16,18 +16,9 @@
  * limitations under the License.
  */
 
-import { useRef } from 'react';
-
-interface ValueBox<T> {
-  value: T;
-}
+import { useState } from 'react';
 
 export function useConstant<T>(fn: () => T): T {
-  const box = useRef<ValueBox<T>>();
-
-  if (!box.current) {
-    box.current = { value: fn() };
-  }
-
-  return box.current.value;
+  const [value] = useState(fn);
+  return value;
 }

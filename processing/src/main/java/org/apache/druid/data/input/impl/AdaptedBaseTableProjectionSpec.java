@@ -26,6 +26,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -71,6 +72,17 @@ public final class AdaptedBaseTableProjectionSpec implements BaseTableProjection
   }
 
   @Override
+  public AdaptedBaseTableProjectionSpec withAdditionalColumns(@Nullable List<DimensionSchema> additionalColumns)
+  {
+    if (CollectionUtils.isNullOrEmpty(additionalColumns)) {
+      return this;
+    }
+    final List<DimensionSchema> revised = new ArrayList<>(dimensionsSpec.getDimensions());
+    revised.addAll(additionalColumns);
+    return new AdaptedBaseTableProjectionSpec(granularitySpec, dimensionsSpec.withDimensions(revised), metrics);
+  }
+
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return VirtualColumns.EMPTY;
@@ -98,6 +110,12 @@ public final class AdaptedBaseTableProjectionSpec implements BaseTableProjection
   public Granularity getQueryGranularity()
   {
     return granularitySpec.getQueryGranularity();
+  }
+
+  @Override
+  public boolean isRollup()
+  {
+    return granularitySpec.isRollup();
   }
 
   @Override

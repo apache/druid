@@ -40,6 +40,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
+import org.apache.druid.segment.ResidentCursorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumns;
@@ -64,7 +65,7 @@ import java.util.List;
  *
  * @see RowFrameCursorFactory the row-based version
  */
-public class ColumnarFrameCursorFactory implements CursorFactory
+public class ColumnarFrameCursorFactory implements ResidentCursorFactory
 {
   private final Frame frame;
   private final RowSignature signature;

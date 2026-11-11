@@ -191,10 +191,19 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     String prefix = prefixSignaturePair.lhs;
     RowSignature signature = prefixSignaturePair.rhs;
 
+    final DimFilter leftDimFilter = getDimFilter(plannerContext, leftDesc.rowSignature, leftFilter);
+
+    // Virtual columns that read only the left side are pushed into it, alongside the names it reserves and those that
+    // the left filter reads. The right side is built into a joinable apart from them.
+    final Set<String> reservedNames = new HashSet<>(leftDesc.dataSource.getReservedColumns());
+    if (leftDimFilter != null) {
+      reservedNames.addAll(leftDimFilter.getRequiredColumns());
+    }
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         signature,
         plannerContext.getExpressionParser(),
-        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns(),
+        reservedNames
     );
     plannerContext.setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 
@@ -225,7 +234,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             prefix
         ),
         toDruidJoinType(joinRel.getJoinType()),
-        getDimFilter(plannerContext, leftDesc.rowSignature, leftFilter),
+        leftDimFilter,
         plannerContext.getJoinableFactoryWrapper(),
         QueryUtils.getJoinAlgorithm(joinRel, plannerContext)
     );
@@ -259,10 +268,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignatures.fromRelDataType(
-            joinRel.getRowType().getFieldNames(),
-            joinRel.getRowType()
-        ),
+        RowSignatures.fromRelDataTypeWithUniqueFields(joinRel.getRowType()),
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false,

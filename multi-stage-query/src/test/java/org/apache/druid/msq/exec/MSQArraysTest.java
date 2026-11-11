@@ -26,17 +26,18 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -47,8 +48,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -128,7 +127,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceMvdWithStringArray(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     testIngestQuery()
         .setSql(
@@ -137,11 +136,11 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[dim3] using type[VARCHAR ARRAY] and arrayIngestMode[array], "
-                + "since the existing type is[VARCHAR]"))
+                + "since the existing type is[VARCHAR]"
+            )
         ))
         .verifyExecutionError();
   }
@@ -155,7 +154,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceStringArrayWithMvdInArrayMode(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     testIngestQuery()
         .setSql(
@@ -164,12 +163,12 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[arrayString] using type[VARCHAR] and arrayIngestMode[array], since the "
                 + "existing type is[VARCHAR ARRAY]. Try adjusting your query to make this column an ARRAY instead "
-                + "of VARCHAR."))
+                + "of VARCHAR."
+            )
         ))
         .verifyExecutionError();
   }
@@ -183,7 +182,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceStringArrayWithMvdInMvdMode(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "mvd");
 
     testIngestQuery()
         .setSql(
@@ -192,12 +191,12 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[arrayString] using type[VARCHAR] and arrayIngestMode[mvd], since the "
                 + "existing type is[VARCHAR ARRAY]. Try setting arrayIngestMode to[array] and adjusting your query to "
-                + "make this column an ARRAY instead of VARCHAR."))
+                + "make this column an ARRAY instead of VARCHAR."
+            )
         ))
         .verifyExecutionError();
   }
@@ -211,8 +210,8 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceMvdWithStringArraySkipValidation(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
-    adjustedContext.put(MultiStageQueryContext.CTX_SKIP_TYPE_VERIFICATION, "dim3");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
+    QueryContextParameters.SKIP_TYPE_VERIFICATION.set(adjustedContext, "dim3");
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -251,7 +250,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testReplaceMvdWithMvd(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -343,7 +342,7 @@ public class MSQArraysTest extends MSQTestBase
                                             .build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_USE_AUTO_SCHEMAS, true);
+    QueryContextParameters.USE_AUTO_COLUMN_SCHEMAS.set(adjustedContext, true);
 
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
@@ -373,7 +372,7 @@ public class MSQArraysTest extends MSQTestBase
   public void testInsertArraysWithStringArraysAsMVDs(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "mvd");
 
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
@@ -391,11 +390,9 @@ public class MSQArraysTest extends MSQTestBase
                              + "  )\n"
                              + ") PARTITIONED BY ALL")
                      .setQueryContext(adjustedContext)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Numeric arrays can only be ingested when"))
-                     ))
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains("Numeric arrays can only be ingested when")
+                     )
                      .verifyExecutionError();
   }
 
@@ -552,7 +549,7 @@ public class MSQArraysTest extends MSQTestBase
                                             .build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, "array");
 
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
@@ -749,7 +746,7 @@ public class MSQArraysTest extends MSQTestBase
                                              .build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, arrayIngestMode);
+    QueryContextParameters.ARRAY_INGEST_MODE.set(adjustedContext, arrayIngestMode);
 
     Query<?> expectedQuery = newScanQueryBuilder()
         .dataSource(dataFileExternalDataSource)

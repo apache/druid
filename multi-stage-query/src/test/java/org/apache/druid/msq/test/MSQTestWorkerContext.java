@@ -48,7 +48,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV10;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
@@ -69,6 +69,12 @@ public class MSQTestWorkerContext implements WorkerContext
 {
   private static final Logger log = new Logger(MSQTestWorkerContext.class);
   private static final StupidPool<ByteBuffer> BUFFER_POOL = new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000));
+
+  /**
+   * System property that sets {@link #threadCount()}, the number of processors each worker runs at once. Defaults to 1.
+   * The shared processing pool is sized separately, by {@link CalciteMSQTestsHelper.MSQTestModule#POOL_THREADS_PROPERTY}.
+   */
+  public static final String THREAD_COUNT_PROPERTY = "druid.msq.test.workerThreadCount";
 
   private final String workerId;
   private final Controller controller;
@@ -186,7 +192,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public int threadCount()
   {
-    return 1;
+    return Integer.getInteger(THREAD_COUNT_PROPERTY, 1);
   }
 
   @Override
@@ -316,11 +322,10 @@ public class MSQTestWorkerContext implements WorkerContext
     @Override
     public IndexMerger indexMerger()
     {
-      return new IndexMergerV9(
+      return new IndexMergerV10(
           mapper,
           indexIO(),
-          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-          true
+          OffHeapMemorySegmentWriteOutMediumFactory.instance()
       );
     }
 

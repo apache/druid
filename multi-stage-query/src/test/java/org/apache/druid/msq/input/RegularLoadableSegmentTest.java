@@ -24,23 +24,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
@@ -62,7 +65,10 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.DateTime;
@@ -71,8 +77,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -94,8 +102,10 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   private static final int THREADS = 8;
   private static File SEGMENT_ZIP_FILE;
 
-  @TempDir
-  public Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
+  private Path tempDir;
 
   private List<DataSegment> segments;
   private File cacheDir;
@@ -122,6 +132,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   @BeforeEach
   public void setUp() throws Exception
   {
+    tempDir = temporaryFolder.getRoot().toPath();
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(TestLoadSpec.class);
     jsonMapper.registerModule(new SegmentizerModule());
@@ -141,15 +152,10 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
       final int partitionNum = i % 2;
 
       segments.add(
-          DataSegment.builder()
-                     .dataSource(DATASOURCE)
-                     .interval(
-                         Intervals.utc(
+          DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.utc(
                              startTime.getMillis(),
                              startTime.plusDays(1).getMillis()
-                         )
-                     )
-                     .version("0")
+                         ), "0", partitionNum))
                      .shardSpec(new NumberedShardSpec(partitionNum, 2))
                      .loadSpec(
                          jsonMapper.convertValue(
@@ -164,11 +170,12 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // SegmentManager with virtualStorage for dynamically-loaded data tests
     cacheDir = tempDir.resolve("cache").toFile();
-    final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
-        .setLocations(ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null)))
-        .setVirtualStorage(true)
-        .setVirtualStorageIsEphemeral(true)
-        .setVirtualStoragePartialDownloadsEnabled(true);
+    final SegmentLoaderConfig virtualLoaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
+        .virtualStorage(true)
+        .virtualStorageIsEphemeral(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .build();
     final List<StorageLocation> virtualLocations = virtualLoaderConfig.toStorageLocations();
     segmentManagerDynamic = new SegmentManager(
         new SegmentLocalCacheManager(
@@ -183,8 +190,9 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // SegmentManager without virtualStorage for pre-loaded data tests
     preLoadCacheDir = tempDir.resolve("localCache").toFile();
-    final SegmentLoaderConfig localLoaderConfig = new SegmentLoaderConfig()
-        .setLocations(ImmutableList.of(new StorageLocationConfig(preLoadCacheDir, 10_000_000_000L, null)));
+    final SegmentLoaderConfig localLoaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(preLoadCacheDir, 10_000_000_000L, null))
+        .build();
     final List<StorageLocation> localLocations = localLoaderConfig.toStorageLocations();
     segmentManagerPreLoad = new SegmentManager(
         new SegmentLocalCacheManager(
@@ -240,16 +248,18 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
                   f,
                   ls -> {
                     final AcquireSegmentAction acquireAction = ls.acquire(AcquireMode.PARTIAL);
-                    return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
+                    final SettableFuture<AcquireSegmentAction> ready = SettableFuture.create();
+                    acquireAction.addReadyCallback(() -> ready.set(acquireAction));
+                    return ready;
                   }
               ),
-              pair -> {
-                final AcquireSegmentResult acquireResult = pair.rhs;
-                final Optional<Segment> acquiredSegmentOptional =
-                    acquireResult.getReferenceProvider().acquireReference();
+              (AcquireSegmentAction action) -> {
+                final AcquireSegmentResult acquireResult = action.release();
+                final Optional<Segment> acquiredSegmentOptional = acquireResult.getSegment();
                 Assertions.assertTrue(acquiredSegmentOptional.isPresent());
 
-                try (final AcquireSegmentAction ignored = pair.lhs;
+                // closing the action after release is a no-op; the segment carries all cleanup
+                try (final AcquireSegmentAction ignored = action;
                      final Segment acquiredSegment = acquiredSegmentOptional.get()) {
                   Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
                   RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
@@ -311,16 +321,18 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
                   f,
                   ls -> {
                     final AcquireSegmentAction acquireAction = ls.acquire(AcquireMode.PARTIAL);
-                    return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
+                    final SettableFuture<AcquireSegmentAction> ready = SettableFuture.create();
+                    acquireAction.addReadyCallback(() -> ready.set(acquireAction));
+                    return ready;
                   }
               ),
-              pair -> {
-                final AcquireSegmentResult acquireResult = pair.rhs;
-                final Optional<Segment> acquiredSegmentOptional =
-                    acquireResult.getReferenceProvider().acquireReference();
+              (AcquireSegmentAction action) -> {
+                final AcquireSegmentResult acquireResult = action.release();
+                final Optional<Segment> acquiredSegmentOptional = acquireResult.getSegment();
                 Assertions.assertTrue(acquiredSegmentOptional.isPresent());
 
-                try (final AcquireSegmentAction ignored = pair.lhs;
+                // closing the action after release is a no-op; the segment carries all cleanup
+                try (final AcquireSegmentAction ignored = action;
                      final Segment acquiredSegment = acquiredSegmentOptional.get()) {
                   Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
                   RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
@@ -365,11 +377,12 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     // Load segment into SegmentManager's timeline
     segmentManagerPreLoad.loadSegment(segment);
 
+    final ChannelCounters counters = new ChannelCounters();
     final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
         segmentManagerPreLoad,
         segment.getId(),
         segment.toDescriptor(),
-        null,
+        counters,
         null,
         false
     );
@@ -377,6 +390,14 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     // acquireIfCached should return a segment since it's loaded
     final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(AcquireMode.PARTIAL);
     Assertions.assertTrue(cachedSegment.isPresent());
+
+    // The file is counted only once the segment is handed out, and only once.
+    Assertions.assertNull(counters.snapshot(), "nothing is counted until the segment is handed out");
+    loadableSegment.countHandedOut();
+    loadableSegment.countHandedOut();
+    Assertions.assertEquals(1, lastValue(counters.snapshot().getFiles()));
+    Assertions.assertEquals(1209, lastValue(counters.snapshot().getRows()));
+    Assertions.assertEquals(segment.getSize(), lastValue(counters.snapshot().getBytes()));
 
     try (final Segment acquiredSegment = cachedSegment.get()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
@@ -416,7 +437,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
    * Tests fetching a single segment with CoordinatorClient.
    */
   @Test
-  public void test_fetchSegment_dynamic() throws IOException
+  public void test_fetchSegment_dynamic() throws IOException, InterruptedException
   {
     final DataSegment segment = segments.get(0);
     final TestCoordinatorClientImpl coordinatorClient = new TestCoordinatorClientImpl();
@@ -436,8 +457,9 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // Verify segment acquisition works.
     final AcquireSegmentAction acquireAction = loadableSegment.acquire(AcquireMode.PARTIAL);
-    final AcquireSegmentResult acquireResult = FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), false);
-    final Optional<Segment> acquiredSegmentOptional = acquireResult.getReferenceProvider().acquireReference();
+    acquireAction.await();
+    final AcquireSegmentResult acquireResult = acquireAction.release();
+    final Optional<Segment> acquiredSegmentOptional = acquireResult.getSegment();
     Assertions.assertTrue(acquiredSegmentOptional.isPresent());
 
     try (final AcquireSegmentAction ignored = acquireAction;
@@ -453,7 +475,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
    * Tests fetching a single segment with locally-cached DataSegment.
    */
   @Test
-  public void test_fetchSegment_preLoaded() throws IOException, SegmentLoadingException
+  public void test_fetchSegment_preLoaded() throws IOException, SegmentLoadingException, InterruptedException
   {
     final DataSegment segment = segments.get(0);
 
@@ -475,8 +497,9 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // Verify segment acquisition works.
     final AcquireSegmentAction acquireAction = loadableSegment.acquire(AcquireMode.PARTIAL);
-    final AcquireSegmentResult acquireResult = FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), false);
-    final Optional<Segment> acquiredSegmentOptional = acquireResult.getReferenceProvider().acquireReference();
+    acquireAction.await();
+    final AcquireSegmentResult acquireResult = acquireAction.release();
+    final Optional<Segment> acquiredSegmentOptional = acquireResult.getSegment();
     Assertions.assertTrue(acquiredSegmentOptional.isPresent());
 
     try (final AcquireSegmentAction ignored = acquireAction;
@@ -517,6 +540,212 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
       catch (IOException e) {
         throw new SegmentLoadingException(e, "Failed to load segment in location [%s]", destDir);
       }
+    }
+  }
+
+  /**
+   * Deferred chain, stage-1 cancel: closing the outer handle before the Coordinator fetch resolves must cancel the
+   * fetch and acquire nothing.
+   */
+  @Test
+  public void test_deferredAcquire_closeBeforeCoordinatorFetch()
+  {
+    final DataSegment segment = segments.get(0);
+    final SettableFuture<DataSegment> gate = SettableFuture.create();
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        segmentManagerDynamic,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        new GatedCoordinatorClient(gate),
+        false
+    );
+
+    final AcquireSegmentAction action = loadableSegment.acquire(AcquireMode.PARTIAL);
+    Assertions.assertFalse(action.isReady());
+    action.close();
+
+    Assertions.assertTrue(gate.isCancelled(), "closing the outer handle must cancel the Coordinator fetch");
+    assertCacheDirClean();
+  }
+
+  /**
+   * Deferred chain, closed-before-stage-2 guard: when the Coordinator fetch completes after the outer handle was
+   * closed (simulated with a cancel-resistant future), the inner acquire must never start.
+   */
+  @Test
+  public void test_deferredAcquire_fetchCompletesAfterClose()
+  {
+    final DataSegment segment = segments.get(0);
+    final UncancellableFuture<DataSegment> gate = new UncancellableFuture<>();
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        segmentManagerDynamic,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        new GatedCoordinatorClient(gate),
+        false
+    );
+
+    final AcquireSegmentAction action = loadableSegment.acquire(AcquireMode.PARTIAL);
+    action.close();
+
+    // the fetch survives the cancel attempt and completes; the stage guard must prevent the inner acquire
+    Assertions.assertTrue(gate.setValue(segment));
+    assertCacheDirClean();
+  }
+
+  /**
+   * Deferred chain, stage-2 synchronous throw: if segmentManager.acquireSegment() throws synchronously after the
+   * Coordinator fetch resolves, the failure must surface from the outer handle rather than being swallowed by the
+   * direct-executor callback (which would hang the consumer forever).
+   */
+  @Test
+  public void test_deferredAcquire_innerAcquireThrowIsSurfacedNotSwallowed()
+  {
+    final DataSegment segment = segments.get(0);
+    final DruidException boom = DruidException.forPersona(DruidException.Persona.USER)
+                                             .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                                             .build("no room for segment[%s]", segment.getId());
+    final SegmentManager throwingManager = new SegmentManager(null)
+    {
+      @Override
+      public Optional<VersionedIntervalTimeline<String, DataSegment>> getTimeline(TableDataSource dataSource)
+      {
+        // force the deferred (cachedDataSegment == null) path
+        return Optional.empty();
+      }
+
+      @Override
+      public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
+      {
+        throw boom;
+      }
+    };
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        throwingManager,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        new TestCoordinatorClientImpl(),
+        false
+    );
+
+    final AcquireSegmentAction action = loadableSegment.acquire(AcquireMode.PARTIAL);
+    // bounded await: a hang (swallowed throw) would surface as TimeoutException and fail the test
+    final DruidException thrown = Assertions.assertThrows(DruidException.class, () -> action.await(10_000L));
+    Assertions.assertTrue(thrown.getMessage().contains("no room for segment["), thrown.getMessage());
+    action.close();
+  }
+
+  /**
+   * Deferred chain, close-after-ready without release: closing the outer handle discards the delivered result and
+   * releases everything the acquire placed.
+   */
+  @Test
+  public void test_deferredAcquire_closeAfterReadyUnreleased() throws Exception
+  {
+    final DataSegment segment = segments.get(0);
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        segmentManagerDynamic,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        new TestCoordinatorClientImpl(),
+        false
+    );
+
+    final AcquireSegmentAction action = loadableSegment.acquire(AcquireMode.PARTIAL);
+    action.await();
+    action.close();
+    assertCacheDirClean();
+  }
+
+  /**
+   * A successful {@link AcquireSegmentAction#release()} counts the load. The file, with the segment's row count, is
+   * counted only by {@link RegularLoadableSegment#countHandedOut()}, at most once.
+   */
+  @Test
+  public void test_countDelivered_accounting() throws Exception
+  {
+    final DataSegment segment = segments.get(0);
+    final ChannelCounters counters = new ChannelCounters();
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        segmentManagerDynamic,
+        segment.getId(),
+        segment.toDescriptor(),
+        counters,
+        new TestCoordinatorClientImpl(),
+        false
+    );
+
+    final AcquireSegmentAction action = loadableSegment.acquire(AcquireMode.PARTIAL);
+    action.await();
+    final AcquireSegmentResult result = action.release();
+    Assertions.assertEquals(1, lastValue(counters.snapshot().getLoadFiles()), "the load is counted at release");
+    Assertions.assertEquals(0, lastValue(counters.snapshot().getFiles()), "the file is not counted until handed out");
+
+    loadableSegment.countHandedOut();
+    loadableSegment.countHandedOut();
+    Assertions.assertEquals(1, lastValue(counters.snapshot().getFiles()), "exactly one file per delivery");
+    Assertions.assertEquals(1209, lastValue(counters.snapshot().getRows()));
+
+    try (Segment acquiredSegment = result.getSegment().orElseThrow()) {
+      Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
+    }
+    action.close();
+  }
+
+  /**
+   * Returns the last element of a counter array, or 0 if nothing has been counted.
+   */
+  private static long lastValue(@Nullable final long[] values)
+  {
+    return values == null || values.length == 0 ? 0 : values[values.length - 1];
+  }
+
+  /**
+   * Ephemeral virtual storage deletes segment files once all holds are released, so a clean cache dir proves the
+   * acquire leaked nothing.
+   */
+  private void assertCacheDirClean()
+  {
+    if (!cacheDir.exists()) {
+      // nothing was ever downloaded, which is as clean as it gets
+      return;
+    }
+    Assertions.assertEquals(Set.of("info_dir", "__drop"), Set.of(cacheDir.list()));
+    Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(cacheDir, "__drop").list()));
+    Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(cacheDir, "info_dir").list()));
+  }
+
+  private static class GatedCoordinatorClient extends NoopCoordinatorClient
+  {
+    private final ListenableFuture<DataSegment> future;
+
+    GatedCoordinatorClient(ListenableFuture<DataSegment> future)
+    {
+      this.future = future;
+    }
+
+    @Override
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
+    {
+      return future;
+    }
+  }
+
+  private static class UncancellableFuture<T> extends AbstractFuture<T>
+  {
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning)
+    {
+      return false;
+    }
+
+    boolean setValue(T value)
+    {
+      return set(value);
     }
   }
 

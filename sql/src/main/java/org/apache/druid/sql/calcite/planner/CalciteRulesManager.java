@@ -55,6 +55,7 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
 import org.apache.druid.sql.calcite.rule.AggregateMergeRule;
 import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
@@ -69,8 +70,8 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterDecomposeCoalesceRule;
 import org.apache.druid.sql.calcite.rule.FilterDecomposeConcatRule;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
-import org.apache.druid.sql.calcite.rule.FixIncorrectInExpansionTypes;
 import org.apache.druid.sql.calcite.rule.FlattenConcatRule;
+import org.apache.druid.sql.calcite.rule.InlineValuesSubQueryRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
@@ -84,12 +85,23 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.hook.DruidHook;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 public class CalciteRulesManager
 {
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_PLANNER_BLOAT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final String BLOAT_PROPERTY = "sqlPlannerBloat";
+
+  /**
+   * @deprecated Use the declared default of {@link QueryContextParameters#SQL_PLANNER_BLOAT} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
+  public static final int DEFAULT_BLOAT = 1000;
+
   private static final Logger log = new Logger(CalciteRulesManager.class);
 
   public static final int DRUID_CONVENTION_RULES = 0;
@@ -99,9 +111,6 @@ public class CalciteRulesManager
   private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.parseInt(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
-  public static final String BLOAT_PROPERTY = "sqlPlannerBloat";
-  public static final int DEFAULT_BLOAT = 1000;
-
   /**
    * Rules from {@link org.apache.calcite.plan.RelOptRules#BASE_RULES}, minus:
    *
@@ -322,7 +331,7 @@ public class CalciteRulesManager
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
     final List<Program> prePrograms = new ArrayList<>();
     prePrograms.add(new LoggingProgram("Start", isDebug));
-    prePrograms.add(sqlToRelWorkaroundProgram());
+    prePrograms.add(new InlineValuesSubQueryRule(plannerContext));
     prePrograms.add(Programs.subQuery(DefaultRelMetadataProvider.INSTANCE));
     prePrograms.add(new LoggingProgram("Finished subquery program", isDebug));
     prePrograms.add(DecorrelateAndTrimFieldsProgram.INSTANCE);
@@ -336,12 +345,6 @@ public class CalciteRulesManager
     }
 
     return Programs.sequence(prePrograms.toArray(new Program[0]));
-  }
-
-  private Program sqlToRelWorkaroundProgram()
-  {
-    Set<RelOptRule> rules = Collections.singleton(new FixIncorrectInExpansionTypes());
-    return Programs.hep(rules, true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   /**
@@ -504,8 +507,7 @@ public class CalciteRulesManager
 
   private int getBloatProperty(PlannerContext plannerContext)
   {
-    final Integer bloat = plannerContext.queryContext().getInt(BLOAT_PROPERTY);
-    return (bloat != null) ? bloat : DEFAULT_BLOAT;
+    return plannerContext.queryContext().getOrDefault(QueryContextParameters.SQL_PLANNER_BLOAT);
   }
 
   public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext, boolean withJoinRules)

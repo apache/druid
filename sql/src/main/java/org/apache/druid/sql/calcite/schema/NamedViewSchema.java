@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 
 public class NamedViewSchema implements NamedSchema
@@ -28,7 +28,6 @@ public class NamedViewSchema implements NamedSchema
   public static final String NAME = "view";
   private final ViewSchema viewSchema;
 
-  @Inject
   public NamedViewSchema(ViewSchema viewSchema)
   {
     this.viewSchema = viewSchema;
@@ -41,9 +40,9 @@ public class NamedViewSchema implements NamedSchema
   }
 
   @Override
-  public String getSchemaResourceType(String resourceName)
+  public Resource getSchemaResource(String resourceName)
   {
-    return ResourceType.VIEW;
+    return new Resource(resourceName, ResourceType.VIEW);
   }
 
   @Override

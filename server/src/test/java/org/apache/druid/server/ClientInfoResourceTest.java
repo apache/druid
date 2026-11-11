@@ -36,6 +36,7 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -43,9 +44,9 @@ import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -64,7 +65,7 @@ public class ClientInfoResourceTest
   private TimelineServerView timelineServerView;
   private ClientInfoResource resource;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     VersionedIntervalTimeline<String, ServerSelector> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
@@ -147,7 +148,7 @@ public class ClientInfoResourceTest
         KEY_METRICS, ImmutableSet.of("m1", "m2")
     );
     EasyMock.verify(serverInventoryView);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -164,7 +165,7 @@ public class ClientInfoResourceTest
     );
 
     EasyMock.verify(serverInventoryView, timelineServerView);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -185,7 +186,7 @@ public class ClientInfoResourceTest
     );
 
     EasyMock.verify(serverInventoryView, timelineServerView);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -194,7 +195,7 @@ public class ClientInfoResourceTest
     Map<String, Object> actual = resource.getDatasource(dataSource, null, null);
     Map<String, Object> expected = ImmutableMap.of(KEY_DIMENSIONS, ImmutableSet.of(), KEY_METRICS, ImmutableSet.of());
 
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -213,7 +214,7 @@ public class ClientInfoResourceTest
 
     Map<String, Object> actual = defaultResource.getDatasource(dataSource, null, null);
 
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -240,7 +241,7 @@ public class ClientInfoResourceTest
     );
 
     EasyMock.verify(serverInventoryView, timelineServerView);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
 
   }
 
@@ -265,7 +266,7 @@ public class ClientInfoResourceTest
     );
 
     EasyMock.verify(serverInventoryView, timelineServerView);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   /**
@@ -287,7 +288,7 @@ public class ClientInfoResourceTest
     );
 
     EasyMock.verify(serverInventoryView, timelineServerView);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   /**
@@ -300,7 +301,7 @@ public class ClientInfoResourceTest
     Map<String, Object> expected = ImmutableMap.of();
 
     EasyMock.verify(serverInventoryView, timelineServerView);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -348,7 +349,7 @@ public class ClientInfoResourceTest
     ).build();
 
     EasyMock.verify(serverInventoryView, timelineServerView);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   private void addSegment(
@@ -360,10 +361,7 @@ public class ClientInfoResourceTest
       String version
   )
   {
-    DataSegment segment = DataSegment.builder()
-                                     .dataSource(dataSource)
-                                     .interval(Intervals.of(interval))
-                                     .version(version)
+    DataSegment segment = DataSegment.builder(SegmentId.of(dataSource, Intervals.of(interval), version, 0))
                                      .dimensions(dims)
                                      .metrics(metrics)
                                      .size(1)
@@ -383,10 +381,7 @@ public class ClientInfoResourceTest
       ShardSpec shardSpec
   )
   {
-    DataSegment segment = DataSegment.builder()
-                                     .dataSource(dataSource)
-                                     .interval(Intervals.of(interval))
-                                     .version(version)
+    DataSegment segment = DataSegment.builder(SegmentId.of(dataSource, Intervals.of(interval), version, shardSpec))
                                      .dimensions(dims)
                                      .metrics(metrics)
                                      .shardSpec(shardSpec)

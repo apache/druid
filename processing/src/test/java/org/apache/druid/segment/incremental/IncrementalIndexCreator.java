@@ -188,7 +188,8 @@ public class IncrementalIndexCreator implements Closeable
    *
    * we can test all the input combinations as follows:
    * {@code
-   *   @Parameterized.Parameters(name = "{index}: {0}, {1}")
+   *   @ParameterizedClass(name = "{index}: {0}, {1}")
+   *   @MethodSource("constructorFeeder")
    *   public static Collection<?> constructorFeeder()
    *   {
    *     return IncrementalIndexCreator.indexTypeCartesianProduct(

@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
 /**
  * Vectorized selector for primitive columns.
  *
- * @see org.apache.druid.segment.ColumnValueSelector, the non-vectorized version.
+ * @see org.apache.druid.segment.ColumnValueSelector the non-vectorized version.
  */
 public interface VectorValueSelector extends VectorSizeInspector
 {

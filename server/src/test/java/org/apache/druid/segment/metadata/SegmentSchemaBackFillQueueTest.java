@@ -37,8 +37,8 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,7 +49,7 @@ import java.util.concurrent.CountDownLatch;
 
 public class SegmentSchemaBackFillQueueTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
@@ -94,41 +94,32 @@ public class SegmentSchemaBackFillQueueTest
           }
         };
 
-    final DataSegment segment1 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-01/2023-01-02"),
-        "2023-01-01",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    final DataSegment segment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-01-02"), "2023-01-01", 0))
+                                            .loadSpec(ImmutableMap.of("path", "a-1"))
+                                            .dimensions(ImmutableList.of("dim1"))
+                                            .metrics(ImmutableList.of("m1"))
+                                            .shardSpec(new LinearShardSpec(0))
+                                            .binaryVersion(9)
+                                            .size(100)
+                                            .build();
 
-    final DataSegment segment2 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-02/2023-01-03"),
-        "2023-02-01",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    final DataSegment segment2 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-02/2023-01-03"), "2023-02-01", 0))
+                                            .loadSpec(ImmutableMap.of("path", "a-1"))
+                                            .dimensions(ImmutableList.of("dim1"))
+                                            .metrics(ImmutableList.of("m1"))
+                                            .shardSpec(new LinearShardSpec(0))
+                                            .binaryVersion(9)
+                                            .size(100)
+                                            .build();
 
-    final DataSegment segment3 = new DataSegment(
-        "foo1",
-        Intervals.of("2023-01-01/2023-01-02"),
-        "2023-01-01",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    final DataSegment segment3 = DataSegment.builder(SegmentId.of("foo1", Intervals.of("2023-01-01/2023-01-02"), "2023-01-01", 0))
+                                            .loadSpec(ImmutableMap.of("path", "a-1"))
+                                            .dimensions(ImmutableList.of("dim1"))
+                                            .metrics(ImmutableList.of("m1"))
+                                            .shardSpec(new LinearShardSpec(0))
+                                            .binaryVersion(9)
+                                            .size(100)
+                                            .build();
     Set<DataSegment> segments = new HashSet<>();
     segments.add(segment1);
     segments.add(segment2);
