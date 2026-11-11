@@ -28,12 +28,14 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
+import org.apache.druid.msq.exec.MSQMetrics;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerFailureListener;
@@ -207,10 +209,20 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(MSQMetricEventBuilder metricBuilder)
+  public ServiceMetricEvent.Builder makeMetricBuilder()
   {
-    metricBuilder.setDartDimensions(context);
-    metricBuilder.setDimension(QueryContextParameters.DART_QUERY_ID.getName(), context.get(QueryContextParameters.DART_QUERY_ID));
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    MSQMetrics.setQueryDimensions(metricBuilder, context, DartSqlEngine.NAME);
+    metricBuilder.setDimension(
+        QueryContextParameters.DART_QUERY_ID.getName(),
+        context.get(QueryContextParameters.DART_QUERY_ID)
+    );
+    return metricBuilder;
+  }
+
+  @Override
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
+  {
     emitter.emit(metricBuilder);
   }
 

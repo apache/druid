@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReaderProvider;
@@ -62,10 +63,14 @@ public interface WorkerContext extends Closeable
   Injector injector();
 
   /**
-   * Emit the metric in the {@link MSQMetricEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
-   * context dependant dimensions.
+   * Returns a new builder with appropriate dimensions for a worker metric.
    */
-  void emitMetric(MSQMetricEventBuilder metricBuilder);
+  ServiceMetricEvent.Builder makeMetricBuilder();
+
+  /**
+   * Emits the provided metric using a {@link ServiceEmitter}.
+   */
+  void emitMetric(ServiceMetricEvent.Builder metricBuilder);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in

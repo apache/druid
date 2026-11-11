@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -54,7 +55,6 @@ import org.apache.druid.sql.hook.DruidHook;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class NativeQueryMaker implements QueryMaker
@@ -184,8 +184,8 @@ public class NativeQueryMaker implements QueryMaker
     Hook.QUERY_PLAN.run(query);
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, query);
 
-    if (query.getId() == null) {
-      final String queryId = UUID.randomUUID().toString();
+    if (Strings.isNullOrEmpty(query.getId())) {
+      final String queryId = plannerContext.getSqlQueryId();
       plannerContext.addNativeQueryId(queryId);
       query = query.withId(queryId);
     } else {

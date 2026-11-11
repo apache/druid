@@ -27,15 +27,17 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.messages.PostCounters;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartWorkerConfig;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
+import org.apache.druid.msq.exec.MSQMetrics;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -216,10 +218,17 @@ public class DartWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(MSQMetricEventBuilder metricBuilder)
+  public ServiceMetricEvent.Builder makeMetricBuilder()
   {
-    metricBuilder.setDartDimensions(queryContext);
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    MSQMetrics.setQueryDimensions(metricBuilder, queryContext, DartSqlEngine.NAME);
     metricBuilder.setDimension(QueryContextParameters.DART_QUERY_ID.getName(), queryId());
+    return metricBuilder;
+  }
+
+  @Override
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
+  {
     emitter.emit(metricBuilder);
   }
 
