@@ -19,18 +19,18 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
-import org.apache.druid.java.util.common.Stopwatch;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.joda.time.Duration;
-
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.druid.java.util.common.Stopwatch;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.joda.time.Duration;
 
 public class ScheduledExecutors
 {
@@ -84,7 +84,11 @@ public class ScheduledExecutors
               signal = callable.call();
             }
             catch (Throwable e) {
-              log.warn(e, "Uncaught exception. Rescheduling.");
+              if(exec.isShutdown()){
+                log.debug("Exception from %s during shutdown, not rescheduling: %s",callable, e.toString());
+              } else{
+                log.warn(e, "Uncaught exception. Rescheduling.");
+              }
             }
 
             if (signal == Signal.REPEAT && !exec.isShutdown()) {

@@ -19,10 +19,6 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
-import org.joda.time.Duration;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -30,6 +26,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.LogEvent;
+import org.joda.time.Duration;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class ScheduledExecutorsTest
 {
@@ -362,4 +366,115 @@ public class ScheduledExecutorsTest
       exec.shutdownNow();
     }
   }
+
+  @RegisterExtension
+  public final LoggerCaptureExtension logCaptureExtension = new LoggerCaptureExtension(ScheduledExecutors.class);
+
+  @Test
+  public void testScheduleAtFixedRateLogsQuietlyWhenExecutorAlreadyShutdown() throws Exception
+  {
+    final Duration initialDelay = Duration.millis(0);
+    final Duration period = Duration.millis(1000);
+    final ScheduledExecutorService delegate = Execs.scheduledSingleThreaded("testQuietShutdown-%d");
+    final ScheduledExecutorService alreadyShutdownExec = new ShutdownReportingExecutor(delegate);
+
+    try {
+      ScheduledExecutors.scheduleAtFixedRate(
+          alreadyShutdownExec,
+          initialDelay,
+          period,
+          () -> {
+            throw new RuntimeException("simulated shutdown-ordering failure");
+          }
+      );
+
+      logCaptureExtension.awaitLogEvents();
+    }
+    finally {
+      delegate.shutdownNow();
+    }
+
+    final List<LogEvent> events = logCaptureExtension.getLogEvents();
+    Assertions.assertFalse(
+        events.stream().anyMatch(e -> e.getLevel().equals(Level.WARN)),
+        "no WARN-level stack trace should be logged when the executor is already shut down"
+    );
+  }
+
+  /**
+   * Minimal {@link ScheduledExecutorService} that delegates scheduling to a real executor
+   * but always reports {@link #isShutdown()} as {@code true}, for testing shutdown-path
+   * behavior without needing to win a real shutdown race.
+   */
+  private static class ShutdownReportingExecutor extends java.util.concurrent.AbstractExecutorService
+      implements ScheduledExecutorService
+  {
+    private final ScheduledExecutorService delegate;
+
+    ShutdownReportingExecutor(ScheduledExecutorService delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public boolean isShutdown()
+    {
+      return true;
+    }
+
+    @Override
+    public java.util.concurrent.ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)
+    {
+      return delegate.schedule(command, delay, unit);
+    }
+
+    @Override
+    public <V> java.util.concurrent.ScheduledFuture<V> schedule(java.util.concurrent.Callable<V> callable, long delay, TimeUnit unit)
+    {
+      throw new UnsupportedOperationException("Not used by this test.");
+    }
+
+    @Override
+    public java.util.concurrent.ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit)
+    {
+      throw new UnsupportedOperationException("Not used by this test.");
+    }
+
+    @Override
+    public java.util.concurrent.ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit)
+    {
+      throw new UnsupportedOperationException("Not used by this test.");
+    }
+
+    @Override
+    public void shutdown()
+    {
+      delegate.shutdown();
+    }
+
+    @Override
+    public List<Runnable> shutdownNow()
+    {
+      return delegate.shutdownNow();
+    }
+
+    @Override
+    public boolean isTerminated()
+    {
+      return delegate.isTerminated();
+    }
+
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException
+    {
+      return delegate.awaitTermination(timeout, unit);
+    }
+
+    @Override
+    public void execute(Runnable command)
+    {
+      delegate.execute(command);
+    }
+  }
 }
+

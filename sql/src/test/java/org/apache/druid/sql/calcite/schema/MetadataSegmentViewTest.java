@@ -227,4 +227,42 @@ public class MetadataSegmentViewTest
       }
     };
   }
+  
+  @Test
+  public void test_stop_interruptsBlockedPoll() throws Exception
+  {
+    final CountDownLatch pollStarted = new CountDownLatch(1);
+    final CountDownLatch interrupted = new CountDownLatch(1);
+
+    Mockito.when(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(
+            ArgumentMatchers.eq(null),
+            ArgumentMatchers.eq(true)
+        )
+    ).thenAnswer(invocation -> {
+      pollStarted.countDown();
+      try {
+        // Block to simulate a hung coordinator call; stop() should interrupt this
+        // rather than letting it run to completion (or fail with ServiceClosedException
+        // once the coordinator's locator has already stopped).
+        Thread.sleep(TimeUnit.MINUTES.toMillis(5));
+      }
+      catch (InterruptedException e) {
+        interrupted.countDown();
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+      return Futures.immediateFuture(StupidResourceHolder.create(List.<SegmentStatusInCluster>of().iterator()));
+    });
+
+    segmentView.start();
+    Assertions.assertTrue(pollStarted.await(5, TimeUnit.SECONDS), "poll should have started");
+
+    segmentView.stop();
+
+    Assertions.assertTrue(
+        interrupted.await(5, TimeUnit.SECONDS),
+        "stop() should interrupt an in-flight poll blocked on the coordinator call"
+    );
+  }
 }
