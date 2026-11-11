@@ -16,29 +16,9 @@
 name: "CI"
 
 on:
-  push:
-    branches:
-      - master
-      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
-  pull_request:
-    branches:
-      - master
-      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
-
-concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  pull-requests: read # paths-filter lists a PR's files; coverage-jacoco reads its labels
-  actions: read # actions-timeline reads the run's jobs
+  workflow_call:
 
 jobs:
-  # Path filtering lives here, not in a workflow-level paths-ignore: a skipped workflow
-  # never reports quality-gate, so docs-only PRs could not merge once it is required.
   changes:
     runs-on: ubuntu-slim
     outputs:
@@ -64,52 +44,9 @@ jobs:
               - '!examples/**/jupyter-notebooks/**'
               - '!web-console/**'
               - '!website/**'
-              # PR automation that the build and tests do not use
-              - '!.github/dependabot.yml'
-              - '!.github/labeler.yml'
-              - '!.github/scripts/auto-add-milestone.sh'
-              - '!.github/scripts/backport-pr.sh'
-              - '!.github/workflows/backport.yml'
-              - '!.github/workflows/labeler.yml'
-              - '!.github/workflows/pr-checks.yml'
-              - '!.github/workflows/pr-merged.yml'
-              - '!.github/workflows/stale.yml'
 
-  distribution-build:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/packaging-check.sh
-      summary: "Builds the release distribution with the apache-release profile and checks its licenses."
-      key: "packaging-check-jdk25"
-
-  docs-and-web-console:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/web-checks.sh
-      summary: "Builds the website and checks its links and spelling, then builds the web console and runs its e2e tests."
-      key: "web-checks"
-      artifact_prefix: "web-checks-logs"
-
-  static-analysis:
-    needs: changes
-    if: ${{ needs.changes.outputs.java == 'true' }}
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/static-checks-maven.sh
-      summary: "The Maven static checks in static-checks-maven.sh, ending with an OpenRewrite dry run."
-      key: "static-checks-maven"
-
-  error-prone:
-    needs: changes
-    if: ${{ needs.changes.outputs.java == 'true' }}
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/strict-compilation.sh
-      summary: "Compiles main and test code with the Error Prone checks of the strictCompile profile."
-      key: "strict-compilation"
-
-  unit-tests:
-    name: "unit-tests (classes ${{ matrix.pattern }})"
+  run-unit-tests:
+    name: "unit tests(main)"
     needs: changes
     if: ${{ needs.changes.outputs.java == 'true' }}
     strategy:
@@ -119,151 +56,78 @@ jobs:
         pattern: [ "C*", "S*", "K*,U*,Z*,Y*,X*", "N*,Q*", "I*,L*,J*", "M*,A*,V*,W*", "E*,G*,F*", "R*,B*,P*", "H*,D*,T*,O*" ]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run_unit-tests '-Dtest=!QTest,${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
-      summary: "Unit tests and the in-JVM embedded-cluster tests whose class names start with ${{ matrix.pattern }}. QTest runs in sql-query-tests."
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
       artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
       execute: ${{ matrix.jdk == '25' || github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-jdk21') }}
 
-  sql-query-tests:
-    name: "sql-query-tests (part ${{ matrix.part }} of 4)"
+  reporting-jacoco-coverage-failures:
+    name: "coverage-jacoco"
+    needs: [run-unit-tests, run-separated-tests]
+    uses: ./.github/workflows/worker.yml
+    if: ${{ success() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') && github.event_name != 'push' }}
+    with:
+      script: .github/scripts/create-jacoco-coverage-report.sh
+      artifacts_to_download: "unit-test-reports-jdk25*"
+      key: "coverage-jacoco"
+
+  run-separated-tests:
     needs: changes
     if: ${{ needs.changes.outputs.java == 'true' }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { part: 1, split: "0/4" }
-          - { part: 2, split: "1/4" }
-          - { part: 3, split: "2/4" }
-          - { part: 4, split: "3/4" }
+          - name: "QTest 0/4"
+            args: "-Dtest=QTest -Dquidem.split=0/4"
+          - name: "QTest 1/4"
+            args: "-Dtest=QTest -Dquidem.split=1/4"
+          - name: "QTest 2/4"
+            args: "-Dtest=QTest -Dquidem.split=2/4"
+          - name: "QTest 3/4"
+            args: "-Dtest=QTest -Dquidem.split=3/4"
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run_unit-tests -Dtest=QTest -Dquidem.split=${{ matrix.split }} -Dmaven.test.failure.ignore=true
-      summary: "QTest in quidem-ut: SQL queries checked against expected results on the native, MSQ and Dart engines. Its .iq files are split by path hash into 4 parts; this is part ${{ matrix.part }}."
+      script: .github/scripts/run_unit-tests ${{ matrix.args }} -Dmaven.test.failure.ignore=true
+      key: ${{ matrix.name }}
       artifact_prefix: "unit-test-reports-jdk25"
-      key: "QTest ${{ matrix.split }}"
 
-  coverage-jacoco:
-    needs: [changes, unit-tests, sql-query-tests]
-    if: ${{ success() && needs.changes.outputs.java == 'true' && github.event_name != 'push' }}
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/create-jacoco-coverage-report.sh
-      summary: "Fails when changed lines are less than 50% covered by the unit tests. The jacoco:skip label skips it."
-      artifacts_to_download: "unit-test-reports-jdk25*"
-      key: "coverage-jacoco"
-      skip_label: "jacoco:skip"
-
-  docker-image-tests:
+  static-checks-maven:
     needs: changes
     if: ${{ needs.changes.outputs.java == 'true' }}
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - name: Set Docker image env var
-        run: echo "DRUID_DIST_IMAGE_NAME=apache/druid:docker-tests" >> $GITHUB_ENV
-      - name: Setup Java
-        uses: actions/setup-java@v6
-        with:
-          distribution: 'zulu'
-          java-version: 25
-          cache: 'maven'
-      - name: Build the Druid distribution for the Docker image
-        # Build only what the Docker image needs: the binary distribution tarball.
-        # Release-only work and static checks are skipped. Same flags as the builder stage in
-        # distribution/docker/Dockerfile. This also installs every reactor module
-        # into the local Maven repository, which run_docker-tests relies on.
-        # benchmarks is excluded: nothing in the distribution or the Docker tests
-        # depends on it. The web console assets are skipped too: no Docker test
-        # uses the console, the router tolerates the missing assets, and the
-        # console is fully built and packaged by distribution-build on every commit.
-        run: ./mvnw -B clean install -pl '!benchmarks' -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests -Dweb.console.skip=true
-      - name: Build the Docker image
-        run: |
-          set -o pipefail
-          {
-            cat distribution/docker/Dockerfile
-            printf '\nENV JAVA_TOOL_OPTIONS="-XX:+UseCompactObjectHeaders"\n'
-          } | DOCKER_BUILDKIT=1 docker build \
-            --build-arg BUILD_FROM_SOURCE=false \
-            -t "$DRUID_DIST_IMAGE_NAME" \
-            -f - .
-      - name: Run Docker tests
-        id: run-it
-        run: .github/scripts/run_docker-tests
-        timeout-minutes: 60
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/static-checks-maven.sh
+      key: "static-checks-maven"
 
-      - name: Tar Druid container logs
-        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        run: tar cvzf ./druid-container-logs.tgz ./embedded-tests/druid-container-logs
+  strict-compilation:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/strict-compilation.sh
+      key: "strict-compilation"
 
-      - name: Upload Druid container logs to GitHub
-        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: failure-druid-container-logs
-          path: druid-container-logs.tgz
-      - name: Collect docker logs on failure
-        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        run: |
-          mkdir docker-logs
-          for c in $(docker ps -a --format="{{.Names}}")
-          do
-            docker logs $c > ./docker-logs/$c.log
-          done
+  docker-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
+    uses: ./.github/workflows/docker-tests.yml
 
-      - name: Tar docker logs
-        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        run: tar cvzf ./docker-logs.tgz ./docker-logs
+  packaging-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ '25' ]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/packaging-check.sh
+      jdk: ${{ matrix.jdk }}
+      key: "packaging-check-jdk${{ matrix.jdk }}"
 
-      - name: Upload docker logs to GitHub
-        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: failure-docker-logs
-          path: docker-logs.tgz
-
-      - name: Collect failsafe reports on failure
-        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        run: |
-          tar cvzf ./failsafe-logs.tgz ./embedded-tests/target/failsafe-reports
-
-      - name: Upload failsafe reports to GitHub
-        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: failure-failsafe-logs
-          path: failsafe-logs.tgz
-
-  # The one check to require in .asf.yaml. A job skipped by a condition reports success,
-  # so this job always runs and fails itself unless every job it needs passed.
-  quality-gate:
-    name: "quality-gate"
-    if: always()
-    needs: [changes, distribution-build, docs-and-web-console, static-analysis, error-prone, unit-tests, sql-query-tests, coverage-jacoco, docker-image-tests]
-    runs-on: ubuntu-slim
-    steps:
-      # Third-party actions must be pinned to a SHA on the ASF allowlist
-      # https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
-      - uses: Kesin11/actions-timeline@460b1f8a750077029ad3589824d371b200e91dcf # v3.2.1
-        continue-on-error: true
-      - name: Check that every job passed
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-          JAVA: ${{ needs.changes.outputs.java }}
-        run: |
-          fail=0
-          for job in $(jq -r 'keys[]' <<<"$NEEDS"); do
-            result=$(jq -r --arg j "$job" '.[$j].result' <<<"$NEEDS")
-            echo "$job: $result"
-            case "$result" in
-              success) ;;
-              # Without Java changes the Java jobs skip; coverage-jacoco also skips on push.
-              skipped)
-                if [ "$JAVA" = true ] && ! { [ "$job" = coverage-jacoco ] && [ "$GITHUB_EVENT_NAME" = push ]; }; then fail=1; fi ;;
-              *) fail=1 ;;
-            esac
-          done
-          exit $fail
+  web-checks:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/web-checks.sh
+      key: "web-checks"
+      artifact_prefix: "web-checks-logs"
