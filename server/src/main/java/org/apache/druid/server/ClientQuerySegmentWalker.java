@@ -854,6 +854,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension(DruidMetrics.ID, query.getId())
+                              .setDimension(DruidMetrics.QUERY_ID, query.getId())
                               .setDimension(DruidMetrics.SUBQUERY_ID, query.getSubQueryId())
                               .setMetric(ROWS_COUNT_METRIC, limitAccumulator.get() - initialSubqueryRows)
         );
@@ -861,6 +862,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension(DruidMetrics.ID, query.getId())
+                              .setDimension(DruidMetrics.QUERY_ID, query.getId())
                               .setDimension(DruidMetrics.SUBQUERY_ID, query.getSubQueryId())
                               .setMetric(BYTES_COUNT_METRIC, memoryLimitAccumulator.get() - initialSubqueryBytes)
         );
@@ -927,6 +929,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       emitter.emit(
           ServiceMetricEvent.builder()
                             .setDimension(DruidMetrics.ID, query.getId())
+                            .setDimension(DruidMetrics.QUERY_ID, query.getId())
                             .setDimension(DruidMetrics.SUBQUERY_ID, query.getSubQueryId())
                             .setMetric(ROWS_COUNT_METRIC, limitAccumulator.get() - initialSubqueryRows)
       );

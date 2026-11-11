@@ -120,12 +120,30 @@ public class IndexerControllerContextTest
                     .put(DruidMetrics.TAGS, tags)
                     .put(DruidMetrics.GROUP_ID, "controller")
                     .put(DruidMetrics.ID, "query")
+                    .put(DruidMetrics.QUERY_ID, "query")
                     .put(QueryContextParameters.SQL_QUERY_ID.getName(), "sqlQuery")
                     .put(DruidMetrics.TYPE, "msq")
                     .put(DruidMetrics.ENGINE, MSQTaskSqlEngine.NAME)
                     .build(),
         event.getUserDims()
     );
+  }
+
+  @Test
+  public void test_makeMetricBuilder_noQueryIdInContext()
+  {
+    final MSQControllerTask task = makeTask(
+        Map.of(QueryContextParameters.SQL_QUERY_ID.getName(), "sqlQuery"),
+        Map.of()
+    );
+
+    final ServiceMetricEvent event = makeContext(task).makeMetricBuilder()
+                                                      .setMetric("query/time", 1)
+                                                      .build(ImmutableMap.of());
+
+    Assertions.assertFalse(event.getUserDims().containsKey(DruidMetrics.ID));
+    Assertions.assertFalse(event.getUserDims().containsKey(DruidMetrics.QUERY_ID));
+    Assertions.assertEquals("sqlQuery", event.getUserDims().get(QueryContextParameters.SQL_QUERY_ID.getName()));
   }
 
   @Test

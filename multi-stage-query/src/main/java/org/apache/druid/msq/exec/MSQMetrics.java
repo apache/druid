@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.exec;
 
-import com.google.common.base.Strings;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
@@ -44,6 +43,7 @@ public class MSQMetrics
    * Sets the following dimensions:
    * <ul>
    * <li>id</li>
+   * <li>queryId</li>
    * <li>sqlQueryId</li>
    * <li>type</li>
    * <li>engine</li>
@@ -55,11 +55,13 @@ public class MSQMetrics
       final String engine
   )
   {
-    final String sqlQueryId = queryContext.get(QueryContextParameters.SQL_QUERY_ID);
-    final String contextQueryId = queryContext.get(QueryContextParameters.QUERY_ID);
-    final String queryId = Strings.isNullOrEmpty(contextQueryId) ? sqlQueryId : contextQueryId;
+    final String queryId = queryContext.get(QueryContextParameters.QUERY_ID);
     builder.setDimensionIfNotNull(DruidMetrics.ID, queryId);
-    builder.setDimensionIfNotNull(QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId);
+    builder.setDimensionIfNotNull(DruidMetrics.QUERY_ID, queryId);
+    builder.setDimensionIfNotNull(
+        QueryContextParameters.SQL_QUERY_ID.getName(),
+        queryContext.get(QueryContextParameters.SQL_QUERY_ID)
+    );
     builder.setDimension(DruidMetrics.TYPE, QUERY_METRIC_TYPE);
     builder.setDimension(DruidMetrics.ENGINE, engine);
   }
