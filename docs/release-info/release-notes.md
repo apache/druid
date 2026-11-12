@@ -59,7 +59,7 @@ This section contains important information about new and existing features.
 
 ### Java
 
-Support for Java 21 has been dropped. Yuo must upgrade to Java 25.
+Support for Java 21 has been dropped. You must upgrade to Java 25.
 
 ### DDL statements for the catalog (experimental)
 
@@ -88,8 +88,8 @@ The new `ingest/events/filtered` metric reports how many records header filterin
 Common query context parameters listed in [Query context reference](../querying/query-context-reference.md) and [Scan queries](../querying/scan-query.md) are now typed `QueryContextParameter` descriptors. The following changes apply to the query context handling:
 
 * Integer and long parameters reject values that aren't exact integers instead of truncating or wrapping them. For example `1.5`, and values out of range. Integral values like 5.0 or "5.0" are still accepted. Invalid values now fail with an error message: "Query context parameter [x] should be ...."
-* A null in the query context, or SET x = NULL, no longer clears a default configured with druid.query.default.context or the Broker dynamic configuration. The default applies as if the key were not set. Previously the null reached readers, which used the built-in default. To override a configured default, set an explicit value.
-* `maxSubqueryBytes` is a typed string parameter that accepts auto, disabled or a non-negative number of bytes, as the subquery guardrail does. Invalid values such as SET maxSubqueryBytes = TRUE now fail during validation, and numbers such as 1e9 are now accepted.
+* A null in the query context, or SET x = NULL, no longer clears a default configured with `druid.query.default.context` or the Broker dynamic configuration. The default applies as if the key were not set. Previously the null reached readers, which used the built-in default. To override a configured default, set an explicit value.
+* `maxSubqueryBytes` is a typed string parameter that accepts auto, disabled or a non-negative number of bytes, as the subquery guardrail does. Invalid values such as `SET maxSubqueryBytes = TRUE` now fail during validation, and numbers such as `1e9` are now accepted.
 
 [#20555][https://github.com/apache/druid/pull/20555/)
 
@@ -114,7 +114,7 @@ There are new configs that control the behavior of the HTTP client: `druid.globa
 
 You can now enable QoS filtering for the Coordinator to prevent a burst of slow API requests from exhausting the thread pool and blocking health checks.
 
-Use `druid.coordinator.server.maxConcurrentRequests` to configure this feature (default: max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))). Set this property to `0` to turn it off.
+Use `druid.coordinator.server.maxConcurrentRequests` to configure this feature `(default: max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8)))`. Set this property to `0` to turn it off.
 
 Leader-status endpoints are excluded from the cap so load balancers/monitors stay unaffected.
 
@@ -146,11 +146,11 @@ Kafka supervisors now accept `ioConfig.partitionIds`, which lets you ingest only
 
 - You can now simulate the cost-based autoscaler for Kafka to help determine the optimal task count for different amounts of lag. [#19687](https://github.com/apache/druid/pull/19687)
 - You can now set a critical lag threshold for the cost-based autoscaler. When lag reaches 75% of the threshold, the autoscaler bypasses the scale-up boundary. When lag reaches 100%, the autoscaler scales up to the maximum task count. [#19655](https://github.com/apache/druid/pull/19655)
-- You can now choose to configure cooldown for the costBased auto-scaler for a supervisor in one of 2 ways:
+- You can now choose to configure cooldown for the cost-based autoscaler for a supervisor in one of 2 ways:
      - **High sensitivity**: Set `minScaleUpDelay / minScaleDownDelay < taskDuration`. For example if `minScaleUpDelay = taskDuration / 2`, there would be at most 1 scaling event between 2 task rollovers
-     - **Low sensitivity** : Set `minScaleUpDelay / minScaleDownDelay > taskDuration`. In this case, the cooldowns are effectively ignored and the scaling happens on task rollover only.
+     - **Low sensitivity** : Set `minScaleUpDelay / minScaleDownDelay > taskDuration`. In this case, cooldown is effectively ignored and the scaling happens on task rollover only.
      [#20706](https://github.com/apache/druid/pull/20706)
-- The cost-based autoscaler now uses running averages instead of instantaneous values of task metrics to make decisions for the costBased auto-scaler. This leads to smoother scaling but may sometimes come at the cost of slightly delayed responses to change in metric trends that occur towards the end of the task lifecycle. For higher sensitivity to changing trends, set `minScaleUpDelay` and `minScaleDownDelay` to be smaller than `taskDuration`.
+- The cost-based autoscaler now uses running averages instead of instantaneous values of task metrics to make decisions for the cost based auto-scaler. This leads to smoother scaling but may sometimes come at the cost of slightly delayed responses to change in metric trends that occur towards the end of the task lifecycle. For higher sensitivity to changing trends, set `minScaleUpDelay` and `minScaleDownDelay` to be smaller than `taskDuration`.
 
 ##### Other streaming ingestion improvements
 
@@ -164,7 +164,7 @@ You can now limit how long the Broker spends planning a SQL query with the new `
 
 [#20314](https://github.com/apache/druid/pull/20314)
 
-#### Fixed JDK HTTPClient Failures caused by query response trailers
+#### Fixed JDK HTTP client Failures caused by query response trailers
 
 Brokers and Historicals now send the `X-Druid-Response-Complete` and `X-Error-Message` HTTP trailers only when the request includes the `TE: trailers` header. Clients that read these trailers must send that header. This fixes query failures (`java.net.ProtocolException: CR expected`) in `java.net.http.HttpClient-based` clients, including the Druid JDBC driver, on JDK 17.0.21, 21.0.13 and 25.0.5.
 
@@ -228,15 +228,15 @@ Users who query tables they don't have READ permission for now see a "not found"
 
 To restore the previous behavior, set `druid.sql.planner.authorizeTableVisibility` to `false`.
 
-Additionally, when set to `true`, INSERT and REPLACE require both READ and WRITE access to the target table. If this property is set to `false`, they only require WRITE permission.Regardless of the value of this property, tables only appear in INFORMATION_SCHEMA if the user has READ access to them.
+Additionally, when set to `true`, INSERT and REPLACE require both READ and WRITE access to the target table. If this property is set to `false`, they only require WRITE permission. Regardless of the value of this property, tables only appear in INFORMATION_SCHEMA if the user has READ access to them.
 
 This is a breaking change that affects the permissions you need. For more information, see [permissions changes for SQL-based ingestion](#permissions-changes-for-sql-based-ingestion).
 
 [#20075](https://github.com/apache/druid/pull/20075)
 
-#### JAVA_HOME
+#### Java home variable
 
-Middle Managers now honor JAVA_HOME when using the `bin/java` script, which should be present in the working directory.
+Middle Managers now honor `JAVA_HOME` when using the `bin/java` script, which should be present in the working directory.
 
 Druid uses the following logic
 
@@ -369,7 +369,7 @@ To keep the previous behavior, pin the old dimension list with `druid.emitter.st
 
 #### Web console code editor
 
-The web console's code editors moved from Ace (`ace-builds` and `react-ace`) to CodeMirror 6. All editors now share a single `CodeEditor` component, including the workbench, the explore view's SQL inputs, JSON inputs, spec and value dialogs, history, and explain. Two Lezer grammars, one for DruidSQL and one for Hjson, drive the highlighting and the completions.
+The web console's code editors moved from Ace (`ace-builds` and `react-ace`) to Code Mirror 6. All editors now share a single `CodeEditor` component, including the workbench, the explore view's SQL inputs, JSON inputs, spec and value dialogs, history, and explain. Two Lezer grammars, one for DruidSQL and one for Hjson, drive the highlighting and the completions.
 
 [#20507](https://github.com/apache/druid/pull/20507)
 
