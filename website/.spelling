@@ -2630,12 +2630,6 @@ SRE
 reachability
 ownership_mismatch
 giveup
-Lezer
-MD5
-Hjson
-spec
-dialog
-
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2695,6 +2689,3 @@ getters
 savepoints
 Scrollable
 updatable
-
- ../docs/release-infor/release-notes.md
-dialogs

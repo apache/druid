@@ -1,1 +1,0 @@
-V	101011000000Z		11111115	unknown	/C=DR/ST=DR/L=Druid City/O=Druid/OU=IntegrationTests/CN=localhost/emailAddress=integration-test@druid.apache.org
