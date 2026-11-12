@@ -39,8 +39,10 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
@@ -51,6 +53,7 @@ import java.util.Arrays;
 public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 {
   private static final Logger log = new Logger(ResultLevelCachingQueryRunner.class);
+  private static final byte RESULT_LEVEL_CACHE_KEY_WITH_DATASOURCE_AND_INTERVALS = 0x1;
   private final QueryRunner baseRunner;
   private ObjectMapper objectMapper;
   private final Cache cache;
@@ -95,7 +98,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     if (useResultCache || populateResultCache) {
 
-      final byte[] queryCacheKey = strategy.computeResultLevelCacheKey(query);
+      final byte[] queryCacheKey = computeResultLevelCacheKey();
       final Cache.NamedKey cacheKey = CacheUtil.computeResultLevelCacheKey(queryCacheKey);
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKey);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
@@ -204,6 +207,29 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       return cache.get(cacheKey);
     }
     return null;
+  }
+
+  private byte[] computeResultLevelCacheKey()
+  {
+    final byte[] queryCacheKey = strategy.computeResultLevelCacheKey(query);
+    if (!cacheConfig.isIncludeDatasourceAndIntervalsInResultLevelCacheKey()) {
+      return queryCacheKey;
+    }
+    // The cached value still starts with the ETag, which is checked before the entry is used. Adding the datasource
+    // and intervals to the key gives queries that differ only by interval or datasource their own entries, instead of
+    // one shared entry that each of them overwrites. The byte arrays are length-prefixed so that where one ends and the
+    // next begins is unambiguous.
+    final CacheKeyBuilder builder = new CacheKeyBuilder(RESULT_LEVEL_CACHE_KEY_WITH_DATASOURCE_AND_INTERVALS)
+        .appendInt(queryCacheKey.length)
+        .appendByteArray(queryCacheKey);
+    final byte[] dataSourceCacheKey = query.getDataSource().getCacheKey();
+    if (dataSourceCacheKey != null) {
+      builder.appendInt(dataSourceCacheKey.length).appendByteArray(dataSourceCacheKey);
+    }
+    for (Interval interval : query.getIntervals()) {
+      builder.appendLong(interval.getStartMillis()).appendLong(interval.getEndMillis());
+    }
+    return builder.build();
   }
 
   private String extractEtagFromResults(

@@ -47,6 +47,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -103,10 +104,7 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       return walker.add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE)
-                     .interval(index.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(DATA_SOURCE, index.getDataInterval(), "1", 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(0)
                      .build(),
@@ -145,6 +143,22 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
 
     Assertions.assertTrue(e.getMessage().contains(
         "Cannot apply 'BITMAP64_EXACT_COUNT' to arguments of type 'BITMAP64_EXACT_COUNT(<COMPLEX<HYPERUNIQUE>>)'"));
+  }
+
+  @Test
+  public void testExactCountOnNonNumericStringLiteralThrowsError()
+  {
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT BITMAP64_EXACT_COUNT('abc') FROM " + DATA_SOURCE,
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+
+    Assertions.assertTrue(e.getMessage().contains(
+        "Function [BITMAP64_EXACT_COUNT] argument [1] must be numeric, got string literal ['abc']"));
   }
 
   @Test

@@ -35,10 +35,6 @@
 
     <repositories>
         <repository>
-            <id>confluent</id>
-            <url>https://packages.confluent.io/maven/</url>
-        </repository>
-        <repository>
             <id>datasets</id>
             <url>https://raw.githubusercontent.com/kgyrtkirk/datasets/repo/</url>
         </repository>
@@ -347,7 +343,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-schema-registry-client</artifactId>
-            <version>8.3.2</version>
+            <version>8.4.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
@@ -382,7 +378,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-protobuf-provider</artifactId>
-            <version>8.3.2</version>
+            <version>8.4.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>

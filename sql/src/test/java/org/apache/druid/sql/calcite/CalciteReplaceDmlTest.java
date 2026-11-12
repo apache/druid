@@ -1112,4 +1112,19 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         ))
         .verify();
   }
+
+  @Test
+  public void testReplaceWithSqlTimeCondition()
+  {
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(QueryContextParameters.SQL_TIME_CONDITION.getName(), "2000/2001");
+
+    testIngestionQuery()
+        .context(context)
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Context parameter [sqlTimeCondition] cannot be provided on operator [REPLACE]"
+        ))
+        .verify();
+  }
 }

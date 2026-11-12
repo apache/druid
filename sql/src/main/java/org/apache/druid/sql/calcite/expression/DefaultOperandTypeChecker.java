@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlCallBinding;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
@@ -33,8 +34,12 @@ import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.validate.implicit.TypeCoercion;
 import org.apache.calcite.util.Static;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeCoercion;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -53,14 +58,14 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
    * {@link #operandTypes} are used instead.
    */
   private final List<String> operandNames;
-  private final List<SqlTypeFamily> operandTypes;
+  private final List<OperandType> operandTypes;
   private final int requiredOperands;
   private final IntSet nullableOperands;
   private final IntSet literalOperands;
 
   private DefaultOperandTypeChecker(
       final List<String> operandNames,
-      final List<SqlTypeFamily> operandTypes,
+      final List<OperandType> operandTypes,
       final int requiredOperands,
       final IntSet nullableOperands,
       @Nullable final int[] literalOperands
@@ -110,13 +115,40 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
         }
       }
 
+      final OperandType expectedType = operandTypes.get(i);
+      if (expectedType.isCoerceStrings() && operand instanceof SqlCharStringLiteral) {
+        // Verify that a string literal can be converted to a number. This must happen before coercion, which would
+        // otherwise turn it into a null number. Explicit CASTs are not checked, since they are the user's intent.
+        final String value = ((SqlCharStringLiteral) operand).getValueAs(String.class);
+        if (!Calcites.isNumericString(value)) {
+          if (throwOnFailure) {
+            throw Calcites.nonNumericStringLiteralError(
+                StringUtils.format(
+                    "Function [%s] argument [%s]",
+                    callBinding.getOperator().getName(),
+                    operandNames.isEmpty() ? i + 1 : operandNames.get(i)
+                ),
+                value
+            );
+          } else {
+            return false;
+          }
+        }
+      }
+
       final RelDataType operandType = callBinding.getValidator().deriveType(callBinding.getScope(), operand);
-      final SqlTypeFamily expectedFamily = operandTypes.get(i);
+      final SqlTypeFamily expectedFamily = expectedType.getFamily();
 
       if (expectedFamily == SqlTypeFamily.ANY) {
         // ANY matches anything. This operand is all good; do nothing.
       } else if (expectedFamily.getTypeNames().contains(operandType.getSqlTypeName())) {
         // Operand came in with one of the expected types.
+      } else if (expectedType.isAllowedComplexType(operandType)) {
+        // Operand came in with one of the complex types allowed for this operand.
+      } else if (expectedType.isCoerceStrings() && SqlTypeFamily.DATETIME.contains(operandType)) {
+        // Operand came in with a datetime type, which Druid stores as a number of milliseconds.
+      } else if (expectedType.isCoerceStrings() && coerceToNumber(callBinding, i, operandType)) {
+        // Operand was a character string, and is now cast to a number.
       } else if (operandType.getSqlTypeName() == SqlTypeName.NULL || SqlUtil.isNullLiteral(operand, true)) {
         // Null came in, check if operand is a nullable type.
         if (!nullableOperands.contains(i)) {
@@ -136,6 +168,37 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
     }
 
     return true;
+  }
+
+  /**
+   * Casts a character string operand to DOUBLE using implicit type coercion. Returns false, without changing the
+   * operand, if the operand is not a character string or if type coercion is not available.
+   */
+  private static boolean coerceToNumber(
+      final SqlCallBinding callBinding,
+      final int operand,
+      final RelDataType operandType
+  )
+  {
+    if (!SqlTypeFamily.CHARACTER.contains(operandType) || !callBinding.isTypeCoercionEnabled()) {
+      return false;
+    }
+
+    final TypeCoercion typeCoercion = callBinding.getValidator().getTypeCoercion();
+    if (!(typeCoercion instanceof DruidTypeCoercion)) {
+      return false;
+    }
+
+    return ((DruidTypeCoercion) typeCoercion).coerceOperand(
+        callBinding.getScope(),
+        callBinding.getCall(),
+        operand,
+        Calcites.createSqlTypeWithNullability(
+            callBinding.getTypeFactory(),
+            SqlTypeName.DOUBLE,
+            operandType.isNullable()
+        )
+    );
   }
 
   @Override
@@ -183,7 +246,7 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
   public static class Builder
   {
     private List<String> operandNames = Collections.emptyList();
-    private List<SqlTypeFamily> operandTypes;
+    private List<OperandType> operandTypes;
 
     @Nullable
     private Integer requiredOperandCount;
@@ -206,16 +269,24 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
       return this;
     }
 
-    public Builder operandTypes(final SqlTypeFamily... operandTypes)
+    /**
+     * Sets the operand types, which may accept complex types or coerce strings, such as
+     * {@code OperandType.numeric().orComplex(type).coerceStrings()}.
+     */
+    public Builder operandTypes(final OperandType... operandTypes)
     {
       this.operandTypes = Arrays.asList(operandTypes);
       return this;
     }
 
+    public Builder operandTypes(final SqlTypeFamily... operandTypes)
+    {
+      return operandTypes(Arrays.stream(operandTypes).map(OperandType::of).toArray(OperandType[]::new));
+    }
+
     public Builder operandTypes(final List<SqlTypeFamily> operandTypes)
     {
-      this.operandTypes = operandTypes;
-      return this;
+      return operandTypes(operandTypes.stream().map(OperandType::of).toArray(OperandType[]::new));
     }
 
     public Builder requiredOperandCount(Integer requiredOperandCount)
@@ -243,16 +314,30 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
           operandNames,
           operandTypes,
           computedRequiredOperandCount,
-          DefaultOperandTypeChecker.buildNullableOperands(computedRequiredOperandCount, operandTypes.size(), notNullOperands),
+          DefaultOperandTypeChecker.buildNullableOperands(computedRequiredOperandCount, operandTypes, notNullOperands),
           literalOperands
       );
     }
   }
 
-  public static IntSet buildNullableOperands(int requiredOperandCount, int totalOperandCount, IntSet notNullOperands)
+  /**
+   * Returns the indexes of operands that accept NULL literals: optional operands, and operands declared with
+   * {@link OperandType#nullable()}. Operands in notNullOperands are always excluded, even if they are optional or
+   * nullable.
+   *
+   * @param requiredOperandCount number of required operands, at most the number of operand types
+   * @param operandTypes         types of all operands
+   * @param notNullOperands      indexes of operands that never accept NULL literals
+   */
+  public static IntSet buildNullableOperands(
+      int requiredOperandCount,
+      List<OperandType> operandTypes,
+      IntSet notNullOperands
+  )
   {
     final IntSet nullableOperands = new IntArraySet();
-    IntStream.range(requiredOperandCount, totalOperandCount)
+    IntStream.range(0, operandTypes.size())
+             .filter(i -> i >= requiredOperandCount || operandTypes.get(i).isNullable())
              .filter(i -> !notNullOperands.contains(i))
              .forEach(nullableOperands::add);
     return nullableOperands;

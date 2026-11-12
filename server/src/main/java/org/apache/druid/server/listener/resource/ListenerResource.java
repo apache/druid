@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.ServletResourceUtils;
+import org.apache.druid.server.security.ForbiddenException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -88,6 +89,9 @@ public abstract class ListenerResource
     try {
       return handler.handlePOSTAll(inputStream, mapper);
     }
+    catch (ForbiddenException e) {
+      throw e;
+    }
     catch (Exception e) {
       LOG.error(e, "Exception in handling POSTAll request");
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
@@ -108,6 +112,9 @@ public abstract class ListenerResource
     final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
     try {
       return handler.handleUpdates(inputStream, mapper);
+    }
+    catch (ForbiddenException e) {
+      throw e;
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling updates request");

@@ -157,7 +157,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
         javaOpts(task),
         taskConfig.getTaskDir(task.getId()),
         taskRunnerConfig.getCpuCoreInMicro(),
-        node.isEnableTlsPort()
+        node.isEnableTlsPort(),
+        task.getId()
     );
     PodSpec podSpec = pod.getSpec();
     massageSpec(podSpec, taskRunnerConfig.getPrimaryContainerName());
@@ -329,6 +330,17 @@ public abstract class K8sTaskAdapter implements TaskAdapter
                 "metadata.name"
             )).build()).build()
     );
+
+    // Pass the task id through the environment rather than as a command argument: the command is flattened into a
+    // single "sh -c" string, which would split task ids containing spaces. peon.sh forwards it to CliPeon as --taskId.
+    if (context.getTaskId() != null) {
+      envVars.add(
+          new EnvVarBuilder()
+              .withName(DruidK8sConstants.TASK_ID_ENV)
+              .withValue(context.getTaskId())
+              .build()
+      );
+    }
 
     if (taskContents.length() < DruidK8sConstants.MAX_ENV_VARIABLE_KBS) {
       envVars.add(
@@ -505,8 +517,6 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     command.add("--loadBroadcastDatasourceMode");
     command.add(task.getBroadcastDatasourceLoadingSpec().getMode().toString());
 
-    command.add("--taskId");
-    command.add(task.getId());
     log.info(
         "Peon Command for K8s job: %s",
         ForkingTaskRunner.getMaskedCommand(startupLoggingConfig.getMaskProperties(), command)

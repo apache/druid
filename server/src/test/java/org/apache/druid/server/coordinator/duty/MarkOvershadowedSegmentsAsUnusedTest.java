@@ -37,6 +37,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -51,9 +52,7 @@ public class MarkOvershadowedSegmentsAsUnusedTest
 {
   private final DateTime start = DateTimes.of("2012-01-01");
 
-  private final DataSegment segmentV0 = DataSegment.builder().dataSource("test")
-                                                   .interval(new Interval(start, start.plusHours(1)))
-                                                   .version("0")
+  private final DataSegment segmentV0 = DataSegment.builder(SegmentId.of("test", new Interval(start, start.plusHours(1)), "0", 0))
                                                    .size(0)
                                                    .build();
   private final DataSegment segmentV1 = segmentV0.withVersion("1");

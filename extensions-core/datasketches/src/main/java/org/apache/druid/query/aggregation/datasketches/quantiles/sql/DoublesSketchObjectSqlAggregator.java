@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.OperandType;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -51,7 +52,10 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
   private static final SqlAggFunction FUNCTION_INSTANCE =
       OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "k")
-                         .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
+                         .operandTypes(
+                             OperandType.numeric().orComplex(DoublesSketchModule.TYPE).coerceStrings().nullable(),
+                             OperandType.of(SqlTypeFamily.EXACT_NUMERIC)
+                         )
                          .returnTypeInference(
                              Calcites.complexReturnTypeWithNullability(DoublesSketchModule.TYPE, false)
                          )

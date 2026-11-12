@@ -52,6 +52,7 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterAll;
@@ -237,10 +238,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
       int numCorePartitions
   )
   {
-    return DataSegment.builder()
-                      .dataSource(DATASOURCE)
-                      .interval(interval)
-                      .version("1")
+    return DataSegment.builder(SegmentId.of(DATASOURCE, interval, "1", partitionId))
                       .shardSpec(new NumberedShardSpec(partitionId, numCorePartitions))
                       .size(10)
                       .build();

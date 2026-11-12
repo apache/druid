@@ -32,6 +32,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
@@ -428,17 +429,14 @@ public class S3DataSegmentPusherTest
   {
     S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(zip));
 
-    DataSegment segmentToPush = new DataSegment(
-            "foo",
-            Intervals.of("2015/2016"),
-            "0",
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            size
-    );
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush, useUniquePath);
 

@@ -27,10 +27,12 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.broker.BrokerClientImpl;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.CoordinatorClientConfig;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -57,7 +59,7 @@ public class ServiceClientModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    // Nothing to do.
+    JsonConfigProvider.bind(binder, "druid.client.coordinator", CoordinatorClientConfig.class);
   }
 
   @Provides
@@ -112,13 +114,14 @@ public class ServiceClientModule implements DruidModule
   @Coordinator
   public ServiceClient makeServiceClientForCoordinator(
       @EscalatedGlobal final ServiceClientFactory clientFactory,
-      @Coordinator final ServiceLocator serviceLocator
+      @Coordinator final ServiceLocator serviceLocator,
+      final CoordinatorClientConfig config
   )
   {
     return clientFactory.makeClient(
         NodeRole.COORDINATOR.getJsonName(),
         serviceLocator,
-        StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
+        StandardRetryPolicy.builder().maxAttempts(config.getMaxAttempts()).build()
     );
   }
 

@@ -56,6 +56,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -122,10 +123,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", schemaInfo.getDataInterval(), "1", 0))
                                                .shardSpec(new LinearShardSpec(0))
                                                .size(0)
                                                .build();
@@ -140,10 +138,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
 
 
     final SegmentGenerator otherGenerator = CLOSER.register(new SegmentGenerator());
-    final DataSegment otherSegment = DataSegment.builder()
-                                                .dataSource("foo")
-                                                .interval(schemaInfo.getDataInterval())
-                                                .version("2")
+    final DataSegment otherSegment = DataSegment.builder(SegmentId.of("foo", schemaInfo.getDataInterval(), "2", 0))
                                                 .shardSpec(new LinearShardSpec(0))
                                                 .size(0)
                                                 .build();

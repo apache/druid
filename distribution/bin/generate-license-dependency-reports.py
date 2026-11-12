@@ -59,17 +59,20 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
 
     if not exclude_ext:
         extensions_core_path = os.path.join(druid_path, "extensions-core")
-        command = "mvn -Dexec.executable='echo' -Dexec.args='${basedir}' exec:exec -q | grep extensions-core | grep -o '[^/]*$'"
+        command = "mvn -Dexec.executable='echo' -Dexec.args='${basedir} ${project.artifactId}' exec:exec -q | grep extensions-core | grep -o '[^/]*$'"
         extension_dirs = subprocess.check_output(command, cwd=druid_path, shell=True).decode().split('\n')[:-1]
         print("Found {} extensions".format(len(extension_dirs)))
-        for extension_dir in extension_dirs:
-            print("extension dir: {}".format(extension_dir))
+        for extension_dir_and_artifact_id in extension_dirs:
+            extension_dir, artifact_id = extension_dir_and_artifact_id.split(' ')
+            print("extension dir: {}, artifactId: {}".format(extension_dir, artifact_id))
             extension_path = os.path.join(extensions_core_path, extension_dir)
             if not os.path.isdir(extension_path):
                 print("{} is not a directory".format(extension_path))
                 continue
 
-            extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
+            # Name the report after the artifactId, which is the extension's directory in the binary distribution
+            # and the module tag check-licenses.py matches against licenses.yaml (extensions/<artifactId>).
+            extension_report_dir = "{}/{}".format(license_ext_path, artifact_id)
             script_args.append((extension_path, os.path.join(extension_path, "target", "reports"), extension_report_dir))
 
     print("Generating dependency reports")

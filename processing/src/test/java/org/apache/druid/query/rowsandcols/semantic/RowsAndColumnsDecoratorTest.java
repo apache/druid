@@ -322,7 +322,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
             siggy.getColumnType(columnNum).orElseThrow(() -> new UOE("debug me")).getStrategy();
 
         final Comparator<Object[]> newComp = (lhs, rhs) ->
-            strategy.compare(lhs[columnNum], rhs[columnNum]) * order.getDirection().getDirectionInt();
+            Integer.signum(strategy.compare(lhs[columnNum], rhs[columnNum])) * order.getDirection().getDirectionInt();
 
         if (comparator == null) {
           comparator = newComp;

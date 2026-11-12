@@ -762,6 +762,34 @@ public class ExecutionVertexTest
   }
 
   @Test
+  public void testJoinSubqueryToLookup()
+  {
+    final QueryDataSource queryDataSource = new QueryDataSource(
+        GroupByQuery.builder()
+                    .setDataSource(TABLE_FOO)
+                    .setInterval(Intervals.ONLY_ETERNITY)
+                    .setGranularity(Granularities.ALL)
+                    .build()
+    );
+    final JoinDataSource joinDataSource = join(
+        queryDataSource,
+        LOOKUP_LOOKYLOO,
+        "1.",
+        JoinType.INNER
+    );
+
+    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
+
+    // The subquery is executed separately, so it is the base, and the effective intervals are the outer query's.
+    Assertions.assertFalse(ev.isProcessable());
+    Assertions.assertFalse(ev.isTableBased());
+    Assertions.assertEquals(queryDataSource, ev.getBaseDataSource());
+    Assertions.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
+    Assertions.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertTrue(ev.isSegmentMapFunctionExpensive());
+  }
+
+  @Test
   public void testHashCodeIsNotSupported()
   {
     assertThrows(Exception.class, () -> ExecutionVertex.of(makeScanQuery(TABLE_FOO)).hashCode());

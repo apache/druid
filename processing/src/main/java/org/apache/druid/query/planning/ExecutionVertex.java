@@ -347,10 +347,10 @@ public class ExecutionVertex
         return false;
       }
       if (node.dataSource instanceof QueryDataSource) {
-        EVNode parentNode = parents.get(parents.size() - 2);
-        if (parentNode.isQuery()) {
-          return parentNode.getQuery().mayCollapseQueryDataSource();
-        }
+        // Subqueries are part of this vertex only if the query directly above them can collapse them. Subqueries
+        // under other datasources, such as the left-hand side of a join, are executed separately.
+        final EVNode parentNode = parents.get(parents.size() - 2);
+        return parentNode.isQuery() && parentNode.getQuery().mayCollapseQueryDataSource();
       }
       if (node.dataSource instanceof UnionDataSource) {
         return false;

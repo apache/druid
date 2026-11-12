@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
@@ -52,7 +54,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
 
   private static final Logger LOGGER = new Logger(SchemaRegistryBasedProtobufBytesDecoder.class);
 
-  private final SchemaRegistryClient registry;
+  private final Supplier<SchemaRegistryClient> registry;
   private final String url;
   private final int capacity;
   private final List<String> urls;
@@ -86,7 +88,8 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
       throw new IAE("SchemaRegistryBasedProtobufBytesDecoder requires non-null URLs");
     }
 
-    this.registry = new CachedSchemaRegistryClient(
+    // Client is created lazily: its constructor reads keystores and other resources named in the config.
+    this.registry = Suppliers.memoize(() -> new CachedSchemaRegistryClient(
         baseUrls,
         this.capacity,
         Collections.singletonList(new ProtobufSchemaProvider()),
@@ -100,7 +103,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
             DRUID_DYNAMIC_CONFIG_PROVIDER_KEY,
             this.jsonMapper
         )
-    );
+    ));
   }
 
   @JsonProperty
@@ -147,7 +150,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.urls = null;
     this.config = null;
     this.headers = null;
-    this.registry = registry;
+    this.registry = () -> registry;
     this.jsonMapper = new ObjectMapper();
   }
 
@@ -179,7 +182,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     int length = bytes.limit() - 2 - 4;
     Descriptors.Descriptor descriptor;
     try {
-      ProtobufSchema schema = (ProtobufSchema) registry.getSchemaById(id);
+      ProtobufSchema schema = (ProtobufSchema) registry.get().getSchemaById(id);
       descriptor = schema.toDescriptor();
     }
     catch (RestClientException e) {

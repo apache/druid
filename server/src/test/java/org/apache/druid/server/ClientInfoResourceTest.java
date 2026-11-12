@@ -36,6 +36,7 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -360,10 +361,7 @@ public class ClientInfoResourceTest
       String version
   )
   {
-    DataSegment segment = DataSegment.builder()
-                                     .dataSource(dataSource)
-                                     .interval(Intervals.of(interval))
-                                     .version(version)
+    DataSegment segment = DataSegment.builder(SegmentId.of(dataSource, Intervals.of(interval), version, 0))
                                      .dimensions(dims)
                                      .metrics(metrics)
                                      .size(1)
@@ -383,10 +381,7 @@ public class ClientInfoResourceTest
       ShardSpec shardSpec
   )
   {
-    DataSegment segment = DataSegment.builder()
-                                     .dataSource(dataSource)
-                                     .interval(Intervals.of(interval))
-                                     .version(version)
+    DataSegment segment = DataSegment.builder(SegmentId.of(dataSource, Intervals.of(interval), version, shardSpec))
                                      .dimensions(dims)
                                      .metrics(metrics)
                                      .shardSpec(shardSpec)

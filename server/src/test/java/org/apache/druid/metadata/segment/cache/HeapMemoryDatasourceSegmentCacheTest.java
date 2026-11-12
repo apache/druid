@@ -706,6 +706,45 @@ public class HeapMemoryDatasourceSegmentCacheTest
   }
 
   @Test
+  public void testMarkSegmentsWithinIntervalAsUnused_ignoresPartiallyOverlappingSegments()
+  {
+    cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT));
+
+    // Interval lies strictly inside JAN_1_SEGMENT
+    final Interval firstHourOfJan = FIRST_DAY_OF_JAN.withDurationAfterStart(Duration.standardHours(1));
+    Assertions.assertEquals(0, cache.markSegmentsWithinIntervalAsUnused(firstHourOfJan, null, DateTimes.nowUtc()));
+
+    // Interval overlaps the end of JAN_1_SEGMENT and the start of JAN_2_SEGMENT
+    final Interval straddlingJan1AndJan2 = new Interval(
+        FIRST_DAY_OF_JAN.getEnd().minusHours(12),
+        FIRST_DAY_OF_JAN.getEnd().plusHours(12)
+    );
+    Assertions.assertEquals(
+        0,
+        cache.markSegmentsWithinIntervalAsUnused(straddlingJan1AndJan2, null, DateTimes.nowUtc())
+    );
+
+    Assertions.assertEquals(
+        Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT),
+        cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
+    );
+
+    // Interval that fully contains JAN_1_SEGMENT marks only that segment
+    Assertions.assertEquals(
+        1,
+        cache.markSegmentsWithinIntervalAsUnused(
+            new Interval(FIRST_DAY_OF_JAN.getStart().minusHours(12), FIRST_DAY_OF_JAN.getEnd().plusHours(12)),
+            null,
+            DateTimes.nowUtc()
+        )
+    );
+    Assertions.assertEquals(
+        Set.of(JAN_2_SEGMENT),
+        cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
+    );
+  }
+
+  @Test
   public void testMarkSegmentAsUnused()
   {
     cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT));

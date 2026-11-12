@@ -363,16 +363,10 @@ public class PartialQueryableIndex implements QueryableIndex
       Predicate<String> servableBundles
   )
   {
-    final SortedSet<AggregateProjectionMetadata> servable =
-        new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
-    for (AggregateProjectionMetadata projection : projections) {
-      if (servableBundles.test(projection.getSchema().getName())) {
-        servable.add(projection);
-      }
-    }
     return Projections.findMatchingProjection(
         cursorBuildSpec,
-        servable,
+        projections,
+        servableBundles,
         dataInterval,
         this::checkProjectionHasColumn,
         this::getProjectionQueryableIndex
@@ -488,7 +482,7 @@ public class PartialQueryableIndex implements QueryableIndex
     final ColumnHolderTable baseColumns = clusterGroupColumnsByIndex.computeIfAbsent(
         groupIndex,
         i -> buildColumnSuppliers(
-            Projections.getClusterGroupBundleName(groupSpec.getClusteringValueIds()),
+            groupSpec.getBundleName(),
             clusteredBaseSummary.getTimeColumnName(),
             groupSpec.getNumRows(),
             clusteredBaseSummary.getGroupColumnNames(),
@@ -571,7 +565,7 @@ public class PartialQueryableIndex implements QueryableIndex
       final List<TableClusterGroupSpec> candidateGroups = new ArrayList<>(getClusterGroupSchemas());
       if (servableBundles != null) {
         candidateGroups.removeIf(
-            group -> !servableBundles.test(Projections.getClusterGroupBundleName(group.getClusteringValueIds()))
+            group -> !servableBundles.test(group.getBundleName())
         );
       }
       final ClusterGroupQueryPlan clusterGroupPlan = Projections.planClusterGroupQuery(candidateGroups, spec);
@@ -582,7 +576,7 @@ public class PartialQueryableIndex implements QueryableIndex
         final Set<String> required = requiredColumns(groupIndex, null, groupSpec);
         bundles.add(
             new PrefetchBundle(
-                Projections.getClusterGroupBundleName(group.getClusteringValueIds()),
+                group.getBundleName(),
                 groupIndex,
                 required,
                 () -> planClusterGroupPrefetch(group, required)
@@ -922,7 +916,7 @@ public class PartialQueryableIndex implements QueryableIndex
       throw DruidException.defensive("planClusterGroupPrefetch called on a non-clustered segment");
     }
     return planPrefetch(
-        Projections.getClusterGroupBundleName(groupSpec.getClusteringValueIds()),
+        groupSpec.getBundleName(),
         clusteredBaseSummary.getTimeColumnName(),
         column -> Projections.getClusterGroupSegmentInternalFileName(groupSpec.getClusteringValueIds(), column),
         columns

@@ -59,6 +59,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,10 +83,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                   .put(QueryContextParameters.INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.name())
                   .toMap();
   public static final DataSegment LOADED_SEGMENT_1 =
-      DataSegment.builder()
-                 .dataSource(CalciteTests.DATASOURCE1)
-                 .interval(Intervals.of("2003-01-01T00:00:00.000Z/2004-01-01T00:00:00.000Z"))
-                 .version("1")
+      DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE1, Intervals.of("2003-01-01T00:00:00.000Z/2004-01-01T00:00:00.000Z"), "1", 0))
                  .shardSpec(new LinearShardSpec(0))
                  .size(0)
                  .build();
@@ -229,6 +227,77 @@ public class MSQLoadedSegmentTests extends MSQTestBase
             new Object[]{1L, "def"},
             new Object[]{1L, "qwe"},
             new Object[]{1L, "tyu"}
+        ))
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectWithLoadedSegmentsOnFooWithMultipleYielders()
+  {
+    final RowSignature resultSignature =
+        RowSignature.builder()
+                    .add("cnt", ColumnType.LONG)
+                    .add("dim1", ColumnType.STRING)
+                    .build();
+
+    doReturn(
+        Futures.immediateFuture(
+            new DataServerQueryResult<>(
+                ImmutableList.of(
+                    Yielders.each(
+                        Sequences.simple(
+                            ImmutableList.of(
+                                new Object[]{1L, "qwe"},
+                                new Object[]{1L, "tyu"}
+                            )
+                        )
+                    ),
+                    Yielders.each(Sequences.empty()),
+                    Yielders.each(
+                        Sequences.simple(
+                            ImmutableList.of(
+                                new Object[]{1L, "uio"}
+                            )
+                        )
+                    )
+                ),
+                ImmutableList.of(),
+                "foo"
+            )
+        )).when(dataServerQueryHandler)
+          .fetchRowsFromDataServer(any(), any(), any(), any());
+
+    testSelectQuery()
+        .setSql("select cnt, dim1 from foo order by dim1")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("cnt", "dim1")
+                           .columnTypes(resultSignature.getColumnTypes())
+                           .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
+                           .context(REALTIME_QUERY_CTX)
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(REALTIME_QUERY_CTX)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1L, ""},
+            new Object[]{1L, "1"},
+            new Object[]{1L, "10.1"},
+            new Object[]{1L, "2"},
+            new Object[]{1L, "abc"},
+            new Object[]{1L, "def"},
+            new Object[]{1L, "qwe"},
+            new Object[]{1L, "tyu"},
+            new Object[]{1L, "uio"}
         ))
         .verifyResults();
   }

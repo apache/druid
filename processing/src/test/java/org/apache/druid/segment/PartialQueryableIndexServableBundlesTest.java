@@ -31,8 +31,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -53,7 +53,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -106,6 +105,14 @@ class PartialQueryableIndexServableBundlesTest extends PartialQueryableIndexCurs
                      .setGroupingColumns(List.of("dim1"))
                      .setAggregators(List.of(new CountAggregatorFactory("_count")))
                      .setPhysicalColumns(Set.of("dim1"))
+                     .build();
+
+  // group by dim1, metric1 + count, which only BIG_PROJECTION can answer
+  private static final CursorBuildSpec COUNT_BY_DIM1_METRIC1 =
+      CursorBuildSpec.builder()
+                     .setGroupingColumns(List.of("dim1", "metric1"))
+                     .setAggregators(List.of(new CountAggregatorFactory("_count")))
+                     .setPhysicalColumns(Set.of("dim1", "metric1"))
                      .build();
 
   @RegisterExtension
@@ -272,7 +279,8 @@ class PartialQueryableIndexServableBundlesTest extends PartialQueryableIndexCurs
       final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
                                                   .setQueryContext(
                                                       QueryContext.of(
-                                                          Map.of(QueryContexts.USE_PROJECTION, SMALL_PROJECTION)
+                                                          QueryContextParameters.USE_PROJECTION,
+                                                          SMALL_PROJECTION
                                                       )
                                                   )
                                                   .build();
@@ -284,7 +292,116 @@ class PartialQueryableIndexServableBundlesTest extends PartialQueryableIndexCurs
           DruidException.class,
           () -> opened.index().planCursorPrefetch(spec, BIG_PROJECTION::equals)
       );
-      Assertions.assertTrue(e.getMessage().contains("does not satisfy query"), e.getMessage());
+      Assertions.assertEquals(
+          "Projection[" + SMALL_PROJECTION + "] specified, but does not satisfy query",
+          e.getMessage()
+      );
+    }
+  }
+
+  @Test
+  void testUseProjectionNamingMissingProjectionFails() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "use_missing_projection")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(
+                                                          QueryContextParameters.USE_PROJECTION,
+                                                          "does_not_exist"
+                                                      )
+                                                  )
+                                                  .build();
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> opened.index().planCursorPrefetch(spec, BIG_PROJECTION::equals)
+      );
+      Assertions.assertEquals("Projection[does_not_exist] does not exist", e.getMessage());
+    }
+  }
+
+  @Test
+  void testUseProjectionNamingServedProjectionSucceeds() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "use_served_projection")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(
+                                                          QueryContextParameters.USE_PROJECTION,
+                                                          BIG_PROJECTION
+                                                      )
+                                                  )
+                                                  .build();
+      // the big projection is named and servable, so it's used even though the small one is also servable and
+      // would otherwise be preferred
+      final PartialQueryableIndex.CursorPrefetchPlan plan =
+          opened.index().planCursorPrefetch(spec, name -> !BASE.equals(name));
+      Assertions.assertEquals(BIG_PROJECTION, plan.matchedProjection().getName());
+    }
+  }
+
+  @Test
+  void testUseProjectionNamingServedProjectionThatDoesNotFitFails() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "use_served_no_fit")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1_METRIC1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(
+                                                          QueryContextParameters.USE_PROJECTION,
+                                                          SMALL_PROJECTION
+                                                      )
+                                                  )
+                                                  .build();
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> opened.index().planCursorPrefetch(spec, SMALL_PROJECTION::equals)
+      );
+      Assertions.assertEquals(
+          "Projection[" + SMALL_PROJECTION + "] specified, but does not satisfy query",
+          e.getMessage()
+      );
+    }
+  }
+
+  @Test
+  void testForceProjectionsWithNothingServableFails() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "force_nothing_servable")) {
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(QueryContextParameters.FORCE_PROJECTIONS, true)
+                                                  )
+                                                  .build();
+      Assertions.assertEquals(
+          SMALL_PROJECTION,
+          opened.index().planCursorPrefetch(spec, null).matchedProjection().getName()
+      );
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> opened.index().planCursorPrefetch(spec, bundle -> false)
+      );
+      Assertions.assertEquals("Force projections specified, but none satisfy query", e.getMessage());
+    }
+  }
+
+  @Test
+  void testNoProjectionsWithNothingServableSkipsUseProjection() throws IOException
+  {
+    try (IndexAndMapper opened = openIndex(new CountingRangeReader(segmentDir), "no_projections_nothing_servable")) {
+      // without noProjections, naming the unservable small projection fails as in
+      // testUseProjectionNamingUnservedProjectionFails
+      final CursorBuildSpec spec = CursorBuildSpec.builder(COUNT_BY_DIM1)
+                                                  .setQueryContext(
+                                                      QueryContext.of(
+                                                          QueryContextParameters.NO_PROJECTIONS,
+                                                          true,
+                                                          QueryContextParameters.USE_PROJECTION,
+                                                          SMALL_PROJECTION
+                                                      )
+                                                  )
+                                                  .build();
+      final PartialQueryableIndex.CursorPrefetchPlan plan = opened.index().planCursorPrefetch(spec, bundle -> false);
+      Assertions.assertNull(plan.matchedProjection());
+      Assertions.assertTrue(plan.bundles().isEmpty(), "the base table is not servable either");
     }
   }
 

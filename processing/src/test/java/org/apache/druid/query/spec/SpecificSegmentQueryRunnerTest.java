@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
@@ -206,6 +207,47 @@ public class SpecificSegmentQueryRunnerTest
     assertThreadNameDuringProcessing(true, "processing_thread-name-query");
   }
 
+  @Test
+  public void testNarrowsDescriptorToQueryIntervals()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2012-01-01/P1D"), "version", 0);
+    final AtomicReference<QuerySegmentSpec> baseSegmentSpec = new AtomicReference<>();
+    final SpecificSegmentQueryRunner<Result<TimeseriesResultValue>> queryRunner = new SpecificSegmentQueryRunner<>(
+        (queryPlus, responseContext) -> {
+          baseSegmentSpec.set(((BaseQuery<?>) queryPlus.getQuery()).getQuerySegmentSpec());
+          return Sequences.empty();
+        },
+        new SpecificSegmentSpec(descriptor)
+    );
+
+    queryRunner.run(QueryPlus.wrap(makeCountQuery("2011-12-31T12/2012-01-01T06")), ResponseContext.createEmpty())
+               .toList();
+
+    Assertions.assertEquals(
+        new MultipleSpecificSegmentSpec(
+            List.of(new SegmentDescriptor(Intervals.of("2012-01-01/2012-01-01T06"), "version", 0))
+        ),
+        baseSegmentSpec.get()
+    );
+  }
+
+  @Test
+  public void testSkipsSegmentOutsideQueryIntervals()
+  {
+    final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.of("2012-01-01/P1D"), "version", 0);
+    final SpecificSegmentQueryRunner<Result<TimeseriesResultValue>> queryRunner = new SpecificSegmentQueryRunner<>(
+        (queryPlus, responseContext) -> Assertions.fail("Segment should not run"),
+        new SpecificSegmentSpec(descriptor)
+    );
+
+    final ResponseContext responseContext = ResponseContext.createEmpty();
+    Assertions.assertEquals(
+        List.of(),
+        queryRunner.run(QueryPlus.wrap(makeCountQuery("2012-01-02/P1D")), responseContext).toList()
+    );
+    Assertions.assertNull(responseContext.getMissingSegments());
+  }
+
   private void assertThreadNameDuringProcessing(
       final Boolean setProcessingThreadNames,
       final String expectedThreadNameDuringProcessing
@@ -280,6 +322,16 @@ public class SpecificSegmentQueryRunnerTest
     } else {
       return QueryContext.ofMap(QueryContextParameters.SET_PROCESSING_THREAD_NAMES, setProcessingThreadNames);
     }
+  }
+
+  private static TimeseriesQuery makeCountQuery(final String interval)
+  {
+    return Druids.newTimeseriesQueryBuilder()
+                 .dataSource("foo")
+                 .granularity(Granularities.ALL)
+                 .intervals(ImmutableList.of(Intervals.of(interval)))
+                 .aggregators(ImmutableList.of(new CountAggregatorFactory("rows")))
+                 .build();
   }
 
   private static Result<TimeseriesResultValue> makeResult()

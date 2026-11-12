@@ -254,6 +254,8 @@
     "tier/storage/required": [],
     "tier/storage/capacity":  [],
     "tier/segmentCache/used":  [],
+    "tier/segmentCache/utilization":  [],
+    "tierAlias/segmentCache/utilization":  [],
     "tier/segmentCache/capacity":  [],
     "zk/connected": [],
     "zk/reconnect/time": []

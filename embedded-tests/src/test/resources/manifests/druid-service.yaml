@@ -28,7 +28,16 @@ spec:
             - name: DRUID_XMS
               value: "128m"
             - name: DRUID_XMX
-              value: "128m"
+              value: "256m"
+          readinessProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /status/health
+              port: ${port}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
           volumeMounts:
             - name: druid-common-props
               mountPath: /opt/druid/conf/druid/cluster/_common/common.runtime.properties

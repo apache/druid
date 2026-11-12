@@ -46,6 +46,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -138,6 +139,26 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       ""
   );
 
+  /**
+   * Load spec keys, at any nesting level, whose values repeat across segments and so are interned, such as the type of
+   * the deep storage or the bucket it writes to. Values that are unique to each segment (such as the S3 {@code key}, or
+   * the {@code path} of HDFS and Google) are deliberately left out, since interning a string nothing else shares costs
+   * more than it saves.
+   */
+  private static final Set<String> INTERNED_LOAD_SPEC_VALUE_KEYS = Set.of(
+      // every load spec, including the partial load wrappers and their delegates
+      "type",
+      // S3, Google, and Aliyun OSS
+      "bucket",
+      // S3
+      "S3Schema",
+      // Azure
+      "containerName",
+      // partial load specs: the request fingerprint, and the selected projection names
+      "fingerprint",
+      "projections"
+  );
+
   private final Integer binaryVersion;
   private final SegmentId id;
   @Nullable
@@ -175,77 +196,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
    */
   @Nullable
   private final String indexingStateFingerprint;
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      Map<String, Object> loadSpec,
-      List<String> dimensions,
-      List<String> metrics,
-      ShardSpec shardSpec,
-      Integer binaryVersion,
-      long size
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        null,
-        null,
-        shardSpec,
-        null,
-        binaryVersion,
-        size,
-        null,
-        null,
-        PruneSpecsHolder.DEFAULT
-    );
-  }
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      Map<String, Object> loadSpec,
-      List<String> dimensions,
-      List<String> metrics,
-      ShardSpec shardSpec,
-      @Nullable CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        null,
-        null,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        null,
-        null,
-        PruneSpecsHolder.DEFAULT
-    );
-  }
 
   @JsonCreator
   private DataSegment(
@@ -327,6 +277,26 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.indexingStateFingerprint = indexingStateFingerprint == null ?
                                     null :
                                     STRING_INTERNER.intern(indexingStateFingerprint);
+  }
+
+  /**
+   * Copies {@code other} by reference, for subclasses that decorate an existing segment. The copy shares the
+   * original's state rather than rebuilding it.
+   */
+  protected DataSegment(DataSegment other)
+  {
+    this.binaryVersion = other.binaryVersion;
+    this.id = other.id;
+    this.loadSpec = other.loadSpec;
+    this.dimensions = other.dimensions;
+    this.metrics = other.metrics;
+    this.projections = other.projections;
+    this.clusterGroups = other.clusterGroups;
+    this.shardSpec = other.shardSpec;
+    this.lastCompactionState = other.lastCompactionState;
+    this.size = other.size;
+    this.totalRows = other.totalRows;
+    this.indexingStateFingerprint = other.indexingStateFingerprint;
   }
 
   /**
@@ -634,12 +604,42 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     if (loadSpec == null) {
       return null;
     }
+    return prepareLoadSpecMap(loadSpec);
+  }
+
+  /**
+   * Compacts one level of a load spec, recursing into nested maps and lists (such as the {@code delegate} of a partial
+   * load spec, or the {@code members} of a composite one). Keys are interned, and so are the values of
+   * {@link #INTERNED_LOAD_SPEC_VALUE_KEYS}.
+   */
+  private static Map<String, Object> prepareLoadSpecMap(Map<?, ?> map)
+  {
     // Load spec is just of 3 entries on average; HashMap/LinkedHashMap consumes much more memory than ArrayMap
-    Map<String, Object> result = new Object2ObjectArrayMap<>(loadSpec.size());
-    for (Map.Entry<String, Object> e : loadSpec.entrySet()) {
-      result.put(STRING_INTERNER.intern(e.getKey()), e.getValue());
+    final Map<String, Object> result = new Object2ObjectArrayMap<>(map.size());
+    for (Map.Entry<?, ?> e : map.entrySet()) {
+      final String key = STRING_INTERNER.intern((String) e.getKey());
+      result.put(key, prepareLoadSpecValue(e.getValue(), INTERNED_LOAD_SPEC_VALUE_KEYS.contains(key)));
     }
     return result;
+  }
+
+  @Nullable
+  private static Object prepareLoadSpecValue(@Nullable Object value, boolean intern)
+  {
+    if (value instanceof Map<?, ?> map) {
+      return prepareLoadSpecMap(map);
+    }
+    if (value instanceof List<?> list) {
+      final List<Object> result = new ArrayList<>(list.size());
+      for (Object element : list) {
+        result.add(prepareLoadSpecValue(element, intern));
+      }
+      return result;
+    }
+    if (intern && value instanceof String s) {
+      return STRING_INTERNER.intern(s);
+    }
+    return value;
   }
 
   @Nullable
@@ -674,15 +674,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
                                .collect(ImmutableList.toImmutableList()));
   }
 
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public static Builder builder()
-  {
-    return new Builder();
-  }
-
   public static Builder builder(SegmentId segmentId)
   {
     return new Builder(segmentId);
@@ -715,22 +706,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private long size;
     private Integer totalRows;
     private String indexingStateFingerprint;
-
-    /**
-     * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
-     */
-    @Deprecated
-    private Builder()
-    {
-      this.loadSpec = ImmutableMap.of();
-      this.dimensions = ImmutableList.of();
-      this.metrics = ImmutableList.of();
-      // By default, segment is not projection-aware.
-      this.projections = null;
-      this.shardSpec = new NumberedShardSpec(0, 1);
-      this.size = -1;
-      this.totalRows = null;
-    }
 
     private Builder(SegmentId segmentId)
     {

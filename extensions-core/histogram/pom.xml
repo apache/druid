@@ -83,7 +83,7 @@
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
-            <artifactId>fastutil-core</artifactId>
+            <artifactId>fastutil</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>

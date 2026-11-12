@@ -60,6 +60,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -180,7 +181,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private URL getLoadCapabilitiesUrl() throws MalformedURLException
   {
-    return new URL(new URL(serverId), "druid-internal/v1/segments/loadCapabilities");
+    return URI.create(serverId).resolve("/druid-internal/v1/segments/loadCapabilities").toURL();
   }
 
   /**
@@ -385,14 +386,13 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         loadingRateTracker.markBatchLoadingStarted();
       }
 
-      final URL changeRequestURL = new URL(
-          new URL(serverId),
+      final URL changeRequestURL = URI.create(serverId).resolve(
           StringUtils.nonStrictFormat(
-              "druid-internal/v1/segments/changeRequests?timeout=%d&loadingMode=%s",
+              "/druid-internal/v1/segments/changeRequests?timeout=%d&loadingMode=%s",
               config.getHostTimeout().getMillis(),
               loadingMode
           )
-      );
+      ).toURL();
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = httpClient.go(

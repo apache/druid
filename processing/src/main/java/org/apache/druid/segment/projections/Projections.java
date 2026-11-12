@@ -26,6 +26,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContext;
@@ -72,6 +73,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Projections
 {
@@ -113,6 +115,32 @@ public class Projections
       Function<String, T> getRowSelector
   )
   {
+    return findMatchingProjection(
+        cursorBuildSpec,
+        projections,
+        projectionName -> true,
+        dataInterval,
+        physicalChecker,
+        getRowSelector
+    );
+  }
+
+  /**
+   * Like {@link #findMatchingProjection(CursorBuildSpec, SortedSet, Interval, PhysicalColumnChecker, Function)}, but
+   * only projections accepted by {@code servableProjections} are matching candidates. A projection named by
+   * {@link QueryContextParameters#USE_PROJECTION} that is in {@code projections} but not servable is reported as not
+   * satisfying the query rather than as not existing.
+   */
+  @Nullable
+  public static <T> QueryableProjection<T> findMatchingProjection(
+      CursorBuildSpec cursorBuildSpec,
+      SortedSet<AggregateProjectionMetadata> projections,
+      Predicate<String> servableProjections,
+      Interval dataInterval,
+      PhysicalColumnChecker physicalChecker,
+      Function<String, T> getRowSelector
+  )
+  {
     if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.NO_PROJECTIONS)) {
       return null;
     }
@@ -121,6 +149,9 @@ public class Projections
     if (cursorBuildSpec.isAggregate()) {
       for (AggregateProjectionMetadata spec : projections) {
         if (name != null && !name.equals(spec.getSchema().getName())) {
+          continue;
+        }
+        if (!servableProjections.test(spec.getSchema().getName())) {
           continue;
         }
         final ProjectionMatch match = matchAggregateProjection(
@@ -621,20 +652,28 @@ public class Projections
    */
   public static String getClusterGroupSegmentInternalFileName(List<Integer> clusteringValueIds, String column)
   {
-    return getClusterGroupSegmentInternalFilePrefix(clusteringValueIds) + column;
+    return buildClusterGroupBundleName(clusteringValueIds).append('/').append(column).toString();
   }
 
   public static String getClusterGroupSegmentInternalFilePrefix(List<Integer> clusteringValueIds)
   {
-    return getClusterGroupBundleName(clusteringValueIds) + '/';
+    return buildClusterGroupBundleName(clusteringValueIds).append('/').toString();
   }
 
   /**
    * Bundle name for a cluster group's containers in the V10 file, matching the tag {@code IndexMergerV10} applies at
    * write time: {@code __base$<id0>_<id1>...<idK>}. This is the cluster group's canonical identity; the per-group file
    * prefix ({@link #getClusterGroupSegmentInternalFilePrefix}) is just this name plus a trailing {@code '/'} separator.
+   * <p>
+   * The returned value is interned, this method is intended for uses where the name is retained in memory for as long
+   * as the segment is loaded.
    */
   public static String getClusterGroupBundleName(List<Integer> clusteringValueIds)
+  {
+    return SmooshedFileMapper.STRING_INTERNER.intern(buildClusterGroupBundleName(clusteringValueIds).toString());
+  }
+
+  private static StringBuilder buildClusterGroupBundleName(List<Integer> clusteringValueIds)
   {
     if (clusteringValueIds == null || clusteringValueIds.isEmpty()) {
       throw DruidException.defensive("clusteringValueIds must not be null or empty");
@@ -646,7 +685,7 @@ public class Projections
       }
       sb.append(clusteringValueIds.get(i));
     }
-    return sb.toString();
+    return sb;
   }
 
   /**

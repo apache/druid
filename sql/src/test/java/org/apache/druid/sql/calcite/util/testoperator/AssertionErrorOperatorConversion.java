@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.util.testoperator;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -45,7 +46,7 @@ public class AssertionErrorOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlOperator OPERATOR =
       OperatorConversions.operatorBuilder("assertion_error")
-                         .operandTypes()
+                         .operandTypes(new SqlTypeFamily[0])
                          .returnTypeNonNull(SqlTypeName.BIGINT)
                          .build();
 

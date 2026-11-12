@@ -131,29 +131,23 @@ public class KillUnreferencedSegmentSchemaTest
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
     SchemaPayloadPlus schemaMetadata = new SchemaPayloadPlus(schemaPayload, (long) 1);
 
-    DataSegment segment1 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-01/2023-01-02"),
-        "2023-01-01",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-01-02"), "2023-01-01", 0))
+                                      .loadSpec(ImmutableMap.of("path", "a-1"))
+                                      .dimensions(ImmutableList.of("dim1"))
+                                      .metrics(ImmutableList.of("m1"))
+                                      .shardSpec(new LinearShardSpec(0))
+                                      .binaryVersion(9)
+                                      .size(100)
+                                      .build();
 
-    DataSegment segment2 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-02/2023-01-03"),
-        "2023-01-02",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment2 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-02/2023-01-03"), "2023-01-02", 0))
+                                      .loadSpec(ImmutableMap.of("path", "a-1"))
+                                      .dimensions(ImmutableList.of("dim1"))
+                                      .metrics(ImmutableList.of("m1"))
+                                      .shardSpec(new LinearShardSpec(0))
+                                      .binaryVersion(9)
+                                      .size(100)
+                                      .build();
 
     segments.add(segment1);
     segments.add(segment2);
@@ -255,17 +249,14 @@ public class KillUnreferencedSegmentSchemaTest
     Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
 
     // associate a segment to the schema
-    DataSegment segment1 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-02/2023-01-03"),
-        "2023-01-02",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-02/2023-01-03"), "2023-01-02", 0))
+                                      .loadSpec(ImmutableMap.of("path", "a-1"))
+                                      .dimensions(ImmutableList.of("dim1"))
+                                      .metrics(ImmutableList.of("m1"))
+                                      .shardSpec(new LinearShardSpec(0))
+                                      .binaryVersion(9)
+                                      .size(100)
+                                      .build();
 
     segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(segment1), Collections.emptyMap());
 
@@ -343,17 +334,14 @@ public class KillUnreferencedSegmentSchemaTest
     Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintNewVersion));
 
     // associate a segment to the schema
-    DataSegment segment1 = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-02/2023-01-03"),
-        "2023-01-02",
-        ImmutableMap.of("path", "a-1"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment1 = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-02/2023-01-03"), "2023-01-02", 0))
+                                      .loadSpec(ImmutableMap.of("path", "a-1"))
+                                      .dimensions(ImmutableList.of("dim1"))
+                                      .metrics(ImmutableList.of("m1"))
+                                      .shardSpec(new LinearShardSpec(0))
+                                      .binaryVersion(9)
+                                      .size(100)
+                                      .build();
 
     segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(segment1), Collections.emptyMap());
 

@@ -40,6 +40,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -52,6 +53,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -648,5 +651,54 @@ public class DataSegmentTest
     DataSegment withFingerprint = segment2.withIndexingStateFingerprint(fingerprint);
     Assertions.assertEquals(fingerprint, withFingerprint.getIndexingStateFingerprint());
     Assertions.assertEquals(segment1, withFingerprint);
+  }
+
+  @Test
+  public void testCopyConstructorSharesEveryField() throws IllegalAccessException
+  {
+    final ShardSpec shardSpec = new NumberedShardSpec(3, 0);
+    final DataSegment segment =
+        DataSegment.builder(SegmentId.of("something", Intervals.of("2011-10-01/2011-10-02"), "1", shardSpec))
+                   .loadSpec(ImmutableMap.of("type", "local", "path", "/tmp/segment"))
+                   .dimensions(List.of("dim1", "dim2"))
+                   .metrics(List.of("met1"))
+                   .projections(List.of("proj1"))
+                   .clusterGroups(
+                       new ClusterGroupTuples(
+                           RowSignature.builder().add("tenant", ColumnType.STRING).build(),
+                           List.of(List.of("acme"))
+                       )
+                   )
+                   .shardSpec(shardSpec)
+                   .lastCompactionState(
+                       CompactionState.builder().partitionsSpec(new DynamicPartitionsSpec(null, null)).build()
+                   )
+                   .binaryVersion(TEST_VERSION)
+                   .size(123L)
+                   .totalRows(12)
+                   .indexingStateFingerprint("fingerprint")
+                   .build();
+
+    // a decorating subclass that uses the copy constructor
+    final DataSegment copy = new DataSegment(segment)
+    {
+    };
+
+    // reflective, so a field added to DataSegment but not to the copy constructor fails here
+    for (Field field : DataSegment.class.getDeclaredFields()) {
+      if (Modifier.isStatic(field.getModifiers())) {
+        continue;
+      }
+      field.setAccessible(true);
+      final Object original = field.get(segment);
+      Assertions.assertNotNull(original, "field[" + field.getName() + "] must be set for this test to check it");
+      if (field.getType().isPrimitive()) {
+        Assertions.assertEquals(original, field.get(copy), field.getName());
+      } else {
+        Assertions.assertSame(original, field.get(copy), field.getName());
+      }
+    }
+    Assertions.assertEquals(segment, copy);
+    Assertions.assertEquals(segment.toString(), copy.toString());
   }
 }

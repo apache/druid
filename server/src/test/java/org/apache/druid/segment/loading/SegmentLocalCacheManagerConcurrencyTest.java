@@ -902,9 +902,7 @@ class SegmentLocalCacheManagerConcurrencyTest
 
   private DataSegment newSegment(Interval interval, int partitionId, long size)
   {
-    return DataSegment.builder()
-                      .dataSource(dataSource)
-                      .interval(interval)
+    return DataSegment.builder(SegmentId.of(dataSource, interval, segmentVersion, partitionId))
                       .loadSpec(
                           ImmutableMap.of(
                               "type",
@@ -913,7 +911,6 @@ class SegmentLocalCacheManagerConcurrencyTest
                               "somewhere"
                           )
                       )
-                      .version(segmentVersion)
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
                       .shardSpec(new NumberedShardSpec(partitionId, 0))

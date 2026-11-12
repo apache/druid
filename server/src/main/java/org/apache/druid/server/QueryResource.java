@@ -21,8 +21,11 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
@@ -287,6 +290,25 @@ public class QueryResource implements QueryCountStatsProvider
     void incrementTimedOut();
   }
 
+  /**
+   * Whether {@code e} wraps an exception that Druid code threw while binding a query, such as a
+   * {@link NullPointerException} from a deserializer or setter, rather than a rejection of the input. Jackson wraps
+   * those in a plain {@link JsonMappingException} with the original exception as its cause, while its own input
+   * errors are subclasses such as {@link com.fasterxml.jackson.databind.exc.MismatchedInputException}.
+   */
+  private static boolean isServerErrorDuringBinding(final JsonMappingException e)
+  {
+    final Throwable cause = e.getCause();
+    if (e.getClass() != JsonMappingException.class || cause == null) {
+      return false;
+    }
+    if (cause instanceof IllegalArgumentException || cause instanceof JsonProcessingException) {
+      return false;
+    }
+    return !(cause instanceof DruidException
+             && ((DruidException) cause).getTargetPersona() == DruidException.Persona.USER);
+  }
+
   private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
@@ -298,6 +320,19 @@ public class QueryResource implements QueryCountStatsProvider
       baseQuery = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
     }
     catch (ValueInstantiationException e) {
+      throw new BadJsonQueryException(e);
+    }
+    catch (InvalidDefinitionException e) {
+      // A query class that Jackson cannot bind to is a server-side defect, not a bad request, so leave it to the
+      // catch-all in doPost to log and return as a 500.
+      throw e;
+    }
+    catch (JsonMappingException e) {
+      if (isServerErrorDuringBinding(e)) {
+        // Leave it to the catch-all in doPost to log and return as a 500.
+        throw e;
+      }
+      // Well-formed JSON that cannot be bound to a query, such as an unknown query type or a field of the wrong type.
       throw new BadJsonQueryException(e);
     }
     catch (JsonParseException e) {

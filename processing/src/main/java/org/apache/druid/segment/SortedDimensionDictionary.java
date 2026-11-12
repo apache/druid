@@ -19,65 +19,24 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Lists;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
-import it.unimi.dsi.fastutil.objects.Object2IntSortedMap;
 import org.apache.druid.java.util.common.guava.Comparators;
 
 import java.util.List;
 
 /**
  * Creates a sorted dictionary given some existing dictionary, storing a mapping of both sorted id to unsorted id
- * and unsorted id to sorted id
+ * and unsorted id to sorted id. Values are sorted by natural order with nulls first.
  */
-public class SortedDimensionDictionary<T extends Comparable<T>>
+public class SortedDimensionDictionary<T extends Comparable<T>> extends ComparatorSortedDimensionDictionary<T>
 {
-  private final List<T> sortedVals;
-  private final int[] idToIndex;
-  private final int[] indexToId;
-
+  /**
+   * @param idToValue unsorted dictionary values, which must be unique. The sort looks up values by id many
+   *                  times, so this should be a {@link java.util.RandomAccess} list such as
+   *                  {@link java.util.ArrayList}.
+   * @param length    number of ids, from the start of {@code idToValue}, to include
+   */
   public SortedDimensionDictionary(List<T> idToValue, int length)
   {
-    Object2IntSortedMap<T> sortedMap = new Object2IntRBTreeMap<>(Comparators.naturalNullsFirst());
-    for (int id = 0; id < length; id++) {
-      T value = idToValue.get(id);
-      sortedMap.put(value, id);
-    }
-    this.sortedVals = Lists.newArrayList(sortedMap.keySet());
-    this.idToIndex = new int[length];
-    this.indexToId = new int[length];
-    int index = 0;
-    for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext(); ) {
-      int id = iterator.nextInt();
-      idToIndex[id] = index;
-      indexToId[index] = id;
-      index++;
-    }
-  }
-
-  /**
-   * Number of ids in this sorted view, captured at {@link DimensionDictionary#sort()} time. Both the sorted-id and
-   * unsorted-id spaces cover {@code [0, size())}. Useful when iterating a snapshot taken concurrently with a still-
-   * growing source dictionary, where re-reading the source size would be inconsistent with this view.
-   */
-  public int size()
-  {
-    return sortedVals.size();
-  }
-
-  public int getUnsortedIdFromSortedId(int index)
-  {
-    return indexToId[index];
-  }
-
-  public int getSortedIdFromUnsortedId(int id)
-  {
-    return idToIndex[id];
-  }
-
-  public T getValueFromSortedId(int index)
-  {
-    return sortedVals.get(index);
+    super(idToValue, Comparators.naturalNullsFirst(), length);
   }
 }

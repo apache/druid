@@ -194,6 +194,8 @@
   "tier/storage/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge", "help": "Total segment storage in bytes available for assignment in each tier."},
   "tier/segmentCache/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge", "help": "Total physical capacity in bytes of the segment cache locations in each tier."},
   "tier/segmentCache/used": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge", "help": "Total bytes occupied on disk in each tier."},
+  "tier/segmentCache/utilization": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge", "help": "Bytes occupied on disk in each tier as a whole-number percentage of its segment cache capacity."},
+  "tierAlias/segmentCache/utilization": { "dimensions" : ["tierAlias"], "type" : "gauge", "help": "Bytes occupied on disk across all tiers of each tier alias as a whole-number percentage of their combined segment cache capacity."},
   "tier/required/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge", "help": "Deprecated. Use tier/storage/required instead."},
   "tier/total/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge", "help": "Deprecated. Use tier/storage/capacity instead."},
   "compact/task/count" : { "dimensions" : [], "type" : "gauge", "help": "Number of tasks issued in the auto compaction run."},

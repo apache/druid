@@ -50,13 +50,11 @@ import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -91,21 +89,21 @@ public class IndexerControllerContext implements ControllerContext
    * Worker context keys that worker tasks require in their task context.
    */
   private static final Set<String> WORKER_TASK_CONTEXT_KEYS = ImmutableSet.of(
-      MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
-      MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
-      MultiStageQueryContext.CTX_IS_REINDEX,
-      MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES,
-      MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE,
-      MultiStageQueryContext.CTX_REMOVE_NULL_BYTES,
-      MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS,
-      MultiStageQueryContext.CTX_MAX_FRAME_SIZE,
-      MultiStageQueryContext.CTX_SELECT_DESTINATION,
-      MultiStageQueryContext.CTX_LIVE_REPORT_COUNTERS,
-      MultiStageQueryContext.CTX_MAX_THREADS,
+      QueryContextParameters.DURABLE_SHUFFLE_STORAGE.getName(),
+      QueryContextParameters.MAX_PARSE_EXCEPTIONS.getName(),
+      QueryContextParameters.IS_REINDEX.getName(),
+      QueryContextParameters.MAX_CONCURRENT_STAGES.getName(),
+      QueryContextParameters.ROW_BASED_FRAME_TYPE.getName(),
+      QueryContextParameters.REMOVE_NULL_BYTES.getName(),
+      QueryContextParameters.INCLUDE_ALL_COUNTERS.getName(),
+      QueryContextParameters.MAX_FRAME_SIZE.getName(),
+      QueryContextParameters.SELECT_DESTINATION.getName(),
+      QueryContextParameters.LIVE_REPORT_COUNTERS.getName(),
+      QueryContextParameters.MAX_THREADS.getName(),
       MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS,
       Tasks.STORE_EMPTY_COLUMNS_KEY,
       QueryContextParameters.QUERY_ID.getName(),
-      BaseQuery.SQL_QUERY_ID,
+      QueryContextParameters.SQL_QUERY_ID.getName(),
       QueryContextParameters.DEBUG.getName()
   );
 

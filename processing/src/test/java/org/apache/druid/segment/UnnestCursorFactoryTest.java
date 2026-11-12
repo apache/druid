@@ -56,6 +56,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.hamcrest.CoreMatchers;
@@ -102,10 +103,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
     CLOSER = Closer.create();
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", schemaInfo.getDataInterval(), "1", 0))
                                                .shardSpec(new LinearShardSpec(0))
                                                .size(0)
                                                .build();
@@ -877,10 +875,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
     final String inputColumn = "multi-string5";
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", schemaInfo.getDataInterval(), "1", 0))
                                                .shardSpec(new LinearShardSpec(0))
                                                .size(0)
                                                .build();

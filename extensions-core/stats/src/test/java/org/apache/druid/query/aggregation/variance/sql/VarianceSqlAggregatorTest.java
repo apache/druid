@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
@@ -65,6 +66,7 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
 
@@ -125,10 +127,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       return walker.add(
-          DataSegment.builder()
-                     .dataSource(CalciteTests.DATASOURCE3)
-                     .interval(index.getDataInterval())
-                     .version("1")
+          DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE3, index.getDataInterval(), "1", 0))
                      .shardSpec(new LinearShardSpec(0))
                      .size(0)
                      .build(),
@@ -720,5 +719,87 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         "Query could not be planned. A possible reason is [Aggregation [STDDEV] is currently not supported for window functions]",
         e.getMessage()
     );
+  }
+
+  @Test
+  public void testVarianceOnNonNumericStringLiteral()
+  {
+    for (String function : ImmutableList.of("VARIANCE", "VAR_POP", "VAR_SAMP", "STDDEV", "STDDEV_POP", "STDDEV_SAMP")) {
+      testQueryThrows(
+          StringUtils.format("SELECT %s('m1') FROM numfoo", function),
+          invalidSqlContains(
+              StringUtils.format(
+                  "Function [%s] argument [1] must be numeric, got string literal ['m1']."
+                  + " If you meant to refer to a column, use double quotes.",
+                  function
+              )
+          )
+      );
+    }
+  }
+
+  @Test
+  public void testVarianceOnNumericStringLiteral()
+  {
+    testBuilder()
+        .sql(
+            "SELECT VARIANCE('1.5'), VAR_POP('1.5'), VAR_SAMP('1.5'),"
+            + " STDDEV('1.5'), STDDEV_POP('1.5'), STDDEV_SAMP('1.5') FROM numfoo"
+        )
+        .expectedResults(
+            ResultMatchMode.EQUALS_EPS,
+            ImmutableList.of(new Object[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0})
+        )
+        .run();
+  }
+
+  @Test
+  public void testVarianceOnStringColumn()
+  {
+    testBuilder()
+        .sql(
+            "SELECT VARIANCE(dim1), VAR_POP(dim1), VAR_SAMP(dim1), STDDEV(dim1), STDDEV_POP(dim1), STDDEV_SAMP(dim1)"
+            + " FROM numfoo"
+        )
+        .expectedResults(
+            ResultMatchMode.EQUALS_EPS,
+            ImmutableList.of(
+                new Object[]{
+                    24.903333333333332,
+                    16.60222222222222,
+                    24.903333333333332,
+                    4.990323970779185,
+                    4.074582459862878,
+                    4.990323970779185
+                }
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testVarianceOnTimeColumn()
+  {
+    for (String function : ImmutableList.of("VARIANCE", "VAR_POP", "VAR_SAMP", "STDDEV", "STDDEV_POP", "STDDEV_SAMP")) {
+      testQueryThrows(
+          StringUtils.format("SELECT %s(__time) FROM numfoo", function),
+          invalidSqlContains(
+              StringUtils.format("Cannot apply '%s' to arguments of type '%s(<TIMESTAMP(3)>)'", function, function)
+          )
+      );
+    }
+  }
+
+  @Test
+  public void testVarianceOnNullDouble()
+  {
+    testBuilder()
+        .sql(
+            "SELECT VARIANCE(CAST(NULL AS DOUBLE)), VAR_POP(CAST(NULL AS DOUBLE)), VAR_SAMP(CAST(NULL AS DOUBLE)),"
+            + " STDDEV(CAST(NULL AS DOUBLE)), STDDEV_POP(CAST(NULL AS DOUBLE)), STDDEV_SAMP(CAST(NULL AS DOUBLE))"
+            + " FROM numfoo"
+        )
+        .expectedResults(ImmutableList.of(new Object[]{null, null, null, null, null, null}))
+        .run();
   }
 }

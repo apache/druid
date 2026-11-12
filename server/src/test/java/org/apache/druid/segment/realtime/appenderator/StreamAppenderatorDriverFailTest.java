@@ -285,30 +285,24 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
     if (!failWithException) {
       // Should only kill segments if there was _no_ exception.
-      dataSegmentKiller.killQuietly(new DataSegment(
-          "foo",
-          Intervals.of("2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z"),
-          "abc123",
-          ImmutableMap.of(),
-          ImmutableList.of(),
-          ImmutableList.of(),
-          new NumberedShardSpec(0, 0),
-          0,
-          0
-      ));
+      dataSegmentKiller.killQuietly(DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z"), "abc123", 0))
+                                               .loadSpec(ImmutableMap.of())
+                                               .dimensions(ImmutableList.of())
+                                               .metrics(ImmutableList.of())
+                                               .shardSpec(new NumberedShardSpec(0, 0))
+                                               .binaryVersion(0)
+                                               .size(0)
+                                               .build());
       EasyMock.expectLastCall().once();
 
-      dataSegmentKiller.killQuietly(new DataSegment(
-          "foo",
-          Intervals.of("2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z"),
-          "abc123",
-          ImmutableMap.of(),
-          ImmutableList.of(),
-          ImmutableList.of(),
-          new NumberedShardSpec(0, 0),
-          0,
-          0
-      ));
+      dataSegmentKiller.killQuietly(DataSegment.builder(SegmentId.of("foo", Intervals.of("2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z"), "abc123", 0))
+                                               .loadSpec(ImmutableMap.of())
+                                               .dimensions(ImmutableList.of())
+                                               .metrics(ImmutableList.of())
+                                               .shardSpec(new NumberedShardSpec(0, 0))
+                                               .binaryVersion(0)
+                                               .size(0)
+                                               .build());
       EasyMock.expectLastCall().once();
     }
 
@@ -482,17 +476,14 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
       if (pushEnabled) {
         final List<DataSegment> segments = identifiers.stream()
                                                       .map(
-                                                          id -> new DataSegment(
-                                                              id.getDataSource(),
-                                                              id.getInterval(),
-                                                              id.getVersion(),
-                                                              ImmutableMap.of(),
-                                                              ImmutableList.of(),
-                                                              ImmutableList.of(),
-                                                              id.getShardSpec(),
-                                                              0,
-                                                              0
-                                                          )
+                                                          id -> DataSegment.builder(id.asSegmentId())
+                                                                           .loadSpec(ImmutableMap.of())
+                                                                           .dimensions(ImmutableList.of())
+                                                                           .metrics(ImmutableList.of())
+                                                                           .shardSpec(id.getShardSpec())
+                                                                           .binaryVersion(0)
+                                                                           .size(0)
+                                                                           .build()
                                                       )
                                                       .collect(Collectors.toList());
         return Futures.transform(

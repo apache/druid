@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.projections.Projections;
@@ -128,6 +129,15 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     }
     if (!handlerContext.plannerContext().getParameters().isEmpty()) {
       throw InvalidSqlInput.exception("Dynamic parameters are not supported for [%s]", operationName());
+    }
+    // Fail if sqlTimeCondition is specified, since projection bodies are planned with the statement's context,
+    // so the condition would be stored in the catalog as part of their filters.
+    if (handlerContext.queryContext().has(QueryContextParameters.SQL_TIME_CONDITION)) {
+      throw InvalidSqlInput.exception(
+          "Context parameter [%s] cannot be provided on operator [%s]",
+          QueryContextParameters.SQL_TIME_CONDITION,
+          operationName()
+      );
     }
     tableId = TableId.datasource(resolveTableName());
     final Resource resource = new Resource(tableId.name(), ResourceType.DATASOURCE);

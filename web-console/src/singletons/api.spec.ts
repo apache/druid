@@ -22,6 +22,7 @@ describe('Api', () => {
   it('escapes stuff', () => {
     expect(Api.encodePath('wikipedia')).toEqual('wikipedia');
     expect(Api.encodePath(`wi%ki?pe#dia&'[;]`)).toEqual('wi%25ki%3Fpe%23dia%26%27%5B%3B%5D');
+    expect(Api.encodePath('wiki\\pe^di|a')).toEqual('wiki%5Cpe%5Edi%7Ca');
   });
 
   describe(`with BigInt`, () => {
