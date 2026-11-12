@@ -282,6 +282,13 @@
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
+  "task/status/persistFailed/count": {
+    "dimensions": [
+      "dataSource",
+      "taskType"
+    ],
+    "type": "counter"
+  },
   "segment/added/bytes": {
     "dimensions": [
       "dataSource",

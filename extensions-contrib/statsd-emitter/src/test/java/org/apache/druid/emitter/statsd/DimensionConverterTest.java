@@ -66,6 +66,7 @@ public class DimensionConverterTest
   {
     DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
     for (String metric : new String[]{
+        "task/status/persistFailed/count",
         "task/success/count",
         "task/failed/count",
         "task/running/count",
