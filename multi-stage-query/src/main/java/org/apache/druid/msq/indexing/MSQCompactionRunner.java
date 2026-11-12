@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -48,6 +47,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
@@ -688,7 +688,7 @@ public class MSQCompactionRunner implements CompactionRunner
       }
 
       for (String dim : multiValuedColumns) {
-        String virtualColumnExpr = StringUtils.format("mv_to_array(\"%s\")", StringEscapeUtils.escapeJava(dim));
+        String virtualColumnExpr = StringUtils.format("mv_to_array(%s)", Parser.identifier(dim).stringify());
         inputColToVirtualCol.put(
             dim,
             new ExpressionVirtualColumn(
@@ -731,8 +731,8 @@ public class MSQCompactionRunner implements CompactionRunner
                                     new ExpressionPostAggregator(
                                         entry.getKey(),
                                         StringUtils.format(
-                                            "array_to_mv(\"%s\")",
-                                            StringEscapeUtils.escapeJava(entry.getValue().getOutputName())
+                                            "array_to_mv(%s)",
+                                            Parser.identifier(entry.getValue().getOutputName()).stringify()
                                         ),
                                         null,
                                         ColumnType.STRING,

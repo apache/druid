@@ -19,11 +19,11 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -77,7 +77,7 @@ public interface RollupBaseTableProjectionSpec extends BaseTableProjectionSpec
   {
     return new ExpressionVirtualColumn(
         MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + column,
-        StringUtils.format("mv_to_array(\"%s\")", StringEscapeUtils.escapeJava(column)),
+        StringUtils.format("mv_to_array(%s)", Parser.identifier(column).stringify()),
         ColumnType.STRING_ARRAY,
         ExprMacroTable.nil()
     );
