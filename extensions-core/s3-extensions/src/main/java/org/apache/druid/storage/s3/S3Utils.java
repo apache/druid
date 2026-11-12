@@ -164,6 +164,17 @@ public class S3Utils
   }
 
   /**
+   * Routes requests for a regional Access Point ARN to the Region named in the ARN. Without this the SDK rejects any
+   * ARN whose Region differs from the client Region before sending the request. Cross-partition ARNs are still rejected.
+   */
+  public static void configureAccessPointArnRegion(final S3BaseClientBuilder<?, ?>... s3ClientBuilders)
+  {
+    for (final S3BaseClientBuilder<?, ?> s3ClientBuilder : s3ClientBuilders) {
+      s3ClientBuilder.useArnRegion(true);
+    }
+  }
+
+  /**
    * Retries S3 operations that fail intermittently (due to io-related exceptions, during obtaining credentials, etc).
    * Service-level exceptions (access denied, file not found, etc) are not retried.
    */

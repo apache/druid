@@ -30,6 +30,9 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.ExecutableHttpRequest;
 import software.amazon.awssdk.http.HttpExecuteRequest;
@@ -59,6 +62,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class S3UtilsTest
@@ -73,6 +77,53 @@ public class S3UtilsTest
     Assertions.assertFalse(
         s3ClientBuilder.plugins().stream().anyMatch(LegacyMd5Plugin.class::isInstance)
     );
+  }
+
+  @Test
+  public void testConfigureAccessPointArnRegionForSyncAndAsyncClients()
+  {
+    final String arn = "arn:aws:s3:us-east-1:123456789012:accesspoint:my-ap";
+    final AtomicReference<String> syncHost = new AtomicReference<>();
+    final AtomicReference<String> asyncHost = new AtomicReference<>();
+    final S3ClientBuilder s3ClientBuilder = S3Client.builder();
+    final S3AsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.builder();
+
+    S3Utils.configureAccessPointArnRegion(s3ClientBuilder, s3AsyncClientBuilder);
+
+    try (
+        final S3Client s3Client = s3ClientBuilder
+            .credentialsProvider(AnonymousCredentialsProvider.create())
+            .region(Region.US_WEST_2)
+            .overrideConfiguration(c -> c.addExecutionInterceptor(captureHostAndAbort(syncHost)))
+            .build();
+        final S3AsyncClient s3AsyncClient = s3AsyncClientBuilder
+            .credentialsProvider(AnonymousCredentialsProvider.create())
+            .region(Region.US_WEST_2)
+            .overrideConfiguration(c -> c.addExecutionInterceptor(captureHostAndAbort(asyncHost)))
+            .build()
+    ) {
+      Assertions.assertThrows(RuntimeException.class, () -> s3Client.headObject(b -> b.bucket(arn).key("key")));
+      Assertions.assertThrows(
+          RuntimeException.class,
+          () -> s3AsyncClient.headObject(b -> b.bucket(arn).key("key")).join()
+      );
+    }
+
+    Assertions.assertEquals("my-ap-123456789012.s3-accesspoint.us-east-1.amazonaws.com", syncHost.get());
+    Assertions.assertEquals("my-ap-123456789012.s3-accesspoint.us-east-1.amazonaws.com", asyncHost.get());
+  }
+
+  private static ExecutionInterceptor captureHostAndAbort(final AtomicReference<String> host)
+  {
+    return new ExecutionInterceptor()
+    {
+      @Override
+      public void beforeTransmission(Context.BeforeTransmission context, ExecutionAttributes executionAttributes)
+      {
+        host.set(context.httpRequest().host());
+        throw new IllegalStateException("aborted before transmission");
+      }
+    };
   }
 
   @Test
