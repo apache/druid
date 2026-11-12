@@ -279,8 +279,8 @@ public class FilteredRequestLoggerTest
     final MockLogger delegate = new MockLogger();
     final FilteredRequestLoggerProvider.FilteredRequestLogger logger = new FilteredRequestLoggerProvider.FilteredRequestLogger(
         delegate,
-        0,
-        0,
+        5,
+        5,
         Set.of(),
         false,
         true
