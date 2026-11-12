@@ -113,7 +113,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
    * uses otherwise. Checked in widest-first order so an expression containing multiple VO_MATHLIB ops gets
    * the loosest tolerance any of them needs.
    */
-  private static int allowedUlpsFor(String exprString)
+  private static int allowedUlpsFor(Expr parsed, String exprString)
   {
     if (HYPERBOLIC_FN_PATTERN.matcher(exprString).find()) {
       return 5;
@@ -124,7 +124,16 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     if (MATH_LIB_FN_PATTERN.matcher(exprString).find()) {
       return 2;
     }
-    return 0;
+    // '^' routes through SIMD POW for double outputs via VectorMathProcessors.power() but doesn't match the
+    // function-name regex, so walk the parsed tree for BinPowExpr to pick it up.
+    final boolean[] hasBinPow = {false};
+    parsed.visit(expr -> {
+      if (expr instanceof BinPowExpr) {
+        hasBinPow[0] = true;
+      }
+      return expr;
+    });
+    return hasBinPow[0] ? 2 : 0;
   }
 
 
@@ -284,9 +293,25 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     for (List<String> template : templateInputs) {
       templates.add(StringUtils.format("%s %s %s", template.get(0), "%s", template.get(1)));
     }
-    final List<String> args = List.of("+", "-", "*", "/", "^", "%");
+    final List<String> args = List.of("+", "-", "*", "/", "%");
 
     testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testPowerOperator()
+  {
+    // '^' routes through SIMD POW for double outputs via VectorMathProcessors.Power / SimdSupportedBinaryOp.POW,
+    // so vector-vs-scalar can diverge by up to 2 ulps. allowedUlpsFor walks the parsed tree for BinPowExpr to
+    // pick that up, since regex-matching a lone '^' against the expression string would be fragile.
+    final Set<String> columns = Set.of("d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null", "s1");
+    final Set<String> columns2 = Set.of("d1", "d2", "l1", "l2", "1", "1.0");
+    final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2);
+    final List<String> templates = new ArrayList<>();
+    for (List<String> template : templateInputs) {
+      templates.add(StringUtils.format("%s %s %s", template.get(0), "%s", template.get(1)));
+    }
+    testFunctions(types, templates, List.of("^"));
   }
 
   @Test
@@ -889,9 +914,9 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
           final Object actual = vectorEval.valueOrThrow()[i];
           // For expressions that don't use any VO_MATHLIB op the SIMD and scalar paths are bit-identical,
           // so keep strict equality there and only loosen when at least one such op appears in the
-          // expression (see allowedUlpsFor + the useVectorMathApi javadoc). Two-tier bound matches
-          // SimdVoMathlibParityTest: 5 ulps if any hyperbolic (sinh/cosh/tanh) appears, otherwise 2.
-          final int allowedUlps = allowedUlpsFor(exprString);
+          // expression (see allowedUlpsFor + the useVectorMathApi javadoc). Bounds match SimdVoMathlibParityTest:
+          // 5 ulps for hyperbolic (sinh/cosh/tanh), 4 for atan2, otherwise 2.
+          final int allowedUlps = allowedUlpsFor(expr, exprString);
           if (allowedUlps > 0 && expected instanceof Double && actual instanceof Double) {
             VectorTestAssertions.assertDoublesEquivalent(message, (Double) expected, (Double) actual, allowedUlps);
           } else {
