@@ -34,7 +34,7 @@ For the full release notes for a specific version, see the [releases page](https
 
 Support for Java 21 has been dropped. You must upgrade to Java 25.
 
-### Dart workers
+#### Dart workers
 
 Dart workers on Historicals are now announced and discovered by the Broker with a new `DartWorkerService` mechanism. If you've enabled Dart, follow the standard rolling upgrade order: during an upgrade, restart Historicals before the Broker; during a downgrade, restart the Broker before Historicals.
 
@@ -42,7 +42,7 @@ Dart workers on Historicals are now announced and discovered by the Broker with 
 
 ### Incompatible changes
 
-### Permissions changes for SQL-based ingestion
+#### Permissions changes for SQL-based ingestion
 
 The [table visibility](./release-notes.md#table-visibility) changes affect the permissions required for SQL-based ingestion. INSERT and REPLACE now require READ access (in addition to WRITE) on the target table.
 
@@ -50,7 +50,7 @@ To restore the previous behavior, set `druid.sql.planner.authorizeTableVisibilit
 
 [#20075](https://github.com/apache/druid/pull/20075)
 
-### Alerts on `task/run/time`
+#### Alerts on `task/run/time`
 
 The `statsd` and `prometheus` emitters now emit the `taskStatus` dimension on `task/run/time`. This is a breaking change for dashboards and alerts on `task/run/time`:
 
@@ -62,7 +62,7 @@ To keep the previous behavior, pin the old dimension list with `druid.emitter.st
 
 [#20122](https://github.com/apache/druid/pull/20122)
 
-### `SysMonitor` removed
+#### `SysMonitor` removed
 
 `SysMonitor` has been removed after being deprecated in Druid 27. Use `OshiSysMonitor` instead.
 
