@@ -317,10 +317,13 @@ public class ProjectionSpecTranslator
    */
   private static boolean declaresMultiValued(VirtualColumn virtualColumn, String declared)
   {
-    return virtualColumn instanceof ExpressionVirtualColumn
-           && RollupBaseTableProjectionSpec.toMultiValueVirtualColumn(declared)
-                                           .getExpression()
-                                           .equals(((ExpressionVirtualColumn) virtualColumn).getExpression());
+    if (!(virtualColumn instanceof ExpressionVirtualColumn)) {
+      return false;
+    }
+    return RollupBaseTableProjectionSpec.toMultiValueVirtualColumn(declared)
+                                        .getParsedExpression()
+                                        .get()
+                                        .equals(((ExpressionVirtualColumn) virtualColumn).getParsedExpression().get());
   }
 
   /**

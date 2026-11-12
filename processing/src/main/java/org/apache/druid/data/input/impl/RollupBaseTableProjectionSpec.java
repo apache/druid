@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -40,14 +41,6 @@ import java.util.Set;
  */
 public interface RollupBaseTableProjectionSpec extends BaseTableProjectionSpec
 {
-  /**
-   * Prefix of the virtual column that declares one grouping column to hold more than one value per row. Like the
-   * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} carrier this is metadata rather than a stored column: the
-   * column keeps its declared type and is still written as a multi-valued string, and the carrier only says that
-   * grouping by it has to treat its values as a set rather than as one value.
-   */
-  String MULTI_VALUE_VIRTUAL_COLUMN_PREFIX = "__virtualMultiValue_";
-
   @Override
   default boolean isRollup()
   {
@@ -84,7 +77,7 @@ public interface RollupBaseTableProjectionSpec extends BaseTableProjectionSpec
   {
     return new ExpressionVirtualColumn(
         MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + column,
-        StringUtils.format("mv_to_array(\"%s\")", column),
+        StringUtils.format("mv_to_array(\"%s\")", StringEscapeUtils.escapeJava(column)),
         ColumnType.STRING_ARRAY,
         ExprMacroTable.nil()
     );

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -687,7 +688,7 @@ public class MSQCompactionRunner implements CompactionRunner
       }
 
       for (String dim : multiValuedColumns) {
-        String virtualColumnExpr = StringUtils.format("mv_to_array(\"%s\")", dim);
+        String virtualColumnExpr = StringUtils.format("mv_to_array(\"%s\")", StringEscapeUtils.escapeJava(dim));
         inputColToVirtualCol.put(
             dim,
             new ExpressionVirtualColumn(
@@ -729,7 +730,10 @@ public class MSQCompactionRunner implements CompactionRunner
                                 entry ->
                                     new ExpressionPostAggregator(
                                         entry.getKey(),
-                                        StringUtils.format("array_to_mv(\"%s\")", entry.getValue().getOutputName()),
+                                        StringUtils.format(
+                                            "array_to_mv(\"%s\")",
+                                            StringEscapeUtils.escapeJava(entry.getValue().getOutputName())
+                                        ),
                                         null,
                                         ColumnType.STRING,
                                         exprMacroTable

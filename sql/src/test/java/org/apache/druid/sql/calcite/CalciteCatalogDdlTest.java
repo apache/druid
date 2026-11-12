@@ -1201,6 +1201,28 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   }
 
   /**
+   * The planner escapes identifiers in the expressions it builds differently than the carrier builder does, so for a
+   * column name that needs any escaping the two spell the same expression unalike. The declaration is recognised by
+   * what the expression means rather than by how it is written.
+   */
+  @Test
+  public void testRollupBaseProjectionWithMultiValuedColumnNeedingEscaping()
+  {
+    execute(
+        "CREATE TABLE tbl (\"a\"\"b\" VARCHAR, __time TIMESTAMP,"
+        + " PROJECTION __base AS (SELECT MV_TO_ARRAY(\"a\"\"b\") AS \"a\"\"b\", __time GROUP BY 1, 2))"
+    );
+    assertEquals(
+        new RollupTableBaseTableMetadata(
+            VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("a\"b")),
+            null,
+            null
+        ),
+        WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  /**
    * The declaration is about the column it names, so aliasing it onto a different one is not a declaration at all and
    * falls back to the computed-column rejection.
    */

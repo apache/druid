@@ -261,7 +261,7 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
             .virtualColumns(
                 VirtualColumns.create(
                     new ExpressionVirtualColumn(
-                        RollupBaseTableProjectionSpec.MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + "page",
+                        BaseTableProjectionSpec.MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + "page",
                         "upper(\"page\")",
                         ColumnType.STRING,
                         ExprMacroTable.nil()
@@ -320,6 +320,65 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
     Assertions.assertFalse(declared.hasEqualCompactionState(undeclared));
     Assertions.assertFalse(declared.hasEqualCompactionState(undeclared, true));
     Assertions.assertTrue(declared.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testColumnNamedLikeAMultiValueCarrierRejected()
+  {
+    // The carrier is named for the column it declares, so a stored column can be named like one. The two would then
+    // share a name and the carrier would shadow the stored column, so the prefix is reserved.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("page")))
+            .groupingColumns(
+                new StringDimensionSchema("page"),
+                new StringDimensionSchema(
+                    BaseTableProjectionSpec.MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + "page"
+                ),
+                new LongDimensionSchema("__time")
+            )
+            .aggregators(new LongSumAggregatorFactory("total", "total"))
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("reserved"), e.getMessage());
+  }
+
+  @Test
+  void testAggregatorNamedLikeAMultiValueCarrierRejected()
+  {
+    // Metric columns are stored too, so they are reserved the same way.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+            .aggregators(
+                new LongSumAggregatorFactory(
+                    BaseTableProjectionSpec.MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + "page",
+                    "total"
+                )
+            )
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("reserved"), e.getMessage());
+  }
+
+  @Test
+  void testMultiValueCarrierEscapesTheColumnName()
+  {
+    // Identifiers in an expression are unescaped as java strings, so a name holding a quote or a backslash has to be
+    // escaped going in or the carrier is an expression that cannot be parsed at all.
+    final String awkward = "a\"b\\c";
+    final ExpressionVirtualColumn carrier = RollupBaseTableProjectionSpec.toMultiValueVirtualColumn(awkward);
+
+    // parses, and reads the column it was built for rather than some mangling of it
+    Assertions.assertEquals(Collections.singletonList(awkward), carrier.requiredColumns());
+
+    final RollupTableProjectionSpec spec = RollupTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(carrier))
+        .groupingColumns(new StringDimensionSchema(awkward), new LongDimensionSchema("__time"))
+        .build();
+    Assertions.assertEquals(Collections.singleton(awkward), spec.getMultiValuedColumns());
   }
 
   @Test

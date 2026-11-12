@@ -311,6 +311,14 @@ public final class RollupTableProjectionSpec implements RollupBaseTableProjectio
             Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
         );
       }
+      if (aggregator.getName().startsWith(MULTI_VALUE_VIRTUAL_COLUMN_PREFIX)) {
+        throw InvalidInput.exception(
+            "aggregator cannot be named [%s]; the [%s] prefix is reserved for the virtual columns that declare a"
+            + " column to be multi-valued",
+            aggregator.getName(),
+            MULTI_VALUE_VIRTUAL_COLUMN_PREFIX
+        );
+      }
       if (!names.add(aggregator.getName())) {
         throw InvalidInput.exception(
             "aggregator [%s] duplicates the name of a column or another aggregator",
