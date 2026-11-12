@@ -268,10 +268,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       // sync requests are issued into the shutdown window. Any syncer already in-flight may
       // still have a pending HTTP callback land on the executor after this; that case is
       // handled defensively inside ChangeRequestHttpSyncer itself.
-      for(DruidServerHolder serverHolder: ImmutableSet.copyOf(servers.values())){
-        try{
+      for (DruidServerHolder serverHolder : ImmutableSet.copyOf(servers.values())) {
+        try {
           serverHolder.stop();
-        } catch (Exception e){
+        } 
+        catch (Exception e) {
           log.warn(e, "Failed to cleanly stop server[%s] during shutdown.", serverHolder.druidServer.getName());
         }
       }

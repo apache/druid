@@ -36,10 +36,11 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.Timeout.ThreadMode;
-import org.junit.jupiter.api.Assertions;
+
 
 import java.io.ByteArrayInputStream;
 import java.net.URL;
@@ -209,7 +210,7 @@ public class ChangeRequestHttpSyncerTest
       }
     }
   }
-    @Test
+  @Test
   public void testRejectedCallbackExecutionIsSwallowedNotThrown() throws Exception
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
