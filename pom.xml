@@ -713,7 +713,7 @@
             <dependency>
                 <groupId>com.ibm.icu</groupId>
                 <artifactId>icu4j</artifactId>
-                <version>78.3</version>
+                <version>79.1</version>
             </dependency>
             <dependency>
                 <groupId>org.mozilla</groupId>
