@@ -80,18 +80,18 @@
         and update as needed in extensions-contrib/druid-ranger-security/pom.xml  -->
         <apache.ranger.version>2.9.0</apache.ranger.version>
         <antlr4.version>4.13.2</antlr4.version>
-        <gson.version>2.14.0</gson.version>
+        <gson.version>2.15.0</gson.version>
         <scala.library.version>2.13.16</scala.library.version>
         <avatica.version>1.29.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
         <tsfile.version>2.5.0</tsfile.version>
-        <bytebuddy.version>1.18.15</bytebuddy.version>
+        <bytebuddy.version>1.18.16</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
         <calcite.version>1.42.0</calcite.version>
-        <confluent.version>8.3.2</confluent.version>
+        <confluent.version>8.4.0</confluent.version>
         <cronutils.version>9.2.1</cronutils.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
@@ -130,7 +130,7 @@
         <aws.sdk.v2.version>2.57.2</aws.sdk.v2.version>
         <aws.msk.iam.auth.version>2.3.9</aws.msk.iam.auth.version>
         <caffeine.version>3.3.1</caffeine.version>
-        <jacoco.version>0.8.15</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <hibernate-validator.version>9.1.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.14</httpclient.version>
@@ -139,7 +139,7 @@
         <zookeeper.version>3.8.8</zookeeper.version>
         <checkerframework.version>4.3.1</checkerframework.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.cloud.libraries-bom.version>26.90.0</com.google.cloud.libraries-bom.version>
+        <com.google.cloud.libraries-bom.version>26.91.0</com.google.cloud.libraries-bom.version>
         <jdk.strong.encapsulation.argLine>
             <!-- Strong encapsulation parameters -->
             <!-- When updating this list, update all four locations: -->
@@ -538,7 +538,7 @@
             <dependency>
                 <groupId>com.github.fppt</groupId>
                 <artifactId>jedis-mock</artifactId>
-                <version>1.1.20</version>
+                <version>1.1.21</version>
             </dependency>
             <dependency>
               <groupId>io.kubernetes</groupId>
@@ -718,12 +718,12 @@
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
-                <version>1.9.1</version>
+                <version>1.9.2</version>
             </dependency>
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino-engine</artifactId>
-                <version>1.9.1</version>
+                <version>1.9.2</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -942,7 +942,7 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.15.0</version>
+                <version>2.15.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
@@ -1157,7 +1157,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>1.6.25</version>
+                <version>1.6.29</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>
@@ -1522,7 +1522,7 @@
           <dependency>
               <groupId>org.jruby.joni</groupId>
               <artifactId>joni</artifactId>
-              <version>2.2.7</version>
+              <version>2.2.8</version>
           </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>
@@ -1853,7 +1853,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.6.3</version>
+                <version>3.7.0</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
@@ -1864,7 +1864,7 @@
                             <rules>
                                 <banDuplicatePomDependencyVersions/>
                                 <requireMavenVersion>
-                                    <version>3.6.3</version>
+                                    <version>3.7.0</version>
                                 </requireMavenVersion>
                                 <requireJavaVersion>
                                     <version>1.8.0</version>
