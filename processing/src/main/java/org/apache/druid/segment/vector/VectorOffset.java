@@ -22,7 +22,7 @@ package org.apache.druid.segment.vector;
 /**
  * The movable version of ReadableVectorOffset.
  *
- * @see org.apache.druid.segment.data.Offset, the non-vectorized version.
+ * @see org.apache.druid.segment.data.Offset the non-vectorized version.
  */
 public interface VectorOffset extends ReadableVectorOffset
 {

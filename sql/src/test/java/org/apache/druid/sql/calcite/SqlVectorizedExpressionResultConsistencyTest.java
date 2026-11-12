@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -29,8 +28,10 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -53,6 +54,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -120,10 +122,7 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("foo", schemaInfo.getDataInterval(), "1", 0))
                                                .shardSpec(new LinearShardSpec(0))
                                                .size(0)
                                                .build();
@@ -188,13 +187,17 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
 
   public static void testQuery(SqlEngine engine, PlannerFactory plannerFactory, String query)
   {
-    final Map<String, Object> vector = ImmutableMap.of(
-            QueryContexts.VECTORIZE_KEY, "force",
-            QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "force"
+    final Map<String, Object> vector = QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        QueryContexts.Vectorize.FORCE,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        QueryContexts.Vectorize.FORCE
     );
-    final Map<String, Object> nonvector = ImmutableMap.of(
-            QueryContexts.VECTORIZE_KEY, "false",
-            QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "false"
+    final Map<String, Object> nonvector = QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        QueryContexts.Vectorize.FALSE,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        QueryContexts.Vectorize.FALSE
     );
 
     try (

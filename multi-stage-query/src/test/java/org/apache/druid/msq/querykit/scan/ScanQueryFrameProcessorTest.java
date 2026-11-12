@@ -19,8 +19,10 @@
 
 package org.apache.druid.msq.querykit.scan;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
@@ -38,22 +40,33 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.SegmentReferenceHolder;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.AsyncCursorHolder;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
@@ -66,18 +79,25 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 {
@@ -112,6 +132,169 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
   }
 
   @Test
+  public void test_runWithSegments_sharedLimitReachedMidFrame() throws Exception
+  {
+    final QueryableIndex queryableIndex = TestIndex.getMMappedTestIndex();
+
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+              .columns("__time", "market")
+              .limit(13)
+              .build();
+
+    // Other processors have already written 10 rows, so this one must stop after 3, even though a frame can hold more.
+    final ScanLimitTracker limitTracker = ScanLimitTracker.create(query);
+    flushRowsFromOtherProcessor(limitTracker, 10);
+    final List<List<Object>> rows = runScanOverSegment(queryableIndex, query, limitTracker, Integer.MAX_VALUE);
+
+    Assertions.assertEquals(3, rows.size());
+    Assertions.assertTrue(limitTracker.isSatisfied());
+  }
+
+  @Test
+  public void test_runWithSegments_prunableSegment_releasedWithoutReading() throws Exception
+  {
+    final QueryableIndex queryableIndex = TestIndex.getMMappedTestIndex();
+    final ScanQuery query = timeOrderedQuery(Order.DESCENDING);
+
+    // Prunes every segment, but still needs rows, so the processor's early return for a satisfied tracker does not
+    // apply.
+    final ScanLimitTracker pruneAll = new ScanLimitTracker()
+    {
+      @Override
+      public boolean isSatisfied()
+      {
+        return false;
+      }
+
+      @Override
+      public RowGate forCursor(final ColumnSelectorFactory columnSelectorFactory, final List<OrderBy> cursorOrdering)
+      {
+        return RowGate.ALWAYS_WRITE;
+      }
+
+      @Override
+      public boolean canSkip(final Interval interval)
+      {
+        return true;
+      }
+    };
+
+    // runScanOverSegment also checks that the segment reference was released.
+    Assertions.assertEquals(List.of(), runScanOverSegment(queryableIndex, query, pruneAll, 1));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = Order.class, names = {"ASCENDING", "DESCENDING"})
+  public void test_runWithSegments_timeOrderedCursor_stopsAtThreshold(final Order order) throws Exception
+  {
+    // Cursor returns rows in the query's __time order, so the first row worse than the threshold ends the cursor.
+    final QueryableIndex queryableIndex = TestIndex.getMMappedTestIndex();
+    final ScanQuery query = timeOrderedQuery(order);
+
+    final int timeColumn = timeColumn(queryableIndex);
+    final List<List<Object>> allRows = runScanOverSegment(queryableIndex, query, ScanLimitTracker.NONE, 1);
+    final List<List<Object>> rows = runScanOverSegment(queryableIndex, query, trackerAtThresholdTime(order), 1);
+
+    Assertions.assertEquals(rowsNotWorseThanThreshold(allRows, timeColumn, order), rows);
+  }
+
+  @Test
+  public void test_runWithSegments_nonTimeOrderedCursor_skipsRowsPastThreshold() throws Exception
+  {
+    // Segment sorted by dimensions first, so rows newer than the threshold come after older ones.
+    final QueryableIndex queryableIndex = TestIndex.getNonTimeOrderedMMappedTestIndex();
+    final ScanQuery query = timeOrderedQuery(Order.DESCENDING);
+
+    final int timeColumn = timeColumn(queryableIndex);
+    final List<List<Object>> allRows = runScanOverSegment(queryableIndex, query, ScanLimitTracker.NONE, 1);
+    final List<List<Object>> rows =
+        runScanOverSegment(queryableIndex, query, trackerAtThresholdTime(Order.DESCENDING), 1);
+
+    // A row the threshold lets through comes after one it does not, so stopping at the first worse row would lose it.
+    final int firstWorseRow = Iterables.indexOf(allRows, row -> timeOf(row, timeColumn) < THRESHOLD_TIME);
+    Assertions.assertTrue(firstWorseRow >= 0);
+    Assertions.assertTrue(
+        allRows.subList(firstWorseRow, allRows.size())
+               .stream()
+               .anyMatch(row -> timeOf(row, timeColumn) >= THRESHOLD_TIME)
+    );
+
+    Assertions.assertEquals(rowsNotWorseThanThreshold(allRows, timeColumn, Order.DESCENDING), rows);
+  }
+
+  @Test
+  public void test_runWithDataServerQuery_sharedLimitAcrossMultipleYielders() throws Exception
+  {
+    final RowSignature signature = RowSignature.builder().add("dim", ColumnType.STRING).build();
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+              .columns(signature.getColumnNames())
+              .columnTypes(signature.getColumnTypes())
+              .limit(4)
+              .build();
+
+    // Each yielder has fewer rows than the limit, and the first one leaves a partial frame behind when it runs out.
+    final DataServerQueryHandler dataServerQueryHandler = new DataServerQueryHandler()
+    {
+      @Override
+      @SuppressWarnings("unchecked")
+      public <RowType, QueryType> ListenableFuture<DataServerQueryResult<RowType>> fetchRowsFromDataServer(
+          final Query<QueryType> query,
+          final JavaType queryResultType,
+          final Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
+          final Closer closer
+      )
+      {
+        final List<Yielder<Object[]>> yielders = ImmutableList.of(
+            Yielders.each(Sequences.simple(ImmutableList.of(new Object[]{"a"}, new Object[]{"b"}, new Object[]{"c"}))),
+            Yielders.each(Sequences.simple(ImmutableList.of(new Object[]{"d"}, new Object[]{"e"}, new Object[]{"f"}))),
+            Yielders.each(Sequences.simple(ImmutableList.of(new Object[]{"g"}, new Object[]{"h"}, new Object[]{"i"})))
+        );
+
+        return Futures.immediateFuture(
+            (DataServerQueryResult<RowType>) new DataServerQueryResult<>(yielders, ImmutableList.of(), "test")
+        );
+      }
+    };
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.latestRowBased(),
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        signature,
+        Collections.emptyList(),
+        false
+    );
+
+    final ScanLimitTracker limitTracker = ScanLimitTracker.create(query);
+    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
+        query,
+        limitTracker,
+        new DefaultObjectMapper(),
+        ReadableInput.dataServerQuery(dataServerQueryHandler),
+        SegmentMapFunction.IDENTITY,
+        ResourceHolder.fromCloseable(outputChannel.writable()),
+        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
+    );
+
+    final ListenableFuture<Object> retVal = exec.runFully(processor, null);
+    final List<List<Object>> rows =
+        FrameTestUtil.readRowsFromFrameChannel(outputChannel.readable(), FrameReader.create(signature)).toList();
+    retVal.get();
+
+    Assertions.assertEquals(
+        ImmutableList.of(List.of("a"), List.of("b"), List.of("c"), List.of("d")),
+        rows
+    );
+    Assertions.assertTrue(limitTracker.isSatisfied());
+  }
+
+  @Test
   public void test_runWithSegments_descendingMatchesNonVectorized() throws Exception
   {
     final QueryableIndex queryableIndex = TestIndex.getMMappedTestIndex();
@@ -124,9 +307,16 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
               .order(Order.DESCENDING);
 
     final ScanQuery nonVectorizedQuery =
-        baseBuilder.context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, "false")).build();
+        baseBuilder.context(QueryContext.ofMap(QueryContextParameters.VECTORIZE, QueryContexts.Vectorize.FALSE)).build();
     final ScanQuery vectorizedQuery =
-        baseBuilder.context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, "force", QueryContexts.VECTOR_SIZE_KEY, 7))
+        baseBuilder.context(
+                     QueryContext.ofMap(
+                         QueryContextParameters.VECTORIZE,
+                         QueryContexts.Vectorize.FORCE,
+                         QueryContextParameters.VECTOR_SIZE,
+                         7
+                     )
+                 )
                    .build();
 
     final List<List<Object>> nonVectorizedRows = runScanOverSegment(queryableIndex, nonVectorizedQuery);
@@ -197,7 +387,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 
     final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
         query,
-        null,
+        ScanLimitTracker.NONE,
         new DefaultObjectMapper(),
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), 0, 0),
         SegmentMapFunction.IDENTITY,
@@ -223,6 +413,139 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
                        + "2011-01-02T00:00:00.000Z/2021-01-01T00:00:00.000Z]]"
                    )
                    .assertThat(e);
+  }
+
+  @Test
+  public void test_runWithInputChannel_sharedLimitReachedMidFrame_finishesWithoutAwaitingInput() throws Exception
+  {
+    final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
+    final FrameSequenceBuilder frameSequenceBuilder =
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                            .maxRowsPerFrame(5)
+                            .frameType(FrameType.latestRowBased())
+                            .allocator(ArenaMemoryAllocator.createOnHeap(100_000));
+    final RowSignature signature = frameSequenceBuilder.signature();
+
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+              .columns(signature.getColumnNames())
+              .limit(13)
+              .build();
+
+    // Other processors have already written 10 rows, so this one must stop after 3 of the first frame's 5.
+    final ScanLimitTracker limitTracker = ScanLimitTracker.create(query);
+    flushRowsFromOtherProcessor(limitTracker, 10);
+
+    // Provide one input frame and leave the channel open, so the processor next awaits more input.
+    final BlockingQueueFrameChannel inputChannel = new BlockingQueueFrameChannel(1);
+    final WritableFrameChannel writableInputChannel = inputChannel.writable();
+    writableInputChannel.write(frameSequenceBuilder.frames().toList().getFirst());
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+    final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            signature,
+            Collections.emptyList(),
+            false
+        ),
+        Integer.MAX_VALUE
+    );
+
+    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
+        query,
+        limitTracker,
+        new DefaultObjectMapper(),
+        ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), 0, 0),
+        SegmentMapFunction.IDENTITY,
+        ResourceHolder.fromCloseable(outputChannel.writable()),
+        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
+    );
+    final ListenableFuture<Object> retVal = exec.runFully(processor, null);
+
+    // The stopped rows must be flushed, and the processor must finish, without waiting for more input.
+    outputChannel.readable().readabilityFuture().get(30, TimeUnit.SECONDS);
+    Assertions.assertEquals(3, outputChannel.readable().readFrame().numRows());
+    Assertions.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
+    Assertions.assertTrue(limitTracker.isSatisfied());
+
+    writableInputChannel.close();
+  }
+
+  @Test
+  public void test_runWithInputChannel_sharedLimitReachedByCountedUnflushedRows_writesThem() throws Exception
+  {
+    final int batch = RowCountScanLimitTracker.ROWS_PER_UPDATE;
+    final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
+    final FrameSequenceBuilder frameSequenceBuilder =
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                            .maxRowsPerFrame(batch)
+                            .frameType(FrameType.latestRowBased())
+                            .allocator(ArenaMemoryAllocator.createOnHeap(1_000_000));
+    final RowSignature signature = frameSequenceBuilder.signature();
+
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+              .columns(signature.getColumnNames())
+              .limit(100)
+              .build();
+    final ScanLimitTracker limitTracker = ScanLimitTracker.create(query);
+
+    // Provide one input frame of exactly one batch and leave the channel open. The processor counts the batch, its
+    // cursor runs out, and its rows stay in the frame writer while it awaits more input.
+    final BlockingQueueFrameChannel inputChannel = new BlockingQueueFrameChannel(1);
+    final WritableFrameChannel writableInputChannel = inputChannel.writable();
+    writableInputChannel.write(frameSequenceBuilder.frames().toList().getFirst());
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+    final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            signature,
+            Collections.emptyList(),
+            false
+        ),
+        Integer.MAX_VALUE
+    );
+
+    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
+        query,
+        limitTracker,
+        new DefaultObjectMapper(),
+        ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), 0, 0),
+        SegmentMapFunction.IDENTITY,
+        ResourceHolder.fromCloseable(outputChannel.writable()),
+        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
+    );
+    final ListenableFuture<Object> retVal = exec.runFully(processor, null);
+
+    // Another processor buffers the rest of the limit. Its gate stops once this processor's batch is counted.
+    final RowGate otherProcessorGate = limitTracker.forCursor(null, List.of());
+    for (int i = 0; i < 100 - batch; i++) {
+      otherProcessorGate.onRowWritten();
+    }
+    final long deadline = System.currentTimeMillis() + 30_000;
+    while (otherProcessorGate.check() != RowGate.Decision.STOP) {
+      Assertions.assertTrue(System.currentTimeMillis() < deadline, "processor never counted its batch");
+      Thread.sleep(10);
+    }
+    otherProcessorGate.onFrameFlushed();
+    Assertions.assertTrue(limitTracker.isSatisfied());
+
+    // The limit counts this processor's rows, so they must be written even though it stops without more input.
+    writableInputChannel.close();
+    final List<List<Object>> rows = FrameTestUtil.readRowsFromFrameChannel(
+        outputChannel.readable(),
+        FrameReader.create(signature)
+    ).toList();
+    Assertions.assertEquals(batch, rows.size());
+    Assertions.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
   }
 
   /**
@@ -338,7 +661,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     final ReferenceCountedSegmentProvider segmentReferenceProvider = new ReferenceCountedSegmentProvider(wrappedSegment);
     final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
         query,
-        null,
+        ScanLimitTracker.NONE,
         new DefaultObjectMapper(),
         ReadableInput.segment(
             new SegmentReferenceHolder(
@@ -377,15 +700,114 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     Assertions.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
   }
 
+  /**
+   * Counts {@code numRows} rows toward {@code limitTracker}'s limit, as if another processor had written and flushed
+   * them.
+   */
+  private static void flushRowsFromOtherProcessor(final ScanLimitTracker limitTracker, final int numRows)
+  {
+    final RowGate otherProcessorGate = limitTracker.forCursor(null, List.of());
+    for (int i = 0; i < numRows; i++) {
+      otherProcessorGate.onRowWritten();
+    }
+    otherProcessorGate.onFrameFlushed();
+  }
+
+  /**
+   * Threshold of the time-ordered tests. Rows at this time tie it; rows after it (descending) or before it
+   * (ascending) beat it.
+   */
+  private static final long THRESHOLD_TIME = DateTimes.of("2011-04-01").getMillis();
+
+  /**
+   * Rows needed by the tracker in the time-ordered tests: more than the test segments hold, so the rows a test writes
+   * never tighten the threshold.
+   */
+  private static final int TRACKER_ROWS_NEEDED = 5000;
+
+  /**
+   * Tracker whose threshold is {@link #THRESHOLD_TIME}, as if other processors had already written
+   * {@link #TRACKER_ROWS_NEEDED} rows at that time.
+   */
+  private static TimeOrderedScanLimitTracker trackerAtThresholdTime(final Order order)
+  {
+    final TimeOrderedScanLimitTracker limitTracker = new TimeOrderedScanLimitTracker(order, TRACKER_ROWS_NEEDED);
+    final long[] times = new long[TRACKER_ROWS_NEEDED];
+    Arrays.fill(times, THRESHOLD_TIME);
+    limitTracker.offerAll(times, times.length);
+    return limitTracker;
+  }
+
+  /**
+   * Returns the rows of {@code rows} that are not worse than {@link #THRESHOLD_TIME} in {@code order}, in their
+   * original order. Checks that the threshold both keeps and removes some rows, so tests using it cannot pass
+   * trivially, and that the rows kept cannot tighten the threshold.
+   */
+  private static List<List<Object>> rowsNotWorseThanThreshold(
+      final List<List<Object>> rows,
+      final int timeColumn,
+      final Order order
+  )
+  {
+    final List<List<Object>> notWorse =
+        rows.stream()
+            .filter(row -> order == Order.DESCENDING
+                           ? timeOf(row, timeColumn) >= THRESHOLD_TIME
+                           : timeOf(row, timeColumn) <= THRESHOLD_TIME)
+            .collect(Collectors.toList());
+    Assertions.assertFalse(notWorse.isEmpty());
+    Assertions.assertTrue(notWorse.size() < rows.size());
+    Assertions.assertTrue(notWorse.size() < TRACKER_ROWS_NEEDED);
+    return notWorse;
+  }
+
+  /**
+   * Position of {@code __time} in the rows that {@link #runScanOverSegment} returns for {@code queryableIndex}.
+   */
+  private static int timeColumn(final QueryableIndex queryableIndex)
+  {
+    return new QueryableIndexCursorFactory(queryableIndex).getRowSignature().indexOf(ColumnHolder.TIME_COLUMN_NAME);
+  }
+
+  private static long timeOf(final List<Object> row, final int timeColumn)
+  {
+    return ((Number) row.get(timeColumn)).longValue();
+  }
+
+  /**
+   * Query for the time-ordered tests: ordered by {@code __time}, with a limit larger than the test segments' rows, so
+   * the limit pushdown never ends a cursor first.
+   */
+  private static ScanQuery timeOrderedQuery(final Order order)
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource("test")
+                 .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+                 .columns("__time", "market")
+                 .order(order)
+                 .limit(TRACKER_ROWS_NEEDED)
+                 .build();
+  }
+
   private List<List<Object>> runScanOverSegment(final QueryableIndex queryableIndex, final ScanQuery query)
       throws Exception
+  {
+    // Limit output frames to 1 row to ensure we test edge cases
+    return runScanOverSegment(queryableIndex, query, ScanLimitTracker.NONE, 1);
+  }
+
+  private List<List<Object>> runScanOverSegment(
+      final QueryableIndex queryableIndex,
+      final ScanQuery query,
+      final ScanLimitTracker limitTracker,
+      final int maxRowsPerFrame
+  ) throws Exception
   {
     final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
     final RowSignature signature = cursorFactory.getRowSignature();
 
     final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
 
-    // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
         FrameWriters.makeFrameWriterFactory(
             FrameType.latestRowBased(),
@@ -394,14 +816,14 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
             Collections.emptyList(),
             false
         ),
-        1
+        maxRowsPerFrame
     );
 
     final ReferenceCountedSegmentProvider segmentReferenceProvider =
         new ReferenceCountedSegmentProvider(new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test")));
     final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
         query,
-        null,
+        limitTracker,
         new DefaultObjectMapper(),
         ReadableInput.segment(
             new SegmentReferenceHolder(

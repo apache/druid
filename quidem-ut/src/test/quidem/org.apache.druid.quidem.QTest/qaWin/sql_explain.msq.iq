@@ -140,7 +140,6 @@ WHERE client_ip IN ('107.13.54.103',
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "timestampResultField" : "d3",
@@ -274,7 +273,6 @@ WHERE client_ip IN ('107.13.54.103',
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "timestampResultField" : "d3",
@@ -428,7 +426,6 @@ WHERE client_ip IN ('107.13.54.103',
           "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
         },
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -804,7 +801,6 @@ WHERE client_ip IN ('107.13.54.103',
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "timestampResultField" : "d3",
@@ -938,7 +934,6 @@ WHERE client_ip IN ('107.13.54.103',
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "timestampResultField" : "d3",
@@ -1092,7 +1087,6 @@ WHERE client_ip IN ('107.13.54.103',
           "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
         },
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -1457,7 +1451,6 @@ GROUP BY server_ip,
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "timestampResultField" : "d3",
@@ -1586,7 +1579,6 @@ GROUP BY server_ip,
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "timestampResultField" : "d3",
@@ -1732,7 +1724,6 @@ GROUP BY server_ip,
           "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
         },
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
@@ -2098,7 +2089,6 @@ GROUP BY server_ip,
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "timestampResultField" : "d3",
@@ -2227,7 +2217,6 @@ GROUP BY server_ip,
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "timestampResultField" : "d3",
@@ -2373,7 +2362,6 @@ GROUP BY server_ip,
           "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
         },
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,

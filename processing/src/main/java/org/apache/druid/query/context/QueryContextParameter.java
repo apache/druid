@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.context;
 
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -33,21 +34,104 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * Describes a query context parameter without changing how existing query code reads the context. Instances are
- * immutable and thread-safe when their parser and constraint implementations are thread-safe.
+ * Describes a query context parameter: its name, value type, parser, constraints, default value and documentation.
+ * Code reads and writes the parameter through this descriptor instead of a raw string key. Instances are immutable and
+ * thread-safe when their parser and constraint implementations are thread-safe.
  *
  * <p>A {@code null} value means "unset": readers treat an explicit {@code null} the same as an absent key, and writers
  * remove the key (or store {@code null} where removal is not possible). {@link #isNullable()} controls whether a
  * {@code null} may be supplied at all. Invalid values are reported with {@link BadQueryContextException}.</p>
  *
+ * <p>Query contexts are JSON maps: users send them as JSON, and Druid serializes them to data servers and into task
+ * specs. An enum value therefore usually arrives in its JSON form, a string, rather than as the enum constant. An enum
+ * used as a parameter type must have one string form that all paths agree on: its {@code toString()} must be
+ * annotated with {@code @JsonValue}, and both its {@code @JsonCreator}, if any, and the parameter's parser must accept
+ * that string. {@code QueryContextParameterTest#testEnumParametersHaveConsistentJsonForm} checks this for every enum
+ * parameter in {@link QueryContextParameters#ALL}.</p>
+ *
  * @param <T> parsed value type
  */
 public final class QueryContextParameter<T>
 {
+  /**
+   * Who a query context parameter is intended for. Visibility is independent of documentation metadata: parameters of
+   * every visibility carry a description.
+   */
+  public enum Visibility
+  {
+    /**
+     * A user-facing parameter that is part of the documented contract and is rendered in the generated documentation.
+     */
+    PUBLIC,
+
+    /**
+     * A user-settable parameter, such as a switch for debugging, testing or tuning, that is not part of the documented
+     * contract. It is left out of the generated documentation and may change or be removed without notice.
+     */
+    HIDDEN,
+
+    /**
+     * A parameter that Druid sets itself to coordinate between services. It is left out of the generated documentation.
+     */
+    SYSTEM
+  }
+
+  /**
+   * The value type of a parameter as users see it, such as in {@code sys.query_context_parameters}
+   */
+  public enum Type
+  {
+    BOOLEAN("Boolean", Boolean.class),
+    INTEGER("Integer", Integer.class),
+    LONG("Long", Long.class),
+    FLOAT("Float", Float.class),
+    STRING("String", String.class),
+    /**
+     * A number that also accepts a human-readable form with a unit suffix, such as {@code 10K} or {@code 256MiB}
+     */
+    HUMAN_READABLE_NUMBER("HumanReadableNumber", HumanReadableBytes.class),
+    ENUM("Enum", Enum.class),
+    /**
+     * A JSON value of any shape, such as an object
+     */
+    OBJECT("Object", Object.class);
+
+    private final String displayName;
+    private final Class<?> javaType;
+
+    Type(final String displayName, final Class<?> javaType)
+    {
+      this.displayName = displayName;
+      this.javaType = javaType;
+    }
+
+    /**
+     * Returns the name shown to users, in PascalCase, such as {@code HumanReadableNumber}
+     */
+    public String getDisplayName()
+    {
+      return displayName;
+    }
+
+    /**
+     * Returns the type of parameters whose values are of the given class
+     *
+     * @throws IAE if no type corresponds to the class
+     */
+    public static Type of(final Class<?> valueType)
+    {
+      for (final Type type : values()) {
+        if (type == ENUM ? valueType.isEnum() : type.javaType.equals(valueType)) {
+          return type;
+        }
+      }
+      throw new IAE("No query context parameter type for value type [%s]", valueType.getName());
+    }
+  }
+
   @FunctionalInterface
   public interface ValueParser<T>
   {
@@ -81,30 +165,43 @@ public final class QueryContextParameter<T>
   }
 
   private final String name;
+  private final Type type;
   private final Class<T> valueType;
   private final ValueParser<T> parser;
   private final List<ParameterConstraint<T>> constraints;
-  private final Optional<T> defaultValue;
+  private final DefaultValue<T> defaultValue;
   private final boolean nullable;
-  private final Optional<String> deprecationMessage;
-  private final Optional<ParameterDocumentation> documentation;
+  private final Visibility visibility;
+  @Nullable
+  private final String since;
+  @Nullable
+  private final String deprecationMessage;
+  private final ParameterDocumentation documentation;
 
   private QueryContextParameter(final Builder<T> builder)
   {
     this.name = builder.name;
+    this.type = builder.type;
     this.valueType = builder.valueType;
     this.parser = builder.parser;
     this.constraints = List.copyOf(builder.constraints);
-    this.defaultValue = Optional.ofNullable(builder.defaultValue);
+    this.defaultValue = builder.defaultValue;
     this.nullable = builder.nullable;
-    this.deprecationMessage = Optional.ofNullable(builder.deprecationMessage);
-    this.documentation = builder.documentationBuilder == null
-                         ? Optional.empty()
-                         : Optional.of(builder.documentationBuilder.build());
+    this.visibility = builder.visibility;
+    this.since = builder.since;
+    this.deprecationMessage = builder.deprecationMessage;
 
-    if (defaultValue.isPresent()) {
+    if (!builder.hasDescription) {
+      throw new IAE("Query context parameter [%s] must have a description", name);
+    }
+    if (since != null) {
+      builder.documentationBuilder.since(since);
+    }
+    this.documentation = builder.documentationBuilder.build();
+
+    if (defaultValue instanceof DefaultValue.Literal<T> literal) {
       try {
-        validate(defaultValue.get());
+        validate(literal.value());
       }
       catch (BadQueryContextException e) {
         // An invalid declared default is a programming error, not a bad user-supplied value.
@@ -125,6 +222,11 @@ public final class QueryContextParameter<T>
   public String getName()
   {
     return name;
+  }
+
+  public Type getType()
+  {
+    return type;
   }
 
   public Class<T> getValueType()
@@ -197,9 +299,11 @@ public final class QueryContextParameter<T>
     if (parsed != null) {
       return parsed;
     }
-    return defaultValue.orElseThrow(
-        () -> new ISE("Query context parameter [%s] has no declared default", name)
-    );
+    final T literalDefault = getLiteralDefault();
+    if (literalDefault == null) {
+      throw new ISE("Query context parameter [%s] has no declared default", name);
+    }
+    return literalDefault;
   }
 
   /**
@@ -228,12 +332,22 @@ public final class QueryContextParameter<T>
   }
 
   /**
-   * Returns the declared default, if one exists. Parameters whose fallback is supplied by runtime configuration or an
-   * individual call site do not have a default value in the descriptor.
+   * Returns the declared default: none, a literal value, or the runtime property that the code reading the parameter
+   * falls back to.
    */
-  public Optional<T> getDefaultValue()
+  public DefaultValue<T> getDefaultValue()
   {
     return defaultValue;
+  }
+
+  /**
+   * Returns the default value if it is a literal, otherwise null. Parameters whose fallback is supplied by runtime
+   * configuration or an individual call site do not have one.
+   */
+  @Nullable
+  public T getLiteralDefault()
+  {
+    return defaultValue instanceof DefaultValue.Literal<T> literal ? literal.value() : null;
   }
 
   public boolean isNullable()
@@ -241,17 +355,33 @@ public final class QueryContextParameter<T>
     return nullable;
   }
 
-  public boolean isDeprecated()
+  public Visibility getVisibility()
   {
-    return deprecationMessage.isPresent();
+    return visibility;
   }
 
-  public Optional<String> getDeprecationMessage()
+  /**
+   * Returns the Druid version that introduced this parameter, if declared. Available regardless of whether the
+   * parameter has public documentation.
+   */
+  @Nullable
+  public String getSince()
+  {
+    return since;
+  }
+
+  public boolean isDeprecated()
+  {
+    return deprecationMessage != null;
+  }
+
+  @Nullable
+  public String getDeprecationMessage()
   {
     return deprecationMessage;
   }
 
-  public Optional<ParameterDocumentation> getDocumentation()
+  public ParameterDocumentation getDocumentation()
   {
     return documentation;
   }
@@ -305,22 +435,27 @@ public final class QueryContextParameter<T>
   public static final class Builder<T>
   {
     private final String name;
+    private final Type type;
     private final Class<T> valueType;
     private final ValueParser<T> parser;
     private final List<ParameterConstraint<T>> constraints = new ArrayList<>();
-    @Nullable
-    private T defaultValue;
+    private DefaultValue<T> defaultValue = DefaultValue.none();
     // Query context maps historically permit explicit null values, so preserve that behavior unless declared otherwise.
     private boolean nullable = true;
+    private Visibility visibility = Visibility.PUBLIC;
     @Nullable
     private String deprecationMessage;
     @Nullable
     private ParameterDocumentation.Builder documentationBuilder;
+    private boolean hasDescription;
+    @Nullable
+    private String since;
 
     private Builder(final String name, final Class<T> valueType, final ValueParser<T> parser)
     {
       this.name = Objects.requireNonNull(name, "name");
       this.valueType = Objects.requireNonNull(valueType, "valueType");
+      this.type = Type.of(valueType);
       this.parser = Objects.requireNonNull(parser, "parser");
 
       if (name.isBlank() || !name.equals(name.trim())) {
@@ -336,13 +471,29 @@ public final class QueryContextParameter<T>
 
     public Builder<T> defaultValue(final T defaultValue)
     {
-      this.defaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
+      this.defaultValue = new DefaultValue.Literal<>(defaultValue);
+      return this;
+    }
+
+    /**
+     * Declares that the default is the value of a runtime property, like
+     * {@code defaultValue(DefaultValue.fromProperty("druid.broker.http.maxQueuedBytes"))}.
+     */
+    public Builder<T> defaultValue(final DefaultValue.FromProperty<T> fromProperty)
+    {
+      this.defaultValue = Objects.requireNonNull(fromProperty, "fromProperty");
       return this;
     }
 
     public Builder<T> nullable(final boolean nullable)
     {
       this.nullable = nullable;
+      return this;
+    }
+
+    public Builder<T> visibility(final Visibility visibility)
+    {
+      this.visibility = Objects.requireNonNull(visibility, "visibility");
       return this;
     }
 
@@ -366,6 +517,7 @@ public final class QueryContextParameter<T>
     public Builder<T> description(final String description)
     {
       documentationBuilder().description(description);
+      hasDescription = true;
       return this;
     }
 
@@ -401,7 +553,10 @@ public final class QueryContextParameter<T>
 
     public Builder<T> since(final String since)
     {
-      documentationBuilder().since(since);
+      this.since = Objects.requireNonNull(since, "since");
+      if (since.isBlank()) {
+        throw new IAE("Query context parameter since must not be blank");
+      }
       return this;
     }
 

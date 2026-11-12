@@ -66,6 +66,21 @@ line */ SELECT`;
     expect(tokenOf(dsqlLanguage, sql, '(x AS VARCHAR)')).toEqual('Parens');
   });
 
+  it('highlights NULLS FIRST / NULLS LAST as keywords', () => {
+    expect(tokenize(dsqlLanguage, 'ORDER BY 2 DESC NULLS LAST, 1 NULLS FIRST')).toEqual([
+      ['Keyword', 'ORDER'],
+      ['Keyword', 'BY'],
+      ['Number', '2'],
+      ['Keyword', 'DESC'],
+      ['Keyword', 'NULLS'],
+      ['Keyword', 'LAST'],
+      ['Punctuation', ','],
+      ['Number', '1'],
+      ['Keyword', 'NULLS'],
+      ['Keyword', 'FIRST'],
+    ]);
+  });
+
   it('highlights unterminated DruidSQL tokens', () => {
     expect(tokenOf(dsqlLanguage, 'SELECT /* not closed', '/* not closed')).toEqual('BlockComment');
     // An unterminated literal or quoted identifier lasts until the end of the line
@@ -217,6 +232,21 @@ dataSource: wikipedia`;
       expect(complete(hjson({ jsonCompletions }), '{\n  que|')).toEqual(['queryType']);
       expect(hjson({ jsonCompletions })).toBe(hjson({ jsonCompletions }));
       expect(complete(hjson(), '{\n  que|')).toBeUndefined();
+    });
+
+    it('completes query context parameters right after the SET keyword in dsql', () => {
+      expect(complete(dsql(), 'SET |')).toContain('sqlTimeZone');
+      expect(complete(dsql(), 'SELECT 1;\nset |')).toContain('sqlTimeZone');
+      // However long the whitespace after SET is
+      expect(complete(dsql(), `SET\n${' '.repeat(40)}|`)).toContain('sqlTimeZone');
+      expect(complete(dsql(), 'SELECT |')).toBeUndefined();
+      // Not the SET keyword
+      expect(complete(dsql(), "SELECT * FROM t WHERE x = 'foo set |")).toBeUndefined();
+      expect(complete(dsql(), '-- set |')).toBeUndefined();
+      expect(complete(dsql(), 'SELECT * FROM t LIMIT 1 OFFSET |')).toBeUndefined();
+      // Not after SET itself: in an unclosed quoted identifier or string
+      expect(complete(dsql(), 'SET "a |')).toBeUndefined();
+      expect(complete(dsql(), "SET 'a |")).toBeUndefined();
     });
 
     it('is off in read only editors', () => {

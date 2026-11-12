@@ -35,6 +35,7 @@ public class ResourceType
   public static final String SYSTEM_TABLE = "SYSTEM_TABLE";
   public static final String QUERY_CONTEXT = "QUERY_CONTEXT";
   public static final String EXTERNAL = "EXTERNAL";
+  public static final String LOOKUP = "LOOKUP";
 
   private static final Set<String> KNOWN_TYPES = Sets.newConcurrentHashSet();
 
@@ -47,6 +48,7 @@ public class ResourceType
     registerResourceType(SYSTEM_TABLE);
     registerResourceType(QUERY_CONTEXT);
     registerResourceType(EXTERNAL);
+    registerResourceType(LOOKUP);
   }
 
   /**

@@ -70,6 +70,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   private final AggregatorFactory[] aggregatorFactories;
   private final Map<String, IncrementalIndex.DimensionDesc> dimensionsMap;
   private final Map<String, IncrementalIndex.MetricDesc> aggregatorsMap;
+  // formats of the time column and metrics; grouping column formats come from their indexers, see getColumnFormat
   private final Map<String, ColumnFormat> columnFormats;
   private final FactsHolder factsHolder;
   private final IncrementalIndex.InputRowHolder inputRowHolder = new IncrementalIndex.InputRowHolder();
@@ -308,6 +309,11 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   @Override
   public ColumnFormat getColumnFormat(String columnName)
   {
+    // Read the format from the dimension indexer, so it reflects the data added so far.
+    final IncrementalIndex.DimensionDesc dim = dimensionsMap.get(columnName);
+    if (dim != null) {
+      return dim.getIndexer().getFormat();
+    }
     return columnFormats.get(columnName);
   }
 
@@ -423,7 +429,6 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
 
         dimensions.add(childOnly);
         dimensionsMap.put(dimension.getName(), childOnly);
-        columnFormats.put(dimension.getName(), childOnly.getIndexer().getFormat());
       } else {
         if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
           // special handle auto column schema, who reports type as json in schema, but indexer reports whatever
@@ -450,7 +455,6 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
         dimensions.add(child);
         dimensionsMap.put(dimension.getName(), child);
         parentDimensionIndex[child.getIndex()] = parent.getIndex();
-        columnFormats.put(dimension.getName(), child.getIndexer().getFormat());
       }
     }
   }

@@ -20,8 +20,8 @@
 package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.NotYetSupported;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
@@ -41,9 +41,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
   {
     return new QueryTestBuilder(new CalciteTestConfig(true))
         .queryContext(
-            ImmutableMap.<String, Object>builder()
-                .put(QueryContexts.ENABLE_DEBUG, true)
-                .build()
+            QueryContext.ofMap(QueryContextParameters.DEBUG, true)
         )
         .skipVectorize(true)
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());

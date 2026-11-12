@@ -35,14 +35,15 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -64,6 +65,7 @@ import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -78,6 +80,7 @@ import javax.ws.rs.core.MediaType;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -91,28 +94,19 @@ public class CoordinatorClientImplTest
   private MockServiceClient serviceClient;
   private CoordinatorClient coordinatorClient;
 
-  private static final DataSegment SEGMENT1 = DataSegment.builder()
-                                                         .dataSource("xyz")
-                                                         .interval(Intervals.of("1000/2000"))
-                                                         .version("1")
+  private static final DataSegment SEGMENT1 = DataSegment.builder(SegmentId.of("xyz", Intervals.of("1000/2000"), "1", 0))
                                                          .loadSpec(ImmutableMap.of("type", "local", "loc", "foo"))
                                                          .shardSpec(new NumberedShardSpec(0, 1))
                                                          .size(1)
                                                          .build();
 
-  private static final DataSegment SEGMENT2 = DataSegment.builder()
-                                                         .dataSource("xyz")
-                                                         .interval(Intervals.of("2000/3000"))
-                                                         .version("1")
+  private static final DataSegment SEGMENT2 = DataSegment.builder(SegmentId.of("xyz", Intervals.of("2000/3000"), "1", 0))
                                                          .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
                                                          .shardSpec(new NumberedShardSpec(0, 1))
                                                          .size(1)
                                                          .build();
 
-  private static final DataSegment SEGMENT3 = DataSegment.builder()
-                                                         .dataSource("abc")
-                                                         .interval(Intervals.of("2000/3000"))
-                                                         .version("1")
+  private static final DataSegment SEGMENT3 = DataSegment.builder(SegmentId.of("abc", Intervals.of("2000/3000"), "1", 0))
                                                          .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
                                                          .shardSpec(new NumberedShardSpec(0, 1))
                                                          .size(1)
@@ -168,10 +162,7 @@ public class CoordinatorClientImplTest
   public void test_fetchUsedSegment() throws Exception
   {
     final DataSegment segment =
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(Intervals.of("2000/3000"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", Intervals.of("2000/3000"), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build();
@@ -196,10 +187,7 @@ public class CoordinatorClientImplTest
   public void test_fetchSegment() throws Exception
   {
     final DataSegment segment =
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(Intervals.of("2000/3000"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", Intervals.of("2000/3000"), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build();
@@ -225,10 +213,7 @@ public class CoordinatorClientImplTest
   {
     final List<Interval> intervals = Collections.singletonList(Intervals.of("2000/3000"));
     final DataSegment segment =
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(intervals.get(0))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", intervals.get(0), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build();
@@ -374,10 +359,7 @@ public class CoordinatorClientImplTest
         );
 
     final ImmutableSegmentLoadInfo immutableSegmentLoadInfo1 = new ImmutableSegmentLoadInfo(
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(intervals.get(0))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", intervals.get(0), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build(),
@@ -395,10 +377,7 @@ public class CoordinatorClientImplTest
     );
 
     final ImmutableSegmentLoadInfo immutableSegmentLoadInfo2 = new ImmutableSegmentLoadInfo(
-        DataSegment.builder()
-                   .dataSource("xyz")
-                   .interval(intervals.get(1))
-                   .version("1")
+        DataSegment.builder(SegmentId.of("xyz", intervals.get(1), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 1))
                    .size(1)
                    .build(),
@@ -575,10 +554,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segments)
     );
 
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, true),
         true
-    );
+    ).get();
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
@@ -606,10 +585,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segments)
     );
 
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, false),
         true
-    );
+    ).get();
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
@@ -620,6 +599,26 @@ public class CoordinatorClientImplTest
                       .map(SegmentStatusInCluster::getDataSegment)
                       .collect(ImmutableList.toImmutableList())
     );
+  }
+
+  @Test
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_closeBeforeIteratingReleasesTheResponse()
+      throws JsonProcessingException
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT1))
+    );
+
+    final ResourceHolder<Iterator<SegmentStatusInCluster>> segments = FutureUtils.getUnchecked(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, false),
+        true
+    );
+    segments.close();
+
+    Assertions.assertThrows(QueryInterruptedException.class, () -> segments.get().hasNext());
   }
 
   @Test
@@ -635,10 +634,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT3))
     );
 
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc"), true),
         true
-    );
+    ).get();
 
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
@@ -666,10 +665,10 @@ public class CoordinatorClientImplTest
     );
 
     Set<String> dataSources = new LinkedHashSet<>(List.of("xyz", "abc"));
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(dataSources, true),
         true
-    );
+    ).get();
 
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
@@ -696,10 +695,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(List.of(SEGMENT3))
     );
 
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+    Iterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
         coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc"), false),
         true
-    );
+    ).get();
 
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {

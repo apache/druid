@@ -23,7 +23,7 @@ import { C, filterMap, N, T } from 'druid-query-toolkit';
 
 import type { CompletionWord } from '../components/code-editor/completion-source';
 import { completeSyntaxTree, tokenBefore } from '../components/code-editor/completion-source';
-import { DEFAULT_SERVER_QUERY_CONTEXT } from '../druid-models';
+import type { QueryContextParameterMetadata } from '../druid-models';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../editor-languages/dsql-docs';
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../editor-languages/dsql-keywords';
 import type { AvailableFunctions } from '../helpers';
@@ -31,6 +31,7 @@ import type { ColumnMetadata } from '../utils';
 import { lookupBy, uniq } from '../utils';
 
 import type { EditorCompletion } from './editor-completion';
+import { getQueryContextCompletions } from './query-context-parameter-completions';
 
 const SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_FUNCTION = [
   'AS',
@@ -42,7 +43,9 @@ const SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_FUNCTION = [
   'SET',
   'VALUES',
   'FETCH',
+  'NULLS',
   'FIRST',
+  'LAST',
   'NEXT',
   'ONLY',
   'PRECEDING',
@@ -55,7 +58,9 @@ const SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_REF = [
   'DESC',
   'LIMIT',
   'OFFSET',
+  'NULLS',
   'FIRST',
+  'LAST',
   'NEXT',
   'ONLY',
   'PRECEDING',
@@ -93,6 +98,7 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   RIGHT: ['JOIN', 'OUTER'],
   INNER: ['JOIN'],
   FULL: ['JOIN', 'OUTER'],
+  OUTER: ['JOIN'],
   CROSS: ['JOIN'],
   NATURAL: ['JOIN', 'LEFT', 'RIGHT', 'INNER', 'FULL'],
   EXPLAIN: ['PLAN'],
@@ -100,18 +106,20 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   GROUPING: ['SETS'],
   FETCH: ['FIRST', 'NEXT'],
   FIRST: ['ROW', 'ROWS'],
+  ASC: ['NULLS'],
+  DESC: ['NULLS'],
+  NULLS: ['FIRST', 'LAST'],
   NEXT: ['ROW', 'ROWS'],
   ROWS: ['ONLY'],
   ROW: ['ONLY'],
   IS: ['NOT', 'DISTINCT'],
-  DISTINCT: ['FROM'],
   BY: ['GROUPING', 'ROLLUP', 'CUBE', 'ALL', 'HOUR', 'DAY', 'MONTH', 'YEAR'],
   ALL: ['TIME'],
 
   // Keywords that cannot be followed by any other keyword
   AS: [],
-  ASC: [],
-  DESC: [],
+  DISTINCT: [], // Except in IS [NOT] DISTINCT FROM, see SQL_KEYWORD_PAIR_FOLLOW_SUGGESTIONS
+  LAST: [],
   LIMIT: [],
   OFFSET: [],
   RETURNING: [],
@@ -157,6 +165,29 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   MILLENNIUM: [],
 };
 
+// Like SQL_KEYWORD_FOLLOW_SUGGESTIONS but keyed by the two keywords before the cursor, takes precedence over it. For
+// keywords that are followed by different keywords depending on what comes before them
+const SQL_KEYWORD_PAIR_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
+  // BY on its own suggests the union of these
+  'GROUP BY': ['GROUPING', 'ROLLUP', 'CUBE'],
+  'PARTITIONED BY': ['ALL', 'HOUR', 'DAY', 'MONTH', 'YEAR'],
+  'ORDER BY': [],
+  'PARTITION BY': [],
+  'CLUSTERED BY': [],
+
+  // ALL on its own is PARTITIONED BY ALL TIME
+  'SELECT ALL': [],
+  'UNION ALL': ['SELECT'],
+
+  'IS NOT': ['DISTINCT'],
+  'IS DISTINCT': ['FROM'],
+  'NOT DISTINCT': ['FROM'],
+
+  'NULLS FIRST': [], // Unlike FETCH FIRST
+  'CURRENT ROW': [], // Unlike FETCH FIRST ROW
+  'PLAN FOR': ['SELECT', 'INSERT', 'REPLACE'], // Unlike SUBSTRING(... FOR ...)
+};
+
 const COMMENT_NODES = new Set(['LineComment', 'BlockComment', 'Issue']);
 
 // The tokens that are words, the specializer in dsql-tokens.ts tells them apart
@@ -192,6 +223,8 @@ function tokenEndingBefore(state: EditorState, pos: number): SyntaxNode | undefi
 
 export interface SqlCompletionOptions {
   columnMetadata?: readonly ColumnMetadata[];
+  /** The query context parameters to suggest after SET, from sys.query_context_parameters */
+  queryContextParameters?: readonly QueryContextParameterMetadata[];
   columns?: readonly string[];
   availableSqlFunctions?: AvailableFunctions;
   skipAggregates?: boolean;
@@ -203,7 +236,13 @@ export interface SqlCompletionOptions {
 export function getSqlCompletions(
   { state, pos }: CompletionContext,
   { from, text: prefix }: CompletionWord,
-  { columnMetadata, columns, availableSqlFunctions, skipAggregates }: SqlCompletionOptions = {},
+  {
+    columnMetadata,
+    columns,
+    availableSqlFunctions,
+    skipAggregates,
+    queryContextParameters,
+  }: SqlCompletionOptions = {},
 ): EditorCompletion[] {
   const token = tokenBefore(state, pos);
 
@@ -233,10 +272,23 @@ export function getSqlCompletions(
     tokenBeforePrefix && WORD_NODES.has(tokenBeforePrefix.name)
       ? state.sliceDoc(tokenBeforePrefix.from, tokenBeforePrefix.to).toUpperCase()
       : undefined;
+  const tokenBeforeKeyword =
+    tokenBeforePrefix && keywordBeforePrefix
+      ? tokenEndingBefore(state, tokenBeforePrefix.from)
+      : undefined;
+  const keywordsBeforePrefix =
+    tokenBeforeKeyword && WORD_NODES.has(tokenBeforeKeyword.name)
+      ? `${state.sliceDoc(tokenBeforeKeyword.from, tokenBeforeKeyword.to).toUpperCase()} ${keywordBeforePrefix}`
+      : undefined;
 
   // Other than literals, do not autocomplete numbers
   if (/^\d+$/.test(prefix)) {
     return []; // Don't start completing if the user is typing a number
+  }
+
+  // After SET only a query context parameter name can follow
+  if (keywordBeforePrefix === 'SET') {
+    return getQueryContextCompletions(quote, queryContextParameters);
   }
 
   const possibleReferences = getPossibleSqlReferences(state, 100, prefix);
@@ -249,7 +301,11 @@ export function getSqlCompletions(
 
   if (!quote) {
     completions = completions.concat(
-      (SQL_KEYWORD_FOLLOW_SUGGESTIONS[keywordBeforePrefix || ''] || SQL_KEYWORDS).map(v => ({
+      (
+        SQL_KEYWORD_PAIR_FOLLOW_SUGGESTIONS[keywordsBeforePrefix || ''] ||
+        SQL_KEYWORD_FOLLOW_SUGGESTIONS[keywordBeforePrefix || ''] ||
+        SQL_KEYWORDS
+      ).map(v => ({
         label: v,
         boost: 10,
         detail: 'keyword',
@@ -357,16 +413,6 @@ export function getSqlCompletions(
         })),
       );
     }
-  }
-
-  if (keywordBeforePrefix === 'SET') {
-    completions = completions.concat(
-      Object.keys(DEFAULT_SERVER_QUERY_CONTEXT).map(key => ({
-        label: quote ? key : String(C(key)),
-        boost: 50,
-        detail: 'context',
-      })),
-    );
   }
 
   return completions;

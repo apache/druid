@@ -61,6 +61,13 @@ public class EC2AutoScalerTest
   );
   private static final String IP = "dummyIP";
 
+  /**
+   * Mocked in place of {@link Ec2Client}, whose JDK proxy exceeds the 64 KB static initializer limit.
+   */
+  abstract static class MockableEc2Client implements Ec2Client
+  {
+  }
+
   private Ec2Client amazonEC2Client;
   private Instance instance;
   private SimpleWorkerProvisioningConfig managementConfig;
@@ -68,7 +75,7 @@ public class EC2AutoScalerTest
   @BeforeEach
   public void setUp()
   {
-    amazonEC2Client = EasyMock.createMock(Ec2Client.class);
+    amazonEC2Client = EasyMock.createMock(MockableEc2Client.class);
 
     instance = Instance.builder()
         .instanceId(INSTANCE_ID)

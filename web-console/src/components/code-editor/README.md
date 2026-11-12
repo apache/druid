@@ -223,6 +223,9 @@ made of:
 - `lineNumbers({ domEventHandlers })` for the click and hover, which hands over the line that was clicked or hovered
 - a `StateEffect` to set the hovered query
 
+A gutter marker's `toDOM` must return a single node (not a `DocumentFragment`): the gutter removes just one node when
+the marker goes away, so any extra nodes would be left behind.
+
 React only provides `onRun`. Because `extensions` is only read once, `FlexibleQueryInput` puts the markers in its own
 `Compartment` and reconfigures it when they are turned on or off.
 

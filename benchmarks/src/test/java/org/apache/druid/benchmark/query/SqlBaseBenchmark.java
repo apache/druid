@@ -22,7 +22,6 @@ package org.apache.druid.benchmark.query;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -45,6 +44,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
@@ -60,6 +60,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.AutoTypeColumnSchema;
@@ -227,11 +228,21 @@ public class SqlBaseBenchmark
 
   protected Map<String, Object> getContext()
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    final Map<String, Object> context = QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        vectorizeContext,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorizeContext
     );
     return context;
+  }
+
+  /**
+   * Additional lookups, by name, to make available to queries via LOOKUP
+   */
+  protected Map<String, LookupExtractor> getLookups()
+  {
+    return Collections.emptyMap();
   }
 
   protected IndexSpec getIndexSpec()
@@ -248,7 +259,7 @@ public class SqlBaseBenchmark
   @Setup(Level.Trial)
   public void setup() throws JsonProcessingException
   {
-    vectorizeContext = QueryContexts.Vectorize.fromString(vectorize);
+    vectorizeContext = QueryContextParameters.VECTORIZE.parse(vectorize);
     checkIncompatibleParameters();
 
     Map<DataSegment, IncrementalIndex> realtimeSegments = new HashMap<>();
@@ -328,7 +339,7 @@ public class SqlBaseBenchmark
     final Pair<PlannerFactory, SqlEngine> sqlSystem = createSqlSystem(
         segments,
         realtimeSegments,
-        Collections.emptyMap(),
+        getLookups(),
         storageType,
         closer
     );
@@ -339,13 +350,10 @@ public class SqlBaseBenchmark
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(
         engine,
         "EXPLAIN PLAN FOR " + getQuery(),
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(getContext())
-                    .put(
-                        "useNativeQueryExplain",
-                        true
-                    )
-                    .build()
+                    .put(QueryContextParameters.USE_NATIVE_QUERY_EXPLAIN, true)
+                    .toMap()
     )) {
       final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run().getResults();

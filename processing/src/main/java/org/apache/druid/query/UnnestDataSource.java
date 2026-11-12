@@ -24,11 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.UnnestSegment;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -134,6 +137,32 @@ public class UnnestDataSource implements DataSource
   {
     return base.createSegmentMapFunction(query)
                .thenMap(segment -> new UnnestSegment(segment, virtualColumn, unnestFilter));
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner createSegmentPruner(@Nullable DimFilter filter, VirtualColumns virtualColumns)
+  {
+    return base.createSegmentPruner(filter, VirtualColumns.create(virtualColumn).plus(virtualColumns));
+  }
+
+  @Override
+  public Set<String> getReservedColumns()
+  {
+    // base.getReservedColumns() is not included, because UnnestCursorFactory applies virtual columns
+    // in an isolated namespace (using PostJoinCursor) that would not interfere with the base.
+    final Set<String> names = new HashSet<>(virtualColumn.requiredColumns());
+    names.add(virtualColumn.getOutputName());
+    if (unnestFilter != null) {
+      names.addAll(unnestFilter.getRequiredColumns());
+    }
+    return names;
+  }
+
+  @Override
+  public boolean mayFilterRows()
+  {
+    return true;
   }
 
   @Override

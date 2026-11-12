@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.dart.guice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -34,9 +35,13 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.LoadScope;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
@@ -48,15 +53,19 @@ import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.DartMessageRelayFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartMessageRelays;
 import org.apache.druid.msq.dart.controller.DartTableInputSpecSlicerProvider;
+import org.apache.druid.msq.dart.controller.DartWorkerSyncer;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactoryImpl;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.dart.worker.DartWorkerService;
 import org.apache.druid.msq.guice.MSQBinders;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -64,6 +73,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Primary module for Brokers. Checks {@link DartModules#isDartEnabled(Properties)} before installing itself.
@@ -96,9 +106,10 @@ public class DartControllerModule implements DruidModule
 
       LifecycleModule.register(binder, DartSqlClients.class);
       LifecycleModule.register(binder, DartMessageRelays.class);
+      LifecycleModule.register(binder, DartControllerRegistry.class);
+      LifecycleModule.register(binder, DartWorkerSyncer.class);
 
       binder.bind(ControllerMessageListener.class).in(LazySingleton.class);
-      binder.bind(DartControllerRegistry.class).in(LazySingleton.class);
       binder.bind(DartMessageRelayFactoryImpl.class).in(LazySingleton.class);
       binder.bind(DartControllerContextFactory.class)
             .to(DartControllerContextFactoryImpl.class)
@@ -135,6 +146,29 @@ public class DartControllerModule implements DruidModule
     )
     {
       return new DartMessageRelays(discoveryProvider, messageRelayFactory);
+    }
+
+    @Provides
+    @ManageLifecycle
+    public DartWorkerSyncer makeWorkerSyncer(
+        final DartControllerRegistry controllerRegistry,
+        final DruidNodeDiscoveryProvider discoveryProvider,
+        @EscalatedGlobal final ServiceClientFactory clientFactory,
+        @Json final ObjectMapper jsonMapper,
+        @Self final DruidNode selfNode,
+        final DartControllerConfig config,
+        final ScheduledExecutorFactory execFactory
+    )
+    {
+      return new DartWorkerSyncer(
+          controllerRegistry,
+          () -> discoveryProvider.getForServiceAndRoles(DartWorkerService.NAME, Set.of(NodeRole.HISTORICAL)),
+          clientFactory,
+          jsonMapper,
+          selfNode.getHostAndPortToUse(),
+          config,
+          execFactory
+      );
     }
 
     @Provides

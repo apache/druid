@@ -25,9 +25,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,7 +63,7 @@ public class NoQueryLaningStrategyTest
   {
     final String someLane = "some-lane";
     TimeseriesQuery query = queryBuilder.context(
-        ImmutableMap.of(QueryContexts.PRIORITY_KEY, 100, QueryContexts.LANE_KEY, someLane)
+        QueryContext.ofMap(QueryContextParameters.PRIORITY, 100, QueryContextParameters.LANE, someLane)
     ).build();
     Assertions.assertEquals(
         someLane,

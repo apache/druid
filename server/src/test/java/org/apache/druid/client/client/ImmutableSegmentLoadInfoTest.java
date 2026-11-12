@@ -27,6 +27,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -41,16 +42,11 @@ public class ImmutableSegmentLoadInfoTest
   public void testSerde() throws IOException
   {
     ImmutableSegmentLoadInfo segmentLoadInfo = new ImmutableSegmentLoadInfo(
-        new DataSegment(
-            "test_ds",
-            Intervals.of("2011-04-01/2011-04-02"),
-            "v1",
-            null,
-            null,
-            null,
-            NoneShardSpec.instance(),
-            0, 0
-        ), Sets.newHashSet(new DruidServerMetadata("a", "host", null, 10, null, ServerType.HISTORICAL, "tier", 1))
+        DataSegment.builder(SegmentId.of("test_ds", Intervals.of("2011-04-01/2011-04-02"), "v1", 0))
+                   .shardSpec(NoneShardSpec.instance())
+                   .binaryVersion(0)
+                   .size(0)
+                   .build(), Sets.newHashSet(new DruidServerMetadata("a", "host", null, 10, null, ServerType.HISTORICAL, "tier", 1))
     );
 
     ImmutableSegmentLoadInfo serde = mapper.readValue(

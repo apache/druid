@@ -111,28 +111,9 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
     // Build the left/base holder asynchronously (a partial base segment downloads its required columns here); the
     // join's build-side joinables are already-resident in-memory tables, so the base is the only async piece. Once it's
     // ready, wrap it with the join cursors. Closing the returned holder before it's ready cancels the base load.
-    final AsyncCursorHolder baseAsync = baseCursorFactory.makeCursorHolderAsync(plan.baseBuildSpec);
-    final AsyncCursorHolder asyncHolder = new AsyncCursorHolder(baseAsync::close);
-    baseAsync.addReadyCallback(() -> {
-      final CursorHolder joinHolder;
-      try {
-        // release() transfers ownership of the base holder to us (and surfaces a base-load failure as its cause); the
-        // join holder now owns closing it via joinablesCloser. The wrap below can't throw, so the catch only fires on
-        // a base failure or a cancel race (baseAsync already closed), in both cases joinablesCloser is still empty.
-        final CursorHolder baseHolder = baseAsync.release();
-        joinablesCloser.register(baseHolder);
-        joinHolder = joinCursorHolder(plan, joinablesCloser, baseHolder);
-      }
-      catch (Throwable t) {
-        asyncHolder.setException(t);
-        return;
-      }
-      if (!asyncHolder.set(joinHolder)) {
-        // awaiter closed the wrapper while we were producing the holder; close it so the base holder doesn't leak
-        joinHolder.close();
-      }
-    });
-    return asyncHolder;
+    return baseCursorFactory
+        .makeCursorHolderAsync(plan.baseBuildSpec)
+        .transform(baseHolder -> joinCursorHolder(plan, joinablesCloser, joinablesCloser.register(baseHolder)));
   }
 
   /**
@@ -280,6 +261,9 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
       CursorHolder baseCursorHolder
   )
   {
+    final VirtualColumns postJoinVirtualColumns =
+        VirtualColumns.fromIterable(plan.actualPreAnalysis.getPostJoinVirtualColumns());
+
     return new CursorHolder()
     {
       @Override
@@ -299,7 +283,7 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
 
         return PostJoinCursor.wrap(
             retVal,
-            VirtualColumns.fromIterable(plan.actualPreAnalysis.getPostJoinVirtualColumns()),
+            postJoinVirtualColumns,
             plan.joinFilterSplit.getJoinTableFilter().orElse(null)
         );
       }
@@ -307,7 +291,7 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
       @Override
       public List<OrderBy> getOrdering()
       {
-        return computeOrdering(baseCursorHolder.getOrdering());
+        return computeOrdering(baseCursorHolder.getOrdering(), postJoinVirtualColumns);
       }
 
       @Override
@@ -377,12 +361,14 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
   /**
    * Computes ordering of a join {@link CursorHolder} based on the ordering of an underlying {@link CursorHolder}.
    */
-  private List<OrderBy> computeOrdering(final List<OrderBy> baseOrdering)
+  private List<OrderBy> computeOrdering(final List<OrderBy> baseOrdering, final VirtualColumns postJoinVirtualColumns)
   {
-    // Sorted the same way as the base segment, unless a joined-in column shadows one of the base columns.
+    // Sorted the same way as the base segment, unless a joined-in column or a post-join virtual column shadows one
+    // of the base columns.
     int limit = 0;
     for (; limit < baseOrdering.size(); limit++) {
-      if (!baseCursorFactory.getRowSignature().contains(baseOrdering.get(limit).getColumnName())) {
+      final String columnName = baseOrdering.get(limit).getColumnName();
+      if (!baseCursorFactory.getRowSignature().contains(columnName) || postJoinVirtualColumns.exists(columnName)) {
         break;
       }
     }

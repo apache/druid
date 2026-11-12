@@ -47,6 +47,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -1028,7 +1029,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
         // disable the parallel merge because we don't care about the merge and don't want to consume its resources
         QueryContexts.override(
             internalQueryConfig.getContext(),
-            QueryContexts.BROKER_PARALLEL_MERGE_KEY,
+            QueryContextParameters.ENABLE_PARALLEL_MERGE,
             false
         ),
         fetchAggregatorsInSegmentMetadataQuery()

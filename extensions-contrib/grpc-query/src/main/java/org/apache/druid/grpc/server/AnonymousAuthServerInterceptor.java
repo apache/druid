@@ -36,7 +36,7 @@ import javax.inject.Inject;
  * authorization result in the context. Use this form for either of Druid's
  * "allow all" authorizers.
  *
- * @see {@link BasicAuthServerInterceptor} for details
+ * @see BasicAuthServerInterceptor for details
  */
 public class AnonymousAuthServerInterceptor implements ServerInterceptor
 {

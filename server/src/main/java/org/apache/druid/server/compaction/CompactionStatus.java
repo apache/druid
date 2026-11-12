@@ -649,9 +649,16 @@ public class CompactionStatus
     {
       // The baseTable spec compares its own state; segment/query granularity and rollup are covered by their own
       // checks, so the spec excludes them. A null configured baseTable means "don't care".
+      //
+      // When the config is not sealed, the compaction task appends the columns it finds in the segments to the spec,
+      // so the recorded state is a superset of the configured one and a strict comparison would recompact forever.
+      // The relaxed comparison accepts that superset. The cost is that the config-derived fingerprint never matches
+      // either, so these datasources always fall through to this field-by-field pass instead of the fingerprint fast
+      // path; recording the declared spec instead is not an option, since it would misdescribe the segment.
       final BaseTableProjectionSpec configured = compactionConfig.getBaseTable();
       final BaseTableProjectionSpec current = lastCompactionState.getBaseTable();
-      if (configured == null || (current != null && configured.hasEqualCompactionState(current))) {
+      if (configured == null
+          || (current != null && configured.hasEqualCompactionState(current, !compactionConfig.isSealed()))) {
         return COMPLETE;
       }
       return configChanged("baseTable", configured, current, String::valueOf);

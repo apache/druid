@@ -21,16 +21,15 @@ package org.apache.druid.server;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 
-import java.util.Collections;
 import java.util.UUID;
 
 /**
- * Populates {@link QueryContexts#QUERY_RESOURCE_ID} in the query context
+ * Populates {@link QueryContextParameters#QUERY_RESOURCE_ID} in the query context
  */
 public class ResourceIdPopulatingQueryRunner<T> implements QueryRunner<T>
 {
@@ -46,10 +45,7 @@ public class ResourceIdPopulatingQueryRunner<T> implements QueryRunner<T>
    */
   public static <T> Query<T> populateResourceId(Query<T> query)
   {
-    return query.withOverriddenContext(Collections.singletonMap(
-        QueryContexts.QUERY_RESOURCE_ID,
-        UUID.randomUUID().toString()
-    ));
+    return query.withOverriddenContext(QueryContextParameters.QUERY_RESOURCE_ID, UUID.randomUUID().toString());
   }
 
   @Override

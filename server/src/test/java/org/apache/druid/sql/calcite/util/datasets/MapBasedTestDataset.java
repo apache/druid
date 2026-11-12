@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.RowSignature.Builder;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 
 import java.io.File;
@@ -57,10 +58,7 @@ public abstract class MapBasedTestDataset implements TestDataSet
   @Override
   public final DataSegment makeSegment(final QueryableIndex index)
   {
-    DataSegment segment = DataSegment.builder()
-        .dataSource(name)
-        .interval(index.getDataInterval())
-        .version("1")
+    DataSegment segment = DataSegment.builder(SegmentId.of(name, index.getDataInterval(), "1", 0))
         .shardSpec(new LinearShardSpec(0))
         .size(0)
         .build();

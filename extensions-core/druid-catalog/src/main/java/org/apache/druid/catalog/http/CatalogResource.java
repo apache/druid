@@ -70,7 +70,7 @@ import java.util.stream.Collectors;
  * etc. Operations occur at the global level (all schemas), the schema level, or the
  * table level.
  *
- * @see {@link CatalogListenerResource} for the broker-side API.
+ * @see CatalogListenerResource for the broker-side API.
  */
 @Path(CatalogResource.ROOT_PATH)
 public class CatalogResource

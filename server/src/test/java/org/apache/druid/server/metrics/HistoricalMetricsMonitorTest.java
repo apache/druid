@@ -27,6 +27,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,17 +56,13 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
   {
     final long size = 5;
     final String dataSource = "dataSource";
-    final DataSegment dataSegment = new DataSegment(
-        dataSource,
-        Intervals.of("2014/2015"),
-        "version",
-        ImmutableMap.of(),
-        ImmutableList.of(),
-        ImmutableList.of(),
-        null,
-        1,
-        size
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of(dataSource, Intervals.of("2014/2015"), "version", 0))
+                                               .loadSpec(ImmutableMap.of())
+                                               .dimensions(ImmutableList.of())
+                                               .metrics(ImmutableList.of())
+                                               .binaryVersion(1)
+                                               .size(size)
+                                               .build();
     final long maxSize = 10;
     final int priority = 111;
     final String tier = "tier";

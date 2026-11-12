@@ -30,7 +30,6 @@ import org.apache.druid.messages.server.MessageRelayResource;
 import org.apache.druid.rpc.ServiceClosedException;
 import org.apache.druid.server.DruidNode;
 
-import java.io.Closeable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -41,7 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Uses {@link MessageRelayClient} to communicate with the {@link MessageRelayResource} on a server.
  * that flows upstream
  */
-public class MessageRelay<MessageType> implements Closeable
+public class MessageRelay<MessageType>
 {
   private static final Logger log = new Logger(MessageRelay.class);
 
@@ -79,12 +78,13 @@ public class MessageRelay<MessageType> implements Closeable
 
   /**
    * Stop the {@link Collector}.
+   *
+   * @param notifyListener whether to call {@link MessageListener#serverRemoved} for this client
    */
-  @Override
-  public void close()
+  public void stop(final boolean notifyListener)
   {
     if (closed.compareAndSet(false, true)) {
-      collector.stop();
+      collector.stop(notifyListener);
     }
   }
 
@@ -142,7 +142,7 @@ public class MessageRelay<MessageType> implements Closeable
             theWatermark
         );
 
-        close();
+        MessageRelay.this.stop(true);
         return;
       }
 
@@ -159,8 +159,28 @@ public class MessageRelay<MessageType> implements Closeable
               if (theEpoch == INIT) {
                 epoch.set(result.getEpoch());
                 watermark.set(endWatermark);
-              } else if (epoch.get() != result.getEpoch()
-                         || !watermark.compareAndSet(result.getStartWatermark(), endWatermark)) {
+              } else if (epoch.get() != result.getEpoch()) {
+                // The server reset our outbox, which it does when it thinks we have gone away. Messages in the old
+                // outbox are lost, so tell the listener the server went away and came back.
+                log.warn(
+                    "Outbox epoch from server[%s] for client[%s] changed from[%s] to[%s]. Restarting collector.",
+                    serverNode.getHostAndPortToUse(),
+                    selfHost,
+                    theEpoch,
+                    result.getEpoch()
+                );
+
+                notifyServerRemoved();
+                epoch.set(result.getEpoch());
+                watermark.set(endWatermark);
+
+                try {
+                  listener.serverAdded(serverNode);
+                }
+                catch (Throwable e) {
+                  log.warn(e, "Failed to add server[%s]", serverNode.getHostAndPortToUse());
+                }
+              } else if (!watermark.compareAndSet(result.getStartWatermark(), endWatermark)) {
                 // We don't expect to see this unless there is somehow another collector running with the same
                 // clientHost. If the unexpected happens, log it and close the collector. It will stay, doing
                 // nothing, in the MessageCollectors map until it is removed by the discovery listener.
@@ -176,7 +196,7 @@ public class MessageRelay<MessageType> implements Closeable
                     result.getStartWatermark()
                 );
 
-                close();
+                MessageRelay.this.stop(true);
                 return;
               }
 
@@ -218,20 +238,27 @@ public class MessageRelay<MessageType> implements Closeable
                 );
               }
 
-              close();
+              MessageRelay.this.stop(true);
             }
           },
           Execs.directExecutor()
       );
     }
 
-    public void stop()
+    public void stop(final boolean notifyListener)
     {
       final ListenableFuture<?> future = currentCall.getAndSet(null);
       if (future != null) {
         future.cancel(true);
       }
 
+      if (notifyListener) {
+        notifyServerRemoved();
+      }
+    }
+
+    private void notifyServerRemoved()
+    {
       try {
         listener.serverRemoved(serverNode);
       }

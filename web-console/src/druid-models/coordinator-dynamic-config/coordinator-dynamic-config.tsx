@@ -45,6 +45,18 @@ export interface CoordinatorDynamicConfig {
   debugDimensions?: any;
 }
 
+export function getTierToAliasLookup(
+  config: CoordinatorDynamicConfig | undefined,
+): Record<string, string> {
+  const lookup: Record<string, string> = {};
+  for (const [alias, tiers] of Object.entries(config?.historicalTierAliases || {})) {
+    for (const tier of tiers) {
+      lookup[tier] = alias;
+    }
+  }
+  return lookup;
+}
+
 export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[] = [
   {
     name: 'pauseCoordination',

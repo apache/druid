@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
@@ -45,6 +44,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
@@ -248,7 +248,7 @@ public class QueryLifecycle
 
     final Map<String, Object> finalContext =
         configSnapshot.resolveContext(baseQuery, effectiveClientProvidedQueryContextKeys);
-    finalContext.put(BaseQuery.QUERY_ID, queryId);
+    QueryContextParameters.QUERY_ID.set(finalContext, queryId);
 
     this.baseQuery = baseQuery.withOverriddenContext(finalContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);

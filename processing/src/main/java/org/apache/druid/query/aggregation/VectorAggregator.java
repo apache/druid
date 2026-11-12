@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
  * Unlike {@link Aggregator}, VectorAggregators are never used by multiple threads at once. Implementations are not
  * required to be thread safe.
  *
- * @see BufferAggregator, the vectorized version.
+ * @see BufferAggregator the vectorized version.
  */
 public interface VectorAggregator
 {

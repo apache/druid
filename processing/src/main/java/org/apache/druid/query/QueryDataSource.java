@@ -112,6 +112,17 @@ public class QueryDataSource implements DataSource
     throw DruidException.defensive("Creating a segmentMapFunction for a QueryDataSource is not supported [%s].", query);
   }
 
+  /**
+   * Returns an empty set, since the subquery runs apart from the virtual columns applied on top of this datasource,
+   * which see only its results.
+   */
+  @Override
+  public Set<String> getReservedColumns()
+  {
+    // Subqueries do not reserve any column names, because subqueries do all their operations in an isolated namespace.
+    return Set.of();
+  }
+
   @Override
   public byte[] getCacheKey()
   {

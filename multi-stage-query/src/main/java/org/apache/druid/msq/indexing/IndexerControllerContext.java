@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
@@ -30,6 +31,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -48,15 +50,14 @@ import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.ChatHandler;
@@ -83,6 +84,28 @@ public class IndexerControllerContext implements ControllerContext
   public static final SegmentSource DEFAULT_SEGMENT_SOURCE = SegmentSource.NONE;
 
   private static final Logger log = new Logger(IndexerControllerContext.class);
+
+  /**
+   * Worker context keys that worker tasks require in their task context.
+   */
+  private static final Set<String> WORKER_TASK_CONTEXT_KEYS = ImmutableSet.of(
+      QueryContextParameters.DURABLE_SHUFFLE_STORAGE.getName(),
+      QueryContextParameters.MAX_PARSE_EXCEPTIONS.getName(),
+      QueryContextParameters.IS_REINDEX.getName(),
+      QueryContextParameters.MAX_CONCURRENT_STAGES.getName(),
+      QueryContextParameters.ROW_BASED_FRAME_TYPE.getName(),
+      QueryContextParameters.REMOVE_NULL_BYTES.getName(),
+      QueryContextParameters.INCLUDE_ALL_COUNTERS.getName(),
+      QueryContextParameters.MAX_FRAME_SIZE.getName(),
+      QueryContextParameters.SELECT_DESTINATION.getName(),
+      QueryContextParameters.LIVE_REPORT_COUNTERS.getName(),
+      QueryContextParameters.MAX_THREADS.getName(),
+      MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS,
+      Tasks.STORE_EMPTY_COLUMNS_KEY,
+      QueryContextParameters.QUERY_ID.getName(),
+      QueryContextParameters.SQL_QUERY_ID.getName(),
+      QueryContextParameters.DEBUG.getName()
+  );
 
   private final MSQControllerTask task;
   private final TaskLockType taskLockType;
@@ -144,11 +167,11 @@ public class IndexerControllerContext implements ControllerContext
     log.debug(
         "Query[%s] using %s[%s], %s[%s], %s[%s].",
         queryId(),
-        MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
+        QueryContextParameters.DURABLE_SHUFFLE_STORAGE,
         config.isDurableStorage(),
-        MultiStageQueryContext.CTX_FAULT_TOLERANCE,
+        QueryContextParameters.FAULT_TOLERANCE,
         config.isFaultTolerant(),
-        MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES,
+        QueryContextParameters.MAX_CONCURRENT_STAGES,
         config.getMaxConcurrentStages()
     );
 
@@ -282,7 +305,7 @@ public class IndexerControllerContext implements ControllerContext
     final boolean isDurableStorageEnabled;
 
     if (isFaultToleranceEnabled) {
-      if (!queryContext.containsKey(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE)) {
+      if (!queryContext.has(QueryContextParameters.DURABLE_SHUFFLE_STORAGE)) {
         // if context key not set, enable durableStorage automatically.
         isDurableStorageEnabled = true;
       } else {
@@ -295,9 +318,9 @@ public class IndexerControllerContext implements ControllerContext
                   StringUtils.format(
                       "Context param[%s] cannot be explicitly set to false when context param[%s] is"
                       + " set to true. Either remove the context param[%s] or explicitly set it to true.",
-                      MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
-                      MultiStageQueryContext.CTX_FAULT_TOLERANCE,
-                      MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE
+                      QueryContextParameters.DURABLE_SHUFFLE_STORAGE,
+                      QueryContextParameters.FAULT_TOLERANCE,
+                      QueryContextParameters.DURABLE_SHUFFLE_STORAGE
                   )
               )
           );
@@ -347,23 +370,23 @@ public class IndexerControllerContext implements ControllerContext
 
     // Override certain items to ensure they are the same across all workers; just in case workers have a different
     // default from the controller.
-    workerContextMap.put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled);
-    workerContextMap.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions);
-    workerContextMap.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
-    workerContextMap.put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages);
-    workerContextMap.put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version());
-    workerContextMap.put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes);
-    workerContextMap.put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
-    workerContextMap.put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
+    QueryContextParameters.DURABLE_SHUFFLE_STORAGE.set(workerContextMap, durableStorageEnabled);
+    QueryContextParameters.MAX_PARSE_EXCEPTIONS.set(workerContextMap, maxParseExceptions);
+    QueryContextParameters.IS_REINDEX.set(workerContextMap, isReindex);
+    QueryContextParameters.MAX_CONCURRENT_STAGES.set(workerContextMap, maxConcurrentStages);
+    QueryContextParameters.ROW_BASED_FRAME_TYPE.set(workerContextMap, (int) rowBasedFrameType.version());
+    QueryContextParameters.REMOVE_NULL_BYTES.set(workerContextMap, removeNullBytes);
+    QueryContextParameters.INCLUDE_ALL_COUNTERS.set(workerContextMap, includeAllCounters);
+    QueryContextParameters.MAX_FRAME_SIZE.set(workerContextMap, frameSize);
 
     if (querySpec.getId() != null) {
-      workerContextMap.put(BaseQuery.QUERY_ID, querySpec.getId());
+      QueryContextParameters.QUERY_ID.set(workerContextMap, querySpec.getId());
     }
 
     MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {
-      workerContextMap.put(
-          MultiStageQueryContext.CTX_SELECT_DESTINATION,
+      QueryContextParameters.SELECT_DESTINATION.set(
+          workerContextMap,
           destination.toSelectDestination().getName()
       );
     }
@@ -382,15 +405,20 @@ public class IndexerControllerContext implements ControllerContext
       final Map<String, Object> controllerTaskContext
   )
   {
-    // Put worker context into the task context. That way, workers can get these context keys either from
-    // WorkOrder#getContext or Task#getContext.
-    final Map<String, Object> taskContext = new HashMap<>(
-        makeWorkerContextMap(
-            querySpec,
-            queryKernelConfig.isDurableStorage(),
-            queryKernelConfig.getMaxConcurrentStages()
-        )
+    final Map<String, Object> workerContextMap = makeWorkerContextMap(
+        querySpec,
+        queryKernelConfig.isDurableStorage(),
+        queryKernelConfig.getMaxConcurrentStages()
     );
+
+    // Forward only the worker context keys that the task requires.
+    final Map<String, Object> taskContext = new HashMap<>();
+    for (String key : WORKER_TASK_CONTEXT_KEYS) {
+      final Object value = workerContextMap.get(key);
+      if (value != null) {
+        taskContext.put(key, value);
+      }
+    }
 
     // Put the lookup loading info in the task context to facilitate selective loading of lookups.
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE) != null) {

@@ -372,7 +372,6 @@ public class EmbeddedClusterApis implements EmbeddedResource
       long timeoutMillis
   )
   {
-    final String escapedDataSource = StringUtils.escapeSql(dataSource);
     final int numSegments = (int) coordinator
         .bindings()
         .segmentsMetadataStorage()
@@ -380,6 +379,17 @@ public class EmbeddedClusterApis implements EmbeddedResource
         .stream()
         .filter(segment -> !segment.isTombstone())
         .count();
+
+    waitForSegmentsToBeQueryable(dataSource, numSegments, timeoutMillis);
+  }
+
+  /**
+   * Like {@link #waitForAllSegmentsToBeQueryable}, but waits for a given number of segments, which may include
+   * unpublished realtime segments that are not in the metadata store yet.
+   */
+  public void waitForSegmentsToBeQueryable(String dataSource, int numSegments, long timeoutMillis)
+  {
+    final String escapedDataSource = StringUtils.escapeSql(dataSource);
 
     waitForResult(
         () -> runSql(

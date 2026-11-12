@@ -641,7 +641,7 @@ describe('Execution', () => {
           "id": "query-45f1dafd-8a52-4eb7-9a6c-77840cddd349",
           "nativeQuery": undefined,
           "queryContext": undefined,
-          "result": _QueryResult {
+          "result": QueryResult {
             "header": [
               Column {
                 "name": "channel",

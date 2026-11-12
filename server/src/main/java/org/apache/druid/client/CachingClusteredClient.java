@@ -60,7 +60,7 @@ import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
@@ -71,6 +71,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
@@ -297,24 +298,24 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
     }
 
-    private ImmutableMap<String, Object> makeDownstreamQueryContext()
+    private Map<String, Object> makeDownstreamQueryContext()
     {
-      final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
+      final QueryContextBuilder contextBuilder = QueryContext.builder();
 
       final QueryContext queryContext = query.context();
       final int priority = queryContext.getPriority();
-      contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
+      contextBuilder.put(QueryContextParameters.PRIORITY, priority);
       final String lane = queryContext.getLane();
       if (lane != null) {
-        contextBuilder.put(QueryContexts.LANE_KEY, lane);
+        contextBuilder.put(QueryContextParameters.LANE, lane);
       }
 
       if (populateCache) {
         // prevent down-stream nodes from caching results as well if we are populating the cache
-        contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
-        contextBuilder.put(QueryContexts.BY_SEGMENT_KEY, true);
+        contextBuilder.put(QueryContextParameters.POPULATE_CACHE, false);
+        contextBuilder.put(QueryContextParameters.BY_SEGMENT, true);
       }
-      return contextBuilder.build();
+      return contextBuilder.toMap();
     }
 
     /**

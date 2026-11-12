@@ -41,6 +41,7 @@ import java.util.IdentityHashMap;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -160,6 +161,7 @@ public class RunAllFullyWidget<T, ResultType>
 
                   // Cleanup if there were no outstanding processors. (If there were some outstanding ones, future
                   // cancellation above would trigger cleanup.)
+                  finished.compareAndSet(null, Either.error(new CancellationException("Canceled")));
                   cleanupIfNoMoreProcessors();
                 }
               }

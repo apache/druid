@@ -1352,10 +1352,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
   private DataSegment createSegment(Interval interval, String version)
   {
-    return DataSegment.builder()
-                      .dataSource(TestDataSource.WIKI)
-                      .interval(interval)
-                      .version(version)
+    return DataSegment.builder(SegmentId.of(TestDataSource.WIKI, interval, version, 0))
                       .size(100)
                       .build();
   }

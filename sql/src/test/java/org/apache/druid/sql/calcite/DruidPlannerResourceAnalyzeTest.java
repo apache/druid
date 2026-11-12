@@ -205,6 +205,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
     testSysTable("SELECT * FROM sys.tasks", null, PLANNER_CONFIG_DEFAULT);
     testSysTable("SELECT * FROM sys.supervisors", null, PLANNER_CONFIG_DEFAULT);
     testSysTable("SELECT * FROM sys.server_properties", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.query_context_parameters", null, PLANNER_CONFIG_DEFAULT);
 
     testSysTable("SELECT * FROM sys.segments", "segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.servers", "servers", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
@@ -212,6 +213,11 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
     testSysTable("SELECT * FROM sys.tasks", "tasks", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.supervisors", "supervisors", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.server_properties", "server_properties", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable(
+        "SELECT * FROM sys.query_context_parameters",
+        "query_context_parameters",
+        PLANNER_CONFIG_AUTHORIZE_SYS_TABLES
+    );
   }
 
   private void testSysTable(String sql, String name, PlannerConfig plannerConfig)

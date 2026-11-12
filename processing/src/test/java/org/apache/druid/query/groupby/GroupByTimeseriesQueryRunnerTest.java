@@ -40,6 +40,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -126,17 +127,17 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                 )
             );
 
-            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timeDimension);
+            QueryContextParameters.TIMESTAMP_RESULT_FIELD.set(theContext, timeDimension);
             try {
-              theContext.put(
-                  GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
+              QueryContextParameters.TIMESTAMP_RESULT_FIELD_GRANULARITY.set(
+                  theContext,
                   jsonMapper.writeValueAsString(granularity)
               );
             }
             catch (JsonProcessingException e) {
               throw new RuntimeException(e);
             }
-            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
+            QueryContextParameters.TIMESTAMP_RESULT_FIELD_IN_ORIGINAL_DIMENSIONS.set(theContext, 0);
           }
 
           GroupByQuery newQuery = GroupByQuery

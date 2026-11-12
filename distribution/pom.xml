@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>39.0.0-SNAPSHOT</version>
+        <version>40.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -50,6 +50,8 @@
     <properties>
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
+        <!-- PR CI sets this to warn; release builds must fail on stale licenses.yaml versions -->
+        <druid.distribution.licenses.staleVersions>fail</druid.distribution.licenses.staleVersions>
     </properties>
 
     <build>
@@ -94,7 +96,7 @@
                             <target>
                                 <concat destfile="${project.build.directory}/../../README.BINARY">
                                     <fileset file="${project.build.directory}/../../README" />
-                                    <fileset file="${project.build.directory}/../../LABELS" />
+                                    <fileset file="${project.build.directory}/LABELS" />
                                 </concat>
                             </target>
                         </configuration>
@@ -152,11 +154,14 @@
                                         <argument>${project.parent.basedir}/licenses/APACHE2</argument>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
+                                        <argument>--labels-path=${project.build.directory}/LABELS</argument>
                                         <!-- Contrib extensions are not bundled in the Apache release binary; skip
                                              their licenses.yaml entries so LICENSE.BINARY does not overclaim what
                                              ships. check-licenses.py enforces that every contrib entry uses this
                                              module prefix. -->
                                         <argument>--exclude-module-prefix=extensions-contrib/</argument>
+                                        <!-- druid-testcontainers is published to Maven but not bundled in the binary. -->
+                                        <argument>--exclude-module-prefix=extensions/druid-testcontainers</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -176,6 +181,8 @@
                                              their licenses.yaml entries so NOTICE.BINARY does not overclaim what
                                              ships. See the matching generate-binary-license execution above. -->
                                         <argument>--exclude-module-prefix=extensions-contrib/</argument>
+                                        <!-- druid-testcontainers is published to Maven but not bundled in the binary. -->
+                                        <argument>--exclude-module-prefix=extensions/druid-testcontainers</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -314,6 +321,16 @@
                                 </configuration>
                             </execution>
                             <execution>
+                                <id>test-check-licenses</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/test_check_licenses.py</executable>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>check-licenses</id>
                                 <phase>test</phase>
                                 <goals>
@@ -324,6 +341,11 @@
                                     <arguments>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.basedir}/target/license-reports</argument>
+                                        <!-- Keep these under bundle-contrib-exts too: the check guards the Apache release
+                                             LICENSE, which leaves out contrib entries. -->
+                                        <argument>--exclude-module-prefix=extensions-contrib/</argument>
+                                        <argument>--exclude-module-prefix=extensions/druid-testcontainers</argument>
+                                        <argument>--stale-versions=${druid.distribution.licenses.staleVersions}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -372,6 +394,8 @@
                                         <argument>${project.parent.basedir}/licenses/APACHE2</argument>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
+                                        <argument>--labels-path=${project.build.directory}/LABELS</argument>
+                                        <argument>--exclude-module-prefix=extensions/druid-testcontainers</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -382,6 +406,7 @@
                                         <argument>${project.parent.basedir}/NOTICE</argument>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.parent.basedir}/NOTICE.BINARY</argument>
+                                        <argument>--exclude-module-prefix=extensions/druid-testcontainers</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -438,6 +463,8 @@
                                         <argument>org.apache.druid.extensions.contrib:prometheus-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-thrift-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-tsfile-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>

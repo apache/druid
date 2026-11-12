@@ -48,6 +48,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.Interval;
@@ -208,16 +209,10 @@ public class ShuffleDataSegmentPusherTest
     BucketNumberedShardSpec<?> shardSpec = Mockito.mock(BucketNumberedShardSpec.class);
     Mockito.when(shardSpec.getBucketId()).thenReturn(0);
 
-    return new DataSegment(
-        "dataSource",
-        interval,
-        "version",
-        null,
-        null,
-        null,
-        shardSpec,
-        9,
-        0
-    );
+    return DataSegment.builder(SegmentId.of("dataSource", interval, "version", 0))
+                      .shardSpec(shardSpec)
+                      .binaryVersion(9)
+                      .size(0)
+                      .build();
   }
 }

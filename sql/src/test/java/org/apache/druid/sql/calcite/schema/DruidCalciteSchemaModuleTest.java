@@ -40,6 +40,8 @@ import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
@@ -117,6 +119,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(TimelineServerView.class).toInstance(serverView);
           binder.bind(JoinableFactory.class).toInstance(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()));
           binder.bind(PlannerConfig.class).toInstance(plannerConfig);
+          binder.bind(QueryConfigProvider.class).toInstance(new DefaultQueryConfig(null));
           binder.bind(ViewManager.class).toInstance(viewManager);
           binder.bind(Escalator.class).toInstance(escalator);
           binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);

@@ -28,11 +28,10 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.exec.std.StandardPartitionReader;
-import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
+import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.msq.querykit.InputPruner;
 import org.apache.druid.msq.querykit.ReadableInput;
-import org.apache.druid.msq.querykit.ReadableInputQueue;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.filter.DimFilter;
@@ -44,32 +43,24 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-
 @JsonTypeName("scan")
 public class ScanQueryStageProcessor extends BaseLeafStageProcessor
 {
-  private static final String IRRELEVANT = "irrelevant";
-
   private final ScanQuery query;
 
   /**
-   * Instantiated and passed to all the {@link ScanQueryFrameProcessor}s created from this factory to keep a track
-   * of the number of rows processed so far in case the query is limited (without any order by) because one doesn't need
-   * to scan through all the rows in that case.
-   * This is not ideal because nothing really guarantees this factory is used for a single makeWorkers call
+   * Shared by all the {@link ScanQueryFrameProcessor}s created from this factory. Allows a limited scan to stop reading
+   * once rows can no longer contribute to the result. It holds that execution's state, so {@link #execute} may be
+   * called at most once per instance.
    */
-  @Nullable
-  private final AtomicLong runningCountForLimit;
+  private final ScanLimitTracker limitTracker;
 
   @JsonCreator
   public ScanQueryStageProcessor(@JsonProperty("query") ScanQuery query)
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
-    this.runningCountForLimit = query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
+    this.limitTracker = ScanLimitTracker.create(query);
   }
 
   public static ScanQueryStageProcessor makeScanStageProcessor(
@@ -81,7 +72,7 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
     DimFilter newFilter = filtration.getDimFilter();
 
     ScanQuery scanQuery = Druids.newScanQueryBuilder()
-        .dataSource(IRRELEVANT)
+        .dataSource(new InputNumberDataSource(0))
         .intervals(QuerySegmentSpec.ETERNITY)
         .filters(newFilter)
         .virtualColumns(virtualColumns)
@@ -119,7 +110,7 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
   {
     return new ScanQueryFrameProcessor(
         query,
-        runningCountForLimit,
+        limitTracker,
         frameContext.jsonMapper(),
         baseInput,
         segmentMapFn,
@@ -129,15 +120,17 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
   }
 
   @Override
-  protected ReadableInputQueue makeReadableInputQueue(
-      StandardPartitionReader partitionReader,
-      List<PhysicalInputSlice> slices,
-      int loadahead
-  )
+  protected InputPruner getInputPruner()
+  {
+    return limitTracker;
+  }
+
+  @Override
+  protected AcquireMode getDefaultAcquireMode()
   {
     // Scan reads segments through the async cursor API, so acquire them partially: only the columns the query
     // touches are downloaded.
-    return new ReadableInputQueue(partitionReader, slices, loadahead, AcquireMode.PARTIAL);
+    return AcquireMode.PARTIAL;
   }
 
   @Override

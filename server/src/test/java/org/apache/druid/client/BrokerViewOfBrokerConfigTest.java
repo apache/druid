@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
@@ -85,6 +86,23 @@ public class BrokerViewOfBrokerConfigTest
   {
     target.setDynamicConfig(BrokerDynamicConfig.builder().build());
     Assertions.assertEquals(defaultQueryConfig.getContext(), target.getContext());
+  }
+
+  @Test
+  public void testContextWithOverridesHoldsOnlyTheDynamicOverrides()
+  {
+    final QueryConfigProvider.ContextWithOverrides beforeSync = target.getContextWithOverrides();
+    Assertions.assertEquals(target.getContext(), beforeSync.context());
+    Assertions.assertEquals(Map.of(), beforeSync.dynamicOverrides());
+
+    target.setDynamicConfig(
+        BrokerDynamicConfig.builder()
+                           .withQueryContext(QueryContext.of(ImmutableMap.of("useCache", false)))
+                           .build()
+    );
+    final QueryConfigProvider.ContextWithOverrides afterSync = target.getContextWithOverrides();
+    Assertions.assertEquals(target.getContext(), afterSync.context());
+    Assertions.assertEquals(Map.of("useCache", false), afterSync.dynamicOverrides());
   }
 
   @Test

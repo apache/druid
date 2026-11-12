@@ -26,6 +26,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
@@ -35,10 +36,8 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -89,6 +88,7 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   private final RowSignature clusteringColumns;
   // Query virtual columns whose output names shadow a clustering column are deferred to the delegate; see class doc.
   private final VirtualColumns queryVirtualColumns;
+  private final MultiGroupColumnInspector capabilities;
   private ColumnSelectorFactory delegate;
   private Object[] clusteringValues;
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
@@ -96,24 +96,22 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   private long generation;
   private final RowIdSupplier rowIdSupplier = new DelegatingRowIdSupplier(this);
 
-  public ClusteringColumnSelectorFactory(
-      ColumnSelectorFactory delegate,
-      RowSignature clusteringColumns,
-      Object[] clusteringValues
-  )
-  {
-    this(delegate, clusteringColumns, clusteringValues, VirtualColumns.EMPTY);
-  }
-
+  /**
+   * Creates a factory over one cluster group, which {@link #setDelegate} may later move to others. Capabilities of
+   * non-clustering columns come from {@code allGroupsInspector}, which must therefore cover every group the factory
+   * may be moved to; see {@link MultiGroupColumnInspector}.
+   */
   public ClusteringColumnSelectorFactory(
       ColumnSelectorFactory delegate,
       RowSignature clusteringColumns,
       Object[] clusteringValues,
-      VirtualColumns queryVirtualColumns
+      VirtualColumns queryVirtualColumns,
+      ColumnInspector allGroupsInspector
   )
   {
     this.clusteringColumns = clusteringColumns;
     this.queryVirtualColumns = queryVirtualColumns;
+    this.capabilities = new MultiGroupColumnInspector(clusteringColumns, queryVirtualColumns, allGroupsInspector);
     setDelegate(delegate, clusteringValues);
   }
 
@@ -179,29 +177,7 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    if (!servesClusteringConstant(column)) {
-      // Non-clustering columns (or a clustering column shadowed by a query VC, resolved by the delegate) are stored
-      // per cluster group, each with its own local dictionary. The
-      // ConcatenatingCursor walks those groups behind a single cursor, so a column's dictionary IDs are NOT stable
-      // across the whole cursor. We therefore must not advertise dictionary encoding here: otherwise the group-by
-      // engine keys on the (per-group-local) IDs and conflates distinct values from different groups. Reporting the
-      // column as non-dictionary-encoded forces value-based grouping, which is correct across groups.
-      final ColumnCapabilities delegateCapabilities = delegate.getColumnCapabilities(column);
-      if (delegateCapabilities == null) {
-        return null;
-      }
-      return ColumnCapabilitiesImpl.copyOf(delegateCapabilities)
-                                   .setDictionaryEncoded(false)
-                                   .setDictionaryValuesSorted(false)
-                                   .setDictionaryValuesUnique(false)
-                                   .setHasBitmapIndexes(false);
-    }
-    final int idx = clusteringColumns.indexOf(column);
-    final ColumnType type = clusteringColumns.getColumnType(idx).orElseThrow();
-    if (type.is(ValueType.STRING)) {
-      return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
-    }
-    return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
+    return capabilities.getColumnCapabilities(column);
   }
 
   @Nullable

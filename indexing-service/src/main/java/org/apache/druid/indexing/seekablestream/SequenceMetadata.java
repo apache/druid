@@ -63,7 +63,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   private final boolean sentinel;
   /**
    * Lock for accessing {@link #endOffsets} and {@link #checkpointed}. This lock is required because
-   * {@link #setEndOffsets)} can be called by both the main thread and the HTTP thread.
+   * {@link #setEndOffsets} can be called by both the main thread and the HTTP thread.
    */
   private final ReentrantLock lock = new ReentrantLock();
 

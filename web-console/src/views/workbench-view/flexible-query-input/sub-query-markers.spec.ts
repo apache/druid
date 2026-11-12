@@ -70,6 +70,28 @@ describe('sub-query-markers', () => {
     view.destroy();
   });
 
+  it('leaves just the line number when a run button goes away', () => {
+    const query = 'SELECT 1\nFROM t\nORDER BY 1 DESC ';
+    const view = new EditorView({
+      state: State.create({ doc: query, extensions: subQueryMarkers(() => {}) }),
+    });
+    const firstLineNumber = () =>
+      view.dom.querySelectorAll('.cm-lineNumbers .cm-gutterElement')[1]?.textContent;
+
+    // Typing a stray word makes the query only parsable as a sub query (so it gets a run button), deleting it puts
+    // the text back to a whole query (so the button goes away)
+    for (let i = 0; i < 3; i++) {
+      view.dispatch({ changes: { from: query.length, insert: 'N' } });
+      expect(view.dom.querySelectorAll('.sub-query-run-button')).toHaveLength(1);
+      expect(firstLineNumber()).toEqual('1');
+
+      view.dispatch({ changes: { from: query.length, to: query.length + 1 } });
+      expect(view.dom.querySelectorAll('.sub-query-run-button')).toHaveLength(0);
+      expect(firstLineNumber()).toEqual('1');
+    }
+    view.destroy();
+  });
+
   it('has no queries without the extension', () => {
     expect(getSubQueries(State.create({ doc: TEXT }))).toEqual([]);
   });

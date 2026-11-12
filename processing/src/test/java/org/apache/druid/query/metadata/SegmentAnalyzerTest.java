@@ -538,7 +538,16 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
             .andReturn(Cursors.ascendingTimeOrder())
             .atLeastOnce();
 
+    BaseColumnHolder timeHolder = EasyMock.createMock(BaseColumnHolder.class);
+    EasyMock.expect(timeHolder.getCapabilities())
+            .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
+            .atLeastOnce();
+    EasyMock.expect(mockIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeHolder).atLeastOnce();
+
     BaseColumnHolder holder = EasyMock.createMock(BaseColumnHolder.class);
+    EasyMock.expect(holder.getCapabilities())
+            .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.UNKNOWN_COMPLEX))
+            .atLeastOnce();
     EasyMock.expect(mockIndex.getColumnHolder("x")).andReturn(holder).atLeastOnce();
 
     StringUtf8DictionaryEncodedColumn dictionaryEncodedColumn = EasyMock.createMock(StringUtf8DictionaryEncodedColumn.class);
@@ -546,7 +555,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 
     dictionaryEncodedColumn.close();
     EasyMock.expectLastCall();
-    EasyMock.replay(mockIndex, holder, dictionaryEncodedColumn);
+    EasyMock.replay(mockIndex, timeHolder, holder, dictionaryEncodedColumn);
 
     Segment s = new QueryableIndexSegment(mockIndex, SegmentId.dummy("test"));
 
@@ -556,7 +565,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     Assertions.assertTrue(analysis.get("x").isError());
     Assertions.assertTrue(analysis.get("x").getErrorMessage().contains("is not a [org.apache.druid.segment.column.ComplexColumn]"));
 
-    EasyMock.verify(mockIndex, holder, dictionaryEncodedColumn);
+    EasyMock.verify(mockIndex, timeHolder, holder, dictionaryEncodedColumn);
   }
 
 

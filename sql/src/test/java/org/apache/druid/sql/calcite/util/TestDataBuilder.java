@@ -824,28 +824,19 @@ public class TestDataBuilder
         .buildMMappedIndex();
 
     return walker.add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(index1.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE1, index1.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build(),
         index1
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE2)
-                   .interval(index2.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE2, index2.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build(),
         index2
     ).add(
-       DataSegment.builder()
-                  .dataSource(CalciteTests.RESTRICTED_DATASOURCE)
-                  .interval(index1.getDataInterval())
-                  .version("1")
+       DataSegment.builder(SegmentId.of(CalciteTests.RESTRICTED_DATASOURCE, index1.getDataInterval(), "1", 0))
                   .shardSpec(new LinearShardSpec(0))
                   .size(0)
                   .build(),
@@ -857,10 +848,7 @@ public class TestDataBuilder
                    .build(),
         index1
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
-                   .interval(forbiddenIndex.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.FORBIDDEN_DATASOURCE, forbiddenIndex.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build(),
@@ -874,37 +862,25 @@ public class TestDataBuilder
         TestHelper.JSON_MAPPER,
         new File(tmpDir, "larry")
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE4)
-                   .interval(index4.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE4, index4.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build(),
         index4
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE5)
-                   .interval(indexLotsOfColumns.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.DATASOURCE5, indexLotsOfColumns.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build(),
         indexLotsOfColumns
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.SOME_DATASOURCE)
-                   .interval(indexLotsOfColumns.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.SOME_DATASOURCE, indexLotsOfColumns.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build(),
         someDatasourceIndex
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.SOMEXDATASOURCE)
-                   .interval(indexLotsOfColumns.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.SOMEXDATASOURCE, indexLotsOfColumns.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build(),
@@ -918,37 +894,25 @@ public class TestDataBuilder
         TestHelper.JSON_MAPPER,
         new File(tmpDir, "3a")
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.USERVISITDATASOURCE)
-                   .interval(userVisitIndex.getDataInterval())
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.USERVISITDATASOURCE, userVisitIndex.getDataInterval(), "1", 0))
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
                    .build(),
         userVisitIndex
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.WIKIPEDIA)
-                   .interval(Intervals.of("2015-09-12/2015-09-13"))
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.WIKIPEDIA, Intervals.of("2015-09-12/2015-09-13"), "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
                    .build(),
         makeWikipediaIndex(tmpDir)
     ).add(
-      DataSegment.builder()
-                 .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
-                 .interval(Intervals.of("2015-09-12/2015-09-13"))
-                 .version("1")
+      DataSegment.builder(SegmentId.of(CalciteTests.WIKIPEDIA_FIRST_LAST, Intervals.of("2015-09-12/2015-09-13"), "1", 0))
                  .shardSpec(new NumberedShardSpec(0, 0))
                  .size(0)
                  .build(),
       makeWikipediaIndexWithAggregation(tmpDir)
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.ARRAYS_DATASOURCE)
-                   .version("1")
-                   .interval(arraysIndex.getDataInterval())
+        DataSegment.builder(SegmentId.of(CalciteTests.ARRAYS_DATASOURCE, arraysIndex.getDataInterval(), "1", 1))
                    .shardSpec(new LinearShardSpec(1))
                    .size(0)
                    .build(),
@@ -970,10 +934,7 @@ public class TestDataBuilder
     final QueryableIndex queryableIndex = getQueryableIndexForBenchmarkDatasource();
 
     segmentWalker.add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.BENCHMARK_DATASOURCE)
-                   .interval(Intervals.ETERNITY)
-                   .version("1")
+        DataSegment.builder(SegmentId.of(CalciteTests.BENCHMARK_DATASOURCE, Intervals.ETERNITY, "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
                    .build(),
@@ -990,10 +951,7 @@ public class TestDataBuilder
     final QueryableIndex queryableIndex = getQueryableIndexForDrillDatasource(dataSource, tmpDir);
 
     segmentWalker.add(
-        DataSegment.builder()
-                   .dataSource(dataSource)
-                   .interval(Intervals.ETERNITY)
-                   .version("1")
+        DataSegment.builder(SegmentId.of(dataSource, Intervals.ETERNITY, "1", 0))
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
                    .build(),

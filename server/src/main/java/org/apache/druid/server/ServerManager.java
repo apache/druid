@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingQueryRunner;
@@ -62,6 +63,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
@@ -83,7 +85,9 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -410,32 +414,51 @@ public class ServerManager implements QuerySegmentWalker
     );
   }
 
-  protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
-      final Query<T> query,
+  /**
+   * Returns one runner per spec, in the order of {@code specs}. The ordering is important because
+   * {@link QueryRunnerFactory} implementations may rely on it. For example,
+   * {@link ScanQueryRunnerFactory#mergeRunners} matches runners to segment descriptors positionally.
+   *
+   * <p>The order of {@code segmentReferences} need not match the order of {@code specs}.
+   */
+  private <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
+      final List<SegmentDescriptor> specs,
+      final List<SegmentReference> segmentReferences,
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final List<SegmentReference> segmentReferences,
       final AtomicLong cpuTimeAccumulator,
       final Optional<byte[]> cacheKeyPrefix
   )
   {
+    final Map<SegmentDescriptor, SegmentReference> referencesByDescriptor = new HashMap<>();
+    for (final SegmentReference reference : segmentReferences) {
+      referencesByDescriptor.put(reference.getSegmentDescriptor(), reference);
+    }
+
     return FunctionalIterable
-        .create(segmentReferences)
+        .create(specs)
         .transform(
-            ref ->
-                ref.getSegmentReference()
-                   .map(segment ->
-                            buildQueryRunnerForSegment(
-                                ref.getSegmentDescriptor(),
-                                segment,
-                                factory,
-                                toolChest,
-                                cpuTimeAccumulator,
-                                cacheKeyPrefix
-                            )
-                   ).orElseThrow(
-                       () -> DruidException.defensive("Unexpected missing segment[%s]", ref.getSegmentDescriptor())
-                   )
+            spec -> {
+              final SegmentReference ref = referencesByDescriptor.get(spec);
+              if (ref == null) {
+                // Return nothing: ResourceManagingQueryRunner already reported this spec as missing.
+                return new NoopQueryRunner<>();
+              }
+
+              return ref.getSegmentReference()
+                        .map(segment ->
+                                 buildQueryRunnerForSegment(
+                                     ref.getSegmentDescriptor(),
+                                     segment,
+                                     factory,
+                                     toolChest,
+                                     cpuTimeAccumulator,
+                                     cacheKeyPrefix
+                                 )
+                        ).orElseThrow(
+                            () -> DruidException.defensive("Unexpected missing segment[%s]", ref.getSegmentDescriptor())
+                        );
+            }
         );
   }
 
@@ -558,7 +581,7 @@ public class ServerManager implements QuerySegmentWalker
     private final QueryRunnerFactory<T, Query<T>> factory;
     private final QueryToolChest<T, Query<T>> toolChest;
     private final ExecutionVertex ev;
-    private final Iterable<SegmentDescriptor> specs;
+    private final List<SegmentDescriptor> specs;
 
     public ResourceManagingQueryRunner(
         VersionedIntervalTimeline<String, DataSegment> timeline,
@@ -572,7 +595,8 @@ public class ServerManager implements QuerySegmentWalker
       this.factory = factory;
       this.toolChest = toolChest;
       this.ev = ev;
-      this.specs = specs;
+      // Copy, since run() iterates specs twice and both passes must see the same descriptors.
+      this.specs = ImmutableList.copyOf(specs);
     }
 
     @Override
@@ -607,10 +631,10 @@ public class ServerManager implements QuerySegmentWalker
         queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentReferences.size()).emit(emitter);
 
         final FunctionalIterable<QueryRunner<T>> queryRunners = getQueryRunnersForSegments(
-            query,
+            specs,
+            segmentReferences,
             factory,
             toolChest,
-            segmentReferences,
             cpuTimeAccumulator,
             cacheKeyPrefix
         );

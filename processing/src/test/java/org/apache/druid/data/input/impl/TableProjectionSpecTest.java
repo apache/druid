@@ -43,6 +43,56 @@ import java.util.stream.Collectors;
 
 class TableProjectionSpecTest extends InitializedNullHandlingTest
 {
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsAppendedColumns()
+  {
+    final TableProjectionSpec declared = pagesSpec();
+    final TableProjectionSpec recorded =
+        declared.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("city")));
+
+    // What a non-sealed compaction records is a superset of what the config declares; comparing it strictly would
+    // recompact the datasource on every run.
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded));
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded, false));
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+    // Equality is the zero-appended-columns case.
+    Assertions.assertTrue(declared.hasEqualCompactionState(declared, true));
+    // The relaxation is one-directional: dropping a declared column is still a change.
+    Assertions.assertFalse(recorded.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsStillComparesEverythingElse()
+  {
+    final TableProjectionSpec declared = pagesSpec();
+
+    // Query granularity is compared by its own check, so it is excluded from both sides here too.
+    Assertions.assertTrue(
+        declared.hasEqualCompactionState(declared.withQueryGranularity(Granularities.HOUR), true)
+    );
+    // A reordered declared column is a change even though the column count only grew.
+    final TableProjectionSpec reordered = TableProjectionSpec
+        .builder()
+        .columns(
+            new StringDimensionSchema("page"),
+            new LongDimensionSchema("cnt"),
+            new LongDimensionSchema("__time"),
+            new StringDimensionSchema("city")
+        )
+        .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(reordered, true));
+    // A spec of a different type is never equivalent.
+    Assertions.assertFalse(
+        declared.hasEqualCompactionState(
+            ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                .columns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"), new LongDimensionSchema("cnt"))
+                .clusteringColumns("page")
+                .build(),
+            true
+        )
+    );
+  }
+
   private static TableProjectionSpec pagesSpec()
   {
     return TableProjectionSpec.builder()

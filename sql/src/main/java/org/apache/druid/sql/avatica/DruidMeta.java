@@ -44,7 +44,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryConfigProvider;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
@@ -232,7 +232,7 @@ public class DruidMeta extends MetaImpl
     // Don't stringify arrays for JDBC because Avatica needs to handle arrays.
     // When using query context security, all JDBC users must have permission on
     // this context key.
-    contextMap.put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false);
+    QueryContextParameters.SQL_STRINGIFY_ARRAYS.set(contextMap, false);
     try {
       openDruidConnection(ch.id, secret, contextMap);
     }
@@ -334,6 +334,12 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult != null) {
       return authenticationResult;
     }
+
+    // Credentials are fixed at openConnection() and cannot be retried under the same
+    // connection id, so a failure here is terminal for this connection. Close it immediately
+    // rather than leaving it to occupy a connection slot until it times out, since it can
+    // never be reclaimed by closeIfEmpty() once a statement exists on it.
+    closeConnection(new ConnectionHandle(druidConnection.getConnectionId()));
 
     // Throw an error. Use the same text that will appear if the user is denied
     // access to any resource within the query. See mapException(). This consistency

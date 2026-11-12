@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -26,8 +27,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
@@ -60,10 +63,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.server.http.AsyncRequest;
+import org.apache.druid.server.http.AsyncRequest.AsyncResponse;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -121,6 +125,7 @@ public class OverlordResource
   private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
 
   private final AuthConfig authConfig;
+  private final ObjectMapper jsonMapper;
 
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
   private static final Set<String> AUDITED_TASK_TYPES
@@ -137,7 +142,8 @@ public class OverlordResource
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper,
       WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      ObjectMapper jsonMapper
   )
   {
     this.overlord = overlord;
@@ -150,6 +156,7 @@ public class OverlordResource
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
     this.authConfig = authConfig;
+    this.jsonMapper = jsonMapper;
   }
 
   /**
@@ -386,28 +393,6 @@ public class OverlordResource
   }
 
   @POST
-  @Path("/datasources/{dataSource}/shutdownAllTasks")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(DatasourceResourceFilter.class)
-  public Response shutdownTasksForDataSource(@PathParam("dataSource") final String dataSource)
-  {
-    return asLeaderWith(
-        taskMaster.getTaskQueue(),
-        taskQueue -> {
-          final List<TaskInfo> tasks = taskQueryTool.getActiveTaskInfo(dataSource);
-          if (tasks.isEmpty()) {
-            return Response.status(Status.NOT_FOUND).build();
-          } else {
-            for (final TaskInfo task : tasks) {
-              taskQueue.shutdown(task.getId(), "Shutdown request from user");
-            }
-            return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
-          }
-        }
-    );
-  }
-
-  @POST
   @Path("/taskStatus")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
@@ -506,35 +491,42 @@ public class OverlordResource
   @Path("/action")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response doAction(final TaskActionHolder holder)
+  public void performTaskAction(
+      final TaskActionHolder holder,
+      @Context HttpServletRequest request
+  )
   {
-    return asLeaderWith(
-        taskMaster.getTaskActionClient(holder.getTask()),
-        new Function<>()
-        {
-          @Override
-          public Response apply(TaskActionClient taskActionClient)
-          {
-            final Map<String, Object> retMap;
+    final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
+    if (!taskActionClient.isPresent()) {
+      // Encourage client to try again soon, when we'll likely have a redirect set up
+      AsyncRequest.completed(request, jsonMapper, AsyncResponse.status(Status.SERVICE_UNAVAILABLE.getStatusCode()));
+      return;
+    }
 
-            // It would be great to verify that this worker is actually supposed to be running the task before
-            // actually doing the action.  Some ideas for how that could be done would be using some sort of attempt_id
-            // or token that gets passed around.
-
-            try {
-              final Object ret = taskActionClient.submit(holder.getAction());
-              retMap = new HashMap<>();
-              retMap.put("result", ret);
-            }
-            catch (Exception e) {
-              log.warn(e, "Failed to perform task action");
-              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
-            }
-
-            return Response.ok().entity(retMap).build();
-          }
-        }
-    );
+    final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
+    // Use a default timeout of 15 minutes
+    AsyncRequest.create(request, future, 15 * 60_000)
+                .contentType(jsonMapper, MediaType.APPLICATION_JSON)
+                .onTimeout(HttpResponseStatus.GATEWAY_TIMEOUT.code())
+                .onSuccess(
+                    result -> {
+                      // Use null-safe map since some task actions may return null result
+                      final Map<String, Object> payload = new HashMap<>();
+                      payload.put("result", result);
+                      return AsyncResponse.of(Status.OK.getStatusCode(), payload);
+                    }
+                )
+                .onFailure(t -> {
+                  log.warn(t, "Failed to perform task action");
+                  if (t instanceof DruidException druidException) {
+                    return AsyncResponse.of(druidException.getStatusCode(), druidException.toErrorResponse());
+                  } else {
+                    final Map<String, String> payload = new HashMap<>();
+                    payload.put("error", t.getMessage());
+                    return AsyncResponse.of(Status.INTERNAL_SERVER_ERROR.getStatusCode(), payload);
+                  }
+                })
+                .start();
   }
 
   @GET

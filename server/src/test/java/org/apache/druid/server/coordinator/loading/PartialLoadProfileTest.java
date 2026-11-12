@@ -164,4 +164,19 @@ public class PartialLoadProfileTest
     PartialLoadProfile pd = PartialLoadProfile.forLoaded(WRAPPED, "v1:differentfingerprint", 12345L);
     Assertions.assertNotSame(pa, pd);
   }
+
+  @Test
+  public void testFingerprintIsInterned()
+  {
+    // equal but distinct fingerprint instances, as when each announcement deserializes its own copy; the profiles
+    // themselves differ (different loadedBytes), so only the fingerprint interning can make the strings the same
+    final String fingerprintA = new StringBuilder("v1:").append("fedcba9876543210").toString();
+    final String fingerprintB = new StringBuilder("v1:").append("fedcba9876543210").toString();
+    Assertions.assertNotSame(fingerprintA, fingerprintB);
+
+    final PartialLoadProfile pa = PartialLoadProfile.forLoaded(WRAPPED, fingerprintA, 1L);
+    final PartialLoadProfile pb = PartialLoadProfile.forLoaded(WRAPPED, fingerprintB, 2L);
+    Assertions.assertNotSame(pa, pb);
+    Assertions.assertSame(pa.fingerprint(), pb.fingerprint());
+  }
 }

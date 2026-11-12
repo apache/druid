@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  * All the dimensions will be retained and lexicographically order using dimensions name.
  * <p>
  * The metric path of the graphite event is:
- * <namespacePrefix>.[<druid service name>].[<druid hostname>].<dimensions values ordered by dimension's name>.<metric>
+ * {@code <namespacePrefix>.[<druid service name>].[<druid hostname>].<dimensions values ordered by dimension's name>.<metric>}
  * <p>
  * Note that this path will be sanitized by replacing all the `.` or `space` to `_` {@link GraphiteEmitter#sanitize(String)}
  */

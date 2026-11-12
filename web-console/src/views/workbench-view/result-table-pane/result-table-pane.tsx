@@ -19,7 +19,7 @@
 import { Button, Icon, Intent, Menu, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import type { Column, QueryResult, SqlExpression, SqlQueryBase } from 'druid-query-toolkit';
 import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar, SqlType } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
@@ -52,6 +52,7 @@ import {
   filterMap,
   formatNumber,
   getNumericColumnBraces,
+  isNumberLike,
   oneOf,
   prettyPrintSql,
   timeFormatToSql,
@@ -91,7 +92,11 @@ function isStringJsonString(value: string): boolean {
   }
 }
 
-function getExpressionIfAlias(query: SqlQuery, columnIndex: number, numColumns: number): string {
+function getExpressionIfAlias(
+  query: SqlQueryBase,
+  columnIndex: number,
+  numColumns: number,
+): string {
   const selectExpressionsArray = query.getSelectExpressionsArray();
   // If there is a * before
   if (
@@ -568,7 +573,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         const descOrderBy = orderByExpression.toOrderByExpression('DESC');
         const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
         const descOrderByPretty = prettyPrintSql(descOrderBy);
-        const ascOrderByPretty = prettyPrintSql(descOrderBy);
+        const ascOrderByPretty = prettyPrintSql(ascOrderBy);
 
         menuItems.push(
           <MenuItem
@@ -720,7 +725,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
-                          text={typeof value === 'number' ? formatNumber(value) : String(value)}
+                          text={isNumberLike(value) ? formatNumber(value) : String(value)}
                           braces={numericColumnBraces[i]}
                           padFractionalPart
                         />

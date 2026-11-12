@@ -74,7 +74,7 @@ public interface CatalogManager
    * @return the version of the newly created table. Call
    * {@link TableMetadata#asUpdate(long)} if you want a new
    * {@link TableMetadata} with the new version.
-   * @throws {@link DuplicateKeyException} if the row is a duplicate
+   * @throws DuplicateKeyException if the row is a duplicate
    * (schema, name) pair. This generally indicates a code error,
    * or since our code is perfect, a race condition or a DB
    * update outside of Druid. In any event, the error is not

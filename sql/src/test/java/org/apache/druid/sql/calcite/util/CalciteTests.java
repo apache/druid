@@ -53,6 +53,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
@@ -105,6 +106,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
@@ -418,7 +420,9 @@ public class CalciteTests
         getJsonMapper(),
         new FakeHttpClient(),
         () -> new SqlEngineRegistry(Collections.emptySet()),
-        plannerConfig
+        plannerConfig,
+        new DefaultQueryConfig(null),
+        new Properties()
     );
   }
 

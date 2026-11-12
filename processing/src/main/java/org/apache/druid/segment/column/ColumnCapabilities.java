@@ -124,18 +124,24 @@ public interface ColumnCapabilities extends TypeSignature<ValueType>
 
     public Capable and(Capable other)
     {
-      if (this == UNKNOWN || other == UNKNOWN) {
+      if (this == FALSE || other == FALSE) {
+        return FALSE;
+      } else if (this == UNKNOWN || other == UNKNOWN) {
         return UNKNOWN;
+      } else {
+        return TRUE;
       }
-      return this == TRUE && other == TRUE ? TRUE : FALSE;
     }
 
     public Capable or(Capable other)
     {
-      if (this == TRUE) {
+      if (this == TRUE || other == TRUE) {
         return TRUE;
+      } else if (this == UNKNOWN || other == UNKNOWN) {
+        return UNKNOWN;
+      } else {
+        return FALSE;
       }
-      return other;
     }
 
     public static Capable of(boolean bool)

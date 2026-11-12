@@ -532,6 +532,41 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testCreateTableWithSqlTimeCondition()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "SET sqlTimeCondition = '2020-01-01/2020-02-01';\n"
+            + "CREATE TABLE tbl (__time TIMESTAMP, page VARCHAR, cnt BIGINT,"
+            + " PROJECTION p AS (SELECT page, SUM(cnt) AS total GROUP BY page))"
+        )
+    );
+    assertEquals(
+        "Context parameter [sqlTimeCondition] cannot be provided on operator [CREATE TABLE]",
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  @Test
+  public void testAlterTableWithSqlTimeCondition()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "SET sqlTimeCondition = '2020-01-01/2020-02-01';\n"
+            + "ALTER TABLE tbl SET PROPERTIES (description = 'hi')"
+        )
+    );
+    assertEquals(
+        "Context parameter [sqlTimeCondition] cannot be provided on operator [ALTER TABLE SET PROPERTIES]",
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
   /**
    * A projection defined with TIME_FLOOR must carry a granularity the segment layer can recover, which is how the
    * projection gets matched to time-grouped queries.

@@ -35,6 +35,8 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -42,6 +44,7 @@ import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
@@ -62,7 +65,6 @@ import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
@@ -79,6 +81,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ExpressionTestHelper
@@ -115,6 +118,17 @@ public class ExpressionTestHelper
       null, /* Don't need authentication result */
       Collections.emptySet(),
       Collections.emptyMap(),
+      null
+  );
+
+  public static final PlannerContext PLANNER_CONTEXT_WITH_EXTRACTION_FNS = PlannerContext.create(
+      PLANNER_TOOLBOX,
+      "SELECT 1", // The actual query isn't important for this test
+      null, /* Don't need SQL node */
+      null, /* Don't need engine */
+      null, /* Don't need authentication result */
+      Collections.emptySet(),
+      QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true),
       null
   );
 
@@ -228,11 +242,32 @@ public class ExpressionTestHelper
 
   /**
    * @return Representation of variable that is bound in an expression. Intended use is as one of
-   * the args to {@link #buildExpectedExpression(String, Object...)}.
+   * the args to {@link #expectedFunctionCall(ColumnType, String, Object...)}.
    */
   Variable makeVariable(String name)
   {
     return new Variable(name);
+  }
+
+  /**
+   * @return Representation of a null literal of the given type, which may itself be null for an untyped null literal.
+   * Intended use is as one of the args to {@link #expectedFunctionCall(ColumnType, String, Object...)}, where a plain
+   * null arg is typed as STRING.
+   */
+  NullLiteral makeTypedNullLiteral(@Nullable ColumnType type)
+  {
+    return new NullLiteral(type);
+  }
+
+  private static class NullLiteral
+  {
+    @Nullable
+    private final ColumnType type;
+
+    NullLiteral(@Nullable ColumnType type)
+    {
+      this.type = type;
+    }
   }
 
   private static class Variable
@@ -243,35 +278,48 @@ public class ExpressionTestHelper
     {
       this.name = name;
     }
-
-    @Override
-    public String toString()
-    {
-      return "\"" + name + "\"";
-    }
   }
 
-  DruidExpression buildExpectedExpression(String functionName, Object... args)
+  /**
+   * Builds the expected {@link DruidExpression} of a function call. Each of the {@code args} is converted to an
+   * argument expression: {@link #makeVariable(String)} becomes a column of the type in the row signature (it is an
+   * error if the name is not in the row signature), a {@link DruidExpression} is used as is, and {@link String},
+   * {@link Boolean}, {@link Long}, {@link Integer} and {@link Double} become literals. A plain null becomes a null
+   * literal typed as STRING; use {@link #makeTypedNullLiteral(ColumnType)} for a null of any other type.
+   */
+  DruidExpression expectedFunctionCall(ColumnType type, String functionName, Object... args)
   {
-    String noDelimiter = "";
-    String argsString = Arrays.stream(args)
-                              .map(ExpressionTestHelper::quoteIfNeeded)
-                              .collect(Collectors.joining(","));
-    List<String> elements = Arrays.asList(functionName, "(", argsString, ")");
-    return CalciteTestBase.makeExpression(String.join(noDelimiter, elements));
+    return DruidExpression.ofFunctionCall(
+        type,
+        functionName,
+        Arrays.stream(args).map(this::toArgumentExpression).collect(Collectors.toList())
+    );
   }
 
-  private static String quoteIfNeeded(@Nullable Object arg)
+  private DruidExpression toArgumentExpression(@Nullable Object arg)
   {
     if (arg == null) {
-      return "null";
+      return DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.nullLiteral());
+    } else if (arg instanceof NullLiteral) {
+      return DruidExpression.ofLiteral(((NullLiteral) arg).type, DruidExpression.nullLiteral());
+    } else if (arg instanceof DruidExpression) {
+      return (DruidExpression) arg;
+    } else if (arg instanceof Variable) {
+      final String name = ((Variable) arg).name;
+      final ColumnType columnType = rowSignature.getColumnType(name).orElseThrow(
+          () -> new IllegalArgumentException("Variable [" + name + "] is not in the row signature")
+      );
+      return DruidExpression.ofColumn(columnType, name);
     } else if (arg instanceof String) {
-      return "'" + arg + "'";
+      return DruidExpression.ofStringLiteral((String) arg);
     } else if (arg instanceof Boolean) {
-      return (Boolean) arg ? "1" : "0";
-    } else {
-      return arg.toString();
+      return DruidExpression.ofLiteral(ColumnType.LONG, (Boolean) arg ? "1" : "0");
+    } else if (arg instanceof Long || arg instanceof Integer) {
+      return DruidExpression.ofLiteral(ColumnType.LONG, arg.toString());
+    } else if (arg instanceof Double) {
+      return DruidExpression.ofLiteral(ColumnType.DOUBLE, arg.toString());
     }
+    throw new IllegalArgumentException("Unsupported argument type: " + arg.getClass());
   }
 
   void testExpression(
@@ -306,47 +354,40 @@ public class ExpressionTestHelper
     testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult);
   }
 
+  void testExpression(
+      final RexNode rexNode,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
+  )
+  {
+    testExpression(PLANNER_CONTEXT, rexNode, expectedExpression, expectedResult);
+  }
+
   /**
-   * @deprecated use {@link #testExpression(SqlOperator, RexNode, DruidExpression, Object)} instead which does a
-   * deep comparison of {@link DruidExpression} instead of just comparing the output of
-   * {@link DruidExpression#getExpression()}
+   * Same as {@link #testExpression(RexNode, DruidExpression, Object)}, but plans with
+   * {@link #PLANNER_CONTEXT_WITH_EXTRACTION_FNS}, i.e. with sqlUseExtractionFns enabled.
    */
-  @Deprecated
-  void testExpressionString(
-      final SqlOperator op,
-      final List<? extends RexNode> exprs,
-      final DruidExpression expectedExpression,
-      final Object expectedResult
-  )
-  {
-    testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult, false);
-  }
-
-  void testExpression(
+  void testExpressionWithExtractionFns(
       final RexNode rexNode,
       final DruidExpression expectedExpression,
       final Object expectedResult
   )
   {
-    testExpression(rexNode, expectedExpression, expectedResult, true);
+    testExpression(PLANNER_CONTEXT_WITH_EXTRACTION_FNS, rexNode, expectedExpression, expectedResult);
   }
 
-  void testExpression(
+  private void testExpression(
+      final PlannerContext plannerContext,
       final RexNode rexNode,
       final DruidExpression expectedExpression,
-      final Object expectedResult,
-      final boolean deepCompare
+      final Object expectedResult
   )
   {
-    DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
+    DruidExpression expression = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
     Assertions.assertNotNull(expression);
-    if (deepCompare) {
-      Assertions.assertEquals(expectedExpression, expression, "Expression for: " + rexNode);
-    } else {
-      Assertions.assertEquals(expectedExpression.getExpression(), expression.getExpression(), "Expression for: " + rexNode);
-    }
+    Assertions.assertEquals(expectedExpression, expression, "Expression for: " + rexNode);
 
-    ExprEval<?> result = PLANNER_CONTEXT.parseExpression(expression.getExpression())
+    ExprEval<?> result = plannerContext.parseExpression(expression.getExpression())
                                         .eval(expressionBindings);
 
     Assertions.assertEquals(expectedResult, result.value(), "Result for: " + rexNode);
@@ -364,7 +405,8 @@ public class ExpressionTestHelper
     final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         rowSignature,
         new ExpressionParserImpl(PLANNER_TOOLBOX.exprMacroTable()),
-        false
+        false,
+        Set.of()
     );
 
     final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);

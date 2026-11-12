@@ -154,6 +154,17 @@ public class Stats
      */
     public static final CoordinatorStat CACHE_USED
         = CoordinatorStat.toDebugAndEmit("cacheUsed", "tier/segmentCache/used");
+    /**
+     * {@link #CACHE_USED} as a whole-number percentage of {@link #CACHE_CAPACITY}.
+     */
+    public static final CoordinatorStat CACHE_UTILIZATION
+        = CoordinatorStat.toDebugAndEmit("cacheUtil", "tier/segmentCache/utilization");
+    /**
+     * Segment cache utilization of all tiers under a tier alias, as a whole-number percentage of their combined
+     * capacity.
+     */
+    public static final CoordinatorStat ALIAS_CACHE_UTILIZATION
+        = CoordinatorStat.toDebugAndEmit("aliasCacheUtil", "tierAlias/segmentCache/utilization");
     public static final CoordinatorStat REPLICATION_FACTOR
         = CoordinatorStat.toDebugAndEmit("maxRepFactor", "tier/replication/factor");
     public static final CoordinatorStat HISTORICAL_COUNT

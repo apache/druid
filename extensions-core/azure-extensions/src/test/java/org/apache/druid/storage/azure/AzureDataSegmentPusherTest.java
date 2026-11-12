@@ -33,6 +33,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -61,17 +62,12 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   private static final String CONTAINER_NAME = "container";
   private static final String PREFIX = "prefix";
   private static final String BLOB_PATH = " Россия 한국 中国!?/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final DataSegment DATA_SEGMENT = new DataSegment(
-      " Россия 한국 中国!?",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),
-      null,
-      null,
-      new LinearShardSpec(0),
-      0,
-      1
-  );
+  private static final DataSegment DATA_SEGMENT = DataSegment.builder(SegmentId.of(" Россия 한국 中国!?", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                                                             .loadSpec(ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH))
+                                                             .shardSpec(new LinearShardSpec(0))
+                                                             .binaryVersion(0)
+                                                             .size(1)
+                                                             .build();
   private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true);
   private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false);
   private static final byte[] DATA = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -81,17 +77,14 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   private static final String NON_UNIQUE_WITH_PREFIX_MATCHER = PREFIX + "/" + "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/index\\.zip";
   private static final int MAX_TRIES = 3;
 
-  private static final DataSegment SEGMENT_TO_PUSH = new DataSegment(
-      "foo",
-      Intervals.of("2015/2016"),
-      "0",
-      new HashMap<>(),
-      new ArrayList<>(),
-      new ArrayList<>(),
-      new LinearShardSpec(0),
-      0,
-      DATA.length
-  );
+  private static final DataSegment SEGMENT_TO_PUSH = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                                                .loadSpec(new HashMap<>())
+                                                                .dimensions(new ArrayList<>())
+                                                                .metrics(new ArrayList<>())
+                                                                .shardSpec(new LinearShardSpec(0))
+                                                                .binaryVersion(0)
+                                                                .size(DATA.length)
+                                                                .build();
 
   private AzureStorage azureStorage;
   private AzureAccountConfig azureAccountConfig;

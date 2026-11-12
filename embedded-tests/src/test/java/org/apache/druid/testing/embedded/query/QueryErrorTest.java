@@ -24,7 +24,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.HttpResponseException;
@@ -234,7 +234,7 @@ public class QueryErrorTest extends QueryTestBase
   {
     final Map<String, Object> context = new HashMap<>();
     // Disable cache so that each run hits historical.
-    context.put(QueryContexts.USE_CACHE_KEY, false);
+    context.put(QueryContextParameters.USE_CACHE.getName(), false);
     context.put(key, true);
     return context;
   }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.query.context.QueryContextParameter;
 
 import javax.annotation.Nullable;
@@ -31,8 +32,8 @@ import java.util.Objects;
  * Builds an immutable query context map using typed parameter descriptors.
  * Existing string-keyed maps can be copied with {@link #putAll(Map)} for backward compatibility.
  *
- * <p>Like {@link com.google.common.collect.ImmutableMap.Builder}, {@link #putAll(Map)} rejects {@code null} keys and
- * values.
+ * <p>Like {@link com.google.common.collect.ImmutableMap.Builder}, {@link #putRaw(String, Object)} and
+ * {@link #putAll(Map)} reject {@code null} keys and values.
  * Typed entries follow the {@link QueryContextParameter} convention that {@code null} means "unset", so
  * {@link #put(QueryContextParameter, Object)} with a {@code null} value removes the parameter.
  * Unlike {@code ImmutableMap.Builder}, a later value for the same key replaces the earlier one.</p>
@@ -48,11 +49,25 @@ public final class QueryContextBuilder
    */
   public QueryContextBuilder putAll(final Map<? extends String, ?> values)
   {
-    values.forEach(
-        (name, value) -> this.values.put(
-            Objects.requireNonNull(name, "name"),
-            Objects.requireNonNull(value, () -> "value for query context key [" + name + "]")
-        )
+    values.forEach(this::putRaw);
+    return this;
+  }
+
+  /**
+   * Adds a context value using a raw string key.
+   *
+   * <p>For tests only: keys that have no {@link QueryContextParameter} descriptor, such as arbitrary or test-only keys,
+   * and raw values that exercise parsing. Production code should declare a descriptor in
+   * {@link org.apache.druid.query.context.QueryContextParameters} and use {@link #put(QueryContextParameter, Object)}.</p>
+   *
+   * @throws NullPointerException if the name or value is {@code null}
+   */
+  @VisibleForTesting
+  public QueryContextBuilder putRaw(final String name, final Object value)
+  {
+    values.put(
+        Objects.requireNonNull(name, "name"),
+        Objects.requireNonNull(value, () -> "value for query context key [" + name + "]")
     );
     return this;
   }

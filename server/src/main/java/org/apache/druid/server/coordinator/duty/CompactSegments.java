@@ -403,6 +403,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         config.getMetricsSpec(),
         config.getTransformSpec(),
         config.getBaseTable(),
+        config.isSealed(),
         config.getProjections(),
         dropExisting,
         autoCompactionContext,
@@ -460,6 +461,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       @Nullable AggregatorFactory[] metricsSpec,
       @Nullable CompactionTransformSpec transformSpec,
       @Nullable BaseTableProjectionSpec baseTable,
+      boolean sealed,
       @Nullable List<AggregateProjectionSpec> projectionSpecs,
       @Nullable Boolean dropExisting,
       Map<String, Object> context,
@@ -514,6 +516,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         transformSpec,
         baseTable,
         projectionSpecs,
+        sealed,
         context,
         compactionRunner
     );

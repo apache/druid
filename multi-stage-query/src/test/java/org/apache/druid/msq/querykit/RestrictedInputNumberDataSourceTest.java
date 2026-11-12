@@ -25,6 +25,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
@@ -33,6 +34,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Set;
 
 public class RestrictedInputNumberDataSourceTest
 {
@@ -57,6 +60,18 @@ public class RestrictedInputNumberDataSourceTest
   {
     Assertions.assertTrue(restrictedFooDataSource.getTableNames().isEmpty());
     Assertions.assertTrue(restrictedBarDataSource.getTableNames().isEmpty());
+  }
+
+  @Test
+  public void test_getReservedColumns()
+  {
+    Assertions.assertEquals(Set.of(), restrictedFooDataSource.getReservedColumns());
+    Assertions.assertEquals(Set.of(), restrictedBarDataSource.getReservedColumns());
+    Assertions.assertEquals(
+        Set.of("dim1"),
+        new RestrictedInputNumberDataSource(0, RowFilterPolicy.from(DimFilters.dimEquals("dim1", "a")))
+            .getReservedColumns()
+    );
   }
 
   @Test
@@ -162,7 +177,7 @@ public class RestrictedInputNumberDataSourceTest
   {
     Assertions.assertEquals(
         new FilterSegmentPruner(TrueDimFilter.instance(), null, VirtualColumns.EMPTY),
-        restrictedFooDataSource.createSegmentPruner()
+        restrictedFooDataSource.createSegmentPruner(null, VirtualColumns.EMPTY)
     );
   }
 }

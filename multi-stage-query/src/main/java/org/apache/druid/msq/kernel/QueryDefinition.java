@@ -26,10 +26,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.RowSignature;
@@ -216,7 +220,9 @@ public class QueryDefinition
    *   <li>All nonleaf stages {@link StageDefinition#getMaxWorkerCount()} are further capped to
    *       {@code maxNonLeafWorkerCount}.</li>
    *   <li>All stage shuffle specs, if {@link ShuffleSpec#isAdjustable()}, have their partition count set to
-   *       the capped max worker count times {@code targetPartitionsPerWorker}.</li>
+   *       {@code targetPartitionsPerWorker} times the capped max worker count of the stages that read them as
+   *       non-broadcast inputs (the largest, if there are several). Stages with no such readers use their own capped
+   *       max worker count instead.</li>
    * </ul>
    */
   public QueryDefinition withRuntimeBounds(
@@ -225,12 +231,40 @@ public class QueryDefinition
       final int targetPartitionsPerWorker
   )
   {
+    final Int2IntMap adjustedMaxWorkerCounts = new Int2IntOpenHashMap();
+    for (final StageDefinition stageDef : stageDefinitions.values()) {
+      adjustedMaxWorkerCounts.put(
+          stageDef.getStageNumber(),
+          stageDef.computeAdjustedMaxWorkerCount(maxWorkerCount, maxNonLeafWorkerCount)
+      );
+    }
+
+    // Stage number -> largest adjusted max worker count of the stages that read it as a non-broadcast input.
+    final Int2IntMap readerMaxWorkerCounts = new Int2IntOpenHashMap();
+    for (final StageDefinition stageDef : stageDefinitions.values()) {
+      final List<InputSpec> inputSpecs = stageDef.getInputSpecs();
+      for (int inputNumber = 0; inputNumber < inputSpecs.size(); inputNumber++) {
+        if (inputSpecs.get(inputNumber) instanceof StageInputSpec stageInputSpec
+            && !stageDef.getBroadcastInputNumbers().contains(inputNumber)) {
+          readerMaxWorkerCounts.mergeInt(
+              stageInputSpec.getStageNumber(),
+              adjustedMaxWorkerCounts.get(stageDef.getStageNumber()),
+              Math::max
+          );
+        }
+      }
+    }
+
     boolean anyChanged = false;
     final Map<StageId, StageDefinition> newStageDefinitions = new LinkedHashMap<>();
     for (Map.Entry<StageId, StageDefinition> entry : stageDefinitions.entrySet()) {
       final StageDefinition stageDef = entry.getValue();
+      final int stageNumber = stageDef.getStageNumber();
+      final int adjustedMaxWorkerCount = adjustedMaxWorkerCounts.get(stageNumber);
+      final int adjustedPartitionCount =
+          readerMaxWorkerCounts.getOrDefault(stageNumber, adjustedMaxWorkerCount) * targetPartitionsPerWorker;
       final StageDefinition adjustedStageDef =
-          stageDef.withRuntimeBounds(maxWorkerCount, maxNonLeafWorkerCount, targetPartitionsPerWorker);
+          stageDef.withRuntimeBounds(adjustedMaxWorkerCount, adjustedPartitionCount);
       newStageDefinitions.put(entry.getKey(), adjustedStageDef);
       if (!Objects.equals(adjustedStageDef, stageDef)) {
         anyChanged = true;

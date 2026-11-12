@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
 /**
  * The result of calling {@link VectorValueMatcher#match}.
  *
- * @see VectorMatch, the implementation, which also adds some extra mutation methods.
+ * @see VectorMatch the implementation, which also adds some extra mutation methods.
  */
 public interface ReadableVectorMatch
 {

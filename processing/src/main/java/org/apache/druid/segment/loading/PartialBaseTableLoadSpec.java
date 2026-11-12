@@ -162,7 +162,7 @@ public class PartialBaseTableLoadSpec extends PartialLoadSpec
     final List<TableClusterGroupSpec> groups = clusteredSummary.getClusterGroups();
     final List<String> bundleNames = new ArrayList<>(groups.size());
     for (TableClusterGroupSpec group : groups) {
-      bundleNames.add(Projections.getClusterGroupBundleName(group.getClusteringValueIds()));
+      bundleNames.add(group.getBundleName());
     }
     return bundleNames;
   }

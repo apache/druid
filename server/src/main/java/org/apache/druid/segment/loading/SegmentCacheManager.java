@@ -116,7 +116,9 @@ public interface SegmentCacheManager
    * {@link AcquireMode#FULL} a cached entry is returned only if it is behaviorally fully-materialized. With
    * {@link AcquireMode#PARTIAL} a mounted (but possibly not-yet-fully-downloaded) entry is sufficient, and callers
    * acknowledge that synchronous methods may refuse if the segment is not fully downloaded; they must use asynchronous
-   * methods like {@link CursorFactory#makeCursorHolderAsync} instead. See {@link AcquireMode} for details.
+   * methods like {@link CursorFactory#makeCursorHolderAsync} instead. {@link AcquireMode#PARTIAL_RULE_HELD} is like
+   * {@link AcquireMode#PARTIAL}, but only returns an entry that a partial-load rule could apply to, and the returned
+   * segment only serves the rule-selected bundles. See {@link AcquireMode} for details.
    */
   Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode);
 
@@ -134,7 +136,9 @@ public interface SegmentCacheManager
    * {@link AcquireMode#FULL} the segment is fully materialized up front. With {@link AcquireMode#PARTIAL}, when the
    * segment's {@link LoadSpec} supports range reads, only a minimal amount of metadata is downloaded and additional
    * loading is deferred to the async methods callers use to interact with the returned segment; partial-ineligible
-   * segments fall back to {@link AcquireMode#FULL} behavior. See {@link AcquireMode} for details.
+   * segments fall back to {@link AcquireMode#FULL} behavior. With {@link AcquireMode#PARTIAL_RULE_HELD} nothing is
+   * loaded up front: the segment serves only the bundles selected by its partial-load rule, and if there is no rule it
+   * serves no rows. See {@link AcquireMode} for details.
    */
   AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode);
 

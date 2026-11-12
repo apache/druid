@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -87,6 +88,14 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = queryPlus.getQuery();
     final CacheStrategy strategy = toolChest.getCacheStrategy(query, mapper);
+
+    // Key on the part of the segment that the query covers, since callers may narrow the query to skip part of it.
+    final SegmentDescriptor descriptor = Queries.narrowToQuery(segmentDescriptor, query);
+    if (descriptor == null) {
+      // Nothing worth caching, since the query does not overlap this segment.
+      return base.run(queryPlus, responseContext);
+    }
+
     final boolean populateCache = canPopulateCache(query, strategy);
     final boolean useCache = canUseCache(query, strategy);
 
@@ -94,7 +103,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     if (useCache || populateCache) {
       key = CacheUtil.computeSegmentCacheKey(
           cacheId,
-          alignToActualDataInterval(segmentDescriptor),
+          alignToActualDataInterval(descriptor),
           Bytes.concat(cacheKeyPrefix.get(), strategy.computeCacheKey(query))
       );
     } else {

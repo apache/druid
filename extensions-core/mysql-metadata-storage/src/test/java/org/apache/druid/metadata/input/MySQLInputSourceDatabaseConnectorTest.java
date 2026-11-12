@@ -231,7 +231,7 @@ public class MySQLInputSourceDatabaseConnectorTest
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"useSSL=true", "sslMode=verify-full"})
+  @ValueSource(strings = {"useSSL=true", "useSSL=false", "sslMode=verify-full", "sslMode=disable"})
   public void testSuccessMariaDbSslPropertyWithDefaultAllowlist(final String sslProperty)
   {
     final MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()

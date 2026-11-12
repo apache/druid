@@ -22,6 +22,7 @@ package org.apache.druid.segment.projections;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -46,6 +47,20 @@ import java.util.function.LongSupplier;
 
 class MergingColumnSelectorFactoryTest
 {
+  /**
+   * Stands in for the capabilities of all groups: reports column "v" as a dictionary-encoded string with multiple
+   * values, unlike the single-valued per-group stubs from {@link #groupFactory}, so tests can tell which one answered.
+   */
+  private static final ColumnInspector ALL_GROUPS_INSPECTOR =
+      column -> "v".equals(column)
+                ? ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
+                                        .setHasMultipleValues(true)
+                                        .setDictionaryEncoded(true)
+                                        .setDictionaryValuesSorted(true)
+                                        .setDictionaryValuesUnique(true)
+                                        .setHasBitmapIndexes(true)
+                : null;
+
   private final int[] currentGroup = {0};
   private final long[] rowId = {0};
 
@@ -78,6 +93,7 @@ class MergingColumnSelectorFactoryTest
         clusteringColumns,
         clusteringValuesByGroup,
         queryVirtualColumns,
+        ALL_GROUPS_INSPECTOR,
         currentGroupSupplier,
         rowIdSupplier
     );
@@ -86,9 +102,9 @@ class MergingColumnSelectorFactoryTest
   @Test
   void testGetColumnCapabilitiesStripsDictionaryEncoding()
   {
-    // The representative group advertises "v" as a dictionary-encoded string with bitmap indexes; because per-group
-    // dictionary ids are not stable across the merged stream, the factory must strip those flags (forcing value-based
-    // grouping) while keeping the type.
+    // The inspector advertises "v" as a dictionary-encoded string with bitmap indexes; because per-group dictionary
+    // ids are not stable across the merged stream, the factory must strip those flags (forcing value-based grouping)
+    // while keeping the type.
     final MergingColumnSelectorFactory factory = factory(groupFactory("g0"), groupFactory("g1"));
     final ColumnCapabilities caps = factory.getColumnCapabilities("v");
     Assertions.assertNotNull(caps);
@@ -100,13 +116,17 @@ class MergingColumnSelectorFactoryTest
   }
 
   @Test
-  void testGetColumnCapabilitiesNullWhenRepresentativeHasNone()
+  void testGetColumnCapabilitiesComeFromAllGroups()
   {
-    // Unknown column -> representative returns null -> factory returns null (caller skips it).
-    final MergingColumnSelectorFactory factory = factory(groupFactory("g0"));
-    Assertions.assertNull(factory.getColumnCapabilities("nope"));
-    // No non-null group factory at all -> null capabilities.
-    Assertions.assertNull(factory(new ColumnSelectorFactory[]{null}).getColumnCapabilities("v"));
+    // the per-group stubs report "v" as single-valued, but some group has multiple values, so the factory must too
+    final MergingColumnSelectorFactory factory = factory(groupFactory("g0"), groupFactory("g1"));
+    Assertions.assertTrue(factory.getColumnCapabilities("v").hasMultipleValues().isTrue());
+  }
+
+  @Test
+  void testGetColumnCapabilitiesNullForUnknownColumn()
+  {
+    Assertions.assertNull(factory(groupFactory("g0")).getColumnCapabilities("nope"));
   }
 
   @Test
@@ -223,8 +243,8 @@ class MergingColumnSelectorFactoryTest
   }
 
   /**
-   * A stub group factory that reports column "v" as a dictionary-encoded string (to exercise stripping) and returns
-   * constant selectors carrying {@code tag} (to verify per-group dispatch).
+   * A stub group factory that reports column "v" as a single-valued string (which capabilities must not come from) and
+   * returns constant selectors carrying {@code tag} (to verify per-group dispatch).
    */
   private static ColumnSelectorFactory groupFactory(String tag)
   {

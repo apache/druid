@@ -18,6 +18,7 @@
 
 import { EditorState } from '@codemirror/state';
 
+import type { QueryContextParameterMetadata } from '../druid-models';
 import { dsql } from '../editor-languages/dsql';
 import { completionContextAt } from '../test-utils/completion-context';
 import type { ColumnMetadata } from '../utils';
@@ -36,6 +37,13 @@ describe('sql-completions', () => {
     function completionsAt(textWithCursor: string, options?: SqlCompletionOptions) {
       const [context, word] = completionContextAt(dsql(), textWithCursor);
       return getSqlCompletions(context, word, options);
+    }
+
+    // The keywords suggested with the cursor at the |
+    function keywordsAt(textWithCursor: string): string[] {
+      return completionsAt(textWithCursor)
+        .filter(c => c.detail === 'keyword')
+        .map(c => c.label);
     }
 
     const columnMetadata: ColumnMetadata[] = [
@@ -130,6 +138,54 @@ describe('sql-completions', () => {
       expect(keywordValues).not.toContain('SELECT');
     });
 
+    it('suggests NULLS FIRST / NULLS LAST after an ORDER BY direction', () => {
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC |')).toEqual(['NULLS']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 ASC |')).toEqual(['NULLS']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS |')).toEqual(['FIRST', 'LAST']);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS LAST |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 DESC NULLS FIRST |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 nulls\n  first |')).toEqual([]);
+
+      // FIRST is still followed by ROW / ROWS in a FETCH
+      expect(keywordsAt('SELECT * FROM t ORDER BY 1 FETCH FIRST |')).toEqual(['ROW', 'ROWS']);
+    });
+
+    it('suggests keywords based on the two keywords before the cursor', () => {
+      // BY
+      expect(keywordsAt('SELECT * FROM t GROUP BY |')).toEqual(['GROUPING', 'ROLLUP', 'CUBE']);
+      expect(keywordsAt('REPLACE INTO t SELECT * FROM s PARTITIONED BY |')).toEqual([
+        'ALL',
+        'HOUR',
+        'DAY',
+        'MONTH',
+        'YEAR',
+      ]);
+      expect(keywordsAt('SELECT * FROM t ORDER BY |')).toEqual([]);
+      expect(keywordsAt('SELECT ROW_NUMBER() OVER (PARTITION BY |')).toEqual([]);
+      expect(
+        keywordsAt('REPLACE INTO t SELECT * FROM s PARTITIONED BY DAY CLUSTERED BY |'),
+      ).toEqual([]);
+
+      // ALL
+      expect(keywordsAt('REPLACE INTO t SELECT * FROM s PARTITIONED BY ALL |')).toEqual(['TIME']);
+      expect(keywordsAt('SELECT ALL |')).toEqual([]);
+      expect(keywordsAt('SELECT 1 UNION ALL |')).toEqual(['SELECT']);
+
+      // DISTINCT
+      expect(keywordsAt('SELECT DISTINCT |')).toEqual([]);
+      expect(keywordsAt('SELECT COUNT(DISTINCT |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t WHERE x IS |')).toEqual(['NOT', 'DISTINCT']);
+      expect(keywordsAt('SELECT * FROM t WHERE x IS NOT |')).toEqual(['DISTINCT']);
+      expect(keywordsAt('SELECT * FROM t WHERE x IS DISTINCT |')).toEqual(['FROM']);
+      expect(keywordsAt('SELECT * FROM t WHERE x IS NOT DISTINCT |')).toEqual(['FROM']);
+
+      // Others
+      expect(keywordsAt('SELECT * FROM t LEFT OUTER |')).toEqual(['JOIN']);
+      expect(keywordsAt('SELECT SUM(x) OVER (ORDER BY y ROWS CURRENT ROW |')).toEqual([]);
+      expect(keywordsAt('SELECT * FROM t FETCH FIRST ROW |')).toEqual(['ONLY']);
+      expect(keywordsAt('EXPLAIN PLAN FOR |')).toEqual(['SELECT', 'INSERT', 'REPLACE']);
+    });
+
     it('looks at the keyword on an earlier line and past comments', () => {
       for (const sql of ['SELECT * FROM t GROUP\n  |', 'SELECT * FROM t GROUP /* by what */ |']) {
         expect(
@@ -186,11 +242,53 @@ describe('sql-completions', () => {
       expect(columnCompletions.map(c => c.label)).toContain('"user"');
     });
 
-    it('includes context keys after SET keyword', () => {
-      const completions = completionsAt('SET |');
+    it('suggests the query context parameters from sys.query_context_parameters after SET', () => {
+      const queryContextParameters: QueryContextParameterMetadata[] = [
+        {
+          name: 'sqlTimeZone',
+          type: 'String',
+          description:
+            'Time zone for a connection. See [time zones](../querying/sql.md#time-zones).',
+          default_value: null,
+          default_description: 'UTC',
+          effective_value: null,
+          effective_source: null,
+          deprecation: null,
+          query_languages: ['JSON', 'SQL'],
+        },
+        {
+          name: 'useCache',
+          type: 'Boolean',
+          description: 'Whether to use the cache.<br />Applies to native queries.',
+          default_value: 'true',
+          default_description: null,
+          effective_value: 'false',
+          effective_source: 'BROKER_DYNAMIC_CONFIG',
+          deprecation: 'Use `useResultLevelCache` instead.',
+          query_languages: ['JSON', 'SQL'],
+        },
+      ];
 
-      const contextCompletions = completions.filter(c => c.detail === 'context');
-      expect(contextCompletions.length).toBeGreaterThan(0);
+      // Only the context parameters, no keywords, tables or columns. Their docs are tested with getQueryContextCompletions.
+      expect(
+        completionsAt('SET |', { queryContextParameters, columnMetadata }).map(c => [
+          c.label,
+          c.boost,
+          c.detail,
+        ]),
+      ).toEqual([
+        ['sqlTimeZone', 50, 'context'],
+        ['useCache', 40, 'context'],
+      ]);
+    });
+
+    it('falls back to the well-known context keys when the parameters are not loaded', () => {
+      for (const queryContextParameters of [undefined, []]) {
+        const completions = completionsAt('SET |', { queryContextParameters });
+        // Only context keys, without docs
+        expect(completions.map(c => c.label)).toContain('sqlTimeZone');
+        expect(completions.every(c => c.detail === 'context' && c.doc === undefined)).toBe(true);
+      }
     });
 
     it('handles column names correctly with quotes', () => {

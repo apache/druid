@@ -27,7 +27,10 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -540,6 +543,42 @@ public class DimensionRangeShardSpecTest
         universalSet
     );
     assertTrue(shard.possibleInDomain(domain));
+  }
+
+  @Test
+  public void testEqualVirtualColumnsShareInstance()
+  {
+    setDimensions("v0");
+
+    final DimensionRangeShardSpec shard0 = new DimensionRangeShardSpec(
+        dimensions,
+        createVirtualColumns(),
+        null,
+        StringTuple.create("m"),
+        0,
+        2
+    );
+    final DimensionRangeShardSpec shard1 = new DimensionRangeShardSpec(
+        dimensions,
+        createVirtualColumns(),
+        StringTuple.create("m"),
+        null,
+        1,
+        2
+    );
+
+    Assertions.assertSame(shard0.getVirtualColumns(), shard1.getVirtualColumns());
+    Assertions.assertSame(
+        shard0.getVirtualColumns().getVirtualColumns()[0],
+        shard1.getVirtualColumns().getVirtualColumns()[0]
+    );
+  }
+
+  private static VirtualColumns createVirtualColumns()
+  {
+    return VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(\"dim\")", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
   }
 
   private RangeSet<String> getRangeSet(Range range)

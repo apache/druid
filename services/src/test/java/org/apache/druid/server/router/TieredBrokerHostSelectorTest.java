@@ -35,8 +35,9 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.DruidNode;
@@ -320,7 +321,7 @@ public class TieredBrokerHostSelectorTest
         "hotBroker",
         brokerSelector.select(
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "hotBroker"))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, "hotBroker"))
                 .build()
         ).lhs
     );
@@ -328,7 +329,7 @@ public class TieredBrokerHostSelectorTest
         "coldBroker",
         brokerSelector.select(
             queryBuilder
-                .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "coldBroker"))
+                .context(QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, "coldBroker"))
                 .build()
         ).lhs
     );
@@ -347,7 +348,7 @@ public class TieredBrokerHostSelectorTest
         "hotBroker",
         brokerSelector.selectForSql(
             createSqlQueryWithContext(
-                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "hotBroker")
+                QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, "hotBroker")
             )
         ).lhs
     );
@@ -355,7 +356,7 @@ public class TieredBrokerHostSelectorTest
         "coldBroker",
         brokerSelector.selectForSql(
             createSqlQueryWithContext(
-                ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "coldBroker")
+                QueryContext.ofMap(QueryContextParameters.BROKER_SERVICE, "coldBroker")
             )
         ).lhs
     );

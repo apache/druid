@@ -37,7 +37,6 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.eclipse.jetty.http.UriCompliance;
@@ -222,7 +221,7 @@ public class ServerConfig
   private String maxSubqueryBytes = SubqueryGuardrailHelper.LIMIT_DISABLED_VALUE;
 
   @JsonProperty
-  private boolean useNestedForUnknownTypeInSubquery = QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
+  private boolean useNestedForUnknownTypeInSubquery = false;
 
   @JsonProperty
   @Min(1)
@@ -233,7 +232,7 @@ public class ServerConfig
 
   @JsonProperty
   @NotNull
-  private Period gracefulShutdownTimeout = Period.ZERO;
+  private Period gracefulShutdownTimeout = Period.seconds(30);
 
   @JsonProperty
   @NotNull
@@ -356,6 +355,22 @@ public class ServerConfig
    */
   public ServerConfig withUnannouncePropagationDelay(final Period newUnannouncePropagationDelay)
   {
+    return withShutdownTimings(gracefulShutdownTimeout, newUnannouncePropagationDelay);
+  }
+
+  /**
+   * Returns a copy of this config with {@link #getGracefulShutdownTimeout()} replaced by the given value.
+   */
+  public ServerConfig withGracefulShutdownTimeout(final Period newGracefulShutdownTimeout)
+  {
+    return withShutdownTimings(newGracefulShutdownTimeout, unannouncePropagationDelay);
+  }
+
+  private ServerConfig withShutdownTimings(
+      final Period newGracefulShutdownTimeout,
+      final Period newUnannouncePropagationDelay
+  )
+  {
     return new ServerConfig(
         numThreads,
         queueSize,
@@ -368,7 +383,7 @@ public class ServerConfig
         useNestedForUnknownTypeInSubquery,
         maxQueryTimeout,
         maxRequestHeaderSize,
-        gracefulShutdownTimeout,
+        newGracefulShutdownTimeout,
         newUnannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel,

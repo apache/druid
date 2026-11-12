@@ -198,7 +198,7 @@ Configuration properties:
 |property|description|values|default|
 |--------|-----------|------|-------|
 |maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used. Overrides the identically named config.|An integer in [1, 2147483647]|`druid.query.scan.maxRowsQueuedForOrdering`| <!-- GENERATED QUERY CONTEXT PARAMETER: maxRowsQueuedForOrdering -->
-|maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used.  Overrides the identically named config.|An integer in [1, 2147483647]|`druid.query.scan.maxSegmentPartitionsOrderedInMemory`|
+|maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used. Overrides the identically named config.|An integer in [1, 2147483647]|`druid.query.scan.maxSegmentPartitionsOrderedInMemory`| <!-- GENERATED QUERY CONTEXT PARAMETER: maxSegmentPartitionsOrderedInMemory -->
 
 Sample query context JSON object:
 

@@ -77,11 +77,22 @@ public class ChangeRequestHistory<T>
     this.singleThreadedExecutor = Execs.singleThreaded("SegmentChangeRequestHistory");
   }
 
+  /**
+   * Stops this history object, which causes pending and future calls to {@link #getRequestsSince} to fail,
+   * and causes future change requests to be discarded.
+   */
   public void stop()
   {
-    singleThreadedExecutor.shutdownNow();
-    final LinkedHashSet<CustomSettableFuture<?>> futures = new LinkedHashSet<>(waitingFutures.keySet());
-    waitingFutures.clear();
+    final LinkedHashSet<CustomSettableFuture<?>> futures;
+
+    synchronized (this) {
+      singleThreadedExecutor.shutdownNow();
+      synchronized (waitingFutures) {
+        futures = new LinkedHashSet<>(waitingFutures.keySet());
+        waitingFutures.clear();
+      }
+    }
+
     for (CustomSettableFuture<?> theFuture : futures) {
       theFuture.setException(new IllegalStateException("Server is shutting down."));
     }

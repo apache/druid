@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentDetail;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -84,17 +85,13 @@ public class RetrieveSegmentsActionsTest
 
   private static DataSegment createSegment(Interval interval, String version)
   {
-    return new DataSegment(
-        task.getDataSource(),
-        interval,
-        version,
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        NoneShardSpec.instance(),
-        9,
-        1
-    );
+    return DataSegment.builder(SegmentId.of(task.getDataSource(), interval, version, 0))
+                      .dimensions(ImmutableList.of("dim1", "dim2"))
+                      .metrics(ImmutableList.of("met1", "met2"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(1)
+                      .build();
   }
 
   @Test

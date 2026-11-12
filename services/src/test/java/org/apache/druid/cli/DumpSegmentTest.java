@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.IndexBuilder;
@@ -111,6 +112,8 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     QueryableIndex index = Mockito.mock(QueryableIndex.class);
     Sequence expected = Sequences.simple(Collections.singletonList(123));
     Mockito.when(query.withOverriddenContext(ArgumentMatchers.any())).thenReturn(query);
+    Mockito.when(query.withOverriddenContext(ArgumentMatchers.any(QueryContextParameter.class), ArgumentMatchers.any()))
+           .thenReturn(query);
     Mockito.when(injector.getInstance(QueryRunnerFactoryConglomerate.class)).thenReturn(conglomerate);
     Mockito.when(conglomerate.findFactory(ArgumentMatchers.any())).thenReturn(factory);
     Mockito.when(factory.createRunner(ArgumentMatchers.any())).thenReturn(runner);
