@@ -257,7 +257,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       final int minWorkerCount = workerConfig.getAutoScaler().getMinNumWorkers();
       final int maxWorkerCount = workerConfig.getAutoScaler().getMaxNumWorkers();
       log.info("Min/max workers: %d/%d", minWorkerCount, maxWorkerCount);
-      final int currValidWorkers = getCurrValidWorkers(workers);
+      final int currValidWorkers = getCurrValidWorkers(workers, runner);
 
       // If there are no worker and workerCapacityHint config is not set (-1) or invalid (<= 0), then spin up minWorkerCount
       // as we cannot determine the exact capacity here to fulfill the need.
@@ -302,7 +302,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     {
       final Collection<ImmutableWorkerInfo> validWorkers = Collections2.filter(
           workers,
-          ProvisioningUtil.createValidWorkerPredicate(config)
+          ProvisioningUtil.createValidWorkerPredicate(config, runner)
       );
       log.debug("Valid workers: %d %s", validWorkers.size(), validWorkers);
 
@@ -372,9 +372,9 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       );
 
       if (currentlyTerminating.isEmpty()) {
-        final int maxWorkersToTerminate = maxWorkersToTerminate(zkWorkers, workerConfig);
+        final int maxWorkersToTerminate = maxWorkersToTerminate(zkWorkers, workerConfig, runner);
         log.info("Max workers to terminate: %d", maxWorkersToTerminate);
-        final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config);
+        final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config, runner);
         final Collection<String> laziestWorkerIps =
             Collections2.transform(
                 runner.markWorkersLazy(isLazyWorker, maxWorkersToTerminate),
@@ -432,9 +432,13 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     }
   }
 
-  private int maxWorkersToTerminate(Collection<ImmutableWorkerInfo> zkWorkers, DefaultWorkerBehaviorConfig workerConfig)
+  private int maxWorkersToTerminate(
+      Collection<ImmutableWorkerInfo> zkWorkers,
+      DefaultWorkerBehaviorConfig workerConfig,
+      WorkerTaskRunner runner
+  )
   {
-    final int currValidWorkers = getCurrValidWorkers(zkWorkers);
+    final int currValidWorkers = getCurrValidWorkers(zkWorkers, runner);
     final int invalidWorkers = zkWorkers.size() - currValidWorkers;
     final int minWorkers = workerConfig.getAutoScaler().getMinNumWorkers();
     log.info("Min workers: %d", minWorkers);
@@ -450,9 +454,9 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     );
   }
 
-  private int getCurrValidWorkers(Collection<ImmutableWorkerInfo> workers)
+  private int getCurrValidWorkers(Collection<ImmutableWorkerInfo> workers, WorkerTaskRunner runner)
   {
-    final Predicate<ImmutableWorkerInfo> isValidWorker = ProvisioningUtil.createValidWorkerPredicate(config);
+    final Predicate<ImmutableWorkerInfo> isValidWorker = ProvisioningUtil.createValidWorkerPredicate(config, runner);
     final int currValidWorkers = Collections2.filter(workers, isValidWorker).size();
     log.debug("Current valid workers: %d", currValidWorkers);
     return currValidWorkers;

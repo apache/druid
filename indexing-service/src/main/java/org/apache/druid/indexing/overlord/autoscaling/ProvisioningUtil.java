@@ -21,11 +21,13 @@ package org.apache.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
+import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 
 public class ProvisioningUtil
 {
   public static Predicate<ImmutableWorkerInfo> createValidWorkerPredicate(
-      final SimpleWorkerProvisioningConfig config
+      final SimpleWorkerProvisioningConfig config,
+      final WorkerTaskRunner runner
   )
   {
     return new Predicate<>()
@@ -33,18 +35,31 @@ public class ProvisioningUtil
       @Override
       public boolean apply(ImmutableWorkerInfo worker)
       {
-        // workerVersion is optional. Without it no worker is too old, but a disabled worker is still not valid.
-        final String minVersion = config.getWorkerVersion();
-        return worker.isValidVersion(minVersion == null ? "" : minVersion);
+        return worker.isValidVersion(getMinWorkerVersion(config, runner));
       }
     };
   }
 
-  public static Predicate<ImmutableWorkerInfo> createLazyWorkerPredicate(
-      final SimpleWorkerProvisioningConfig config
+  /**
+   * Returns {@code druid.indexer.autoscale.workerVersion} if it is set. Otherwise returns the runner's
+   * {@code minWorkerVersion}, the version that tasks are assigned by, so that a worker which can no longer get
+   * tasks does not count as valid.
+   */
+  private static String getMinWorkerVersion(
+      final SimpleWorkerProvisioningConfig config,
+      final WorkerTaskRunner runner
   )
   {
-    final Predicate<ImmutableWorkerInfo> isValidWorker = createValidWorkerPredicate(config);
+    final String workerVersion = config.getWorkerVersion();
+    return workerVersion != null ? workerVersion : runner.getConfig().getMinWorkerVersion();
+  }
+
+  public static Predicate<ImmutableWorkerInfo> createLazyWorkerPredicate(
+      final SimpleWorkerProvisioningConfig config,
+      final WorkerTaskRunner runner
+  )
+  {
+    final Predicate<ImmutableWorkerInfo> isValidWorker = createValidWorkerPredicate(config, runner);
 
     return new Predicate<>()
     {
