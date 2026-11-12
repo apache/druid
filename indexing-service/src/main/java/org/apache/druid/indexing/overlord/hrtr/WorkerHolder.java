@@ -166,6 +166,11 @@ public class WorkerHolder
     );
   }
 
+  boolean hasAnnouncement(String taskId)
+  {
+    return tasksSnapshotRef.get().containsKey(taskId);
+  }
+
   /**
    * Adds or updates an announcement in {@link #tasksSnapshotRef} and refreshes the capacity view so the two stay
    * in sync. {@link #deltaSync} does not use this because it applies a batch of changes and refreshes once at the
