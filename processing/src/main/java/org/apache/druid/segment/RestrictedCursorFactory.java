@@ -56,13 +56,28 @@ public class RestrictedCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return delegate.makeCursorHolder(policy.visit(spec));
+    return delegate.makeCursorHolder(delegateSpec(spec));
   }
 
   @Override
   public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
   {
-    return delegate.makeCursorHolderAsync(policy.visit(spec));
+    return delegate.makeCursorHolderAsync(delegateSpec(spec));
+  }
+
+  @Override
+  public CursorPrefetch prefetch(CursorBuildSpec spec)
+  {
+    return delegate.prefetch(delegateSpec(spec));
+  }
+
+  /**
+   * The spec passed to the delegate: the caller's spec with {@link #policy} applied. Used by every delegating method
+   * here.
+   */
+  private CursorBuildSpec delegateSpec(CursorBuildSpec spec)
+  {
+    return policy.visit(spec);
   }
 
   @Override

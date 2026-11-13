@@ -37,6 +37,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.CursorPrefetch;
 import org.apache.druid.segment.DeferredCursorFactory;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.TopNOptimizationInspector;
@@ -54,6 +55,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorFactoryTest
 {
@@ -287,6 +289,70 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
     }
     finally {
       asyncHolder.close();
+    }
+  }
+
+  @Test
+  public void test_prefetch_factToCountryLeft_delegatesBaseSpec()
+  {
+    // prefetch must warm the left/base side with exactly the base spec the async build computes (join filter
+    // pushdown, base physical columns, no join prefixes), and track the base's handle.
+    final List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+    final JoinFilterPreAnalysis joinFilterPreAnalysis =
+        makeDefaultConfigPreAnalysis(null, joinableClauses, VirtualColumns.EMPTY);
+    final DeferredCursorFactory base = new DeferredCursorFactory(factSegment.as(CursorFactory.class));
+    final HashJoinSegmentCursorFactory factory = new HashJoinSegmentCursorFactory(
+        base,
+        null,
+        joinableClauses,
+        joinFilterPreAnalysis
+    );
+    final CursorBuildSpec spec = CursorBuildSpec.builder()
+                                                .setPhysicalColumns(Set.of("countryIsoCode", "c1.countryName"))
+                                                .build();
+
+    factory.makeCursorHolderAsync(spec).close();
+    final CursorPrefetch prefetch = factory.prefetch(spec);
+    try {
+      Assertions.assertEquals(base.getPendingSpec(), base.getPrefetchSpec(), "prefetch spec must match the build spec");
+      Assertions.assertEquals(
+          Set.of("countryIsoCode"),
+          base.getPrefetchSpec().getPhysicalColumns(),
+          "the base is asked only for base-table columns"
+      );
+      Assertions.assertFalse(prefetch.isReady(), "prefetch waits for the base");
+      base.completePrefetch();
+      Assertions.assertTrue(prefetch.isReady());
+    }
+    finally {
+      prefetch.close();
+    }
+  }
+
+  @Test
+  public void test_prefetch_noClauses_delegatesBaseSpec()
+  {
+    final JoinFilterPreAnalysis joinFilterPreAnalysis =
+        makeDefaultConfigPreAnalysis(null, ImmutableList.of(), VirtualColumns.EMPTY);
+    final DeferredCursorFactory base = new DeferredCursorFactory(factSegment.as(CursorFactory.class));
+    final HashJoinSegmentCursorFactory factory = new HashJoinSegmentCursorFactory(
+        base,
+        null,
+        ImmutableList.of(),
+        joinFilterPreAnalysis
+    );
+
+    factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN).close();
+    final CursorPrefetch prefetch = factory.prefetch(CursorBuildSpec.FULL_SCAN);
+    try {
+      Assertions.assertEquals(base.getPendingSpec(), base.getPrefetchSpec());
+      Assertions.assertFalse(prefetch.isReady());
+      prefetch.close();
+      Assertions.assertTrue(base.prefetchCanceled.get(), "closing the prefetch before it's ready cancels the base");
+    }
+    catch (Throwable t) {
+      prefetch.close();
+      throw t;
     }
   }
 

@@ -203,6 +203,40 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
   }
 
   @Test
+  void testPrefetchAcquiresAndDownloadsOnlySurvivingGroups() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final CountingBundleAcquirer acquirer = new CountingBundleAcquirer(directExec());
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_acme")) {
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          opened.index(),
+          QueryableIndexTimeBoundaryInspector.create(opened.index()),
+          acquirer
+      );
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+                                                  .setFilter(new EqualityFilter("tenant", ColumnType.STRING, "acme", null))
+                                                  .build();
+
+      final CursorPrefetch prefetch = factory.prefetch(spec);
+      Assertions.assertTrue(prefetch.isReady());
+      Assertions.assertEquals(List.of(ACME_BUNDLE), prefetch.get().bundles());
+      Assertions.assertEquals(1, acquirer.acquiredCount(ACME_BUNDLE), "only the surviving group is held");
+      Assertions.assertEquals(0, acquirer.acquiredCount(GLOBEX_BUNDLE), "the pruned group is never touched");
+
+      final Set<String> downloaded = opened.mapper().getDownloadedFiles();
+      Assertions.assertTrue(downloaded.contains(ACME_BUNDLE + "/region"), "got: " + downloaded);
+      Assertions.assertTrue(
+          downloaded.stream().noneMatch(f -> f.startsWith(GLOBEX_BUNDLE + "/")),
+          "globex group must not be downloaded; got: " + downloaded
+      );
+
+      Assertions.assertEquals(0, acquirer.releasedCount(ACME_BUNDLE));
+      prefetch.close();
+      Assertions.assertEquals(1, acquirer.releasedCount(ACME_BUNDLE), "closing the handle releases the group hold");
+    }
+  }
+
+  @Test
   void testFilterMatchingNoGroupDownloadsNothing() throws IOException
   {
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);

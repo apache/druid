@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.asyncresource.AsyncResource;
+import org.apache.druid.common.asyncresource.AsyncResourceCanceledException;
 import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
@@ -906,6 +907,383 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
       }
       blockingExec.shutdownNow();
       rawExec.shutdownNow();
+    }
+  }
+
+  @Test
+  void testPrefetchHandleDownloadsExactlyRequiredFiles() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_files")) {
+      final PartialQueryableIndex index = opened.index();
+      final PartialSegmentFileMapperV10 mapper = opened.mapper();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          noOpAcquirer(directExec())
+      );
+      rangeReader.resetCount();
+
+      final CursorBuildSpec spec = CursorBuildSpec.builder().setPhysicalColumns(Set.of("dim1")).build();
+      try (CursorPrefetch prefetch = factory.prefetch(spec)) {
+        Assertions.assertTrue(prefetch.isReady(), "the direct executor completes the prefetch inline");
+        final CursorPrefetch.Stats stats = prefetch.get();
+        Assertions.assertEquals(List.of(Projections.BASE_TABLE_PROJECTION_NAME), stats.bundles());
+        Assertions.assertEquals(rangeReader.getReadCount(), stats.plannedRuns(), "one deep-storage read per run");
+        Assertions.assertTrue(stats.plannedBytes() > 0);
+
+        final String basePrefix = Projections.BASE_TABLE_PROJECTION_NAME + "/";
+        final Set<String> downloaded = mapper.getDownloadedFiles();
+        Assertions.assertTrue(
+            downloaded.contains(basePrefix + ColumnHolder.TIME_COLUMN_NAME),
+            "expected base __time; got: " + downloaded
+        );
+        Assertions.assertTrue(downloaded.contains(basePrefix + "dim1"), "expected base dim1; got: " + downloaded);
+        Assertions.assertFalse(
+            downloaded.contains(basePrefix + "metric1"),
+            "expected base metric1 NOT to be downloaded; got: " + downloaded
+        );
+      }
+    }
+  }
+
+  @Test
+  void testPrefetchHandleThenCursorBuildDownloadsNothingAndReusesHolders() throws IOException
+  {
+    // A cursor build for the same spec, made while the prefetch handle is still open, has nothing left to download
+    // (so it submits only its holder-producing continuation) and finds the column holders the prefetch materialized.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_then_build")) {
+      final PartialQueryableIndex index = opened.index();
+      final ListeningExecutorService exec = directExec();
+      final AtomicInteger submits = new AtomicInteger();
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          return () -> {};
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          submits.incrementAndGet();
+          return AsyncResources.fromFutureUnmanaged(exec.submit(task));
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          acquirer
+      );
+      final CursorBuildSpec spec = CursorBuildSpec.builder().setPhysicalColumns(Set.of("dim1")).build();
+
+      try (CursorPrefetch prefetch = factory.prefetch(spec)) {
+        Assertions.assertTrue(prefetch.isReady());
+        final int prefetchSubmits = submits.get();
+        Assertions.assertTrue(prefetchSubmits >= 2, "at least one run download plus the materialization continuation");
+        final ColumnHolder warm = index.getColumnHolder("dim1");
+        rangeReader.resetCount();
+
+        try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(spec);
+             CursorHolder holder = asyncHolder.release()) {
+          Assertions.assertEquals(0, rangeReader.getReadCount(), "nothing left to download after the prefetch");
+          Assertions.assertEquals(
+              prefetchSubmits + 1,
+              submits.get(),
+              "the cursor build submits only its holder-producing continuation"
+          );
+          Assertions.assertSame(warm, index.getColumnHolder("dim1"), "the memoized holder is reused");
+
+          final Cursor cursor = holder.asCursor();
+          final ColumnValueSelector<?> dim1 = cursor.getColumnSelectorFactory().makeColumnValueSelector("dim1");
+          final List<Object> values = new ArrayList<>();
+          while (!cursor.isDone()) {
+            values.add(dim1.getObject());
+            cursor.advance();
+          }
+          Assertions.assertEquals(List.of("a", "a", "b", "b"), values);
+        }
+      }
+    }
+  }
+
+  @Test
+  void testPrefetchHandleHoldsBundleUntilClosed() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_hold")) {
+      final PartialQueryableIndex index = opened.index();
+      final ListeningExecutorService exec = directExec();
+      final AtomicInteger holdReleases = new AtomicInteger();
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          return holdReleases::incrementAndGet;
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          return AsyncResources.fromFutureUnmanaged(exec.submit(task));
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          acquirer
+      );
+
+      final CursorPrefetch prefetch = factory.prefetch(CursorBuildSpec.FULL_SCAN);
+      Assertions.assertTrue(prefetch.isReady());
+      Assertions.assertEquals(0, holdReleases.get(), "the handle owns the bundle hold while it is open");
+      prefetch.close();
+      Assertions.assertEquals(1, holdReleases.get(), "closing the handle releases the bundle hold exactly once");
+    }
+  }
+
+  @Test
+  void testPrefetchHandleMatchedProjectionHoldsParentBundle() throws IOException
+  {
+    // Same plan as the async build: the matched projection's bundle plus the __base bundle for the parent columns its
+    // required columns read through; both are held by the handle and released together when it closes.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_projection")) {
+      final PartialQueryableIndex index = opened.index();
+      final PartialSegmentFileMapperV10 mapper = opened.mapper();
+      final ListeningExecutorService exec = directExec();
+      final Set<String> acquired = new TreeSet<>();
+      final AtomicInteger holdReleases = new AtomicInteger();
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          acquired.add(bundleName);
+          return holdReleases::incrementAndGet;
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          return AsyncResources.fromFutureUnmanaged(exec.submit(task));
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          acquirer
+      );
+      final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
+                                                     .setGroupingColumns(List.of("dim1"))
+                                                     .setAggregators(List.of(
+                                                         new LongSumAggregatorFactory("_metric1_sum", "metric1")
+                                                     ))
+                                                     .setPhysicalColumns(Set.of("dim1", "metric1"))
+                                                     .build();
+
+      final CursorPrefetch prefetch = factory.prefetch(aggSpec);
+      Assertions.assertTrue(prefetch.isReady());
+      Assertions.assertEquals(new TreeSet<>(Set.of(PROJECTION_NAME, Projections.BASE_TABLE_PROJECTION_NAME)), acquired);
+      Assertions.assertEquals(List.of(PROJECTION_NAME, Projections.BASE_TABLE_PROJECTION_NAME), prefetch.get().bundles());
+
+      final String projPrefix = PROJECTION_NAME + "/";
+      final String basePrefix = Projections.BASE_TABLE_PROJECTION_NAME + "/";
+      final Set<String> downloaded = mapper.getDownloadedFiles();
+      Assertions.assertTrue(downloaded.contains(projPrefix + "dim1"), "expected projection dim1; got: " + downloaded);
+      Assertions.assertTrue(
+          downloaded.contains(projPrefix + "_metric1_sum"),
+          "expected projection _metric1_sum; got: " + downloaded
+      );
+      Assertions.assertFalse(
+          downloaded.contains(projPrefix + "_count"),
+          "expected projection _count NOT to be downloaded; got: " + downloaded
+      );
+      Assertions.assertFalse(
+          downloaded.contains(basePrefix + "metric1"),
+          "expected base metric1 NOT to be downloaded; got: " + downloaded
+      );
+
+      Assertions.assertEquals(0, holdReleases.get());
+      prefetch.close();
+      Assertions.assertEquals(2, holdReleases.get(), "both bundle holds release when the handle closes");
+    }
+  }
+
+  @Test
+  void testPrefetchHandleCloseBeforeReadyCancelsRunsAndReleasesHoldOnce() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_cancel")) {
+      final PartialQueryableIndex index = opened.index();
+      final List<ListenableFuture<?>> submitted = new ArrayList<>();
+      final AtomicInteger holdReleases = new AtomicInteger(0);
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          return holdReleases::incrementAndGet;
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          final SettableFuture<T> future = SettableFuture.create();
+          submitted.add(future);
+          return AsyncResources.fromFutureUnmanaged(future);
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          V10TimeBoundaryInspector.forBaseProjection(index.getBaseProjectionMetadata(), index.getDataInterval()),
+          acquirer
+      );
+
+      final CursorPrefetch prefetch = factory.prefetch(CursorBuildSpec.FULL_SCAN);
+      Assertions.assertFalse(prefetch.isReady(), "downloads never complete, so the prefetch must not be ready");
+      Assertions.assertFalse(submitted.isEmpty(), "at least one run download should have been submitted");
+      Assertions.assertEquals(0, holdReleases.get(), "hold must still be held while the prefetch is loading");
+
+      prefetch.close();
+
+      submitted.forEach(f -> Assertions.assertTrue(f.isCancelled(), "pending run downloads must be cancelled"));
+      Assertions.assertEquals(1, holdReleases.get(), "bundle hold must be released exactly once");
+      Assertions.assertThrows(AsyncResourceCanceledException.class, prefetch::get);
+    }
+  }
+
+  @Test
+  void testPrefetchHandleDownloadFailureReleasesHoldsAndGetThrows() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_fail")) {
+      final PartialQueryableIndex index = opened.index();
+      final List<SettableFuture<?>> submitted = new ArrayList<>();
+      final AtomicInteger holdReleases = new AtomicInteger(0);
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          return holdReleases::incrementAndGet;
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          final SettableFuture<T> future = SettableFuture.create();
+          submitted.add(future);
+          return AsyncResources.fromFutureUnmanaged(future);
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          V10TimeBoundaryInspector.forBaseProjection(index.getBaseProjectionMetadata(), index.getDataInterval()),
+          acquirer
+      );
+
+      try (CursorPrefetch prefetch = factory.prefetch(CursorBuildSpec.FULL_SCAN)) {
+        Assertions.assertFalse(prefetch.isReady());
+        submitted.get(0).setException(new IOException("deep storage went away"));
+        Assertions.assertTrue(prefetch.isReady(), "a failed run download completes the prefetch");
+        Assertions.assertThrows(RuntimeException.class, prefetch::get);
+        Assertions.assertEquals(1, holdReleases.get(), "a failed prefetch releases its holds");
+      }
+      Assertions.assertEquals(1, holdReleases.get(), "closing a failed prefetch releases nothing twice");
+    }
+  }
+
+  @Test
+  void testPrefetchHandleAlreadyResidentStillMaterializesOnDownloadExecutor() throws Exception
+  {
+    // Nothing to download, so the empty collect is ready inline; the materialization must still hop to the download
+    // executor rather than deserialize columns on the calling thread.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final CountDownLatch gate = new CountDownLatch(1);
+    final ExecutorService rawExec = Execs.singleThreaded("partial-prefetch-resident-%d");
+    final ListeningExecutorService gatedExec = MoreExecutors.listeningDecorator(rawExec);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_resident")) {
+      opened.mapper().ensureAllDownloaded();
+      final PartialQueryableIndex index = opened.index();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          noOpAcquirer(gatedExec)
+      );
+
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedExec.submit(() -> {
+        try {
+          gate.await();
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      });
+
+      try (CursorPrefetch prefetch = factory.prefetch(CursorBuildSpec.FULL_SCAN)) {
+        Assertions.assertFalse(prefetch.isReady(), "must not become ready inline even with nothing to download");
+
+        final CountDownLatch ready = new CountDownLatch(1);
+        final AtomicReference<String> readyThread = new AtomicReference<>();
+        prefetch.addReadyCallback(() -> {
+          readyThread.set(Thread.currentThread().getName());
+          ready.countDown();
+        });
+        gate.countDown();
+        Assertions.assertTrue(ready.await(5, TimeUnit.SECONDS), "ready callback must fire once the executor drains");
+        Assertions.assertTrue(
+            readyThread.get().startsWith("partial-prefetch-resident"),
+            "columns must be materialized on the download executor, not thread[" + readyThread.get() + "]"
+        );
+        Assertions.assertEquals(0, prefetch.get().plannedRuns(), "nothing was planned for download");
+      }
+    }
+    finally {
+      gatedExec.shutdownNow();
+      rawExec.shutdownNow();
+    }
+  }
+
+  @Test
+  void testPrefetchHandleEmptyPlanIsReadyNoOp() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_empty")) {
+      final PartialQueryableIndex index = opened.index();
+      final Set<String> acquired = new TreeSet<>();
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          acquired.add(bundleName);
+          return () -> {};
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          throw new AssertionError("nothing to download");
+        }
+      };
+      // nothing is servable, so the plan has no bundles
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          acquirer,
+          bundleName -> false
+      );
+
+      try (CursorPrefetch prefetch = factory.prefetch(CursorBuildSpec.FULL_SCAN)) {
+        Assertions.assertTrue(prefetch.isReady());
+        Assertions.assertEquals(CursorPrefetch.Stats.NONE, prefetch.get());
+        Assertions.assertTrue(acquired.isEmpty(), "no bundle is held for an empty plan");
+      }
     }
   }
 
