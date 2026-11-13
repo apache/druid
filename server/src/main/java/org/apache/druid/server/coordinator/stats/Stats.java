@@ -58,7 +58,7 @@ public class Stats
     public static final CoordinatorStat UNNEEDED
         = CoordinatorStat.toDebugAndEmit("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
-        = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
+        = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overShadowed/count");
     public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
         = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
 
