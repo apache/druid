@@ -55,6 +55,7 @@ public class LoggerCaptureExtension implements BeforeEachCallback, AfterEachCall
   public void beforeEach(final ExtensionContext context)
   {
     inMemoryAppender = new InMemoryAppender(targetClass);
+    inMemoryAppender.start();
     final LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
     final Configuration configuration = loggerContext.getConfiguration();
     targetClassLoggerConfig = configuration.getLoggerConfig(targetClass.getName());
@@ -66,6 +67,7 @@ public class LoggerCaptureExtension implements BeforeEachCallback, AfterEachCall
   {
     clearLogEvents();
     targetClassLoggerConfig.removeAppender(InMemoryAppender.NAME);
+    inMemoryAppender.stop();
   }
 
   public List<LogEvent> getLogEvents()
@@ -101,7 +103,7 @@ public class LoggerCaptureExtension implements BeforeEachCallback, AfterEachCall
     {
       synchronized (logEvents) {
         if (logEvent.getLoggerName().equals(targetLoggerName)) {
-          logEvents.add(logEvent);
+          logEvents.add(logEvent.toImmutable());
           logEvents.notifyAll();
         }
       }

@@ -20,15 +20,21 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 
 /**
  * The {@code druid.storage} properties that describe how segments are laid out in deep storage rather than how to
  * reach it, and so are shared by every {@link DataSegmentPusher} instead of belonging to any one of them. Currently
- * that is only {@code druid.storage.zip}, but anything else that is a property of the layout rather than of a
- * particular deep storage belongs here too.
+ * that is {@code druid.storage.compressionFormat} and deprecated {@code druid.storage.zip}, but anything else that is
+ * a property of the layout rather than of a particular deep storage belongs here too.
  * <p>
  * This is bound once in core, by {@code LocalDataStorageDruidModule}, instead of once per deep storage
  * implementation, so that these properties mean the same thing whatever {@code druid.storage.type} is set to, and so
@@ -40,34 +46,73 @@ import javax.annotation.Nullable;
  */
 public class DeepStorageSegmentConfig
 {
-  @JsonProperty
+  private static final Logger log = new Logger(DeepStorageSegmentConfig.class);
+
+  /**
+   * Deprecated configuration property retained as an always-null serialization placeholder so that
+   * {@link org.apache.druid.guice.JsonConfigurator} can validate its field annotation. The creator parameter
+   * below consumes legacy {@code zip} input and derives {@code compressionFormat} from it.
+   */
+  @JsonProperty("zip")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Deprecated
   @Nullable
-  private final Boolean zip;
+  private final Boolean zip = null;
+
+  @JsonProperty("compressionFormat")
+  @Nullable
+  private final CompressionUtils.Format compressionFormat;
 
   @JsonCreator
-  public DeepStorageSegmentConfig(@JsonProperty("zip") @Nullable Boolean zip)
+  public DeepStorageSegmentConfig(
+      @JsonProperty("zip") @Nullable Boolean zip,
+      @JsonProperty("compressionFormat") @Nullable CompressionUtils.Format compressionFormat
+  )
   {
-    this.zip = zip;
+    if (zip != null) {
+      log.warn("druid.storage.zip is deprecated, use druid.storage.compressionFormat instead.");
+    }
+    if (compressionFormat != null) {
+      this.compressionFormat = compressionFormat;
+    } else if (zip != null) {
+      this.compressionFormat = zip ? CompressionUtils.Format.ZIP : CompressionUtils.Format.NONE;
+    } else {
+      this.compressionFormat = null;
+    }
   }
 
   public DeepStorageSegmentConfig()
   {
-    this(null);
+    this(null, null);
   }
 
   /**
-   * Whether segments should be written as a zip file, falling back to {@code defaultZip} when
-   * {@code druid.storage.zip} has not been set.
+   * Resolves the effective compression format to use, falling back to {@code defaultFormat} when neither
+   * {@code druid.storage.compressionFormat} nor {@code druid.storage.zip} has been set.
+   * <p>
+   * When {@code supportedFormats} is non-empty, throws {@link IAE} if the resolved format is not among them.
    */
-  public boolean isZip(boolean defaultZip)
+  public CompressionUtils.Format getEffectiveCompressionFormat(
+      CompressionUtils.Format defaultFormat,
+      CompressionUtils.Format... supportedFormats
+  )
   {
-    return zip == null ? defaultZip : zip;
+    Preconditions.checkNotNull(defaultFormat, "defaultFormat");
+    final CompressionUtils.Format resolved = compressionFormat != null ? compressionFormat : defaultFormat;
+    if (supportedFormats.length > 0 && !Arrays.asList(supportedFormats).contains(resolved)) {
+      throw new IAE(
+          "Compression format [%s] is not supported. Supported formats: %s",
+          resolved,
+          Arrays.toString(supportedFormats)
+      );
+    }
+    return resolved;
   }
 
-  @JsonProperty("zip")
+  @JsonProperty("compressionFormat")
   @Nullable
-  public Boolean getZip()
+  public CompressionUtils.Format getCompressionFormat()
   {
-    return zip;
+    return compressionFormat;
   }
 }
