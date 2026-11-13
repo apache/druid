@@ -43,8 +43,7 @@ github:
             require_code_owner_review: false
             require_last_push_approval: false
             required_review_thread_resolution: false
-    # Same raw syntax and bypass as "Require review". quality-gate is the job in the CI
-    # workflow that fails unless the whole CI run passed.
+    # The quality-gate job of the CI workflow is a required status check: PRs merge only once it succeeds.
     - name: "Require CI"
       target: branch
       enforcement: active
@@ -62,7 +61,6 @@ github:
           parameters:
             strict_required_status_checks_policy: false
             required_status_checks:
-              # No integration_id: asfyaml would send it as a string, which GitHub rejects.
               - context: quality-gate
 
   # Attempt to make the auto-generated github emails more easily readable in email clients.
