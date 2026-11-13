@@ -57,6 +57,7 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.EqualDistributionWorkerSelectStrategy;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -1765,14 +1766,16 @@ public class HttpRemoteTaskRunnerTest
               TestUtils.conditionValid(() -> taskRunner.getWorkersWithUnacknowledgedTasks().isEmpty(), 5_000)
           );
         }
-        // The worker reports the task FAILED, after RUNNING or as its first report when both land in one sync
+        // The worker reports the task FAILED and removes it in the same sync, so its snapshot never shows it FAILED
         final TaskAnnouncement failed = TaskAnnouncement.create(
             killedTask,
             TaskStatus.failure(killedTask.getId(), "killed"),
             TaskLocation.unknown()
         );
-        workerHolder.addOrUpdateAnnouncement(failed);
-        taskRunner.taskAddedOrUpdated(failed, workerHolder);
+        workerHolder.createSyncListener().deltaSync(ImmutableList.of(
+            new WorkerHistoryItem.TaskUpdate(failed),
+            new WorkerHistoryItem.TaskRemoval(killedTask.getId())
+        ));
         Assertions.assertTrue(
             TestUtils.conditionValid(() -> taskRunner.getWorkersWithUnacknowledgedTasks().isEmpty(), 5_000)
         );
