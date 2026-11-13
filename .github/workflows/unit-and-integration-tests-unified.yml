@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Unit & Integration tests CI"
+name: "CI"
 # Starts for every PR so that quality-gate always reports; ci.yml decides which jobs to skip.
 on:
   push:
