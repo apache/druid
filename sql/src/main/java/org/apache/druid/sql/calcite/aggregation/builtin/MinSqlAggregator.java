@@ -44,7 +44,8 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
-      final String fieldName
+      final String fieldName,
+      final boolean filteredByElseZeroRewrite
   )
   {
     final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());

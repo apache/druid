@@ -303,9 +303,13 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
         newProjects.add(arg1);
         newProjects.add(filter);
 
-        RelDataType newType = typeFactory.createTypeWithNullability(call.getType(), true);
+        // Use SUM0 instead of SUM to return 0 instead of NULL when filter never matches.
+        // This fixes the known inconsistency documented in the class javadoc where
+        // SUM(CASE WHEN COND THEN COL1 ELSE 0 END) would return NULL instead of 0
+        // when no rows match the condition.
+        RelDataType newType = typeFactory.createTypeWithNullability(call.getType(), false);
         return AggregateCall.create(
-            call.getAggregation(),
+            SqlStdOperatorTable.SUM0,
             false,
             false,
             false,
