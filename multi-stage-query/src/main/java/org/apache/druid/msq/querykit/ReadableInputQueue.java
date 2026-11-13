@@ -44,6 +44,7 @@ import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
@@ -72,10 +73,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * When closed, this object cancels all pending segment loads and releases all segments that have not yet been
  * acquired by callers through {@link SegmentReferenceHolder#getSegmentReferenceOnce()}. Callers that have acquired
  * segment references are responsible for closing those references, they will not be closed by this class.
+ *
+ * Load-ahead (see {@link #loadahead}) is a prefetch, so a full segment cache alone does not make it fail a query: when
+ * a load-ahead acquisition finds no room in the segment cache before it has been handed out, the segment goes back into
+ * {@link #loadableSegments} and load-ahead backs off for a while (see {@link #deferLoadahead}). Other failures do fail
+ * the query: a load-ahead that runs out of room after it was handed out (a caller is waiting on it), a load-ahead that
+ * fails for any other reason, and a segment acquired on demand by {@link #nextSegmentInput()}, which is needed to make
+ * progress right now.
  */
 public class ReadableInputQueue implements Closeable
 {
   private static final Logger log = new Logger(ReadableInputQueue.class);
+
+  /**
+   * Largest value of {@link #loadaheadCooldown}, i.e. the longest load-ahead backs off for when the segment cache
+   * stays full.
+   */
+  private static final int MAX_LOADAHEAD_COOLDOWN = 64;
 
   /**
    * Partitions to be read.
@@ -84,10 +98,12 @@ public class ReadableInputQueue implements Closeable
   private final Queue<NumberedItem<ReadablePartition>> readablePartitions = new ArrayDeque<>();
 
   /**
-   * Segments to be loaded.
+   * Segments to be loaded, in the order they are handed out, i.e. sorted by {@link QueuedSegment#position()}. Segments
+   * are taken from the front when they are acquired, and a segment whose load-ahead acquisition could not be
+   * accommodated by the segment cache is put back in its place by {@link #deferLoadahead}.
    */
   @GuardedBy("this")
-  private final Deque<NumberedItem<LoadableSegment>> loadableSegments = new ArrayDeque<>();
+  private final Deque<QueuedSegment> loadableSegments = new ArrayDeque<>();
 
   /**
    * Realtime servers to be queried.
@@ -115,6 +131,38 @@ public class ReadableInputQueue implements Closeable
   @GuardedBy("this")
   private final LinkedHashMap<ListenableFuture<NumberedReadableInput>, PendingInput> pendingNextInputs =
       new LinkedHashMap<>();
+
+  /**
+   * Number of entries in {@link #pendingNextInputs} started by load-ahead, i.e. not {@link PendingInput#cached()}.
+   * Load-ahead keeps this topped up to {@link #loadahead}.
+   */
+  @GuardedBy("this")
+  private int pendingLoadaheadCount;
+
+  /**
+   * Number of upcoming load-ahead opportunities to skip, because the segment cache had no room for a recent
+   * load-ahead acquisition. Counts down one per input handed out by {@link #nextSegmentInput()}, which paces it by the
+   * progress of the stage.
+   */
+  @GuardedBy("this")
+  private int loadaheadCooldown;
+
+  /**
+   * Length of the latest {@link #loadaheadCooldown}. Doubles (up to {@link #MAX_LOADAHEAD_COOLDOWN}) each time a
+   * load-ahead acquisition is deferred while no cooldown is running, and resets to zero once one succeeds, so a cache
+   * that stays full does not turn load-ahead into a stream of doomed acquisitions, yet load-ahead resumes at full speed
+   * once space frees up. A deferral during a cooldown does not double it again, since it comes from an acquisition that
+   * was already in flight when the cooldown started: several load-aheads failing together count as one failed round.
+   */
+  @GuardedBy("this")
+  private int loadaheadBackoff;
+
+  /**
+   * Whether we have logged about deferring load-ahead. Used to log the first deferral for this queue at INFO and the
+   * rest at DEBUG, since a full segment cache typically defers load-ahead over and over.
+   */
+  @GuardedBy("this")
+  private boolean loggedLoadaheadDeferral;
 
   /**
    * Interval of the last group probed by {@link #acquireCachedInNextGroup()}. Intervals in the same group compare equal
@@ -214,7 +262,10 @@ public class ReadableInputQueue implements Closeable
     if (timeOrder != Order.NONE) {
       segments.sort(Comparator.comparing(item -> item.item().descriptor().getInterval(), intervalOrder));
     }
-    loadableSegments.addAll(segments);
+    for (int i = 0; i < segments.size(); i++) {
+      final NumberedItem<LoadableSegment> segment = segments.get(i);
+      loadableSegments.add(new QueuedSegment(i, segment.inputNumber(), segment.item()));
+    }
   }
 
   /**
@@ -233,12 +284,9 @@ public class ReadableInputQueue implements Closeable
         acquireCachedInNextGroup();
       }
 
-      // (2) start loading up to "loadahead" additional segments
-      for (int i = 0; i < loadahead; i++) {
-        if (!addLoadaheadFuture()) {
-          break;
-        }
-      }
+      // (2) start loading up to "loadahead" additional segments. Stops short if the segment cache cannot accommodate
+      // them all; the rest are acquired later, either by a subsequent load-ahead or on demand.
+      topUpLoadahead();
     }
   }
 
@@ -268,6 +316,7 @@ public class ReadableInputQueue implements Closeable
       synchronized (this) {
         skippedFutures = new ArrayList<>(pendingNextInputs.keySet());
         pendingNextInputs.clear();
+        pendingLoadaheadCount = 0;
       }
       releaseSkippedInputs(skippedFutures);
       return null;
@@ -350,7 +399,8 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Returns the next input from {@link #loadableSegments}, if any. Returns null if none remain.
+   * Returns the next input from {@link #loadableSegments}, if any: a pending input if there is one, else a segment
+   * acquired on demand. Returns null if none remain.
    */
   @Nullable
   private ListenableFuture<NumberedReadableInput> nextSegmentInput()
@@ -363,10 +413,7 @@ public class ReadableInputQueue implements Closeable
       acquireCachedInNextGroup();
       while (unskippedFuture == null && !pendingNextInputs.isEmpty()) {
         final ListenableFuture<NumberedReadableInput> selectedFuture = selectPendingInput();
-        final PendingInput selectedInput = pendingNextInputs.remove(selectedFuture);
-        if (!selectedInput.cached()) {
-          addLoadaheadFuture();
-        }
+        final PendingInput selectedInput = removePendingInput(selectedFuture);
         // The selected segment may have been pruned since its load was started, check if it can be skipped once more
         // before handing it out.
         if (canSkipSegment(selectedInput.segment())) {
@@ -381,23 +428,76 @@ public class ReadableInputQueue implements Closeable
     }
 
     releaseSkippedInputs(skippedFutures);
+
+    final ListenableFuture<NumberedReadableInput> future;
+    final LoadableSegment segment;
     if (unskippedFuture != null) {
-      registerCountOnSuccess(unskippedFuture, unskippedSegment);
-      return unskippedFuture;
+      future = unskippedFuture;
+      segment = unskippedSegment;
+    } else {
+      // Nothing unpruned is pending (loadahead is 0, load-ahead is backing off, or every pending input was skipped), so
+      // acquire on demand. The caller has nothing else to work on, which makes this segment part of what the stage
+      // needs in order to make progress so running out of room in the segment cache is fatal here.
+      final Acquisition acquisition;
+      synchronized (this) {
+        final QueuedSegment nextSegment = pollUnprunedSegment();
+        if (nextSegment == null) {
+          return null;
+        }
+        acquisition = acquireSegment(nextSegment, false);
+      }
+      registerReadyCallback(acquisition);
+      future = acquisition.future();
+      segment = acquisition.segment();
     }
 
-    // Acquires on demand when loadahead is 0. With loadahead, no unpruned segments remain here.
-    final NumberedItem<LoadableSegment> nextItem;
-    final ListenableFuture<NumberedReadableInput> future;
-    synchronized (this) {
-      nextItem = pollUnprunedSegment();
-      if (nextItem == null) {
-        return null;
-      }
-      future = acquireSegment(nextItem);
-    }
-    registerCountOnSuccess(future, nextItem.item());
+    // Top up load-ahead before registering the count: if that throws, the future is never handed out, so it must not
+    // be counted as read.
+    afterHandOut();
+    registerCountOnSuccess(future, segment);
     return future;
+  }
+
+  /**
+   * Called once per input handed out by {@link #nextSegmentInput()}, which is what paces load-ahead. Burns off one
+   * unit of {@link #loadaheadCooldown} if load-ahead is backing off, else tops load-ahead back up, which replaces the
+   * input just handed out if it was itself a load-ahead.
+   */
+  private void afterHandOut()
+  {
+    synchronized (this) {
+      if (loadaheadCooldown > 0) {
+        loadaheadCooldown--;
+        return;
+      }
+    }
+    topUpLoadahead();
+  }
+
+  /**
+   * Starts load-ahead acquisitions until {@link #pendingLoadaheadCount} reaches {@link #loadahead}. Stops early when
+   * the queue is closed, a {@link #loadaheadCooldown} is running, {@link #inputPruner} rules out every remaining input,
+   * no segments remain to be acquired, or an acquisition is deferred for lack of room in the segment cache (which
+   * starts a cooldown).
+   * <p>
+   * Acquires one segment at a time, registering its ready callback before acquiring the next: the callback fires
+   * inline for an already-ready acquisition, so a no-room failure that is known right away starts the cooldown.
+   */
+  private void topUpLoadahead()
+  {
+    while (true) {
+      final Acquisition acquisition;
+      synchronized (this) {
+        if (closed || loadaheadCooldown > 0 || pendingLoadaheadCount >= loadahead) {
+          return;
+        }
+        acquisition = addLoadaheadFuture();
+      }
+      if (acquisition == null) {
+        return;
+      }
+      registerReadyCallback(acquisition);
+    }
   }
 
   /**
@@ -471,7 +571,7 @@ public class ReadableInputQueue implements Closeable
     if (!pendingNextInputs.isEmpty()) {
       nextInterval = pendingNextInputs.values().iterator().next().interval();
     } else if (!loadableSegments.isEmpty()) {
-      nextInterval = loadableSegments.peek().item().descriptor().getInterval();
+      nextInterval = loadableSegments.peek().segment().descriptor().getInterval();
     } else {
       return;
     }
@@ -481,41 +581,53 @@ public class ReadableInputQueue implements Closeable
     }
     probedGroupInterval = nextInterval;
 
-    final List<NumberedItem<LoadableSegment>> notCached = new ArrayList<>();
-    NumberedItem<LoadableSegment> nextItem;
-    while ((nextItem = loadableSegments.peek()) != null
-           && intervalOrder.compare(nextInterval, nextItem.item().descriptor().getInterval()) == 0) {
-      loadableSegments.poll();
-      if (canSkipSegment(nextItem.item())) {
-        continue;
-      }
-      final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextItem);
-      if (cachedFuture != null) {
-        pendingNextInputs.put(cachedFuture, new PendingInput(nextItem.item(), true));
-      } else {
-        notCached.add(nextItem);
+    final List<QueuedSegment> notCached = new ArrayList<>();
+    try {
+      QueuedSegment nextSegment;
+      while ((nextSegment = loadableSegments.peek()) != null
+             && intervalOrder.compare(nextInterval, nextSegment.segment().descriptor().getInterval()) == 0) {
+        loadableSegments.poll();
+        if (canSkipSegment(nextSegment.segment())) {
+          continue;
+        }
+        final ListenableFuture<NumberedReadableInput> cachedFuture;
+        try {
+          cachedFuture = acquireIfCached(nextSegment);
+        }
+        catch (Throwable t) {
+          // acquireIfCached leaves the segment unacquired when it throws, so it goes back with the others.
+          notCached.add(nextSegment);
+          throw t;
+        }
+        if (cachedFuture != null) {
+          pendingNextInputs.put(cachedFuture, new PendingInput(nextSegment.segment(), true));
+        } else {
+          notCached.add(nextSegment);
+        }
       }
     }
-
-    // Put non-cached segments back at the front of loadableSegments.
-    for (int i = notCached.size() - 1; i >= 0; i--) {
-      loadableSegments.addFirst(notCached.get(i));
+    finally {
+      // Put non-cached segments back at the front of loadableSegments, which keeps it sorted: they were polled from the
+      // front, in order.
+      for (int i = notCached.size() - 1; i >= 0; i--) {
+        loadableSegments.addFirst(notCached.get(i));
+      }
     }
   }
 
   /**
-   * Removes and returns the next item from {@link #loadableSegments} that {@link #inputPruner} does not rule out, or
-   * null if none remain.
+   * Removes and returns the next segment from {@link #loadableSegments} that {@link #inputPruner} does not rule out,
+   * or null if none remain.
    */
   @GuardedBy("this")
   @Nullable
-  private NumberedItem<LoadableSegment> pollUnprunedSegment()
+  private QueuedSegment pollUnprunedSegment()
   {
-    NumberedItem<LoadableSegment> nextItem;
+    QueuedSegment nextSegment;
     do {
-      nextItem = loadableSegments.poll();
-    } while (nextItem != null && canSkipSegment(nextItem.item()));
-    return nextItem;
+      nextSegment = loadableSegments.poll();
+    } while (nextSegment != null && canSkipSegment(nextSegment.segment()));
+    return nextSegment;
   }
 
   /**
@@ -527,53 +639,128 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Acquires the segment in {@code nextItem}: immediately if it is cached, otherwise by starting to load it.
+   * Acquires {@code nextSegment}: immediately if it is cached, otherwise by starting to load it. The caller must pass
+   * the returned acquisition to {@link #registerReadyCallback} once outside the queue monitor.
+   *
+   * @param loadahead whether this is a load-ahead acquisition rather than an on-demand one
    */
   @GuardedBy("this")
-  private ListenableFuture<NumberedReadableInput> acquireSegment(final NumberedItem<LoadableSegment> nextItem)
+  private Acquisition acquireSegment(final QueuedSegment nextSegment, final boolean loadahead)
   {
-    final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextItem);
-    return cachedFuture != null ? cachedFuture : loadSegment(nextItem);
+    final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextSegment);
+    if (cachedFuture != null) {
+      return new Acquisition(nextSegment, cachedFuture, null, loadahead);
+    }
+    return loadSegment(nextSegment, loadahead);
   }
 
   /**
-   * Acquires the segment in {@code nextItem} if it is cached, returning an already-completed future to it, or null if
-   * it is not cached. The segment is tracked in {@link #loadedSegments} so {@link #close()} releases it if it is never
-   * handed out.
+   * Acquires {@code nextSegment} if it is cached, returning an already-completed future to it, or null if it is not
+   * cached.
    */
   @GuardedBy("this")
   @Nullable
-  private ListenableFuture<NumberedReadableInput> acquireIfCached(final NumberedItem<LoadableSegment> nextItem)
+  private ListenableFuture<NumberedReadableInput> acquireIfCached(final QueuedSegment nextSegment)
   {
-    final LoadableSegment loadableSegment = nextItem.item();
-    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(acquireMode);
+    final LoadableSegment loadableSegment = nextSegment.segment();
+    final Optional<Segment> cachedSegment;
+    try {
+      cachedSegment = loadableSegment.acquireIfCached(acquireMode);
+    }
+    catch (Throwable e) {
+      if (VirtualStorageManager.isInsufficientStorage(e)) {
+        // A locally-cached segment can still need room in the segment cache, e.g. to re-reserve parts of it that were
+        // evicted since it was loaded. Treat it as not cached: loading it is subject to the usual rules, so a
+        // load-ahead that finds no room is deferred and an on-demand one fails.
+        log.debug(
+            e,
+            "No room in the segment cache to acquire cached segment[%s]; loading it instead.",
+            loadableSegment.description()
+        );
+        return null;
+      }
+      throw e;
+    }
     if (cachedSegment.isEmpty()) {
       return null;
     }
-
-    final SegmentReferenceHolder holder = new SegmentReferenceHolder(
-        new SegmentReference(loadableSegment.descriptor(), cachedSegment),
-        loadableSegment.description()
-    );
-    loadedSegments.add(holder);
-    return Futures.immediateFuture(new NumberedReadableInput(nextItem.inputNumber(), ReadableInput.segment(holder)));
+    return Futures.immediateFuture(addLoadedSegment(nextSegment.inputNumber(), loadableSegment, cachedSegment));
   }
 
   /**
-   * Starts loading the segment in {@code nextItem} and returns a future to its reference.
+   * Starts loading {@code nextSegment}. The returned acquisition's future is completed by {@link #onSegmentReady}, once
+   * {@link #registerReadyCallback} has registered it.
    */
   @GuardedBy("this")
-  private ListenableFuture<NumberedReadableInput> loadSegment(final NumberedItem<LoadableSegment> nextItem)
+  private Acquisition loadSegment(final QueuedSegment nextSegment, final boolean loadahead)
   {
-    final LoadableSegment nextLoadableSegment = nextItem.item();
     final SettableFuture<NumberedReadableInput> future = SettableFuture.create();
-    final AcquireSegmentAction acquireSegmentAction = nextLoadableSegment.acquire(acquireMode);
+    final AcquireSegmentAction acquireSegmentAction = nextSegment.segment().acquire(acquireMode);
     loadingSegments.put(acquireSegmentAction, future);
-    // may fire immediately on this thread for an already-ready acquire; the queue monitor is reentrant
-    acquireSegmentAction.addReadyCallback(
-        () -> onSegmentReady(nextItem.inputNumber(), nextLoadableSegment, acquireSegmentAction)
+    return new Acquisition(nextSegment, future, acquireSegmentAction, loadahead);
+  }
+
+  /**
+   * Wraps a segment acquired for {@code loadableSegment} in a {@link SegmentReferenceHolder}, tracked in
+   * {@link #loadedSegments} so {@link #close()} releases it if it is never handed out, and returns the input to hand
+   * out. Both ways a segment becomes ready go through here: a cache hit in {@link #acquireIfCached} and a delivered
+   * load in {@link #onSegmentReady}.
+   */
+  @GuardedBy("this")
+  private NumberedReadableInput addLoadedSegment(
+      final int inputNumber,
+      final LoadableSegment loadableSegment,
+      final Optional<Segment> segment
+  )
+  {
+    final SegmentReferenceHolder holder = new SegmentReferenceHolder(
+        new SegmentReference(loadableSegment.descriptor(), segment),
+        loadableSegment.description()
     );
-    return future;
+    loadedSegments.add(holder);
+    return new NumberedReadableInput(inputNumber, ReadableInput.segment(holder));
+  }
+
+  /**
+   * Registers {@link #onSegmentReady} on the action of an acquisition that is a load. Must be called outside the queue
+   * monitor as the callback fires inline for an already-ready action, and delivery must not run while holding the lock.
+   */
+  private void registerReadyCallback(final Acquisition acquisition)
+  {
+    final AcquireSegmentAction action = acquisition.action();
+    if (action == null) {
+      // A cache hit, which is ready already.
+      return;
+    }
+    // addReadyCallback runs the callback inline for an action that is ready already, and lets anything it throws
+    // escape. Track whether it started, so that is not mistaken for a failure to register: onSegmentReady claims the
+    // action from loadingSegments before it can throw, which would look just like a load claimed elsewhere.
+    final AtomicBoolean callbackStarted = new AtomicBoolean(false);
+    try {
+      action.addReadyCallback(
+          () -> {
+            callbackStarted.set(true);
+            onSegmentReady(acquisition);
+          }
+      );
+    }
+    catch (Throwable e) {
+      if (callbackStarted.get()) {
+        throw e;
+      }
+      final boolean claimedElsewhere;
+      synchronized (this) {
+        // close() clears loadingSegments too, so this covers a load that close() claimed.
+        claimedElsewhere = !loadingSegments.containsKey(action);
+      }
+      if (claimedElsewhere) {
+        // close() or releaseSkippedInputs() claimed the action and closed it before we registered, and has failed its
+        // future; nothing left to deliver.
+        log.debug(e, "Load of segment[%s] was closed before it could be awaited.", acquisition.segment().description());
+        return;
+      }
+      throw e;
+    }
   }
 
   /**
@@ -591,14 +778,15 @@ public class ReadableInputQueue implements Closeable
    * completed OUTSIDE the queue monitor so downstream listeners never run while holding the queue lock; deliveries
    * racing {@link #close()} are arbitrated by a closed re-check plus {@link SettableFuture}'s behavior where the first
    * write wins (close() also fails in-flight futures but the losing write is a harmless no-op).
+   * <p>
+   * A load-ahead that fails for lack of room in the segment cache before it is handed out is deferred instead of
+   * failed; see {@link #deferFailedLoadahead}.
    */
-  private void onSegmentReady(
-      final int inputNumber,
-      final LoadableSegment loadableSegment,
-      final AcquireSegmentAction acquireSegmentAction
-  )
+  private void onSegmentReady(final Acquisition acquisition)
   {
-    ReadableInput readableInput = null;
+    final LoadableSegment loadableSegment = acquisition.segment();
+    final AcquireSegmentAction acquireSegmentAction = acquisition.action();
+    NumberedReadableInput input = null;
     Throwable failure = null;
     final SettableFuture<NumberedReadableInput> future;
 
@@ -619,14 +807,13 @@ public class ReadableInputQueue implements Closeable
         // Ownership transfer; the delivered segment's close releases everything the acquire placed, and release()
         // runs the producer's delivery-accounting hook.
         releasedResult = acquireSegmentAction.release();
-        final SegmentReferenceHolder referenceHolder = new SegmentReferenceHolder(
-            new SegmentReference(loadableSegment.descriptor(), releasedResult.getSegment()),
-            loadableSegment.description()
-        );
-        loadedSegments.add(referenceHolder);
+        input = addLoadedSegment(acquisition.queued().inputNumber(), loadableSegment, releasedResult.getSegment());
         // ownership is now with loadedSegments; close() will close the holder if it is never handed out
         releasedResult = null;
-        readableInput = ReadableInput.segment(referenceHolder);
+        if (acquisition.loadahead()) {
+          // Load-ahead is working; stop backing off.
+          loadaheadBackoff = 0;
+        }
       }
       catch (Throwable t) {
         failure = t;
@@ -644,6 +831,23 @@ public class ReadableInputQueue implements Closeable
               acquireSegmentAction,
               e -> log.warn(e, "Failed to close acquire action for segment[%s]", loadableSegment.description())
           );
+          boolean deferred;
+          try {
+            deferred = deferFailedLoadahead(future, acquisition, t);
+          }
+          catch (Throwable deferralFailure) {
+            // Could not defer, so the failure stands and fails the future below like any other failed load. This must
+            // not escape else the future would never complete.
+            if (deferralFailure != t) {
+              t.addSuppressed(deferralFailure);
+            }
+            deferred = false;
+          }
+          if (deferred) {
+            // The segment is back in loadableSegments; the future was never handed out, so it is simply dropped.
+            inFlightDeliveries.remove(future);
+            return;
+          }
         }
       }
     }
@@ -664,7 +868,7 @@ public class ReadableInputQueue implements Closeable
     } else if (queueClosed) {
       future.setException(DruidException.defensive("Input queue closed while segment load was in flight"));
     } else {
-      future.set(new NumberedReadableInput(inputNumber, readableInput));
+      future.set(input);
     }
     synchronized (this) {
       inFlightDeliveries.remove(future);
@@ -672,23 +876,146 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Acquires the next segment that {@link #inputPruner} does not rule out and adds its future to
-   * {@link #pendingNextInputs}. Returns whether a future was added.
+   * Defers a load-ahead acquisition whose action failed for lack of room in the segment cache, provided it has not
+   * been handed out yet (its future is still in {@link #pendingNextInputs}), so nobody is waiting on it: the
+   * acquisition is abandoned, and the segment goes back to be tried again later. Returns whether it was deferred; if
+   * not, the failure stands. The caller must have closed the failed action.
+   * <p>
+   * A load-ahead that was handed out before it failed is needed to make progress, so its failure is never deferred.
+   * <p>
+   * Throws if the deferral fails, e.g. if {@link LoadableSegment#abandonFailedAcquisition()} does. The future is still
+   * in {@link #pendingNextInputs} then, so the caller fails it like any other failed load.
    */
-  private boolean addLoadaheadFuture()
+  @GuardedBy("this")
+  private boolean deferFailedLoadahead(
+      final ListenableFuture<NumberedReadableInput> future,
+      final Acquisition acquisition,
+      final Throwable failure
+  )
   {
-    if (canSkipRemaining()) {
+    // There is no need to check for close(): the caller claimed this load from loadingSegments in the same monitor
+    // hold, and close() clears both loadingSegments and pendingNextInputs.
+    if (!acquisition.loadahead()
+        || !pendingNextInputs.containsKey(future)
+        || !VirtualStorageManager.isInsufficientStorage(failure)) {
       return false;
     }
 
-    synchronized (this) {
-      final NumberedItem<LoadableSegment> nextItem = pollUnprunedSegment();
-      if (nextItem == null) {
-        return false;
-      }
-      pendingNextInputs.put(acquireSegment(nextItem), new PendingInput(nextItem.item(), false));
-      return true;
+    // The failed action handed out no segment, so the segment can be made acquirable again.
+    acquisition.segment().abandonFailedAcquisition();
+
+    // Remove the future last, so that it is still pending if anything before this throws.
+    deferLoadahead(acquisition.queued(), failure);
+    removePendingInput(future);
+    return true;
+  }
+
+  /**
+   * Puts the segment of a load-ahead acquisition that found no room in the segment cache back into
+   * {@link #loadableSegments}, and backs off load-ahead for a while unless a {@link #loadaheadCooldown} is running
+   * already (see {@link #loadaheadBackoff}).
+   * <p>
+   * Load-ahead is purely a prefetch, so a full cache must not fail the query. The segment is tried again on a later
+   * load-ahead opportunity, or acquired on demand by {@link #nextSegmentInput()} once nothing is pending. It goes back
+   * to its own place in hand-out order (see {@link #requeue}) rather than onto the front: several load-aheads can be in
+   * flight when the cache fills up, and their failures can arrive in any order, so pushing each onto the front would
+   * reverse them. The count reported by {@link #remaining()} is unaffected, since the segment merely moves back to
+   * where it came from.
+   */
+  @GuardedBy("this")
+  private void deferLoadahead(final QueuedSegment segment, final Throwable e)
+  {
+    requeue(segment);
+    if (loadaheadCooldown == 0) {
+      loadaheadBackoff = Math.min(MAX_LOADAHEAD_COOLDOWN, loadaheadBackoff == 0 ? 1 : loadaheadBackoff * 2);
+      loadaheadCooldown = loadaheadBackoff;
     }
+
+    if (loggedLoadaheadDeferral) {
+      log.debug(
+          e,
+          "No room in the segment cache to load segment[%s] ahead; backing off load-ahead for [%d] input(s).",
+          segment.segment().description(),
+          loadaheadCooldown
+      );
+    } else {
+      loggedLoadaheadDeferral = true;
+      log.noStackTrace().info(
+          e,
+          "No room in the segment cache to load segment[%s] ahead; backing off load-ahead for [%d] input(s). "
+          + "Segments are still loaded on demand as they are needed, so this only means load-ahead is backing off.",
+          segment.segment().description(),
+          loadaheadCooldown
+      );
+    }
+  }
+
+  /**
+   * Puts a segment that was taken from {@link #loadableSegments} back in its place, keeping the queue sorted by
+   * {@link QueuedSegment#position()}. Segments are always taken from the front, so only segments deferred earlier can
+   * come before it, and there are few of those: load-ahead keeps at most {@link #loadahead} acquisitions in flight.
+   */
+  @GuardedBy("this")
+  private void requeue(final QueuedSegment segment)
+  {
+    final List<QueuedSegment> before = new ArrayList<>();
+    while (!loadableSegments.isEmpty() && loadableSegments.peekFirst().position() < segment.position()) {
+      before.add(loadableSegments.pollFirst());
+    }
+    loadableSegments.addFirst(segment);
+    for (int i = before.size() - 1; i >= 0; i--) {
+      loadableSegments.addFirst(before.get(i));
+    }
+  }
+
+  /**
+   * Acquires the next segment that {@link #inputPruner} does not rule out and adds its future to
+   * {@link #pendingNextInputs}. Returns the acquisition, for the caller to pass to {@link #registerReadyCallback} once
+   * outside the queue monitor, or null if no segment was acquired: either none remain, or the segment cache had no
+   * room for the acquisition, in which case {@link #deferLoadahead} has put the segment back.
+   */
+  @GuardedBy("this")
+  @Nullable
+  private Acquisition addLoadaheadFuture()
+  {
+    if (canSkipRemaining()) {
+      return null;
+    }
+
+    final QueuedSegment nextSegment = pollUnprunedSegment();
+    if (nextSegment == null) {
+      return null;
+    }
+
+    final Acquisition acquisition;
+    try {
+      acquisition = acquireSegment(nextSegment, true);
+    }
+    catch (Throwable e) {
+      if (VirtualStorageManager.isInsufficientStorage(e)) {
+        // acquire() leaves the segment unacquired when it throws, so it can go straight back into the queue.
+        deferLoadahead(nextSegment, e);
+        return null;
+      }
+      throw e;
+    }
+    pendingNextInputs.put(acquisition.future(), new PendingInput(nextSegment.segment(), false));
+    pendingLoadaheadCount++;
+    return acquisition;
+  }
+
+  /**
+   * Removes a future from {@link #pendingNextInputs}, keeping {@link #pendingLoadaheadCount} in step, and returns the
+   * input it delivers.
+   */
+  @GuardedBy("this")
+  private PendingInput removePendingInput(final ListenableFuture<NumberedReadableInput> future)
+  {
+    final PendingInput input = pendingNextInputs.remove(future);
+    if (!input.cached()) {
+      pendingLoadaheadCount--;
+    }
+    return input;
   }
 
   /**
@@ -835,6 +1162,7 @@ public class ReadableInputQueue implements Closeable
       // handing them out after close would deliver holders this close() is draining. Also keeps remaining()
       // reporting 0 after close.
       pendingNextInputs.clear();
+      pendingLoadaheadCount = 0;
     }
 
     // Cancel all pending segment loads.
@@ -867,7 +1195,7 @@ public class ReadableInputQueue implements Closeable
    * A segment in {@link #pendingNextInputs}.
    * <p>
    * Cached segments come from {@link #acquireCachedInNextGroup()} and are marked accordingly so consumers are aware
-   * of how the segment was acquired.
+   * of how the segment was acquired. The others were acquired by load-ahead, and count toward {@link #loadahead}.
    */
   private record PendingInput(LoadableSegment segment, boolean cached)
   {
@@ -878,9 +1206,41 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
+   * A segment acquisition started under the queue monitor by {@link #acquireSegment}. Unless it was a cache hit, it has
+   * an {@link #action} whose ready callback {@link #registerReadyCallback} registers once outside the monitor.
+   *
+   * @param queued    the segment, as it was taken from {@link #loadableSegments}
+   * @param future    future to hand out for the segment
+   * @param action    the load, or null for a cache hit
+   * @param loadahead whether this is a load-ahead acquisition rather than an on-demand one
+   */
+  private record Acquisition(
+      QueuedSegment queued,
+      ListenableFuture<NumberedReadableInput> future,
+      @Nullable AcquireSegmentAction action,
+      boolean loadahead
+  )
+  {
+    LoadableSegment segment()
+    {
+      return queued.segment();
+    }
+  }
+
+  /**
    * An item that is yet to be turned into a {@link ReadableInput}, along with the input number it came from.
    */
   private record NumberedItem<T>(int inputNumber, T item)
+  {
+  }
+
+  /**
+   * A segment in {@link #loadableSegments}, along with the input number it came from.
+   *
+   * @param position position of the segment in hand-out order: its index in {@link #loadableSegments} as built by the
+   *                 constructor. Lets {@link #requeue} put a segment back in its place.
+   */
+  private record QueuedSegment(int position, int inputNumber, LoadableSegment segment)
   {
   }
 }

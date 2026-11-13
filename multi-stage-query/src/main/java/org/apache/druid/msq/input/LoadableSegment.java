@@ -72,6 +72,11 @@ public interface LoadableSegment
    * therefore access it through the async API ({@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync})
    * rather than the synchronous {@code makeCursorHolder}, which refuses to download on a processing thread.
    *
+   * If this method throws, it must leave the segment unacquired, holding nothing, so that it may still be acquired
+   * later. {@link org.apache.druid.msq.querykit.ReadableInputQueue} relies on this: it treats a cached acquisition that
+   * finds no room in the segment cache as a cache miss and loads the segment instead, and it keeps a segment whose
+   * probe failed for any other reason among its unacquired segments.
+   *
    * @return an Optional containing the cached Segment if available, or empty if not cached
    */
   Optional<Segment> acquireIfCached(AcquireMode acquireMode);
@@ -96,9 +101,28 @@ public interface LoadableSegment
    * async API ({@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync}) rather than the
    * synchronous {@code makeCursorHolder}, which refuses to download on a processing thread.
    *
+   * If this method throws, the segment is left unacquired and may be acquired again later. If it returns an action
+   * that then fails (its {@link AcquireSegmentAction#release()} throws), use {@link #abandonFailedAcquisition()} to
+   * make the segment acquirable again.
+   *
    * @throws DruidException if the segment has already been acquired
    */
   AcquireSegmentAction acquire(AcquireMode acquireMode);
+
+  /**
+   * Abandon an acquisition that failed to produce a {@link Segment}, so that {@link #acquire(AcquireMode)} may be
+   * called again.
+   *
+   * Only valid when a prior {@link #acquire(AcquireMode)} returned an {@link AcquireSegmentAction} that failed.
+   * Callers must have closed that action, and must be certain it handed out no {@link Segment}. (There is no need to
+   * call this when {@link #acquire(AcquireMode)} itself throws; that leaves the segment unacquired already.)
+   *
+   * Used by {@link org.apache.druid.msq.querykit.ReadableInputQueue} to retry a load-ahead acquisition that ran out
+   * of room in the segment cache, since load-ahead is an optimization that must not fail a query.
+   *
+   * @throws DruidException if the segment is not currently acquired
+   */
+  void abandonFailedAcquisition();
 
   /**
    * Counts this segment as a file read, using the row and byte counts recorded when it was acquired. The consumer

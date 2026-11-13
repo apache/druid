@@ -650,6 +650,22 @@ public class StorageLocationVirtualStorageManagerTest
   }
 
   @Test
+  public void testIsInsufficientStorageSeesWrappedCapacityFailure()
+  {
+    final DruidException noRoom = DruidException.forPersona(DruidException.Persona.USER)
+                                                .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                                                .build("no room");
+    Assertions.assertTrue(VirtualStorageManager.isInsufficientStorage(noRoom));
+    Assertions.assertTrue(VirtualStorageManager.isInsufficientStorage(new RuntimeException(noRoom)));
+    // a capacity failure wrapped in another DruidException describing the higher-level operation still counts
+    Assertions.assertTrue(
+        VirtualStorageManager.isInsufficientStorage(DruidException.defensive(noRoom, "Failed to mount bundle"))
+    );
+    Assertions.assertFalse(VirtualStorageManager.isInsufficientStorage(DruidException.defensive("something else")));
+    Assertions.assertFalse(VirtualStorageManager.isInsufficientStorage(new RuntimeException("boom")));
+  }
+
+  @Test
   public void testReserveAndPopulateAsyncDoesNotRecoverFromOtherErrors()
   {
     // A populate failure that is not an insufficient-storage error must be propagated, not recovered: the recovery

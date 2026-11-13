@@ -162,9 +162,28 @@ public class AdaptedLoadableSegment implements LoadableSegment
 
     // The supplier starts the underlying work (e.g. VSF file fetches); fromResource folds the resource's lifecycle
     // into the delivered segment's close (and cancels it if the action is closed before readiness).
-    final AcquireSegmentAction action = AcquireSegmentHandles.fromResource(asyncSegmentSupplier.get());
+    final AcquireSegmentAction action;
+    try {
+      action = AcquireSegmentHandles.fromResource(asyncSegmentSupplier.get());
+    }
+    catch (Throwable t) {
+      // Nothing was acquired, so leave the segment acquirable (see LoadableSegment#acquire).
+      acquired.set(false);
+      throw t;
+    }
     action.setOnRelease(this::countDelivered);
     return action;
+  }
+
+  /**
+   * Makes {@link #acquire} callable again after a failed acquisition.
+   */
+  @Override
+  public void abandonFailedAcquisition()
+  {
+    if (!acquired.compareAndSet(true, false)) {
+      throw DruidException.defensive("Segment with descriptor[%s] is not acquired", descriptor);
+    }
   }
 
   @Override
