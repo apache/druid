@@ -105,7 +105,8 @@ setKey() {
     [ -f "$service_conf" ] && printf '\n%s=%s\n' "$key" "$value" >> "$service_conf"
     [ -f "$service_conf" ] || printf '\n%s=%s\n' "$key" "$value" >> "$COMMON_CONF_DIR/common.runtime.properties"
 
-    echo "Setting $key=$value in $service_conf"
+    # Do not log the value since it may contain credentials
+    echo "Setting $key in $service_conf"
 }
 
 setJavaKey() {

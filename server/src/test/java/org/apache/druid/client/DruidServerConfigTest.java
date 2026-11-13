@@ -111,13 +111,9 @@ public class DruidServerConfigTest
   @Test
   public void testServerMaxSizePrecedence() throws Exception
   {
-    String serverConfigWithDefaultSizeStr = "{\"maxSize\":0,\"tier\":\"_default_tier\",\"priority\":0,"
-                                            + "\"hiddenProperties\":[\"druid.metadata.storage.connector.password\","
-                                            + "\"druid.s3.accessKey\",\"druid.s3.secretKey\"]}\n";
+    String serverConfigWithDefaultSizeStr = "{\"maxSize\":0,\"tier\":\"_default_tier\",\"priority\":0}\n";
 
-    String serverConfigWithNonDefaultSizeStr = "{\"maxSize\":123456,\"tier\":\"_default_tier\",\"priority\":0,"
-                                               + "\"hiddenProperties\":[\"druid.metadata.storage.connector.password\","
-                                               + "\"druid.s3.accessKey\",\"druid.s3.secretKey\"]}\n";
+    String serverConfigWithNonDefaultSizeStr = "{\"maxSize\":123456,\"tier\":\"_default_tier\",\"priority\":0}\n";
 
     final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig1 = new StorageLocationConfig(testSegmentCacheDir1, 10000000000L, null);

@@ -27,7 +27,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.FileWriteMode;
@@ -62,10 +61,10 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
+import org.apache.druid.server.security.SensitiveProperties;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.utils.JvmUtils;
@@ -82,7 +81,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -91,6 +89,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * Runs tasks in separate processes using the "internal peon" verb.
@@ -128,7 +127,7 @@ public class ForkingTaskRunner
   private final DruidNode node;
   private final ListeningExecutorService exec;
   private final PortFinder portFinder;
-  private final StartupLoggingConfig startupLoggingConfig;
+  private final SensitiveProperties sensitiveProperties;
   private final WorkerConfig workerConfig;
 
   private volatile int numProcessorsPerTask = -1;
@@ -148,7 +147,7 @@ public class ForkingTaskRunner
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
       @Self DruidNode node,
-      StartupLoggingConfig startupLoggingConfig,
+      SensitiveProperties sensitiveProperties,
       TaskStorageDirTracker dirTracker
   )
   {
@@ -158,7 +157,7 @@ public class ForkingTaskRunner
     this.taskLogPusher = taskLogPusher;
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
-    this.startupLoggingConfig = startupLoggingConfig;
+    this.sensitiveProperties = sensitiveProperties;
     this.workerConfig = workerConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
@@ -409,7 +408,7 @@ public class ForkingTaskRunner
 
                         LOGGER.info(
                             "Running command[%s]",
-                            getMaskedCommand(startupLoggingConfig.getMaskProperties(), command.getCommandList())
+                            getMaskedCommand(sensitiveProperties, command.getCommandList())
                         );
                         taskWorkItem.processHolder = runTaskProcess(command.getCommandList(), logFile, taskLocation);
 
@@ -763,21 +762,19 @@ public class ForkingTaskRunner
     }
   }
 
-  public static String getMaskedCommand(List<String> maskedProperties, List<String> command)
+  /**
+   * Joins the command with spaces, replacing the value of each {@code name=value} argument whose name is sensitive
+   * with {@code <masked>}.
+   */
+  public static String getMaskedCommand(SensitiveProperties sensitiveProperties, List<String> command)
   {
-    final Set<String> maskedPropertiesSet = Sets.newHashSet(maskedProperties);
-    final Iterator<String> maskedIterator = command.stream().map(element -> {
-      String[] splits = element.split("=", 2);
-      if (splits.length == 2) {
-        for (String masked : maskedPropertiesSet) {
-          if (splits[0].contains(masked)) {
-            return StringUtils.format("%s=%s", splits[0], "<masked>");
-          }
-        }
+    return command.stream().map(element -> {
+      final String[] splits = element.split("=", 2);
+      if (splits.length == 2 && sensitiveProperties.isSensitive(splits[0])) {
+        return StringUtils.format("%s=%s", splits[0], "<masked>");
       }
       return element;
-    }).iterator();
-    return Joiner.on(" ").join(maskedIterator);
+    }).collect(Collectors.joining(" "));
   }
 
   @Override
