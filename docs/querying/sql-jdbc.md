@@ -96,9 +96,9 @@ The driver interprets certain connection parameters itself. All other connection
 
 | Parameter | Description | Default |
 |---|---|---|
-| `authentication` | Authentication scheme: `basic` or `basicRaw`. See [Authentication](#authentication). Values are case-sensitive. | `basic` if `user` or `password` is set; otherwise no credentials are sent |
+| `authentication` | Authentication scheme: `basic`, `basicRaw`, or `bearer`. See [Authentication](#authentication). Values are case-sensitive. | `basic` if `user` or `password` is set; otherwise no credentials are sent |
 | `user` | Username. Only used when `authentication` is `basic`. | None |
-| `password` | Password, or the credential token when `authentication` is `basicRaw`. | None |
+| `password` | Password, or the credential token when `authentication` is `basicRaw` or `bearer`. | None |
 | `verifyTls` | Whether to validate the server's TLS certificate chain on HTTPS connections. | `true` |
 
 ### Query context parameters
@@ -123,6 +123,9 @@ when you set `user` or `password` without setting `authentication`.
 `authentication=basicRaw` sends `Authorization: Basic <password>`, using the value of `password` verbatim as the
 already-encoded credential, and ignores `user`. `password` is required. Use this when you already hold an encoded
 credential or a token issued by a custom authenticator.
+
+`authentication=bearer` sends `Authorization: Bearer <password>`, using the value of `password` verbatim as the
+bearer token, and ignores `user`. `password` is required.
 
 Whenever possible, supply credentials using connection properties rather than the JDBC URL. This helps prevent them from
 being logged or stored in configuration files.
