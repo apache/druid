@@ -47,18 +47,18 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`query/time`|Milliseconds taken to complete a query.|Native Query: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.|< 1s|
+|`query/time`|Milliseconds taken to complete a query.|Native Query: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`, `statusCode`.|< 1s|
 
 ### Broker
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p>Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p>GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
-|`query/bytes`|The total number of bytes returned to the requesting client in the query response from the broker. Other services report the total bytes for their portion of the query. |<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>| |
-|`query/node/time`|Milliseconds taken to query individual historical/realtime processes.|`id`, `status`, `server`|< 1s|
-|`query/resultCache/hit`|Whether the query hit the result cache (1) or not (0). Emission of the metric indicates the result-level cache was polled.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p>|Varies|
-|`query/node/bytes`|Number of bytes returned from querying individual historical/realtime processes.|`id`, `status`, `server`| |
-|`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|`id`, `status`, `server`|< 1s|
+|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`, `statusCode`.</p><p>Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p>GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/bytes`|The total number of bytes returned to the requesting client in the query response from the broker. Other services report the total bytes for their portion of the query. |<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>| |
+|`query/node/time`|Milliseconds taken to query individual historical/realtime processes.|`id`, `queryId`, `status`, `server`|< 1s|
+|`query/resultCache/hit`|Whether the query hit the result cache (1) or not (0). Emission of the metric indicates the result-level cache was polled.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`.</p>|Varies|
+|`query/node/bytes`|Number of bytes returned from querying individual historical/realtime processes.|`id`, `queryId`, `status`, `server`| |
+|`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|`id`, `queryId`, `status`, `server`|< 1s|
 |`query/count`|Number of total queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/success/count`|Number of queries successfully processed.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
@@ -66,9 +66,9 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/segments/count`|This metric is not enabled by default. Number of segments that will be touched by the query. The Broker makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the Broker. The Broker will resend the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.||Varies|
 |`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|`lane`, `dataSource`, `type`|0|
-|`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
-|`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
-|`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
+|`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `queryId`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
+|`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `queryId`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
+|`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `queryId`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`serverview/init/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`metadatacache/init/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
 |`segment/metadataCache/sync/time`|Time taken to poll segment metadata from the Coordinator and update the segment metadata cache. This metric is emitted only if [metadata cache](../configuration/index.md#sql) is enabled on the Broker.||Depends on the number of segments.|
@@ -80,8 +80,8 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
 |`serverview/sync/healthy`|Sync status of the Broker with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. This metric can be used in conjunction with `serverview/sync/unstableTime` to debug slow startup of Brokers.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
 |`serverview/sync/unstableTime`|Time in milliseconds for which the Broker has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
-|`subquery/rows`|Number of rows materialized by the subquery's results. |`id`, `subqueryId`| Varies |
-|`subquery/bytes`|Number of bytes materialized by the subquery's results. This metric is only emitted if the query uses [byte-based subquery guardrails](https://druid.apache.org/docs/latest/configuration/#guardrails-for-materialization-of-subqueries) |`id`, `subqueryId` | Varies |
+|`subquery/rows`|Number of rows materialized by the subquery's results. |`id`, `queryId`, `subqueryId`| Varies |
+|`subquery/bytes`|Number of bytes materialized by the subquery's results. This metric is only emitted if the query uses [byte-based subquery guardrails](https://druid.apache.org/docs/latest/configuration/#guardrails-for-materialization-of-subqueries) |`id`, `queryId`, `subqueryId` | Varies |
 |`subquery/rowLimit/count`|Number of subqueries whose results are materialized as rows (Java objects on heap).|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
 |`subquery/byteLimit/count`|Number of subqueries whose results are materialized as frames (Druid's internal byte representation of rows).|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
 |`subquery/fallback/count`|Number of subqueries which cannot be materialized as frames|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
@@ -107,14 +107,14 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
-|`query/segments/count`|This metric is not enabled by default. Number of segments this Historical scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|Varies|
-|`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|`id`, `status`, `segment`, `vectorized`.|several hundred milliseconds|
-|`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `segment`|< several hundred milliseconds|
+|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/segments/count`|This metric is not enabled by default. Number of segments this Historical scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|Varies|
+|`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|`id`, `queryId`, `status`, `segment`, `vectorized`.|several hundred milliseconds|
+|`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `queryId`, `segment`|< several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`segment/scan/active`|Number of segments currently scanned. This metric also indicates how many threads from `druid.processing.numThreads` are currently being used.||Close to `druid.processing.numThreads`|
-|`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the Historical process).|`id`, `segment`|several hundred milliseconds|
-|`query/cpu/time`|Microseconds of CPU time taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|Varies|
+|`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the Historical process).|`id`, `queryId`, `segment`|several hundred milliseconds|
+|`query/cpu/time`|Microseconds of CPU time taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|Varies|
 |`query/count`|Total number of queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/success/count`|Number of queries successfully processed.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
@@ -143,12 +143,12 @@ to represent the task ID are deprecated and will be removed in a future release.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
-|`query/segments/count`|This metric is not enabled by default. Number of segments this Peon scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`. </p><p>TopN: `threshold`, `dimension`.</p>|Varies|
-|`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `segment`|several hundred milliseconds|
+|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/segments/count`|This metric is not enabled by default. Number of segments this Peon scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`. </p><p>TopN: `threshold`, `dimension`.</p>|Varies|
+|`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `queryId`, `segment`|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`segment/scan/active`|Number of segments currently scanned. This metric also indicates how many threads from `druid.processing.numThreads` are currently being used.||Close to `druid.processing.numThreads`|
-|`query/cpu/time`|Microseconds of CPU time taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`. </p><p>TopN: `threshold`, `dimension`.</p>|Varies|
+|`query/cpu/time`|Microseconds of CPU time taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `queryId`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`. </p><p>TopN: `threshold`, `dimension`.</p>|Varies|
 |`query/count`|Number of total queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/success/count`|Number of queries successfully processed.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
@@ -218,9 +218,9 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`sqlQuery/time`|Milliseconds taken to complete a SQL.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
-|`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
-|`sqlQuery/bytes`|number of bytes returned in SQL response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
+|`sqlQuery/time`|Milliseconds taken to complete a SQL.|`id`, `queryId`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
+|`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `queryId`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
+|`sqlQuery/bytes`|number of bytes returned in SQL response.|`id`, `queryId`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 
 ## Ingestion metrics
 

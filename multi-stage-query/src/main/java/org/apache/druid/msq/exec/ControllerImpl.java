@@ -96,6 +96,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -635,7 +636,7 @@ public class ControllerImpl implements Controller
 
     long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
 
-    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
+    final ServiceMetricEvent.Builder metricBuilder = context.makeMetricBuilder();
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
                  .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
                  .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
@@ -680,7 +681,7 @@ public class ControllerImpl implements Controller
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
 
-    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
+    final ServiceMetricEvent.Builder metricBuilder = context.makeMetricBuilder();
     metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes);
     context.emitMetric(metricBuilder);
   }
@@ -1640,7 +1641,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
+    final ServiceMetricEvent.Builder metricBuilder = context.makeMetricBuilder();
 
     metricBuilder.setMetric("ingest/tombstones/count", numTombstones);
     context.emitMetric(metricBuilder);

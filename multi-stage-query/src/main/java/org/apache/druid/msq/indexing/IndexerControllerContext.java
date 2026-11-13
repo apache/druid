@@ -35,10 +35,11 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
+import org.apache.druid.msq.exec.MSQMetrics;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -54,6 +55,7 @@ import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
@@ -179,10 +181,16 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(MSQMetricEventBuilder metricBuilder)
+  public ServiceMetricEvent.Builder makeMetricBuilder()
   {
-    // Attach task specific dimensions
-    metricBuilder.setTaskDimensions(task, taskQuerySpecContext);
+    final ServiceMetricEvent.Builder metricBuilder = task.getMetricBuilder();
+    MSQMetrics.setQueryDimensions(metricBuilder, taskQuerySpecContext, MSQTaskSqlEngine.NAME);
+    return metricBuilder;
+  }
+
+  @Override
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
+  {
     toolbox.getEmitter().emit(metricBuilder);
   }
 

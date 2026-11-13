@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.DecoratedExecutorService;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
@@ -230,7 +231,7 @@ public class WorkerImpl implements Worker
       cpuTimeNs += tracker.totalCpu();
     }
 
-    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
+    final ServiceMetricEvent.Builder metricBuilder = context.makeMetricBuilder();
 
     final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
     if (datasources != null) {

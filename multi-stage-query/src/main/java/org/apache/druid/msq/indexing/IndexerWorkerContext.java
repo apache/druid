@@ -33,10 +33,11 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
+import org.apache.druid.msq.exec.MSQMetrics;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -51,6 +52,7 @@ import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -274,10 +276,16 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(MSQMetricEventBuilder metricBuilder)
+  public ServiceMetricEvent.Builder makeMetricBuilder()
   {
-    // Attach task specific dimensions
-    metricBuilder.setTaskDimensions(task, QueryContext.of(task.getContext()));
+    final ServiceMetricEvent.Builder metricBuilder = task.getMetricBuilder();
+    MSQMetrics.setQueryDimensions(metricBuilder, QueryContext.of(task.getContext()), MSQTaskSqlEngine.NAME);
+    return metricBuilder;
+  }
+
+  @Override
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
+  {
     toolbox.getEmitter().emit(metricBuilder);
   }
 

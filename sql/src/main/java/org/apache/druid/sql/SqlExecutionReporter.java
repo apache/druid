@@ -27,6 +27,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -106,6 +107,10 @@ public class SqlExecutionReporter
       ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
       if (plannerContext != null) {
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
+        metricBuilder.setDimensionIfNotNull(
+            DruidMetrics.QUERY_ID,
+            plannerContext.queryContext().get(QueryContextParameters.QUERY_ID)
+        );
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
       if (stmt.sqlToolbox.engine != null) {
