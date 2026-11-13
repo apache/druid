@@ -55,6 +55,9 @@ env:
   GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   GITHUB_WORKFLOW_REF: ${{ github.workflow_ref }}
 
+permissions:
+  contents: read
+
 jobs:
   execute:
     name: "${{ inputs.key }}"

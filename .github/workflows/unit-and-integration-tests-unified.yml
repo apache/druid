@@ -35,8 +35,14 @@ env:
   MYSQL_DRIVER_CLASSNAME: com.mysql.jdbc.Driver # Used to set druid config in docker image for revised ITs
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
+permissions:
+  contents: read
+
 jobs:
   ci:
+    permissions:
+      contents: read
+      pull-requests: read
     uses: ./.github/workflows/ci.yml
 
   quality-gate:
@@ -50,6 +56,8 @@ jobs:
 
   actions-timeline:
     needs: [ci]
+    permissions:
+      actions: read
     runs-on: ubuntu-24.04
     if: ${{ !cancelled() }}
     steps:
