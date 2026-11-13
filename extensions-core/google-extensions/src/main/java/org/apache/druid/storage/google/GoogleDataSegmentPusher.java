@@ -116,7 +116,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     final String basePath = buildPath(storageDirSuffix);
 
     try {
-      if (zip) {
+      if (zip && version != IndexIO.V10_VERSION) {
         return pushZip(indexFilesDir, segment, version, basePath);
       } else {
         return pushNoZip(indexFilesDir, segment, version, basePath);

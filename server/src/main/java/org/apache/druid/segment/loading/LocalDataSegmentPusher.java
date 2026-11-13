@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
@@ -91,7 +92,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       return segment.withLoadSpec(makeLoadSpec(outDir.toURI()))
                     .withSize(size)
                     .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
-    } else if (compressionFormat == CompressionUtils.Format.ZIP) {
+    } else if (compressionFormat == CompressionUtils.Format.ZIP
+               && SegmentUtils.getVersionFromDir(dataSegmentFile) != IndexIO.V10_VERSION) {
       return pushZip(dataSegmentFile, outDir, segment);
     } else {
       return pushNoZip(dataSegmentFile, outDir, segment);

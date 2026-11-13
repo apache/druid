@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -129,27 +130,29 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final String storageDir = this.getStorageDir(segment, false);
 
     final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
+    final CompressionUtils.Format format = compressionFormatFor(inDir);
     final String outIndexFilePath = StringUtils.format(
         "%s/%s/%d_%sindex%s",
         fullyQualifiedStorageDirectory.get(),
         storageDir,
         segment.getShardSpec().getPartitionNum(),
         uniquePrefix,
-        compressionFormat.getSuffix()
+        format.getSuffix()
     );
 
-    return pushToFilePathWithRetry(inDir, segment, outIndexFilePath);
+    return pushToFilePathWithRetry(inDir, segment, outIndexFilePath, format);
   }
 
   @Override
   public DataSegment pushToPath(File inDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
+    final CompressionUtils.Format format = compressionFormatFor(inDir);
     final String outIndexFilePath;
 
     if (storageDirSuffix.endsWith("index.zip") || storageDirSuffix.endsWith("index.lz4")) {
       outIndexFilePath = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
     } else {
-      final String suffix = compressionFormat.getSuffix();
+      final String suffix = format.getSuffix();
 
       outIndexFilePath = StringUtils.format(
         "%s/%s/%d_index%s",
@@ -160,10 +163,22 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       );
     }
 
-    return pushToFilePathWithRetry(inDir, segment, outIndexFilePath);
+    return pushToFilePathWithRetry(inDir, segment, outIndexFilePath, format);
   }
 
-  private DataSegment pushToFilePathWithRetry(File inDir, DataSegment segment, String outIndexFilePath)
+  private CompressionUtils.Format compressionFormatFor(File inDir) throws IOException
+  {
+    return SegmentUtils.getVersionFromDir(inDir) == IndexIO.V10_VERSION
+           ? CompressionUtils.Format.NONE
+           : compressionFormat;
+  }
+
+  private DataSegment pushToFilePathWithRetry(
+      File inDir,
+      DataSegment segment,
+      String outIndexFilePath,
+      CompressionUtils.Format format
+  )
       throws IOException
   {
     // Retry any HDFS errors that occur, up to 5 times.
@@ -171,7 +186,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       final long startTime = System.currentTimeMillis();
 
       final DataSegment result = RetryUtils.retry(
-          () -> pushToFilePath(inDir, segment, outIndexFilePath),
+          () -> pushToFilePath(inDir, segment, outIndexFilePath, format),
           exception -> exception instanceof Exception,
           5
       );
@@ -199,7 +214,12 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     emitter.emit(metricBuilder.setMetric("hdfs/push/duration", duration));
   }
 
-  private DataSegment pushToFilePath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
+  private DataSegment pushToFilePath(
+      File inDir,
+      DataSegment segment,
+      String outIndexFilePath,
+      CompressionUtils.Format format
+  ) throws IOException
   {
     log.debug(
         "Copying segment[%s] to HDFS at location[%s]",
@@ -213,7 +233,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         segment.getDataSource(),
         UUIDUtils.generateUuid(),
         segment.getShardSpec().getPartitionNum(),
-        compressionFormat.getSuffix()
+        format.getSuffix()
     ));
     final FileSystem fs = tmpPath.getFileSystem(hadoopConfig);
 
@@ -224,12 +244,12 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       log.debug("Copying files from[%s] to [%s]", inDir, tmpPath);
 
-      if (compressionFormat == CompressionUtils.Format.NONE) {
+      if (format == CompressionUtils.Format.NONE) {
         fs.copyFromLocalFile(false, true, new Path(inDir.toURI()), tmpPath);
         size = FileUtils.getFileSize(inDir);
       } else {
         try (FSDataOutputStream out = fs.create(tmpPath)) {
-          size = compressionFormat.compressDirectory(inDir, out);
+          size = format.compressDirectory(inDir, out);
         }
       }
 

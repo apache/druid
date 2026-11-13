@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -410,11 +411,14 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     );
 
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    task.addToContext(Tasks.BUILD_V10_KEY, true);
     Assertions.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
     DataSegmentsWithSchemas dataSegmentsWithSchemas = getIndexingServiceClient().getSegmentAndSchemas(task);
     verifySchema(dataSegmentsWithSchemas);
     Set<DataSegment> segments = dataSegmentsWithSchemas.getSegments();
+    Assertions.assertFalse(segments.isEmpty());
+    Assertions.assertTrue(segments.stream().allMatch(segment -> segment.getBinaryVersion() == IndexIO.V10_VERSION));
     for (DataSegment segment : segments) {
       for (int i = 0; i < dimensionSchemas.size(); i++) {
         Assertions.assertEquals(dimensionSchemas.get(i).getName(), segment.getDimensions().get(i));
