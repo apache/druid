@@ -197,6 +197,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
       }
     }
     catch (InterruptedException exc) {
+      Thread.currentThread().interrupt();
     }
 
   }
@@ -352,6 +353,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
           e,
           "Interrupted while waiting to add record to buffer");
       stopBackgroundFetch();
+      Thread.currentThread().interrupt();
     }
 
   }
@@ -393,6 +395,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
       return polledRecords;
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       log.warn(e, "Interrupted while polling");
 
       return Collections.emptyList();
