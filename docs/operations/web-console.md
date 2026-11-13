@@ -35,6 +35,8 @@ Access the web console at the following address:
 http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
+To have users sign in to the web console with an OpenID Connect provider, such as Okta or Microsoft Entra ID, see [druid-pac4j](../development/extensions-core/druid-pac4j.md).
+
 :::info
  **Security note:** Without [Druid user permissions](../operations/security-overview.md) configured, any user of the
 API or web console has effectively the same level of access to local files and network services as the user under which

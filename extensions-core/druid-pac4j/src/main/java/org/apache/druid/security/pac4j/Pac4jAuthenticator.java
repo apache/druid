@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.google.inject.Provider;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
@@ -44,10 +46,21 @@ import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Set;
 
 @JsonTypeName("pac4j")
 public class Pac4jAuthenticator implements Authenticator
 {
+  /**
+   * Methods pac4j may pick from the provider's discovery document when clientAuthenticationMethod is not set.
+   * pac4j's own list also contains private_key_jwt, which some providers (e.g. Keycloak) advertise first but which
+   * needs a private key that Druid has no properties for.
+   */
+  private static final Set<ClientAuthenticationMethod> AUTO_DETECTED_CLIENT_AUTHENTICATION_METHODS = ImmutableSet.of(
+      ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
+      ClientAuthenticationMethod.CLIENT_SECRET_POST
+  );
+
   private final String name;
   private final String authorizerName;
   private final Supplier<Config> pac4jConfigSupplier;
@@ -126,16 +139,27 @@ public class Pac4jAuthenticator implements Authenticator
     return null;
   }
 
+  @VisibleForTesting
+  Config getPac4jConfig()
+  {
+    return pac4jConfigSupplier.get();
+  }
+
   private Config createPac4jConfig(OIDCConfig oidcConfig)
   {
     OidcConfiguration oidcConf = new OidcConfiguration();
     oidcConf.setClientId(oidcConfig.getClientID());
-    oidcConf.setSecret(oidcConfig.getClientSecret().getPassword());
     oidcConf.setDiscoveryURI(oidcConfig.getDiscoveryURI());
     oidcConf.setScope(oidcConfig.getScope());
-    if (oidcConfig.getClientAuthenticationMethod() != null) {
-      oidcConf.setClientAuthenticationMethod(
-          ClientAuthenticationMethod.parse(oidcConfig.getClientAuthenticationMethod()));
+    // Without a secret (clientAuthenticationMethod=none) pac4j sends the token request as a public client.
+    if (oidcConfig.getClientSecret() != null) {
+      oidcConf.setSecret(oidcConfig.getClientSecret().getPassword());
+      if (oidcConfig.getClientAuthenticationMethod() != null) {
+        oidcConf.setClientAuthenticationMethod(
+            ClientAuthenticationMethod.parse(oidcConfig.getClientAuthenticationMethod()));
+      } else {
+        oidcConf.setSupportedClientAuthenticationMethods(AUTO_DETECTED_CLIENT_AUTHENTICATION_METHODS);
+      }
     }
     oidcConf.setExpireSessionWithToken(true);
     oidcConf.setUseNonce(true);
