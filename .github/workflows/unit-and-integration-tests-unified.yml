@@ -14,7 +14,7 @@
 # limitations under the License.
 
 name: "CI"
-# Starts for every PR so that quality-gate always reports; ci.yml decides which jobs to skip.
+# Starts for every PR so that quality-gate always reports; ci-jobs.yml decides which jobs to skip.
 on:
   push:
     branches:
@@ -37,7 +37,7 @@ env:
 
 jobs:
   ci:
-    uses: ./.github/workflows/ci.yml
+    uses: ./.github/workflows/ci-jobs.yml
 
   quality-gate:
     needs: [ci]
