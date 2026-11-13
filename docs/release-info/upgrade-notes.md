@@ -26,6 +26,48 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
+## 39.0.0
+
+### Upgrade notes
+
+#### Java
+
+Support for Java 21 has been dropped. You must upgrade to Java 25.
+
+#### Dart workers
+
+Dart workers on Historicals are now announced and discovered by the Broker with a new `DartWorkerService` mechanism. If you've enabled Dart, follow the standard rolling upgrade order: during an upgrade, restart Historicals before the Broker; during a downgrade, restart the Broker before Historicals.
+
+[#20508](https://github.com/apache/druid/pull/20508)
+
+### Incompatible changes
+
+#### Permissions changes for SQL-based ingestion
+
+The [table visibility](./release-notes.md#table-visibility) changes affect the permissions required for SQL-based ingestion. INSERT and REPLACE now require READ access (in addition to WRITE) on the target table.
+
+To restore the previous behavior, set `druid.sql.planner.authorizeTableVisibility` to `false`.
+
+[#20075](https://github.com/apache/druid/pull/20075)
+
+#### Alerts on `task/run/time`
+
+The `statsd` and `prometheus` emitters now emit the `taskStatus` dimension on `task/run/time`. This is a breaking change for dashboards and alerts on `task/run/time`:
+
+- `statsd` (non-DogStatsD mode): Dimension values are joined into the dotted metric name, so `druid.overlord.task.run.time.DATASOURCE.TASKTYPE` becomes `druid.overlord.task.run.time.DATASOURCE.TASKSTATUS.TASKTYPE`. Queries against the old name stop receiving data.
+- `statsd` (DogStatsD mode): A `taskStatus` tag is added. Existing queries keep working and aggregate over it.
+- `prometheus`: A `taskStatus` label is added. Update any queries that select on an exact label set and any recording rules that assume the old label set.
+
+To keep the previous behavior, pin the old dimension list with `druid.emitter.statsd.dimensionMapPath` or `druid.emitter.prometheus.dimensionMapPath`.
+
+[#20122](https://github.com/apache/druid/pull/20122)
+
+#### `SysMonitor` removed
+
+`SysMonitor` has been removed after being deprecated in Druid 27. Use `OshiSysMonitor` instead.
+
+[#20200](https://github.com/apache/druid/pull/20200)
+
 ## 37.0.0
 
 ### Upgrade notes
