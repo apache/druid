@@ -326,8 +326,13 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
       long waitStart = System.currentTimeMillis();
       boolean isTaskAssignmentTimedOut = false;
+      TaskStatus shutdownStatus = null;
       synchronized (statusLock) {
         while (tasks.containsKey(taskId) && tasks.get(taskId).getState().isPending()) {
+          shutdownStatus = workItem.shutdownStatus;
+          if (shutdownStatus != null) {
+            break;
+          }
           long remaining = waitMs - (System.currentTimeMillis() - waitStart);
           if (remaining > 0) {
             statusLock.wait(remaining);
@@ -338,7 +343,28 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         }
       }
 
-      if (isTaskAssignmentTimedOut) {
+      if (shutdownStatus != null) {
+        // taskComplete(..) must be called outside of statusLock, see comments on method.
+        taskComplete(workItem, null, shutdownStatus);
+
+        // The worker may have accepted the task, so keep it reserved until it reports the task or the timeout passes.
+        // taskAddedOrUpdated() releases the worker on that report and, if the task is running, asks to kill it.
+        synchronized (statusLock) {
+          while (taskId.equals(workersWithUnacknowledgedTask.get(workerHost))) {
+            final long remaining = waitMs - (System.currentTimeMillis() - waitStart);
+            if (remaining <= 0) {
+              log.info(
+                  "Worker[%s] did not report killed task[%s] in timeout[%s].",
+                  workerHost,
+                  taskId,
+                  config.getTaskAssignmentTimeout()
+              );
+              break;
+            }
+            statusLock.wait(remaining);
+          }
+        }
+      } else if (isTaskAssignmentTimedOut) {
         log.makeAlert(
             "Task assignment timed out on worker [%s], never ran task [%s] in timeout[%s]!",
             workerHost,
@@ -1221,7 +1247,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         }
         finally {
           synchronized (statusLock) {
-            workersWithUnacknowledgedTask.remove(immutableWorker.getWorker().getHost());
+            workersWithUnacknowledgedTask.remove(immutableWorker.getWorker().getHost(), taskId);
             statusLock.notifyAll();
           }
         }
@@ -1276,6 +1302,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           // asks the worker to shut it down if the worker runs it.
           taskRunnerWorkItem.shutdownStatus = TaskStatus.failure(taskId, reason);
           pendingTaskIds.remove(taskId);
+          statusLock.notifyAll();
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
           tasks.remove(taskId);
         }
@@ -1460,6 +1487,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     boolean isTaskCompleted = false;
 
     synchronized (statusLock) {
+      // The worker has reported the task it was reserved for
+      workersWithUnacknowledgedTask.remove(worker.getHost(), taskId);
+
       taskItem = tasks.get(taskId);
       if (taskItem == null) {
         // Try to find information about it in the TaskStorage
