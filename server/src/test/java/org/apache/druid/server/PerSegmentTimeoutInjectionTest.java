@@ -190,6 +190,7 @@ public class PerSegmentTimeoutInjectionTest
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
         new QueryConfigSnapshot(resolvedDefaultQueryContext, dynamicConfig),
+        Map.of(),
         System.currentTimeMillis(),
         System.nanoTime()
     );

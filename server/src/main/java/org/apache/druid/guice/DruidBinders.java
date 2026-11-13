@@ -32,6 +32,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.server.system.table.SystemTableDescriptor;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
@@ -145,6 +146,14 @@ public class DruidBinders
         new TypeLiteral<>() {},
         new TypeLiteral<>() {}
     );
+  }
+
+  /**
+   * Binds the descriptors of the system tables, keyed by table name.
+   */
+  public static MapBinder<String, SystemTableDescriptor> systemTableDescriptorBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(binder, String.class, SystemTableDescriptor.class);
   }
 
   public static Multibinder<JoinableFactory> joinableFactoryMultiBinder(Binder binder)

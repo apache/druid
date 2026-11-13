@@ -24,11 +24,18 @@ import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.JSR311Resource;
+import org.apache.druid.server.QueryResource;
+import org.apache.druid.server.system.module.SystemTableModule;
+import org.apache.druid.server.system.query.SystemTableQueryResource;
+import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
+import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -80,5 +87,32 @@ public class MainTest
     final Injector startupInjector = GuiceInjectors.makeStartupInjector();
     startupInjector.injectMembers(runnable);
     return runnable.makeInjector(runnable.getNodeRoles(new Properties()));
+  }
+
+  @Test
+  public void testMiddleManagerNativeServerPropertiesInjection()
+  {
+    // The startup injector reads system properties.
+    System.setProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, "true");
+    try {
+      final Injector middleManagerInjector = makeInjector(new CliMiddleManager());
+
+      // Middle Managers expose /druid/v2 through the resource restricted to internal system-table scans.
+      final Set<Class<?>> jerseyResources =
+          middleManagerInjector.getInstance(Key.get(new TypeLiteral<>() {}, JSR311Resource.class));
+      Assertions.assertTrue(jerseyResources.contains(SystemTableQueryResource.class));
+      Assertions.assertFalse(jerseyResources.contains(QueryResource.class));
+      Assertions.assertTrue(
+          systemTableDataProviders(middleManagerInjector).containsKey(ServerPropertiesTableDescriptor.TABLE_NAME)
+      );
+    }
+    finally {
+      System.clearProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY);
+    }
+  }
+
+  private static Map<String, SystemTableDataProvider> systemTableDataProviders(final Injector injector)
+  {
+    return injector.getInstance(Key.get(new TypeLiteral<>() {}));
   }
 }

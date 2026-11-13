@@ -33,6 +33,7 @@ import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -345,6 +346,11 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   public String runSql(String sql, Object... args)
   {
     return clusterApis.runSql(sql, args);
+  }
+
+  public String runSql(final String sql, final Map<String, Object> context, final Object... args)
+  {
+    return clusterApis.runSql(sql, context, args);
   }
 
   EmbeddedDruidServer<?> anyServer()

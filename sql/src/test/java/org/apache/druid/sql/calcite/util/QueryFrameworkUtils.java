@@ -97,6 +97,7 @@ public class QueryFrameworkUtils
         NoopPolicyEnforcer.instance(),
         authorizerMapper,
         new DefaultQueryConfig(Map.of()),
+        Map.of(),
         null  // BrokerConfigManager - null for tests
     );
   }

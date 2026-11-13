@@ -22,13 +22,18 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.QueryResource;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 
-public class QueryablePeonModule implements DruidModule
+/**
+ * Registers the standard native query HTTP resource.
+ */
+public class QueryResourceModule implements DruidModule
 {
   @Override
-  public void configure(Binder binder)
+  public void configure(final Binder binder)
   {
+    binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
     binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
     Jerseys.addResource(binder, QueryResource.class);
     LifecycleModule.register(binder, QueryResource.class);

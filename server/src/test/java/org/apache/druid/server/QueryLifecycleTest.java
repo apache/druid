@@ -30,24 +30,30 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContextTest;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.RestrictedDataSource;
+import org.apache.druid.query.SystemTableAccess;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
@@ -59,6 +65,7 @@ import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
@@ -70,21 +77,28 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.server.system.table.SystemTableDescriptor;
+import org.apache.druid.server.system.table.SystemTableRowAuthorizer;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 @LazySingleton
 public class QueryLifecycleTest
@@ -160,7 +174,8 @@ public class QueryLifecycleTest
 
     injector = Guice.createInjector(
         BoundFieldModule.of(this),
-        binder -> binder.bindScope(LazySingleton.class, Scopes.SINGLETON)
+        binder -> binder.bindScope(LazySingleton.class, Scopes.SINGLETON),
+        DruidBinders::systemTableDescriptorBinder
     );
   }
 
@@ -857,6 +872,7 @@ public class QueryLifecycleTest
             ImmutableMap.of(),
             BrokerDynamicConfig.builder().withQueryBlocklist(ImmutableList.of(rule)).build()
         ),
+        Map.of(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -909,12 +925,279 @@ public class QueryLifecycleTest
             ImmutableMap.of(),
             BrokerDynamicConfig.builder().withQueryBlocklist(ImmutableList.of(rule)).build()
         ),
+        Map.of(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
 
     // This should succeed because query doesn't match blocklist rule
     lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
+  }
+
+  /**
+   * Authorizing a query attaches the caller's access to each system table it reads, including in subqueries.
+   */
+  @Test
+  public void testAuthorizeAttachesSystemTableAccess()
+  {
+    final SystemTableAccess access = new SystemTableAccess(row -> true);
+    final AtomicReference<Query<?>> executed = expectSystemTableExecution();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle((identity, mapper) -> {
+      Assertions.assertSame(authenticationResult, identity);
+      return access;
+    });
+    lifecycle.initialize(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(new QueryDataSource(serverPropertiesScan()))
+              .intervals(ImmutableList.of(Intervals.ETERNITY))
+              .aggregators(new CountAggregatorFactory("count"))
+              .build()
+    );
+
+    Assertions.assertTrue(lifecycle.authorize(mockRequest()).allowAccessWithNoRestriction());
+    lifecycle.execute();
+    final DataSource innerDataSource =
+        ((QueryDataSource) executed.get().getDataSource()).getQuery().getDataSource();
+    Assertions.assertSame(access, ((SystemTableDataSource) innerDataSource).getAccess());
+  }
+
+  /**
+   * A row authorizer that rejects the caller denies the query, so it never executes.
+   */
+  @Test
+  public void testRowAuthorizerDenialDeniesQuery()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle((identity, mapper) -> {
+      throw new ForbiddenException("no state read");
+    });
+    lifecycle.initialize(serverPropertiesScan());
+
+    final AuthorizationResult result = lifecycle.authorize(mockRequest());
+    Assertions.assertFalse(result.allowBasicAccess());
+    Assertions.assertEquals("no state read", result.getErrorMessage());
+    Assertions.assertThrows(DruidException.class, lifecycle::execute);
+  }
+
+  /**
+   * A query run with {@code runSimple}, as by SQL, is forbidden when the table's row authorizer rejects it.
+   */
+  @Test
+  public void testRunSimpleRowAuthorizerDenialIsForbidden()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
+    emitter.emit(EasyMock.<ServiceEventBuilder<?>>anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle((identity, mapper) -> {
+      throw new ForbiddenException("no state read");
+    });
+
+    final ForbiddenException e = Assertions.assertThrows(
+        ForbiddenException.class,
+        () -> lifecycle.runSimple(
+            serverPropertiesScan(),
+            authenticationResult,
+            AuthorizationResult.ALLOW_NO_RESTRICTION
+        )
+    );
+    Assertions.assertEquals("no state read", e.getMessage());
+  }
+
+  /**
+   * With system tables enabled, a table that has no descriptor is rejected as invalid input.
+   */
+  @Test
+  public void testUnknownSystemTableIsRejected()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
+    emitter.emit(EasyMock.<ServiceEventBuilder<?>>anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    replayAll();
+
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource(new SystemTableDataSource("unknown"))
+                                  .eternityInterval()
+                                  .build();
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> systemTableLifecycle((identity, mapper) -> SystemTableAccess.ALL_ROWS)
+            .runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION)
+    );
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+    Assertions.assertEquals(
+        "System table[unknown] can't be queried with native queries. Tables that can: [server_properties]",
+        e.getMessage()
+    );
+  }
+
+  /**
+   * With {@code druid.auth.authorizeSystemTablesDirectly}, a native system-table query requires SYSTEM_TABLE READ on
+   * the table, checked before the table's row authorizer.
+   */
+  @Test
+  public void testSystemTableQueryIsDeniedWithoutSystemTableRead()
+  {
+    authConfig = AuthConfig.newBuilder().setAuthorizeSystemTablesDirectly(true).build();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(
+        authorizer.authorize(
+            authenticationResult,
+            new Resource("server_properties", ResourceType.SYSTEM_TABLE),
+            Action.READ
+        )
+    ).andReturn(Access.DENIED).once();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle((identity, mapper) -> {
+      throw new AssertionError("The row authorizer must not run for a denied query");
+    });
+    lifecycle.initialize(serverPropertiesScan());
+
+    Assertions.assertFalse(lifecycle.authorize(mockRequest()).allowBasicAccess());
+    Assertions.assertThrows(DruidException.class, lifecycle::execute);
+    EasyMock.verify(authorizer);
+  }
+
+  /**
+   * In a query that reads both a table and a system table, the table still needs DATASOURCE READ, and the system
+   * table needs SYSTEM_TABLE READ only with {@code druid.auth.authorizeSystemTablesDirectly}. The system table's
+   * {@code sys.}-prefixed name is never authorized as a datasource.
+   */
+  @ParameterizedTest(name = "authorizeSystemTablesDirectly = {0}")
+  @ValueSource(booleans = {false, true})
+  public void testTableAndSystemTableAuthorization(final boolean authorizeSystemTablesDirectly)
+  {
+    authConfig = AuthConfig.newBuilder().setAuthorizeSystemTablesDirectly(authorizeSystemTablesDirectly).build();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(
+        authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ)
+    ).andReturn(Access.OK).once();
+    if (authorizeSystemTablesDirectly) {
+      EasyMock.expect(
+          authorizer.authorize(
+              authenticationResult,
+              new Resource("server_properties", ResourceType.SYSTEM_TABLE),
+              Action.READ
+          )
+      ).andReturn(Access.OK).once();
+    }
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    replayAll();
+
+    final QueryLifecycle lifecycle = systemTableLifecycle((identity, mapper) -> SystemTableAccess.ALL_ROWS);
+    lifecycle.initialize(
+        Druids.newScanQueryBuilder()
+              .dataSource(
+                  new UnionDataSource(
+                      List.of(new TableDataSource(DATASOURCE), new SystemTableDataSource("server_properties"))
+                  )
+              )
+              .eternityInterval()
+              .build()
+    );
+
+    Assertions.assertTrue(lifecycle.authorize(mockRequest()).allowAccessWithNoRestriction());
+    EasyMock.verify(authorizer);
+  }
+
+  /**
+   * Without a descriptor, which is bound only when {@code druid.query.enableDruidEngineForSystemTables} is set, system
+   * tables are rejected, including below the query root.
+   */
+  @Test
+  public void testSystemTableIsRejectedWithoutDescriptor()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
+    emitter.emit(EasyMock.<ServiceEventBuilder<?>>anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    replayAll();
+
+    final TimeseriesQuery wrappedQuery = Druids.newTimeseriesQueryBuilder()
+                                               .dataSource(new QueryDataSource(serverPropertiesScan()))
+                                               .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                               .aggregators(new CountAggregatorFactory("count"))
+                                               .build();
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> createLifecycle().runSimple(wrappedQuery, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION)
+    );
+    Assertions.assertEquals(DruidException.Category.UNSUPPORTED, e.getCategory());
+    Assertions.assertEquals(
+        "System table[server_properties] can't be queried with native queries unless "
+        + "[druid.query.enableDruidEngineForSystemTables] is set on all services",
+        e.getMessage()
+    );
+  }
+
+  private static ScanQuery serverPropertiesScan()
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource(new SystemTableDataSource("server_properties"))
+                 .eternityInterval()
+                 .build();
+  }
+
+  /**
+   * Expects an authorized system-table query to execute, and returns the query that reaches the walker.
+   */
+  private AtomicReference<Query<?>> expectSystemTableExecution()
+  {
+    final AtomicReference<Query<?>> executed = new AtomicReference<>();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andAnswer(() -> {
+              executed.set((Query<?>) EasyMock.getCurrentArguments()[0]);
+              return (queryPlus, responseContext) -> Sequences.empty();
+            })
+            .once();
+    return executed;
+  }
+
+  private QueryLifecycle systemTableLifecycle(final SystemTableRowAuthorizer rowAuthorizer)
+  {
+    final SystemTableDescriptor descriptor = EasyMock.createMock(SystemTableDescriptor.class);
+    EasyMock.expect(descriptor.getRowAuthorizer()).andReturn(rowAuthorizer).anyTimes();
+    EasyMock.replay(descriptor);
+    return new QueryLifecycle(
+        conglomerate,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        authConfig,
+        policyEnforcer,
+        new QueryConfigSnapshot(ImmutableMap.of(), BrokerDynamicConfig.builder().build()),
+        Map.of("server_properties", descriptor),
+        System.currentTimeMillis(),
+        System.nanoTime()
+    );
   }
 
   private HttpServletRequest mockRequest()

@@ -296,6 +296,7 @@ public class QueryResourceTest
         NoopPolicyEnforcer.instance(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new DefaultQueryConfig(Map.of()),
+        Map.of(),
         null
     );
   }
@@ -394,6 +395,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             overrideConfig,
+            Map.of(),
             null
         )
     );
@@ -463,6 +465,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             queryConfig,
+            Map.of(),
             null
         )
     );
@@ -564,6 +567,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             null
         )
     );
@@ -642,6 +646,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             null
         )
     );
@@ -732,6 +737,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             null
         )
     );
@@ -790,7 +796,19 @@ public class QueryResourceTest
 
     queryResource = createQueryResource(
 
-        new QueryLifecycleFactory(null, null, null, null, null, null, NoopPolicyEnforcer.instance(), null, overrideConfig, null)
+        new QueryLifecycleFactory(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            NoopPolicyEnforcer.instance(),
+            null,
+            overrideConfig,
+            Map.of(),
+            null
+        )
         {
           @Override
           public QueryLifecycle factorize()
@@ -805,6 +823,7 @@ public class QueryResourceTest
                 new AuthConfig(),
                 NoopPolicyEnforcer.instance(),
                 new QueryConfigSnapshot(overrideConfig.getContext(), null),
+                Map.of(),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )
@@ -855,6 +874,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             overrideConfig,
+            Map.of(),
             null
         )
     );
@@ -1219,6 +1239,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             authMapper,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             null
         ),
         authMapper,
@@ -1294,6 +1315,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             null
         ),
         null,
@@ -1393,6 +1415,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             authMapper,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             null
         ),
         authMapper,
@@ -1501,6 +1524,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             authMapper,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             null
         ),
         authMapper,
@@ -1884,6 +1908,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             null
         ),
         null,
@@ -2111,6 +2136,7 @@ public class QueryResourceTest
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
+            Map.of(),
             brokerViewOfBrokerConfig
         ),
         null,

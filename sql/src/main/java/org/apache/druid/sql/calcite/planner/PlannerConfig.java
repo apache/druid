@@ -123,6 +123,10 @@ public class PlannerConfig
   @JsonProperty
   private boolean computeInnerJoinCostAsFilter = true;
 
+  /**
+   * Deprecated: use {@code druid.auth.authorizeSystemTablesDirectly}, which also applies to native queries on system
+   * tables. The Broker authorizes system tables directly if either property is set.
+   */
   @JsonProperty
   private boolean authorizeSystemTablesDirectly = false;
 
