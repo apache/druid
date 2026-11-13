@@ -13,14 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "CI"
+name: "CI jobs"
 
 on:
   workflow_call:
 
 jobs:
+  changes:
+    runs-on: ubuntu-slim
+    outputs:
+      java: ${{ steps.filter.outputs.java }}
+    steps:
+      # Pull requests are read through the API; only push events need the repository.
+      - uses: actions/checkout@v7
+        if: ${{ github.event_name == 'push' }}
+      - id: filter
+        # Third-party actions must be pinned to a SHA on the ASF allowlist
+        # https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          base: ${{ github.event_name == 'push' && github.ref_name || '' }}
+          predicate-quantifier: every
+          filters: |
+            java:
+              - '**'
+              - '!**/*.md'
+              - '!dev/**'
+              - '!distribution/bin/**'
+              - '!docs/**'
+              - '!examples/**/jupyter-notebooks/**'
+              - '!web-console/**'
+              - '!website/**'
+
   run-unit-tests:
     name: "unit tests(main)"
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +73,8 @@ jobs:
       key: "coverage-jacoco"
 
   run-separated-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -64,20 +94,40 @@ jobs:
       artifact_prefix: "unit-test-reports-jdk25"
 
   static-checks-maven:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/static-checks-maven.sh
       key: "static-checks-maven"
 
   strict-compilation:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/strict-compilation.sh
       key: "strict-compilation"
 
-  openrewrite:
+  docker-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
+    uses: ./.github/workflows/docker-tests.yml
+
+  packaging-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ '25' ]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/openrewrite.sh
-      key: "openrewrite"
-      artifact_prefix: "openrewrite-patch"
+      script: .github/scripts/packaging-check.sh
+      jdk: ${{ matrix.jdk }}
+      key: "packaging-check-jdk${{ matrix.jdk }}"
+
+  web-checks:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/web-checks.sh
+      key: "web-checks"
+      artifact_prefix: "web-checks-logs"

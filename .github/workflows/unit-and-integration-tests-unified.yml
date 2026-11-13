@@ -13,50 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Unit & Integration tests CI"
+name: "CI"
+# Starts for every PR so that quality-gate always reports; ci.yml decides which jobs to skip.
 on:
   push:
-    paths-ignore:
-      - '**/*.md'
-      - 'dev/**'
-      - 'distribution/bin/**'
-      - 'docs/**'
-      - 'examples/**/jupyter-notebooks/**'
-      - 'web-console/**'
-      - 'website/**'
-      # PR automation that the build and tests do not use
-      - '.github/dependabot.yml'
-      - '.github/labeler.yml'
-      - '.github/scripts/auto-add-milestone.sh'
-      - '.github/scripts/backport-pr.sh'
-      - '.github/workflows/backport.yml'
-      - '.github/workflows/labeler.yml'
-      - '.github/workflows/pr-checks.yml'
-      - '.github/workflows/pr-merged.yml'
-      - '.github/workflows/stale.yml'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
       - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
   pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - 'dev/**'
-      - 'distribution/bin/**'
-      - 'docs/**'
-      - 'examples/**/jupyter-notebooks/**'
-      - 'web-console/**'
-      - 'website/**'
-      # PR automation that the build and tests do not use
-      - '.github/dependabot.yml'
-      - '.github/labeler.yml'
-      - '.github/scripts/auto-add-milestone.sh'
-      - '.github/scripts/backport-pr.sh'
-      - '.github/workflows/backport.yml'
-      - '.github/workflows/labeler.yml'
-      - '.github/workflows/pr-checks.yml'
-      - '.github/workflows/pr-merged.yml'
-      - '.github/workflows/stale.yml'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
@@ -71,15 +36,20 @@ env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  unit-tests:
-    name: "unit tests"
+  ci:
     uses: ./.github/workflows/ci.yml
 
-  docker-tests:
-    uses: ./.github/workflows/docker-tests.yml
+  quality-gate:
+    needs: [ci]
+    runs-on: ubuntu-slim
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Fail unless CI passed
+        if: ${{ needs.ci.result != 'success' }}
+        run: exit 1
 
   actions-timeline:
-    needs: [unit-tests, docker-tests]
+    needs: [ci]
     runs-on: ubuntu-24.04
     if: ${{ !cancelled() }}
     steps:
