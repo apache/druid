@@ -77,13 +77,13 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
     final int columnNumber = table.rowSignature().indexOf(dimensionSpec.getDimension());
 
     if (columnNumber < 0) {
-      return dimensionSpec.decorate(DimensionSelector.constant(null, dimensionSpec.getExtractionFn()));
+      return dimensionSpec.decorate(DimensionSelector.constant(null, dimensionSpec.getExtractionFn(closer)));
     } else {
       final DimensionSelector undecoratedSelector = new IndexedTableDimensionSelector(
           table,
           currentRow,
           columnNumber,
-          dimensionSpec.getExtractionFn(),
+          dimensionSpec.getExtractionFn(closer),
           closer
       );
 

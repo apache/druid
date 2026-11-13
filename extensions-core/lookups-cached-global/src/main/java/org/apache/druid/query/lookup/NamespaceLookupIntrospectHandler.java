@@ -29,7 +29,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 
 public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
 {
@@ -45,8 +48,8 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response getKeys()
   {
-    try {
-      return Response.ok(getLatest().keySet()).build();
+    try (final RetainedLookupExtractor extractor = getRetainedExtractor()) {
+      return Response.ok(Collections.unmodifiableSet(new LinkedHashSet<>(extractor.asMap().keySet()))).build();
     }
     catch (ISE e) {
       return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
@@ -58,8 +61,8 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response getValues()
   {
-    try {
-      return Response.ok(getLatest().values()).build();
+    try (final RetainedLookupExtractor extractor = getRetainedExtractor()) {
+      return Response.ok(Collections.unmodifiableList(new ArrayList<>(extractor.asMap().values()))).build();
     }
     catch (ISE e) {
       return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
@@ -84,16 +87,19 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response getMap()
   {
-    try {
-      return Response.ok(getLatest()).build();
+    try (final RetainedLookupExtractor extractor = getRetainedExtractor()) {
+      return Response.ok(Collections.unmodifiableMap(new LinkedHashMap<>(extractor.asMap()))).build();
     }
     catch (ISE e) {
       return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
     }
   }
 
-  private Map<String, String> getLatest()
+  /**
+   * Response entity must be copied while this handle is retained, since HTTP serialization happens after it closes
+   */
+  private RetainedLookupExtractor getRetainedExtractor()
   {
-    return factory.get().asMap();
+    return factory.acquireRetainedLookupExtractor().orElseThrow(() -> new ISE("No retained lookup cache available"));
   }
 }
