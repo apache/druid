@@ -126,7 +126,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
         return false;
       }
 
-      final Predicate<ImmutableWorkerInfo> isValidWorker = ProvisioningUtil.createValidWorkerPredicate(config);
+      final Predicate<ImmutableWorkerInfo> isValidWorker = ProvisioningUtil.createValidWorkerPredicate(config, runner);
       final int currValidWorkers = Collections2.filter(workers, isValidWorker).size();
 
       final List<String> workerNodeIds = workerConfig.getAutoScaler().ipToIdLookup(
@@ -219,7 +219,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
         final int excessWorkers = (workers.size() + currentlyProvisioning.size()) - targetWorkerCount;
         if (excessWorkers > 0) {
-          final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config);
+          final Predicate<ImmutableWorkerInfo> isLazyWorker =
+              ProvisioningUtil.createLazyWorkerPredicate(config, runner);
           final Collection<String> laziestWorkerIps =
               Collections2.transform(
                   runner.markWorkersLazy(isLazyWorker, excessWorkers),
@@ -279,9 +280,9 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     {
       final Collection<ImmutableWorkerInfo> validWorkers = Collections2.filter(
           zkWorkers,
-          ProvisioningUtil.createValidWorkerPredicate(config)
+          ProvisioningUtil.createValidWorkerPredicate(config, runner)
       );
-      final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config);
+      final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config, runner);
       final int minWorkerCount = workerConfig.getAutoScaler().getMinNumWorkers();
       final int maxWorkerCount = workerConfig.getAutoScaler().getMaxNumWorkers();
 
