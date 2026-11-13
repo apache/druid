@@ -118,10 +118,11 @@ public class LoggingEmitterTest
 
     // "query/time" is in the default allowed metrics list
     emitter.emit(ServiceMetricEvent.builder().setMetric("query/time", 100).build("test", "localhost"));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("task/status/persistFailed/count", 1).build("test", "localhost"));
     // "some/unlisted/metric" is NOT in the default list
     emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
 
-    Assertions.assertEquals(1, serializedObjects.size(), "Only the allowed metric should be serialized");
+    Assertions.assertEquals(2, serializedObjects.size(), "Only allowed metrics should be serialized");
   }
 
   /**
