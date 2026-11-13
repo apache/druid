@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -288,7 +289,7 @@ public class ParallelIndexSupervisorTaskTest
     @Test
     public void testIsParallelModeFalse_rangePartition()
     {
-      InputSource inputSource = mock(InputSource.class);
+      InputSource inputSource = mock(SplittableInputSource.class);
       expect(inputSource.isSplittable()).andReturn(true).anyTimes();
 
       ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
@@ -327,6 +328,39 @@ public class ParallelIndexSupervisorTaskTest
 
       ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
       expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(SingleDimensionPartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(3);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assertions.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeTrue_rangePartitionWithSingleSplitInputSource()
+    {
+      // e.g. a DruidInputSource with an explicit segment list, as used by native minor compaction
+      final InputSource inputSource = mock(SplittableInputSource.class);
+      expect(inputSource.isSplittable()).andReturn(false).anyTimes();
+
+      final ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(SingleDimensionPartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(0).andReturn(1).andReturn(2);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assertions.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assertions.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assertions.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_singleSplitInputSourceNotRangePartition()
+    {
+      final InputSource inputSource = mock(SplittableInputSource.class);
+      expect(inputSource.isSplittable()).andReturn(false).anyTimes();
+
+      final ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(PartitionsSpec.class))
                                                             .anyTimes();
       expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(3);
       EasyMock.replay(inputSource, tuningConfig);

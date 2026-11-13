@@ -310,4 +310,45 @@ public class DruidInputSourceTest
     );
     Assertions.assertEquals(ImmutableSet.of(DruidInputSource.TYPE_KEY), druidInputSource.getTypes());
   }
+
+  @Test
+  public void testIsSplittableWithInterval()
+  {
+    final DruidInputSource druidInputSource = new DruidInputSource(
+        "foo",
+        Intervals.of("2000/2001"),
+        null,
+        null,
+        null,
+        null,
+        indexIO,
+        coordinatorClient,
+        segmentCacheManagerFactory,
+        taskConfig
+    );
+    Assertions.assertTrue(druidInputSource.isSplittable());
+  }
+
+  @Test
+  public void testIsNotSplittableWithSegments()
+  {
+    final DruidInputSource druidInputSource = new DruidInputSource(
+        "foo",
+        null,
+        ImmutableList.of(
+            new WindowedSegmentId(
+                "foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123",
+                ImmutableList.of(Intervals.of("2000-01-01T00/2000-01-01T01"))
+            )
+        ),
+        null,
+        null,
+        null,
+        indexIO,
+        coordinatorClient,
+        segmentCacheManagerFactory,
+        taskConfig
+    );
+    Assertions.assertFalse(druidInputSource.isSplittable());
+  }
 }

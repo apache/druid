@@ -24,6 +24,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -38,6 +39,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -285,12 +288,18 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
         .build();
+    final long numSubtasksBeforeCompaction = countSubtasks();
     dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     verifySchema(dataSegmentsWithSchemas);
+
+    // The minor compaction input is a single split, so the task runs sequentially even with maxNumConcurrentSubTasks = 2
+    Assertions.assertEquals(numSubtasksBeforeCompaction, countSubtasks());
 
     // Check published segment set after compaction
     final Set<DataSegment> publishedAfterCompaction = dataSegmentsWithSchemas.getSegments();
     Assertions.assertFalse(SegmentUtils.groupSegmentsByInterval(publishedAfterCompaction).isEmpty());
+
+    assertSameVersionAndUniquePartitionNumbers(publishedAfterCompaction);
 
     final Set<String> finalSegmentIds = publishedAfterCompaction.stream()
                                                                 .map(segment -> segment.getId().toString())
@@ -371,6 +380,117 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         Assertions.assertTrue(coordinatorSuccessorIds.containsAll(expectedSuccessorIds));
       }
     }
+  }
+
+  @Test
+  public void testMinorCompactionWithRangePartitionsRunsInParallel()
+  {
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = runTestTask(
+        new DynamicPartitionsSpec(10, null),
+        TaskState.SUCCESS,
+        true
+    );
+    final List<DataSegment> segmentsToCompact = new ArrayList<>();
+    for (final List<DataSegment> segmentsInInterval :
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments()).values()) {
+      segmentsInInterval.sort(Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum()));
+      segmentsToCompact.addAll(segmentsInInterval.subList(0, Math.max(1, segmentsInInterval.size() / 2)));
+    }
+
+    final CompactionTask compactionTask = newCompactionTaskBuilder()
+        .inputSpec(
+            new MinorCompactionInputSpec(
+                INTERVAL_TO_INDEX,
+                segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+            ), true
+        )
+        .tuningConfig(
+            newTuningConfig(new DimensionRangePartitionsSpec(10, null, List.of("dim1"), false), 2, true)
+        )
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .build();
+    final long numSubtasksBeforeCompaction = countSubtasks();
+    final Set<DataSegment> publishedAfterCompaction = runTask(compactionTask, TaskState.SUCCESS).getSegments();
+
+    // runSequential() does not support range partitioning, so the task still runs in parallel mode
+    Assertions.assertTrue(countSubtasks() > numSubtasksBeforeCompaction);
+
+    // Range-partitioned replacements and upgraded segments are published together
+    Assertions.assertTrue(
+        publishedAfterCompaction.stream().anyMatch(segment -> segment.getShardSpec() instanceof DimensionRangeShardSpec)
+    );
+    assertSameVersionAndUniquePartitionNumbers(publishedAfterCompaction);
+    assertSomeSegmentsUpgraded(publishedAfterCompaction);
+  }
+
+  @Test
+  public void testMinorCompactionWithHashPartitionsRunsSequentially()
+  {
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = runTestTask(
+        new HashedPartitionsSpec(null, 4, null),
+        TaskState.SUCCESS,
+        false
+    );
+    final List<DataSegment> segmentsToCompact = new ArrayList<>();
+    for (final List<DataSegment> segmentsInInterval :
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments()).values()) {
+      segmentsInInterval.sort(Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum()));
+      segmentsToCompact.addAll(segmentsInInterval.subList(0, Math.max(1, segmentsInInterval.size() / 2)));
+    }
+
+    final CompactionTask compactionTask = newCompactionTaskBuilder()
+        .inputSpec(
+            new MinorCompactionInputSpec(
+                INTERVAL_TO_INDEX,
+                segmentsToCompact.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+            ), true
+        )
+        .tuningConfig(newTuningConfig(new HashedPartitionsSpec(null, 2, null), 2, true))
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .build();
+    final long numSubtasksBeforeCompaction = countSubtasks();
+    final Set<DataSegment> publishedAfterCompaction = runTask(compactionTask, TaskState.SUCCESS).getSegments();
+
+    // The minor compaction input is a single split, so the task runs sequentially even with maxNumConcurrentSubTasks = 2
+    Assertions.assertEquals(numSubtasksBeforeCompaction, countSubtasks());
+    Assertions.assertTrue(
+        publishedAfterCompaction.stream().anyMatch(segment -> segment.getShardSpec() instanceof HashBasedNumberedShardSpec)
+    );
+    assertSameVersionAndUniquePartitionNumbers(publishedAfterCompaction);
+    assertSomeSegmentsUpgraded(publishedAfterCompaction);
+  }
+
+  /**
+   * Compacted and upgraded segments are published at the same new version without partition number clashes.
+   */
+  private static void assertSameVersionAndUniquePartitionNumbers(Set<DataSegment> segments)
+  {
+    for (final List<DataSegment> segmentsInInterval : SegmentUtils.groupSegmentsByInterval(segments).values()) {
+      Assertions.assertEquals(1, segmentsInInterval.stream().map(DataSegment::getVersion).distinct().count());
+      Assertions.assertEquals(
+          segmentsInInterval.size(),
+          segmentsInInterval.stream().map(segment -> segment.getShardSpec().getPartitionNum()).distinct().count()
+      );
+    }
+  }
+
+  private void assertSomeSegmentsUpgraded(Set<DataSegment> segments)
+  {
+    final Set<String> segmentIds = segments.stream()
+                                           .map(segment -> segment.getId().toString())
+                                           .collect(Collectors.toSet());
+    Assertions.assertFalse(getStorageCoordinator().retrieveUpgradedFromSegmentIds(DATASOURCE, segmentIds).isEmpty());
+  }
+
+  /**
+   * Subtasks that finish successfully stay in the test task storage as active tasks.
+   */
+  private long countSubtasks()
+  {
+    return getTaskStorage().getActiveTasksByDatasource(DATASOURCE)
+                           .stream()
+                           .filter(task -> task instanceof AbstractBatchSubtask)
+                           .count();
   }
 
   private DataSegmentsWithSchemas runTestTask(
