@@ -1,0 +1,133 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "CI jobs"
+
+on:
+  workflow_call:
+
+jobs:
+  changes:
+    runs-on: ubuntu-slim
+    outputs:
+      java: ${{ steps.filter.outputs.java }}
+    steps:
+      # Pull requests are read through the API; only push events need the repository.
+      - uses: actions/checkout@v7
+        if: ${{ github.event_name == 'push' }}
+      - id: filter
+        # Third-party actions must be pinned to a SHA on the ASF allowlist
+        # https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          base: ${{ github.event_name == 'push' && github.ref_name || '' }}
+          predicate-quantifier: every
+          filters: |
+            java:
+              - '**'
+              - '!**/*.md'
+              - '!dev/**'
+              - '!distribution/bin/**'
+              - '!docs/**'
+              - '!examples/**/jupyter-notebooks/**'
+              - '!web-console/**'
+              - '!website/**'
+
+  run-unit-tests:
+    name: "unit tests(main)"
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ "25" ]
+        pattern: [ "C*", "S*", "K*,U*,Z*,Y*,X*", "N*,Q*", "I*,L*,J*", "M*,A*,V*,W*", "E*,G*,F*", "R*,B*,P*", "H*,D*,T*,O*" ]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
+      jdk: ${{ matrix.jdk }}
+      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
+      execute: ${{ matrix.jdk == '25' || github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-jdk21') }}
+
+  reporting-jacoco-coverage-failures:
+    name: "coverage-jacoco"
+    needs: [run-unit-tests, run-separated-tests]
+    uses: ./.github/workflows/worker.yml
+    if: ${{ success() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') && github.event_name != 'push' }}
+    with:
+      script: .github/scripts/create-jacoco-coverage-report.sh
+      artifacts_to_download: "unit-test-reports-jdk25*"
+      key: "coverage-jacoco"
+
+  run-separated-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "QTest 0/4"
+            args: "-Dtest=QTest -Dquidem.split=0/4"
+          - name: "QTest 1/4"
+            args: "-Dtest=QTest -Dquidem.split=1/4"
+          - name: "QTest 2/4"
+            args: "-Dtest=QTest -Dquidem.split=2/4"
+          - name: "QTest 3/4"
+            args: "-Dtest=QTest -Dquidem.split=3/4"
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run_unit-tests ${{ matrix.args }} -Dmaven.test.failure.ignore=true
+      key: ${{ matrix.name }}
+      artifact_prefix: "unit-test-reports-jdk25"
+
+  static-checks-maven:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/static-checks-maven.sh
+      key: "static-checks-maven"
+
+  strict-compilation:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/strict-compilation.sh
+      key: "strict-compilation"
+
+  docker-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
+    uses: ./.github/workflows/docker-tests.yml
+
+  packaging-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ '25' ]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/packaging-check.sh
+      jdk: ${{ matrix.jdk }}
+      key: "packaging-check-jdk${{ matrix.jdk }}"
+
+  web-checks:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/web-checks.sh
+      key: "web-checks"
+      artifact_prefix: "web-checks-logs"
