@@ -26,7 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -51,10 +53,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class KafkaInputFormatTest
@@ -146,7 +151,8 @@ public class KafkaInputFormatTest
         "kafka.newts.timestamp",
         "kafka.newtopic.topic",
         "kafka.new.partition",
-        "kafka.new.offset"
+        "kafka.new.offset",
+        null
     );
   }
 
@@ -187,7 +193,8 @@ public class KafkaInputFormatTest
         "kafka.newts.timestamp",
         "kafka.newtopic.topic",
         "kafka.new.partition",
-        "kafka.new.offset"
+        "kafka.new.offset",
+        null
     );
     Assertions.assertEquals(format, kif);
 
@@ -424,7 +431,8 @@ public class KafkaInputFormatTest
             false
         ),
         "kafka.newheader.", "kafka.newkey.", "kafka.newts.", "kafka.newtopic.",
-        "kafka.new.partition", "kafka.new.offset"
+        "kafka.new.partition", "kafka.new.offset",
+        null
     );
 
     final InputEntityReader reader = localFormat.createReader(
@@ -723,7 +731,8 @@ public class KafkaInputFormatTest
         "kafka.newts.timestamp",
         "kafka.newtopic.topic",
         "kafka.new.partition",
-        "kafka.new.offset"
+        "kafka.new.offset",
+        null
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
@@ -823,7 +832,8 @@ public class KafkaInputFormatTest
         "kafka.newts.timestamp",
         "kafka.newtopic.topic",
         "kafka.new.partition",
-        "kafka.new.offset"
+        "kafka.new.offset",
+        null
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
@@ -961,6 +971,285 @@ public class KafkaInputFormatTest
       }
 
       Assertions.assertEquals(numExpectedIterations, numActualIterations);
+    }
+  }
+
+  private static final byte[] MULTI_FIELD_JSON_KEY_BYTES = StringUtils.toUtf8(
+      TestUtils.singleQuoteToStandardJson(
+          "{'tenant': 'acme', 'userId': 42, 'region': 'us-east', 'ts': '2021-06-26', 'loc': {'zone': 'b'}}"
+      )
+  );
+
+  private static KafkaInputFormat makeKeyPrefixFormat(InputFormat keyFormat, @Nullable String keyColumnPrefix)
+  {
+    return new KafkaInputFormat(
+        new KafkaStringHeaderFormat(null),
+        keyFormat,
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), null, null, false, false),
+        "kafka.newheader.",
+        "kafka.newkey.key",
+        "kafka.newts.timestamp",
+        "kafka.newtopic.topic",
+        "kafka.new.partition",
+        "kafka.new.offset",
+        keyColumnPrefix
+    );
+  }
+
+  private static JsonInputFormat plainJsonFormat()
+  {
+    return new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), null, null, false, false);
+  }
+
+  private static InputRow readOnlyRow(InputEntityReader reader) throws IOException
+  {
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      Assertions.assertTrue(iterator.hasNext());
+      final InputRow row = iterator.next();
+      Assertions.assertFalse(iterator.hasNext());
+      return row;
+    }
+  }
+
+  private InputEntityReader discoveryReader(
+      KafkaInputFormat kafkaInputFormat,
+      KafkaRecordEntity entity,
+      String tsColumn
+  )
+  {
+    return kafkaInputFormat.createReader(
+        new InputRowSchema(
+            new TimestampSpec(tsColumn, "iso", null),
+            DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+            ColumnsFilter.all()
+        ),
+        newSettableByteEntity(entity),
+        null
+    );
+  }
+
+  @Test
+  public void testSerdeWithKeyColumnPrefix() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final KafkaInputFormat withPrefix = makeKeyPrefixFormat(plainJsonFormat(), "kafka.key.");
+    final KafkaInputFormat withoutPrefix = makeKeyPrefixFormat(plainJsonFormat(), null);
+
+    Assertions.assertEquals("kafka.key.", withPrefix.getKeyColumnPrefix());
+    Assertions.assertNull(withoutPrefix.getKeyColumnPrefix());
+    Assertions.assertNotEquals(withPrefix, withoutPrefix);
+    Assertions.assertNotEquals(withPrefix.hashCode(), withoutPrefix.hashCode());
+
+    final Map<?, ?> withPrefixJson = mapper.readValue(mapper.writeValueAsBytes(withPrefix), Map.class);
+    Assertions.assertEquals("kafka.key.", withPrefixJson.get("keyColumnPrefix"));
+
+    // Specs that don't set the new property serialize exactly as before.
+    final Map<?, ?> withoutPrefixJson = mapper.readValue(mapper.writeValueAsBytes(withoutPrefix), Map.class);
+    Assertions.assertFalse(withoutPrefixJson.containsKey("keyColumnPrefix"));
+  }
+
+  @Test
+  public void testKeyColumnPrefixIngestsAllJsonKeyFields() throws IOException
+  {
+    final KafkaInputFormat kafkaInputFormat = makeKeyPrefixFormat(plainJsonFormat(), "kafka.key.");
+    final KafkaRecordEntity inputEntity = makeInputEntity(
+        MULTI_FIELD_JSON_KEY_BYTES,
+        SIMPLE_JSON_VALUE_BYTES,
+        new RecordHeaders(SAMPLE_HEADERS)
+    );
+
+    final InputRow row = readOnlyRow(discoveryReader(kafkaInputFormat, inputEntity, "timestamp"));
+
+    Assertions.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+    Assertions.assertEquals("acme", Iterables.getOnlyElement(row.getDimension("kafka.key.tenant")));
+    Assertions.assertEquals("42", Iterables.getOnlyElement(row.getDimension("kafka.key.userId")));
+    Assertions.assertEquals(42L, row.getRaw("kafka.key.userId"));
+    Assertions.assertEquals("us-east", Iterables.getOnlyElement(row.getDimension("kafka.key.region")));
+    Assertions.assertEquals(ImmutableMap.of("zone", "b"), row.getRaw("kafka.key.loc"));
+    Assertions.assertTrue(row.getDimensions().containsAll(
+        ImmutableList.of("kafka.key.tenant", "kafka.key.userId", "kafka.key.region", "kafka.key.ts", "kafka.key.loc")
+    ));
+
+    // keyColumnName is not populated when keyColumnPrefix is set, and the internal timestamp never leaks.
+    Assertions.assertFalse(row.getDimensions().contains("kafka.newkey.key"));
+    Assertions.assertNull(row.getRaw("kafka.newkey.key"));
+    Assertions.assertFalse(row.getDimensions().contains("kafka.key." + KafkaInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING));
+
+    // Value and header columns are unaffected.
+    Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+    verifyHeader(row);
+  }
+
+  @Test
+  public void testKeyColumnPrefixWithKeyFlattenSpec() throws IOException
+  {
+    final KafkaInputFormat kafkaInputFormat = makeKeyPrefixFormat(
+        new JsonInputFormat(
+            new JSONPathSpec(
+                true,
+                ImmutableList.of(new JSONPathFieldSpec(JSONPathFieldType.PATH, "zone", "$.loc.zone"))
+            ),
+            null,
+            null,
+            false,
+            false
+        ),
+        "k_"
+    );
+    final KafkaRecordEntity inputEntity = makeInputEntity(
+        MULTI_FIELD_JSON_KEY_BYTES,
+        SIMPLE_JSON_VALUE_BYTES,
+        new RecordHeaders(SAMPLE_HEADERS)
+    );
+
+    final InputRow row = readOnlyRow(discoveryReader(kafkaInputFormat, inputEntity, "timestamp"));
+    Assertions.assertEquals("b", Iterables.getOnlyElement(row.getDimension("k_zone")));
+    Assertions.assertEquals("acme", Iterables.getOnlyElement(row.getDimension("k_tenant")));
+  }
+
+  @Test
+  public void testKeyColumnPrefixWithCsvKey() throws IOException
+  {
+    final KafkaInputFormat kafkaInputFormat = makeKeyPrefixFormat(
+        new CsvInputFormat(ImmutableList.of("tenant", "userId", "region"), null, false, false, 0, null),
+        "kafka.key."
+    );
+    final KafkaRecordEntity inputEntity = makeInputEntity(
+        StringUtils.toUtf8("acme,42,us-east"),
+        SIMPLE_JSON_VALUE_BYTES,
+        new RecordHeaders(SAMPLE_HEADERS)
+    );
+
+    final InputEntityReader reader = kafkaInputFormat.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(
+                    ImmutableList.of("foo", "kafka.key.tenant", "kafka.key.userId", "kafka.key.region")
+                )
+            ),
+            ColumnsFilter.all()
+        ),
+        newSettableByteEntity(inputEntity),
+        null
+    );
+
+    final InputRow row = readOnlyRow(reader);
+    Assertions.assertEquals(
+        ImmutableList.of("foo", "kafka.key.tenant", "kafka.key.userId", "kafka.key.region"),
+        row.getDimensions()
+    );
+    Assertions.assertEquals("acme", Iterables.getOnlyElement(row.getDimension("kafka.key.tenant")));
+    Assertions.assertEquals("42", Iterables.getOnlyElement(row.getDimension("kafka.key.userId")));
+    Assertions.assertEquals("us-east", Iterables.getOnlyElement(row.getDimension("kafka.key.region")));
+  }
+
+  @Test
+  public void testTimestampFromPrefixedKeyField() throws IOException
+  {
+    final KafkaInputFormat kafkaInputFormat = makeKeyPrefixFormat(plainJsonFormat(), "kafka.key.");
+    final KafkaRecordEntity inputEntity = makeInputEntity(
+        MULTI_FIELD_JSON_KEY_BYTES,
+        StringUtils.toUtf8("{\"foo\": \"x\"}"),
+        new RecordHeaders(SAMPLE_HEADERS)
+    );
+
+    final InputRow row = readOnlyRow(discoveryReader(kafkaInputFormat, inputEntity, "kafka.key.ts"));
+    Assertions.assertEquals(DateTimes.of("2021-06-26"), row.getTimestamp());
+    Assertions.assertEquals("acme", Iterables.getOnlyElement(row.getDimension("kafka.key.tenant")));
+  }
+
+  @Test
+  public void testKeyColumnPrefixPrecedence() throws IOException
+  {
+    // With an empty prefix, key fields become top-level columns. A value field with the same name wins, and a header
+    // with the same name wins over the key, matching the existing keyColumnName behavior.
+    final KafkaInputFormat kafkaInputFormat = makeKeyPrefixFormat(plainJsonFormat(), "");
+    final Headers headers = new RecordHeaders(SAMPLE_HEADERS);
+    headers.add(new RecordHeader("region", StringUtils.toUtf8("from-header")));
+    final KafkaRecordEntity inputEntity = makeInputEntity(
+        StringUtils.toUtf8("{\"foo\": \"from-key\", \"tenant\": \"acme\", \"kafka.newheader.region\": \"from-key\"}"),
+        SIMPLE_JSON_VALUE_BYTES,
+        headers
+    );
+
+    final InputRow row = readOnlyRow(discoveryReader(kafkaInputFormat, inputEntity, "timestamp"));
+    Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+    Assertions.assertEquals("acme", Iterables.getOnlyElement(row.getDimension("tenant")));
+    Assertions.assertEquals("from-header", Iterables.getOnlyElement(row.getDimension("kafka.newheader.region")));
+  }
+
+  @Test
+  public void testKeyColumnPrefixWithNullKey() throws IOException
+  {
+    final KafkaInputFormat kafkaInputFormat = makeKeyPrefixFormat(plainJsonFormat(), "kafka.key.");
+    final KafkaRecordEntity inputEntity =
+        makeInputEntity(null, SIMPLE_JSON_VALUE_BYTES, new RecordHeaders(SAMPLE_HEADERS));
+
+    final InputRow row = readOnlyRow(discoveryReader(kafkaInputFormat, inputEntity, "timestamp"));
+    Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+    Assertions.assertTrue(row.getDimensions().stream().noneMatch(d -> d.startsWith("kafka.key.")));
+  }
+
+  @Test
+  public void testKeyColumnPrefixSample() throws IOException
+  {
+    final KafkaInputFormat kafkaInputFormat = makeKeyPrefixFormat(plainJsonFormat(), "kafka.key.");
+    final KafkaRecordEntity inputEntity = makeInputEntity(
+        MULTI_FIELD_JSON_KEY_BYTES,
+        SIMPLE_JSON_VALUE_BYTES,
+        new RecordHeaders(SAMPLE_HEADERS)
+    );
+
+    try (CloseableIterator<InputRowListPlusRawValues> iterator =
+             discoveryReader(kafkaInputFormat, inputEntity, "timestamp").sample()) {
+      Assertions.assertTrue(iterator.hasNext());
+      final InputRowListPlusRawValues sampled = iterator.next();
+      Assertions.assertFalse(iterator.hasNext());
+      Assertions.assertNull(sampled.getParseException());
+
+      final Map<String, Object> raw = Iterables.getOnlyElement(sampled.getRawValuesList());
+      Assertions.assertEquals("acme", raw.get("kafka.key.tenant"));
+      Assertions.assertEquals(42, ((Number) raw.get("kafka.key.userId")).intValue());
+      Assertions.assertEquals("x", raw.get("foo"));
+      Assertions.assertFalse(raw.containsKey("kafka.newkey.key"));
+
+      final List<InputRow> rows = sampled.getInputRows();
+      Assertions.assertEquals(1, rows.size());
+      Assertions.assertEquals("us-east", Iterables.getOnlyElement(rows.get(0).getDimension("kafka.key.region")));
+    }
+  }
+
+  @Test
+  public void testKeyColumnPrefixSampleWithKeyFlattenSpec() throws IOException
+  {
+    final KafkaInputFormat kafkaInputFormat = makeKeyPrefixFormat(
+        new JsonInputFormat(
+            new JSONPathSpec(
+                true,
+                ImmutableList.of(new JSONPathFieldSpec(JSONPathFieldType.PATH, "zone", "$.loc.zone"))
+            ),
+            null,
+            null,
+            false,
+            false
+        ),
+        "k_"
+    );
+    final KafkaRecordEntity inputEntity = makeInputEntity(
+        MULTI_FIELD_JSON_KEY_BYTES,
+        SIMPLE_JSON_VALUE_BYTES,
+        new RecordHeaders(SAMPLE_HEADERS)
+    );
+
+    // The sampler should show the same key columns as ingestion, including flattened fields.
+    try (CloseableIterator<InputRowListPlusRawValues> iterator =
+             discoveryReader(kafkaInputFormat, inputEntity, "timestamp").sample()) {
+      final InputRowListPlusRawValues sampled = iterator.next();
+      final Map<String, Object> raw = Iterables.getOnlyElement(sampled.getRawValuesList());
+      Assertions.assertEquals("b", raw.get("k_zone"));
+      Assertions.assertEquals("acme", raw.get("k_tenant"));
+      Assertions.assertEquals("b", Iterables.getOnlyElement(sampled.getInputRows().get(0).getDimension("k_zone")));
     }
   }
 
