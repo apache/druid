@@ -47,6 +47,7 @@ import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileBuilderV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.TemporaryFolderExtension;
@@ -58,6 +59,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -70,6 +72,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 class PartialSegmentBundleCacheEntryTest
 {
@@ -294,6 +297,73 @@ class PartialSegmentBundleCacheEntryTest
     finally {
       handle.close();
     }
+  }
+
+  @Test
+  void testRuntimeAcquireOfProjectionBundleSurfacesParentCapacityFailure() throws IOException
+  {
+    // The acquirer reserves a projection bundle's parent __base bundle on the way in. When that reservation fails for
+    // lack of room, the failure must keep its CAPACITY_EXCEEDED category (MSQ load-ahead backs off on it) rather than
+    // being relabeled as a defect of the mount.
+    final PartialSegmentBundleCacheEntryIdentifier baseId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null)
+    {
+      @Nullable
+      @Override
+      public <T extends CacheEntry> ReservationHold<T> addWeakReservationHold(
+          CacheEntryIdentifier entryId,
+          Supplier<? extends CacheEntry> entrySupplier
+      )
+      {
+        if (baseId.equals(entryId)) {
+          // no room for the parent
+          return null;
+        }
+        return super.addWeakReservationHold(entryId, entrySupplier);
+      }
+    };
+    final PartialSegmentMetadataCacheEntry metadata = newMetadataEntry();
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> metadata.getBundleAcquirer().acquire(AGG_BUNDLE)
+    );
+    Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
+    Assertions.assertTrue(VirtualStorageManager.isInsufficientStorage(e));
+
+    // A new exception wraps the parent's reservation failure, keeping its category, persona and error code, rather
+    // than adding context to it: mount() hands the same failure to every concurrent waiter.
+    final DruidException reservationFailure = Assertions.assertInstanceOf(DruidException.class, e.getCause());
+    Assertions.assertNotSame(reservationFailure, e);
+    Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, reservationFailure.getCategory());
+    Assertions.assertEquals(reservationFailure.getErrorCode(), e.getErrorCode());
+    Assertions.assertEquals(reservationFailure.getTargetPersona(), e.getTargetPersona());
+    Assertions.assertTrue(reservationFailure.getContext().isEmpty(), "the caught failure must not be mutated");
+
+    // The message names the bundle being mounted and, separately, the parent bundle that had no room; nothing labels
+    // the projection bundle as the one that failed to reserve.
+    final String mountPrefix =
+        StringUtils.format("Failed to mount bundle[%s] for segment[%s]: ", AGG_BUNDLE, SEGMENT_ID);
+    Assertions.assertTrue(e.getMessage().startsWith(mountPrefix), e.getMessage());
+    Assertions.assertTrue(
+        e.getMessage().contains(
+            StringUtils.format("Unable to reserve bundle[%s]", Projections.BASE_TABLE_PROJECTION_NAME)
+        ),
+        e.getMessage()
+    );
+    Assertions.assertFalse(
+        e.getMessage().contains(StringUtils.format("Unable to reserve bundle[%s]", AGG_BUNDLE)),
+        e.getMessage()
+    );
+    Assertions.assertNull(e.getContextValue("bundle"), "context must not attribute the failure to a bundle");
+
+    final PartialSegmentBundleCacheEntry agg = location.getCacheEntry(aggId);
+    Assertions.assertTrue(agg == null || !agg.isMounted(), "failed projection bundle must not be left mounted");
   }
 
   @Test

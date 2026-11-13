@@ -1556,6 +1556,14 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         catch (Throwable t) {
           CloseableUtils.closeAndSuppressExceptions(hold, t::addSuppressed);
           CloseableUtils.closeAndSuppressExceptions(parentHolds, t::addSuppressed);
+          if (t instanceof DruidException druidException) {
+            // Keep the original category visible rather than relabeling it as a defect: a parent bundle's
+            // reservation failing with CAPACITY_EXCEEDED is back-pressure that callers can dispatch on. Build a new
+            // exception rather than adding context to the caught one, which may be shared (mount() dedups concurrent
+            // mounts and rethrows the same cause to every waiter). Its message also names the bundle that actually
+            // failed, which may be a parent.
+            throw druidException.prependAndBuild("Failed to mount bundle[%s] for segment[%s]", bundleName, segmentId);
+          }
           throw DruidException.defensive(t, "Failed to mount bundle[%s] for segment[%s]", bundleName, segmentId);
         }
         CloseableUtils.closeAndSuppressExceptions(
