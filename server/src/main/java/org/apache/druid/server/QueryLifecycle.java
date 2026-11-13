@@ -497,6 +497,8 @@ public class QueryLifecycle
         statsMap.put("exception", e.toString());
         if (shouldLogStackTrace(e, baseQuery.context())) {
           log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
+        } else if (isUserError(e)) {
+          log.noStackTrace().debug(e, "Exception while processing queryId [%s]", baseQuery.getId());
         } else {
           log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         }
@@ -609,6 +611,36 @@ public class QueryLifecycle
       return persona == DruidException.Persona.OPERATOR || persona == DruidException.Persona.DEVELOPER;
     } else {
       return false;
+    }
+  }
+
+  /**
+   * Returns whether the exception is an error the user caused and can fix themselves, such as invalid SQL or an
+   * unknown table. The client already receives these in the response, and they are recorded in the request log and
+   * query metrics, so they don't need a WARN in the server log.
+   *
+   * The persona alone is not enough: {@link DruidException.Persona#USER} exceptions are also raised for timeouts,
+   * capacity limits and runtime failures that may need operator attention. So only categories describing a problem
+   * with the request itself are considered user errors.
+   *
+   * @param e exception
+   */
+  public static boolean isUserError(final Throwable e)
+  {
+    if (!(e instanceof DruidException)) {
+      return false;
+    }
+    final DruidException de = (DruidException) e;
+    if (de.getTargetPersona() != DruidException.Persona.USER) {
+      return false;
+    }
+    switch (de.getCategory()) {
+      case INVALID_INPUT:
+      case NOT_FOUND:
+      case UNSUPPORTED:
+        return true;
+      default:
+        return false;
     }
   }
 }
