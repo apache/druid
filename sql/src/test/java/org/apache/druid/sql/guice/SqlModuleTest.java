@@ -52,6 +52,7 @@ import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -204,6 +205,7 @@ public class SqlModuleTest
               binder.bind(ServiceEmitter.class).toInstance(serviceEmitter);
               binder.bind(RequestLogger.class).toInstance(NoopRequestLogger.instance());
               binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
+              binder.bind(QueryContextConfig.class).toInstance(QueryContextConfig.DEFAULT);
               binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);
               binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);

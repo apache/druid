@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -67,7 +68,8 @@ public class GrpcEndpointInitializer
       final QueryLifecycleFactory queryLifecycleFactory,
       final QueryConfigProvider queryConfigProvider,
       final AuthenticatorMapper authMapper,
-      final QueryScheduler queryScheduler
+      final QueryScheduler queryScheduler,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.config = config;
@@ -77,7 +79,8 @@ public class GrpcEndpointInitializer
         sqlStatementFactory,
         queryConfigProvider,
         queryLifecycleFactory,
-        queryScheduler
+        queryScheduler,
+        queryContextConfig
     );
   }
 

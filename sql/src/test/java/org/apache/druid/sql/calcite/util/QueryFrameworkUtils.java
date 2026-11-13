@@ -30,6 +30,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -80,6 +81,11 @@ import java.util.Set;
 
 public class QueryFrameworkUtils
 {
+  /**
+   * Rejects unknown query context parameters, unlike the default, so that tests catch parameters missing from
+   * {@link org.apache.druid.query.context.QueryContextParameters}.
+   */
+  public static final QueryContextConfig TEST_QUERY_CONTEXT_CONFIG = new QueryContextConfig(true);
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
       final QuerySegmentWalker walker,
