@@ -665,6 +665,32 @@ public interface IndexerMetadataStorageCoordinator
    */
   boolean markSegmentAsUsed(SegmentId segmentId);
 
+  default ShareInboxStageResult stageShareInboxBatch(ShareInboxBatch batch)
+  {
+    throw new UnsupportedOperationException("Share inbox staging is not supported");
+  }
+
+  default ShareInboxClaimResult claimShareInboxManifests(ShareInboxClaimRequest request)
+  {
+    throw new UnsupportedOperationException("Share inbox claims are not supported");
+  }
+
+  default ShareInboxRenewResult renewShareInboxClaims(ShareInboxRenewRequest request)
+  {
+    throw new UnsupportedOperationException("Share inbox claim renewal is not supported");
+  }
+
+  default SegmentPublishResult commitAppendSegmentsAndShareInbox(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String taskAllocatorId,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping,
+      ShareInboxCompletionRequest completionRequest
+  )
+  {
+    throw new UnsupportedOperationException("Share inbox completion is not supported");
+  }
+
   /**
    * Validates the given supervisorId and given metadata to ensure
    * that start/end metadata non-null implies supervisor ID is non-null.
