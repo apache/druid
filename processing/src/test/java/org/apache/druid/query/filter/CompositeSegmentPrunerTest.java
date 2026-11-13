@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -33,6 +34,7 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -240,6 +242,61 @@ class CompositeSegmentPrunerTest
     return DataSegment.builder(SegmentId.of("prune-test", interval, "0", shardSpec))
                       .shardSpec(shardSpec)
                       .build();
+  }
+
+  @Test
+  void testRequiredSegmentDetailsIsUnionOfPruners()
+  {
+    final CompositeSegmentPruner composite = new CompositeSegmentPruner(
+        new LinkedHashSet<>(
+            List.of(
+                new FilterSegmentPruner(FILTER_DIM1, null, null),
+                new RequiresDetailsPruner(EnumSet.of(SegmentDetail.DIMENSIONS))
+            )
+        )
+    );
+
+    Assertions.assertEquals(
+        EnumSet.of(SegmentDetail.CLUSTER_GROUPS, SegmentDetail.DIMENSIONS),
+        composite.getRequiredSegmentDetails()
+    );
+  }
+
+  @Test
+  void testRequiredSegmentDetailsDefaultsToNone()
+  {
+    Assertions.assertEquals(SegmentDetail.none(), new AlwaysIncludePruner().getRequiredSegmentDetails());
+  }
+
+  /**
+   * Test pruner that includes every segment and declares the given details.
+   */
+  private static class RequiresDetailsPruner implements SegmentPruner
+  {
+    private final EnumSet<SegmentDetail> details;
+
+    private RequiresDetailsPruner(EnumSet<SegmentDetail> details)
+    {
+      this.details = details;
+    }
+
+    @Override
+    public boolean include(DataSegment segment)
+    {
+      return true;
+    }
+
+    @Override
+    public EnumSet<SegmentDetail> getRequiredSegmentDetails()
+    {
+      return details;
+    }
+
+    @Override
+    public SegmentPruner combine(SegmentPruner other)
+    {
+      return new CompositeSegmentPruner(new LinkedHashSet<>(List.of(this, other)));
+    }
   }
 
   /**

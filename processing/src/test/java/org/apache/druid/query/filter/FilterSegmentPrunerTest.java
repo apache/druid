@@ -31,6 +31,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -40,6 +41,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -188,6 +190,18 @@ class FilterSegmentPrunerTest
     String interval1 = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
     DataSegment excludedByDim1 = makeDataSegment(interval1, makeRange("dim1", 0, "lmn", null));
     Assertions.assertFalse(combined.include(excludedByDim1));
+  }
+
+  @Test
+  void testRequiredSegmentDetails()
+  {
+    final FilterSegmentPruner pruner = new FilterSegmentPruner(
+        new EqualityFilter("dim1", ColumnType.STRING, "abc", null),
+        null,
+        null
+    );
+
+    Assertions.assertEquals(EnumSet.of(SegmentDetail.CLUSTER_GROUPS), pruner.getRequiredSegmentDetails());
   }
 
   @Test
