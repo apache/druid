@@ -326,13 +326,16 @@ For native queries, the logger only logs requests when the `query/time` metric e
 For SQL queries, it only logs requests when the `sqlQuery/time` metric exceeds threshold provided in `sqlQueryTimeThresholdMs`.
 See [Metrics](../operations/metrics.md) for more details on query metrics.
 
-Requests that meet the threshold are logged using the request logger type set in `druid.request.logging.delegate.type`.
+Requests that pass every filter are logged using the request logger type set in `druid.request.logging.delegate.type`.
+Set `alwaysLogFailures` to log failed queries even when they would otherwise be filtered out.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for the `query/time` metric in milliseconds.|0, i.e., no filtering|
 |`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for the `sqlQuery/time` metric in milliseconds.|0, i.e., no filtering|
 |`druid.request.logging.mutedQueryTypes` | Query requests of these types are not logged. Query types are defined as string objects corresponding to the "queryType" value for the specified query in the Druid's [native JSON query API](../querying/querying.md). Misspelled query types will be ignored. Example to ignore scan and timeBoundary queries: `["scan", "timeBoundary"]`| []|
+|`druid.request.logging.muteSqlPlannedNativeQueries`|If `true`, native queries with a `sqlQueryId` in their context are not logged, regardless of `queryTimeThresholdMs`. This covers every native query planned from SQL; on the Broker, the SQL request log line still records each query's outcome and its `nativeQueryIds`. Data servers receive these native queries with the same `sqlQueryId`, so they are muted there too. Native queries submitted directly without a `sqlQueryId` are unaffected.|false|
+|`druid.request.logging.alwaysLogFailures`|If `true`, failed native and SQL queries (any query with `success: false`, including cancelled, timed-out and invalid queries) are always logged, bypassing the time thresholds, `mutedQueryTypes`, and `muteSqlPlannedNativeQueries`.|false|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composing request logging
