@@ -377,7 +377,7 @@ public class JettyTest extends BaseJettyTest
         }
     );
 
-    latch.await(5, TimeUnit.SECONDS);
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS));
   }
 
   @Test
