@@ -335,6 +335,32 @@ public class HumanReadableBytesTest
     Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
+  /**
+   * The overflow tests above all use the smallest multiplier that overflows, which wraps around to a negative value.
+   * A large enough multiplier overflows to a positive value instead, which used to slip through the overflow check
+   * and return a silently wrong result. 20000000000000000 * 1000 = 2e19 is well beyond Long.MAX_VALUE.
+   */
+  @Test
+  public void testOverflowPositiveWrapK()
+  {
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("20000000000000000k"));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
+  }
+
+  @Test
+  public void testOverflowPositiveWrapKiB()
+  {
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("20000000000000000KiB"));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
+  }
+
+  @Test
+  public void testOverflowPositiveWrapGiB()
+  {
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("20000000000000000GiB"));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
+  }
+
   @Test
   public void testJSON() throws JsonProcessingException
   {
