@@ -276,6 +276,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       synchronized (servers) {
         shuttingDown = true;
         serverHoldersSnapshot = ImmutableSet.copyOf(servers.values());
+        servers.clear();
       }
 
       // Stop each per-server syncer before shutting down the executor below, so that no new
@@ -602,8 +603,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     void stop()
     {
-      syncer.stop();
-      stopped.set(true);
+      if (stopped.compareAndSet(false, true)) {
+        syncer.stop();
+      }
     }
 
     boolean isStopped()
