@@ -32,6 +32,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.CursorPrefetch;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -77,17 +78,14 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final Filter combinedFilter = baseFilterAnd(spec.getFilter());
-    final Set<String> physicalColumns = computeBasePhysicalColumns(spec, combinedFilter);
-
+    final JoinCursorPlan plan = planCursor(spec);
     if (clauses.isEmpty()) {
       // if there are no clauses, we can just use the base cursor directly if we apply the combined filter
-      return baseCursorFactory.makeCursorHolder(noClausesBaseSpec(spec, combinedFilter, physicalColumns));
+      return baseCursorFactory.makeCursorHolder(plan.baseBuildSpec);
     }
 
     // else we need to wipe out the grouping, aggregations, and ordering
     final Closer joinablesCloser = Closer.create();
-    final JoinCursorPlan plan = planJoinCursor(spec, combinedFilter, physicalColumns);
     final CursorHolder baseCursorHolder = joinablesCloser.register(
         baseCursorFactory.makeCursorHolder(plan.baseBuildSpec)
     );
@@ -97,16 +95,13 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
   @Override
   public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
   {
-    final Filter combinedFilter = baseFilterAnd(spec.getFilter());
-    final Set<String> physicalColumns = computeBasePhysicalColumns(spec, combinedFilter);
-
+    // Join filter analysis + base-spec computation are CPU-only; do them synchronously to learn the base spec.
+    final JoinCursorPlan plan = planCursor(spec);
     if (clauses.isEmpty()) {
-      return baseCursorFactory.makeCursorHolderAsync(noClausesBaseSpec(spec, combinedFilter, physicalColumns));
+      return baseCursorFactory.makeCursorHolderAsync(plan.baseBuildSpec);
     }
 
     final Closer joinablesCloser = Closer.create();
-    // Join filter analysis + base-spec computation are CPU-only; do them synchronously to learn the base spec.
-    final JoinCursorPlan plan = planJoinCursor(spec, combinedFilter, physicalColumns);
 
     // Build the left/base holder asynchronously (a partial base segment downloads its required columns here); the
     // join's build-side joinables are already-resident in-memory tables, so the base is the only async piece. Once it's
@@ -114,6 +109,38 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
     return baseCursorFactory
         .makeCursorHolderAsync(plan.baseBuildSpec)
         .transform(baseHolder -> joinCursorHolder(plan, joinablesCloser, joinablesCloser.register(baseHolder)));
+  }
+
+  @Override
+  public CursorPrefetch prefetch(CursorBuildSpec spec)
+  {
+    // The left/base side is the only part that loads on demand (the build-side joinables are resident in-memory
+    // tables), so warm it up with exactly the base spec the async build computes. Nothing of the join itself is
+    // created here: no joinables closer, no per-cursor matchers.
+    return baseCursorFactory.prefetch(delegateSpec(spec));
+  }
+
+  /**
+   * The spec passed to the base cursor factory for {@code spec}; see {@link #planCursor}.
+   */
+  private CursorBuildSpec delegateSpec(CursorBuildSpec spec)
+  {
+    return planCursor(spec).baseBuildSpec;
+  }
+
+  /**
+   * Plans a cursor over this factory for {@code spec}, shared by every holder path: with no clauses, just the base
+   * spec (the original spec with the combined filter and base physical columns); otherwise the join filter
+   * pre-analysis and split too (see {@link #planJoinCursor}).
+   */
+  private JoinCursorPlan planCursor(CursorBuildSpec spec)
+  {
+    final Filter combinedFilter = baseFilterAnd(spec.getFilter());
+    final Set<String> physicalColumns = computeBasePhysicalColumns(spec, combinedFilter);
+    if (clauses.isEmpty()) {
+      return new JoinCursorPlan(null, null, noClausesBaseSpec(spec, combinedFilter, physicalColumns));
+    }
+    return planJoinCursor(spec, combinedFilter, physicalColumns);
   }
 
   /**
@@ -377,8 +404,9 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
   }
 
   /**
-   * Outputs of {@link #planJoinCursor}: the (possibly re-computed) join filter pre-analysis and split needed when the
-   * join cursor is actually constructed, plus the base-table cursor build spec used to open the left-side holder.
+   * Outputs of {@link #planCursor}: the (possibly re-computed) join filter pre-analysis and split needed when the
+   * join cursor is actually constructed, plus the base-table cursor build spec used to open the left-side holder. The
+   * analysis and split are null when there are no clauses, since no join cursor is constructed then.
    */
   private static final class JoinCursorPlan
   {
@@ -386,12 +414,14 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
      * Typically the same as {@link HashJoinSegmentCursorFactory#joinFilterPreAnalysis}, but may differ when an unnest
      * datasource is layered on top of a join datasource.
      */
+    @Nullable
     private final JoinFilterPreAnalysis actualPreAnalysis;
 
     /**
      * Result of {@link JoinFilterAnalyzer#splitFilter} on {@link #actualPreAnalysis} and
      * {@link HashJoinSegmentCursorFactory#baseFilter}.
      */
+    @Nullable
     private final JoinFilterSplit joinFilterSplit;
 
     /**
@@ -400,8 +430,8 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
     private final CursorBuildSpec baseBuildSpec;
 
     private JoinCursorPlan(
-        JoinFilterPreAnalysis actualPreAnalysis,
-        JoinFilterSplit joinFilterSplit,
+        @Nullable JoinFilterPreAnalysis actualPreAnalysis,
+        @Nullable JoinFilterSplit joinFilterSplit,
         CursorBuildSpec baseBuildSpec
     )
     {

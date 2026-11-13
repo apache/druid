@@ -142,6 +142,37 @@ public class ProjectCursorFactoryTest extends InitializedNullHandlingTest
         message,
         Assertions.assertThrows(DruidException.class, () -> factory.makeCursorHolderAsync(spec)).getMessage()
     );
+    Assertions.assertEquals(
+        message,
+        Assertions.assertThrows(DruidException.class, () -> factory.prefetch(spec)).getMessage()
+    );
+  }
+
+  @Test
+  public void test_prefetch_delegatesSameSpecAsAsyncBuild()
+  {
+    final DeferredCursorFactory deferred = new DeferredCursorFactory(new QueryableIndexCursorFactory(index));
+    final CursorFactory projected = new ProjectCursorFactory(
+        deferred,
+        VirtualColumns.create(expression("doubled", "num * 2"))
+    );
+    final CursorBuildSpec spec = spec(expression("v0", "concat(out, '!')"));
+
+    projected.makeCursorHolderAsync(spec).close();
+    final CursorPrefetch prefetch = projected.prefetch(spec);
+    try {
+      Assertions.assertEquals(deferred.getPendingSpec(), deferred.getPrefetchSpec());
+      Assertions.assertTrue(
+          deferred.getPrefetchSpec().getVirtualColumns().exists("doubled"),
+          "our virtual columns are folded into the delegate's spec"
+      );
+      Assertions.assertFalse(prefetch.isReady());
+      deferred.completePrefetch();
+      Assertions.assertTrue(prefetch.isReady());
+    }
+    finally {
+      prefetch.close();
+    }
   }
 
   @Test

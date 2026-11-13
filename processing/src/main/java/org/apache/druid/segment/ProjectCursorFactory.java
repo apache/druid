@@ -54,6 +54,12 @@ public class ProjectCursorFactory implements CursorFactory
   }
 
   @Override
+  public CursorPrefetch prefetch(final CursorBuildSpec spec)
+  {
+    return delegate.prefetch(delegateSpec(spec));
+  }
+
+  @Override
   public RowSignature getRowSignature()
   {
     return virtualColumns.wrappedSignature(delegate.getRowSignature(), delegate);

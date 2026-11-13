@@ -55,6 +55,16 @@ public interface CursorFactory extends ColumnInspector
   }
 
   /**
+   * Optional preloading for a given {@link CursorBuildSpec}, which starts doing the loading that a later
+   * {@link #makeCursorHolderAsync(CursorBuildSpec)} would otherwise do on demand. See {@link CursorPrefetch} for the
+   * lifecycle of the returned handle, in particular that it must stay open for the warmed-up parts to stay resident.
+   */
+  default CursorPrefetch prefetch(CursorBuildSpec spec)
+  {
+    return CursorPrefetch.none();
+  }
+
+  /**
    * Returns the {@link RowSignature} of the data available from this cursor factory. For mutable segments, even though
    * the signature may evolve over time, any particular object returned by this method is an immutable snapshot.
    */

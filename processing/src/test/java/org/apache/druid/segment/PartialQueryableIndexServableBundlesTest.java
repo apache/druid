@@ -405,6 +405,27 @@ class PartialQueryableIndexServableBundlesTest extends PartialQueryableIndexCurs
     }
   }
 
+  @Test
+  void testPrefetchHonorsServableBundles() throws IOException
+  {
+    // prefetch plans over the same restricted view as the cursor build: the served projection plus the base parent of
+    // its required columns, never the unserved best match.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_servable")) {
+      final RecordingAcquirer acquirer = new RecordingAcquirer(directExec());
+      final PartialQueryableIndexCursorFactory factory = factory(opened.index(), acquirer, BIG_PROJECTION::equals);
+      try (CursorPrefetch prefetch = factory.prefetch(COUNT_BY_DIM1)) {
+        Assertions.assertTrue(prefetch.isReady());
+        Assertions.assertEquals(List.of(BIG_PROJECTION, BASE), prefetch.get().bundles());
+      }
+      Assertions.assertEquals(new TreeSet<>(Set.of(BIG_PROJECTION, BASE)), acquirer.acquired);
+      Assertions.assertTrue(
+          opened.mapper().getDownloadedFiles().stream().noneMatch(f -> f.startsWith(SMALL_PROJECTION + "/")),
+          "the unserved projection must not be touched; got: " + opened.mapper().getDownloadedFiles()
+      );
+    }
+  }
+
   private static PartialQueryableIndexCursorFactory factory(
       PartialQueryableIndex index,
       PartialBundleAcquirer acquirer,

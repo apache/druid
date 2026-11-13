@@ -79,7 +79,7 @@ public class UnnestCursorFactory implements CursorFactory
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final UnnestFilterSplit filterSplit = computeFilterSplit(spec);
-    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(spec, unnestColumn, filterSplit.getBaseTableFilter());
+    final CursorBuildSpec unnestBuildSpec = delegateSpec(spec, filterSplit);
 
     final Closer closer = Closer.create();
     // base holder is built lazily on first asCursor()/getOrdering() and registered for close at that point
@@ -93,13 +93,38 @@ public class UnnestCursorFactory implements CursorFactory
   public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
   {
     final UnnestFilterSplit filterSplit = computeFilterSplit(spec);
-    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(spec, unnestColumn, filterSplit.getBaseTableFilter());
+    final CursorBuildSpec unnestBuildSpec = delegateSpec(spec, filterSplit);
 
     // Build the base-table holder asynchronously (a partial base segment downloads its required columns here), then
     // wrap the ready holder in the unnest holder, which owns closing it.
     return baseCursorFactory
         .makeCursorHolderAsync(unnestBuildSpec)
         .transform(baseHolder -> unnestCursorHolder(spec, filterSplit, baseHolder, Suppliers.ofInstance(baseHolder)));
+  }
+
+  @Override
+  public CursorPrefetch prefetch(CursorBuildSpec spec)
+  {
+    // the base table is the only part that loads on demand, so warm it up with exactly the spec the async build uses
+    return baseCursorFactory.prefetch(delegateSpec(spec));
+  }
+
+  /**
+   * The spec passed to the base cursor factory for {@code spec}, computing the filter split itself.
+   */
+  private CursorBuildSpec delegateSpec(CursorBuildSpec spec)
+  {
+    return delegateSpec(spec, computeFilterSplit(spec));
+  }
+
+  /**
+   * The spec passed to the base cursor factory: the caller's spec rewritten for the unnest input column, with only
+   * the base-table half of its filters (see {@link #computeFilterSplit}). Shared by every holder path, which also need
+   * {@code filterSplit} for the post-unnest half.
+   */
+  private CursorBuildSpec delegateSpec(CursorBuildSpec spec, UnnestFilterSplit filterSplit)
+  {
+    return transformCursorBuildSpec(spec, unnestColumn, filterSplit.getBaseTableFilter());
   }
 
   /**
