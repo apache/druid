@@ -37,6 +37,7 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.processor.test.ChompingFrameProcessor;
 import org.apache.druid.frame.processor.test.FailingFrameProcessor;
+import org.apache.druid.frame.processor.test.SimpleReturningFrameProcessor;
 import org.apache.druid.frame.processor.test.SleepyFrameProcessor;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ISE;
@@ -61,6 +62,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -258,6 +260,52 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
         e.getCause().getCause(),
         Matchers.hasProperty("message", CoreMatchers.equalTo("failure!"))
     );
+  }
+
+  @Test
+  public void test_runAllFully_errorOnNext_cleansUpProcessorNotLaunched()
+  {
+    final CleanupCountingFrameProcessor<Long> notLaunched =
+        new CleanupCountingFrameProcessor<>(new SimpleReturningFrameProcessor<>(1L));
+
+    // The second call to next() throws after the first processor has been taken, but before it is launched.
+    final ListenableFuture<Long> future = exec.runAllFully(
+        ensureClose(new ScriptedProcessorManager<>(List.of(processorFuture(notLaunched)))),
+        maxOutstandingProcessors,
+        bouncer,
+        null
+    );
+
+    final ExecutionException e = Assertions.assertThrows(ExecutionException.class, future::get);
+    MatcherAssert.assertThat(e.getCause(), Matchers.hasProperty("message", CoreMatchers.equalTo("error!")));
+    Assertions.assertEquals(1, notLaunched.getCleanupCount());
+  }
+
+  @Test
+  public void test_runAllFully_failing_cleansUpProcessorArrivingAfterFailure() throws Exception
+  {
+    final CleanupCountingFrameProcessor<Long> failing = new CleanupCountingFrameProcessor<>(
+        new FailingFrameProcessor(ReadableNilFrameChannel.INSTANCE, BlockingQueueFrameChannel.minimal().writable(), 0)
+    );
+    final CleanupCountingFrameProcessor<Long> arrivesLate =
+        new CleanupCountingFrameProcessor<>(new SimpleReturningFrameProcessor<>(1L));
+    final SettableFuture<Optional<ProcessorAndCallback<Long>>> pendingNext = SettableFuture.create();
+
+    final ListenableFuture<Long> future = exec.runAllFully(
+        ensureClose(new ScriptedProcessorManager<>(List.of(processorFuture(failing), pendingNext))),
+        maxOutstandingProcessors,
+        bouncer,
+        null
+    );
+
+    Assertions.assertThrows(ExecutionException.class, future::get);
+    Assertions.assertEquals(1, failing.getCleanupCount());
+    Assertions.assertEquals(1, closed.get(), "Processor manager closed");
+
+    // Resolve the pending next() only now, after the run has failed and the manager has been closed. Cleanup happens
+    // synchronously, since the widget's callback uses a direct executor.
+    pendingNext.set(Optional.of(new ProcessorAndCallback<>(arrivesLate, null)));
+    Assertions.assertEquals(1, arrivesLate.getCleanupCount());
   }
 
   @Test
@@ -594,6 +642,97 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     {
       closed.getAndIncrement();
       delegate.close();
+    }
+  }
+
+  /**
+   * Returns an already-resolved {@link ProcessorManager#next()} future for the given processor.
+   */
+  private static <T> ListenableFuture<Optional<ProcessorAndCallback<T>>> processorFuture(
+      final FrameProcessor<T> processor
+  )
+  {
+    return Futures.immediateFuture(Optional.of(new ProcessorAndCallback<>(processor, null)));
+  }
+
+  /**
+   * Processor manager that returns a fixed list of futures from {@link #next()}, then throws. Unlike most managers, it
+   * does not cancel pending futures on {@link #close()}, so tests control when they resolve.
+   */
+  private static class ScriptedProcessorManager<T> implements ProcessorManager<T, Long>
+  {
+    private final List<ListenableFuture<Optional<ProcessorAndCallback<T>>>> futures;
+    private int i;
+
+    public ScriptedProcessorManager(final List<ListenableFuture<Optional<ProcessorAndCallback<T>>>> futures)
+    {
+      this.futures = futures;
+    }
+
+    @Override
+    public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
+    {
+      if (i < futures.size()) {
+        return futures.get(i++);
+      } else {
+        throw new ISE("error!");
+      }
+    }
+
+    @Override
+    public Long result()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void close()
+    {
+      // Do nothing: tests resolve pending futures themselves.
+    }
+  }
+
+  /**
+   * Processor wrapper that counts calls to {@link #cleanup()}.
+   */
+  private static class CleanupCountingFrameProcessor<T> implements FrameProcessor<T>
+  {
+    private final FrameProcessor<T> delegate;
+    private final AtomicInteger cleanupCount = new AtomicInteger();
+
+    public CleanupCountingFrameProcessor(final FrameProcessor<T> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public List<ReadableFrameChannel> inputChannels()
+    {
+      return delegate.inputChannels();
+    }
+
+    @Override
+    public List<WritableFrameChannel> outputChannels()
+    {
+      return delegate.outputChannels();
+    }
+
+    @Override
+    public ReturnOrAwait<T> runIncrementally(final IntSet readableInputs) throws InterruptedException, IOException
+    {
+      return delegate.runIncrementally(readableInputs);
+    }
+
+    @Override
+    public void cleanup() throws IOException
+    {
+      cleanupCount.incrementAndGet();
+      delegate.cleanup();
+    }
+
+    public int getCleanupCount()
+    {
+      return cleanupCount.get();
     }
   }
 
