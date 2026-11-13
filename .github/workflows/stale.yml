@@ -19,6 +19,11 @@ on:
   schedule:
     - cron: '0 0 * * *'  # Run every day at midnight
 
+permissions:
+  actions: write
+  issues: write
+  pull-requests: write
+
 jobs:
   stale:
     runs-on: ubuntu-24.04
