@@ -89,6 +89,17 @@ public class HumanReadableBytes
 
   public static long parse(String number)
   {
+    return parse(number, false);
+  }
+
+  /**
+   * Parses a number like {@link #parse(String)}, and also accepts a negative number, such as {@code -2K}, when
+   * {@code allowNegative} is true
+   *
+   * @throws IAE if the input is invalid
+   */
+  public static long parse(String number, boolean allowNegative)
+  {
     if (number == null) {
       throw new IAE("Invalid format of number: number is null");
     }
@@ -98,7 +109,7 @@ public class HumanReadableBytes
       throw new IAE("Invalid format of number: number is blank");
     }
 
-    return parseInner(number);
+    return parseInner(number, allowNegative);
   }
 
   /**
@@ -137,34 +148,44 @@ public class HumanReadableBytes
     if (number.length() == 0) {
       return nullValue;
     }
-    return parseInner(number);
+    return parseInner(number, false);
   }
 
-  private static long parseInner(String rawNumber)
+  private static long parseInner(String number, boolean allowNegative)
   {
-    String number = StringUtils.toLowerCase(rawNumber);
+    // Index of the first digit, after a minus sign if there is one
+    int start = 0;
     if (number.charAt(0) == '-') {
-      throw new IAE("Invalid format of number: %s. Negative value is not allowed.", rawNumber);
+      if (!allowNegative) {
+        throw new IAE("Invalid format of number: %s. Negative value is not allowed.", number);
+      }
+
+      // The minus sign must be directly followed by a digit
+      if (number.length() == 1 || !Character.isDigit(number.charAt(1))) {
+        throw new IAE("Invalid format of number: %s", number);
+      }
+      start = 1;
     }
 
     int lastDigitIndex = number.length() - 1;
     boolean isBinaryByte = false;
     char unit = number.charAt(lastDigitIndex--);
-    if (unit == 'b') {
+    if (unit == 'b' || unit == 'B') {
       //unit ends with 'b' must be format of KiB/MiB/GiB/TiB/PiB, so at least 3 extra characters are required
-      if (lastDigitIndex < 2) {
-        throw new IAE("Invalid format of number: %s", rawNumber);
+      if (lastDigitIndex < start + 2) {
+        throw new IAE("Invalid format of number: %s", number);
       }
-      if (number.charAt(lastDigitIndex--) != 'i') {
-        throw new IAE("Invalid format of number: %s", rawNumber);
+      final char binaryMarker = number.charAt(lastDigitIndex--);
+      if (binaryMarker != 'i' && binaryMarker != 'I') {
+        throw new IAE("Invalid format of number: %s", number);
       }
 
       unit = number.charAt(lastDigitIndex--);
       isBinaryByte = true;
-    } else if (unit == 'i') {
+    } else if (unit == 'i' || unit == 'I') {
       //unit ends with 'i' must be format of Ki/Mi/Gi/Ti/Pi, so at least 2 extra characters are required
-      if (lastDigitIndex < 1) {
-        throw new IAE("Invalid format of number [%s]. The unit should be one of Pi/Ti/Gi/Mi/Ki", rawNumber);
+      if (lastDigitIndex < start + 1) {
+        throw new IAE("Invalid format of number [%s]. The unit should be one of Pi/Ti/Gi/Mi/Ki", number);
       }
       unit = number.charAt(lastDigitIndex--);
       isBinaryByte = true;
@@ -173,28 +194,33 @@ public class HumanReadableBytes
     long base = 1;
     switch (unit) {
       case 'k':
+      case 'K':
         base = isBinaryByte ? 1024 : 1_000;
         break;
 
       case 'm':
+      case 'M':
         base = isBinaryByte ? 1024 * 1024 : 1_000_000;
         break;
 
       case 'g':
+      case 'G':
         base = isBinaryByte ? 1024 * 1024 * 1024 : 1_000_000_000;
         break;
 
       case 't':
+      case 'T':
         base = isBinaryByte ? 1024L * 1024 * 1024 * 1024 : 1_000_000_000_000L;
         break;
 
       case 'p':
+      case 'P':
         base = isBinaryByte ? 1024L * 1024 * 1024 * 1024 * 1024 : 1_000_000_000_000_000L;
         break;
 
       default:
         if (!Character.isDigit(unit)) {
-          throw new IAE("Invalid format of number: %s", rawNumber);
+          throw new IAE("Invalid format of number: %s", number);
         }
 
         //lastDigitIndex here holds the index which is prior to current digit
@@ -204,15 +230,16 @@ public class HumanReadableBytes
     }
 
     try {
-      long value = Long.parseLong(number.substring(0, lastDigitIndex + 1)) * base;
-      if (base > 1 && value < base) {
-        //for base == 1, overflow has been checked in parseLong
-        throw new IAE("Number overflow: %s", rawNumber);
-      }
-      return value;
+      // Spaces are allowed between the number and the unit, such as "1 MiB"
+      final String digits = number.substring(start, lastDigitIndex + 1);
+      final long value = Math.multiplyExact(Long.parseLong(base > 1 ? digits.stripTrailing() : digits), base);
+      return start == 0 ? value : -value;
     }
     catch (NumberFormatException e) {
-      throw new IAE("Invalid format or out of range of long: %s", rawNumber);
+      throw new IAE("Invalid format or out of range of long: %s", number);
+    }
+    catch (ArithmeticException e) {
+      throw new IAE("Number overflow: %s", number);
     }
   }
 
