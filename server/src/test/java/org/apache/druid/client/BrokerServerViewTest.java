@@ -731,6 +731,12 @@ public class BrokerServerViewTest
           {
             return ignoredTiers;
           }
+
+          @Override
+          public long getSegmentDropDelayMillis()
+          {
+            return 0;
+          }
         }
     );
   }
@@ -861,6 +867,9 @@ public class BrokerServerViewTest
   @AfterEach
   public void tearDown()
   {
+    if (brokerServerView != null) {
+      brokerServerView.stop();
+    }
     if (baseView != null) {
       baseView.stop();
     }
