@@ -193,12 +193,18 @@ Configuration properties:
 |druid.query.scan.maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used|An integer in [1, 2147483647]|50|
 
 
-## Query context properties
+## Query context parameters {#query-context-properties}
 
-|property|description|values|default|
-|--------|-----------|------|-------|
-|maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used. Overrides the identically named config.|An integer in [1, 2147483647]|`druid.query.scan.maxRowsQueuedForOrdering`| <!-- GENERATED QUERY CONTEXT PARAMETER: maxRowsQueuedForOrdering -->
-|maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used. Overrides the identically named config.|An integer in [1, 2147483647]|`druid.query.scan.maxSegmentPartitionsOrderedInMemory`| <!-- GENERATED QUERY CONTEXT PARAMETER: maxSegmentPartitionsOrderedInMemory -->
+The following query context parameters apply to Scan queries:
+
+<!-- BEGIN GENERATED QUERY CONTEXT PARAMETER TABLE: queryTypes=SCAN -->
+
+|Parameter|Description|Default|
+|---|---|---|
+|[`maxRowsQueuedForOrdering`](query-context-reference.md#maxrowsqueuedforordering)|The maximum number of rows returned when time ordering is used.|`druid.query.scan.maxRowsQueuedForOrdering`|
+|[`maxSegmentPartitionsOrderedInMemory`](query-context-reference.md#maxsegmentpartitionsorderedinmemory)|The maximum number of segments scanned per historical when time ordering is used.|`druid.query.scan.maxSegmentPartitionsOrderedInMemory`|
+
+<!-- END GENERATED QUERY CONTEXT PARAMETER TABLE -->
 
 Sample query context JSON object:
 
