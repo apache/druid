@@ -43,6 +43,27 @@ github:
             require_code_owner_review: false
             require_last_push_approval: false
             required_review_thread_resolution: false
+    # Same raw syntax and bypass as "Require review". quality-gate is the job in the CI
+    # workflow that fails unless the whole CI run passed.
+    - name: "Require CI"
+      target: branch
+      enforcement: active
+      conditions:
+        ref_name:
+          include:
+            - "~DEFAULT_BRANCH"
+          exclude: []
+      bypass_actors:
+        - actor_id: 4
+          actor_type: RepositoryRole
+          bypass_mode: always
+      rules:
+        - type: required_status_checks
+          parameters:
+            strict_required_status_checks_policy: false
+            required_status_checks:
+              # No integration_id: asfyaml would send it as a string, which GitHub rejects.
+              - context: quality-gate
 
   # Attempt to make the auto-generated github emails more easily readable in email clients.
   # Configuration adapted from https://github.com/apache/plc4x/blob/develop/.asf.yaml.
