@@ -76,7 +76,7 @@ public class ErrorResponseTest
             "legacyQueryException",
 
             "persona",
-            "OPERATOR",
+            "USER",
 
             "category",
             "TIMEOUT",
@@ -103,7 +103,7 @@ public class ErrorResponseTest
 
     DruidExceptionMatcher.assertThat(
         recomposed.getUnderlyingException(),
-        new DruidExceptionMatcher(DruidException.Persona.OPERATOR, DruidException.Category.TIMEOUT, "legacyQueryException")
+        new DruidExceptionMatcher(DruidException.Persona.USER, DruidException.Category.TIMEOUT, "legacyQueryException")
             .expectMessageIs("Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.")
     );
   }
@@ -125,7 +125,7 @@ public class ErrorResponseTest
             "legacyQueryException",
 
             "persona",
-            "OPERATOR",
+            "USER",
 
             "category",
             "TIMEOUT",
