@@ -688,6 +688,60 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
+  public void testUnknownMultiValuedDimensionsOnlyWrapsColumnsThatCouldBeMultiValued() throws JsonProcessingException
+  {
+    // Nothing told this task which columns hold several values, so it has to assume of every column that could. An
+    // auto-typed string column reads as STRING but stores one value per row, so there is nothing to assume about it
+    // and wrapping it would convert a column that never needed converting.
+    final AutoTypeColumnSchema autoStringDimension = new AutoTypeColumnSchema("auto_string_dim", ColumnType.STRING, null);
+    final List<DimensionSchema> dimensions = ImmutableList.of(STRING_DIMENSION, autoStringDimension, LONG_DIMENSION);
+
+    final CompactionTask task = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap(),
+        null,
+        null
+    );
+
+    final CombinedDataSchema dataSchema = new CombinedDataSchema(
+        DATA_SOURCE,
+        new TimestampSpec(TIMESTAMP_COLUMN, null, null),
+        new DimensionsSpec(dimensions),
+        AGGREGATORS.toArray(new AggregatorFactory[0]),
+        new UniformGranularitySpec(
+            SEGMENT_GRANULARITY.getDefaultGranularity(),
+            QUERY_GRANULARITY.getDefaultGranularity(),
+            Collections.singletonList(COMPACTION_INTERVAL)
+        ),
+        null,
+        null,
+        null // the multi-valued set is unknown
+    );
+
+    final GroupByQuery groupByQuery = (GroupByQuery) Iterables.getOnlyElement(
+        MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
+            task,
+            Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
+        )
+    ).getQuerySpec().getQuery();
+
+    final List<String> groupedColumns = groupByQuery.getDimensions()
+                                                    .stream()
+                                                    .map(DimensionSpec::getOutputName)
+                                                    .collect(Collectors.toList());
+    Assertions.assertTrue(
+        groupedColumns.contains(MSQCompactionRunner.ARRAY_VIRTUAL_COLUMN_PREFIX + STRING_DIMENSION.getName()),
+        groupedColumns.toString()
+    );
+    Assertions.assertTrue(groupedColumns.contains(autoStringDimension.getName()), groupedColumns.toString());
+    Assertions.assertFalse(
+        groupedColumns.contains(MSQCompactionRunner.ARRAY_VIRTUAL_COLUMN_PREFIX + autoStringDimension.getName()),
+        groupedColumns.toString()
+    );
+  }
+
+  @Test
   public void testCompactionConfigWithProjectionsProducesCorrectSpec() throws JsonProcessingException
   {
     DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);

@@ -22,6 +22,7 @@ package org.apache.druid.catalog.model;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.RollupBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.RollupTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
@@ -40,6 +41,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -116,6 +118,40 @@ public class RollupTableBaseTableMetadataTest extends InitializedNullHandlingTes
     Assertions.assertArrayEquals(totalSum(), spec.getMetrics());
     Assertions.assertEquals(Granularities.HOUR, spec.getQueryGranularity());
     Assertions.assertTrue(spec.isRollup());
+  }
+
+  @Test
+  public void testCreateSpecCarriesMultiValueDeclaration()
+  {
+    // The multi-value carrier rides through to the spec like the granularity one, and the column it names stays an
+    // ordinary declared grouping column: the declaration is about how rows group onto it, not about what is stored.
+    final RollupTableProjectionSpec spec = new RollupTableBaseTableMetadata(
+        VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("tenant")),
+        totalSum(),
+        null
+    ).createSpec(COLUMNS);
+
+    Assertions.assertEquals(Set.of("tenant"), spec.getMultiValuedColumns());
+    Assertions.assertEquals(
+        List.of("tenant", Columns.TIME_COLUMN),
+        spec.getGroupingColumns().stream().map(DimensionSchema::getName).collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void testCreateSpecMultiValueDeclarationForUndeclaredColumnFails()
+  {
+    // The spec validates the carrier against the grouping columns it is built with, so a catalog table cannot
+    // declare a column multi-valued that it does not group by.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> new RollupTableBaseTableMetadata(
+            VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("absent")),
+            totalSum(),
+            null
+        ).createSpec(COLUMNS)
+    );
+    Assertions.assertTrue(e.getMessage().contains("does not group by that column"), e.getMessage());
   }
 
   @Test

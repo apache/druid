@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
@@ -669,11 +670,11 @@ public class MSQCompactionRunner implements CompactionRunner
       ));
     }
     if (isGroupBy(dataSchema)) {
-      // Convert MVDs to arrays for grouping to avoid unnest, assuming all string cols to be MVDs.
+      // Convert MVDs to arrays for grouping to avoid unnest.
       Set<String> multiValuedColumns = dataSchema.getDimensionsSpec()
                                                  .getDimensions()
                                                  .stream()
-                                                 .filter(dim -> dim.getColumnType().equals(ColumnType.STRING))
+                                                 .filter(DimensionSchema::canBeMultiValued)
                                                  .map(DimensionSchema::getName)
                                                  .collect(Collectors.toSet());
       if (dataSchema instanceof CombinedDataSchema &&
@@ -687,7 +688,7 @@ public class MSQCompactionRunner implements CompactionRunner
       }
 
       for (String dim : multiValuedColumns) {
-        String virtualColumnExpr = StringUtils.format("mv_to_array(\"%s\")", dim);
+        String virtualColumnExpr = StringUtils.format("mv_to_array(%s)", Parser.identifier(dim).stringify());
         inputColToVirtualCol.put(
             dim,
             new ExpressionVirtualColumn(
@@ -729,7 +730,10 @@ public class MSQCompactionRunner implements CompactionRunner
                                 entry ->
                                     new ExpressionPostAggregator(
                                         entry.getKey(),
-                                        StringUtils.format("array_to_mv(\"%s\")", entry.getValue().getOutputName()),
+                                        StringUtils.format(
+                                            "array_to_mv(%s)",
+                                            Parser.identifier(entry.getValue().getOutputName()).stringify()
+                                        ),
                                         null,
                                         ColumnType.STRING,
                                         exprMacroTable

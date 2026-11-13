@@ -25,12 +25,16 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
@@ -177,6 +181,204 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
         .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
         .aggregators(new LongSumAggregatorFactory("total", "total"), new LongSumAggregatorFactory("rows", "rows"))
         .build();
+  }
+
+  @Test
+  void testMultiValueCarrierDeclaresAGroupingColumnMultiValued()
+  {
+    final RollupTableProjectionSpec spec = RollupTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("page")))
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
+        .build();
+
+    Assertions.assertEquals(Collections.singleton("page"), spec.getMultiValuedColumns());
+    // The declaration does not change the column: it is still a stored string, in its declared position.
+    Assertions.assertEquals(
+        ImmutableList.of(OrderBy.ascending("page"), OrderBy.ascending("__time")),
+        spec.getOrdering()
+    );
+    Assertions.assertEquals(
+        new StringDimensionSchema("page"),
+        spec.getDimensionsSpec().getDimensions().get(0)
+    );
+  }
+
+  @Test
+  void testNoMultiValueCarriersMeansNoneDeclared()
+  {
+    // Absent is a declaration too: a layout that says nothing declares no column multi-valued, rather than leaving it
+    // open.
+    Assertions.assertEquals(Collections.emptySet(), pagesSpec().getMultiValuedColumns());
+    Assertions.assertEquals(
+        Collections.emptySet(),
+        pagesSpec().withQueryGranularity(Granularities.HOUR).getMultiValuedColumns()
+    );
+  }
+
+  @Test
+  void testMultiValueCarrierForUngroupedColumnRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("referrer")))
+            .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+            .aggregators(new LongSumAggregatorFactory("total", "total"))
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("does not group by that column"), e.getMessage());
+  }
+
+  @Test
+  void testMultiValueCarrierForSingleValuedTypeRejected()
+  {
+    // Only a string column can hold more than one value, so declaring it of anything else is a contradiction rather
+    // than a hint to be ignored.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("views")))
+            .groupingColumns(
+                new StringDimensionSchema("page"),
+                new LongDimensionSchema("views"),
+                new LongDimensionSchema("__time")
+            )
+            .aggregators(new LongSumAggregatorFactory("total", "total"))
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("cannot be declared multi-valued"), e.getMessage());
+  }
+
+  @Test
+  void testMultiValueCarrierWithAForeignExpressionRejected()
+  {
+    // The carrier is metadata read back by name, so a spec must not be constructible claiming one thing under a name
+    // that reads as another.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .virtualColumns(
+                VirtualColumns.create(
+                    new ExpressionVirtualColumn(
+                        BaseTableProjectionSpec.MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + "page",
+                        "upper(\"page\")",
+                        ColumnType.STRING,
+                        ExprMacroTable.nil()
+                    )
+                )
+            )
+            .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+            .aggregators(new LongSumAggregatorFactory("total", "total"))
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("mv_to_array"), e.getMessage());
+  }
+
+  @Test
+  void testMultiValueCarrierSurvivesTheWithers()
+  {
+    final RollupTableProjectionSpec spec = RollupTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("page")))
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
+        .build();
+
+    // Compaction rebuilds the spec as it absorbs what the segments hold, and the declaration has to come through
+    // each rebuild or it would be lost partway.
+    Assertions.assertEquals(
+        Collections.singleton("page"),
+        spec.withQueryGranularity(Granularities.HOUR).getMultiValuedColumns()
+    );
+    Assertions.assertEquals(
+        Collections.singleton("page"),
+        spec.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("referrer")))
+            .getMultiValuedColumns()
+    );
+    Assertions.assertEquals(
+        Collections.singleton("page"),
+        spec.withAdditionalMetrics(new AggregatorFactory[]{new LongSumAggregatorFactory("extra", "extra")})
+            .getMultiValuedColumns()
+    );
+  }
+
+  @Test
+  void testMultiValueCarrierIsComparedByCompactionState()
+  {
+    // Declaring a column multi-valued changes how the rows are grouped, so it is a real difference between what a
+    // config asks for and what a segment was built with.
+    final RollupTableProjectionSpec declared = RollupTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("page")))
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
+        .build();
+    final RollupTableProjectionSpec undeclared = RollupTableProjectionSpec.builder()
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
+        .build();
+
+    Assertions.assertFalse(declared.hasEqualCompactionState(undeclared));
+    Assertions.assertFalse(declared.hasEqualCompactionState(undeclared, true));
+    Assertions.assertTrue(declared.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testColumnNamedLikeAMultiValueCarrierRejected()
+  {
+    // The carrier is named for the column it declares, so a stored column can be named like one. The two would then
+    // share a name and the carrier would shadow the stored column, so the prefix is reserved.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("page")))
+            .groupingColumns(
+                new StringDimensionSchema("page"),
+                new StringDimensionSchema(
+                    BaseTableProjectionSpec.MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + "page"
+                ),
+                new LongDimensionSchema("__time")
+            )
+            .aggregators(new LongSumAggregatorFactory("total", "total"))
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("reserved"), e.getMessage());
+  }
+
+  @Test
+  void testAggregatorNamedLikeAMultiValueCarrierRejected()
+  {
+    // Metric columns are stored too, so they are reserved the same way.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+            .aggregators(
+                new LongSumAggregatorFactory(
+                    BaseTableProjectionSpec.MULTI_VALUE_VIRTUAL_COLUMN_PREFIX + "page",
+                    "total"
+                )
+            )
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("reserved"), e.getMessage());
+  }
+
+  @Test
+  void testMultiValueCarrierEscapesTheColumnName()
+  {
+    // Identifiers in an expression are unescaped as java strings, so a name holding a quote or a backslash has to be
+    // escaped going in or the carrier is an expression that cannot be parsed at all.
+    final String awkward = "a\"b\\c";
+    final ExpressionVirtualColumn carrier = RollupBaseTableProjectionSpec.toMultiValueVirtualColumn(awkward);
+
+    // parses, and reads the column it was built for rather than some mangling of it
+    Assertions.assertEquals(Collections.singletonList(awkward), carrier.requiredColumns());
+
+    final RollupTableProjectionSpec spec = RollupTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(carrier))
+        .groupingColumns(new StringDimensionSchema(awkward), new LongDimensionSchema("__time"))
+        .build();
+    Assertions.assertEquals(Collections.singleton(awkward), spec.getMultiValuedColumns());
   }
 
   @Test
@@ -421,6 +623,22 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
     Assertions.assertEquals(
         withGranularity,
         mapper.readValue(mapper.writeValueAsString(withGranularity), BaseTableProjectionSpec.class)
+    );
+
+    // The multi-value declaration is persisted with the segment and read back by compaction runs that did not write
+    // it, so it has to survive a round trip and still read as a declaration afterwards.
+    final BaseTableProjectionSpec withMultiValue = RollupTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("page")))
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
+        .build();
+    final BaseTableProjectionSpec roundTripped =
+        mapper.readValue(mapper.writeValueAsString(withMultiValue), BaseTableProjectionSpec.class);
+    Assertions.assertEquals(withMultiValue, roundTripped);
+    Assertions.assertInstanceOf(RollupBaseTableProjectionSpec.class, roundTripped);
+    Assertions.assertEquals(
+        Collections.singleton("page"),
+        ((RollupBaseTableProjectionSpec) roundTripped).getMultiValuedColumns()
     );
   }
 }
