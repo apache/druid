@@ -341,16 +341,17 @@ public class S3Utils
   }
 
   /**
-   * Fails when ACL grants are enabled for an Access Point ARN bucket. Granting the bucket owner full control needs
-   * GetBucketAcl, which Multi-Region Access Points do not support, so these buckets require disableAcl=true.
+   * Fails when ACL grants are enabled for a Multi-Region Access Point ARN bucket. Granting the bucket owner full
+   * control needs GetBucketAcl, which Multi-Region Access Points do not support, so these buckets require
+   * disableAcl=true. Regional Access Points support GetBucketAcl and are allowed.
    *
    * @param disableAclProperty runtime property that controls the ACL behavior, used in the error message
    */
   public static void checkAclSupported(@Nullable String bucket, boolean disableAcl, String disableAclProperty)
   {
-    if (!disableAcl && isS3Arn(normalizeBucketName(bucket))) {
+    if (!disableAcl && isMultiRegionAccessPointArn(normalizeBucketName(bucket))) {
       throw new IAE(
-          "Bucket [%s] is an S3 Access Point ARN, which does not support bucket ACL lookups. Set [%s=true].",
+          "Bucket [%s] is a Multi-Region Access Point ARN, which does not support bucket ACL lookups. Set [%s=true].",
           bucket,
           disableAclProperty
       );

@@ -699,6 +699,8 @@ public class S3UtilsTest
 
     S3Utils.checkAclSupported(arn, true, "druid.storage.disableAcl");
     S3Utils.checkAclSupported("bucket", false, "druid.storage.disableAcl");
+    S3Utils.checkAclSupported("arn:aws:s3:us-east-1:123456789123:accesspoint:my-ap", false, "druid.storage.disableAcl");
+    S3Utils.checkAclSupported("arn:aws:s3:us-east-1:123456789123:accesspoint/my-ap", false, "druid.storage.disableAcl");
   }
 
   @Test

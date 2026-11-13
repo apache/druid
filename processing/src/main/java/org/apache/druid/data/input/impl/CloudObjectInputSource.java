@@ -79,7 +79,7 @@ public abstract class CloudObjectInputSource
       @Nullable SystemFields systemFields
   )
   {
-    this(scheme, uris, prefixes, objects, objectGlob, systemFields, CloudBucketValidator.ACCEPT_ALL);
+    this(scheme, uris, prefixes, objects, objectGlob, systemFields, CloudBucketValidator.REJECT_COLON);
   }
 
   protected CloudObjectInputSource(

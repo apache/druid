@@ -37,6 +37,19 @@ public class S3OutputConfigTest
   private static int MAX_RETRY_COUNT = 0;
 
   @Test
+  public void testSlashFormArnBucketIsNormalized()
+  {
+    final S3OutputConfig config = new S3OutputConfig(
+        "arn:aws:s3::123456789012:accesspoint/abcdef0123456.mrap",
+        PREFIX,
+        null,
+        null,
+        null
+    );
+    Assertions.assertEquals("arn:aws:s3::123456789012:accesspoint:abcdef0123456.mrap", config.getBucket());
+  }
+
+  @Test
   public void testTooLargeChunkSize() throws IOException
   {
     long chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES + 1;

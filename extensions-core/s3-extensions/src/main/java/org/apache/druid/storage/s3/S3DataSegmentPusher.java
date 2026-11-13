@@ -21,6 +21,7 @@ package org.apache.druid.storage.s3;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -205,7 +206,10 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
   {
     // remove the leading "/"
-    return makeLoadSpec(finalIndexZipFilePath.getHost(), finalIndexZipFilePath.getPath().substring(1));
+    return makeLoadSpec(
+        CloudObjectLocation.extractBucket(finalIndexZipFilePath),
+        finalIndexZipFilePath.getPath().substring(1)
+    );
   }
 
   /**

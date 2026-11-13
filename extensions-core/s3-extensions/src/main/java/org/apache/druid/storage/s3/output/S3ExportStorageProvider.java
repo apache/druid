@@ -43,6 +43,7 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.S3IntermediateRoleConfig;
 import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
+import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
@@ -102,7 +103,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
 
   )
   {
-    this.bucket = bucket;
+    this.bucket = S3Utils.normalizeBucketName(bucket);
     this.prefix = prefix;
     this.assumeRoleArn = assumeRoleArn;
     this.assumeRoleExternalId = assumeRoleExternalId;
@@ -170,7 +171,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
 
   private static boolean validateUri(final URI allowedUri, final URI providedUri)
   {
-    if (!allowedUri.getHost().equals(providedUri.getHost())) {
+    if (!CloudObjectLocation.extractBucket(allowedUri).equals(CloudObjectLocation.extractBucket(providedUri))) {
       return false;
     }
     final String allowedPath = StringUtils.maybeAppendTrailingSlash(allowedUri.getPath());

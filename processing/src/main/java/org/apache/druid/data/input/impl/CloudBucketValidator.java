@@ -27,7 +27,15 @@ package org.apache.druid.data.input.impl;
 @FunctionalInterface
 public interface CloudBucketValidator
 {
-  CloudBucketValidator ACCEPT_ALL = bucket -> {};
+  /**
+   * Default for providers whose bucket names never contain ':'. {@link CloudObjectLocation} permits ':' so that
+   * providers such as S3 can accept ARNs, so other providers reject it here to keep failing at spec validation.
+   */
+  CloudBucketValidator REJECT_COLON = bucket -> {
+    if (bucket.indexOf(':') >= 0) {
+      throw new IllegalArgumentException("bucket must follow DNS-compliant naming conventions");
+    }
+  };
 
   /**
    * @throws IllegalArgumentException if the bucket is not valid for the provider
