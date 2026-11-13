@@ -35,6 +35,7 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -604,17 +605,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
 
   /**
    * Returns true if this task can run in the parallel mode with the given inputSource and tuningConfig.
-   * This method should be synchronized with CompactSegments.isParallelMode(ClientCompactionTaskQueryTuningConfig).
+   * This method should be synchronized with CompactionSlotManager.isParallelMode(ClientCompactionTaskQueryTuningConfig).
+   * That method does not see the input source, so it still counts parallel task slots for native minor compaction,
+   * which runs sequentially unless range partitioning is used.
    */
   public static boolean isParallelMode(InputSource inputSource, @Nullable ParallelIndexTuningConfig tuningConfig)
   {
     if (null == tuningConfig) {
       return false;
     }
-    boolean useRangePartitions = useRangePartitions(tuningConfig);
-    // Range partitioning is not implemented for runSequential() (but hash partitioning is)
-    int minRequiredNumConcurrentSubTasks = useRangePartitions ? 1 : 2;
-    return inputSource.isSplittable() && tuningConfig.getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
+    if (useRangePartitions(tuningConfig)) {
+      // Range partitioning is not implemented for runSequential() (but hash partitioning is),
+      // so keep it parallel even if the input source produces only one split.
+      return inputSource instanceof SplittableInputSource && tuningConfig.getMaxNumConcurrentSubTasks() >= 1;
+    }
+    return inputSource.isSplittable() && tuningConfig.getMaxNumConcurrentSubTasks() >= 2;
   }
 
   private static boolean useRangePartitions(ParallelIndexTuningConfig tuningConfig)
