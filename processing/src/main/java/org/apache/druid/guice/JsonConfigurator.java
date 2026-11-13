@@ -187,6 +187,7 @@ public class JsonConfigurator
               } else {
                 path.append(".").append(pathPart);
               }
+              beanClazz = theField.getType();
             }
           }
         }

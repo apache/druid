@@ -24,8 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.ProvisionException;
 import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Valid;
+import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.executable.ExecutableValidator;
 import jakarta.validation.metadata.BeanDescriptor;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -240,6 +244,35 @@ public class JsonConfiguratorTest
         IllegalArgumentException.class,
         () -> configurator.configurate(properties, PROP_PREFIX, MappableObject.class)
     );
+  }
+
+  @Test
+  public void testNestedViolationNamesFullPath()
+  {
+    final JsonConfigurator configurator = new JsonConfigurator(
+        jsonMapper,
+        Validation.buildDefaultValidatorFactory().getValidator()
+    );
+    properties.setProperty(PROP_PREFIX + "inner.count", "0");
+    final ProvisionException e = Assertions.assertThrows(
+        ProvisionException.class,
+        () -> configurator.configurate(properties, PROP_PREFIX, Outer.class)
+    );
+    Assertions.assertTrue(e.getMessage().contains(PROP_PREFIX + "inner.count - "), e.getMessage());
+  }
+
+  static class Outer
+  {
+    @JsonProperty
+    @Valid
+    Inner inner;
+  }
+
+  static class Inner
+  {
+    @JsonProperty
+    @Min(1)
+    int count = 1;
   }
 }
 
