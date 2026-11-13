@@ -393,6 +393,7 @@ public class ServerSideEncryptingAmazonS3
                                 .build());
       S3Utils.configureLegacyMd5(awsClientConfig, clientBuilder, asyncClientBuilder);
     }
+    S3Utils.configureAccessPointArnRegion(clientBuilder, asyncClientBuilder);
 
     // Configure HTTP client with proxy if needed
     if (awsProxyConfig != null) {

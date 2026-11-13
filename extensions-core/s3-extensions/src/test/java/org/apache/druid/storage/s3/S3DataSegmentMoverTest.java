@@ -101,6 +101,27 @@ public class S3DataSegmentMoverTest
   }
 
   @Test
+  public void testMoveFromMultiRegionAccessPointIsRejected()
+  {
+    final String mrap = "arn:aws:s3::123456789012:accesspoint/abcdef0123456.mrap";
+    final MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
+    final S3DataSegmentMover mover = new S3DataSegmentMover(
+        Suppliers.ofInstance(mockS3Client),
+        new S3DataSegmentPusherConfig()
+    );
+
+    final SegmentLoadingException e = Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> mover.move(
+            SOURCE_SEGMENT.withLoadSpec(ImmutableMap.of("key", "baseKey/index.zip", "bucket", mrap)),
+            ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("only as a CopyObject destination"));
+    Assertions.assertFalse(mockS3Client.didMove());
+  }
+
+  @Test
   public void testMoveNoop() throws Exception
   {
     MockAmazonS3Client mockS3Client = new MockAmazonS3Client();

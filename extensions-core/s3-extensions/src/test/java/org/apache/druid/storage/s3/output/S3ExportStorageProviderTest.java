@@ -59,6 +59,33 @@ public class S3ExportStorageProviderTest
   }
 
   @Test
+  public void testValidatePathsWithAccessPointArn()
+  {
+    final String arn = "arn:aws:s3:us-east-1:123456789012:accesspoint:my-ap";
+    final List<String> arnPrefixes = ImmutableList.of("s3://" + arn + "/exports/");
+
+    S3ExportStorageProvider.validateS3Prefix(arnPrefixes, arn, "exports/table");
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> S3ExportStorageProvider.validateS3Prefix(arnPrefixes, "bucket-name", "exports/table")
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, arn, "validPath1/")
+    );
+  }
+
+  @Test
+  public void testSlashFormArnBucketIsNormalized()
+  {
+    Assertions.assertEquals(
+        "arn:aws:s3::123456789012:accesspoint:abcdef0123456.mrap",
+        new S3ExportStorageProvider("arn:aws:s3::123456789012:accesspoint/abcdef0123456.mrap", "export", null, null)
+            .getBucket()
+    );
+  }
+
+  @Test
   public void testExportManifestFilePath()
   {
     Assertions.assertEquals(

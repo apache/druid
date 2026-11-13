@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicates;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFilePointer;
@@ -94,6 +95,22 @@ public class CloudObjectInputSourceTest
         URIS,
         inputSource.getUris()
     );
+  }
+
+  @Test
+  public void testDefaultValidatorRejectsColonInBucket()
+  {
+    final List<CloudObjectLocation> objects = Collections.singletonList(
+        new CloudObjectLocation("arn:aws:s3:us-east-1:123456789012:accesspoint:my-ap", "file.csv")
+    );
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+            .useConstructor(SCHEME, null, null, objects, null, SystemFields.none())
+            .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+        )
+    );
+    Assertions.assertInstanceOf(IllegalArgumentException.class, Throwables.getRootCause(e));
   }
 
   @Test

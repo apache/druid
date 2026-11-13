@@ -39,9 +39,11 @@ public class S3DataSegmentPusherConfig
   @Min(1)
   private int maxListingLength = 1024;
 
+  // annotated so Jackson routes deserialization through the normalizing setter instead of writing the field directly
+  @JsonProperty("bucket")
   public void setBucket(String bucket)
   {
-    this.bucket = bucket;
+    this.bucket = S3Utils.normalizeBucketName(bucket);
   }
 
   public void setBaseKey(String baseKey)
