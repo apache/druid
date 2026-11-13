@@ -41,8 +41,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.Timeout.ThreadMode;
 
-
 import java.io.ByteArrayInputStream;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -138,7 +138,7 @@ public class ChangeRequestHttpSyncerTest
         jsonMapper,
         httpClient,
         Execs.scheduledSingleThreaded("ChangeRequestHttpSyncerTest"),
-        new URL("http://localhost:8080/"),
+        URI.create("http://localhost:8080/").toURL(),
         "/xx",
         typeRef,
         50000,

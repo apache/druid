@@ -99,6 +99,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
+  // Guarded by the `servers` monitor, together with serverAdded()/stop(), so that no new
+  // DruidServerHolder can be started once shutdown has begun: either serverAdded() runs
+  // first and the holder is included in stop()'s snapshot, or it runs after and observes
+  // shuttingDown=true and skips starting a new holder.
+  private boolean shuttingDown = false;
+
   private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new ConcurrentHashMap<>();
   private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
 
@@ -264,18 +270,27 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
       log.info("Stopping executor[%s].", execNamePrefix);
 
+      // Flip shuttingDown and snapshot the current holders under the same `servers` monitor
+      // that serverAdded() uses, so no new holder can be started after this point.
+      final Collection<DruidServerHolder> serverHoldersSnapshot;
+      synchronized (servers) {
+        shuttingDown = true;
+        serverHoldersSnapshot = ImmutableSet.copyOf(servers.values());
+      }
+
       // Stop each per-server syncer before shutting down the executor below, so that no new
       // sync requests are issued into the shutdown window. Any syncer already in-flight may
       // still have a pending HTTP callback land on the executor after this; that case is
       // handled defensively inside ChangeRequestHttpSyncer itself.
-      for (DruidServerHolder serverHolder : ImmutableSet.copyOf(servers.values())) {
+      for (DruidServerHolder serverHolder : serverHoldersSnapshot) {
         try {
           serverHolder.stop();
-        } 
+        }
         catch (Exception e) {
           log.warn(e, "Failed to cleanly stop server[%s] during shutdown.", serverHolder.druidServer.getName());
         }
       }
+
       if (inventorySyncExecutor != null) {
         inventorySyncExecutor.shutdownNow();
       }
@@ -436,6 +451,10 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   void serverAdded(DruidServer server)
   {
     synchronized (servers) {
+      if (shuttingDown) {
+        log.info("Ignoring server[%s] added during shutdown.", server.getName());
+        return;
+      }
       DruidServerHolder existing = servers.get(server.getName());
       if (existing == null) {
         log.info("Server[%s] appeared.", server.getName());

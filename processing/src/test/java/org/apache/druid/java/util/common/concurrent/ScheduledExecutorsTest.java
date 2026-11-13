@@ -379,16 +379,21 @@ public class ScheduledExecutorsTest
     final ScheduledExecutorService alreadyShutdownExec = new ShutdownReportingExecutor(delegate);
 
     try {
+      final CountDownLatch ran = new CountDownLatch(1);
       ScheduledExecutors.scheduleAtFixedRate(
           alreadyShutdownExec,
           initialDelay,
           period,
           () -> {
+            ran.countDown();
             throw new RuntimeException("simulated shutdown-ordering failure");
           }
       );
 
-      logCaptureExtension.awaitLogEvents();
+      Assertions.assertTrue(ran.await(5, TimeUnit.SECONDS), "callable should have run once");
+      // Give the logging call a moment to land after the callable throws, without
+      // depending on DEBUG-level visibility (which varies by test logging config).
+      Thread.sleep(200);
     }
     finally {
       delegate.shutdownNow();
