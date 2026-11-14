@@ -47,6 +47,7 @@ public class ServerConfigTest
     Assertions.assertFalse(defaultConfig2.isEnableResponseIdentityHeaders());
     Assertions.assertEquals(UriCompliance.LEGACY, defaultConfig.getUriCompliance());
     Assertions.assertEquals(true, defaultConfig.isEnforceStrictSNIHostChecking());
+    Assertions.assertEquals(0, defaultConfig2.getHeaderCacheSize());
 
     ServerConfig modifiedConfig = new ServerConfig(
         999,
@@ -73,7 +74,8 @@ public class ServerConfigTest
         true,
         UriCompliance.RFC3986,
         false,
-        true
+        true,
+        512
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -90,6 +92,7 @@ public class ServerConfigTest
     Assertions.assertTrue(modifiedConfig2.isEnableResponseIdentityHeaders());
     Assertions.assertEquals(UriCompliance.RFC3986, modifiedConfig2.getUriCompliance());
     Assertions.assertFalse(modifiedConfig2.isEnforceStrictSNIHostChecking());
+    Assertions.assertEquals(512, modifiedConfig2.getHeaderCacheSize());
   }
 
   @Test
