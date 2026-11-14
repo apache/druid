@@ -4088,6 +4088,70 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testIsTaskCurrentChecksExclusiveStart()
+  {
+    final DateTime minMessageTime = DateTimes.nowUtc();
+    final DateTime maxMessageTime = minMessageTime.plus(10000);
+    final KinesisSupervisor supervisor = createSupervisor(
+        1,
+        1,
+        true,
+        "PT1H",
+        new Period("P1D"),
+        new Period("P1D"),
+        false,
+        42,
+        dataSchema,
+        tuningConfig
+    );
+    final ImmutableMap<String, String> startingOffsets = ImmutableMap.of(SHARD_ID1, "3");
+    final SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers = new SeekableStreamEndSequenceNumbers<>(
+        "stream",
+        ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER)
+    );
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        42,
+        startingOffsets,
+        minMessageTime,
+        maxMessageTime,
+        ImmutableSet.of("inclusive", "exclusive"),
+        ImmutableSet.of(SHARD_ID1),
+        null
+    );
+
+    final KinesisIndexTask inclusiveTask = createKinesisIndexTask(
+        "inclusive",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", startingOffsets, ImmutableSet.of()),
+        endSequenceNumbers,
+        minMessageTime,
+        maxMessageTime,
+        dataSchema
+    );
+    final KinesisIndexTask exclusiveTask = createKinesisIndexTask(
+        "exclusive",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", startingOffsets, ImmutableSet.of(SHARD_ID1)),
+        endSequenceNumbers,
+        minMessageTime,
+        maxMessageTime,
+        dataSchema
+    );
+    final Map<String, Task> taskMap = ImmutableMap.of(
+        inclusiveTask.getId(), inclusiveTask,
+        exclusiveTask.getId(), exclusiveTask
+    );
+
+    replayAll();
+
+    Assertions.assertFalse(supervisor.isTaskCurrent(42, inclusiveTask.getId(), taskMap));
+    Assertions.assertTrue(supervisor.isTaskCurrent(42, exclusiveTask.getId(), taskMap));
+
+    verifyAll();
+  }
+
+  @Test
   public void testSequenceNameDoesNotChangeWithTaskId()
   {
     final DateTime minMessageTime = DateTimes.nowUtc();
@@ -4153,6 +4217,59 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     Assertions.assertNotEquals(task1.getId(), task2.getId());
     Assertions.assertEquals(sequenceTask1, sequenceTask2);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testSequenceNameChangesWithExclusiveStart()
+  {
+    final KinesisSupervisor supervisor = createSupervisor(
+        1,
+        1,
+        true,
+        "PT1H",
+        new Period("P1D"),
+        new Period("P1D"),
+        false,
+        42,
+        dataSchema,
+        tuningConfig
+    );
+    final ImmutableMap<String, String> startingOffsets = ImmutableMap.of(SHARD_ID1, "3");
+
+    replayAll();
+
+    final String inclusiveSequenceName = supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        0,
+        startingOffsets,
+        null,
+        null,
+        ImmutableSet.of(),
+        ImmutableSet.of(),
+        null
+    ).getBaseSequenceName();
+    final String exclusiveSequenceName = supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        0,
+        startingOffsets,
+        null,
+        null,
+        ImmutableSet.of(),
+        ImmutableSet.of(SHARD_ID1),
+        null
+    ).getBaseSequenceName();
+    final String replicaSequenceName = supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        0,
+        startingOffsets,
+        null,
+        null,
+        ImmutableSet.of(),
+        ImmutableSet.of(SHARD_ID1),
+        null
+    ).getBaseSequenceName();
+
+    Assertions.assertNotEquals(inclusiveSequenceName, exclusiveSequenceName);
+    Assertions.assertEquals(exclusiveSequenceName, replicaSequenceName);
 
     verifyAll();
   }
@@ -5841,6 +5958,26 @@ public class KinesisSupervisorTest extends EasyMockSupport
       }
       final int groupId = getTaskGroupIdForPartition(startPartitions.keySet().iterator().next());
       return StringUtils.format("sequenceName-%d", groupId);
+    }
+
+    @Override
+    protected String generateSequenceName(
+        Map<String, String> startPartitions,
+        DateTime minimumMessageTime,
+        DateTime maximumMessageTime,
+        DataSchema dataSchema,
+        SeekableStreamIndexTaskTuningConfig tuningConfig,
+        @Nullable Set<String> exclusiveStartSequenceNumberPartitions
+    )
+    {
+      // These tests use fixed sequence names to focus on task lifecycle behavior.
+      return generateSequenceName(
+          startPartitions,
+          minimumMessageTime,
+          maximumMessageTime,
+          dataSchema,
+          tuningConfig
+      );
     }
 
     @Override
