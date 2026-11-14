@@ -45,6 +45,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.segment.IndexIO.isExternalCompressionSupported;
+
 /**
  * Used for writing segment files to Azure based deep storage
  */
@@ -123,7 +125,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
 
     try {
-      if (zip && binaryVersion != IndexIO.V10_VERSION) {
+      if (zip && isExternalCompressionSupported(binaryVersion)) {
         return pushZip(indexFilesDir, segment, binaryVersion, azureBasePath);
       } else {
         return pushNoZip(indexFilesDir, segment, binaryVersion, azureBasePath);
