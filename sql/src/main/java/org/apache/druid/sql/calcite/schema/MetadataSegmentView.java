@@ -146,7 +146,11 @@ public class MetadataSegmentView
     }
     log.info("MetadataSegmentView is stopping.");
     if (isCacheEnabled) {
-      scheduledExec.shutdown();
+      // shutdownNow() interrupts any in-flight poll that may be blocked waiting on the
+      // coordinator client, rather than letting it run to completion and potentially fail
+      // with ServiceClosedException once the coordinator's DiscoveryServiceLocator has
+      // already stopped.
+      scheduledExec.shutdownNow();
       publishedSegments = null;
       segmentIdToReplicationFactor.invalidateAll();
     }

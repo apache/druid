@@ -165,7 +165,11 @@ public class ScheduledExecutors
               signal = callable.call();
             }
             catch (Throwable e) {
-              log.warn(e, "Uncaught exception. Rescheduling.");
+              if (exec.isShutdown()) {
+                log.debug("Exception from %s during shutdown, not rescheduling: %s", callable, e.toString());
+              } else {
+                log.warn(e, "Uncaught exception. Rescheduling.");
+              }
             }
 
             if (signal == Signal.REPEAT && !exec.isShutdown()) {

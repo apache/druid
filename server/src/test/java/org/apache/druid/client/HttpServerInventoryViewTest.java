@@ -475,6 +475,25 @@ public class HttpServerInventoryViewTest
     }
   }
 
+  @Test
+  public void testStopStopsAllTrackedServersBeforeShuttingDownExecutor()
+  {
+    httpServerInventoryView.start();
+    druidNodeDiscovery.markNodeViewInitialized();
+    execHelper.finishInventoryInitialization();
+
+    druidNodeDiscovery.addNodeAndNotifyListeners("localhost1");
+    druidNodeDiscovery.addNodeAndNotifyListeners("localhost2");
+
+    Assertions.assertEquals(2, httpServerInventoryView.getInventory().size());
+
+    // Should not throw even though multiple server syncers are stopped individually
+    // before the shared sync/monitoring executors are shut down.
+    Assertions.assertDoesNotThrow(() -> httpServerInventoryView.stop());
+
+    Assertions.assertTrue(execHelper.syncExecutor.isShutdown());
+  }
+
   private void createInventoryView(HttpServerInventoryViewConfig config)
   {
     httpServerInventoryView = new HttpServerInventoryView(
