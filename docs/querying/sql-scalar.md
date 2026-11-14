@@ -69,6 +69,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`ACOS(expr)`|Arc cosine of `expr`.|
 |`ATAN(expr)`|Arc tangent of `expr`.|
 |`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
+|`HYPOT(x, y)`|Square root of the sum of squares (`sqrt(x*x + y*y)`), computed without intermediate overflow or underflow.|
 |`SINH(expr)`|Hyperbolic sine of `expr`.|
 |`COSH(expr)`|Hyperbolic cosine of `expr`.|
 |`TANH(expr)`|Hyperbolic tangent of `expr`.|

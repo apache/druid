@@ -45,7 +45,22 @@ public enum SimdSupportedBinaryOp
    * division by zero would throw {@link ArithmeticException} in the middle of a chunk. So the {@code long × long}
    * combo falls through to the scalar processor for DIV; only the double-output combos are SIMD-specialized.
    */
-  DIV(false, false);
+  DIV(false, false),
+  /**
+   * Exponentiation. VO_MATHLIB code path. {@code VectorOperators.POW} returns a
+   * {@link jdk.incubator.vector.DoubleVector} only, so the {@code long × long -> long} combo (produced by
+   * {@code LongMath.pow} in the scalar factory) is not SIMD-specialized here; the three double-returning combos are.
+   */
+  POW(false, true),
+  /**
+   * {@code atan2(y, x)}. VO_MATHLIB code path. Returns double for every input shape so all four combos SIMD.
+   */
+  ATAN2(false, true),
+  /**
+   * {@code hypot(x, y) = sqrt(x*x + y*y)} without intermediate overflow/underflow. VO_MATHLIB code path. Returns
+   * double for every input shape so all four combos SIMD.
+   */
+  HYPOT(false, true);
 
   private final boolean supportsLongLong;
   private final boolean mathLib;
@@ -67,8 +82,7 @@ public enum SimdSupportedBinaryOp
 
   /**
    * Whether this op's SIMD path routes through the JDK's VO_MATHLIB (SVML/SLEEF) dispatch rather than a direct
-   * hardware FP intrinsic. See {@link SimdSupportedUnaryOp#isMathLib()}. All current binary ops are direct
-   * intrinsics; future additions (ATAN2, POW, HYPOT) will be VO_MATHLIB.
+   * hardware FP intrinsic. See {@link SimdSupportedUnaryOp#isMathLib()}.
    */
   public boolean isMathLib()
   {

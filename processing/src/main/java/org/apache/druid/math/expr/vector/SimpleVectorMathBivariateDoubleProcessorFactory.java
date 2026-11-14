@@ -20,10 +20,15 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoubleLongFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoublesFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongDoubleFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongsFunction;
+import org.apache.druid.math.expr.vector.simd.SimdProcessors;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedBinaryOp;
+
+import javax.annotation.Nullable;
 
 /**
  * Make a 2 argument, math processor with the following type rules
@@ -31,6 +36,11 @@ import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongsFunction
  * long, double    -> double
  * double, long    -> double
  * double, double  -> double
+ *
+ * If a non-null {@link SimdSupportedBinaryOp} is supplied to the constructor and
+ * {@link ExpressionProcessing#useVectorApi()} is true (plus the VO_MATHLIB opt-in for VO_MATHLIB ops), this factory
+ * returns SIMD-specialized processors backed by the JDK incubator {@code jdk.incubator.vector} API instead of the
+ * standard scalar implementations.
  */
 public class SimpleVectorMathBivariateDoubleProcessorFactory extends VectorMathBivariateDoubleProcessorFactory
 {
@@ -38,6 +48,8 @@ public class SimpleVectorMathBivariateDoubleProcessorFactory extends VectorMathB
   private final DoubleBivariateLongDoubleFunction longDoubleFunction;
   private final DoubleBivariateDoubleLongFunction doubleLongFunction;
   private final DoubleBivariateDoublesFunction doublesFunction;
+  @Nullable
+  private final SimdSupportedBinaryOp simdOp;
 
   public SimpleVectorMathBivariateDoubleProcessorFactory(
       DoubleBivariateLongsFunction longsFunction,
@@ -46,10 +58,22 @@ public class SimpleVectorMathBivariateDoubleProcessorFactory extends VectorMathB
       DoubleBivariateDoublesFunction doublesFunction
   )
   {
+    this(longsFunction, longDoubleFunction, doubleLongFunction, doublesFunction, null);
+  }
+
+  public SimpleVectorMathBivariateDoubleProcessorFactory(
+      DoubleBivariateLongsFunction longsFunction,
+      DoubleBivariateLongDoubleFunction longDoubleFunction,
+      DoubleBivariateDoubleLongFunction doubleLongFunction,
+      DoubleBivariateDoublesFunction doublesFunction,
+      @Nullable SimdSupportedBinaryOp simdOp
+  )
+  {
     this.longsFunction = longsFunction;
     this.longDoubleFunction = longDoubleFunction;
     this.doubleLongFunction = doubleLongFunction;
     this.doublesFunction = doublesFunction;
+    this.simdOp = simdOp;
   }
 
   @Override
@@ -59,6 +83,14 @@ public class SimpleVectorMathBivariateDoubleProcessorFactory extends VectorMathB
       Expr right
   )
   {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
+      return SimdProcessors.makeLongLongToDouble(
+          left.asVectorProcessor(inspector),
+          right.asVectorProcessor(inspector),
+          simdOp,
+          longsFunction
+      );
+    }
     return new DoubleBivariateLongsFunctionVectorProcessor(
         left.asVectorProcessor(inspector),
         right.asVectorProcessor(inspector),
@@ -73,6 +105,14 @@ public class SimpleVectorMathBivariateDoubleProcessorFactory extends VectorMathB
       Expr right
   )
   {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
+      return SimdProcessors.makeLongDouble(
+          left.asVectorProcessor(inspector),
+          right.asVectorProcessor(inspector),
+          simdOp,
+          longDoubleFunction
+      );
+    }
     return new DoubleBivariateLongDoubleFunctionVectorProcessor(
         left.asVectorProcessor(inspector),
         right.asVectorProcessor(inspector),
@@ -87,6 +127,14 @@ public class SimpleVectorMathBivariateDoubleProcessorFactory extends VectorMathB
       Expr right
   )
   {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
+      return SimdProcessors.makeDoubleLong(
+          left.asVectorProcessor(inspector),
+          right.asVectorProcessor(inspector),
+          simdOp,
+          doubleLongFunction
+      );
+    }
     return new DoubleBivariateDoubleLongFunctionVectorProcessor(
         left.asVectorProcessor(inspector),
         right.asVectorProcessor(inspector),
@@ -101,6 +149,14 @@ public class SimpleVectorMathBivariateDoubleProcessorFactory extends VectorMathB
       Expr right
   )
   {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
+      return SimdProcessors.makeDoubleDouble(
+          left.asVectorProcessor(inspector),
+          right.asVectorProcessor(inspector),
+          simdOp,
+          doublesFunction
+      );
+    }
     return new DoubleBivariateDoublesFunctionVectorProcessor(
         left.asVectorProcessor(inspector),
         right.asVectorProcessor(inspector),

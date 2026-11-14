@@ -3102,6 +3102,30 @@ Returns the following:
 
 [Learn more](sql-scalar.md#numeric-functions)
 
+## HYPOT
+
+Calculates `sqrt(x*x + y*y)` without intermediate overflow or underflow.
+
+* **Syntax:** `HYPOT(x, y)`
+* **Function type:** Scalar, numeric
+
+<details>
+<summary>Example</summary>
+
+The following example computes the length of the hypotenuse of a right triangle with legs `3` and `4`.
+
+```sql
+SELECT HYPOT(3, 4) AS "hypotenuse"
+```
+Returns the following:
+
+| `hypotenuse` |
+| -- |
+| `5` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
+
 ## ICONTAINS_STRING
 
 Returns true if `str` is a substring of `expr`, case-insensitive. Otherwise, returns false.

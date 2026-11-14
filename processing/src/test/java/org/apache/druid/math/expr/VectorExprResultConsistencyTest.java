@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorTestAssertions;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedBinaryOp;
 import org.apache.druid.math.expr.vector.simd.SimdSupportedUnaryOp;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -62,6 +63,7 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * randomize inputs to various vector expressions and make sure the results match nonvectorized expressions
@@ -77,16 +79,22 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
   // Regexes for detecting VO_MATHLIB function calls in an expression string so the ulp tolerance below only kicks in
   // where the SIMD path can actually diverge from scalar Math. Everything else stays on strict equality. Derived from
-  // SimdSupportedUnaryOp so future ops picked up by the enum's isMathLib() classification get covered automatically.
-  // This part could probably be done nicer if we exposed Simd stuff via the Expr itself instead of this semi-fragile
-  // regex.
+  // SimdSupported{Unary,Binary}Op so future ops picked up by the enum's isMathLib() classification get covered
+  // automatically. This part could probably be done nicer if we exposed Simd stuff via the Expr itself instead of this
+  // semi-fragile regex.
   private static final Set<String> HYPERBOLIC_FN_NAMES = Set.of("sinh", "cosh", "tanh");
   private static final Pattern HYPERBOLIC_FN_PATTERN = functionNamePattern(HYPERBOLIC_FN_NAMES);
+  private static final Set<String> ATAN2_FN_NAMES = Set.of("atan2");
+  private static final Pattern ATAN2_FN_PATTERN = functionNamePattern(ATAN2_FN_NAMES);
   private static final Pattern MATH_LIB_FN_PATTERN = functionNamePattern(
-      Arrays.stream(SimdSupportedUnaryOp.values())
-            .filter(SimdSupportedUnaryOp::isMathLib)
-            .map(op -> op.name().toLowerCase(Locale.ROOT))
-            .collect(Collectors.toSet())
+      Stream.concat(
+          Arrays.stream(SimdSupportedUnaryOp.values())
+                .filter(SimdSupportedUnaryOp::isMathLib)
+                .map(op -> op.name().toLowerCase(Locale.ROOT)),
+          Arrays.stream(SimdSupportedBinaryOp.values())
+                .filter(SimdSupportedBinaryOp::isMathLib)
+                .map(op -> op.name().toLowerCase(Locale.ROOT))
+      ).collect(Collectors.toSet())
   );
 
   private static Pattern functionNamePattern(Set<String> names)
@@ -102,17 +110,30 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   /**
    * Ulp tolerance the vector-vs-scalar comparison should allow for the given expression. Returns 0 for
    * expressions with no VO_MATHLIB ops (strict equality); the same per-op bounds SimdVoMathlibParityTest
-   * uses otherwise.
+   * uses otherwise. Checked in widest-first order so an expression containing multiple VO_MATHLIB ops gets
+   * the loosest tolerance any of them needs.
    */
-  private static int allowedUlpsFor(String exprString)
+  private static int allowedUlpsFor(Expr parsed, String exprString)
   {
     if (HYPERBOLIC_FN_PATTERN.matcher(exprString).find()) {
       return 5;
     }
+    if (ATAN2_FN_PATTERN.matcher(exprString).find()) {
+      return 4;
+    }
     if (MATH_LIB_FN_PATTERN.matcher(exprString).find()) {
       return 2;
     }
-    return 0;
+    // '^' routes through SIMD POW for double outputs via VectorMathProcessors.power() but doesn't match the
+    // function-name regex, so walk the parsed tree for BinPowExpr to pick it up.
+    final boolean[] hasBinPow = {false};
+    parsed.visit(expr -> {
+      if (expr instanceof BinPowExpr) {
+        hasBinPow[0] = true;
+      }
+      return expr;
+    });
+    return hasBinPow[0] ? 2 : 0;
   }
 
 
@@ -272,9 +293,25 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     for (List<String> template : templateInputs) {
       templates.add(StringUtils.format("%s %s %s", template.get(0), "%s", template.get(1)));
     }
-    final List<String> args = List.of("+", "-", "*", "/", "^", "%");
+    final List<String> args = List.of("+", "-", "*", "/", "%");
 
     testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testPowerOperator()
+  {
+    // '^' routes through SIMD POW for double outputs via VectorMathProcessors.Power / SimdSupportedBinaryOp.POW,
+    // so vector-vs-scalar can diverge by up to 2 ulps. allowedUlpsFor walks the parsed tree for BinPowExpr to
+    // pick that up, since regex-matching a lone '^' against the expression string would be fragile.
+    final Set<String> columns = Set.of("d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null", "s1");
+    final Set<String> columns2 = Set.of("d1", "d2", "l1", "l2", "1", "1.0");
+    final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2);
+    final List<String> templates = new ArrayList<>();
+    for (List<String> template : templateInputs) {
+      templates.add(StringUtils.format("%s %s %s", template.get(0), "%s", template.get(1)));
+    }
+    testFunctions(types, templates, List.of("^"));
   }
 
   @Test
@@ -877,9 +914,9 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
           final Object actual = vectorEval.valueOrThrow()[i];
           // For expressions that don't use any VO_MATHLIB op the SIMD and scalar paths are bit-identical,
           // so keep strict equality there and only loosen when at least one such op appears in the
-          // expression (see allowedUlpsFor + the useVectorMathApi javadoc). Two-tier bound matches
-          // SimdVoMathlibParityTest: 5 ulps if any hyperbolic (sinh/cosh/tanh) appears, otherwise 2.
-          final int allowedUlps = allowedUlpsFor(exprString);
+          // expression (see allowedUlpsFor + the useVectorMathApi javadoc). Bounds match SimdVoMathlibParityTest:
+          // 5 ulps for hyperbolic (sinh/cosh/tanh), 4 for atan2, otherwise 2.
+          final int allowedUlps = allowedUlpsFor(expr, exprString);
           if (allowedUlps > 0 && expected instanceof Double && actual instanceof Double) {
             VectorTestAssertions.assertDoublesEquivalent(message, (Double) expected, (Double) actual, allowedUlps);
           } else {
