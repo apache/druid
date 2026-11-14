@@ -25,19 +25,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Please see the class javadocs on {@link BasicAuthorizerRoleSimplifiedPermissions} for details on the deprecation.
- */
-@Deprecated
+
 public class BasicAuthorizerUserFull
 {
   private final String name;
-  private final Set<BasicAuthorizerRole> roles;
+  private final Set<BasicAuthorizerRoleFull> roles;
 
   @JsonCreator
   public BasicAuthorizerUserFull(
       @JsonProperty("name") String name,
-      @JsonProperty("roles") Set<BasicAuthorizerRole> roles
+      @JsonProperty("roles") Set<BasicAuthorizerRoleFull> roles
   )
   {
     this.name = name;
@@ -51,7 +48,7 @@ public class BasicAuthorizerUserFull
   }
 
   @JsonProperty
-  public Set<BasicAuthorizerRole> getRoles()
+  public Set<BasicAuthorizerRoleFull> getRoles()
   {
     return roles;
   }

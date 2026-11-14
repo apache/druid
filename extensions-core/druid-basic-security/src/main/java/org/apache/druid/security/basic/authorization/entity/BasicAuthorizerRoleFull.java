@@ -20,29 +20,28 @@
 package org.apache.druid.security.basic.authorization.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.server.security.ResourceAction;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Please see the class javadocs on {@link BasicAuthorizerRoleSimplifiedPermissions} for details on the deprecation.
- */
-@Deprecated
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class BasicAuthorizerRoleFull
 {
   private final String name;
   private final Set<String> users;
   private final Set<String> groups;
-  private final List<BasicAuthorizerPermission> permissions;
+  private final List<ResourceAction> permissions;
 
   @JsonCreator
   public BasicAuthorizerRoleFull(
       @JsonProperty("name") String name,
       @JsonProperty("users") Set<String> users,
       @JsonProperty("groups") Set<String> groups,
-      @JsonProperty("permissions") List<BasicAuthorizerPermission> permissions
+      @JsonProperty("permissions") List<ResourceAction> permissions
   )
   {
     this.name = name;
@@ -58,7 +57,7 @@ public class BasicAuthorizerRoleFull
   }
 
   @JsonProperty
-  public List<BasicAuthorizerPermission> getPermissions()
+  public List<ResourceAction> getPermissions()
   {
     return permissions;
   }

@@ -31,12 +31,11 @@ import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMappingFull;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRoleFull;
-import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRoleSimplifiedPermissions;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFull;
-import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFullSimplifiedPermissions;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 import org.apache.druid.server.security.Authorizer;
@@ -44,6 +43,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -112,7 +112,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
   }
 
   @Override
-  public Response getUser(String authorizerName, String userName, boolean isFull, boolean simplifyPermissions)
+  public Response getUser(String authorizerName, String userName, boolean isFull)
   {
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
@@ -120,7 +120,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     }
 
     if (isFull) {
-      return getUserFull(authorizerName, userName, simplifyPermissions);
+      return getUserFull(authorizerName, userName);
     } else {
       return getUserSimple(authorizerName, userName);
     }
@@ -226,7 +226,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
   }
 
   @Override
-  public Response getRole(String authorizerName, String roleName, boolean isFull, boolean simplifyPermissions)
+  public Response getRole(String authorizerName, String roleName, boolean isFull)
   {
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
@@ -234,9 +234,9 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     }
 
     if (isFull) {
-      return getRoleFull(authorizerName, roleName, simplifyPermissions);
+      return getRoleFull(authorizerName, roleName);
     } else {
-      return getRoleSimple(authorizerName, roleName, simplifyPermissions);
+      return getRoleSimple(authorizerName, roleName);
     }
   }
 
@@ -472,7 +472,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     }
   }
 
-  private Response getUserFull(String authorizerName, String userName, boolean simplifyPermissions)
+  private Response getUserFull(String authorizerName, String userName)
   {
     Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
         objectMapper,
@@ -490,61 +490,49 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
           storageUpdater.getCurrentRoleMapBytes(authorizerName)
       );
 
-      if (simplifyPermissions) {
-        Set<BasicAuthorizerRoleSimplifiedPermissions> roles = getRolesForUserWithSimplifiedPermissions(user, roleMap);
-        BasicAuthorizerUserFullSimplifiedPermissions fullUser = new BasicAuthorizerUserFullSimplifiedPermissions(
-            userName,
-            roles
-        );
-        return Response.ok(fullUser).build();
-      } else {
-        Set<BasicAuthorizerRole> roles = getRolesForUser(user, roleMap);
-        BasicAuthorizerUserFull fullUser = new BasicAuthorizerUserFull(userName, roles);
-        return Response.ok(fullUser).build();
-      }
+      Set<BasicAuthorizerRoleFull> roles = getRolesForUser(user, roleMap);
+      BasicAuthorizerUserFull fullUser = new BasicAuthorizerUserFull(userName, roles);
+      return Response.ok(fullUser).build();
+
     }
     catch (BasicSecurityDBResourceException e) {
       return makeResponseForBasicSecurityDBResourceException(e);
     }
   }
 
-  private Set<BasicAuthorizerRoleSimplifiedPermissions> getRolesForUserWithSimplifiedPermissions(
+  private Set<BasicAuthorizerRoleFull> getRolesForUser(
       BasicAuthorizerUser user,
       Map<String, BasicAuthorizerRole> roleMap
   )
   {
-    Set<BasicAuthorizerRoleSimplifiedPermissions> roles = new HashSet<>();
+    Set<BasicAuthorizerRoleFull> roles = new HashSet<>();
     for (String roleName : user.getRoles()) {
       BasicAuthorizerRole role = roleMap.get(roleName);
       if (role == null) {
         log.error("User [%s] had role [%s], but role object was not found.", user.getName(), roleName);
       } else {
-        BasicAuthorizerRoleSimplifiedPermissions roleWithSimplifiedPermissions = new BasicAuthorizerRoleSimplifiedPermissions(
+        roles.add(new BasicAuthorizerRoleFull(
             role.getName(),
             null,
-            BasicAuthorizerRoleSimplifiedPermissions.convertPermissions(role.getPermissions())
-        );
-        roles.add(roleWithSimplifiedPermissions);
+            null,
+            convertPermissions(role.getPermissions())
+        ));
       }
     }
     return roles;
   }
 
-  private Set<BasicAuthorizerRole> getRolesForUser(
-      BasicAuthorizerUser user,
-      Map<String, BasicAuthorizerRole> roleMap
+  private List<ResourceAction> convertPermissions(
+      List<BasicAuthorizerPermission> permissions
   )
   {
-    Set<BasicAuthorizerRole> roles = new HashSet<>();
-    for (String roleName : user.getRoles()) {
-      BasicAuthorizerRole role = roleMap.get(roleName);
-      if (role == null) {
-        log.error("User [%s] had role [%s], but role object was not found.", user.getName(), roleName);
-      } else {
-        roles.add(role);
-      }
+    List<ResourceAction> resourceActions = new ArrayList<>();
+
+    for (BasicAuthorizerPermission permission : permissions) {
+      resourceActions.add(permission.getResourceAction());
     }
-    return roles;
+
+    return resourceActions;
   }
 
   private Response getGroupMappingSimple(String authorizerName, String groupMappingName)
@@ -602,7 +590,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     }
   }
 
-  private Response getRoleSimple(String authorizerName, String roleName, boolean simplifyPermissions)
+  private Response getRoleSimple(String authorizerName, String roleName)
   {
     Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
         objectMapper,
@@ -615,18 +603,19 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
       }
 
-      if (simplifyPermissions) {
-        return Response.ok(new BasicAuthorizerRoleSimplifiedPermissions(role, null)).build();
-      } else {
-        return Response.ok(role).build();
-      }
+      return Response.ok(new BasicAuthorizerRoleFull(
+          role.getName(),
+          null,
+          null,
+          convertPermissions(role.getPermissions())
+      )).build();
     }
     catch (BasicSecurityDBResourceException e) {
       return makeResponseForBasicSecurityDBResourceException(e);
     }
   }
 
-  private Response getRoleFull(String authorizerName, String roleName, boolean simplifyPermissions)
+  private Response getRoleFull(String authorizerName, String roleName)
   {
     Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
         objectMapper,
@@ -662,17 +651,13 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
           groupMappings.add(group.getName());
         }
       }
-      if (simplifyPermissions) {
-        return Response.ok(new BasicAuthorizerRoleSimplifiedPermissions(role, users)).build();
-      } else {
-        BasicAuthorizerRoleFull roleFull = new BasicAuthorizerRoleFull(
+      BasicAuthorizerRoleFull roleFull = new BasicAuthorizerRoleFull(
             roleName,
             users,
             groupMappings,
-            role.getPermissions()
-        );
-        return Response.ok(roleFull).build();
-      }
+            convertPermissions(role.getPermissions())
+      );
+      return Response.ok(roleFull).build();
     }
     catch (BasicSecurityDBResourceException e) {
       return makeResponseForBasicSecurityDBResourceException(e);
