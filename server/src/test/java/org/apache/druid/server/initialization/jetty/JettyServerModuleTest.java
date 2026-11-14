@@ -22,6 +22,7 @@ package org.apache.druid.server.initialization.jetty;
 import com.google.inject.Binding;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PasswordProvider;
@@ -29,6 +30,9 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
 import org.apache.druid.server.security.TLSCertificateChecker;
+import org.eclipse.jetty.server.ConnectionFactory;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -36,6 +40,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -116,6 +121,77 @@ public class JettyServerModuleTest
     );
 
     Assertions.assertNotNull(server);
+  }
+
+  @Test
+  public void test_headerCacheSize_appliedToPlaintextAndTlsConnectors() throws Exception
+  {
+    // Jetty's own default is 1024, so this checks that Druid's default of 0 replaces it.
+    assertHeaderCacheSizeOnConnectors(new ServerConfig(), 0);
+    assertHeaderCacheSizeOnConnectors(
+        new DefaultObjectMapper().readValue("{\"headerCacheSize\": 256}", ServerConfig.class),
+        256
+    );
+  }
+
+  private static void assertHeaderCacheSizeOnConnectors(ServerConfig serverConfig, int expectedHeaderCacheSize)
+  {
+    String keystorePath = JettyServerModuleTest.class.getClassLoader().getResource("server.jks").getFile();
+
+    PasswordProvider pp = Mockito.mock(PasswordProvider.class);
+    Mockito.when(pp.getPassword()).thenReturn("druid123");
+
+    TLSServerConfig tlsServerConfig = TLSServerConfig.builder()
+                                                     .keyStorePath(keystorePath)
+                                                     .keyStoreType("jks")
+                                                     .keyStorePasswordProvider(pp)
+                                                     .certAlias("druid")
+                                                     .requireClientCertificate(false)
+                                                     .requestClientCertificate(false)
+                                                     .build();
+
+    DruidNode node = new DruidNode("test", "localhost", false, 8080, 8443, true, true);
+    Injector injector = Mockito.mock(Injector.class);
+    Mockito.when(injector.getInstance(JettyServerInitializer.class))
+           .thenReturn(Mockito.mock(JettyServerInitializer.class));
+
+    Server server = JettyServerModule.makeAndInitializeServer(
+        injector,
+        new Lifecycle(),
+        node,
+        serverConfig,
+        tlsServerConfig,
+        null,
+        Mockito.mock(TLSCertificateChecker.class)
+    );
+
+    Assertions.assertEquals(2, server.getConnectors().length);
+    for (Connector connector : server.getConnectors()) {
+      HttpConnectionFactory factory = findHttpConnectionFactory(connector);
+      Assertions.assertNotNull(factory);
+      Assertions.assertEquals(expectedHeaderCacheSize, factory.getHttpConfiguration().getHeaderCacheSize());
+    }
+  }
+
+  /**
+   * Finds the {@link HttpConnectionFactory} of a connector, looking inside the {@link JettyMonitoringConnectionFactory}
+   * that {@link JettyServerModule} wraps around each connector's default connection factory.
+   */
+  @Nullable
+  private static HttpConnectionFactory findHttpConnectionFactory(Connector connector)
+  {
+    for (ConnectionFactory factory : connector.getConnectionFactories()) {
+      if (factory instanceof HttpConnectionFactory httpConnectionFactory) {
+        return httpConnectionFactory;
+      }
+      if (factory instanceof JettyMonitoringConnectionFactory monitoringConnectionFactory) {
+        final HttpConnectionFactory delegate = monitoringConnectionFactory.getBean(HttpConnectionFactory.class);
+        if (delegate != null) {
+          return delegate;
+        }
+      }
+    }
+    return null;
   }
 
   @Test
