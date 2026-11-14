@@ -67,6 +67,7 @@ import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestIndex;
@@ -362,6 +363,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public IndexMergerV9Factory getIndexMergerV9Factory()
   {
     return testUtils.getIndexMergerV9Factory();
+  }
+
+  public IndexMergerV10Factory getIndexMergerV10Factory()
+  {
+    return testUtils.getIndexMergerV10Factory();
   }
 
   public class TestLocalTaskActionClientFactory implements TaskActionClientFactory

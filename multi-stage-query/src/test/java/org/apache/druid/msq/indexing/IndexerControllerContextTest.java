@@ -48,6 +48,7 @@ public class IndexerControllerContextTest
         QueryContextParameters.SQL_QUERY_ID.getName(), "sql-query-id",
         QueryContextParameters.MAX_THREADS.getName(), 2,
         Tasks.STORE_EMPTY_COLUMNS_KEY, false,
+        Tasks.BUILD_V10_KEY, true,
         QueryContextParameters.FINALIZE_AGGREGATIONS.getName(), false,
         QueryContextParameters.ARRAY_INGEST_MODE.getName(), "array"
     );
@@ -82,6 +83,7 @@ public class IndexerControllerContextTest
     Assertions.assertEquals("sql-query-id", taskContext.get(QueryContextParameters.SQL_QUERY_ID.getName()));
     Assertions.assertEquals(2, taskContext.get(QueryContextParameters.MAX_THREADS.getName()));
     Assertions.assertEquals(false, taskContext.get(Tasks.STORE_EMPTY_COLUMNS_KEY));
+    Assertions.assertEquals(true, taskContext.get(Tasks.BUILD_V10_KEY));
     Assertions.assertEquals(
         TaskReportMSQDestination.instance().toSelectDestination().getName(),
         taskContext.get(QueryContextParameters.SELECT_DESTINATION.getName())

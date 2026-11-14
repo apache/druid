@@ -265,7 +265,7 @@ public class TaskToolboxFactory
         .cacheConfig(cacheConfig)
         .cachePopulatorStats(cachePopulatorStats)
         .indexMerger(
-            config.buildV10()
+            QueryContext.of(task.getContext()).getBoolean(Tasks.BUILD_V10_KEY, config.buildV10())
             ? indexMergerV10Factory.create()
             : indexMergerV9Factory.create(
                 task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, config.isStoreEmptyColumns())

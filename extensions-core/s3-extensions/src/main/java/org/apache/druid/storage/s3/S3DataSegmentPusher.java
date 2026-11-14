@@ -79,7 +79,8 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix) throws IOException
   {
-    if (zip) {
+    final boolean shouldZip = zip && SegmentUtils.getVersionFromDir(indexFilesDir) != IndexIO.V10_VERSION;
+    if (shouldZip) {
       final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), storageDirSuffix);
       log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
       return pushZip(indexFilesDir, inSegment, s3Path);

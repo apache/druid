@@ -123,7 +123,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
 
     try {
-      if (zip) {
+      if (zip && IndexIO.isExternalCompressionSupported(binaryVersion)) {
         return pushZip(indexFilesDir, segment, binaryVersion, azureBasePath);
       } else {
         return pushNoZip(indexFilesDir, segment, binaryVersion, azureBasePath);
