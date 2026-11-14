@@ -30,6 +30,10 @@ import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoubleLongFun
  * SIMD specialization of {@code (double[], long[]) -> double[]} {@code pow(x, y)}. The long input is widened
  * lane-by-lane to a {@link DoubleVector} via {@code castShape} before {@code lanewise(VectorOperators.POW)}. Backed
  * by a vectorized math library (see {@link SimdSupportedBinaryOp#POW}).
+ *
+ * <p>The C99-vs-{@link Math#pow} divergence handled by {@link SimdDoubleDoublePowProcessor#withNanFixup} only fires
+ * when the exponent is {@code NaN} or {@code ±Infinity}; here the exponent is widened from a {@code long} and is
+ * therefore always finite, so no fixup is needed.
  */
 public final class SimdDoubleLongPowProcessor extends SimdDoubleLongProcessor
 {

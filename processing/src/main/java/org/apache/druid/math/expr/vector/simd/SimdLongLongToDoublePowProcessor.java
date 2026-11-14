@@ -30,6 +30,10 @@ import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongsFunction
  * SIMD specialization of {@code (long[], long[]) -> double[]} {@code pow(x, y)}. Both long inputs are widened
  * lane-by-lane to {@link DoubleVector} via {@code castShape} before {@code lanewise(VectorOperators.POW)}. Backed
  * by a vectorized math library (see {@link SimdSupportedBinaryOp#POW}).
+ *
+ * <p>Both operands widen from {@code long} and are therefore always finite, so neither {@code NaN} nor
+ * {@code ±Infinity} can reach {@link VectorOperators#POW} and the {@link SimdDoubleDoublePowProcessor#withNanFixup}
+ * fixup needed by the double-input variants is unnecessary here.
  */
 public final class SimdLongLongToDoublePowProcessor extends SimdLongLongToDoubleProcessor
 {

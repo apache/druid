@@ -22,14 +22,16 @@ package org.apache.druid.math.expr.vector.simd;
 import jdk.incubator.vector.DoubleVector;
 import jdk.incubator.vector.LongVector;
 import jdk.incubator.vector.VectorMask;
-import jdk.incubator.vector.VectorOperators;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongDoubleFunction;
 
 /**
  * SIMD specialization of {@code (long[], double[]) -> double[]} {@code pow(x, y)}. The long input is widened
  * lane-by-lane to a {@link DoubleVector} via {@code castShape} before {@code lanewise(VectorOperators.POW)}. Backed
- * by a vectorized math library (see {@link SimdSupportedBinaryOp#POW}).
+ * by a vectorized math library (see {@link SimdSupportedBinaryOp#POW}). The result is run through
+ * {@link SimdDoubleDoublePowProcessor#withNanFixup} to recover {@link Math#pow}'s NaN behavior at the C99 corner
+ * cases: the widened long base can be exactly {@code ±1.0}, and the double exponent can be {@code NaN} or
+ * {@code ±Infinity}.
  */
 public final class SimdLongDoublePowProcessor extends SimdLongDoubleProcessor
 {
@@ -58,7 +60,7 @@ public final class SimdLongDoublePowProcessor extends SimdLongDoubleProcessor
       final DoubleVector va =
           (DoubleVector) LongVector.fromArray(LONG_SPECIES, leftInput, i).castShape(DOUBLE_SPECIES, 0);
       final DoubleVector vb = DoubleVector.fromArray(DOUBLE_SPECIES, rightInput, i);
-      va.lanewise(VectorOperators.POW, vb).intoArray(outValues, i);
+      SimdDoubleDoublePowProcessor.withNanFixup(va, vb).intoArray(outValues, i);
     }
     if (i < currentSize) {
       final VectorMask<Long> longMask = LONG_SPECIES.indexInRange(i, currentSize);
@@ -66,7 +68,7 @@ public final class SimdLongDoublePowProcessor extends SimdLongDoubleProcessor
       final DoubleVector va =
           (DoubleVector) LongVector.fromArray(LONG_SPECIES, leftInput, i, longMask).castShape(DOUBLE_SPECIES, 0);
       final DoubleVector vb = DoubleVector.fromArray(DOUBLE_SPECIES, rightInput, i, doubleMask);
-      va.lanewise(VectorOperators.POW, vb).intoArray(outValues, i, doubleMask);
+      SimdDoubleDoublePowProcessor.withNanFixup(va, vb).intoArray(outValues, i, doubleMask);
     }
     SimdBinaryNulls.combineInto(outNulls, leftNulls, rightNulls, currentSize);
   }

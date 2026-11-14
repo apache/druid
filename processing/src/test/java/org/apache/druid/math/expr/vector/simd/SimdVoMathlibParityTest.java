@@ -36,6 +36,7 @@ import org.apache.druid.math.expr.vector.functional.DoubleUnivariateLongFunction
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.function.DoubleBinaryOperator;
 
 /**
@@ -365,6 +366,34 @@ public class SimdVoMathlibParityTest
       assertStable("op=" + op + " shape=long,long", warmed, () -> processor.evalVector(STUB_BINDING).values());
       assertParityBinary(op, "long,long", longsToDoubles(leftIn), longsToDoubles(rightIn), warmed, scalar);
     }
+  }
+
+  @Test
+  public void powDoubleDoubleSpecialValuesParity()
+  {
+    // VectorOperators.POW follows C99 and returns 1.0 for pow(1, NaN) and pow(±1, ±Infinity) where Math.pow returns
+    // NaN. SimdPowSpecialCases.withNanFixup patches those lanes, so the SIMD output should match Math.pow exactly on
+    // this special-value grid. ulp=0 because the Java spec pins these results deterministically.
+    final double inf = Double.POSITIVE_INFINITY;
+    final double nan = Double.NaN;
+    // Pairs covering: C99-vs-Math divergences (±1 base × NaN/±Inf exponent, pow(1, NaN)); unaffected NaN/Inf
+    // combinations that should already match (NaN base, pow(2, NaN), pow(2, Inf), pow(0.5, -Inf), pow(2, -Inf));
+    // and a plain finite baseline to confirm the fixup doesn't disturb ordinary values.
+    final double[] bases = {1.0, -1.0, 1.0, -1.0, 1.0, nan, 2.0, 2.0, 0.5, 2.0, inf, 3.0};
+    final double[] exps =  {nan, nan, inf, inf, -inf, 2.0, nan, inf, -inf, -inf, 2.0, 2.0};
+    runPowSpecialValuesParity("double,double", bases, exps);
+  }
+
+  @Test
+  public void powLongDoubleSpecialValuesParity()
+  {
+    // Long base widens to a finite double, so we can still hit the C99-vs-Math fixup via the double-side exponent
+    // being NaN or ±Infinity paired with base=±1 (and the base=2 pairings exercise the unaffected lanes).
+    final double inf = Double.POSITIVE_INFINITY;
+    final double nan = Double.NaN;
+    final long[] bases   = {1L, -1L, 1L, -1L, 1L, -1L, 2L,  2L,  2L,  3L};
+    final double[] exps =  {nan, nan, inf, inf, -inf, -inf, nan, inf, -inf, 2.0};
+    runPowLongDoubleSpecialValuesParity(bases, exps);
   }
 
   @Test
@@ -700,6 +729,77 @@ public class SimdVoMathlibParityTest
         return values.length;
       }
     };
+  }
+
+  private static void runPowSpecialValuesParity(String shapeLabel, double[] bases, double[] exps)
+  {
+    Assertions.assertEquals(bases.length, exps.length);
+    // Pad to INPUT_LANES with a no-op (1 ^ 1 = 1) so the SIMD loop takes multiple iterations per invocation.
+    final double[] leftIn = new double[INPUT_LANES];
+    final double[] rightIn = new double[INPUT_LANES];
+    Arrays.fill(leftIn, 1.0);
+    Arrays.fill(rightIn, 1.0);
+    System.arraycopy(bases, 0, leftIn, 0, bases.length);
+    System.arraycopy(exps, 0, rightIn, 0, exps.length);
+
+    final ExprVectorProcessor<double[]> processor = SimdProcessors.makeDoubleDouble(
+        fixedDoubleInput(leftIn),
+        fixedDoubleInput(rightIn),
+        SimdSupportedBinaryOp.POW,
+        Math::pow
+    );
+
+    double[] warmed = null;
+    for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+      warmed = processor.evalVector(STUB_BINDING).values().clone();
+    }
+
+    for (int i = 0; i < bases.length; i++) {
+      VectorTestAssertions.assertDoublesEquivalent(
+          StringUtils.format(
+              "op=POW shape=%s lane=%d base=%s exp=%s SIMD-vs-Math",
+              shapeLabel, i, leftIn[i], rightIn[i]
+          ),
+          Math.pow(leftIn[i], rightIn[i]),
+          warmed[i],
+          0
+      );
+    }
+  }
+
+  private static void runPowLongDoubleSpecialValuesParity(long[] bases, double[] exps)
+  {
+    Assertions.assertEquals(bases.length, exps.length);
+    final long[] leftIn = new long[INPUT_LANES];
+    final double[] rightIn = new double[INPUT_LANES];
+    Arrays.fill(leftIn, 1L);
+    Arrays.fill(rightIn, 1.0);
+    System.arraycopy(bases, 0, leftIn, 0, bases.length);
+    System.arraycopy(exps, 0, rightIn, 0, exps.length);
+
+    final ExprVectorProcessor<double[]> processor = SimdProcessors.makeLongDouble(
+        fixedLongInput(leftIn),
+        fixedDoubleInput(rightIn),
+        SimdSupportedBinaryOp.POW,
+        (l, r) -> Math.pow((double) l, r)
+    );
+
+    double[] warmed = null;
+    for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+      warmed = processor.evalVector(STUB_BINDING).values().clone();
+    }
+
+    for (int i = 0; i < bases.length; i++) {
+      VectorTestAssertions.assertDoublesEquivalent(
+          StringUtils.format(
+              "op=POW shape=long,double lane=%d base=%s exp=%s SIMD-vs-Math",
+              i, leftIn[i], rightIn[i]
+          ),
+          Math.pow((double) leftIn[i], rightIn[i]),
+          warmed[i],
+          0
+      );
+    }
   }
 
   @FunctionalInterface
