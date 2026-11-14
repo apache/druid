@@ -61,6 +61,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BooleanSupplier;
 
 /**
  * A {@link SegmentFileMapper} that fetches internal files from deep storage via a {@link SegmentRangeReader},
@@ -548,10 +549,17 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * {@code acquireSegment} path on partial-eligible segments to force the segment fully resident before returning.
    * Each container downloads via {@link #fetchFiles}, so a not-yet-downloaded container fetches in a single range
    * read (its files tile back-to-back), and a partially-downloaded container skips its already-resident spans.
+   * <p>
+   * {@code continueDownloading} is consulted before each container fetch (including each attached external
+   * mapper's), so a download whose consumer has given up can stop between fetches rather than finish. Returns
+   * {@code true} when every file is downloaded, {@code false} when the supplier stopped the download early; containers
+   * fetched before the stop stay resident and a later call picks up where this one left off.
    */
-  public void ensureAllDownloaded() throws IOException
+  public boolean ensureAllDownloaded(BooleanSupplier continueDownloading) throws IOException
   {
-    fetchAllContainers();
+    if (!fetchAllContainers(continueDownloading)) {
+      return false;
+    }
     if (!isFullyDownloaded()) {
       throw DruidException.defensive(
           "Failed to download every file of [%s]; residency was cleared mid-download, which means a container was "
@@ -559,16 +567,23 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
           targetFilename
       );
     }
+    return true;
   }
 
-  private void fetchAllContainers() throws IOException
+  private boolean fetchAllContainers(BooleanSupplier continueDownloading) throws IOException
   {
     for (int containerIndex = 0; containerIndex < containers.length; containerIndex++) {
+      if (!continueDownloading.getAsBoolean()) {
+        return false;
+      }
       fetchFiles(containerFileNames.get(containerIndex));
     }
     for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
-      external.fetchAllContainers();
+      if (!external.fetchAllContainers(continueDownloading)) {
+        return false;
+      }
     }
+    return true;
   }
 
   /**

@@ -77,6 +77,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BooleanSupplier;
 
 /**
  *
@@ -520,7 +521,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               return submitAcquireTask(
                   dataSegment.getId(),
                   hold,
-                  (taskHolds, waitNanos) -> loadCompleteEntry(hold.getEntry(), location, taskHolds, waitNanos)
+                  (taskHolds, waitNanos, continueLoading) ->
+                      loadCompleteEntry(hold.getEntry(), location, taskHolds, waitNanos)
               );
             }
           }
@@ -642,7 +644,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         // bundle it mounts. All of them fold into the delivered segment's close. The task owns every hold until the
         // fold (or the failure unwind), so a caller closing the action while the task runs cannot release them
         // mid-mount or mid-download: the entry stays pinned for the task's whole duration.
-        return submitAcquireTask(dataSegment.getId(), reserved.hold, (taskHolds, waitNanos) -> {
+        return submitAcquireTask(dataSegment.getId(), reserved.hold, (taskHolds, waitNanos, continueLoading) -> {
           final long taskStartNanos = System.nanoTime();
           final boolean wasMounted = reserved.metadata.isMounted();
           // mount() is idempotent (and cheap if already mounted)
@@ -684,7 +686,18 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
                 taskHolds.register(reserved.metadata.getBundleAcquirer().acquire(bundleName));
               }
-              mapper.ensureAllDownloaded();
+              // when the action is closed mid-download, stop between container fetches rather than finish a download
+              // nobody wants (freeing its load permits); the throw unwinds every registered hold and the failure is
+              // absorbed by the closed action. Containers fetched before the stop stay resident for a later acquire
+              // to build on.
+              if (!mapper.ensureAllDownloaded(continueLoading)) {
+                throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                    .ofCategory(DruidException.Category.CANCELED)
+                                    .build(
+                                        "Abandoned full download of segment[%s] because its acquire was closed",
+                                        dataSegment.getId()
+                                    );
+              }
               loadSizeBytes = mapper.getDownloadedBytes() - downloadedBefore;
             } else {
               // Lazy mount: the header bytes when this task caused the mount; 0 when the entry was already
@@ -1375,7 +1388,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return submitAcquireTask(
           complete.getSegmentId(),
           hold,
-          (taskHolds, waitNanos) -> loadCompleteEntry(complete, location, taskHolds, waitNanos)
+          (taskHolds, waitNanos, continueLoading) -> loadCompleteEntry(complete, location, taskHolds, waitNanos)
       );
     }
     return null;
@@ -1966,6 +1979,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    *   the action was closed first)</li>
    *   <li>action closed before the task ever runs (canceled while queued): the canceler claims and closes the
    *   hold</li>
+   *   <li>action closed while the task runs: the body may observe abandonment at a safe checkpoint (see
+   *   {@link AcquireTaskBody#load}) and abort by throwing, which unwinds as the "task throws" case above</li>
    *   <li>submitting the task fails synchronously: the hold is closed here and the failure propagates to the
    *   {@link #acquireSegment} caller</li>
    * </ul>
@@ -1982,6 +1997,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     final AcquireSegmentAction action = new AcquireSegmentAction();
     final AtomicBoolean holdClaimed = new AtomicBoolean(false);
+    final AtomicBoolean abandoned = new AtomicBoolean(false);
     final long submitNanos = System.nanoTime();
     final ListenableFuture<?> taskFuture;
     try {
@@ -1998,7 +2014,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           // reads now, so that wait is folded into loadTime instead, and the query-time bundle/column fetches
           // (separate permit-bounded tasks) are not reflected here at all. A meaningful load-wait metric would
           // have to time the permit acquire at the read sites and aggregate it across those fetches.
-          final AcquireSegmentResult result = taskBody.load(taskHolds, System.nanoTime() - submitNanos);
+          final AcquireSegmentResult result =
+              taskBody.load(taskHolds, System.nanoTime() - submitNanos, () -> !abandoned.get());
           if (!action.set(result)) {
             // the action was closed while the task was completing; close the orphaned result
             result.close();
@@ -2025,8 +2042,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       // cancel(false), NOT cancel(true): a still-queued task is prevented from running (the canceler then wins the
       // claim CAS below and releases the pre-placed hold); a task already running is left to finish rather than
       // interrupted, because interrupting a running mount would also fail any concurrent query awaiting the same
-      // mount (mounts are deduped). A running task that finishes after close loses the set() race and closes its
-      // own orphaned result, releasing the holds then.
+      // mount (mounts are deduped). Instead, the abandoned flag lets a running body stop at its own safe
+      // checkpoints (between container fetches, never inside shared work). A running task that finishes after close
+      // loses the set() race and closes its own orphaned result, releasing the holds then.
+      abandoned.set(true);
       taskFuture.cancel(false);
       if (holdClaimed.compareAndSet(false, true)) {
         CloseableUtils.closeAndSuppressExceptions(
@@ -2236,8 +2255,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
      * act: after the fold, ownership of every registered hold lives inside the returned result's segment (or was
      * closed by the fold on a miss), and nothing that can throw may run between the fold and returning. On any
      * throw before the fold, {@link #submitAcquireTask} closes {@code taskHolds}.
+     * <p>
+     * {@code continueLoading} reports whether anyone still wants this acquire (false once the action has been
+     * closed). Long-running bodies should consult it at safe abandonment points and abort by throwing rather than
+     * finishing work nobody wants: the throw unwinds the holds as above and the failure is silently absorbed by the
+     * closed action. A safe abandonment point is one where no shared work is in progress; between deep-storage
+     * container fetches is safe (concurrent downloaders of the same files self-serve), inside a deduped mount is
+     * not (concurrent acquires await the driver's outcome).
      */
-    AcquireSegmentResult load(Closer taskHolds, long waitNanos) throws Exception;
+    AcquireSegmentResult load(Closer taskHolds, long waitNanos, BooleanSupplier continueLoading) throws Exception;
   }
 
   private static final class ReferenceCountingLock

@@ -238,7 +238,7 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
         Assertions.assertInstanceOf(PartialQueryableIndexPhysicalSegmentInspector.class, segment.as(clazz));
       }
 
-      mapper.ensureAllDownloaded();
+      mapper.ensureAllDownloaded(() -> true);
       for (Class<?> clazz : inspectorClasses) {
         Assertions.assertInstanceOf(QueryableIndexPhysicalSegmentInspector.class, segment.as(clazz));
       }
@@ -296,7 +296,7 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
     // segment metadata queries see a partial segment only once it is fully downloaded (AcquireMode.FULL)
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final PartialSegmentFileMapperV10 mapper = openMapper(rangeReader, "analysis");
-    mapper.ensureAllDownloaded();
+    mapper.ensureAllDownloaded(() -> true);
     final PartialQueryableIndex index =
         new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG);
 
