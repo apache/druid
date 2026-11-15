@@ -265,7 +265,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       // Create parent if it does not exist, recreation is not an error.
       fs.mkdirs(outIndexPath.getParent());
       copyFilesWithChecks(fs, tmpPath, outIndexPath);
-      deleteSiblingRepresentations(fs, outIndexPath);
     }
     catch (IOException e) {
       log.error(e, "Failed to push segment[%s] to HDFS at location[%s]", segment.getId(), outIndexFilePath);
@@ -287,51 +286,18 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
   private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
   {
-    if (!HadoopFsWrapper.rename(fs, from, to)) {
-      if (fs.exists(to)) {
-        log.info(
-            "Unable to rename temp file [%s] to segment path [%s], it may have already been pushed by a replica task.",
-            from,
-            to
-        );
-      } else {
-        throw new IOE("Failed to rename temp file [%s] and final segment path [%s] is not present.", from, to);
-      }
-    }
-  }
-
-  /**
-   * A segment can be published in one of three representations in HDFS. Remove representations left by a previous
-   * push only after the new representation has been published.
-   */
-  private void deleteSiblingRepresentations(final FileSystem fs, final Path publishedPath) throws IOException
-  {
-    final String filename = publishedPath.getName();
-    final String stem;
-    if (filename.endsWith(CompressionUtils.Format.ZIP.getSuffix())) {
-      stem = filename.substring(0, filename.length() - CompressionUtils.Format.ZIP.getSuffix().length());
-    } else if (filename.endsWith(CompressionUtils.Format.LZ4.getSuffix())) {
-      stem = filename.substring(0, filename.length() - CompressionUtils.Format.LZ4.getSuffix().length());
-    } else {
-      stem = filename;
-    }
-
-    // Restrict cleanup to names produced by this pusher. In particular, do not derive a sibling from an arbitrary
-    // file in the segment directory.
-    if (!stem.endsWith("_index")) {
+    if (HadoopFsWrapper.rename(fs, from, to)) {
       return;
     }
 
-    for (CompressionUtils.Format format : new CompressionUtils.Format[]{
-        CompressionUtils.Format.ZIP,
-        CompressionUtils.Format.LZ4,
-        CompressionUtils.Format.NONE
-    }) {
-      final String siblingName = format == CompressionUtils.Format.NONE ? stem : stem + format.getSuffix();
-      final Path siblingPath = new Path(publishedPath.getParent(), siblingName);
-      if (!siblingPath.equals(publishedPath) && fs.exists(siblingPath) && !fs.delete(siblingPath, true)) {
-        throw new IOException(StringUtils.format("Unable to remove stale segment representation[%s]", siblingPath));
-      }
+    if (fs.exists(to)) {
+      log.info(
+        "Unable to rename temp file [%s] to segment path [%s], it may have already been pushed by a replica task.",
+        from,
+        to
+      );
+    } else {
+      throw new IOE("Failed to rename temp file [%s] and final segment path [%s] is not present.", from, to);
     }
   }
 

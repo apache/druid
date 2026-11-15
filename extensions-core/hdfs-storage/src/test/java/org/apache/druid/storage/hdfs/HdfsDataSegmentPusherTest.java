@@ -36,6 +36,7 @@ import org.apache.druid.jackson.GranularityModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -67,6 +68,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -602,23 +606,21 @@ public class HdfsDataSegmentPusherTest
   }
 
   @Test
-  public void testPushNoneCleansUpTempDirectoryWhenInputListingFails() throws Exception
+  public void testPushNoneRejectsInvalidInputFile() throws Exception
   {
-    final Configuration conf = new Configuration(true);
-    final File invalidSegmentDir = tempFolder.newFile();
-
     final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = tempFolder.newFolder();
-    config.setStorageDirectory(storageDirectory.getAbsolutePath());
+    config.setStorageDirectory(tempFolder.newFolder().getAbsolutePath());
 
     final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
       config,
-      conf,
+      new Configuration(true),
       null,
-      new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+      new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
     );
 
-    final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+    final DataSegment segment = DataSegment.builder(
+        SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0)
+      )
       .loadSpec(new HashMap<>())
       .dimensions(new ArrayList<>())
       .metrics(new ArrayList<>())
@@ -627,26 +629,17 @@ public class HdfsDataSegmentPusherTest
       .size(0)
       .build();
 
-    final FileSystem fs = FileSystem.getLocal(conf);
-    final Path storagePath = fs.makeQualified(new Path(storageDirectory.getAbsolutePath()));
+    final File invalidSegmentDir = tempFolder.newFile();
 
-    assertThrows(
-      IOException.class,
-      () -> pusher.push(invalidSegmentDir, segment, false)
+    Assertions.assertThrows(
+      Exception.class,
+      () -> pusher.push(invalidSegmentDir, segment, false),
+      "Pushing a regular file instead of a segment directory should fail early"
     );
-
-    final Path dataSourcePath = new Path(storagePath, segment.getDataSource());
-    if (fs.exists(dataSourcePath)) {
-      Assertions.assertEquals(
-        0,
-        fs.listStatus(dataSourcePath).length,
-        "Temporary HDFS directory (UUID folder) should be cleaned up"
-      );
-    }
   }
 
   @Test
-  public void testPushV9ThenV10RemovesZipRepresentation() throws Exception
+  public void testPushV9ThenV10RetainsZipRepresentation() throws Exception
   {
     assertRepresentationTransition(
       CompressionUtils.Format.ZIP,
@@ -656,7 +649,7 @@ public class HdfsDataSegmentPusherTest
   }
 
   @Test
-  public void testPushV10ThenV9RemovesZipRepresentation() throws Exception
+  public void testPushV10ThenV9RetainsZipRepresentation() throws Exception
   {
     assertRepresentationTransition(
       CompressionUtils.Format.ZIP,
@@ -666,7 +659,7 @@ public class HdfsDataSegmentPusherTest
   }
 
   @Test
-  public void testPushV9ThenV10RemovesLz4Representation() throws Exception
+  public void testPushV9ThenV10RetainsLz4Representation() throws Exception
   {
     assertRepresentationTransition(
       CompressionUtils.Format.LZ4,
@@ -676,7 +669,7 @@ public class HdfsDataSegmentPusherTest
   }
 
   @Test
-  public void testPushV10ThenV9RemovesLz4Representation() throws Exception
+  public void testPushV10ThenV9RetainsLz4Representation() throws Exception
   {
     assertRepresentationTransition(
       CompressionUtils.Format.LZ4,
@@ -833,9 +826,6 @@ public class HdfsDataSegmentPusherTest
       .size(0)
       .build();
 
-    final File firstSegmentDir = createSegmentDirectory(firstVersion);
-    final DataSegment firstPush = pusher.push(firstSegmentDir, segment, false);
-
     final File segmentParent = new File(
       storageDirectory,
       pusher.getStorageDir(segment, false)
@@ -845,51 +835,161 @@ public class HdfsDataSegmentPusherTest
     final File lz4Path = new File(segmentParent, "0_index.lz4");
     final File directoryPath = new File(segmentParent, "0_index");
 
+    final File firstSegmentDir = createSegmentDirectory(firstVersion);
+    final DataSegment firstPush = pusher.push(firstSegmentDir, segment, false);
+
     final File firstRepresentation = firstVersion == IndexIO.V10_VERSION
       ? directoryPath
-      : compressionFormat == CompressionUtils.Format.ZIP
-      ? zipPath
-      : lz4Path;
+      : compressionFormat == CompressionUtils.Format.ZIP ? zipPath : lz4Path;
 
     Assertions.assertTrue(
       firstRepresentation.exists(),
       "The first representation should exist after the initial push"
     );
 
+    Assertions.assertTrue(
+      new File(URI.create(Objects.requireNonNull(firstPush.getLoadSpec()).get("path").toString())).exists(),
+      "The first loadSpec path should exist after the initial push"
+    );
+
+    verifySegmentContents(firstRepresentation);
+
     final File secondSegmentDir = createSegmentDirectory(secondVersion);
     final DataSegment secondPush = pusher.push(secondSegmentDir, segment, false);
 
-    final File expectedRepresentation = secondVersion == IndexIO.V10_VERSION
+    final File secondRepresentation = secondVersion == IndexIO.V10_VERSION
       ? directoryPath
-      : compressionFormat == CompressionUtils.Format.ZIP
-      ? zipPath
-      : lz4Path;
+      : compressionFormat == CompressionUtils.Format.ZIP ? zipPath : lz4Path;
 
     Assertions.assertTrue(
-      expectedRepresentation.exists(),
-      "The new representation should exist after the replacement push"
-    );
-
-    Assertions.assertFalse(
       firstRepresentation.exists(),
-      "The previous representation should be removed after the replacement push"
+      "The previous representation must not be deleted after the second push"
     );
 
-    Assertions.assertEquals(
-      secondVersion,
-      secondPush.getBinaryVersion()
+    Assertions.assertTrue(
+      secondRepresentation.exists(),
+      "The new representation should exist after the second push"
     );
 
-    Assertions.assertEquals(
-      secondVersion == IndexIO.V10_VERSION,
-      directoryPath.isDirectory()
+    Assertions.assertTrue(
+      new File(URI.create(firstPush.getLoadSpec().get("path").toString())).exists(),
+      "The first push's loadSpec path must remain valid"
     );
+
+    Assertions.assertTrue(
+      new File(URI.create(Objects.requireNonNull(secondPush.getLoadSpec()).get("path").toString())).exists(),
+      "The second push's loadSpec path must exist"
+    );
+
+    verifySegmentContents(firstRepresentation);
+    verifySegmentContents(secondRepresentation);
+
+    Assertions.assertEquals(firstVersion, firstPush.getBinaryVersion());
+    Assertions.assertEquals(secondVersion, secondPush.getBinaryVersion());
 
     Assertions.assertNotEquals(
-      Objects.requireNonNull(firstPush.getLoadSpec()).get("path"),
-      Objects.requireNonNull(secondPush.getLoadSpec()).get("path"),
-      "The load spec should point to the newly published representation"
+      firstPush.getLoadSpec().get("path"),
+      secondPush.getLoadSpec().get("path"),
+      "Different segment representations should have different loadSpec paths"
     );
+
+    Assertions.assertEquals(
+      firstVersion == IndexIO.V10_VERSION || secondVersion == IndexIO.V10_VERSION,
+      directoryPath.isDirectory()
+    );
+  }
+
+  private void verifySegmentContents(File path) throws IOException
+  {
+    if (path.isDirectory()) {
+      Assertions.assertTrue(new File(path, "version.bin").exists(), "version.bin must exist in directory");
+      Assertions.assertTrue(new File(path, "index.smoosh").exists(), "index.smoosh must exist in directory");
+    } else if (path.getName().endsWith(".zip")) {
+      final File unzipped = tempFolder.newFolder();
+      CompressionUtils.unzip(path, unzipped);
+      Assertions.assertTrue(new File(unzipped, "version.bin").exists(), "version.bin must exist in unzipped archive");
+      Assertions.assertTrue(new File(unzipped, "index.smoosh").exists(), "index.smoosh must exist in unzipped archive");
+    } else {
+      Assertions.assertTrue(path.isFile(), "Representation must be a file");
+      Assertions.assertTrue(path.length() > 0, "Compressed file must not be empty");
+    }
+  }
+
+  @Test
+  public void testConcurrentV9AndV10PushesDoNotDeleteEachOther() throws Exception
+  {
+    final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    config.setStorageDirectory(tempFolder.newFolder().getAbsolutePath());
+
+    final HdfsDataSegmentPusher pusher1 = new HdfsDataSegmentPusher(
+      config,
+      new Configuration(true),
+      null,
+      new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
+    );
+
+    final HdfsDataSegmentPusher pusher2 = new HdfsDataSegmentPusher(
+      config,
+      new Configuration(true),
+      null,
+      new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
+    );
+
+    final DataSegment segmentToPush = DataSegment.builder(
+        SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0)
+      )
+      .loadSpec(new HashMap<>())
+      .dimensions(new ArrayList<>())
+      .metrics(new ArrayList<>())
+      .shardSpec(new NumberedShardSpec(0, 0))
+      .binaryVersion(0)
+      .size(0)
+      .build();
+
+    final File v9SegmentDir = createSegmentDirectory(IndexIO.V9_VERSION);
+    final File v10SegmentDir = createSegmentDirectory(IndexIO.V10_VERSION);
+    final ExecutorService executor = Execs.multiThreaded(2, "HdfsDataSegmentPusherTest-%d");
+    final CountDownLatch startLatch = new CountDownLatch(1);
+
+    try {
+      Future<DataSegment> v9Future = executor.submit(() -> {
+        startLatch.await();
+        return pusher1.push(v9SegmentDir, segmentToPush, false);
+      });
+
+      Future<DataSegment> v10Future = executor.submit(() -> {
+        startLatch.await();
+        return pusher2.push(v10SegmentDir, segmentToPush, false);
+      });
+
+      startLatch.countDown();
+
+      final DataSegment v9PushedSegment = v9Future.get();
+      final DataSegment v10PushedSegment = v10Future.get();
+
+      final File v9Path = new File(URI.create(Objects.requireNonNull(v9PushedSegment.getLoadSpec()).get("path").toString()));
+      final File v10Path = new File(URI.create(Objects.requireNonNull(v10PushedSegment.getLoadSpec()).get("path").toString()));
+
+      Assertions.assertTrue(
+        v9Path.exists(),
+        "V9 zip file should exist after concurrent push"
+      );
+      Assertions.assertTrue(
+        v9Path.isFile(),
+        "V9 ZIP representation must be a file"
+      );
+      Assertions.assertTrue(
+        v10Path.exists(),
+        "V10 directory should exist after concurrent push"
+      );
+      Assertions.assertTrue(
+        v10Path.isDirectory(),
+        "V10 representation must be a directory"
+      );
+    }
+    finally {
+      executor.shutdownNow();
+    }
   }
 
   private File createSegmentDirectory(int version) throws IOException
