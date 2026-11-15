@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
@@ -44,7 +45,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
@@ -405,7 +405,7 @@ public class LocalDataSegmentPusherTest
   public void testConcurrentMixedPushes() throws Exception
   {
     final int numThreads = 10;
-    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+    ExecutorService executor = Execs.multiThreaded(numThreads, "local-segment-pusher-test");
     CountDownLatch latch = new CountDownLatch(1);
     List<Future<DataSegment>> futures = new ArrayList<>();
 
@@ -436,7 +436,7 @@ public class LocalDataSegmentPusherTest
   public void testConcurrentPushesFromSeparatePusherInstances() throws Exception
   {
     final int numThreads = 6;
-    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+    ExecutorService executor = Execs.multiThreaded(numThreads, "local-segment-pusher-test");
     CountDownLatch latch = new CountDownLatch(1);
     List<Future<DataSegment>> futures = new ArrayList<>();
 
