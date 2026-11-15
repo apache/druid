@@ -694,20 +694,22 @@ public class StreamAppenderator implements Appenderator
               }
 
               if (committer != null) {
-                log.debug(
-                    "Committing metadata[%s] for sinks[%s].",
-                    commitMetadata,
-                    Joiner.on(", ").join(
-                        currentHydrants.entrySet()
-                                       .stream()
-                                       .map(entry -> StringUtils.format(
-                                           "%s:%d",
-                                           entry.getKey(),
-                                           entry.getValue()
-                                       ))
-                                       .collect(Collectors.toList())
-                    )
-                );
+                if (log.isDebugEnabled()) {
+                  log.debug(
+                      "Committing metadata[%s] for sinks[%s].",
+                      commitMetadata,
+                      Joiner.on(", ").join(
+                          currentHydrants.entrySet()
+                                         .stream()
+                                         .map(entry -> StringUtils.format(
+                                             "%s:%d",
+                                             entry.getKey(),
+                                             entry.getValue()
+                                         ))
+                                         .collect(Collectors.toList())
+                      )
+                  );
+                }
 
                 committer.run();
 
@@ -813,10 +815,12 @@ public class StreamAppenderator implements Appenderator
                    rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
           );
 
-          log.debug(
-              "Building and pushing segments: %s",
-              theSinks.keySet().stream().map(SegmentIdWithShardSpec::toString).collect(Collectors.joining(", "))
-          );
+          if (log.isDebugEnabled()) {
+            log.debug(
+                "Building and pushing segments: %s",
+                theSinks.keySet().stream().map(SegmentIdWithShardSpec::toString).collect(Collectors.joining(", "))
+            );
+          }
 
           for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : theSinks.entrySet()) {
             if (droppingSinks.contains(entry.getKey())) {
