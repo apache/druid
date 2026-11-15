@@ -21,6 +21,7 @@ package org.apache.druid.storage.s3;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
@@ -41,10 +42,7 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nonnull;
 import javax.tools.FileObject;
@@ -58,6 +56,7 @@ import java.io.Writer;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.Iterator;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
@@ -107,16 +106,19 @@ public class S3DataSegmentPuller implements URIDataPuller
         return result;
       } else if (s3Coords.getPath().endsWith("/")) {
         // segment is not compressed, list objects and pull them all
-        ListObjectsV2Request request = ListObjectsV2Request.builder()
-            .bucket(s3Coords.getBucket())
-            .prefix(s3Coords.getPath())
-            .build();
-        final ListObjectsV2Response list = S3Utils.retryS3Operation(
-            () -> s3Client.listObjectsV2(request)
-        );
         FileUtils.FileCopyResult copyResult = new FileUtils.FileCopyResult();
-        for (S3Object objectSummary : list.contents()) {
-          final CloudObjectLocation objectLocation = S3Utils.summaryToCloudObjectLocation(objectSummary, s3Coords.getBucket());
+        final URI directoryUri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
+        final Iterator<S3ObjectWithBucket> objects = S3Utils.objectSummaryIterator(
+            s3Client,
+            ImmutableList.of(directoryUri),
+            new S3InputDataConfig().getMaxListingLength()
+        );
+        while (objects.hasNext()) {
+          final S3ObjectWithBucket object = objects.next();
+          final CloudObjectLocation objectLocation = S3Utils.summaryToCloudObjectLocation(
+              object.getS3Object(),
+              object.getBucket()
+          );
           final URI uri = objectLocation.toUri(S3StorageDruidModule.SCHEME);
           final ByteSource byteSource = getByteSource(uri);
           final File outFile = new File(outDir, Paths.get(objectLocation.getPath()).getFileName().toString());

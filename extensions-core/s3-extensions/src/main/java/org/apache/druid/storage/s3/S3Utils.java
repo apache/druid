@@ -275,6 +275,16 @@ public class S3Utils
     ) + "/";
   }
 
+  static String constructGenerationBasePath(String baseKey, String storageDir, String generationId)
+  {
+    return JOINER.join(
+        baseKey.isEmpty() ? null : baseKey,
+        "_druid_generations",
+        storageDir,
+        generationId
+    ) + "/";
+  }
+
   /**
    * Builds the header value for {@code x-amz-grant-full-control}.
    *
@@ -365,6 +375,7 @@ public class S3Utils
   )
       throws Exception
   {
+    final String directoryPrefix = prefix.endsWith("/") ? prefix : prefix + "/";
     log.debug("Deleting directory at bucket: [%s], path: [%s]", bucket, prefix);
 
     // A listing page and a multi-object delete do not have the same ceiling: S3 quietly returns only the first 1000
@@ -375,7 +386,7 @@ public class S3Utils
     final List<ObjectIdentifier> keysToDelete = new ArrayList<>(deleteBatchSize);
     final Iterator<S3ObjectWithBucket> iterator = objectSummaryIterator(
         s3Client,
-        ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("s3")),
+        ImmutableList.of(new CloudObjectLocation(bucket, directoryPrefix).toUri("s3")),
         maxListingLength
     );
 

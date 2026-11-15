@@ -19,8 +19,10 @@
 
 package org.apache.druid.storage.s3;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -36,9 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class S3DataSegmentPusher implements DataSegmentPusher
 {
@@ -79,27 +79,33 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix) throws IOException
   {
-    final boolean shouldZip = zip && SegmentUtils.getVersionFromDir(indexFilesDir) != IndexIO.V10_VERSION;
+    final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
+    final boolean shouldZip = zip && IndexIO.isExternalCompressionSupported(binaryVersion);
+    final String generationPath = S3Utils.constructGenerationBasePath(
+        config.getBaseKey(),
+        storageDirSuffix,
+        UUIDUtils.generateUuid()
+    );
     if (shouldZip) {
-      final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), storageDirSuffix);
+      final String s3Path = generationPath + "index.zip";
       log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
-      return pushZip(indexFilesDir, inSegment, s3Path);
+      return pushZip(indexFilesDir, inSegment, binaryVersion, s3Path);
     } else {
-      final String s3Path = S3Utils.constructSegmentBasePath(config.getBaseKey(), storageDirSuffix);
-      log.debug("Copying segment[%s] files to S3 at location[%s]", inSegment.getId(), s3Path);
-      return pushNoZip(indexFilesDir, inSegment, s3Path);
+      log.debug("Copying segment[%s] files to S3 at location[%s]", inSegment.getId(), generationPath);
+      return pushNoZip(indexFilesDir, inSegment, binaryVersion, generationPath);
     }
   }
 
-  private DataSegment pushZip(File indexFilesDir, DataSegment baseSegment, String s3Path) throws IOException
+  private DataSegment pushZip(File indexFilesDir, DataSegment baseSegment, int binaryVersion, String s3Path) throws IOException
   {
+    final String generationPath = s3Path.substring(0, s3Path.length() - "index.zip".length());
     final File zipOutFile = Files.createTempFile("druid", "index.zip").toFile();
     try {
       final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
       final DataSegment outSegment = baseSegment.withSize(indexSize)
                                                 .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-                                                .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+                                                .withBinaryVersion(binaryVersion);
 
       try {
         return S3Utils.retryS3Operation(
@@ -111,99 +117,84 @@ public class S3DataSegmentPusher implements DataSegmentPusher
         );
       }
       catch (S3Exception e) {
+        cleanupGeneration(generationPath);
         throw handlePushServiceException(e, indexSize);
       }
       catch (Exception e) {
+        cleanupGeneration(generationPath);
         throw new RuntimeException(e);
       }
     }
     finally {
       log.debug("Deleting temporary cached index.zip");
-      zipOutFile.delete();
-    }
-  }
-
-  private DataSegment pushNoZip(File indexFilesDir, DataSegment baseSegment, String s3Path) throws IOException
-  {
-    final File[] files = indexFilesDir.listFiles();
-    if (files == null) {
-      throw new IOE("Cannot list directory [%s]", indexFilesDir);
-    }
-
-    final Set<String> pushedKeys = new HashSet<>();
-
-    long size = 0;
-    for (final File file : files) {
-      if (file.isFile()) {
-        size += file.length();
-        final String key = s3Path + file.getName();
-
-        try {
-          S3Utils.retryS3Operation(
-              () -> {
-                S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), key, file);
-                return null;
-              }
-          );
-        }
-        catch (S3Exception e) {
-          throw handlePushServiceException(e, file.length());
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-
-        pushedKeys.add(key);
-      } else {
-        // Segment directories are expected to be flat.
-        throw new IOE("Unexpected subdirectory [%s]", file.getName());
+      if (!zipOutFile.delete()) {
+        log.warn("Failed to delete temporary cached index.zip file [%s]", zipOutFile.getAbsolutePath());
       }
     }
-
-    deleteStaleObjects(s3Path, pushedKeys);
-
-    final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
-    // V10 unzipped is rangeable: a single druid.segment with a range-readable header. V9 unzipped is a directory of
-    // separate smoosh files the range-read path can't consume.
-    final boolean rangeable = binaryVersion == IndexIO.V10_VERSION;
-    return baseSegment.withSize(size)
-                      .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path, rangeable))
-                      .withBinaryVersion(binaryVersion);
   }
 
-  /**
-   * Removes everything under {@code s3Path} that this push did not write.
-   * <p>
-   * A zipped push replaces the previous segment outright, because one {@code index.zip} object overwrites another, and
-   * {@link #push} with {@code useUniquePath = false} is expected to replace a previous push the same way. Uploading
-   * file by file only overwrites the names the new segment happens to share, so without this a re-push could leave
-   * behind objects of whatever was there before: a stale {@code index.zip} from a zipped push, or smoosh chunks from a
-   * larger prior v9 segment.
-   * <p>
-   * Note that this makes an unzipped push require permission to delete objects under the segment path, which a zipped
-   * push does not.
-   */
-  private void deleteStaleObjects(final String s3Path, final Set<String> pushedKeys) throws IOException
+  private DataSegment pushNoZip(File indexFilesDir, DataSegment baseSegment, int binaryVersion, String s3Path) throws IOException
+  {
+    try {
+      final File[] files = indexFilesDir.listFiles();
+      if (files == null) {
+        throw new IOE("Cannot list directory [%s]", indexFilesDir);
+      }
+
+      long size = 0;
+      for (final File file : files) {
+        if (file.isFile()) {
+          size += file.length();
+          final String key = s3Path + file.getName();
+
+          try {
+            S3Utils.retryS3Operation(
+                () -> {
+                  S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), key, file);
+                  return file;
+                }
+            );
+          }
+          catch (S3Exception e) {
+            throw handlePushServiceException(e, file.length());
+          }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+
+        } else {
+          throw new IOE("Unexpected subdirectory [%s]", file.getName());
+        }
+      }
+
+      final boolean rangeable = binaryVersion == IndexIO.V10_VERSION;
+      return baseSegment.withSize(size)
+                        .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path, rangeable))
+                        .withBinaryVersion(binaryVersion);
+    }
+    catch (Exception e) {
+      cleanupGeneration(s3Path);
+      Throwables.throwIfInstanceOf(e, IOException.class);
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void cleanupGeneration(final String generationPath)
   {
     try {
       S3Utils.deleteObjectsInPath(
           s3Client,
           config.getMaxListingLength(),
           config.getBucket(),
-          s3Path,
-          object -> !pushedKeys.contains(object.key())
+          generationPath,
+          ignored -> true
       );
     }
-    catch (Exception e) {
-      throw new IOE(
-          e,
-          "Could not remove objects left under [s3://%s/%s] by a previous push, which would be loaded as part of this"
-          + " segment",
-          config.getBucket(),
-          s3Path
-      );
+    catch (Exception cleanupException) {
+      log.warn(cleanupException, "Unable to clean up failed segment generation[%s]", generationPath);
     }
   }
+
 
   @Override
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)

@@ -44,6 +44,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Objects;
+import java.util.regex.Pattern;
 
 public class GoogleDataSegmentPusherTest extends EasyMockSupport
 {
@@ -92,13 +94,10 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
         .addMockedMethod("insert", File.class, String.class, String.class)
         .createMock();
 
-    final String storageDir = pusher.getStorageDir(segmentToPush, false);
-    final String indexPath = PREFIX + "/" + storageDir + "/" + "index.zip";
-
     pusher.insert(
         EasyMock.anyObject(File.class),
         EasyMock.eq("application/zip"),
-        EasyMock.eq(indexPath)
+        EasyMock.matches(PREFIX + "/_druid_generations/.+/index\\.zip")
     );
     EasyMock.expectLastCall();
 
@@ -108,11 +107,13 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
 
     Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assertions.assertEquals(segmentToPush, segment);
-    Assertions.assertEquals(ImmutableMap.of(
-        "type", GoogleStorageDruidModule.SCHEME,
-        "bucket", BUCKET,
-        "path", indexPath
-    ), segment.getLoadSpec());
+    Assertions.assertEquals(GoogleStorageDruidModule.SCHEME, Objects.requireNonNull(segment.getLoadSpec()).get("type"));
+    Assertions.assertEquals(BUCKET, segment.getLoadSpec().get("bucket"));
+    Assertions.assertTrue(
+      Pattern.compile(PREFIX + "/_druid_generations/.+/index\\.zip")
+        .matcher(segment.getLoadSpec().get("path").toString())
+        .matches()
+    );
 
     verifyAll();
   }
@@ -131,21 +132,10 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
         .addMockedMethod("insert", File.class, String.class, String.class)
         .createMock();
 
-    final String expectedDir = PREFIX + "/" + pusher.getStorageDir(segmentToPush, false);
-    pusher.insert(EasyMock.anyObject(File.class), EasyMock.anyString(), EasyMock.eq(expectedDir + "/version.bin"));
+    pusher.insert(EasyMock.anyObject(File.class), EasyMock.anyString(), EasyMock.matches(PREFIX + "/_druid_generations/.+/version\\.bin"));
     EasyMock.expectLastCall();
-    pusher.insert(EasyMock.anyObject(File.class), EasyMock.anyString(), EasyMock.eq(expectedDir + "/meta.smoosh"));
+    pusher.insert(EasyMock.anyObject(File.class), EasyMock.anyString(), EasyMock.matches(PREFIX + "/_druid_generations/.+/meta\\.smoosh"));
     EasyMock.expectLastCall();
-
-    // nothing else is under the path, so there is nothing to clean up
-    EasyMock.expect(storage.list(EasyMock.eq(BUCKET), EasyMock.eq(expectedDir + "/"), EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(new GoogleStorageObjectPage(
-                ImmutableList.of(
-                    new GoogleStorageObjectMetadata(BUCKET, expectedDir + "/version.bin", (long) data.length, 0L),
-                    new GoogleStorageObjectMetadata(BUCKET, expectedDir + "/meta.smoosh", (long) data.length, 0L)
-                ),
-                null
-            ));
 
     replayAll();
 
@@ -153,12 +143,14 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
 
     // the trailing slash is what marks the path as a directory of files rather than a single object, and V1 (the test
     // fixture) is not V10, so rangeable is stamped false
-    Assertions.assertEquals(ImmutableMap.of(
-        "type", GoogleStorageDruidModule.SCHEME,
-        "bucket", BUCKET,
-        "path", expectedDir + "/",
-        "rangeable", false
-    ), segment.getLoadSpec());
+    Assertions.assertEquals(GoogleStorageDruidModule.SCHEME, Objects.requireNonNull(segment.getLoadSpec()).get("type"));
+    Assertions.assertEquals(BUCKET, segment.getLoadSpec().get("bucket"));
+    Assertions.assertTrue(
+      Pattern.compile(PREFIX + "/_druid_generations/.+/")
+        .matcher(segment.getLoadSpec().get("path").toString())
+        .matches()
+    );
+    Assertions.assertEquals(false, segment.getLoadSpec().get("rangeable"));
     Assertions.assertEquals(2 * data.length, segment.getSize());
 
     verifyAll();
@@ -195,20 +187,14 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
         .addMockedMethod("insert", File.class, String.class, String.class)
         .createMock();
 
-    final String expectedDir = PREFIX + "/" + pusher.getStorageDir(segmentToPush, false);
-    final ImmutableList.Builder<GoogleStorageObjectMetadata> listing = ImmutableList.builder();
     for (final File file : segmentFiles) {
       pusher.insert(
           EasyMock.anyObject(File.class),
           EasyMock.anyString(),
-          EasyMock.eq(expectedDir + "/" + file.getName())
+          EasyMock.matches(PREFIX + "/_druid_generations/.+/.+")
       );
       EasyMock.expectLastCall();
-      listing.add(new GoogleStorageObjectMetadata(BUCKET, expectedDir + "/" + file.getName(), file.length(), 0L));
     }
-    // everything under the path was written by this push, so there is nothing to clean up
-    EasyMock.expect(storage.list(EasyMock.eq(BUCKET), EasyMock.eq(expectedDir + "/"), EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(new GoogleStorageObjectPage(listing.build(), null));
 
     replayAll();
 
@@ -246,50 +232,6 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
     DataSegment segment = pusher.push(tempFolder, segmentToPush, false);
 
     Assertions.assertFalse(segment.getLoadSpec().containsKey("rangeable"));
-
-    verifyAll();
-  }
-
-  @Test
-  public void testPushNoZipRemovesObjectsLeftByPreviousPush() throws Exception
-  {
-    final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
-    Files.write(data, new File(tempFolder, "version.bin"));
-
-    DataSegment segmentToPush = newSegmentToPush(data.length);
-
-    GoogleDataSegmentPusher pusher = createMockBuilder(GoogleDataSegmentPusher.class)
-        .withConstructor(storage, googleAccountConfig, INPUT_DATA_CONFIG, NO_ZIP_CONFIG)
-        .addMockedMethod("insert", File.class, String.class, String.class)
-        .createMock();
-
-    final String expectedDir = PREFIX + "/" + pusher.getStorageDir(segmentToPush, false);
-    pusher.insert(EasyMock.anyObject(File.class), EasyMock.anyString(), EasyMock.eq(expectedDir + "/version.bin"));
-    EasyMock.expectLastCall();
-
-    // an index.zip from a zipped push and a smoosh chunk from a larger prior segment: nothing in the new segment
-    // references either, but the puller would list and download both
-    final String staleZip = expectedDir + "/index.zip";
-    final String staleChunk = expectedDir + "/00001.smoosh";
-    EasyMock.expect(storage.list(EasyMock.eq(BUCKET), EasyMock.eq(expectedDir + "/"), EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(new GoogleStorageObjectPage(
-                ImmutableList.of(
-                    new GoogleStorageObjectMetadata(BUCKET, expectedDir + "/version.bin", (long) data.length, 0L),
-                    new GoogleStorageObjectMetadata(BUCKET, staleZip, 128L, 0L),
-                    new GoogleStorageObjectMetadata(BUCKET, staleChunk, 64L, 0L)
-                ),
-                null
-            ));
-
-    // only the objects this push did not write are removed
-    storage.delete(BUCKET, staleZip);
-    EasyMock.expectLastCall();
-    storage.delete(BUCKET, staleChunk);
-    EasyMock.expectLastCall();
-
-    replayAll();
-
-    pusher.push(tempFolder, segmentToPush, false);
 
     verifyAll();
   }

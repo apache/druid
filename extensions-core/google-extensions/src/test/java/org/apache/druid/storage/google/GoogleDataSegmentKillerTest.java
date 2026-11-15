@@ -29,7 +29,7 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.jupiter.api.Assertions;
@@ -45,7 +45,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   private static final String KEY_2 = "key2";
   private static final String BUCKET = "bucket";
   private static final String PREFIX = "test/log";
-  private static final URI PREFIX_URI = URI.create(StringUtils.format("gs://%s/%s", BUCKET, PREFIX));
+  private static final URI PREFIX_URI = URI.create(StringUtils.format("gs://%s/%s/", BUCKET, PREFIX));
   private static final String INDEX_PATH = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
   private static final String DESCRIPTOR_PATH = DataSegmentKiller.descriptorPath(INDEX_PATH);
   private static final long TIME_0 = 0L;
@@ -57,7 +57,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 
   private static final DataSegment DATA_SEGMENT = DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
                                                              .loadSpec(ImmutableMap.of("bucket", BUCKET, "path", INDEX_PATH))
-                                                             .shardSpec(NoneShardSpec.instance())
+                                                             .shardSpec(new NumberedShardSpec(0, 0))
                                                              .binaryVersion(0)
                                                              .size(1)
                                                              .build();
