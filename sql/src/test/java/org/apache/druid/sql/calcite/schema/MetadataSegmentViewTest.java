@@ -265,4 +265,45 @@ public class MetadataSegmentViewTest
         "stop() should interrupt an in-flight poll blocked on the coordinator call"
     );
   }
+
+  @Test
+  public void test_stop_releasesWaitersBlockedOnInitialPoll() throws Exception
+  {
+    final CountDownLatch pollStarted = new CountDownLatch(1);
+    final CountDownLatch getSegmentsFailed = new CountDownLatch(1);
+
+    Mockito.when(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(
+            ArgumentMatchers.eq(null),
+            ArgumentMatchers.eq(true)
+        )
+    ).thenAnswer(invocation -> {
+      pollStarted.countDown();
+      // Block the first poll indefinitely so it is still in-flight when stop() is called below.
+      Thread.sleep(TimeUnit.MINUTES.toMillis(5));
+      return Futures.immediateFuture(StupidResourceHolder.create(List.<SegmentStatusInCluster>of().iterator()));
+    });
+
+    segmentView.start();
+    Assertions.assertTrue(pollStarted.await(5, TimeUnit.SECONDS), "poll should have started");
+
+    // A concurrent caller blocked waiting for the first poll to complete.
+    final Thread waiter = new Thread(() -> {
+      try {
+        segmentView.getSegments();
+      }
+      catch (ISE e) {
+        getSegmentsFailed.countDown();
+      }
+    });
+    waiter.setDaemon(true);
+    waiter.start();
+
+    segmentView.stop();
+
+    Assertions.assertTrue(
+        getSegmentsFailed.await(5, TimeUnit.SECONDS),
+        "a getSegments() call blocked on the initial poll must be released, not left stuck, when stop() is called"
+    );
+  }
 }
