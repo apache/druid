@@ -588,22 +588,18 @@ Example output:
       "name": "druidRole",
       "permissions": [
         {
-          "resourceAction": {
-            "resource": {
-              "name": "A",
-              "type": "DATASOURCE"
-            },
-            "action": "READ"
-          }
+          "resource": {
+            "name": "A",
+            "type": "DATASOURCE"
+          },
+          "action": "READ"
         },
         {
-          "resourceAction": {
-            "resource": {
-              "name": "C",
-              "type": "CONFIG"
-            },
-            "action": "WRITE"
-          }
+          "resource": {
+            "name": "C",
+            "type": "CONFIG"
+          },
+          "action": "WRITE"
         }
       ]
     }
@@ -656,13 +652,11 @@ Example output:
   "name": "druidRole2",
   "permissions": [
     {
-      "resourceAction": {
-        "resource": {
-          "name": "E",
-          "type": "DATASOURCE"
-        },
-        "action": "WRITE"
-      }
+      "resource": {
+        "name": "E",
+        "type": "DATASOURCE"
+      },
+      "action": "WRITE"
     }
   ]
 }
