@@ -740,6 +740,82 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void testPendingCompletionTimeout_stopsTaskGroupsStartedAfterFailedTaskGroupInOtherLists()
+  {
+    final SeekableStreamSupervisorIOConfig ioConfig = setupSpecForPendingCompletionTest(4);
+
+    expectRunningTask("failedTask");
+    expectRunningTask("olderTask");
+    expectRunningTask("laterTask");
+    expectRunningTask("transitiveTask");
+    taskQueue.shutdown(EasyMock.eq("failedTask"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(indexTaskClient.stopAsync("laterTask", false))
+            .andReturn(Futures.immediateFuture(true)).once();
+    EasyMock.expect(indexTaskClient.stopAsync("transitiveTask", false))
+            .andReturn(Futures.immediateFuture(true)).once();
+
+    // Task group 2 reads the partition of the failed task group, and task group 0 reads partition 3 from the end
+    // offsets of the stopped task groups
+    expectRunningTask("readingTask0");
+    expectRunningTask("readingTask1");
+    expectRunningTask("readingTask2");
+    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    expectCurrentTask("readingTask1", 1, Map.of("1", "150"), ioConfig);
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    // After scale actions, the task groups that started from the end offsets of a task group are not necessarily
+    // in the same list of pending completion task groups
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "failedTask", Map.of("2", "200"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "olderTask", Map.of("1", "100", "3", "300"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "laterTask", Map.of("2", "250", "3", "350"));
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "transitiveTask", Map.of("3", "400"));
+    addActivelyReadingTaskGroup(supervisor, 0, Map.of("0", "150", "3", "450"), Set.of("readingTask0"));
+    addActivelyReadingTaskGroup(supervisor, 1, Map.of("1", "150"), Set.of("readingTask1"));
+    addActivelyReadingTaskGroup(supervisor, 2, Map.of("2", "300"), Set.of("readingTask2"));
+    supervisor.getPartitionOffsets().putAll(Map.of("0", "150", "1", "150", "2", "300", "3", "450"));
+
+    // The later task waits for the failed task group to publish
+    final ListenableFuture<Boolean> readyToPublish = supervisor.isTaskReadyToPublishSegments(
+        "laterTask",
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Map.of("2", "250", "3", "350"), Set.of())
+        )
+    );
+    Assertions.assertFalse(readyToPublish.isDone());
+
+    supervisor.getPendingCompletionTaskGroups(0).get(0).completionTimeout = DateTimes.nowUtc().minusMinutes(1);
+    supervisor.runInternal();
+    verifyAll();
+
+    // The later task is stopped before it can publish from the unpublished end offsets of the failed task group
+    Assertions.assertTrue(readyToPublish.isDone());
+    Assertions.assertEquals(Boolean.FALSE, FutureUtils.getUnchecked(readyToPublish, true));
+
+    // The partitions of the failed and the stopped task groups are re-read from the stream
+    Assertions.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get("2"));
+    Assertions.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get("3"));
+    Assertions.assertEquals("150", supervisor.getPartitionOffsets().get("0"));
+    Assertions.assertEquals("150", supervisor.getPartitionOffsets().get("1"));
+
+    Assertions.assertEquals(Set.of("readingTask1"), supervisor.getActiveTaskGroup(1).taskIds());
+    Assertions.assertEquals(Map.of("0", "150", "3", "10"), supervisor.getActiveTaskGroup(0).startingSequences);
+    Assertions.assertEquals(Map.of("2", "10"), supervisor.getActiveTaskGroup(2).startingSequences);
+
+    // The task group that started reading partition 3 before the stopped task groups keeps publishing
+    Assertions.assertTrue(supervisor.getPendingCompletionTaskGroups(0).isEmpty());
+    Assertions.assertTrue(supervisor.getPendingCompletionTaskGroups(2).isEmpty());
+    Assertions.assertEquals(1, supervisor.getPendingCompletionTaskGroups(1).size());
+    Assertions.assertEquals(Set.of("olderTask"), supervisor.getPendingCompletionTaskGroups(1).get(0).taskIds());
+  }
+
+  @Test
   public void testPendingCompletionTimeout_killsTaskGroupAssignedUnreadPartition_notTaskGroupWithSameId()
   {
     // The task groups are {0, 3}, {1, 4} and {2, 5}
