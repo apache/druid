@@ -33,9 +33,13 @@ import org.apache.druid.utils.CompressionUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class LocalDataSegmentPusher implements DataSegmentPusher
@@ -50,6 +54,14 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
    */
   private static final CompressionUtils.Format DEFAULT_FORMAT = CompressionUtils.Format.NONE;
 
+  private static final Object[] JVM_LOCKS = new Object[64];
+
+  static {
+    for (int i = 0; i < JVM_LOCKS.length; i++) {
+      JVM_LOCKS[i] = new Object();
+    }
+  }
+
   private final LocalDataSegmentPusherConfig config;
   private final CompressionUtils.Format compressionFormat;
 
@@ -62,6 +74,11 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
         CompressionUtils.Format.ZIP,
         CompressionUtils.Format.NONE
     );
+  }
+
+  private Object getJvmLock(String path)
+  {
+    return JVM_LOCKS[(path.hashCode() & 0x7FFFFFFF) % JVM_LOCKS.length];
   }
 
   @Override
@@ -85,18 +102,38 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     if (dataSegmentFile.equals(outDir)) {
       // Input and output directories are the same. Compute size, build a loadSpec, and return.
       long size = 0;
-      for (File file : dataSegmentFile.listFiles()) {
+      for (File file : Objects.requireNonNull(dataSegmentFile.listFiles())) {
         size += file.length();
       }
 
       return segment.withLoadSpec(makeLoadSpec(outDir.toURI()))
                     .withSize(size)
                     .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
-    } else if (compressionFormat == CompressionUtils.Format.ZIP
-               && SegmentUtils.getVersionFromDir(dataSegmentFile) != IndexIO.V10_VERSION) {
-      return pushZip(dataSegmentFile, outDir, segment);
-    } else {
-      return pushNoZip(dataSegmentFile, outDir, segment);
+    }
+
+    FileUtils.mkdirp(outDir);
+    final String canonicalPath = outDir.getCanonicalPath();
+    final File lockFile = new File(outDir, ".push.lock");
+
+    synchronized (getJvmLock(canonicalPath)) {
+      try (FileChannel channel = FileChannel.open(
+        lockFile.toPath(),
+        StandardOpenOption.CREATE,
+        StandardOpenOption.WRITE
+      );
+           FileLock ignored = channel.lock()) {
+
+        DataSegment result;
+
+        if (compressionFormat == CompressionUtils.Format.ZIP
+          && SegmentUtils.getVersionFromDir(dataSegmentFile) != IndexIO.V10_VERSION) {
+          result = pushZip(dataSegmentFile, outDir, segment);
+        } else {
+          result = pushNoZip(dataSegmentFile, outDir, segment);
+        }
+
+        return result;
+      }
     }
   }
 
@@ -127,7 +164,17 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       final File indexFileTarget = new File(outDir, tmpIndexFile.getName());
 
       if (!tmpIndexFile.renameTo(indexFileTarget)) {
-        throw new IOE("Failed to rename [%s] to [%s]", tmpIndexFile, indexFileTarget);
+        Files.move(tmpIndexFile.toPath(), indexFileTarget.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+      }
+
+      final File siblingDir = new File(outDir, INDEX_DIR);
+      if (siblingDir.exists()) {
+        try {
+          FileUtils.deleteDirectory(siblingDir);
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to delete stale sibling directory [%s]", siblingDir);
+        }
       }
 
       return baseSegment.withLoadSpec(makeLoadSpec(new File(outDir, INDEX_ZIP_FILENAME).toURI()))
@@ -163,21 +210,39 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       final File segmentDir = new File(outDir, INDEX_DIR);
       FileUtils.mkdirp(outDir);
 
+      File oldSegmentDir = null;
+      if (segmentDir.exists()) {
+        oldSegmentDir = new File(outDir, StringUtils.format("%s_old_%s", INDEX_DIR, UUID.randomUUID()));
+        Files.move(segmentDir.toPath(), oldSegmentDir.toPath(), StandardCopyOption.ATOMIC_MOVE);
+      }
+
       try {
         Files.move(tmpSegmentDir.toPath(), segmentDir.toPath(), StandardCopyOption.ATOMIC_MOVE);
       }
       catch (IOException e) {
-        if (segmentDir.exists()) {
-          // Move old directory out of the way, then try again. This makes the latest push win when we push to the
-          // same directory twice, so behavior is compatible with the zip style of pushing.
-          Files.move(
-              segmentDir.toPath(),
-              new File(outDir, StringUtils.format("%s_old_%s", INDEX_DIR, UUID.randomUUID())).toPath(),
-              StandardCopyOption.ATOMIC_MOVE
-          );
-
-          Files.move(tmpSegmentDir.toPath(), segmentDir.toPath(), StandardCopyOption.ATOMIC_MOVE);
+        if (oldSegmentDir != null && oldSegmentDir.exists() && !segmentDir.exists()) {
+          try {
+            Files.move(oldSegmentDir.toPath(), segmentDir.toPath(), StandardCopyOption.ATOMIC_MOVE);
+          }
+          catch (IOException restoreEx) {
+            e.addSuppressed(restoreEx);
+          }
         }
+        throw e;
+      }
+
+      if (oldSegmentDir != null) {
+        try {
+          FileUtils.deleteDirectory(oldSegmentDir);
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to delete stale old directory [%s]", oldSegmentDir);
+        }
+      }
+
+      final File siblingZip = new File(outDir, INDEX_ZIP_FILENAME);
+      if (siblingZip.exists() && !siblingZip.delete()) {
+        log.warn("Failed to delete stale sibling file [%s]", siblingZip);
       }
 
       return baseSegment.withLoadSpec(makeLoadSpec(new File(outDir, INDEX_DIR).toURI()))

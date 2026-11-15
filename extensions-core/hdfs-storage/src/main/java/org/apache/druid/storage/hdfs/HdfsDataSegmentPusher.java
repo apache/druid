@@ -285,43 +285,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     return dataSegment;
   }
 
-  private void deleteSiblingRepresentations(final FileSystem fs, final Path publishedPath) throws IOException
-  {
-    final String filename = publishedPath.getName();
-    final CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(filename);
-    final String stem = compressionFormat == null
-                        ? filename
-                        : filename.substring(0, filename.length() - compressionFormat.getSuffix().length());
-
-    if (!isSegmentRepresentationName(stem)) {
-      return;
-    }
-
-    for (CompressionUtils.Format siblingFormat : new CompressionUtils.Format[]{
-        CompressionUtils.Format.ZIP,
-        CompressionUtils.Format.LZ4,
-        CompressionUtils.Format.NONE
-    }) {
-      final String siblingName = siblingFormat == CompressionUtils.Format.NONE
-                                 ? stem
-                                 : stem + siblingFormat.getSuffix();
-      final Path siblingPath = new Path(publishedPath.getParent(), siblingName);
-      if (!siblingPath.equals(publishedPath) && fs.exists(siblingPath)) {
-        final boolean isDirectory = fs.getFileStatus(siblingPath).isDirectory();
-        if (!fs.delete(siblingPath, isDirectory)) {
-          throw new IOException("Unable to remove stale segment representation");
-        }
-      }
-    }
-  }
-
-  private static boolean isSegmentRepresentationName(final String stem)
-  {
-    final String[] parts = stem.split("_");
-    return "index".equals(stem) ||
-           (parts.length >= 2 && parts.length <= 3 && parts[parts.length - 1].equals("index"));
-  }
-
   private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
   {
     if (!HadoopFsWrapper.rename(fs, from, to)) {
@@ -333,6 +296,41 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         );
       } else {
         throw new IOE("Failed to rename temp file [%s] and final segment path [%s] is not present.", from, to);
+      }
+    }
+  }
+
+  /**
+   * A segment can be published in one of three representations in HDFS. Remove representations left by a previous
+   * push only after the new representation has been published.
+   */
+  private void deleteSiblingRepresentations(final FileSystem fs, final Path publishedPath) throws IOException
+  {
+    final String filename = publishedPath.getName();
+    final String stem;
+    if (filename.endsWith(CompressionUtils.Format.ZIP.getSuffix())) {
+      stem = filename.substring(0, filename.length() - CompressionUtils.Format.ZIP.getSuffix().length());
+    } else if (filename.endsWith(CompressionUtils.Format.LZ4.getSuffix())) {
+      stem = filename.substring(0, filename.length() - CompressionUtils.Format.LZ4.getSuffix().length());
+    } else {
+      stem = filename;
+    }
+
+    // Restrict cleanup to names produced by this pusher. In particular, do not derive a sibling from an arbitrary
+    // file in the segment directory.
+    if (!stem.endsWith("_index")) {
+      return;
+    }
+
+    for (CompressionUtils.Format format : new CompressionUtils.Format[]{
+        CompressionUtils.Format.ZIP,
+        CompressionUtils.Format.LZ4,
+        CompressionUtils.Format.NONE
+    }) {
+      final String siblingName = format == CompressionUtils.Format.NONE ? stem : stem + format.getSuffix();
+      final Path siblingPath = new Path(publishedPath.getParent(), siblingName);
+      if (!siblingPath.equals(publishedPath) && fs.exists(siblingPath) && !fs.delete(siblingPath, true)) {
+        throw new IOException(StringUtils.format("Unable to remove stale segment representation[%s]", siblingPath));
       }
     }
   }

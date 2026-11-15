@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -38,6 +39,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 public class LocalDataSegmentPusherTest
@@ -329,4 +337,127 @@ public class LocalDataSegmentPusherTest
         )
     );
   }
+
+
+  @Test
+  public void testPushV9ThenV10RemovesZipRepresentation() throws IOException
+  {
+    DataSegment v9Segment = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
+
+    File outDir = new File(
+      configZip.getStorageDirectory(),
+      localDataSegmentPusherZip.getStorageDir(dataSegment, false)
+    );
+    File zipFile = new File(outDir, "index.zip");
+    File indexDir = new File(outDir, "index");
+
+    Assertions.assertTrue(zipFile.isFile());
+    Assertions.assertFalse(indexDir.exists());
+
+    Files.asByteSink(new File(dataSegmentFiles, "version.bin"))
+      .write(Ints.toByteArray(IndexIO.V10_VERSION));
+
+    DataSegment v10Segment = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
+
+    Assertions.assertNotNull(v9Segment);
+    Assertions.assertNotNull(v10Segment);
+    Assertions.assertTrue(indexDir.isDirectory());
+    Assertions.assertFalse(zipFile.exists(), "The previous V9 ZIP representation should be removed");
+    Assertions.assertEquals(
+      indexDir.toURI().getPath(), v10Segment.getLoadSpec() != null ? v10Segment.getLoadSpec().get("path") : null
+    );
+  }
+
+  @Test
+  public void testPushV10ThenV9RemovesDirectoryRepresentation() throws IOException
+  {
+    Files.asByteSink(new File(dataSegmentFiles, "version.bin"))
+      .write(Ints.toByteArray(IndexIO.V10_VERSION));
+
+    DataSegment v10Segment = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
+
+    File outDir = new File(
+      configZip.getStorageDirectory(),
+      localDataSegmentPusherZip.getStorageDir(dataSegment, false)
+    );
+    File zipFile = new File(outDir, "index.zip");
+    File indexDir = new File(outDir, "index");
+
+    Assertions.assertTrue(indexDir.isDirectory());
+    Assertions.assertFalse(zipFile.exists());
+
+    Files.asByteSink(new File(dataSegmentFiles, "version.bin"))
+      .write(Ints.toByteArray(0x9));
+
+    DataSegment v9Segment = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
+
+    Assertions.assertNotNull(v10Segment);
+    Assertions.assertNotNull(v9Segment);
+    Assertions.assertTrue(zipFile.isFile());
+    Assertions.assertFalse(indexDir.exists(), "The previous V10 directory representation should be removed");
+    Assertions.assertEquals(
+      zipFile.toURI().getPath(),
+      Objects.requireNonNull(v9Segment.getLoadSpec()).get("path")
+    );
+  }
+
+  @Test
+  public void testConcurrentMixedPushes() throws Exception
+  {
+    final int numThreads = 10;
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+    CountDownLatch latch = new CountDownLatch(1);
+    List<Future<DataSegment>> futures = new ArrayList<>();
+
+    for (int i = 0; i < numThreads; i++) {
+      final boolean isV10 = (i % 2 == 0);
+      futures.add(executor.submit(() -> {
+        latch.await();
+        File segmentDir = temporaryFolder.newFolder();
+        Files.asByteSink(new File(segmentDir, "version.bin")).write(Ints.toByteArray(isV10 ? IndexIO.V10_VERSION : 0x9));
+        return localDataSegmentPusherZip.push(segmentDir, dataSegment, false);
+      }));
+    }
+
+    latch.countDown();
+    for (Future<DataSegment> future : futures) {
+      future.get();
+    }
+    executor.shutdown();
+
+    File outDir = new File(configZip.getStorageDirectory(), localDataSegmentPusherZip.getStorageDir(dataSegment, false));
+    File zipFile = new File(outDir, "index.zip");
+    File indexDir = new File(outDir, "index");
+
+    Assertions.assertTrue(zipFile.exists() ^ indexDir.exists(), "Exactly one representation should exist after concurrent pushing");
+  }
+
+  @Test
+  public void testConcurrentPushesFromSeparatePusherInstances() throws Exception
+  {
+    final int numThreads = 6;
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+    CountDownLatch latch = new CountDownLatch(1);
+    List<Future<DataSegment>> futures = new ArrayList<>();
+
+    for (int i = 0; i < numThreads; i++) {
+      LocalDataSegmentPusher instancePusher = new LocalDataSegmentPusher(config, new DeepStorageSegmentConfig(false, null));
+      futures.add(executor.submit(() -> {
+        latch.await();
+        File segmentDir = temporaryFolder.newFolder();
+        Files.asByteSink(new File(segmentDir, "version.bin")).write(Ints.toByteArray(0x9));
+        return instancePusher.push(segmentDir, dataSegment, false);
+      }));
+    }
+
+    latch.countDown();
+    for (Future<DataSegment> future : futures) {
+      future.get();
+    }
+    executor.shutdown();
+
+    File outDir = new File(config.getStorageDirectory(), localDataSegmentPusher.getStorageDir(dataSegment, false));
+    Assertions.assertTrue(new File(outDir, "index").exists(), "Segment should be successfully pushed despite separate pusher instances");
+  }
+
 }
