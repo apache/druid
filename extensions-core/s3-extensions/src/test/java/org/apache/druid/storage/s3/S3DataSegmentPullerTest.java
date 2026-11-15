@@ -382,10 +382,10 @@ public class S3DataSegmentPullerTest
                                             .build())
             .once();
     EasyMock.expect(s3Client.getObject(bucket, prefix + "first"))
-            .andReturn(new ResponseInputStream<>(GetObjectResponse.builder().build(), AbortableInputStream.create(Files.newInputStream(firstFile.toPath()))))
+            .andAnswer(() -> new ResponseInputStream<>(GetObjectResponse.builder().build(), AbortableInputStream.create(Files.newInputStream(firstFile.toPath()))))
             .once();
     EasyMock.expect(s3Client.getObject(bucket, prefix + "second"))
-            .andReturn(new ResponseInputStream<>(GetObjectResponse.builder().build(), AbortableInputStream.create(Files.newInputStream(secondFile.toPath()))))
+            .andAnswer(() -> new ResponseInputStream<>(GetObjectResponse.builder().build(), AbortableInputStream.create(Files.newInputStream(secondFile.toPath()))))
             .once();
     EasyMock.replay(s3Client);
 
