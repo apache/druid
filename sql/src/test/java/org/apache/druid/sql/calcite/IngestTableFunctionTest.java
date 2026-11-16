@@ -637,7 +637,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   @Test
   public void testHttpFnWithImplicitCast()
   {
-    final ExternalDataSource httpDataSource = new ExternalDataSource(
+    final ExternalDataSource implicitCastDataSource = new ExternalDataSource(
         new HttpInputSource(
             Collections.singletonList(toURI("http://foo.com/bar.csv")),
             "123",
@@ -647,7 +647,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             new HttpInputSourceConfig(null, null)
         ),
         new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
-        this.httpDataSource.getSignature()
+        httpDataSource.getSignature()
     );
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\n" +
@@ -658,11 +658,11 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectTarget("dst", httpDataSource.getSignature())
+        .expectTarget("dst", implicitCastDataSource.getSignature())
         .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
-                .dataSource(httpDataSource)
+                .dataSource(implicitCastDataSource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("x", "y", "z")
                 .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
