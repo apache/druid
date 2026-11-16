@@ -372,15 +372,15 @@ public class SimdVoMathlibParityTest
   public void powDoubleDoubleSpecialValuesParity()
   {
     // VectorOperators.POW follows C99 and returns 1.0 for pow(1, NaN) and pow(±1, ±Infinity) where Math.pow returns
-    // NaN. SimdPowSpecialCases.withNanFixup patches those lanes, so the SIMD output should match Math.pow exactly on
-    // this special-value grid. ulp=0 because the Java spec pins these results deterministically.
+    // NaN. SimdDoubleDoublePowProcessor.withNanFixup patches those lanes, so the SIMD output should match Math.pow
+    // exactly on this special-value grid. ulp=0 because the Java spec pins these results deterministically.
     final double inf = Double.POSITIVE_INFINITY;
     final double nan = Double.NaN;
     // Pairs covering: C99-vs-Math divergences (±1 base × NaN/±Inf exponent, pow(1, NaN)); unaffected NaN/Inf
     // combinations that should already match (NaN base, pow(2, NaN), pow(2, Inf), pow(0.5, -Inf), pow(2, -Inf));
     // and a plain finite baseline to confirm the fixup doesn't disturb ordinary values.
     final double[] bases = {1.0, -1.0, 1.0, -1.0, 1.0, nan, 2.0, 2.0, 0.5, 2.0, inf, 3.0};
-    final double[] exps =  {nan, nan, inf, inf, -inf, 2.0, nan, inf, -inf, -inf, 2.0, 2.0};
+    final double[] exps = {nan, nan, inf, inf, -inf, 2.0, nan, inf, -inf, -inf, 2.0, 2.0};
     runPowSpecialValuesParity("double,double", bases, exps);
   }
 
@@ -391,8 +391,8 @@ public class SimdVoMathlibParityTest
     // being NaN or ±Infinity paired with base=±1 (and the base=2 pairings exercise the unaffected lanes).
     final double inf = Double.POSITIVE_INFINITY;
     final double nan = Double.NaN;
-    final long[] bases   = {1L, -1L, 1L, -1L, 1L, -1L, 2L,  2L,  2L,  3L};
-    final double[] exps =  {nan, nan, inf, inf, -inf, -inf, nan, inf, -inf, 2.0};
+    final long[] bases = {1L, -1L, 1L, -1L, 1L, -1L, 2L,  2L,  2L,  3L};
+    final double[] exps = {nan, nan, inf, inf, -inf, -inf, nan, inf, -inf, 2.0};
     runPowLongDoubleSpecialValuesParity(bases, exps);
   }
 
