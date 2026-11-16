@@ -28,6 +28,7 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.interceptor.Context;
@@ -598,6 +599,58 @@ public class S3UtilsTest
     Assertions.assertEquals(1, thrown.getErrors().size());
     Assertions.assertEquals("b", thrown.getErrors().get(0).key());
     EasyMock.verify(s3Client);
+  }
+
+  @Test
+  public void testDeleteBucketKeysForMultiRegionAccessPointRetriesOnlyFailedKeys() throws Exception
+  {
+    // slash form, as a raw load spec can carry it
+    final String mrap = "arn:aws:s3::123456789012:accesspoint/abcdef0123456.mrap";
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+    s3Client.deleteObject(mrap, "a");
+    EasyMock.expectLastCall().once();
+    s3Client.deleteObject(mrap, "b");
+    EasyMock.expectLastCall().andThrow(accessDenied()).once();
+    s3Client.deleteObject(mrap, "b");
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(s3Client);
+
+    S3Utils.deleteBucketKeys(
+        s3Client,
+        mrap,
+        List.of(ObjectIdentifier.builder().key("a").build(), ObjectIdentifier.builder().key("b").build()),
+        3
+    );
+    EasyMock.verify(s3Client);
+  }
+
+  @Test
+  public void testDeleteBucketKeysForMultiRegionAccessPointThrowsAfterAllRetriesExhausted()
+  {
+    final String mrap = "arn:aws:s3::123456789012:accesspoint:abcdef0123456.mrap";
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+    s3Client.deleteObject(mrap, "a");
+    EasyMock.expectLastCall().andThrow(accessDenied()).times(3);
+    EasyMock.replay(s3Client);
+
+    final S3MultiObjectDeleteException thrown = Assertions.assertThrows(
+        S3MultiObjectDeleteException.class,
+        () -> S3Utils.deleteBucketKeys(s3Client, mrap, List.of(ObjectIdentifier.builder().key("a").build()), 2)
+    );
+    Assertions.assertEquals(1, thrown.getErrors().size());
+    Assertions.assertEquals("a", thrown.getErrors().get(0).key());
+    Assertions.assertEquals("AccessDenied", thrown.getErrors().get(0).code());
+    EasyMock.verify(s3Client);
+  }
+
+  private static S3Exception accessDenied()
+  {
+    // 403 is not retried inside retryS3Operation, so each attempt makes exactly one request
+    return (S3Exception) S3Exception.builder()
+                                    .statusCode(403)
+                                    .awsErrorDetails(AwsErrorDetails.builder().errorCode("AccessDenied").build())
+                                    .message("Access Denied")
+                                    .build();
   }
 
   @Test

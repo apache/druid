@@ -260,6 +260,58 @@ public class S3DataSegmentPusherTest
   }
 
   @Test
+  public void testPushNoZipToMultiRegionAccessPointDeletesStaleObjectsOneByOne() throws Exception
+  {
+    final String mrap = "arn:aws:s3::123456789012:accesspoint:abcdef0123456.mrap";
+    // strict, so any DeleteObjects call, which Multi-Region Access Points reject, fails the test
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    s3Client.upload(EasyMock.eq(mrap), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.isNull());
+    EasyMock.expectLastCall().once();
+
+    final String prefix = "key/foo/2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z/0/0/";
+    final String staleZip = prefix + "index.zip";
+    final String staleChunk = prefix + "00001.smoosh";
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
+            .andReturn(
+                ListObjectsV2Response.builder()
+                                     .contents(
+                                         S3Object.builder().key(prefix + "version.bin").size(4L).build(),
+                                         S3Object.builder().key(staleZip).size(128L).build(),
+                                         S3Object.builder().key(staleChunk).size(64L).build()
+                                     )
+                                     .isTruncated(false)
+                                     .build()
+            )
+            .once();
+    s3Client.deleteObject(mrap, staleZip);
+    EasyMock.expectLastCall().once();
+    s3Client.deleteObject(mrap, staleChunk);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(s3Client);
+
+    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket(mrap);
+    config.setBaseKey("key");
+    config.setDisableAcl(true);
+    Files.write(new byte[]{0x0, 0x0, 0x0, 0x1}, new File(tempFolder, "version.bin"));
+    final S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(false));
+    final DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                                 .loadSpec(new HashMap<>())
+                                                 .dimensions(new ArrayList<>())
+                                                 .metrics(new ArrayList<>())
+                                                 .shardSpec(NoneShardSpec.instance())
+                                                 .binaryVersion(0)
+                                                 .size(4)
+                                                 .build();
+
+    final DataSegment segment = pusher.push(tempFolder, segmentToPush, false);
+
+    Assertions.assertEquals(mrap, segment.getLoadSpec().get("bucket"));
+    EasyMock.verify(s3Client);
+  }
+
+  @Test
   public void testPushNoZipBatchesStaleObjectDeletesWithDefaultConfig() throws Exception
   {
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);

@@ -481,19 +481,26 @@ public class S3Utils
                                       .collect(Collectors.toList());
       log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
     }
+    final boolean deleteIndividually = isMultiRegionAccessPointArn(normalizeBucketName(bucket));
     List<ObjectIdentifier> remaining = keysToDelete;
     List<S3Error> lastErrors = null;
     for (int attempt = 0; attempt <= retries; attempt++) {
-      DeleteObjectsRequest deleteRequest = DeleteObjectsRequest.builder()
-          .bucket(bucket)
-          .delete(Delete.builder().objects(remaining).build())
-          .build();
-      DeleteObjectsResponse response = retryS3Operation(() -> s3Client.deleteObjects(deleteRequest));
-      if (!response.hasErrors()) {
+      final List<S3Error> errors;
+      if (deleteIndividually) {
+        errors = deleteKeysIndividually(s3Client, bucket, remaining);
+      } else {
+        final DeleteObjectsRequest deleteRequest = DeleteObjectsRequest.builder()
+            .bucket(bucket)
+            .delete(Delete.builder().objects(remaining).build())
+            .build();
+        final DeleteObjectsResponse response = retryS3Operation(() -> s3Client.deleteObjects(deleteRequest));
+        errors = response.hasErrors() ? response.errors() : List.of();
+      }
+      if (errors.isEmpty()) {
         log.info("Deleted %d files", keysToDelete.size());
         return;
       }
-      lastErrors = response.errors();
+      lastErrors = errors;
       remaining = lastErrors.stream()
                             .map(e -> ObjectIdentifier.builder().key(e.key()).build())
                             .collect(Collectors.toList());
@@ -505,6 +512,38 @@ public class S3Utils
       );
     }
     throw new S3MultiObjectDeleteException(lastErrors);
+  }
+
+  /**
+   * Multi-Region Access Points support DeleteObject but not DeleteObjects, so each key is deleted with its own request.
+   * A key that S3 refuses is reported as an {@link S3Error}, the same way a DeleteObjects response reports it, so
+   * {@link #deleteBucketKeys} retries it like any other failed key.
+   */
+  private static List<S3Error> deleteKeysIndividually(
+      ServerSideEncryptingAmazonS3 s3Client,
+      String bucket,
+      List<ObjectIdentifier> keys
+  ) throws Exception
+  {
+    final List<S3Error> errors = new ArrayList<>();
+    for (final ObjectIdentifier key : keys) {
+      try {
+        retryS3Operation(() -> {
+          s3Client.deleteObject(bucket, key.key());
+          return null;
+        });
+      }
+      catch (S3Exception e) {
+        errors.add(
+            S3Error.builder()
+                   .key(key.key())
+                   .code(e.awsErrorDetails() == null ? null : e.awsErrorDetails().errorCode())
+                   .message(e.getMessage())
+                   .build()
+        );
+      }
+    }
+    return errors;
   }
 
   /**

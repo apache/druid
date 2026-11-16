@@ -33,7 +33,7 @@ public interface CloudBucketValidator
    */
   CloudBucketValidator REJECT_COLON = bucket -> {
     if (bucket.indexOf(':') >= 0) {
-      throw new IllegalArgumentException("bucket must follow DNS-compliant naming conventions");
+      throw new IllegalArgumentException("bucket[" + bucket + "] must follow DNS-compliant naming conventions");
     }
   };
 
