@@ -30,6 +30,7 @@ import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -256,6 +257,8 @@ public class PlannerContext
 
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
+  // positions of the dynamic parameters that SqlParameterizerShuttle replaced with their bound values
+  private final Set<SqlParserPos> boundParameterPositions = new HashSet<>();
   // set of datasources and views which must be authorized, initialized to null so we can detect if it has been set.
   private Set<ResourceAction> resourceActions;
   // result of authorizing set of resources against authentication identity
@@ -684,6 +687,22 @@ public class PlannerContext
   public void setParameters(List<TypedValue> parameters)
   {
     this.parameters = Preconditions.checkNotNull(parameters, "parameters");
+  }
+
+  /**
+   * Records the position of a dynamic parameter that {@link SqlParameterizerShuttle} replaced with its bound value.
+   */
+  public void addBoundParameterPosition(SqlParserPos pos)
+  {
+    boundParameterPositions.add(pos);
+  }
+
+  /**
+   * Returns whether the node is the bound value of a dynamic parameter, rather than something written in the SQL text.
+   */
+  public boolean isBoundParameter(SqlNode node)
+  {
+    return boundParameterPositions.contains(node.getParserPosition());
   }
 
   public void setAuthorizationResult(AuthorizationResult access)

@@ -31,16 +31,23 @@ import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
+import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.util.NlsString;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.sql.calcite.planner.DruidSqlValidator;
+import org.apache.druid.sql.calcite.planner.SqlParameterizerShuttle;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -102,6 +109,13 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
         final Object o;
 
         if (callBinding.isOperandLiteral(i, true)) {
+          if (castsLiteral(callBinding, i)) {
+            throw InvalidSqlInput.exception(
+                "Argument [%s] of table function [%s] must be a literal, not an expression. Remove the CAST.",
+                parameter.getName(),
+                opName
+            );
+          }
           o = callBinding.getOperandLiteralValue(i, Object.class);
         } else {
           throw new NonLiteralException();
@@ -133,6 +147,39 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
     }
 
     return arguments;
+  }
+
+  /**
+   * Returns whether operand {@code i} contains a CAST of a literal. {@link SqlOperatorBinding#isOperandLiteral}
+   * accepts such a CAST, but it adds nothing to a literal. A CAST of a bound dynamic parameter is allowed, since
+   * {@link SqlParameterizerShuttle} has already replaced the parameter with a literal before validation.
+   */
+  private static boolean castsLiteral(SqlOperatorBinding callBinding, int i)
+  {
+    if (!(callBinding instanceof SqlCallBinding)) {
+      return false;
+    }
+    final SqlCallBinding sqlCallBinding = (SqlCallBinding) callBinding;
+    return castsLiteral(sqlCallBinding.operand(i), sqlCallBinding.getValidator());
+  }
+
+  private static boolean castsLiteral(SqlNode node, SqlValidator validator)
+  {
+    switch (node.getKind()) {
+      case CAST:
+        final SqlNode operand = ((SqlCall) node).operand(0);
+        if (node.getParserPosition().equals(operand.getParserPosition())) {
+          // Implicit CAST added by type coercion, which gives the CAST the position of its operand.
+          return castsLiteral(operand, validator);
+        }
+        return !(validator instanceof DruidSqlValidator
+                 && ((DruidSqlValidator) validator).getPlannerContext().isBoundParameter(operand));
+      case ARRAY_VALUE_CONSTRUCTOR:
+      case MAP_VALUE_CONSTRUCTOR:
+        return ((SqlCall) node).getOperandList().stream().anyMatch(o -> castsLiteral(o, validator));
+      default:
+        return false;
+    }
   }
 
   // Copy of Calcite method with Druid-specific code added
