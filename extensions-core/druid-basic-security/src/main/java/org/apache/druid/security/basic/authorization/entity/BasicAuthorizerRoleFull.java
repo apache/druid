@@ -47,7 +47,7 @@ public class BasicAuthorizerRoleFull
     this.name = name;
     this.users = users;
     this.groups = groups;
-    this.permissions = permissions == null ? new ArrayList<>() : permissions;
+    this.permissions = permissions == null ? List.of() : permissions;
   }
 
   @JsonProperty

@@ -38,7 +38,7 @@ public class BasicAuthorizerUserFull
   )
   {
     this.name = name;
-    this.roles = roles == null ? new HashSet<>() : roles;
+    this.roles = roles == null ? Set.of() : roles;
   }
 
   @JsonProperty

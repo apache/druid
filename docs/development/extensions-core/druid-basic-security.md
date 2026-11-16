@@ -664,7 +664,7 @@ Example output:
 
 This API supports the following flags:
 
--`?full`: The output will contain additional `users` and `groups` lists, containing the users and group mappings that currently have this role.
+- `?full`: The output will contain additional `users` and `groups` lists, containing the users and group mappings that currently have this role.
 
 Example output:
 

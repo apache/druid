@@ -233,10 +233,63 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
-    if (isFull) {
-      return getRoleFull(authorizerName, roleName);
-    } else {
-      return getRoleSimple(authorizerName, roleName);
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
+        storageUpdater.getCurrentRoleMapBytes(authorizerName)
+    );
+
+    try {
+      BasicAuthorizerRole role = roleMap.get(roleName);
+      if (role == null) {
+        throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
+      }
+
+      BasicAuthorizerRoleFull roleFull;
+
+      if(isFull){
+        Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+            objectMapper,
+            storageUpdater.getCurrentUserMapBytes(authorizerName)
+        );
+
+        Map<String, BasicAuthorizerGroupMapping> groupMappingMap = BasicAuthUtils.deserializeAuthorizerGroupMappingMap(
+            objectMapper,
+            storageUpdater.getCurrentGroupMappingMapBytes(authorizerName)
+        );
+
+        Set<String> users = new HashSet<>();
+        for (BasicAuthorizerUser user : userMap.values()) {
+          if (user.getRoles().contains(roleName)) {
+            users.add(user.getName());
+          }
+        }
+
+        Set<String> groupMappings = new HashSet<>();
+        for (BasicAuthorizerGroupMapping group : groupMappingMap.values()) {
+          if (group.getRoles().contains(roleName)) {
+            groupMappings.add(group.getName());
+          }
+        }
+        roleFull = new BasicAuthorizerRoleFull(
+            roleName,
+            users,
+            groupMappings,
+            convertPermissions(role.getPermissions())
+        );
+      }
+      else{
+        roleFull = new BasicAuthorizerRoleFull(
+            roleName,
+            null,
+            null,
+            convertPermissions(role.getPermissions())
+        );
+      }
+
+      return Response.ok(roleFull).build();
+    }
+    catch (BasicSecurityDBResourceException e) {
+      return makeResponseForBasicSecurityDBResourceException(e);
     }
   }
 
@@ -584,80 +637,6 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
       BasicAuthorizerGroupMappingFull fullGroup = new BasicAuthorizerGroupMappingFull(groupMapping.getName(), groupMapping.getGroupPattern(), roles);
       return Response.ok(fullGroup).build();
-    }
-    catch (BasicSecurityDBResourceException e) {
-      return makeResponseForBasicSecurityDBResourceException(e);
-    }
-  }
-
-  private Response getRoleSimple(String authorizerName, String roleName)
-  {
-    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
-        objectMapper,
-        storageUpdater.getCurrentRoleMapBytes(authorizerName)
-    );
-
-    try {
-      BasicAuthorizerRole role = roleMap.get(roleName);
-      if (role == null) {
-        throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
-      }
-
-      return Response.ok(new BasicAuthorizerRoleFull(
-          role.getName(),
-          null,
-          null,
-          convertPermissions(role.getPermissions())
-      )).build();
-    }
-    catch (BasicSecurityDBResourceException e) {
-      return makeResponseForBasicSecurityDBResourceException(e);
-    }
-  }
-
-  private Response getRoleFull(String authorizerName, String roleName)
-  {
-    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
-        objectMapper,
-        storageUpdater.getCurrentRoleMapBytes(authorizerName)
-    );
-
-    try {
-      BasicAuthorizerRole role = roleMap.get(roleName);
-      if (role == null) {
-        throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
-      }
-
-      Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
-          objectMapper,
-          storageUpdater.getCurrentUserMapBytes(authorizerName)
-      );
-
-      Map<String, BasicAuthorizerGroupMapping> groupMappingMap = BasicAuthUtils.deserializeAuthorizerGroupMappingMap(
-          objectMapper,
-          storageUpdater.getCurrentGroupMappingMapBytes(authorizerName)
-      );
-
-      Set<String> users = new HashSet<>();
-      for (BasicAuthorizerUser user : userMap.values()) {
-        if (user.getRoles().contains(roleName)) {
-          users.add(user.getName());
-        }
-      }
-
-      Set<String> groupMappings = new HashSet<>();
-      for (BasicAuthorizerGroupMapping group : groupMappingMap.values()) {
-        if (group.getRoles().contains(roleName)) {
-          groupMappings.add(group.getName());
-        }
-      }
-      BasicAuthorizerRoleFull roleFull = new BasicAuthorizerRoleFull(
-            roleName,
-            users,
-            groupMappings,
-            convertPermissions(role.getPermissions())
-      );
-      return Response.ok(roleFull).build();
     }
     catch (BasicSecurityDBResourceException e) {
       return makeResponseForBasicSecurityDBResourceException(e);
