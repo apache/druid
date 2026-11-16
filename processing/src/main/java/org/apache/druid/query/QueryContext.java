@@ -256,7 +256,7 @@ public class QueryContext
    */
   public boolean has(final QueryContextParameter<?> parameter)
   {
-    return get(parameter.getName()) != null;
+    return context.get(parameter.getName()) != null;
   }
 
   /**
@@ -278,7 +278,14 @@ public class QueryContext
   @Nullable
   public <T> T get(final QueryContextParameter<T> parameter)
   {
-    return parseOrDefault(parameter, parameter.getLiteralDefault());
+    final T defaultValue = parameter.getLiteralDefault();
+    if (!containsKey(parameter.getName())) {
+      return defaultValue;
+    }
+
+    // Parse even an explicit null so that non-nullable parameters reject it.
+    final T parsed = parameter.parse(context.get(parameter.getName()));
+    return parsed == null ? defaultValue : parsed;
   }
 
   /**
@@ -303,17 +310,11 @@ public class QueryContext
    */
   public <T> T getOrDefault(final QueryContextParameter<T> parameter, final T defaultValue)
   {
-    return parseOrDefault(parameter, defaultValue);
-  }
-
-  @Nullable
-  private <T> T parseOrDefault(final QueryContextParameter<T> parameter, @Nullable final T defaultValue)
-  {
     if (!containsKey(parameter.getName())) {
       return defaultValue;
     }
     // Parse even an explicit null so that non-nullable parameters reject it.
-    final T parsed = parameter.parse(get(parameter.getName()));
+    final T parsed = parameter.parse(context.get(parameter.getName()));
     return parsed == null ? defaultValue : parsed;
   }
 
@@ -342,7 +343,7 @@ public class QueryContext
    */
   public Boolean getBoolean(final String key)
   {
-    return QueryContexts.getAsBoolean(key, get(key));
+    return QueryContexts.getAsBoolean(key, context.get(key));
   }
 
   /**
@@ -353,7 +354,7 @@ public class QueryContext
    */
   public boolean getBoolean(final String key, final boolean defaultValue)
   {
-    return QueryContexts.parseBoolean(context, key, defaultValue);
+    return QueryContexts.getAsBoolean(key, context.get(key), defaultValue);
   }
 
   /**

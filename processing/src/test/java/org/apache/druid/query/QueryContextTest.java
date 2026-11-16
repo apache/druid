@@ -166,6 +166,31 @@ public class QueryContextTest
   }
 
   @Test
+  public void testGetBooleanFollowsTypedParameterRule()
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.<String, Object>builder()
+                    .put("upper", "TRUE")
+                    .put("one", "1")
+                    .put("zero", 0)
+                    .put("yes", "yes")
+                    .put("decimal", 1.0)
+                    .build()
+    );
+
+    assertTrue(context.getBoolean("upper", false));
+    assertTrue(context.getBoolean("one", false));
+    assertFalse(context.getBoolean("zero", true));
+
+    // Strings other than true/false or 1/0 used to be read as false
+    assertEquals(
+        "Context parameter [yes] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [yes]",
+        assertThrows(BadQueryContextException.class, () -> context.getBoolean("yes", false)).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> context.getBoolean("decimal"));
+  }
+
+  @Test
   public void testGetParameter()
   {
     final QueryContext context = QueryContext.of(
