@@ -109,7 +109,7 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
         final Object o;
 
         if (callBinding.isOperandLiteral(i, true)) {
-          if (castsLiteral(callBinding, i)) {
+          if (containsExplicitCast(callBinding, i)) {
             throw InvalidSqlInput.exception(
                 "Argument [%s] of table function [%s] must be a literal, not an expression. Remove the CAST.",
                 parameter.getName(),
@@ -150,33 +150,34 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
   }
 
   /**
-   * Returns whether operand {@code i} contains a CAST of a literal. {@link SqlOperatorBinding#isOperandLiteral}
-   * accepts such a CAST, but it adds nothing to a literal. A CAST of a bound dynamic parameter is allowed, since
+   * Returns whether operand {@code i} contains an explicit CAST of a literal, as opposed to one added by type
+   * coercion. {@link SqlOperatorBinding#isOperandLiteral} accepts such a CAST, but it adds nothing to a literal.
+   * A CAST of a bound dynamic parameter is allowed, since
    * {@link SqlParameterizerShuttle} has already replaced the parameter with a literal before validation.
    */
-  private static boolean castsLiteral(SqlOperatorBinding callBinding, int i)
+  private static boolean containsExplicitCast(SqlOperatorBinding callBinding, int i)
   {
     if (!(callBinding instanceof SqlCallBinding)) {
       return false;
     }
     final SqlCallBinding sqlCallBinding = (SqlCallBinding) callBinding;
-    return castsLiteral(sqlCallBinding.operand(i), sqlCallBinding.getValidator());
+    return containsExplicitCast(sqlCallBinding.operand(i), sqlCallBinding.getValidator());
   }
 
-  private static boolean castsLiteral(SqlNode node, SqlValidator validator)
+  private static boolean containsExplicitCast(SqlNode node, SqlValidator validator)
   {
     switch (node.getKind()) {
       case CAST:
         final SqlNode operand = ((SqlCall) node).operand(0);
         if (node.getParserPosition().equals(operand.getParserPosition())) {
           // Implicit CAST added by type coercion, which gives the CAST the position of its operand.
-          return castsLiteral(operand, validator);
+          return containsExplicitCast(operand, validator);
         }
         return !(validator instanceof DruidSqlValidator
                  && ((DruidSqlValidator) validator).getPlannerContext().isBoundParameter(operand));
       case ARRAY_VALUE_CONSTRUCTOR:
       case MAP_VALUE_CONSTRUCTOR:
-        return ((SqlCall) node).getOperandList().stream().anyMatch(o -> castsLiteral(o, validator));
+        return ((SqlCall) node).getOperandList().stream().anyMatch(o -> containsExplicitCast(o, validator));
       default:
         return false;
     }
