@@ -203,19 +203,21 @@ public class HumanReadableBytes
         break;
     }
 
+    final long value;
     try {
-      final long value = Long.parseLong(number.substring(0, lastDigitIndex + 1));
-      try {
-        // Math.multiplyExact catches every overflow, including those that wrap around to a positive value which the
-        // previous "value < base" check missed (e.g. 20000000000000000k).
-        return Math.multiplyExact(value, base);
-      }
-      catch (ArithmeticException e) {
-        throw new IAE("Number overflow: %s", rawNumber);
-      }
+      value = Long.parseLong(number.substring(0, lastDigitIndex + 1));
     }
     catch (NumberFormatException e) {
       throw new IAE("Invalid format or out of range of long: %s", rawNumber);
+    }
+
+    try {
+      // Math.multiplyExact catches every overflow, including those that wrap around to a positive value which the
+      // previous "value < base" check missed (e.g. 20000000000000000k).
+      return Math.multiplyExact(value, base);
+    }
+    catch (ArithmeticException e) {
+      throw new IAE("Number overflow: %s", rawNumber);
     }
   }
 

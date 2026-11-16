@@ -28,6 +28,8 @@ import jakarta.validation.groups.Default;
 import org.apache.druid.utils.CollectionUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -338,27 +340,27 @@ public class HumanReadableBytesTest
   /**
    * The overflow tests above all use the smallest multiplier that overflows, which wraps around to a negative value.
    * A large enough multiplier overflows to a positive value instead, which used to slip through the overflow check
-   * and return a silently wrong result. 20000000000000000 * 1000 = 2e19 is well beyond Long.MAX_VALUE.
+   * and return a silently wrong result. 20000000000000000 multiplied by any unit base is well beyond Long.MAX_VALUE
+   * (e.g. 20000000000000000 * 1000 = 2e19), so every suffix must report an overflow.
    */
-  @Test
-  public void testOverflowPositiveWrapK()
+  @ParameterizedTest
+  @ValueSource(strings = {"k", "m", "g", "t", "p", "KiB", "MiB", "GiB", "TiB", "PiB"})
+  public void testOverflowPositiveWrap(String suffix)
   {
-    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("20000000000000000k"));
+    final IAE exception =
+        Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("20000000000000000" + suffix));
     Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
-  @Test
-  public void testOverflowPositiveWrapKiB()
+  /**
+   * Zero with a unit suffix multiplies to 0 and must not be rejected. The previous "value < base" overflow check
+   * treated 0 as an overflow and threw; after the fix it correctly returns 0.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"0k", "0m", "0g", "0t", "0p", "0KiB", "0MiB", "0GiB", "0TiB", "0PiB"})
+  public void testZeroWithUnit(String input)
   {
-    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("20000000000000000KiB"));
-    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
-  }
-
-  @Test
-  public void testOverflowPositiveWrapGiB()
-  {
-    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("20000000000000000GiB"));
-    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
+    Assertions.assertEquals(0L, HumanReadableBytes.parse(input));
   }
 
   @Test
