@@ -343,7 +343,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-schema-registry-client</artifactId>
-            <version>8.3.2</version>
+            <version>8.4.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
@@ -378,7 +378,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-protobuf-provider</artifactId>
-            <version>8.3.2</version>
+            <version>8.4.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
