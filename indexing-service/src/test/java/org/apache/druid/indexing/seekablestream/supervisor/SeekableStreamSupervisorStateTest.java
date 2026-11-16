@@ -648,9 +648,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     expectRunningTask("readingTask0");
     expectRunningTask("readingTask1");
     expectRunningTask("readingTask2");
-    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject());
+    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
-    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject());
+    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
     expectCurrentTask("readingTask1", 1, Map.of("1", "150"), ioConfig);
 
@@ -701,9 +701,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     expectRunningTask("readingTask0");
     expectRunningTask("readingTask1");
     expectRunningTask("readingTask2");
-    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject());
+    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
-    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject());
+    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
     expectCurrentTask("readingTask1", 1, Map.of("1", "150"), ioConfig);
 
@@ -760,9 +760,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     expectRunningTask("readingTask0");
     expectRunningTask("readingTask1");
     expectRunningTask("readingTask2");
-    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject());
+    taskQueue.shutdown(EasyMock.eq("readingTask0"), EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
-    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject());
+    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
     expectCurrentTask("readingTask1", 1, Map.of("1", "150"), ioConfig);
 
@@ -830,7 +830,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     expectRunningTask("readingTask0");
     expectRunningTask("readingTask1");
     expectRunningTask("readingTask2");
-    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject());
+    taskQueue.shutdown(EasyMock.eq("readingTask2"), EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
     expectCurrentTask("readingTask0", 0, Map.of("0", "150", "3", "350"), ioConfig);
     expectCurrentTask("readingTask1", 1, Map.of("1", "150", "4", "450"), ioConfig);

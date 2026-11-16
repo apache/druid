@@ -2475,11 +2475,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * The other partitions of a killed task group are not reset, since {@link #partitionOffsets} still holds the offsets
    * that the task group started from, which may be the end offsets of a task group that has not published yet.
    */
-  private void resetPartitionsAndKillReadingTaskGroups(
-      Set<PartitionIdType> partitions,
-      String reasonFormat,
-      Object... args
-  )
+  private void resetPartitionsAndKillReadingTaskGroups(Set<PartitionIdType> partitions, Set<Integer> failedGroupIds)
   {
     for (PartitionIdType partitionId : partitions) {
       partitionOffsets.put(partitionId, getNotSetMarker());
@@ -2490,21 +2486,26 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     while (iTaskGroups.hasNext()) {
       final TaskGroup taskGroup = iTaskGroups.next();
       final Set<PartitionIdType> assignedPartitions = partitionGroups.getOrDefault(taskGroup.groupId, Set.of());
-      final boolean needsRestart = partitions.stream().anyMatch(partitionId -> {
+      final Set<PartitionIdType> partitionsToReread = partitions.stream().filter(partitionId -> {
         final SequenceOffsetType startingOffset = taskGroup.startingSequences.get(partitionId);
         return startingOffset == null
                ? assignedPartitions.contains(partitionId)
                : !startingOffset.equals(committedOffsets.get(partitionId));
-      });
-      if (needsRestart) {
+      }).collect(Collectors.toSet());
+      if (!partitionsToReread.isEmpty()) {
         log.info(
-            "Killing actively reading taskGroup[%d] with partitions[%s] so that partitions[%s] are re-read from"
+            "Killing actively reading taskGroup[%d] with partitions%s so that partitions%s are re-read from"
             + " the committed offsets.",
             taskGroup.groupId,
             taskGroup.startingSequences.keySet(),
-            partitions
+            partitionsToReread
         );
-        killTasksInGroup(taskGroup, reasonFormat, args);
+        killTasksInGroup(
+            taskGroup,
+            "Earlier taskGroups%s did not publish segments for overlapping partitions%s",
+            failedGroupIds,
+            partitionsToReread
+        );
         iTaskGroups.remove();
       }
     }
@@ -2531,12 +2532,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final TaskGroup failedGroup = failedGroups.get(i);
       for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
         for (TaskGroup group : taskGroupList) {
-          if (!toRemove.contains(group) && isStartedAfter(group, failedGroup)) {
+          if (toRemove.contains(group)) {
+            continue;
+          }
+          final Set<PartitionIdType> overlappingPartitions = getPartitionsStartedAfter(group, failedGroup);
+          if (!overlappingPartitions.isEmpty()) {
             futures.add(
                 stopTasksInGroup(
                     group,
-                    "earlier taskGroup[%d] for an overlapping partition set did not publish segments",
-                    failedGroup.groupId
+                    "earlier taskGroup[%d] did not publish segments for overlapping partitions%s",
+                    failedGroup.groupId,
+                    overlappingPartitions
                 )
             );
             failedGroups.add(group);
@@ -2548,16 +2554,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Returns true if the given task group started reading any partition of the other task group from a later offset,
-   * so that it can only publish its segments after the other task group has published its segments.
-   * This is the same condition as in {@link #getOlderTaskGroupsPublishingToPartitions}.
+   * Returns the partitions of the other task group that the given task group started reading from a later offset.
+   * If there are any, the given task group can only publish its segments after the other task group has published its
+   * segments. This is the same condition as in {@link #getOlderTaskGroupsPublishingToPartitions}.
    */
-  private boolean isStartedAfter(TaskGroup taskGroup, TaskGroup otherTaskGroup)
+  private Set<PartitionIdType> getPartitionsStartedAfter(TaskGroup taskGroup, TaskGroup otherTaskGroup)
   {
-    return otherTaskGroup.startingSequences.entrySet().stream().anyMatch(entry -> {
+    return otherTaskGroup.startingSequences.entrySet().stream().filter(entry -> {
       final SequenceOffsetType startingOffset = taskGroup.startingSequences.get(entry.getKey());
       return startingOffset != null && !isOffsetAtOrBeyond(entry.getValue(), startingOffset);
-    });
+    }).map(Map.Entry::getKey).collect(Collectors.toSet());
   }
 
   private void killTaskGroupForPartitions(Set<PartitionIdType> partitions, String reasonFormat, Object... args)
@@ -4468,11 +4474,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         failedPartitions.addAll(group.startingSequences.keySet());
         failedGroupIds.add(group.groupId);
       }
-      resetPartitionsAndKillReadingTaskGroups(
-          failedPartitions,
-          "Earlier taskGroups%s for an overlapping partition set did not publish segments",
-          failedGroupIds
-      );
+      resetPartitionsAndKillReadingTaskGroups(failedPartitions, failedGroupIds);
     }
 
     for (CopyOnWriteArrayList<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
