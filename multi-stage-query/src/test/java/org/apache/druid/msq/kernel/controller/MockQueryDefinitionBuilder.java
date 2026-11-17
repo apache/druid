@@ -183,7 +183,7 @@ public class MockQueryDefinitionBuilder
                   ),
                   0
               ),
-              MAX_NUM_PARTITIONS,
+              maxPartitions,
               false
           );
           break;

@@ -73,6 +73,14 @@ public class ShuffleSpecFactories
   }
 
   /**
+   * Factory that produces a single unsorted partition, made by mixing together the output of every worker.
+   */
+  public static ShuffleSpecFactory mix()
+  {
+    return (clusterBy, aggregate) -> MixShuffleSpec.instance();
+  }
+
+  /**
    * Factory that produces an adjustable hash-partitioned shuffle spec, sorted within each partition. The partition
    * count is adjusted at runtime by {@link QueryDefinition#withRuntimeBounds(int, int, int)}. Unlike
    * {@link #globalSortWithTargetPartitions()}, it needs no key statistics, but partitions are not in key order.

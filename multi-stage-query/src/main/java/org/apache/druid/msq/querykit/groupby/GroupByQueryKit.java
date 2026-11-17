@@ -152,18 +152,26 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       partitionBoost = true;
     } else {
-      if (doLimitOrOffset || intermediateClusterBy.isEmpty()) {
-        shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
-      } else if (shouldHashPartitionAggregation(queryToRun, resultShuffleSpecFactory, intermediateClusterBy)) {
+      if (!doLimitOrOffset
+          && !intermediateClusterBy.isEmpty()
+          && shouldHashPartitionAggregation(queryToRun, resultShuffleSpecFactory, intermediateClusterBy)) {
         // Each group's partial aggregates land in one partition, so the post-aggregation stage can finish the groups
-        // on many workers. Its output keeps these partitions, which are not in key order.
+        // on many workers.
         shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.hashWithTargetPartitions();
+
+        // Mix the finished groups into one partition, so the reader takes rows from every worker as they arrive.
+        // Keeping the hash partitions would have the reader read them in partition order, one after another, and
+        // each partition's aggregation would wait until its turn.
+        shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.mix();
       } else {
-        shuffleSpecFactoryPreAggregation = resultShuffleSpecFactory;
+        shuffleSpecFactoryPreAggregation = doLimitOrOffset || intermediateClusterBy.isEmpty()
+                                           ? ShuffleSpecFactories.singlePartition()
+                                           : resultShuffleSpecFactory;
+
+        // null: retain partitions from input (i.e. from preAggregation).
+        shuffleSpecFactoryPostAggregation = null;
       }
 
-      // null: retain partitions from input (i.e. from preAggregation).
-      shuffleSpecFactoryPostAggregation = null;
       partitionBoost = false;
     }
 

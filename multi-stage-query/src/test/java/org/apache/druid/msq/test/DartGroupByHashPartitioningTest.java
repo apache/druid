@@ -28,6 +28,7 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.kernel.ShuffleKind;
@@ -187,9 +188,13 @@ public class DartGroupByHashPartitioningTest extends BaseCalciteQueryTest
     final List<MSQStagesReport.Stage> stages = lastQueryStages();
     Assertions.assertEquals(2, stages.size());
     assertHashPartitioned(stages.get(0));
+    // The hash shuffle sorts its partitions one at a time, so it needs buffered output rather than in-memory channels.
+    Assertions.assertEquals(OutputChannelMode.LOCAL_STORAGE, stages.get(0).getOutputChannelMode());
     Assertions.assertEquals(MAX_NON_LEAF_WORKERS, stages.get(1).getWorkerCount());
-    // The final stage keeps the hash partitions; nothing sorts them into one.
-    Assertions.assertFalse(stages.get(1).getStageDefinition().doesShuffle());
+    // The final stage mixes the finished groups into one partition, which streams from every worker at once.
+    Assertions.assertEquals(ShuffleKind.MIX, stages.get(1).getStageDefinition().getShuffleSpec().kind());
+    Assertions.assertEquals(1, stages.get(1).getPartitionCount());
+    Assertions.assertEquals(OutputChannelMode.MEMORY, stages.get(1).getOutputChannelMode());
   }
 
   @Test

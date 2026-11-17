@@ -138,6 +138,9 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     //       \       /
     //        \     /
     //           6 [none]
+    //
+    // Stage 3 has one partition, so it can use MEMORY output. A hash local sort into several partitions needs
+    // buffered output; see ControllerQueryKernelUtilsTest#test_computeStageGroups_hashLocalSort_pipeline_twoAtOnce.
 
     final QueryDefinition queryDef = new MockQueryDefinitionBuilder(7)
         .addEdge(0, 2)
@@ -149,7 +152,7 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
         .addEdge(5, 6)
         .defineStage(0, ShuffleKind.HASH_LOCAL_SORT)
         .defineStage(1, ShuffleKind.HASH_LOCAL_SORT)
-        .defineStage(3, ShuffleKind.HASH_LOCAL_SORT)
+        .defineStage(3, ShuffleKind.HASH_LOCAL_SORT, 1, 1)
         .defineStage(4, ShuffleKind.MIX)
         .defineStage(5, ShuffleKind.HASH_LOCAL_SORT)
         .getQueryDefinitionBuilder()
