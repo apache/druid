@@ -4270,6 +4270,16 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     Assertions.assertNotEquals(inclusiveSequenceName, exclusiveSequenceName);
     Assertions.assertEquals(exclusiveSequenceName, replicaSequenceName);
+    Assertions.assertEquals(
+        supervisor.generateSequenceName(
+            startingOffsets,
+            null,
+            null,
+            dataSchema,
+            tuningConfig.convertToTaskTuningConfig()
+        ),
+        inclusiveSequenceName
+    );
 
     verifyAll();
   }

@@ -3144,7 +3144,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
-  @VisibleForTesting
   protected void addDiscoveredTaskToPendingCompletionTaskGroups(
       int groupId,
       String taskId,
@@ -3418,14 +3417,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                                                          .map(Object::toString)
                                                                                          .sorted()
                                                                                          .collect(Collectors.toList());
-    try {
-      final String exclusivePartitionsJson = sortingMapper.writeValueAsString(sortedExclusivePartitions);
-      final String hashCode = DigestUtils.sha1Hex(sequenceName + exclusivePartitionsJson).substring(0, 15);
-      return Joiner.on("_").join(baseTaskName(), supervisorId, hashCode);
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    final String exclusivePartitions = String.join(",", sortedExclusivePartitions);
+    final String hashCode = DigestUtils.sha1Hex(sequenceName + exclusivePartitions).substring(0, 15);
+    return Joiner.on("_").join(baseTaskName(), supervisorId, hashCode);
   }
 
   protected abstract String baseTaskName();
