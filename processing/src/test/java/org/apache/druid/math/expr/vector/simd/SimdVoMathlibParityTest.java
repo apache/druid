@@ -391,7 +391,7 @@ public class SimdVoMathlibParityTest
     // being NaN or ±Infinity paired with base=±1 (and the base=2 pairings exercise the unaffected lanes).
     final double inf = Double.POSITIVE_INFINITY;
     final double nan = Double.NaN;
-    final long[] bases = {1L, -1L, 1L, -1L, 1L, -1L, 2L,  2L,  2L,  3L};
+    final long[] bases = {1L, -1L, 1L, -1L, 1L, -1L, 2L, 2L, 2L, 3L};
     final double[] exps = {nan, nan, inf, inf, -inf, -inf, nan, inf, -inf, 2.0};
     runPowLongDoubleSpecialValuesParity(bases, exps);
   }
