@@ -22,7 +22,6 @@ package org.apache.druid.security.basic.authorization.entity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.HashSet;
 import java.util.Set;
 
 

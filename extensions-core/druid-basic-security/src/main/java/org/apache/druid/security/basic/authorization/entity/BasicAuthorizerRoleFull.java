@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.security.ResourceAction;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 

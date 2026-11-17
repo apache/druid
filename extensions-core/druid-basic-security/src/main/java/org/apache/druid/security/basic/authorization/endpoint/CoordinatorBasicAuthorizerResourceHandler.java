@@ -43,7 +43,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -246,7 +245,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
       BasicAuthorizerRoleFull roleFull;
 
-      if(isFull){
+      if (isFull) {
         Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
             objectMapper,
             storageUpdater.getCurrentUserMapBytes(authorizerName)
@@ -276,8 +275,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
             groupMappings,
             convertPermissions(role.getPermissions())
         );
-      }
-      else{
+      } else {
         roleFull = new BasicAuthorizerRoleFull(
             roleName,
             null,
@@ -579,13 +577,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       List<BasicAuthorizerPermission> permissions
   )
   {
-    List<ResourceAction> resourceActions = new ArrayList<>();
-
-    for (BasicAuthorizerPermission permission : permissions) {
-      resourceActions.add(permission.getResourceAction());
-    }
-
-    return resourceActions;
+    return permissions.stream().map(BasicAuthorizerPermission::getResourceAction).toList();
   }
 
   private Response getGroupMappingSimple(String authorizerName, String groupMappingName)
