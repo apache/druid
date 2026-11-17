@@ -107,6 +107,14 @@
             <version>${aws.sdk.v2.version}</version>
             <scope>runtime</scope>
         </dependency>
+        <!-- SigV4A signing for Multi-Region Access Points. The SDK looks these up from the classloader that holds
+             http-auth-aws, which is lib/, so they cannot live in an extension directory -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>http-auth-aws-crt</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+            <scope>runtime</scope>
+        </dependency>
         <!-- Keep CRT classes on the shared classpath too: s3 brings crt-core here which relies on the aws-crt-client. -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>

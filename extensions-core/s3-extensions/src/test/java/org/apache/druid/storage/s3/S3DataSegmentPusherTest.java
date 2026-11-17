@@ -184,6 +184,177 @@ public class S3DataSegmentPusherTest
   }
 
   @Test
+  public void testPushNoZipRemovesObjectsLeftByPreviousPush() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    Grant grant = Grant.builder()
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
+        .permission(Permission.FULL_CONTROL)
+        .build();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
+
+    s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
+    EasyMock.expectLastCall().once();
+
+    // an index.zip from a zipped push and a smoosh chunk from a larger prior segment: nothing in the new segment
+    // references either, but the puller would list and download both
+    final String prefix = "key/foo/2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z/0/0/";
+    final String staleZip = prefix + "index.zip";
+    final String staleChunk = prefix + "00001.smoosh";
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
+            .andReturn(
+                ListObjectsV2Response.builder()
+                                     .contents(
+                                         S3Object.builder().key(prefix + "version.bin").size(4L).build(),
+                                         S3Object.builder().key(staleZip).size(128L).build(),
+                                         S3Object.builder().key(staleChunk).size(64L).build()
+                                     )
+                                     .isTruncated(false)
+                                     .build()
+            )
+            .once();
+
+    final Capture<DeleteObjectsRequest> deleteRequest = Capture.newInstance();
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.capture(deleteRequest)))
+            .andReturn(DeleteObjectsResponse.builder().build())
+            .once();
+
+    EasyMock.replay(s3Client);
+
+    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+    validate(
+        false,
+        "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/",
+        s3Client,
+        config,
+        false,
+        new byte[]{0x0, 0x0, 0x0, 0x1}
+    );
+
+    // only the objects this push did not write are removed
+    Assertions.assertEquals(
+        ImmutableSet.of(staleZip, staleChunk),
+        deleteRequest.getValue().delete().objects().stream().map(ObjectIdentifier::key).collect(Collectors.toSet())
+    );
+  }
+
+  @Test
+  public void testPushNoZipToMultiRegionAccessPointDeletesStaleObjectsOneByOne() throws Exception
+  {
+    final String mrap = "arn:aws:s3::123456789012:accesspoint:abcdef0123456.mrap";
+    // strict, so any DeleteObjects call, which Multi-Region Access Points reject, fails the test
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    s3Client.upload(EasyMock.eq(mrap), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.isNull());
+    EasyMock.expectLastCall().once();
+
+    final String prefix = "key/foo/2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z/0/0/";
+    final String staleZip = prefix + "index.zip";
+    final String staleChunk = prefix + "00001.smoosh";
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
+            .andReturn(
+                ListObjectsV2Response.builder()
+                                     .contents(
+                                         S3Object.builder().key(prefix + "version.bin").size(4L).build(),
+                                         S3Object.builder().key(staleZip).size(128L).build(),
+                                         S3Object.builder().key(staleChunk).size(64L).build()
+                                     )
+                                     .isTruncated(false)
+                                     .build()
+            )
+            .once();
+    s3Client.deleteObject(mrap, staleZip);
+    EasyMock.expectLastCall().once();
+    s3Client.deleteObject(mrap, staleChunk);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(s3Client);
+
+    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket(mrap);
+    config.setBaseKey("key");
+    config.setDisableAcl(true);
+    Files.write(new byte[]{0x0, 0x0, 0x0, 0x1}, new File(tempFolder, "version.bin"));
+    final S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(false, null));
+    final DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                                 .loadSpec(new HashMap<>())
+                                                 .dimensions(new ArrayList<>())
+                                                 .metrics(new ArrayList<>())
+                                                 .shardSpec(NoneShardSpec.instance())
+                                                 .binaryVersion(0)
+                                                 .size(4)
+                                                 .build();
+
+    final DataSegment segment = pusher.push(tempFolder, segmentToPush, false);
+
+    Assertions.assertEquals(mrap, segment.getLoadSpec().get("bucket"));
+    EasyMock.verify(s3Client);
+  }
+
+  @Test
+  public void testPushNoZipBatchesStaleObjectDeletesWithDefaultConfig() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    Grant grant = Grant.builder()
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
+        .permission(Permission.FULL_CONTROL)
+        .build();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
+
+    s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
+    EasyMock.expectLastCall().once();
+
+    // maxListingLength defaults to 1024, which is a legal listing size but more keys than DeleteObjects accepts, so
+    // the deletes have to be split even though the listing is not
+    final String prefix = "key/foo/2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z/0/0/";
+    final int staleCount = S3Utils.MAX_MULTI_OBJECT_DELETE_SIZE + 1;
+    final List<S3Object> listing = new ArrayList<>();
+    listing.add(S3Object.builder().key(prefix + "version.bin").size(4L).build());
+    for (int i = 0; i < staleCount; i++) {
+      listing.add(S3Object.builder().key(StringUtils.format("%s%05d.smoosh", prefix, i)).size(8L).build());
+    }
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
+            .andReturn(ListObjectsV2Response.builder().contents(listing).isTruncated(false).build())
+            .once();
+
+    final Capture<DeleteObjectsRequest> deleteRequests = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.capture(deleteRequests)))
+            .andReturn(DeleteObjectsResponse.builder().build())
+            .times(2);
+
+    EasyMock.replay(s3Client);
+
+    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+    Assertions.assertEquals(1024, config.getMaxListingLength());
+
+    validate(
+        false,
+        "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/",
+        s3Client,
+        config,
+        false,
+        new byte[]{0x0, 0x0, 0x0, 0x1}
+    );
+
+    // no request may carry more keys than S3 accepts, and between them they remove every stale object
+    for (DeleteObjectsRequest request : deleteRequests.getValues()) {
+      Assertions.assertTrue(
+          request.delete().objects().size() <= S3Utils.MAX_MULTI_OBJECT_DELETE_SIZE,
+          "DeleteObjects request carried " + request.delete().objects().size() + " keys"
+      );
+    }
+    Assertions.assertEquals(
+        staleCount,
+        deleteRequests.getValues().stream().mapToInt(request -> request.delete().objects().size()).sum()
+    );
+  }
+
+  @Test
   public void testPushZipDoesNotStampRangeable() throws Exception
   {
     // Zip path uses the no-flag makeLoadSpec overload; openRangeReader returns null on the zip-key short circuit

@@ -157,6 +157,7 @@ public class SystemSchema extends AbstractTableSchema
       .add("projections", ColumnType.STRING)
       .add("last_compaction_state", ColumnType.STRING)
       .add("replication_factor", ColumnType.LONG)
+      .add("binary_version", ColumnType.LONG)
       .build();
 
   /**
@@ -521,7 +522,11 @@ public class SystemSchema extends AbstractTableSchema
                 // If the segment is unpublished, we won't have this information yet.
                 // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
                 // This should be automatically updated in the next Coordinator poll.
-                val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
+                val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor(),
+                // 0 is the placeholder version of realtime segments that have not been handed off yet
+                segment.getBinaryVersion() == null || segment.getBinaryVersion() == 0
+                ? null
+                : (long) segment.getBinaryVersion()
             };
           });
 
@@ -558,7 +563,11 @@ public class SystemSchema extends AbstractTableSchema
                 segment.getMetrics(),
                 segment.getProjections(),
                 null, // unpublished segments from realtime tasks will not be compacted yet
-                REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
+                REPLICATION_FACTOR_UNKNOWN, // If the segment is unpublished, we won't have this information yet.
+                // 0 is the placeholder version of realtime segments that have not been handed off yet
+                segment.getBinaryVersion() == null || segment.getBinaryVersion() == 0
+                ? null
+                : (long) segment.getBinaryVersion()
             };
           });
 

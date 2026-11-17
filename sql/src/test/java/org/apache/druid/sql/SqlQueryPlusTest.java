@@ -21,6 +21,8 @@ package org.apache.druid.sql;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
@@ -75,7 +77,94 @@ public class SqlQueryPlusTest
         e,
         DruidExceptionMatcher
             .invalidSqlInput()
-            .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] should be in integer format, but got [not-an-int]")
+            .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [not-an-int]")
+    );
+  }
+
+  @Test
+  public void testSetNumberParameterToHumanReadableNumber()
+  {
+    final SqlQueryPlus query = SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = '1MiB'; SELECT 1")
+                                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                           .build();
+    Assertions.assertEquals(
+        1_048_576,
+        QueryContext.of(query.context()).get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING)
+    );
+
+    final SqlQueryPlus withSpace = SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = '1 MiB'; SELECT 1")
+                                               .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                               .build();
+    Assertions.assertEquals(
+        1_048_576,
+        QueryContext.of(withSpace.context()).get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING)
+    );
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = '3GiB'; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher.invalidSqlInput().expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [3GiB]")
+    );
+  }
+
+  @Test
+  public void testSetBooleanParameterToZeroOrOne()
+  {
+    final SqlQueryPlus query = SqlQueryPlus.builder("SET useCache = 0; SET populateCache = 1; SELECT 1")
+                                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                           .build();
+    final QueryContext context = QueryContext.of(query.context());
+    Assertions.assertFalse(context.get(QueryContextParameters.USE_CACHE));
+    Assertions.assertTrue(context.get(QueryContextParameters.POPULATE_CACHE));
+  }
+
+  @Test
+  public void testSetBooleanParameterToInvalidNumber()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET useCache = 1.0; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains("Context parameter [useCache] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [1.0]")
+    );
+  }
+
+  @Test
+  public void testSetBooleanParameterToString()
+  {
+    final SqlQueryPlus query = SqlQueryPlus.builder("SET useCache = 'FALSE'; SET populateCache = '1'; SELECT 1")
+                                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                           .build();
+    final QueryContext context = QueryContext.of(query.context());
+    Assertions.assertFalse(context.get(QueryContextParameters.USE_CACHE));
+    Assertions.assertTrue(context.get(QueryContextParameters.POPULATE_CACHE));
+  }
+
+  @Test
+  public void testSetBooleanParameterToInvalidString()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET useCache = 'yes'; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains("Context parameter [useCache] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [yes]")
     );
   }
 

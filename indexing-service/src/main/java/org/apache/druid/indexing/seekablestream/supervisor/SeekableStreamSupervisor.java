@@ -120,6 +120,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -2459,6 +2460,112 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  /**
+   * Resets the offsets of the given partitions so that they are re-read from metadata storage, and kills the actively
+   * reading task groups that would otherwise not re-read them from the committed offsets:
+   * <ul>
+   *   <li>Task groups reading any of these partitions from an offset other than the committed offset. These task
+   *   groups started from the end offsets of a task group that did not publish its segments. After a scale action,
+   *   they are not necessarily the task groups with the same groupId as that task group, since the partitions in
+   *   each task group depend on the taskCount.</li>
+   *   <li>Task groups that are assigned any of these partitions but are not reading them, such as a closed Kinesis
+   *   shard whose end offset was never published. Otherwise, the partition would not be re-read until the task group
+   *   rolls over.</li>
+   * </ul>
+   * The other partitions of a killed task group are not reset, since {@link #partitionOffsets} still holds the offsets
+   * that the task group started from, which may be the end offsets of a task group that has not published yet.
+   */
+  private void resetPartitionsAndKillReadingTaskGroups(Set<PartitionIdType> partitions, Set<Integer> failedGroupIds)
+  {
+    for (PartitionIdType partitionId : partitions) {
+      partitionOffsets.put(partitionId, getNotSetMarker());
+    }
+
+    final Map<PartitionIdType, SequenceOffsetType> committedOffsets = getOffsetsFromMetadataStorage();
+    final Iterator<TaskGroup> iTaskGroups = activelyReadingTaskGroups.values().iterator();
+    while (iTaskGroups.hasNext()) {
+      final TaskGroup taskGroup = iTaskGroups.next();
+      final Set<PartitionIdType> assignedPartitions = partitionGroups.getOrDefault(taskGroup.groupId, Set.of());
+      final Set<PartitionIdType> partitionsToReread = partitions.stream().filter(partitionId -> {
+        final SequenceOffsetType startingOffset = taskGroup.startingSequences.get(partitionId);
+        return startingOffset == null
+               ? assignedPartitions.contains(partitionId)
+               : !startingOffset.equals(committedOffsets.get(partitionId));
+      }).collect(Collectors.toSet());
+      if (!partitionsToReread.isEmpty()) {
+        log.info(
+            "Killing actively reading taskGroup[%d] with partitions%s so that partitions%s are re-read from"
+            + " the committed offsets.",
+            taskGroup.groupId,
+            taskGroup.startingSequences.keySet(),
+            partitionsToReread
+        );
+        killTasksInGroup(
+            taskGroup,
+            "Earlier taskGroups%s did not publish segments for overlapping partitions%s",
+            failedGroupIds,
+            partitionsToReread
+        );
+        iTaskGroups.remove();
+      }
+    }
+  }
+
+  /**
+   * Stops the pending completion task groups that started reading a partition of any of the given failed task groups
+   * from a later offset. These are the task groups that {@link #isTaskReadyToPublishSegments} makes wait for a failed
+   * task group to publish, so they cannot publish either. After a scale action, they are not necessarily in the same
+   * list of {@link #pendingCompletionTaskGroups} as the failed task group, since the partitions in each task group
+   * depend on the taskCount.
+   * <p>
+   * The stopped task groups are added to {@code failedGroups} and {@code toRemove}, so that the task groups that
+   * started after them are stopped as well.
+   */
+  private void stopPendingCompletionTaskGroupsStartedAfter(
+      List<TaskGroup> failedGroups,
+      Set<TaskGroup> toRemove,
+      List<ListenableFuture<Void>> futures
+  )
+  {
+    // failedGroups grows as the task groups that started after a failed task group are stopped
+    for (int i = 0; i < failedGroups.size(); i++) {
+      final TaskGroup failedGroup = failedGroups.get(i);
+      for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
+        for (TaskGroup group : taskGroupList) {
+          if (toRemove.contains(group)) {
+            continue;
+          }
+          final Set<PartitionIdType> overlappingPartitions = getPartitionsStartedAfter(group, failedGroup);
+          if (!overlappingPartitions.isEmpty()) {
+            futures.add(
+                stopTasksInGroup(
+                    group,
+                    "earlier taskGroup[%d] did not publish segments for overlapping partitions%s",
+                    failedGroup.groupId,
+                    overlappingPartitions
+                )
+            );
+            failedGroups.add(group);
+            toRemove.add(group);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns the partitions of the other task group that the given task group started reading from a later offset.
+   * If there are any, the given task group can only publish its segments after the other task group has published its
+   * segments. This is the same condition as in {@link #getOlderTaskGroupsPublishingToPartitions}.
+   */
+  private Set<PartitionIdType> getPartitionsStartedAfter(TaskGroup taskGroup, TaskGroup otherTaskGroup)
+  {
+    return otherTaskGroup.startingSequences.entrySet().stream().filter(entry -> {
+      final SequenceOffsetType startingOffset = taskGroup.startingSequences.get(entry.getKey());
+      return startingOffset != null && !isOffsetAtOrBeyond(entry.getValue(), startingOffset);
+    }).map(Map.Entry::getKey).collect(Collectors.toSet());
+  }
+
   private void killTaskGroupForPartitions(Set<PartitionIdType> partitions, String reasonFormat, Object... args)
   {
     for (PartitionIdType partition : partitions) {
@@ -4280,29 +4387,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       throws ExecutionException, InterruptedException
   {
     List<ListenableFuture<Void>> futures = new ArrayList<>();
+    // Groups in all the lists that will not publish their segments
+    final List<TaskGroup> failedGroups = new ArrayList<>();
+    // Groups in all the lists that are no longer pending completion
+    final Set<TaskGroup> toRemove = new LinkedHashSet<>();
 
     for (Entry<Integer, CopyOnWriteArrayList<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
 
-      boolean stopTasksInTaskGroup = false;
       Integer groupId = pendingGroupList.getKey();
       CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingGroupList.getValue();
-      List<TaskGroup> toRemove = new ArrayList<>();
 
       for (TaskGroup group : taskGroupList) {
         boolean foundSuccess = false, entireTaskGroupFailed = false;
-
-        if (stopTasksInTaskGroup) {
-          // One of the earlier groups that was handling the same partition set timed out before the segments were
-          // published so stop any additional groups handling the same partition set that are pending completion.
-          futures.add(
-              stopTasksInGroup(
-                  group,
-                  "one of earlier groups that was handling the same partition set timed out before publishing segments"
-              )
-          );
-          toRemove.add(group);
-          continue;
-        }
 
         Iterator<Entry<String, TaskData>> iTask = group.tasks.entrySet().iterator();
         while (iTask.hasNext()) {
@@ -4350,33 +4446,41 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             ).emit();
           }
 
-          // reset partitions sequences for this task group so that they will be re-read from metadata storage
-          for (PartitionIdType partitionId : group.startingSequences.keySet()) {
-            partitionOffsets.put(partitionId, getNotSetMarker());
-          }
-
           // kill all the tasks in this pending completion group
           killTasksInGroup(
               group,
-              "No successful task in taskGroup within completion timeout",
+              "No successful task in taskGroup[%d] within completion timeout",
               groupId
           );
-          // set a flag so the other pending completion groups for this set of partitions will also stop
-          stopTasksInTaskGroup = true;
-
-          // kill all the tasks in the currently reading task group and remove the bad task group
-          killTasksInGroup(
-              activelyReadingTaskGroups.remove(groupId),
-              "No successful task in prior taskGroup within completion timeout",
-              groupId
-          );
+          // record the group so the pending completion groups that started after it will also stop
+          failedGroups.add(group);
           toRemove.add(group);
         }
       }
-
-      taskGroupList.removeAll(toRemove);
-      toRemove.forEach(TaskGroup::onCompleted);
     }
+
+    if (!failedGroups.isEmpty()) {
+      // Stop the pending completion groups that wait for a failed group to publish. This must happen before
+      // onCompleted(), which would otherwise let their tasks publish from the unpublished end offsets of the failed
+      // group.
+      stopPendingCompletionTaskGroupsStartedAfter(failedGroups, toRemove, futures);
+
+      // reset partitions sequences for the failed and stopped groups so that they will be re-read from metadata
+      // storage, and kill the actively reading task groups that started from their unpublished end offsets. This
+      // must also happen before onCompleted(), which would otherwise let the tasks of those task groups publish.
+      final Set<PartitionIdType> failedPartitions = new HashSet<>();
+      final Set<Integer> failedGroupIds = new TreeSet<>();
+      for (TaskGroup group : failedGroups) {
+        failedPartitions.addAll(group.startingSequences.keySet());
+        failedGroupIds.add(group.groupId);
+      }
+      resetPartitionsAndKillReadingTaskGroups(failedPartitions, failedGroupIds);
+    }
+
+    for (CopyOnWriteArrayList<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
+      taskGroupList.removeAll(toRemove);
+    }
+    toRemove.forEach(TaskGroup::onCompleted);
 
     // Ignore return value; just await.
     coalesceAndAwait(futures);

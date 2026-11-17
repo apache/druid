@@ -21,6 +21,7 @@ package org.apache.druid.query.scan;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +29,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -109,6 +111,42 @@ public class ScanQueryTest extends InitializedNullHandlingTest
         "segmentId",
         Collections.singletonList("yah"),
         events3
+    );
+  }
+
+  @Test
+  public void testContextAcceptsHumanReadableNumbers() throws Exception
+  {
+    // A native query whose JSON context sets numbers in human-readable form
+    final String json = """
+        {
+          "queryType": "scan",
+          "dataSource": "foo",
+          "intervals": ["2000-01-01/2000-01-02"],
+          "columns": ["dim1"],
+          "context": {
+            "maxRowsQueuedForOrdering": "100K",
+            "maxQueuedBytes": "1 MiB",
+            "priority": "-2K",
+            "maxSubqueryBytes": "256 MiB"
+          }
+        }""";
+    final ScanQuery query = (ScanQuery) JSON_MAPPER.readValue(json, Query.class);
+
+    Assertions.assertEquals(100_000, query.getMaxRowsQueuedForOrdering());
+    Assertions.assertEquals(1024 * 1024, query.context().getMaxQueuedBytes(0));
+    Assertions.assertEquals(-2_000, query.context().getPriority());
+    Assertions.assertEquals("256 MiB", query.context().getMaxSubqueryMemoryBytes(null));
+
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> JSON_MAPPER.readValue(StringUtils.replace(json, "\"100K\"", "\"abc\""), Query.class)
+    );
+    Assertions.assertTrue(
+        Throwables.getStackTraceAsString(e).contains(
+            "Query context parameter [maxRowsQueuedForOrdering] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [abc]"
+        ),
+        Throwables.getStackTraceAsString(e)
     );
   }
 

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -256,7 +255,7 @@ public class QueryContext
    */
   public boolean has(final QueryContextParameter<?> parameter)
   {
-    return get(parameter.getName()) != null;
+    return context.get(parameter.getName()) != null;
   }
 
   /**
@@ -278,7 +277,14 @@ public class QueryContext
   @Nullable
   public <T> T get(final QueryContextParameter<T> parameter)
   {
-    return parseOrDefault(parameter, parameter.getLiteralDefault());
+    final T defaultValue = parameter.getLiteralDefault();
+    if (!containsKey(parameter.getName())) {
+      return defaultValue;
+    }
+
+    // Parse even an explicit null so that non-nullable parameters reject it.
+    final T parsed = parameter.parse(context.get(parameter.getName()));
+    return parsed == null ? defaultValue : parsed;
   }
 
   /**
@@ -303,17 +309,11 @@ public class QueryContext
    */
   public <T> T getOrDefault(final QueryContextParameter<T> parameter, final T defaultValue)
   {
-    return parseOrDefault(parameter, defaultValue);
-  }
-
-  @Nullable
-  private <T> T parseOrDefault(final QueryContextParameter<T> parameter, @Nullable final T defaultValue)
-  {
     if (!containsKey(parameter.getName())) {
       return defaultValue;
     }
     // Parse even an explicit null so that non-nullable parameters reject it.
-    final T parsed = parameter.parse(get(parameter.getName()));
+    final T parsed = parameter.parse(context.get(parameter.getName()));
     return parsed == null ? defaultValue : parsed;
   }
 
@@ -342,7 +342,7 @@ public class QueryContext
    */
   public Boolean getBoolean(final String key)
   {
-    return QueryContexts.getAsBoolean(key, get(key));
+    return QueryContexts.getAsBoolean(key, context.get(key));
   }
 
   /**
@@ -353,7 +353,7 @@ public class QueryContext
    */
   public boolean getBoolean(final String key, final boolean defaultValue)
   {
-    return QueryContexts.parseBoolean(context, key, defaultValue);
+    return QueryContexts.getAsBoolean(key, context.get(key), defaultValue);
   }
 
   /**
@@ -375,7 +375,7 @@ public class QueryContext
    */
   public int getInt(final String key, final int defaultValue)
   {
-    return QueryContexts.parseInt(context, key, defaultValue);
+    return QueryContexts.getAsInt(key, get(key), defaultValue);
   }
 
   /**
@@ -397,7 +397,7 @@ public class QueryContext
    */
   public long getLong(final String key, final long defaultValue)
   {
-    return QueryContexts.parseLong(context, key, defaultValue);
+    return QueryContexts.getAsLong(key, get(key), defaultValue);
   }
 
   /**
@@ -409,16 +409,6 @@ public class QueryContext
   public float getFloat(final String key, final float defaultValue)
   {
     return QueryContexts.getAsFloat(key, get(key), defaultValue);
-  }
-
-  public HumanReadableBytes getHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
-  {
-    return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
-  }
-
-  public HumanReadableBytes getHumanReadableBytes(final String key, final long defaultBytes)
-  {
-    return QueryContexts.getAsHumanReadableBytes(key, get(key), HumanReadableBytes.valueOf(defaultBytes));
   }
 
   public <E extends Enum<E>> E getEnum(String key, Class<E> clazz, E defaultValue)

@@ -165,6 +165,8 @@ class SqlResourceQueryResultPusher extends QueryResultPusher
       {
         if (QueryLifecycle.shouldLogStackTrace(e, sqlQuery.queryContext())) {
           log.warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
+        } else if (QueryLifecycle.isUserError(e)) {
+          log.noStackTrace().debug(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
         } else {
           log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
         }

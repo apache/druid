@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -163,6 +162,31 @@ public class QueryContextTest
     assertTrue(context.getBoolean("key1"));
     assertFalse(context.getBoolean("non-exist", false));
     assertNull(context.getBoolean("non-exist"));
+  }
+
+  @Test
+  public void testGetBooleanFollowsTypedParameterRule()
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.<String, Object>builder()
+                    .put("upper", "TRUE")
+                    .put("one", "1")
+                    .put("zero", 0)
+                    .put("yes", "yes")
+                    .put("decimal", 1.0)
+                    .build()
+    );
+
+    assertTrue(context.getBoolean("upper", false));
+    assertTrue(context.getBoolean("one", false));
+    assertFalse(context.getBoolean("zero", true));
+
+    // Strings other than true/false or 1/0 used to be read as false
+    assertEquals(
+        "Context parameter [yes] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [yes]",
+        assertThrows(BadQueryContextException.class, () -> context.getBoolean("yes", false)).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> context.getBoolean("decimal"));
   }
 
   @Test
@@ -386,7 +410,7 @@ public class QueryContextTest
   }
 
   @Test
-  public void testGetHumanReadableBytes()
+  public void testGetLongAcceptsHumanReadableNumbers()
   {
     final QueryContext context = new QueryContext(
         QueryContext.builder()
@@ -398,13 +422,13 @@ public class QueryContextTest
                     .putRaw("m6", "abc")
                     .toMap()
     );
-    assertEquals(500_000_000, context.getHumanReadableBytes("m1", HumanReadableBytes.ZERO).getBytes());
-    assertEquals(500_000_000, context.getHumanReadableBytes("m2", HumanReadableBytes.ZERO).getBytes());
-    assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m3", HumanReadableBytes.ZERO).getBytes());
-    assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m4", HumanReadableBytes.ZERO).getBytes());
-    assertEquals(500_000_000, context.getHumanReadableBytes("m5", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500_000_000L, context.getLong("m1"));
+    assertEquals(500_000_000L, context.getLong("m2"));
+    assertEquals(500 * 1024 * 1024L, context.getLong("m3"));
+    assertEquals(500 * 1024 * 1024L, context.getLong("m4"));
+    assertEquals(500_000_000L, context.getLong("m5"));
 
-    assertThrows(BadQueryContextException.class, () -> context.getHumanReadableBytes("m6", HumanReadableBytes.ZERO));
+    assertThrows(BadQueryContextException.class, () -> context.getLong("m6"));
   }
 
   @Test
@@ -431,12 +455,13 @@ public class QueryContextTest
     assertEquals("100", parameter.parse(100));
     assertEquals("1000000000", parameter.parse(1e9));
 
+    assertEquals("1GiB", parameter.parse("1GiB"));
+    assertEquals("256 MiB", parameter.parse("256 MiB"));
     assertEquals(
-        "Query context parameter [maxSubqueryBytes] should be 'auto', 'disabled' or a non-negative number of bytes, "
-        + "but got [true]",
+        "Query context parameter [maxSubqueryBytes] should be 'auto', 'disabled' or a non-negative number of bytes, such as '10 K' or '256 MiB', but got [true]",
         assertThrows(BadQueryContextException.class, () -> parameter.parse(true)).getMessage()
     );
-    assertThrows(BadQueryContextException.class, () -> parameter.parse("1GiB"));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("-1K"));
     assertThrows(BadQueryContextException.class, () -> parameter.parse("-1"));
     assertThrows(BadQueryContextException.class, () -> parameter.parse(-1));
     assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5));
