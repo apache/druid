@@ -19,6 +19,8 @@
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
 BrowserOnly
+V10
+uncompressed
 docusaurus
 1M
 10MiB
