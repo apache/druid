@@ -43,6 +43,7 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.query.DimensionComparisonUtils;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
@@ -106,6 +107,13 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         && (((DefaultLimitSpec) queryToRun.getLimitSpec()).isLimited()
             || ((DefaultLimitSpec) queryToRun.getLimitSpec()).isOffset());
 
+    // Hash partitions are not in key order, so only queries without ORDER BY use them. Ingestion keeps the default
+    // shuffles, because they decide how segments are cut.
+    final boolean hashPartitionAggregation =
+        queryToRun.context().getOrDefault(QueryContextParameters.GROUP_BY_HASH_PARTITIONING)
+        && !hasOrderBy(queryToRun)
+        && !queryToRun.getContext().containsKey(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY.getName());
+
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
     boolean partitionBoost;
@@ -150,9 +158,15 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       partitionBoost = true;
     } else {
-      shuffleSpecFactoryPreAggregation = doLimitOrOffset || intermediateClusterBy.isEmpty()
-                                         ? ShuffleSpecFactories.singlePartition()
-                                         : resultShuffleSpecFactory;
+      if (doLimitOrOffset || intermediateClusterBy.isEmpty()) {
+        shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
+      } else if (hashPartitionAggregation) {
+        // Each group's partial aggregates land in one partition, so the post-aggregation stage can finish the groups
+        // on many workers. Its output keeps these partitions, which are not in key order.
+        shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.hashWithTargetPartitions();
+      } else {
+        shuffleSpecFactoryPreAggregation = resultShuffleSpecFactory;
+      }
 
       // null: retain partitions from input (i.e. from preAggregation).
       shuffleSpecFactoryPostAggregation = null;
@@ -323,6 +337,15 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
     // Note: ignoring time because we assume granularity = all.
     return new ClusterBy(columns, 0);
+  }
+
+  /**
+   * Whether the query has an ORDER BY.
+   */
+  private static boolean hasOrderBy(final GroupByQuery query)
+  {
+    return query.getLimitSpec() instanceof DefaultLimitSpec
+           && !((DefaultLimitSpec) query.getLimitSpec()).getColumns().isEmpty();
   }
 
   /**

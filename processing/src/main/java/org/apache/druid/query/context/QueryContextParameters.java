@@ -2136,6 +2136,22 @@ public final class QueryContextParameters
           .visibility(Visibility.HIDDEN)
           .build();
 
+  public static final QueryContextParameter<Boolean> GROUP_BY_HASH_PARTITIONING =
+      booleanParameter("groupByHashPartitioning")
+          .since("40.0.0").query(Query.SQL).engine(Engine.MSQ, Engine.DART)
+          .defaultValue(false)
+          .description(
+              """
+              Whether the outermost GROUP BY of a SELECT with no ORDER BY, LIMIT or OFFSET hash-partitions its partial
+              aggregates across `targetPartitionsPerWorker` partitions for each non-leaf worker, instead of sending
+              them to a single worker. Hash partitioning needs no key statistics. Results are not sorted. Has no
+              effect on queries with ORDER BY, LIMIT or OFFSET, INSERT, REPLACE or subqueries.
+              """
+          )
+          .statement(StatementType.SELECT)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
   public static final QueryContextParameter<Integer> MAX_NUM_SEGMENTS =
       integerParameter("maxNumSegments")
           .since("31.0.0").query(Query.SQL).engine(Engine.MSQ)

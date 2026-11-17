@@ -22,6 +22,7 @@ package org.apache.druid.msq.querykit;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
+import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -69,6 +70,16 @@ public class ShuffleSpecFactories
   {
     return (clusterBy, aggregate) ->
         new GlobalSortMaxCountShuffleSpec(clusterBy, 1, aggregate, ShuffleSpec.UNLIMITED, true);
+  }
+
+  /**
+   * Factory that produces an adjustable hash-partitioned shuffle spec, sorted within each partition. The partition
+   * count is adjusted at runtime by {@link QueryDefinition#withRuntimeBounds(int, int, int)}. Unlike
+   * {@link #globalSortWithTargetPartitions()}, it needs no key statistics, but partitions are not in key order.
+   */
+  public static ShuffleSpecFactory hashWithTargetPartitions()
+  {
+    return (clusterBy, aggregate) -> new HashShuffleSpec(clusterBy, 1, true);
   }
 
   /**
