@@ -30,7 +30,7 @@ This reference documents every query context parameter, grouped by where it appl
 - **General parameters**: Apply to native queries and, unless noted, to SQL queries. Some also apply to other engines.
 - **Join filter parameters**: Control filter rewrites and push-down for join queries.
 - **Druid SQL parameters**: Apply to SQL queries only.
-- **Query type parameters**: Apply to a specific native query type, such as TopN or GroupBy.
+- **TopN, Timeseries, Scan, Search and GroupBy parameters**: Apply to a specific native query type.
 - **SQL-based ingestion parameters**: Apply to queries that run on the multi-stage query (MSQ) engine.
 - **Dart parameters**: Apply to [Dart](dart.md) queries only.
 
@@ -40,6 +40,17 @@ that introduced it.
 
 To learn how to set the query context, see [Set query context](./query-context.md).
 <a id="vectorization-parameters"></a>To learn which queries can run vectorized, see [Vectorization](vectorization.md).
+
+## Accepted value formats
+
+Some parameter types accept values in more forms than their names suggest:
+
+|Type|Accepted values|
+|----|---------------|
+|`Boolean`|`true` or `false`, as a Boolean or as a string in any case, and `1` or `0`, as an integer or as a string. Other values, including floating-point numbers such as `1.0`, are rejected.|
+|`Integer`, `Long`|A number with no fractional part, such as `12` or `12.0`, or a string that contains one. The string can also be a [human-readable number](../configuration/human-readable-byte.md), such as `100K` or `1 MiB`, where the unit follows the number directly or after a space. Unlike in runtime properties, a human-readable number can be negative, such as `-2K`, for a parameter that allows negative values. When the type shows a range, such as `Integer in [1, 2147483647]`, the value must be within it.|
+
+For examples of setting parameters of each type in Druid SQL, see [SET](sql.md#set).
 
 ## General parameters
 
@@ -553,7 +564,7 @@ The following parameters apply to SQL queries only. For how to set them, see [SQ
 
 | | |
 |---|---|
-|**Description**|This parameter applies to queries with joins. By default, when the left child is a simple scan with a filter, Druid runs the scan as a query, then joins it with the right child on the Broker. Setting this parameter to `true` overrides that behavior and pushes the join to the data servers instead. Even if a query doesn't explicitly include a join, this parameter may still apply since the SQL planner can translate the query into a join internally.|
+|**Description**|If `true`, Druid pushes a join whose left child is a filtered scan down to the data servers, instead of running the scan as a query and joining on the Broker. Even if a query doesn't explicitly include a join, this parameter may still apply since the SQL planner can translate the query into a join internally.|
 |**Type**|Boolean|
 |**Default**|`false`|
 |**Query**|SQL|
@@ -1424,7 +1435,7 @@ The following parameters apply to [SQL-based ingestion](../multi-stage-query/ind
 
 | | |
 |---|---|
-|**Description**|The MSQ engine can't process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, the MSQ engine removes the null bytes in string fields when reading the data.|
+|**Description**|If `true`, the MSQ engine removes null bytes from string fields when reading data, instead of failing with `InvalidNullByteFault`.|
 |**Type**|Boolean|
 |**Default**|`false`|
 |**Query**|SQL|
@@ -1472,7 +1483,7 @@ The following parameters apply to [SQL-based ingestion](../multi-stage-query/ind
 
 | | |
 |---|---|
-|**Description**|Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](../multi-stage-query/reference.md#clustered-by) clause. When you set `segmentSortOrder`, Druid uses the order from this context parameter instead. Provide the column list as comma-separated values or as a JSON array in string form.<br /><br />For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`.|
+|**Description**|Sort order of rows within each segment, as a comma-separated column list or a JSON array in string form. If not set, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](../multi-stage-query/reference.md#clustered-by) clause.<br /><br />For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`.|
 |**Type**|String|
 |**Default**|empty list|
 |**Query**|SQL|
@@ -1496,7 +1507,7 @@ The following parameters apply to [SQL-based ingestion](../multi-stage-query/ind
 
 | | |
 |---|---|
-|**Description**|During query validation, Druid validates that [string arrays](../querying/arrays.md) and [multi-value dimensions](../querying/multi-value-dimensions.md) are not mixed in the same column. If you are intentionally migrating from one to the other, use this context parameter to disable type validation.<br /><br />Provide the column list as comma-separated values or as a JSON array in string form.|
+|**Description**|Columns for which Druid skips the check that [string arrays](../querying/arrays.md) and [multi-value dimensions](../querying/multi-value-dimensions.md) aren't mixed in the same column. Use it when you are intentionally migrating a column from one to the other.<br /><br />Provide the column list as comma-separated values or as a JSON array in string form.|
 |**Type**|String|
 |**Default**|empty list|
 |**Query**|SQL|

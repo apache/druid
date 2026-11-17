@@ -361,10 +361,11 @@ public final class ParameterDocumentationGenerator
       throw new ISE("Query context parameter filter [%s] in [%s] selects no parameters", block.filter, sourcePath);
     }
 
-    // Only tables of parameters that apply to specific SQL statements, such as those of SQL-based ingestion, need to
-    // show which statements each parameter applies to.
-    final boolean showStatements =
-        selected.stream().anyMatch(parameter -> !parameter.getDocumentation().getStatementTypes().isEmpty());
+    // Statement types matter only where INSERT and REPLACE can run, so only tables of MSQ task engine parameters show
+    // them. Dart, for example, only runs SELECT.
+    final boolean showStatements = selected.stream().allMatch(
+        parameter -> parameter.getDocumentation().getEngines().contains(ParameterDocumentation.Engine.MSQ)
+    );
     final StringBuilder output = new StringBuilder(
         showStatements
         ? "|Parameter|Statements|Description|Default|\n|---|---|---|---|\n"

@@ -50,6 +50,8 @@ class ParameterDocumentationGeneratorTest
       + "\n## Learn more\n";
   private static final String SCAN_DOCUMENT = "docs/querying/scan-query.md";
   private static final String MSQ_DOCUMENT = "docs/multi-stage-query/reference.md";
+  private static final String DART_DOCUMENT = "docs/querying/dart.md";
+  private static final String SQL_DOCUMENT = "docs/querying/sql-query-context.md";
 
   @TempDir
   Path temporaryFolder;
@@ -172,15 +174,20 @@ class ParameterDocumentationGeneratorTest
   }
 
   @Test
-  void testTableShowsStatementsOnlyWhenParametersHaveThem() throws IOException
+  void testTableShowsStatementsOnlyForMsqTaskEngineParameters() throws IOException
   {
     writeDocuments(REFERENCE);
     writeDocument(SCAN_DOCUMENT, table("queryTypes=SCAN"));
     writeDocument(MSQ_DOCUMENT, table("engines~MSQ engines!~NATIVE"));
+    // Some Dart and SQL parameters have statement types, but these tables include parameters that MSQ doesn't honor
+    writeDocument(DART_DOCUMENT, table("engines~DART engines!~NATIVE"));
+    writeDocument(SQL_DOCUMENT, table("queries=SQL engines~NATIVE queryTypes="));
 
     ParameterDocumentationGenerator.main(arguments("generate", temporaryFolder.resolve("generated")));
 
     assertTrue(read(SCAN_DOCUMENT).contains("|Parameter|Description|Default|\n"));
+    assertTrue(read(DART_DOCUMENT).contains("|Parameter|Description|Default|\n"));
+    assertTrue(read(SQL_DOCUMENT).contains("|Parameter|Description|Default|\n"));
     final String msq = read(MSQ_DOCUMENT);
     assertTrue(msq.contains("|Parameter|Statements|Description|Default|\n"));
     assertTrue(msq.contains("|[`rowsPerSegment`](../querying/query-context-reference.md#rowspersegment)|INSERT, REPLACE|"));

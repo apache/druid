@@ -125,19 +125,19 @@ You can use any SQL query context parameters to control Dart's behavior unless o
 
 <!-- BEGIN GENERATED QUERY CONTEXT PARAMETER TABLE: engines~DART engines!~NATIVE -->
 
-|Parameter|Statements|Description|Default|
-|---|---|---|---|
-|[`finalizeAggregations`](query-context-reference.md#finalizeaggregations)|SELECT, INSERT, REPLACE|Determines the type of aggregation to return.|`true`|
-|[`fullReport`](query-context-reference.md#fullreport)||If true, a [Dart](../querying/dart.md) query returns a single `fullReport` column that contains the full query report, including the results, instead of the query results.|`false`|
-|[`includeSegmentSource`](query-context-reference.md#includesegmentsource)|SELECT, INSERT, REPLACE|Controls the sources Druid queries for results in addition to the segments present on deep storage.|`NONE` for the MSQ task engine, `REALTIME` for Dart|
-|[`maxConcurrentStages`](query-context-reference.md#maxconcurrentstages)|SELECT, INSERT, REPLACE|Number of stages that can run concurrently for a query.|`2` for Dart, `1` for the MSQ task engine|
-|[`maxFrameSize`](query-context-reference.md#maxframesize)|SELECT, INSERT, REPLACE|Size of frames used for data transfer within the MSQ engine.|`1000000` (1 MB)|
-|[`maxNonLeafWorkers`](query-context-reference.md#maxnonleafworkers)|SELECT|Number of workers to use for stages beyond the leaf stage.|1 (Scatter-gather style)|
-|[`maxRowsMaterializedInWindow`](query-context-reference.md#maxrowsmaterializedinwindow)|SELECT, INSERT, REPLACE|Maximum number of rows that window functions can materialize in a single window partition.|`100000`|
-|[`maxThreads`](query-context-reference.md#maxthreads)|SELECT, INSERT, REPLACE|Maximum number of threads to use for processing.|Not set (use default thread count)|
-|[`removeNullBytes`](query-context-reference.md#removenullbytes)|SELECT, INSERT, REPLACE|The MSQ engine can't process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data.|`false`|
-|[`sqlJoinAlgorithm`](query-context-reference.md#sqljoinalgorithm)|SELECT, INSERT, REPLACE|Algorithm to use for `JOIN`: `broadcast` for broadcast hash join or `sortMerge` for sort-merge join.|`broadcast`|
-|[`targetPartitionsPerWorker`](query-context-reference.md#targetpartitionsperworker)|SELECT, INSERT, REPLACE|Number of partitions Druid generates for each worker.|`1` for Dart, the number of processing threads for the MSQ task engine|
+|Parameter|Description|Default|
+|---|---|---|
+|[`finalizeAggregations`](query-context-reference.md#finalizeaggregations)|Determines the type of aggregation to return.|`true`|
+|[`fullReport`](query-context-reference.md#fullreport)|If true, a [Dart](../querying/dart.md) query returns a single `fullReport` column that contains the full query report, including the results, instead of the query results.|`false`|
+|[`includeSegmentSource`](query-context-reference.md#includesegmentsource)|Controls the sources Druid queries for results in addition to the segments present on deep storage.|`NONE` for the MSQ task engine, `REALTIME` for Dart|
+|[`maxConcurrentStages`](query-context-reference.md#maxconcurrentstages)|Number of stages that can run concurrently for a query.|`2` for Dart, `1` for the MSQ task engine|
+|[`maxFrameSize`](query-context-reference.md#maxframesize)|Size of frames used for data transfer within the MSQ engine.|`1000000` (1 MB)|
+|[`maxNonLeafWorkers`](query-context-reference.md#maxnonleafworkers)|Number of workers to use for stages beyond the leaf stage.|1 (Scatter-gather style)|
+|[`maxRowsMaterializedInWindow`](query-context-reference.md#maxrowsmaterializedinwindow)|Maximum number of rows that window functions can materialize in a single window partition.|`100000`|
+|[`maxThreads`](query-context-reference.md#maxthreads)|Maximum number of threads to use for processing.|Not set (use default thread count)|
+|[`removeNullBytes`](query-context-reference.md#removenullbytes)|If `true`, the MSQ engine removes null bytes from string fields when reading data, instead of failing with `InvalidNullByteFault`.|`false`|
+|[`sqlJoinAlgorithm`](query-context-reference.md#sqljoinalgorithm)|Algorithm to use for `JOIN`: `broadcast` for broadcast hash join or `sortMerge` for sort-merge join.|`broadcast`|
+|[`targetPartitionsPerWorker`](query-context-reference.md#targetpartitionsperworker)|Number of partitions Druid generates for each worker.|`1` for Dart, the number of processing threads for the MSQ task engine|
 
 <!-- END GENERATED QUERY CONTEXT PARAMETER TABLE -->
 

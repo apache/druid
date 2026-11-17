@@ -987,9 +987,7 @@ public final class QueryContextParameters
           .defaultValue(false)
           .description(
               """
-              This parameter applies to queries with joins.
-              By default, when the left child is a simple scan with a filter, Druid runs the scan as a query, then joins it with the right child on the Broker.
-              Setting this parameter to `true` overrides that behavior and pushes the join to the data servers instead.
+              If `true`, Druid pushes a join whose left child is a filtered scan down to the data servers, instead of running the scan as a query and joining on the Broker.
               Even if a query doesn't explicitly include a join, this parameter may still apply since the SQL planner can translate the query into a join internally.
               """
           )
@@ -1724,9 +1722,8 @@ public final class QueryContextParameters
           .since("24.0.0").query(Query.SQL).engine(Engine.MSQ)
           .description(
               """
-              Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](../multi-stage-query/reference.md#clustered-by) clause.
-              When you set `segmentSortOrder`, Druid uses the order from this context parameter instead.
-              Provide the column list as comma-separated values or as a JSON array in string form.<br /><br />For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`.
+              Sort order of rows within each segment, as a comma-separated column list or a JSON array in string form.
+              If not set, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](../multi-stage-query/reference.md#clustered-by) clause.<br /><br />For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`.
               Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`.
               """
           )
@@ -1887,8 +1884,8 @@ public final class QueryContextParameters
           .since("30.0.0").query(Query.SQL).engine(Engine.MSQ)
           .description(
               """
-              During query validation, Druid validates that [string arrays](../querying/arrays.md) and [multi-value dimensions](../querying/multi-value-dimensions.md) are not mixed in the same column.
-              If you are intentionally migrating from one to the other, use this context parameter to disable type validation.<br /><br />Provide the column list as comma-separated values or as a JSON array in string form.
+              Columns for which Druid skips the check that [string arrays](../querying/arrays.md) and [multi-value dimensions](../querying/multi-value-dimensions.md) aren't mixed in the same column.
+              Use it when you are intentionally migrating a column from one to the other.<br /><br />Provide the column list as comma-separated values or as a JSON array in string form.
               """
           )
           .defaultDescription("empty list")
@@ -1929,8 +1926,7 @@ public final class QueryContextParameters
           .defaultValue(false)
           .description(
               """
-              The MSQ engine can't process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data.
-              If the parameter is set to true, the MSQ engine removes the null bytes in string fields when reading the data.
+              If `true`, the MSQ engine removes null bytes from string fields when reading data, instead of failing with `InvalidNullByteFault`.
               """
           )
           .statement(StatementType.SELECT, StatementType.INSERT, StatementType.REPLACE)
