@@ -57,6 +57,16 @@ druid.auth.authenticator.jwt.type=jwt
 |`druid.auth.pac4j.oidc.scope`| scope is used by an application during authentication to authorize access to a user's details.|`openid profile email`|No|
 |`druid.auth.pac4j.oidc.clientAuthenticationMethod`|The client authentication method to use when communicating with the OIDC provider. Supported values: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, `none`. If not specified, pac4j will auto-detect the method from the provider's discovery document. Set this explicitly if you need to use a specific method (e.g., when your provider advertises multiple methods but you want to use a particular one).|Auto-detected from provider|No|
 
+### Role claim mapping
+
+The `druid.auth.pac4j.oidc.roleClaimPath` property applies only to the browser-based `pac4j` authenticator. When configured, Druid extracts roles from the OIDC profile or ID token claims returned during the pac4j login flow. If no matching roles are found there, Druid falls back to the OIDC access token.
+
+The `jwt` authenticator does not use `roleClaimPath`. It validates the bearer ID token and uses `druid.auth.pac4j.oidc.oidcClaim` as the Druid identity.
+
+|Property|Description|Default|required|
+|--------|---------------|-----------|-------|
+|`druid.auth.pac4j.oidc.roleClaimPath`|Dot-separated path to the claim containing user roles.|none|No|
+
 :::info
 Users must set a strong passphrase to ensure that an attacker is not able to guess it simply by brute force.
 A compromised passphrase may allow an attacker to read and manipulate session cookies.
