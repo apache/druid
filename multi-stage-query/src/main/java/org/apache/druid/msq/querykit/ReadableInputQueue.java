@@ -74,12 +74,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * acquired by callers through {@link SegmentReferenceHolder#getSegmentReferenceOnce()}. Callers that have acquired
  * segment references are responsible for closing those references, they will not be closed by this class.
  *
- * Load-ahead (see {@link #loadahead}) is a prefetch, so a full segment cache alone does not make it fail a query: when
+ * Load-ahead (see {@link #loadahead}) is a prefetch, so a full segment cache alone does not make it fail a query. When
  * a load-ahead acquisition finds no room in the segment cache before it has been handed out, the segment goes back into
  * {@link #loadableSegments} and load-ahead backs off for a while (see {@link #deferLoadahead}). Other failures do fail
- * the query: a load-ahead that runs out of room after it was handed out (a caller is waiting on it), a load-ahead that
- * fails for any other reason, and a segment acquired on demand by {@link #nextSegmentInput()}, which is needed to make
- * progress right now.
+ * the query, such as a load-ahead that runs out of room after it was handed out (a caller is waiting on it), a
+ * load-ahead that fails for any other reason, and a segment acquired on demand by {@link #nextSegmentInput()}, which
+ * is needed to make progress right now.
+ * <p>
+ * A deferred segment keeps its place in time order as far as that is possible without stalling or failing the stage.
+ * It is retried before any later input is handed out once load-ahead stops backing off, and once ready it is handed out
+ * ahead of every input still pending. While it is not ready, later ready inputs are handed out so the stage keeps
+ * making progress: waiting for it could deadlock against the processors holding the room it needs, and handing it out
+ * unready would make a further capacity failure fatal. Time order is thus best-effort under cache pressure, which can
+ * only cost pruning, not correctness: {@link InputPruner#canSkip} is answered by what has been written so far, never by
+ * what the queue was expected to hand out next.
  */
 public class ReadableInputQueue implements Closeable
 {
@@ -264,7 +272,7 @@ public class ReadableInputQueue implements Closeable
     }
     for (int i = 0; i < segments.size(); i++) {
       final NumberedItem<LoadableSegment> segment = segments.get(i);
-      loadableSegments.add(new QueuedSegment(i, segment.inputNumber(), segment.item()));
+      loadableSegments.add(new QueuedSegment(i, segment.inputNumber(), segment.item(), false));
     }
   }
 
@@ -405,6 +413,13 @@ public class ReadableInputQueue implements Closeable
   @Nullable
   private ListenableFuture<NumberedReadableInput> nextSegmentInput()
   {
+    if (deferredSegmentPrecedesPending()) {
+      // A deferred segment comes before everything pending, so give it another try before handing anything out. When
+      // load-ahead is not backing off, this keeps time order whenever the retry is ready right away (a cache hit), and
+      // otherwise gets the retry under way as early as possible.
+      topUpLoadahead();
+    }
+
     final List<ListenableFuture<NumberedReadableInput>> skippedFutures = new ArrayList<>();
     ListenableFuture<NumberedReadableInput> unskippedFuture = null;
     LoadableSegment unskippedSegment = null;
@@ -530,7 +545,10 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Picks the pending input to hand out next. Never null; only called when {@link #pendingNextInputs} is nonempty.
+   * Picks the pending input to hand out next. Never null and only called when {@link #pendingNextInputs} is nonempty.
+   * <p>
+   * The head of {@link #pendingNextInputs} is the pending input that comes first in hand-out order (see
+   * {@link #putPendingInput}). It is handed out if it is ready, or if nothing it could yield to is ready.
    */
   @GuardedBy("this")
   private ListenableFuture<NumberedReadableInput> selectPendingInput()
@@ -544,17 +562,33 @@ public class ReadableInputQueue implements Closeable
     }
 
     // head is not ready, seek for the next ready input who compares equal to head. for ordered inputs that means
-    // matching intervals, for unordered inputs any ready input is fine.
+    // matching intervals, for unordered inputs any ready input is fine. A retried deferral yields to any ready input.
     final Interval headInterval = head.getValue().interval();
+    final boolean headIsRetry = head.getValue().queued().deferred();
     while (iterator.hasNext()) {
       final Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput> entry = iterator.next();
-      if (entry.getKey().isDone() && intervalOrder.compare(headInterval, entry.getValue().interval()) == 0) {
+      if (entry.getKey().isDone()
+          && (headIsRetry || intervalOrder.compare(headInterval, entry.getValue().interval()) == 0)) {
         return entry.getKey();
       }
     }
 
-    // Nothing level with the head is loaded, so hand out the head and let the caller wait for it.
+    // Nothing the head could yield to is loaded, so hand out the head and let the caller wait for it.
     return head.getKey();
+  }
+
+  /**
+   * Whether the front of {@link #loadableSegments} comes before every pending input in the order. Only a deferred
+   * segment can (see {@link #deferLoadahead}): pending inputs were taken from the front, so whatever else is behind
+   * them is level with them or later.
+   */
+  private synchronized boolean deferredSegmentPrecedesPending()
+  {
+    if (pendingNextInputs.isEmpty() || loadableSegments.isEmpty()) {
+      return false;
+    }
+    final Interval frontInterval = loadableSegments.peekFirst().segment().descriptor().getInterval();
+    return intervalOrder.compare(frontInterval, pendingNextInputs.firstEntry().getValue().interval()) < 0;
   }
 
   /**
@@ -567,12 +601,18 @@ public class ReadableInputQueue implements Closeable
   @GuardedBy("this")
   private void acquireCachedInNextGroup()
   {
-    final Interval nextInterval;
+    Interval nextInterval = null;
     if (!pendingNextInputs.isEmpty()) {
-      nextInterval = pendingNextInputs.values().iterator().next().interval();
-    } else if (!loadableSegments.isEmpty()) {
-      nextInterval = loadableSegments.peek().segment().descriptor().getInterval();
-    } else {
+      nextInterval = pendingNextInputs.firstEntry().getValue().interval();
+    }
+    // check if deferred segment at the front of loadableSegments comes before a pending input
+    if (!loadableSegments.isEmpty()) {
+      final Interval frontInterval = loadableSegments.peek().segment().descriptor().getInterval();
+      if (nextInterval == null || intervalOrder.compare(frontInterval, nextInterval) < 0) {
+        nextInterval = frontInterval;
+      }
+    }
+    if (nextInterval == null) {
       return;
     }
 
@@ -600,7 +640,7 @@ public class ReadableInputQueue implements Closeable
           throw t;
         }
         if (cachedFuture != null) {
-          pendingNextInputs.put(cachedFuture, new PendingInput(nextSegment.segment(), true));
+          putPendingInput(cachedFuture, new PendingInput(nextSegment, true));
         } else {
           notCached.add(nextSegment);
         }
@@ -918,14 +958,14 @@ public class ReadableInputQueue implements Closeable
    * Load-ahead is purely a prefetch, so a full cache must not fail the query. The segment is tried again on a later
    * load-ahead opportunity, or acquired on demand by {@link #nextSegmentInput()} once nothing is pending. It goes back
    * to its own place in hand-out order (see {@link #requeue}) rather than onto the front: several load-aheads can be in
-   * flight when the cache fills up, and their failures can arrive in any order, so pushing each onto the front would
-   * reverse them. The count reported by {@link #remaining()} is unaffected, since the segment merely moves back to
-   * where it came from.
+   * flight when the cache fills up, and their failures can arrive in any order. It is marked as deferred, which
+   * {@link #selectPendingInput} takes into account once it is pending again. The count reported by {@link #remaining()}
+   * is unaffected, since the segment merely moves back to where it came from.
    */
   @GuardedBy("this")
   private void deferLoadahead(final QueuedSegment segment, final Throwable e)
   {
-    requeue(segment);
+    requeue(segment.asDeferred());
     if (loadaheadCooldown == 0) {
       loadaheadBackoff = Math.min(MAX_LOADAHEAD_COOLDOWN, loadaheadBackoff == 0 ? 1 : loadaheadBackoff * 2);
       loadaheadCooldown = loadaheadBackoff;
@@ -999,9 +1039,41 @@ public class ReadableInputQueue implements Closeable
       }
       throw e;
     }
-    pendingNextInputs.put(acquisition.future(), new PendingInput(nextSegment.segment(), false));
+    putPendingInput(acquisition.future(), new PendingInput(nextSegment, false));
     pendingLoadaheadCount++;
     return acquisition;
+  }
+
+  /**
+   * Adds a future to {@link #pendingNextInputs}, keeping the map in hand-out order (see
+   * {@link QueuedSegment#position()}) so that its head is the pending input to hand out first. Segments are acquired
+   * from the front of {@link #loadableSegments}, so the new input normally comes after everything pending and goes at
+   * the end. A deferred segment being retried comes before inputs acquired since it was deferred and goes in among
+   * them.
+   */
+  @GuardedBy("this")
+  private void putPendingInput(final ListenableFuture<NumberedReadableInput> future, final PendingInput input)
+  {
+    final Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput> last = pendingNextInputs.lastEntry();
+    if (last == null || last.getValue().queued().position() < input.queued().position()) {
+      pendingNextInputs.put(future, input);
+      return;
+    }
+
+    final List<Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput>> entries =
+        new ArrayList<>(pendingNextInputs.entrySet());
+    pendingNextInputs.clear();
+    boolean added = false;
+    for (final Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput> entry : entries) {
+      if (!added && input.queued().position() < entry.getValue().queued().position()) {
+        pendingNextInputs.put(future, input);
+        added = true;
+      }
+      pendingNextInputs.put(entry.getKey(), entry.getValue());
+    }
+    if (!added) {
+      pendingNextInputs.put(future, input);
+    }
   }
 
   /**
@@ -1196,12 +1268,20 @@ public class ReadableInputQueue implements Closeable
    * <p>
    * Cached segments come from {@link #acquireCachedInNextGroup()} and are marked accordingly so consumers are aware
    * of how the segment was acquired. The others were acquired by load-ahead, and count toward {@link #loadahead}.
+   *
+   * @param queued the segment, as it was taken from {@link #loadableSegments}
+   * @param cached whether the segment was acquired as a cache hit by {@link #acquireCachedInNextGroup()}
    */
-  private record PendingInput(LoadableSegment segment, boolean cached)
+  private record PendingInput(QueuedSegment queued, boolean cached)
   {
+    LoadableSegment segment()
+    {
+      return queued.segment();
+    }
+
     Interval interval()
     {
-      return segment.descriptor().getInterval();
+      return segment().descriptor().getInterval();
     }
   }
 
@@ -1238,9 +1318,15 @@ public class ReadableInputQueue implements Closeable
    * A segment in {@link #loadableSegments}, along with the input number it came from.
    *
    * @param position position of the segment in hand-out order: its index in {@link #loadableSegments} as built by the
-   *                 constructor. Lets {@link #requeue} put a segment back in its place.
+   *                 constructor. Lets {@link #requeue} and {@link #putPendingInput} put a segment back in its place.
+   * @param deferred whether a load-ahead acquisition of the segment was deferred for lack of room in the segment
+   *                 cache (see {@link #deferLoadahead}), in which case it is acquired again later, as a retry.
    */
-  private record QueuedSegment(int position, int inputNumber, LoadableSegment segment)
+  private record QueuedSegment(int position, int inputNumber, LoadableSegment segment, boolean deferred)
   {
+    QueuedSegment asDeferred()
+    {
+      return new QueuedSegment(position, inputNumber, segment, true);
+    }
   }
 }

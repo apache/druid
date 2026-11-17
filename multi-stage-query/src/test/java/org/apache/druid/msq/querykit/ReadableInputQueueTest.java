@@ -272,6 +272,53 @@ class ReadableInputQueueTest
     }
   }
 
+  /**
+   * Hands out the next input, which must be ready, and returns its descriptor, closing its reference.
+   */
+  private static SegmentDescriptor takeReady(final ReadableInputQueue queue) throws Exception
+  {
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future = queue.nextInput();
+    Assertions.assertNotNull(future);
+    Assertions.assertTrue(future.isDone(), "handed-out input must be ready");
+    final SegmentReference ref = future.get().input().getSegment().getSegmentReferenceOnce();
+    Assertions.assertNotNull(ref);
+    final SegmentDescriptor descriptor = ref.getSegmentDescriptor();
+    ref.close();
+    return descriptor;
+  }
+
+  /**
+   * Returns four manual-mode segments on consecutive days, listed in the hand-out order of the given time order.
+   */
+  private static List<CacheBackedLoadableSegment> segmentsInHandOutOrder(final Order order, final TestSegmentCache cache)
+  {
+    final List<CacheBackedLoadableSegment> segments = new ArrayList<>();
+    for (int rank = 1; rank <= 4; rank++) {
+      final int day = order == Order.DESCENDING ? 5 - rank : rank;
+      segments.add(new CacheBackedLoadableSegment(descriptorOnDay(day, 0), cache, NoRoomStyle.FAIL_ACTION, true));
+    }
+    return segments;
+  }
+
+  /**
+   * Makes a time-ordered queue over segments from {@link #segmentsInHandOutOrder}, giving them to it out of order.
+   */
+  private static ReadableInputQueue makeTimeOrderedQueue(
+      final Order order,
+      final int loadahead,
+      final List<CacheBackedLoadableSegment> inHandOutOrder
+  )
+  {
+    return makeQueue(
+        loadahead,
+        timeOrderedPruner(order, interval -> false),
+        inHandOutOrder.get(2),
+        inHandOutOrder.get(0),
+        inHandOutOrder.get(3),
+        inHandOutOrder.get(1)
+    );
+  }
+
   private static List<CacheBackedLoadableSegment> makeSegments(
       final int count,
       final TestSegmentCache cache,
@@ -1333,6 +1380,111 @@ class ReadableInputQueueTest
     queue.close();
   }
 
+  /**
+   * An earlier load-ahead finds the cache full while later ones succeed. The deferred segment is handed out as soon as
+   * it is ready, ahead of later inputs still pending. Until then, later ready inputs are handed out rather than making
+   * the stage wait on the retry, whose failure would be fatal once it is handed out.
+   */
+  @ParameterizedTest
+  @EnumSource(value = Order.class, names = {"ASCENDING", "DESCENDING"})
+  void testTimeOrderDeferredSegmentIsHandedOutAsSoonAsItIsReady(final Order order) throws Exception
+  {
+    final TestSegmentCache cache = new TestSegmentCache(4);
+    final List<Closeable> foreignReservations = List.of(cache.reserveSlot(), cache.reserveSlot());
+    final List<CacheBackedLoadableSegment> inHandOutOrder = segmentsInHandOutOrder(order, cache);
+    final CacheBackedLoadableSegment first = inHandOutOrder.get(0);
+    final CacheBackedLoadableSegment second = inHandOutOrder.get(1);
+    final CacheBackedLoadableSegment third = inHandOutOrder.get(2);
+    final CacheBackedLoadableSegment fourth = inHandOutOrder.get(3);
+    final ReadableInputQueue queue = makeTimeOrderedQueue(order, 3, inHandOutOrder);
+
+    // Load-ahead starts the first three. The later two finish first and take the last two slots, so the first finds
+    // no room and is deferred.
+    queue.start();
+    Assertions.assertEquals(List.of(1, 1, 1, 0), acquireCounts(inHandOutOrder));
+    second.completeLoad();
+    third.completeLoad();
+    first.completeLoad();
+    Assertions.assertEquals(1, cache.getFailedReservations());
+    Assertions.assertEquals(List.of(1, 0, 0, 0), abandonCounts(inHandOutOrder));
+    Assertions.assertEquals(4, queue.remaining());
+
+    // Load-ahead is backing off, so the deferred segment is not retried, and the earliest ready input is handed out.
+    final List<SegmentDescriptor> handedOut = new ArrayList<>();
+    handedOut.add(takeReady(queue));
+    Assertions.assertEquals(second.descriptor(), handedOut.get(0));
+    Assertions.assertEquals(List.of(1, 1, 1, 0), acquireCounts(inHandOutOrder), "no retry while backing off");
+
+    // That hand-out ended the cooldown, so the next one retries the deferred segment before anything else, and tops
+    // load-ahead up behind it. The retry is still loading, so the later ready input is handed out rather than it.
+    handedOut.add(takeReady(queue));
+    Assertions.assertEquals(third.descriptor(), handedOut.get(1));
+    Assertions.assertEquals(List.of(2, 1, 1, 1), acquireCounts(inHandOutOrder));
+
+    // Once the retry is ready it is handed out ahead of the later input, even though that one was ready first.
+    fourth.completeLoad();
+    first.completeLoad();
+    handedOut.add(takeReady(queue));
+    handedOut.add(takeReady(queue));
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(
+        List.of(second.descriptor(), third.descriptor(), first.descriptor(), fourth.descriptor()),
+        handedOut
+    );
+    Assertions.assertEquals(1, cache.getFailedReservations());
+    foreignReservations.forEach(ReadableInputQueueTest::closeQuietly);
+    Assertions.assertEquals(0, cache.getUsedSlots());
+    queue.close();
+  }
+
+  /**
+   * Like {@link #testTimeOrderDeferredSegmentIsHandedOutAsSoonAsItIsReady}, except that the retry of the deferred
+   * segment is ready right away, as a cache hit would be. Then the retry made before handing out the next input is
+   * enough to keep time order: the deferred segment is handed out before the later input that was ready already.
+   */
+  @ParameterizedTest
+  @EnumSource(value = Order.class, names = {"ASCENDING", "DESCENDING"})
+  void testTimeOrderDeferredSegmentRetriedAtHandOutIsHandedOutFirst(final Order order) throws Exception
+  {
+    final TestSegmentCache cache = new TestSegmentCache(4);
+    final List<Closeable> foreignReservations = List.of(cache.reserveSlot(), cache.reserveSlot());
+    final List<CacheBackedLoadableSegment> inHandOutOrder = segmentsInHandOutOrder(order, cache);
+    final CacheBackedLoadableSegment first = inHandOutOrder.get(0);
+    final CacheBackedLoadableSegment second = inHandOutOrder.get(1);
+    final CacheBackedLoadableSegment third = inHandOutOrder.get(2);
+    final CacheBackedLoadableSegment fourth = inHandOutOrder.get(3);
+    final ReadableInputQueue queue = makeTimeOrderedQueue(order, 3, inHandOutOrder);
+
+    queue.start();
+    second.completeLoad();
+    third.completeLoad();
+    first.completeLoad();
+    Assertions.assertEquals(List.of(1, 0, 0, 0), abandonCounts(inHandOutOrder));
+
+    final List<SegmentDescriptor> handedOut = new ArrayList<>();
+    handedOut.add(takeReady(queue));
+    Assertions.assertEquals(second.descriptor(), handedOut.get(0));
+
+    // The retry completes inline, so it is handed out right away, ahead of the later input that was already ready.
+    first.deliverInline();
+    handedOut.add(takeReady(queue));
+    Assertions.assertEquals(first.descriptor(), handedOut.get(1));
+    Assertions.assertEquals(List.of(2, 1, 1, 1), acquireCounts(inHandOutOrder));
+
+    fourth.completeLoad();
+    handedOut.add(takeReady(queue));
+    handedOut.add(takeReady(queue));
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(
+        List.of(second.descriptor(), first.descriptor(), third.descriptor(), fourth.descriptor()),
+        handedOut
+    );
+    Assertions.assertEquals(1, cache.getFailedReservations());
+    foreignReservations.forEach(ReadableInputQueueTest::closeQuietly);
+    Assertions.assertEquals(0, cache.getUsedSlots());
+    queue.close();
+  }
+
   @Test
   void testLoadaheadFailureWhileHandingOutDoesNotCountTheInput()
   {
@@ -1582,7 +1734,7 @@ class ReadableInputQueueTest
   void testTimeOrderCachedSegmentNeedingRoomIsLoadedInItsGroup() throws Exception
   {
     // Probing day 3 for cached segments hits one whose cached acquisition needs room the cache does not have. It is
-    // treated as not cached and loaded, still ahead of day 2.
+    // treated as not cached and loaded, in its place within day 3 and still ahead of day 2.
     final TestSegmentCache cache = new TestSegmentCache(1);
     final CacheBackedLoadableSegment needsRoom =
         new CacheBackedLoadableSegment(descriptorOnDay(3, 1), cache, NoRoomStyle.THROW, false)
@@ -1605,7 +1757,7 @@ class ReadableInputQueueTest
     queue.start();
     Assertions.assertEquals(1, needsRoom.acquireCount.get());
     Assertions.assertEquals(
-        List.of(descriptorOnDay(3, 0), descriptorOnDay(3, 2), descriptorOnDay(3, 1), descriptorOnDay(2, 0)),
+        List.of(descriptorOnDay(3, 0), descriptorOnDay(3, 1), descriptorOnDay(3, 2), descriptorOnDay(2, 0)),
         drainInOrder(queue)
     );
     queue.close();
@@ -1790,7 +1942,7 @@ class ReadableInputQueueTest
     private final SegmentDescriptor descriptor;
     private final TestSegmentCache cache;
     private final NoRoomStyle noRoomStyle;
-    private final boolean manual;
+    private boolean manual;
     final AtomicInteger acquireCount = new AtomicInteger();
     final AtomicInteger abandonCount = new AtomicInteger();
 
@@ -1891,6 +2043,14 @@ class ReadableInputQueueTest
     synchronized boolean hasPendingLoad()
     {
       return pendingAction != null;
+    }
+
+    /**
+     * Leaves manual mode: acquisitions started after this call complete inline, as a cache hit would.
+     */
+    synchronized void deliverInline()
+    {
+      manual = false;
     }
 
     private void complete(final AcquireSegmentAction action, @Nullable final Closeable reservedSlot)
