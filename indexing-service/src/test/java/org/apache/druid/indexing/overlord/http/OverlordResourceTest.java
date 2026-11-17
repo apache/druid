@@ -69,6 +69,7 @@ import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.security.Access;
@@ -816,6 +817,8 @@ public class OverlordResourceTest
     EasyMock.expect(req.getMethod()).andReturn("POST").once();
     EasyMock.expect(req.getRequestURI()).andReturn("/indexer/v2/task").once();
     EasyMock.expect(req.getQueryString()).andReturn("").once();
+    EasyMock.expect(req.getAttribute(RequestHeaderContextFilterHolder.class.getName()))
+            .andStubReturn(Map.of("traceId", "caller"));
     EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(username).once();
     EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn("killing segments").once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
@@ -834,9 +837,11 @@ public class OverlordResourceTest
 
     Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, null, 10, null, null);
     overlordResource.taskPost(task, req);
+    Assertions.assertEquals("caller", task.getContext().get("traceId"));
 
     Assertions.assertTrue(auditEntryCapture.hasCaptured());
     AuditEntry auditEntry = auditEntryCapture.getValue();
+    Assertions.assertEquals(Map.of("traceId", "caller"), auditEntry.getRequest().getRequestMetadata());
     Assertions.assertEquals(username, auditEntry.getAuditInfo().getAuthor());
     Assertions.assertEquals("killing segments", auditEntry.getAuditInfo().getComment());
     Assertions.assertEquals("druid", auditEntry.getAuditInfo().getIdentity());

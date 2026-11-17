@@ -47,6 +47,7 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -70,6 +71,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -176,7 +178,9 @@ public class QueryResource implements QueryCountStatsProvider
     try {
       final Query<?> query;
       try {
-        query = readQuery(req, in, io);
+        final Query<?> parsedQuery = readQuery(req, in, io);
+        final Map<String, String> headers = RequestHeaderContextFilterHolder.contextFor(req);
+        query = headers.isEmpty() ? parsedQuery : parsedQuery.withOverriddenContext(new HashMap<>(headers));
       }
       catch (QueryException e) {
         return io.getResponseWriter().buildNonOkResponse(e.getFailType().getExpectedStatus(), e);

@@ -66,6 +66,7 @@ import org.apache.druid.server.coordinator.rules.IntervalPartialLoadRule;
 import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.rules.WildcardClusterGroupPartialLoadMatcher;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -1912,6 +1913,7 @@ public class DataSourcesResourceTest
     EasyMock.expect(request.getMethod()).andReturn("POST").anyTimes();
     EasyMock.expect(request.getRequestURI()).andReturn("/request/uri").anyTimes();
     EasyMock.expect(request.getQueryString()).andReturn("query=string").anyTimes();
+    EasyMock.expect(request.getAttribute(RequestHeaderContextFilterHolder.class.getName())).andReturn(null).anyTimes();
 
     EasyMock.replay(request);
   }

@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.StatusResource;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -110,6 +111,7 @@ public class JettyServerModule extends JerseyServletModule
     Binder binder = binder();
 
     JsonConfigProvider.bind(binder, "druid.server.http", ServerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.request.headers", RequestHeaderContextConfig.class);
     JsonConfigProvider.bind(binder, "druid.server.https", TLSServerConfig.class);
 
     // We use Guice's SINGLETON scope here because the GuiceFilter forces the base container to be Singleton scoped
@@ -135,6 +137,9 @@ public class JettyServerModule extends JerseyServletModule
     Multibinder.newSetBinder(binder, ServletFilterHolder.class)
                .addBinding()
                .to(StandardResponseHeaderFilterHolder.class);
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
+               .addBinding()
+               .to(RequestHeaderContextFilterHolder.class);
 
     MetricsModule.register(binder, JettyMonitor.class);
   }

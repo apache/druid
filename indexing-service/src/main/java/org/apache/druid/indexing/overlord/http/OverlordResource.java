@@ -69,6 +69,7 @@ import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -196,6 +197,7 @@ public class OverlordResource
         taskMaster.getTaskQueue(),
         taskQueue -> {
           try {
+            RequestHeaderContextFilterHolder.contextFor(req).forEach(task::addToContext);
             taskQueue.add(task);
 
             if (AUDITED_TASK_TYPES.contains(task.getType())) {

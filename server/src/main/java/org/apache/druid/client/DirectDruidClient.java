@@ -65,6 +65,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.utils.CloseableUtils;
@@ -105,6 +106,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final QueryWatcher queryWatcher;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+  private final RequestHeaderContextConfig requestHeaderConfig;
   private final String scheme;
   private final String host;
   private final ServiceEmitter emitter;
@@ -140,6 +142,32 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       ScheduledExecutorService queryCancellationExecutor
   )
   {
+    this(
+        conglomerate,
+        queryWatcher,
+        objectMapper,
+        httpClient,
+        scheme,
+        host,
+        emitter,
+        queryCancellationExecutor,
+        new RequestHeaderContextConfig()
+    );
+  }
+
+  public DirectDruidClient(
+      QueryRunnerFactoryConglomerate conglomerate,
+      QueryWatcher queryWatcher,
+      ObjectMapper objectMapper,
+      HttpClient httpClient,
+      String scheme,
+      String host,
+      ServiceEmitter emitter,
+      ScheduledExecutorService queryCancellationExecutor,
+      RequestHeaderContextConfig requestHeaderConfig
+  )
+  {
+    this.requestHeaderConfig = requestHeaderConfig;
     this.conglomerate = conglomerate;
     this.queryWatcher = queryWatcher;
     this.objectMapper = objectMapper;
@@ -777,18 +805,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       // we can increment the count earlier so that we can route the request to a different server
       openConnections.getAndIncrement();
       try {
-        future = httpClient.go(
-            new Request(
-                HttpMethod.POST,
-                URIs.toURL(url)
-            ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
-             .setHeader(
-                 HttpHeaders.Names.CONTENT_TYPE,
-                 isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-             ),
-            responseHandler,
-            Duration.millis(timeLeft)
-        );
+        final Request request = new Request(HttpMethod.POST, URIs.toURL(url))
+            .setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
+            .setHeader(
+                HttpHeaders.Names.CONTENT_TYPE,
+                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+            );
+        requestHeaderConfig.fromContext(query.getContext()).forEach(request::setHeader);
+        future = httpClient.go(request, responseHandler, Duration.millis(timeLeft));
       }
       catch (Exception e) {
         openConnections.getAndDecrement();
@@ -866,10 +890,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   {
     Runnable cancelRunnable = () -> {
       try {
-        Future<StatusResponseHolder> responseFuture = httpClient.go(
-            new Request(HttpMethod.DELETE, URIs.toURL(cancelUrl))
+        final Request request = new Request(HttpMethod.DELETE, URIs.toURL(cancelUrl))
             .setContent(objectMapper.writeValueAsBytes(query))
-            .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
+            .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON);
+        requestHeaderConfig.fromContext(query.getContext()).forEach(request::setHeader);
+        Future<StatusResponseHolder> responseFuture = httpClient.go(
+            request,
             StatusResponseHandler.getInstance(),
             Duration.standardSeconds(1));
 

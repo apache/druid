@@ -19,8 +19,12 @@
 
 package org.apache.druid.sql;
 
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
+
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A class for the creation of Statements, which happen to be used for Sql.
@@ -47,7 +51,20 @@ public class SqlStatementFactory
       final HttpServletRequest req
   )
   {
-    return new HttpStatement(lifecycleToolbox, sqlQueryPlus, req);
+    final Map<String, String> headers = RequestHeaderContextFilterHolder.contextFor(req);
+    if (headers.isEmpty()) {
+      return new HttpStatement(lifecycleToolbox, sqlQueryPlus, req);
+    }
+
+    // Preserve which keys were supplied by the client, including the captured headers.
+    final Map<String, Object> userContext = new HashMap<>();
+    sqlQueryPlus.authContextKeys().forEach(key -> userContext.put(key, sqlQueryPlus.context().get(key)));
+    userContext.putAll(headers);
+    return new HttpStatement(
+        lifecycleToolbox,
+        sqlQueryPlus.withContext(sqlQueryPlus.context(), userContext),
+        req
+    );
   }
 
   public DirectStatement directStatement(final SqlQueryPlus sqlRequest)

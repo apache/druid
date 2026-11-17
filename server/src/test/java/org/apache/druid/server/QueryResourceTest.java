@@ -95,6 +95,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.mocks.ExceptionalInputStream;
@@ -394,6 +395,34 @@ public class QueryResourceTest
 
     Assertions.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
     Assertions.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
+  }
+
+  @Test
+  public void testCapturedHeadersOverrideNativeBodyContext() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+    testServletRequest.setAttribute(RequestHeaderContextFilterHolder.class.getName(), Map.of("traceId", "caller"));
+    final String query = StringUtils.replace(
+        SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
+        "\"priority\": -1",
+        "\"priority\": -1, \"traceId\": \"body\""
+    );
+    Assertions.assertEquals(200, expectAsyncRequestFlow(query).getStatus());
+    Assertions.assertEquals("caller", testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get("traceId"));
+    Assertions.assertEquals(-1, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get("priority"));
+  }
+
+  @Test
+  public void testAbsentHeaderPreservesNativeBodyContext() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+    final String query = StringUtils.replace(
+        SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
+        "\"priority\": -1",
+        "\"priority\": -1, \"traceId\": \"body\""
+    );
+    Assertions.assertEquals(200, expectAsyncRequestFlow(query).getStatus());
+    Assertions.assertEquals("body", testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get("traceId"));
   }
 
   @Test

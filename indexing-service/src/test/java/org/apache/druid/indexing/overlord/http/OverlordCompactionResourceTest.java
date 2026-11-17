@@ -44,6 +44,7 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -312,6 +313,7 @@ public class OverlordCompactionResourceTest
     EasyMock.expect(httpRequest.getMethod()).andReturn("POST").once();
     EasyMock.expect(httpRequest.getRequestURI()).andReturn("supes").once();
     EasyMock.expect(httpRequest.getQueryString()).andReturn("a=b").once();
+    EasyMock.expect(httpRequest.getAttribute(RequestHeaderContextFilterHolder.class.getName())).andReturn(null).anyTimes();
 
     final CompactionSupervisorSpec supervisorSpec =
         new CompactionSupervisorSpec(wikiConfig, false, validator);

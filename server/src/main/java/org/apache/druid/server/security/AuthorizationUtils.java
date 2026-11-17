@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -202,7 +203,8 @@ public class AuthorizationUtils
         service,
         request.getMethod(),
         request.getRequestURI(),
-        request.getQueryString()
+        request.getQueryString(),
+        RequestHeaderContextFilterHolder.contextFor(request)
     );
   }
 

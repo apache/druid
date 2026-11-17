@@ -120,6 +120,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -228,9 +229,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   {
     final URL url = URI.create("http://localhost:" + port + "/proxy/response-context").toURL();
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
+    get.setRequestProperty("X-Druid-Trace-Id", "caller");
 
     Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(get.getInputStream(), StandardCharsets.UTF_8));
     Assertions.assertEquals(RESPONSE_CONTEXT, get.getHeaderField(QueryResource.HEADER_RESPONSE_CONTEXT));
+    Assertions.assertEquals("caller", get.getHeaderField("X-Druid-Trace-Id"));
   }
 
   @Test
@@ -1082,9 +1085,10 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public javax.ws.rs.core.Response get()
+    public javax.ws.rs.core.Response get(@Context final HttpServletRequest request)
     {
       return javax.ws.rs.core.Response.ok(DEFAULT_RESPONSE_CONTENT)
+                                      .header("X-Druid-Trace-Id", request.getHeader("X-Druid-Trace-Id"))
                                       .header(QueryResource.HEADER_RESPONSE_CONTEXT, RESPONSE_CONTEXT)
                                       .build();
     }

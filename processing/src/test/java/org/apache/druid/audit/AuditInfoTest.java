@@ -27,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AuditInfoTest
 {
@@ -87,6 +89,15 @@ public class AuditInfoTest
     RequestInfo requestInfo = new RequestInfo("overlord", "GET", "/uri", "a=b");
     RequestInfo deserialized = mapper.readValue(mapper.writeValueAsString(requestInfo), RequestInfo.class);
     Assertions.assertEquals(requestInfo, deserialized);
+    Assertions.assertFalse(mapper.writeValueAsString(requestInfo).contains("requestMetadata"));
+    final Map<String, String> metadata = new HashMap<>(Map.of("traceId", "caller"));
+    final RequestInfo enriched = new RequestInfo("overlord", "GET", "/uri", "a=b", metadata);
+    metadata.put("traceId", "changed");
+    Assertions.assertEquals("caller", enriched.getRequestMetadata().get("traceId"));
+    Assertions.assertEquals(enriched, mapper.readValue(mapper.writeValueAsString(enriched), RequestInfo.class));
+    Assertions.assertNotEquals(requestInfo, enriched);
+    Assertions.assertTrue(enriched.toString().contains("traceId=caller"));
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> enriched.getRequestMetadata().put("a", "b"));
   }
 
 }

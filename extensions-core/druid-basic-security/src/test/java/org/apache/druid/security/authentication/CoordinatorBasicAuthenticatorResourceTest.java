@@ -38,6 +38,7 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorC
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.security.basic.authentication.validator.PasswordHashGenerator;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -427,6 +428,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
     EasyMock.expect(req.getMethod()).andReturn("GET").once();
     EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
     EasyMock.expect(req.getQueryString()).andReturn("a=b").once();
+    EasyMock.expect(req.getAttribute(RequestHeaderContextFilterHolder.class.getName())).andReturn(null).anyTimes();
     EasyMock.replay(req);
 
     return req;

@@ -355,6 +355,32 @@ The `switching` request logger routes native query request logs to one request l
 |`druid.request.logging.nativeQueryLogger`|Request logger for emitting native query request logs.|none|
 |`druid.request.logging.sqlQueryLogger`|Request logger for emitting SQL query request logs.|none|
 
+### Request header propagation
+
+Druid copies configured HTTP headers into native query, SQL query, and HTTP-submitted task context after authentication.
+Configure the same mapping on participating services:
+
+```properties
+druid.request.headers.headerToContextKey={"X-Correlation-Id":"correlationId"}
+```
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.headers.headerToContextKey`|JSON object mapping HTTP header names to query and task context keys. Header names are case-insensitive. Custom mappings replace the default; `{}` disables propagation.|`{"X-Druid-Trace-Id":"traceId"}`|
+
+A captured header replaces the matching context value. Missing, blank, or invalid header values leave existing context
+values unchanged. Query-context authorization applies to captured query keys.
+
+Native query fan-out and cancellation requests forward the configured headers from query context. Audit entries include
+captured values in `request.requestMetadata`, omitted when empty. Use non-sensitive metadata suitable for logs and audits.
+
+Druid does not generate IDs. An authentication extension can use the existing `Authenticator.getFilter()` API to generate
+an ID when the header is missing and expose it as a request header before capture. There is no separate ID-generator hook.
+
+Captured values remain in serialized task context. Extensions and clients can use
+`RequestHeaderContextConfig.fromContext(...)` with query or task context to reconstruct the configured headers, then
+attach them to outbound requests. Task execution and calls to other services require this explicit integration.
+
 ### Audit logging
 
 Coordinator and Overlord log changes to lookups, segment load/drop rules, and dynamic configuration changes for auditing.

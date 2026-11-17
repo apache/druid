@@ -225,7 +225,10 @@ public class DirectDruidClientTest
   @Test
   public void testCancelUrlEncodesQueryId()
   {
-    final QueryPlus queryPlus = QueryPlus.wrap(getQueryPlus().getQuery().withId("some query/id#needing?encoding"));
+    final QueryPlus queryPlus = QueryPlus.wrap(
+        getQueryPlus().getQuery().withId("some query/id#needing?encoding")
+                      .withOverriddenContext(Map.of("traceId", "cancel-trace"))
+    );
     final QueuedTestHttpClient queuedHttpClient = new QueuedTestHttpClient();
     queuedHttpClient.enqueue(Futures.immediateCancelledFuture());
 
@@ -236,6 +239,8 @@ public class DirectDruidClientTest
     final List<Request> requests = queuedHttpClient.getRequests();
     Assertions.assertEquals(2, requests.size());
     Assertions.assertEquals(HttpMethod.DELETE, requests.get(1).getMethod());
+    Assertions.assertEquals("cancel-trace", requests.get(0).getHeaders().get("X-Druid-Trace-Id").iterator().next());
+    Assertions.assertEquals("cancel-trace", requests.get(1).getHeaders().get("X-Druid-Trace-Id").iterator().next());
     Assertions.assertEquals(
         "http://" + hostName + "/druid/v2/some%20query%2Fid%23needing%3Fencoding",
         requests.get(1).getUrl().toString()

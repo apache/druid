@@ -150,7 +150,9 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   {
     COORDINATOR_EXPECTED_REQUEST.path = "/druid/coordinator/v1/datasources";
     COORDINATOR_EXPECTED_REQUEST.method = "GET";
-    COORDINATOR_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+    COORDINATOR_EXPECTED_REQUEST.headers = ImmutableMap.of(
+        "Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=", "X-Druid-Trace-Id", "caller"
+    );
 
     HttpURLConnection connection = ((HttpURLConnection)
         new URL(StringUtils.format("http://localhost:%d%s", port, COORDINATOR_EXPECTED_REQUEST.path))
@@ -294,7 +296,9 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   {
     OVERLORD_EXPECTED_REQUEST.path = "/druid/indexer/v1/task/myTaskId/status";
     OVERLORD_EXPECTED_REQUEST.method = "GET";
-    OVERLORD_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+    OVERLORD_EXPECTED_REQUEST.headers = ImmutableMap.of(
+        "Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=", "X-Druid-Trace-Id", "caller"
+    );
 
     HttpURLConnection connection = ((HttpURLConnection)
         new URL(StringUtils.format("http://localhost:%d%s", port, OVERLORD_EXPECTED_REQUEST.path))

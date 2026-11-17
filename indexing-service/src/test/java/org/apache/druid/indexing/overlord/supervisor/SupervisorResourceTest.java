@@ -45,6 +45,7 @@ import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -1658,6 +1659,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(request.getMethod()).andReturn("POST").once();
     EasyMock.expect(request.getRequestURI()).andReturn("supes").once();
     EasyMock.expect(request.getQueryString()).andReturn("a=b").once();
+    EasyMock.expect(request.getAttribute(RequestHeaderContextFilterHolder.class.getName())).andReturn(null).anyTimes();
   }
 
   private static class TestSupervisorSpec implements SupervisorSpec
