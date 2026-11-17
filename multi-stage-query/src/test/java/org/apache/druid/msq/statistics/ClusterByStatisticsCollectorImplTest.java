@@ -490,6 +490,32 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   }
 
   @Test
+  public void testAddAllSnapshotsCountsRetainedBytes()
+  {
+    // The controller merges each worker's snapshot into a collector that starts out empty. The keys of every
+    // snapshot count toward its retained bytes, including the first one's.
+    final List<ClusterByStatisticsCollectorImpl> workerCollectors = new ArrayList<>();
+    long expectedRetainedBytes = 0;
+    for (int worker = 0; worker < 3; worker++) {
+      final ClusterByStatisticsCollectorImpl collector = makeCollector(CLUSTER_BY_X, true);
+      for (long x = worker; x < 300; x += 3) {
+        collector.add(createKey(CLUSTER_BY_X, x), 1);
+      }
+      expectedRetainedBytes += collector.getTotalRetainedBytes();
+      workerCollectors.add(collector);
+    }
+
+    final ClusterByStatisticsCollectorImpl merged = makeCollector(CLUSTER_BY_X, true);
+    for (final ClusterByStatisticsCollectorImpl collector : workerCollectors) {
+      merged.addAll(collector.snapshot());
+    }
+
+    Assertions.assertTrue(expectedRetainedBytes > 0);
+    Assertions.assertEquals(expectedRetainedBytes, merged.getTotalRetainedBytes());
+    Assertions.assertEquals(300, merged.estimatedTotalWeight());
+  }
+
+  @Test
   public void testMoreBucketsThanKeysThrowsException()
   {
     Assertions.assertThrows(IllegalArgumentException.class, () ->

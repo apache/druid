@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 public class DelegateOrMinKeyCollectorTest
@@ -148,6 +150,47 @@ public class DelegateOrMinKeyCollectorTest
     Assertions.assertEquals(createKey(1L), collector.minKey());
     Assertions.assertEquals(expectedRetainedBytes, collector.estimatedRetainedBytes(), 0);
     Assertions.assertEquals(1, collector.estimatedTotalWeight());
+  }
+
+  @Test
+  public void testAddSnapshotSameAsAddAllOfCollectorFromSnapshot()
+  {
+    final DelegateOrMinKeyCollectorFactory<DistinctKeyCollector, DistinctKeySnapshot> factory =
+        new DelegateOrMinKeyCollectorFactory<>(comparator, DistinctKeyCollectorFactory.create(clusterBy, signature));
+
+    final DelegateOrMinKeyCollector<DistinctKeyCollector> withDelegate = factory.newKeyCollector();
+    final DelegateOrMinKeyCollector<DistinctKeyCollector> minKeyOnly = factory.newKeyCollector();
+    for (long i = 10; i < 20; i++) {
+      withDelegate.add(createKey(i), 1);
+      minKeyOnly.add(createKey(i - 5), 1);
+    }
+    while (minKeyOnly.getDelegate().isPresent()) {
+      Assertions.assertTrue(minKeyOnly.downSample());
+    }
+
+    final Map<String, DelegateOrMinKeyCollectorSnapshot<DistinctKeySnapshot>> snapshots = ImmutableMap.of(
+        "empty", factory.toSnapshot(factory.newKeyCollector()),
+        "withDelegate", factory.toSnapshot(withDelegate),
+        "minKeyOnly", factory.toSnapshot(minKeyOnly)
+    );
+
+    for (final String targetName : snapshots.keySet()) {
+      for (final String addedName : snapshots.keySet()) {
+        final String testName = addedName + " added to " + targetName;
+        final DelegateOrMinKeyCollectorSnapshot<DistinctKeySnapshot> targetSnapshot = snapshots.get(targetName);
+        final DelegateOrMinKeyCollectorSnapshot<DistinctKeySnapshot> addedSnapshot = snapshots.get(addedName);
+
+        final DelegateOrMinKeyCollector<DistinctKeyCollector> direct = factory.fromSnapshot(targetSnapshot);
+        factory.addSnapshot(direct, addedSnapshot);
+
+        final DelegateOrMinKeyCollector<DistinctKeyCollector> fromSnapshot = factory.fromSnapshot(targetSnapshot);
+        fromSnapshot.addAll(factory.fromSnapshot(addedSnapshot));
+
+        Assertions.assertEquals(factory.toSnapshot(fromSnapshot), factory.toSnapshot(direct), testName);
+        Assertions.assertEquals(fromSnapshot.estimatedRetainedBytes(), direct.estimatedRetainedBytes(), testName);
+        Assertions.assertEquals(fromSnapshot.estimatedTotalWeight(), direct.estimatedTotalWeight(), testName);
+      }
+    }
   }
 
   private RowKey createKey(final Object... objects)

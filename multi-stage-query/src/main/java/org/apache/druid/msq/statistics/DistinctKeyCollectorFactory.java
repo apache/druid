@@ -68,4 +68,10 @@ public class DistinctKeyCollectorFactory implements KeyCollectorFactory<Distinct
     retainedKeys.putAll(snapshot.getKeysAsMap());
     return new DistinctKeyCollector(comparator, retainedKeys, snapshot.getSpaceReductionFactor());
   }
+
+  @Override
+  public void addSnapshot(final DistinctKeyCollector collector, final DistinctKeySnapshot snapshot)
+  {
+    collector.addAll(snapshot);
+  }
 }
