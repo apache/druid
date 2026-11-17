@@ -164,7 +164,7 @@ You can now limit how long the Broker spends planning a SQL query with the new `
 
 [#20314](https://github.com/apache/druid/pull/20314)
 
-#### Fixed JDK HTTP client Failures caused by query response trailers
+#### Fixed JDK HTTP client failures caused by query response trailers
 
 Brokers and Historicals now send the `X-Druid-Response-Complete` and `X-Error-Message` HTTP trailers only when the request includes the `TE: trailers` header. Clients that read these trailers must send that header. This fixes query failures (`java.net.ProtocolException: CR expected`) in `java.net.http.HttpClient-based` clients, including the Druid JDBC driver, on JDK 17.0.21, 21.0.13 and 25.0.5.
 
@@ -186,7 +186,7 @@ Brokers and Historicals now send the `X-Druid-Response-Complete` and `X-Error-Me
 
 #### Kubernetes node labels
 
-The `druid-kubernetes-extensions` extension now support a `k8sNodeLabel` dynamic config provider, which resolves configuration values from the labels of the Kubernetes node a Druid process runs on.
+The `druid-kubernetes-extensions` extension now supports a `k8sNodeLabel` dynamic config provider, which resolves configuration values from the labels of the Kubernetes node a Druid process runs on.
 
 [#20404](https://github.com/apache/druid/pull/20404)
 
