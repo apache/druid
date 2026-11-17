@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.pac4j;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -27,7 +28,7 @@ import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
 import org.pac4j.core.exception.http.HttpAction;
-import org.pac4j.core.profile.CommonProfile;
+import org.pac4j.core.profile.UserProfile;
 import org.pac4j.jee.context.JEEContext;
 import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
@@ -113,7 +114,7 @@ public class Pac4jFilter implements Filter
               try {
                 // Extract user ID from pac4j profiles and create AuthenticationResult
                 if (profiles != null && !profiles.isEmpty()) {
-                  CommonProfile profile = (CommonProfile) profiles.iterator().next();
+                  final UserProfile profile = profiles.iterator().next();
                   String uid = profile.getId();
                   if (uid != null) {
                     Map<String, Object> authContext = Collections.singletonMap(
@@ -146,6 +147,7 @@ public class Pac4jFilter implements Filter
     }
   }
 
+  @VisibleForTesting
   protected SecurityLogic createSecurityLogic()
   {
     return new DefaultSecurityLogic();
