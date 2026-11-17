@@ -75,7 +75,7 @@ public class BrokerViewOfBrokerConfigTest
                                                                  .build();
     target.setDynamicConfig(dynamicConfig);
 
-    final Map<String, Object> resolved = target.getContext();
+    final QueryContext resolved = target.getContext();
     Assertions.assertEquals(30000, resolved.get("timeout"));
     Assertions.assertEquals(false, resolved.get("useCache"));
     Assertions.assertEquals(5, resolved.get("priority"));
@@ -93,7 +93,7 @@ public class BrokerViewOfBrokerConfigTest
   {
     final QueryConfigProvider.ContextWithOverrides beforeSync = target.getContextWithOverrides();
     Assertions.assertEquals(target.getContext(), beforeSync.context());
-    Assertions.assertEquals(Map.of(), beforeSync.dynamicOverrides());
+    Assertions.assertEquals(QueryContext.empty(), beforeSync.dynamicOverrides());
 
     target.setDynamicConfig(
         BrokerDynamicConfig.builder()
@@ -102,7 +102,7 @@ public class BrokerViewOfBrokerConfigTest
     );
     final QueryConfigProvider.ContextWithOverrides afterSync = target.getContextWithOverrides();
     Assertions.assertEquals(target.getContext(), afterSync.context());
-    Assertions.assertEquals(Map.of("useCache", false), afterSync.dynamicOverrides());
+    Assertions.assertEquals(QueryContext.of(Map.of("useCache", false)), afterSync.dynamicOverrides());
   }
 
   @Test

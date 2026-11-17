@@ -1120,12 +1120,10 @@ public class DruidQuery
       final DataSource newDataSource = dataSourceFiltrationPair.lhs;
       final Filtration filtration = dataSourceFiltrationPair.rhs;
       String bound = minTime ? TimeBoundaryQuery.MIN_TIME : TimeBoundaryQuery.MAX_TIME;
-      Map<String, Object> context = new HashMap<>(plannerContext.queryContextMap());
-      if (minTime) {
-        QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(context, aggregatorFactory.getName());
-      } else {
-        QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(context, aggregatorFactory.getName());
-      }
+      final Map<String, Object> context = plannerContext.queryContext().override(
+          minTime ? QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME : QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME,
+          aggregatorFactory.getName()
+      ).asMap();
       return new TimeBoundaryQuery(
           newDataSource,
           filtration.getQuerySegmentSpec(),

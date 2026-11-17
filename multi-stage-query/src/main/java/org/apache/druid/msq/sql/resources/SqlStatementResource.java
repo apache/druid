@@ -205,10 +205,9 @@ public class SqlStatementResource
       sqlQueryPlus = SqlResource.makeSqlQueryPlus(
           sqlQuery,
           req,
-          QueryContext.builder()
-                      .putAll(queryConfigProvider.getContext())
-                      .put(QueryContextParameters.RESULT_FORMAT, sqlQuery.getResultFormat().toString())
-                      .toMap()
+          queryConfigProvider.getContext().override(
+              QueryContext.of(QueryContextParameters.RESULT_FORMAT, sqlQuery.getResultFormat().toString())
+          )
       );
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
@@ -222,7 +221,7 @@ public class SqlStatementResource
 
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
-    final QueryContext queryContext = QueryContext.of(sqlQueryPlus.context());
+    final QueryContext queryContext = sqlQueryPlus.context();
     final boolean isDebug = queryContext.isDebug();
     try {
       contextChecks(queryContext);

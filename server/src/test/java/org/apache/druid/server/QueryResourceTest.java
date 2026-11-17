@@ -74,6 +74,7 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
@@ -2098,7 +2099,7 @@ public class QueryResourceTest
     final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig = Mockito.mock(BrokerViewOfBrokerConfig.class);
     Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(dynamicConfig);
     Mockito.when(brokerViewOfBrokerConfig.snapshotForQuery())
-           .thenReturn(new QueryConfigSnapshot(Map.of(), dynamicConfig));
+           .thenReturn(new QueryConfigSnapshot(QueryContext.empty(), dynamicConfig));
 
     return createQueryResource(
         new QueryLifecycleFactory(

@@ -244,7 +244,7 @@ public class SqlResource
       final SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, queryConfigProvider.getContext());
 
       // Redefine queryContext to include SET parameters and default context.
-      queryContext = new QueryContext(sqlQueryPlus.context());
+      queryContext = sqlQueryPlus.context();
       final String engineName = queryContext.getEngine();
       final SqlEngine engine = sqlEngineRegistry.getEngine(engineName);
       stmt = engine.getSqlStatementFactory().httpStatement(sqlQueryPlus, req);
@@ -350,13 +350,13 @@ public class SqlResource
   public static SqlQueryPlus makeSqlQueryPlus(
       final SqlQuery sqlQuery,
       final HttpServletRequest req,
-      final Map<String, Object> defaultQueryConfig
+      final QueryContext defaultQueryConfig
   )
   {
     return SqlQueryPlus.builder()
                        .sql(sqlQuery.getQuery())
                        .systemDefaultContext(defaultQueryConfig)
-                       .queryContext(sqlQuery.getContext())
+                       .queryContext(sqlQuery.queryContext())
                        .parameters(sqlQuery.getParameters())
                        .auth(AuthorizationUtils.authenticationResultFromRequest(req))
                        .build();

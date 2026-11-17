@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -70,7 +69,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -329,13 +327,11 @@ public class QueryDriver
    * into a number, Boolean, etc. gRPC has no similar feature. Rather than clutter up
    * the gRPC request with typed context values, we rely on the existing code that can
    * translate string values to the desired type on the fly. Thus, we build up a
-   * {@code Map<String, String>}.
+   * {@link QueryContext} of string values.
    */
-  private Map<String, Object> translateContext(QueryRequest request)
+  private QueryContext translateContext(QueryRequest request)
   {
-    final QueryContextBuilder builder = QueryContext.builder();
-    builder.putAll(request.getContextMap());
-    return builder.toMap();
+    return QueryContext.builder().putAll(request.getContextMap()).toContext();
   }
 
   /**

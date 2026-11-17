@@ -2188,6 +2188,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assertions.assertTrue(queryContext.containsKey(QueryContextParameters.SQL_QUERY_ID.getName()));
     if (success) {
       Assertions.assertTrue(stats.containsKey("sqlQuery/bytes"));
+      Assertions.assertTrue(queryContext.containsKey("nativeQueryIds"));
     } else {
       Assertions.assertTrue(stats.containsKey("exception"));
     }

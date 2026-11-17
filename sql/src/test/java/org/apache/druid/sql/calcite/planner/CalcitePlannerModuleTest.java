@@ -200,7 +200,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
         null, // Don't need an authentication result
         Collections.emptySet(),
-        Collections.emptyMap(),
+        QueryContext.empty(),
         null
     );
 
@@ -222,7 +222,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         new NativeSqlEngine(queryLifecycleFactory, new DefaultObjectMapper(), (SqlStatementFactory) null),
         null, // Don't need an authentication result
         Collections.emptySet(),
-        Collections.emptyMap(),
+        QueryContext.empty(),
         null
     );
 
@@ -244,7 +244,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
             null, // Don't need an authentication result
             Collections.emptySet(),
-            QueryContext.ofMap(QueryContextParameters.SQL_PLANNER_BLOAT, BLOAT),
+            QueryContext.of(QueryContextParameters.SQL_PLANNER_BLOAT, BLOAT),
             null
     );
 
@@ -255,7 +255,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
             null, // Don't need an authentication result
             Collections.emptySet(),
-            Collections.emptyMap(),
+            QueryContext.empty(),
             null
     );
 
