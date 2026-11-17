@@ -2227,7 +2227,7 @@ public class SqlResourceTest extends CalciteTestBase
         Status.BAD_REQUEST.getStatusCode()
     );
 
-    validateInvalidInputError(errorResponse, "Query context parameter [timeout] should be in long format, but got [2000']");
+    validateInvalidInputError(errorResponse, "Query context parameter [timeout] should be in long format, or a human-readable number such as '10 K' or '256 MiB', but got [2000']");
     Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assertions.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }

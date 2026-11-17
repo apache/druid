@@ -273,6 +273,43 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testGetAsIntAndLongUseExactNumberParsing()
+  {
+    // Human-readable numbers, as accepted by integer and long parameters
+    Assertions.assertEquals(10_000, QueryContexts.getAsInt("foo", "10K"));
+    Assertions.assertEquals(256L * 1024 * 1024, QueryContexts.getAsLong("foo", "256 MiB"));
+    Assertions.assertEquals(-1000L, QueryContexts.getAsLong("foo", "-1K"));
+    Assertions.assertEquals(12, QueryContexts.getAsInt("foo", "12.00"));
+    Assertions.assertNull(QueryContexts.getAsInt("foo", null));
+    Assertions.assertNull(QueryContexts.getAsLong("foo", null));
+
+    // Fractional values are rejected instead of truncated
+    Assertions.assertEquals(
+        "Query context parameter [foo] should be in integer format, but got [1.5]",
+        Assertions.assertThrows(BadQueryContextException.class, () -> QueryContexts.getAsInt("foo", 1.5)).getMessage()
+    );
+    Assertions.assertEquals(
+        "Query context parameter [foo] should be in long format, but got [1.5]",
+        Assertions.assertThrows(BadQueryContextException.class, () -> QueryContexts.getAsLong("foo", "1.5")).getMessage()
+    );
+
+    // Values outside the type are rejected instead of wrapped
+    Assertions.assertEquals(
+        "Query context parameter [foo] must be within the range [-2147483648, 2147483647], but was [3000000000]",
+        Assertions.assertThrows(BadQueryContextException.class, () -> QueryContexts.getAsInt("foo", 3_000_000_000L))
+                  .getMessage()
+    );
+    Assertions.assertEquals(
+        "Query context parameter [foo] must be within the range [-2147483648, 2147483647], but was [3G]",
+        Assertions.assertThrows(BadQueryContextException.class, () -> QueryContexts.getAsInt("foo", "3G")).getMessage()
+    );
+    Assertions.assertEquals(
+        "Query context parameter [foo] must be within the range [-9223372036854775808, 9223372036854775807], but was [1.0E19]",
+        Assertions.assertThrows(BadQueryContextException.class, () -> QueryContexts.getAsLong("foo", 1e19)).getMessage()
+    );
+  }
+
+  @Test
   public void testGetAsHumanReadableBytes()
   {
     Assertions.assertEquals(

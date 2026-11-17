@@ -44,7 +44,7 @@ class QueryContextParameterValidatorTest
     assertInvalid(
         Map.of("maxRowsQueuedForOrdering", "not-an-int"),
         false,
-        "Query context parameter [maxRowsQueuedForOrdering] should be in integer format, but got [not-an-int]"
+        "Query context parameter [maxRowsQueuedForOrdering] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [not-an-int]"
     );
 
     assertInvalid(

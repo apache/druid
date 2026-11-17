@@ -105,6 +105,37 @@ public class SqlQueryPlusTest
   }
 
   @Test
+  public void testSetNumberParameterToHumanReadableNumber()
+  {
+    final SqlQueryPlus query = SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = '1MiB'; SELECT 1")
+                                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                           .build();
+    Assertions.assertEquals(
+        1_048_576,
+        QueryContext.of(query.context()).get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING)
+    );
+
+    final SqlQueryPlus withSpace = SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = '1 MiB'; SELECT 1")
+                                               .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                               .build();
+    Assertions.assertEquals(
+        1_048_576,
+        QueryContext.of(withSpace.context()).get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING)
+    );
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = '3GiB'; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher.invalidSqlInput().expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [3GiB]")
+    );
+  }
+
+  @Test
   public void testSetBooleanParameterToZeroOrOne()
   {
     final SqlQueryPlus query = SqlQueryPlus.builder("SET useCache = 0; SET populateCache = 1; SELECT 1")
