@@ -34,11 +34,66 @@ For the full release notes for a specific version, see the [releases page](https
 
 Support for Java 21 has been dropped. You must upgrade to Java 25.
 
+#### Netty 4.2
+
+Druid now uses Netty 4.2 for its HTTP client. Previously, Druid used Netty 3. This is a substantive change in memory characteristics:
+
+- Direct memory: The HTTP client now consumes some direct memory. Operators running close to their `-XX:MaxDirectMemorySize` budget may need to increase it.
+- Pooled buffers: Buffers are now pooled, so resident memory may appear higher than under Netty 3, even when idle. This is normal for a pooled allocator.
+
+There are new configs that control the behavior of the HTTP client: `druid.global.http.connectTimeout`, `druid.global.http.allocator`, `druid.broker.http.connectTimeout`, and `druid.broker.http.allocator`. You can also set some Netty configs directly.
+
+[#19567](https://github.com/apache/druid/pull/19567)
+
 #### Dart workers
 
 Dart workers on Historicals are now announced and discovered by the Broker with a new `DartWorkerService` mechanism. If you've enabled Dart, follow the standard rolling upgrade order: during an upgrade, restart Historicals before the Broker; during a downgrade, restart the Broker before Historicals.
 
 [#20508](https://github.com/apache/druid/pull/20508)
+
+#### Protobuf ingestion
+
+- Protobuf ingestion now keeps the default value of `proto3` fields that are not marked optional. Previously an `int32` field holding `0` (or a string holding "", a `bool` holding false, an `enum` holding its first value) was ingested as null. Such fields now ingest as their actual value.
+
+[#20485](https://github.com/apache/druid/pull/20485)
+
+#### Fixed JDK HTTP client failures caused by query response trailers
+
+Brokers and Historicals now send the `X-Druid-Response-Complete` and `X-Error-Message` HTTP trailers only when the request includes the `TE: trailers` header. Clients that read these trailers must send that header. This fixes query failures (`java.net.ProtocolException: CR expected`) in `java.net.http.HttpClient-based` clients, including the Druid JDBC driver, on JDK 17.0.21, 21.0.13 and 25.0.5.
+
+[#20717](https://github.com/apache/druid/pull/20717)
+
+#### Typed query context parameters
+
+Common query context parameters listed in [Query context reference](../querying/query-context-reference.md) and [Scan queries](../querying/scan-query.md) are now typed `QueryContextParameter` descriptors. The following changes apply to the query context handling:
+
+* Integer and long parameters reject values that aren't exact integers instead of truncating or wrapping them. For example `1.5`, and values out of range. Integral values like 5.0 or "5.0" are still accepted. Invalid values now fail with an error message: "Query context parameter [x] should be ...."
+* A null in the query context, or SET x = NULL, no longer clears a default configured with `druid.query.default.context` or the Broker dynamic configuration. The default applies as if the key were not set. Previously the null reached readers, which used the built-in default. To override a configured default, set an explicit value.
+* `maxSubqueryBytes` is a typed string parameter that accepts auto, disabled or a non-negative number of bytes, as the subquery guardrail does. Invalid values such as `SET maxSubqueryBytes = TRUE` now fail during validation, and numbers such as `1e9` are now accepted.
+
+[#20555][https://github.com/apache/druid/pull/20555/]
+
+#### Java home variable
+
+Middle Managers now honor `JAVA_HOME` when using the `bin/java` script, which should be present in the working directory.
+
+Druid uses the following logic
+
+- If you specified a command (such as if `config.getJavaCommand` is not null), use that.
+- If `bin/run-java` exists, use that
+- Use java
+
+[#19709](https://github.com/apache/druid/pull/19709)
+
+#### Quality of service filtering for Coordinator
+
+You can now enable QoS filtering for the Coordinator to prevent a burst of slow API requests from exhausting the thread pool and blocking health checks.
+
+Use `druid.coordinator.server.maxConcurrentRequests` to configure this feature `(default: max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8)))`. Set this property to `0` to turn it off.
+
+Leader-status endpoints are excluded from the cap so load balancers/monitors stay unaffected.
+
+[#19271](https://github.com/apache/druid/pull/19271)
 
 ### Incompatible changes
 
@@ -67,6 +122,17 @@ To keep the previous behavior, pin the old dimension list with `druid.emitter.st
 `SysMonitor` has been removed after being deprecated in Druid 27. Use `OshiSysMonitor` instead.
 
 [#20200](https://github.com/apache/druid/pull/20200)
+
+#### MariaDB Connector/J 3.x changes connection URI behavior
+
+The MariaDB JDBC connector has been upgraded from from 2.7.3 to 3.5.10, which has the following impact:
+
+- For `druid.metadata.storage.connector.connectURI` with `org.mariadb.jdbc.Driver`, use `jdbc:mariadb:`. A legacy `jdbc:mysql:` URI remains usable only if it includes `permitMysqlScheme`. For example, `jdbc:mysql://<host>/druid?permitMysqlScheme`, because metadata storage passes the URI directly to the driver.
+- For MariaDB-backed SQL input sources and JDBC lookups with the default `druid.access.jdbc.enforceAllowedProperties=true`, use `jdbc:mariadb:`. Druid's JDBC property validation does not route `jdbc:mysql:` to the Connector/J 3.x parser, and `permitMysqlScheme` is not in the default `druid.access.jdbc.allowedProperties`, Adding the option alone is not sufficient.
+- Users who continue supplying Connector/J 2.x do not need to change existing `jdbc:mysql:` or `jdbc:mariadb:` URIs. MySQL Connector/J users are unaffected.
+- Images rebuilt from distribution/docker/Dockerfile.mariadb now install Connector/J 3.5.10 and must follow the 3.x guidance above.
+
+[#20036](https://github.com/apache/druid/pull/20036)
 
 ## 37.0.0
 
