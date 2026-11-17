@@ -73,7 +73,7 @@ For more information, see [Catalog](../development/extensions-core/catalog.md).
 
 ### Kafka header-based filtering
 
-Kafka supervisors can now filter records by their headers. This reduces ingestion CPU and memory use when you only need some of a topic's records. 
+Kafka supervisors can now filter records by their headers. This reduces ingestion CPU and memory use when you only need some of a topic's records.
 
 To use the filter, add `headerBasedFilterConfig` to the supervisor's `ioConfig`. Use an `in` filter where `dimension` is the header name and `values` lists the header values to ingest. Records whose header value isn't in the list are dropped, and offsets still advance.
 
@@ -91,7 +91,7 @@ Common query context parameters listed in [Query context reference](../querying/
 * A null in the query context, or SET x = NULL, no longer clears a default configured with `druid.query.default.context` or the Broker dynamic configuration. The default applies as if the key were not set. Previously the null reached readers, which used the built-in default. To override a configured default, set an explicit value.
 * `maxSubqueryBytes` is a typed string parameter that accepts auto, disabled or a non-negative number of bytes, as the subquery guardrail does. Invalid values such as `SET maxSubqueryBytes = TRUE` now fail during validation, and numbers such as `1e9` are now accepted.
 
-[#20555][https://github.com/apache/druid/pull/20555/)
+[#20555][https://github.com/apache/druid/pull/20555/]
 
 ### Druid JDBC driver
 
@@ -131,7 +131,7 @@ This section contains detailed release notes separated by areas.
 
 #### SQL-based ingestion
 
--  Workers now only pass only the necessary worker context instead of the entire worker context to the task context. [#20650](https://github.com/apache/druid/pull/20650)
+-  Workers now only pass the necessary worker context instead of the entire worker context to the task context. [#20650](https://github.com/apache/druid/pull/20650)
 
 
 #### Streaming ingestion
@@ -282,7 +282,7 @@ To use this feature, set `druid.segment.timeline.fastIntervalSearch` to `true`.
 Druid now supports partial segment loading for virtual storage (on by default). To turn it off, set either of the following to `false`:
 
 - the runtime property `druid.indexer.task.virtualStoragePartialDownloadsEnabled`
-- the query context parameter `virtualStoragePartialDownloadsEnabled` 
+- the query context parameter `virtualStoragePartialDownloadsEnabled`
 
 [#19739](https://github.com/apache/druid/pull/19739)
 
