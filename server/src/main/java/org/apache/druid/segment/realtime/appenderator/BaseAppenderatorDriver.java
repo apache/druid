@@ -633,6 +633,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     segmentsAndCommitMetadata.getSegmentSchemaMapping()
                 );
                 if (publishResult.isSuccess()) {
+                  SegmentPublishUtils.cleanupSegmentsNotAdoptedBySuccessfulPublish(
+                      ImmutableSet.copyOf(segmentsAndCommitMetadata.getSegments()),
+                      publishResult.getSegments(),
+                      publishedSegmentRetriever,
+                      dataSegmentKiller
+                  );
                   // Reconcile to the published shard specs (publishSegments may annotate them, e.g. DimensionValueSetShardSpec
                   //  so logging/handoff reports the real spec, not the pre-publish one.
                   final SegmentsAndCommitMetadata publishedMetadata =

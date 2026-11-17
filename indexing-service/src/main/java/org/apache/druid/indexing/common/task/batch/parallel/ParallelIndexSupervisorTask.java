@@ -47,6 +47,7 @@ import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
@@ -61,6 +62,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
@@ -81,6 +83,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.ChatHandlers;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentPublishUtils;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -1221,11 +1224,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     }
 
     final TransactionalSegmentPublisher publisher = buildSegmentPublisher(toolbox);
-    final boolean published =
+    final SegmentPublishResult publishResult =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, segmentSchemaMapping).isSuccess();
+        ? SegmentPublishResult.ok(Collections.emptySet())
+        : publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, segmentSchemaMapping);
+    final boolean published = publishResult.isSuccess();
 
     if (published) {
+      final Set<DataSegment> uploadedSegments = new HashSet<>(newSegments);
+      uploadedSegments.removeAll(tombStones);
+      SegmentPublishUtils.cleanupSegmentsNotAdoptedBySuccessfulPublish(
+          uploadedSegments,
+          publishResult.getSegments(),
+          new ActionBasedPublishedSegmentRetriever(toolbox.getTaskActionClient()),
+          toolbox.getDataSegmentKiller()
+      );
       LOG.info("Published [%d] segments & [%d] schemas", newSegments.size(), segmentSchemaMapping.getSchemaCount());
 
       // segment metrics:

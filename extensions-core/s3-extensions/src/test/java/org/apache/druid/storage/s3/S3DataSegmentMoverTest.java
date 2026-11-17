@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -51,8 +52,11 @@ import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.Type;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -235,11 +239,124 @@ public class S3DataSegmentMoverTest
     );
   }
 
+  @Test
+  public void testMoveUncompressedSegment() throws Exception
+  {
+    final MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
+    final S3DataSegmentMover mover = new S3DataSegmentMover(
+      Suppliers.ofInstance(mockS3Client),
+      new S3DataSegmentPusherConfig()
+    );
+
+    final String sourcePrefix =
+      "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/";
+
+    final String targetPrefix =
+      "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/";
+
+    final DataSegment uncompressedSegment = SOURCE_SEGMENT
+      .withLoadSpec(ImmutableMap.of("key", sourcePrefix, "bucket", "main"))
+      .withBinaryVersion(IndexIO.V10_VERSION);
+
+    mockS3Client.putObject("main", sourcePrefix + "druid.segment");
+    mockS3Client.putObject("main", sourcePrefix + "version.bin");
+
+    final DataSegment movedSegment = mover.move(
+      uncompressedSegment,
+      ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
+    );
+
+    Assertions.assertEquals(
+      targetPrefix,
+      MapUtils.getString(movedSegment.getLoadSpec(), "key")
+    );
+    Assertions.assertEquals(
+      "archive",
+      MapUtils.getString(movedSegment.getLoadSpec(), "bucket")
+    );
+
+    Assertions.assertTrue(mockS3Client.doesObjectExist("archive", targetPrefix + "druid.segment"));
+    Assertions.assertTrue(mockS3Client.doesObjectExist("archive", targetPrefix + "version.bin"));
+
+    Assertions.assertFalse(mockS3Client.doesObjectExist("main", sourcePrefix + "druid.segment"));
+    Assertions.assertFalse(mockS3Client.doesObjectExist("main", sourcePrefix + "version.bin"));
+    Assertions.assertTrue(mockS3Client.didMove());
+  }
+
+  @Test
+  public void testMoveUncompressedSegmentAcrossMultipleListingPages() throws Exception
+  {
+    final MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
+    mockS3Client.setListPageSize(1);
+
+    final S3DataSegmentMover mover = new S3DataSegmentMover(
+      Suppliers.ofInstance(mockS3Client),
+      new S3DataSegmentPusherConfig()
+    );
+
+    final String sourcePrefix =
+      "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/";
+
+    final String targetPrefix =
+      "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/";
+
+    final DataSegment uncompressedSegment = SOURCE_SEGMENT
+      .withLoadSpec(ImmutableMap.of("key", sourcePrefix, "bucket", "main"))
+      .withBinaryVersion(IndexIO.V10_VERSION);
+
+    final List<String> fileNames = ImmutableList.of(
+      "druid.segment",
+      "version.bin",
+      "00000.smoosh"
+    );
+
+    for (String fileName : fileNames) {
+      mockS3Client.putObject("main", sourcePrefix + fileName);
+    }
+
+    final DataSegment movedSegment = mover.move(
+      uncompressedSegment,
+      ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
+    );
+
+    Assertions.assertEquals(
+      targetPrefix,
+      MapUtils.getString(movedSegment.getLoadSpec(), "key")
+    );
+
+    for (String fileName : fileNames) {
+      Assertions.assertTrue(
+        mockS3Client.doesObjectExist("archive", targetPrefix + fileName),
+        "Expected object to be copied: " + fileName
+      );
+      Assertions.assertFalse(
+        mockS3Client.doesObjectExist("main", sourcePrefix + fileName),
+        "Expected source object to be deleted: " + fileName
+      );
+    }
+
+    Assertions.assertEquals(3, mockS3Client.getListingRequestCount());
+    Assertions.assertTrue(mockS3Client.didMove());
+  }
+
   private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     Map<String, Set<String>> storage = new HashMap<>();
     boolean copied = false;
     boolean deletedOld = false;
+
+    private int listPageSize = Integer.MAX_VALUE;
+    private int listingRequestCount = 0;
+
+    public void setListPageSize(int listPageSize)
+    {
+      this.listPageSize = listPageSize;
+    }
+
+    public int getListingRequestCount()
+    {
+      return listingRequestCount;
+    }
 
     private MockAmazonS3Client()
     {
@@ -300,27 +417,63 @@ public class S3DataSegmentMoverTest
           .build();
     }
 
-    @Override
-    public ListObjectsV2Response listObjectsV2(ListObjectsV2Request listObjectsV2Request)
-    {
-      final String bucketName = listObjectsV2Request.bucket();
-      final String objectKey = listObjectsV2Request.prefix();
-      if (doesObjectExist(bucketName, objectKey)) {
-        final S3Object s3Object = S3Object.builder()
-            .key(objectKey)
-            .storageClass(StorageClass.STANDARD.toString())
-            .build();
 
-        return ListObjectsV2Response.builder()
-            .name(bucketName)
-            .prefix(objectKey)
-            .keyCount(1)
-            .contents(s3Object)
-            .isTruncated(true)
-            .build();
-      } else {
-        return ListObjectsV2Response.builder().build();
+    @Override
+    public ListObjectsV2Response listObjectsV2(ListObjectsV2Request request)
+    {
+      listingRequestCount++;
+
+      final String bucketName = request.bucket();
+      final String prefix = request.prefix();
+
+      final List<String> matchingKeys = new ArrayList<>();
+      final Set<String> objects = storage.getOrDefault(bucketName, Collections.emptySet());
+
+      for (String key : objects) {
+        if (key.startsWith(prefix)) {
+          matchingKeys.add(key);
+        }
       }
+
+      Collections.sort(matchingKeys);
+
+      final String continuationToken = request.continuationToken();
+      final List<String> pageKeys = new ArrayList<>();
+
+      for (String key : matchingKeys) {
+        if (continuationToken == null || key.compareTo(continuationToken) > 0) {
+          pageKeys.add(key);
+        }
+      }
+
+      final int endIndex = Math.min(listPageSize, pageKeys.size());
+      final List<S3Object> page = new ArrayList<>();
+
+      for (int i = 0; i < endIndex; i++) {
+        page.add(
+          S3Object.builder()
+            .key(pageKeys.get(i))
+            .storageClass(StorageClass.STANDARD.toString())
+            .size(1L)
+            .build()
+        );
+      }
+
+      final boolean isTruncated = pageKeys.size() > endIndex;
+
+      final ListObjectsV2Response.Builder responseBuilder =
+        ListObjectsV2Response.builder()
+          .name(bucketName)
+          .prefix(prefix)
+          .keyCount(page.size())
+          .contents(page)
+          .isTruncated(isTruncated);
+
+      if (isTruncated) {
+        responseBuilder.nextContinuationToken(page.getLast().key());
+      }
+
+      return responseBuilder.build();
     }
 
     @Override

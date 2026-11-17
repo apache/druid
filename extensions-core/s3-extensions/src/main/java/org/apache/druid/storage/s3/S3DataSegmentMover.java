@@ -34,13 +34,13 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 
+import java.net.URI;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 
 public class S3DataSegmentMover implements DataSegmentMover
@@ -78,29 +78,41 @@ public class S3DataSegmentMover implements DataSegmentMover
 
       final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
       final String targetS3BaseKey = MapUtils.getString(targetLoadSpec, "baseKey");
+
+      // FIX 2: Validate target location parameters before iterating or manipulating paths
+      if (targetS3Bucket == null || targetS3Bucket.isEmpty()) {
+        throw new SegmentLoadingException("Target S3 bucket is not specified");
+      }
+      if (targetS3BaseKey == null || targetS3BaseKey.isEmpty()) {
+        throw new SegmentLoadingException("Target S3 baseKey is not specified");
+      }
+
       final String targetS3Path;
 
       if (s3Path.endsWith("/")) {
         // segment is not compressed, list objects and move them all
-        ListObjectsV2Request request = ListObjectsV2Request.builder()
-            .bucket(s3Bucket)
-            .prefix(s3Path + "/")
-            .build();
-        final ListObjectsV2Response list = s3ClientSupplier.get().listObjectsV2(request);
-        targetS3Path = S3Utils.constructSegmentBasePath(
-            targetS3BaseKey,
-            DataSegmentPusher.getDefaultStorageDir(segment, false)
+        String constructedPath = S3Utils.constructSegmentBasePath(
+          targetS3BaseKey,
+          DataSegmentPusher.getDefaultStorageDir(segment, false)
         );
-        for (S3Object objectSummary : list.contents()) {
-          final String fileName = Paths.get(objectSummary.key()).getFileName().toString();
-          if (targetS3Bucket.isEmpty()) {
-            throw new SegmentLoadingException("Target S3 bucket is not specified");
-          }
-          if (targetS3Path.isEmpty()) {
-            throw new SegmentLoadingException("Target S3 baseKey is not specified");
-          }
+        // Ensure the directory prefix ends with a single slash
+        targetS3Path = constructedPath.endsWith("/") ? constructedPath : constructedPath + "/";
 
-          safeMove(s3Bucket, s3Path, targetS3Bucket, targetS3Path + "/" + fileName);
+        // FIX 1: Use pagination utility to ensure we catch all objects beyond the 1st page
+        Iterable<URI> uriList = Collections.singletonList(
+          URI.create(StringUtils.format("s3://%s/%s", s3Bucket, s3Path))
+        );
+        Iterator<S3ObjectWithBucket> iterator = S3Utils.objectSummaryIterator(
+          s3ClientSupplier.get(),
+          uriList,
+          config.getMaxListingLength()
+        );
+
+        while (iterator.hasNext()) {
+          S3ObjectWithBucket objectSummary = iterator.next();
+          final String fileName = Paths.get(objectSummary.getKey()).getFileName().toString();
+
+          safeMove(s3Bucket, objectSummary.getKey(), targetS3Bucket, targetS3Path + fileName);
         }
       } else {
         targetS3Path = S3Utils.constructSegmentPath(
@@ -138,7 +150,7 @@ public class S3DataSegmentMover implements DataSegmentMover
                       .build()
       );
     }
-    catch (S3Exception e) {
+    catch (S3Exception | IllegalArgumentException e) {
       throw new SegmentLoadingException(e, "Unable to move segment[%s]: [%s]", segment.getId(), e);
     }
   }
