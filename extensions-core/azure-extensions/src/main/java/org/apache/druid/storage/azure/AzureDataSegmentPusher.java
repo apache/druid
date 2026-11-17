@@ -23,6 +23,7 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -39,11 +40,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Used for writing segment files to Azure based deep storage
@@ -117,13 +114,15 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     boolean prefixIsNullOrEmpty = org.apache.commons.lang3.StringUtils.isEmpty(prefix);
     final String azureBasePath = JOINER.join(
         prefixIsNullOrEmpty ? null : StringUtils.maybeRemoveTrailingSlash(prefix),
-        storageDirSuffix
+        "_druid_generations",
+        storageDirSuffix,
+        UUIDUtils.generateUuid()
     );
 
     final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
 
     try {
-      if (zip) {
+      if (zip && IndexIO.isExternalCompressionSupported(binaryVersion)) {
         return pushZip(indexFilesDir, segment, binaryVersion, azureBasePath);
       } else {
         return pushNoZip(indexFilesDir, segment, binaryVersion, azureBasePath);
@@ -149,6 +148,10 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
       return uploadDataSegment(segment, binaryVersion, size, outFile, getZipBlobPath(azureBasePath));
     }
+    catch (IOException | RuntimeException e) {
+      cleanupGeneration(azureBasePath);
+      throw e;
+    }
     finally {
       if (zipOutFile != null) {
         log.info("Deleting zipped index File[%s]", zipOutFile);
@@ -169,68 +172,46 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       String azureBasePath
   ) throws IOException
   {
-    final File[] files = indexFilesDir.listFiles();
-    if (files == null) {
-      throw new IOE("Cannot list directory [%s]", indexFilesDir);
-    }
-
-    final String azureDirPath = azureBasePath + "/";
-    final Set<String> pushedBlobs = new HashSet<>();
-
-    long size = 0;
-    for (final File file : files) {
-      if (file.isFile()) {
-        size += file.length();
-        final String blobPath = azureDirPath + file.getName();
-        azureStorage.uploadBlockBlob(file, segmentConfig.getContainer(), blobPath, accountConfig.getMaxTries());
-        pushedBlobs.add(blobPath);
-      } else {
-        // Segment directories are expected to be flat.
-        throw new IOE("Unexpected subdirectory [%s]", file.getName());
+    boolean uploadAttempted = false;
+    try {
+      final File[] files = indexFilesDir.listFiles();
+      if (files == null) {
+        throw new IOE("Cannot list directory [%s]", indexFilesDir);
       }
+
+      final String azureDirPath = azureBasePath + "/";
+      long size = 0;
+      for (final File file : files) {
+        if (file.isFile()) {
+          size += file.length();
+          final String blobPath = azureDirPath + file.getName();
+          uploadAttempted = true;
+          azureStorage.uploadBlockBlob(file, segmentConfig.getContainer(), blobPath, accountConfig.getMaxTries());
+        } else {
+          throw new IOE("Unexpected subdirectory [%s]", file.getName());
+        }
+      }
+
+      final boolean rangeable = binaryVersion == IndexIO.V10_VERSION;
+      return segment.withSize(size)
+                    .withLoadSpec(makeLoadSpec(azureDirPath, rangeable))
+                    .withBinaryVersion(binaryVersion);
     }
-
-    deleteStaleBlobs(azureDirPath, pushedBlobs);
-
-    // V10 unzipped is rangeable: a single druid.segment with a range-readable header. V9 unzipped is a directory of
-    // separate smoosh files the range-read path can't consume.
-    final boolean rangeable = binaryVersion == IndexIO.V10_VERSION;
-    return segment.withSize(size)
-                  .withLoadSpec(makeLoadSpec(azureDirPath, rangeable))
-                  .withBinaryVersion(binaryVersion);
+    catch (IOException | RuntimeException e) {
+      if (uploadAttempted) {
+        cleanupGeneration(azureBasePath);
+      }
+      throw e;
+    }
   }
 
-  /**
-   * Removes everything under {@code azureDirPath} that this push did not write.
-   * <p>
-   * A zipped push replaces the previous segment outright, because one {@code index.zip} blob overwrites another, and
-   * {@link #push} with {@code useUniquePath = false} is expected to replace a previous push the same way. Uploading
-   * file by file only overwrites the names the new segment happens to share, so without this a re-push could leave
-   * behind blobs of whatever was there before: a stale {@code index.zip} from a zipped push, or smoosh chunks from a
-   * larger prior v9 segment.
-   * <p>
-   * Note that this makes an unzipped push require permission to delete blobs under the segment path, which a zipped
-   * push does not.
-   */
-  private void deleteStaleBlobs(final String azureDirPath, final Set<String> pushedBlobs) throws IOException
+  private void cleanupGeneration(final String generationPath)
   {
-    final List<String> staleBlobs = azureStorage
-        .listBlobs(segmentConfig.getContainer(), azureDirPath, null, accountConfig.getMaxTries())
-        .stream()
-        .filter(blobPath -> !pushedBlobs.contains(blobPath))
-        .collect(Collectors.toList());
-
-    if (staleBlobs.isEmpty()) {
-      return;
+    try {
+      azureStorage.emptyCloudBlobDirectory(segmentConfig.getContainer(), generationPath, accountConfig.getMaxTries());
     }
-
-    log.info("Removing blobs %s left under [%s] by a previous push", staleBlobs, azureDirPath);
-    if (!azureStorage.batchDeleteFiles(segmentConfig.getContainer(), staleBlobs, accountConfig.getMaxTries())) {
-      throw new IOE(
-          "Could not remove blobs %s left under [%s] by a previous push, which would be loaded as part of this segment",
-          staleBlobs,
-          azureDirPath
-      );
+    catch (Exception cleanupException) {
+      log.warn(cleanupException, "Unable to clean up failed segment generation[%s]", generationPath);
     }
   }
 

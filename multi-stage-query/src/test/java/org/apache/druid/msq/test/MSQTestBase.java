@@ -1321,6 +1321,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private Class<? extends ShardSpec> expectedShardSpec = NumberedShardSpec.class;
 
+    private Integer expectedBinaryVersion;
+
     private boolean expectedRollUp = false;
 
     private Granularity expectedQueryGranularity = Granularities.NONE;
@@ -1347,6 +1349,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public IngestTester setExpectedShardSpec(Class<? extends ShardSpec> expectedShardSpec)
     {
       this.expectedShardSpec = expectedShardSpec;
+      return this;
+    }
+
+    public IngestTester setExpectedBinaryVersion(Integer expectedBinaryVersion)
+    {
+      this.expectedBinaryVersion = expectedBinaryVersion;
       return this;
     }
 
@@ -1465,6 +1473,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
           //Assert shard spec class
           Assertions.assertEquals(expectedShardSpec, dataSegment.getShardSpec().getClass());
+          if (expectedBinaryVersion != null) {
+            Assertions.assertEquals(expectedBinaryVersion, dataSegment.getBinaryVersion());
+          }
           if (foundDataSource == null) {
             foundDataSource = dataSegment.getDataSource();
 

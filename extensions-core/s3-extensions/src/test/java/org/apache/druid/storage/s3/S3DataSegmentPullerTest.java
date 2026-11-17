@@ -24,6 +24,7 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,7 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -303,13 +305,16 @@ public class S3DataSegmentPullerTest
 
     S3Object objectSummary1 = S3Object.builder()
         .key(keyPrefix + "meta.smoosh")
+        .size((long) value.length)
         .build();
     S3Object objectSummary2 = S3Object.builder()
         .key(keyPrefix + "00000.smoosh")
+        .size((long) value.length)
         .build();
 
     ListObjectsV2Response listResponse = ListObjectsV2Response.builder()
         .contents(List.of(objectSummary1, objectSummary2))
+        .isTruncated(false)
         .build();
     EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject())).andReturn(listResponse).once();
 
@@ -346,5 +351,53 @@ public class S3DataSegmentPullerTest
     expected = new File(tmpDir, "00000.smoosh");
     Assertions.assertTrue(expected.exists());
     Assertions.assertEquals(value.length, expected.length());
+  }
+
+  @Test
+  public void testGetNozipAcrossMultipleListingPages() throws Exception
+  {
+    final String bucket = "bucket";
+    final String prefix = "generation/";
+    final byte[] firstValue = "first".getBytes(StandardCharsets.UTF_8);
+    final byte[] secondValue = "second".getBytes(StandardCharsets.UTF_8);
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+    final File firstFile = new File(temporaryFolder, "first");
+    final File secondFile = new File(temporaryFolder, "second");
+    Files.write(firstFile.toPath(), firstValue);
+    Files.write(secondFile.toPath(), secondValue);
+
+    final Capture<ListObjectsV2Request> firstRequest = EasyMock.newCapture();
+    final Capture<ListObjectsV2Request> secondRequest = EasyMock.newCapture();
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.capture(firstRequest)))
+            .andReturn(ListObjectsV2Response.builder()
+                                            .contents(S3Object.builder().key(prefix + "first").size((long) firstValue.length).build())
+                                            .isTruncated(true)
+                                            .nextContinuationToken("page-2")
+                                            .build())
+            .once();
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.capture(secondRequest)))
+            .andReturn(ListObjectsV2Response.builder()
+                                            .contents(S3Object.builder().key(prefix + "second").size((long) secondValue.length).build())
+                                            .isTruncated(false)
+                                            .build())
+            .once();
+    EasyMock.expect(s3Client.getObject(bucket, prefix + "first"))
+            .andAnswer(() -> new ResponseInputStream<>(GetObjectResponse.builder().build(), AbortableInputStream.create(Files.newInputStream(firstFile.toPath()))))
+            .once();
+    EasyMock.expect(s3Client.getObject(bucket, prefix + "second"))
+            .andAnswer(() -> new ResponseInputStream<>(GetObjectResponse.builder().build(), AbortableInputStream.create(Files.newInputStream(secondFile.toPath()))))
+            .once();
+    EasyMock.replay(s3Client);
+
+    final File outDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "multiPageNoZip");
+    new S3DataSegmentPuller(s3Client).getSegmentFiles(new CloudObjectLocation(bucket, prefix), outDir);
+    EasyMock.verify(s3Client);
+    Assertions.assertEquals(bucket, firstRequest.getValue().bucket());
+    Assertions.assertEquals(prefix, firstRequest.getValue().prefix());
+    Assertions.assertEquals(bucket, secondRequest.getValue().bucket());
+    Assertions.assertEquals(prefix, secondRequest.getValue().prefix());
+    Assertions.assertEquals("page-2", secondRequest.getValue().continuationToken());
+    Assertions.assertArrayEquals(firstValue, Files.readAllBytes(new File(outDir, "first").toPath()));
+    Assertions.assertArrayEquals(secondValue, Files.readAllBytes(new File(outDir, "second").toPath()));
   }
 }

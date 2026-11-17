@@ -92,9 +92,10 @@ public class GoogleUtils
   )
       throws Exception
   {
+    final String directoryPrefix = prefix.endsWith("/") ? prefix : prefix + "/";
     final Iterator<GoogleStorageObjectMetadata> iterator = lazyFetchingStorageObjectsIterator(
         storage,
-        ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri(GoogleStorageDruidModule.SCHEME_GS)).iterator(),
+        ImmutableList.of(new CloudObjectLocation(bucket, directoryPrefix).toUri(GoogleStorageDruidModule.SCHEME_GS)).iterator(),
         config.getMaxListingLength()
     );
 

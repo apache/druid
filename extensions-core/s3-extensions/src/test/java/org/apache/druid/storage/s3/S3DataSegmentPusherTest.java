@@ -60,7 +60,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -118,10 +118,6 @@ public class S3DataSegmentPusherTest
     s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
     EasyMock.expectLastCall().once();
 
-    // nothing else is under the path, so there is nothing to clean up
-    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
-            .andReturn(ListObjectsV2Response.builder().isTruncated(false).build())
-            .once();
 
     EasyMock.replay(s3Client);
 
@@ -154,10 +150,6 @@ public class S3DataSegmentPusherTest
     s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
     EasyMock.expectLastCall().once();
 
-    // nothing else is under the path, so there is nothing to clean up
-    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
-            .andReturn(ListObjectsV2Response.builder().isTruncated(false).build())
-            .once();
 
     EasyMock.replay(s3Client);
 
@@ -495,11 +487,10 @@ public class S3DataSegmentPusherTest
     DataSegment segment = pusher.push(segmentDir, segmentToPush, useUniquePath);
 
     Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
-    Assertions.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
-    Assertions.assertTrue(
-            Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches(),
-            segment.getLoadSpec().get("key").toString()
-    );
+    Assertions.assertEquals("bucket", Objects.requireNonNull(segment.getLoadSpec()).get("bucket"));
+    final String key = segment.getLoadSpec().get("key").toString();
+    Assertions.assertTrue(key.startsWith(config.getBaseKey() + "/_druid_generations/"), key);
+    Assertions.assertTrue(key.endsWith("/index.zip") || key.endsWith("/"), key);
     Assertions.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
 
     EasyMock.verify(s3Client);

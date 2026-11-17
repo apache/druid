@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -39,9 +40,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class GoogleDataSegmentPusher implements DataSegmentPusher
 {
@@ -113,10 +112,10 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
-    final String basePath = buildPath(storageDirSuffix);
+    final String basePath = buildPath("_druid_generations/" + storageDirSuffix + "/" + UUIDUtils.generateUuid());
 
     try {
-      if (zip) {
+      if (zip && IndexIO.isExternalCompressionSupported(version)) {
         return pushZip(indexFilesDir, segment, version, basePath);
       } else {
         return pushNoZip(indexFilesDir, segment, version, basePath);
@@ -146,10 +145,16 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
 
       return outSegment;
     }
+    catch (IOException | RuntimeException e) {
+      cleanupGeneration(basePath);
+      throw e;
+    }
     finally {
       if (indexFile != null) {
         log.debug("Deleting file [%s]", indexFile);
-        indexFile.delete();
+        if (!indexFile.delete()) {
+          log.warn("Failed to delete temporary file [%s]", indexFile.getAbsolutePath());
+        }
       }
     }
   }
@@ -162,68 +167,42 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   private DataSegment pushNoZip(File indexFilesDir, DataSegment segment, int version, String basePath)
       throws IOException
   {
-    final File[] files = indexFilesDir.listFiles();
-    if (files == null) {
-      throw new IOE("Cannot list directory [%s]", indexFilesDir);
-    }
-
-    final String dirPath = basePath + "/";
-    final Set<String> pushedPaths = new HashSet<>();
-
-    long size = 0;
-    for (final File file : files) {
-      if (file.isFile()) {
-        size += file.length();
-        final String path = dirPath + file.getName();
-        insert(file, "application/octet-stream", path);
-        pushedPaths.add(path);
-      } else {
-        // Segment directories are expected to be flat.
-        throw new IOE("Unexpected subdirectory [%s]", file.getName());
+    try {
+      final File[] files = indexFilesDir.listFiles();
+      if (files == null) {
+        throw new IOE("Cannot list directory [%s]", indexFilesDir);
       }
+
+      final String dirPath = basePath + "/";
+      long size = 0;
+      for (final File file : files) {
+        if (file.isFile()) {
+          size += file.length();
+          final String path = dirPath + file.getName();
+          insert(file, "application/octet-stream", path);
+        } else {
+          throw new IOE("Unexpected subdirectory [%s]", file.getName());
+        }
+      }
+
+      final boolean rangeable = version == IndexIO.V10_VERSION;
+      return segment.withSize(size)
+                    .withLoadSpec(makeLoadSpec(config.getBucket(), dirPath, rangeable))
+                    .withBinaryVersion(version);
     }
-
-    deleteStaleObjects(dirPath, pushedPaths);
-
-    // V10 unzipped is rangeable: a single druid.segment with a range-readable header. V9 unzipped is a directory of
-    // separate smoosh files the range-read path can't consume.
-    final boolean rangeable = version == IndexIO.V10_VERSION;
-    return segment.withSize(size)
-                  .withLoadSpec(makeLoadSpec(config.getBucket(), dirPath, rangeable))
-                  .withBinaryVersion(version);
+    catch (IOException | RuntimeException e) {
+      cleanupGeneration(basePath);
+      throw e;
+    }
   }
 
-  /**
-   * Removes everything under {@code dirPath} that this push did not write.
-   * <p>
-   * A zipped push replaces the previous segment outright, because one {@code index.zip} object overwrites another, and
-   * {@link #push} with {@code useUniquePath = false} is expected to replace a previous push the same way. Uploading
-   * file by file only overwrites the names the new segment happens to share, so without this a re-push could leave
-   * behind objects of whatever was there before: a stale {@code index.zip} from a zipped push, or smoosh chunks from a
-   * larger prior v9 segment.
-   * <p>
-   * Note that this makes an unzipped push require permission to delete objects under the segment path, which a zipped
-   * push does not.
-   */
-  private void deleteStaleObjects(final String dirPath, final Set<String> pushedPaths) throws IOException
+  private void cleanupGeneration(final String generationPath)
   {
     try {
-      GoogleUtils.deleteObjectsInPath(
-          storage,
-          inputDataConfig,
-          config.getBucket(),
-          dirPath,
-          object -> !pushedPaths.contains(object.getName())
-      );
+      GoogleUtils.deleteObjectsInPath(storage, inputDataConfig, config.getBucket(), generationPath, ignored -> true);
     }
-    catch (Exception e) {
-      throw new IOE(
-          e,
-          "Could not remove objects left under [gs://%s/%s] by a previous push, which would be loaded as part of this"
-          + " segment",
-          config.getBucket(),
-          dirPath
-      );
+    catch (Exception cleanupException) {
+      log.warn(cleanupException, "Unable to clean up failed segment generation[%s]", generationPath);
     }
   }
 

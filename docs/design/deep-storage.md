@@ -27,6 +27,10 @@ Deep storage is where segments are stored.  It is a storage mechanism that Apach
 
 In addition to being the backing store for segments, you can use [query from deep storage](#querying-from-deep-storage) and run queries against segments stored primarily in deep storage. The [load rules](../operations/rule-configuration.md#load-rules) you configure determine whether segments exist primarily in deep storage or in a combination of deep storage and Historical processes.
 
+### V10 segment storage
+
+Deep-storage compression settings apply to V9 and earlier segment formats. When a segment is built using the V10 format, these settings have no effect: V10 segments are stored in their uncompressed representation, regardless of the configured deep-storage compression format. The compression settings remain available for V9 and earlier segments.
+
 ## Deep storage options
 
 Druid supports multiple options for deep storage, including blob storage from major cloud providers. Select the one that fits your environment.
@@ -49,8 +53,8 @@ The following configurations in `common.runtime.properties` apply to local stora
 |--------|---------------|-----------|-------|
 |`druid.storage.type`|`local`||Must be set.|
 |`druid.storage.storageDirectory`|any local directory|Directory for storing segments. Must be different from `druid.segmentCache.locations` and `druid.segmentCache.infoDir`.|`/tmp/druid/localStorage`|
-|`druid.storage.compressionFormat`|`none`, `zip`|The compression format applied to segments in `druid.storage.storageDirectory`. Supported values for local storage are `none` (store segment files directly as a directory without creating an archive) and `zip` (ZIP-compressed segment archive).|`none`|
-|`druid.storage.zip`|`true`, `false`|Deprecated. Use `druid.storage.compressionFormat` instead. Whether segments in `druid.storage.storageDirectory` are written as directories (`false`) or zip files (`true`).|`false`|
+|`druid.storage.compressionFormat`|`none`, `zip`|The compression format applied to V9 and earlier segments in `druid.storage.storageDirectory`. Supported values for local storage are `none` (store segment files directly as a directory without creating an archive) and `zip` (ZIP-compressed segment archive). V10 segments are stored uncompressed regardless of this setting.|`none`|
+|`druid.storage.zip`|`true`, `false`|Deprecated. Use `druid.storage.compressionFormat` instead. For V9 and earlier segments, whether segments in `druid.storage.storageDirectory` are written as directories (`false`) or zip files (`true`). V10 segments are stored uncompressed regardless of this setting.|`false`|
 
 For example:
 

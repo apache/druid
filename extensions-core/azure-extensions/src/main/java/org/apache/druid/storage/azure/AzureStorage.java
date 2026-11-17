@@ -105,13 +105,14 @@ public class AzureStorage
       @Nullable final Integer maxAttempts
   ) throws BlobStorageException
   {
+    final String directoryPrefix = prefix != null && !prefix.endsWith("/") ? prefix + "/" : prefix;
     final BlobContainerClient blobContainerClient = azureClientFactory
         .getBlobServiceClient(maxAttempts, defaultStorageAccount)
         .getBlobContainerClient(containerName);
 
     // https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-list The new client uses flat listing by default.
     final PagedIterable<BlobItem> blobItems = blobContainerClient.listBlobs(
-        new ListBlobsOptions().setPrefix(prefix),
+        new ListBlobsOptions().setPrefix(directoryPrefix),
         Duration.ofMillis(DELTA_BACKOFF_MS)
     );
 
@@ -127,7 +128,7 @@ public class AzureStorage
     );
 
     if (deletedFiles.isEmpty()) {
-      LOG.warn("No files were deleted on the following Azure path: [%s]", prefix);
+      LOG.warn("No files were deleted on the following Azure path: [%s]", directoryPrefix);
     }
 
     return deletedFiles;

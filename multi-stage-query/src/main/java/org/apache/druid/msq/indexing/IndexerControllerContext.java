@@ -102,6 +102,7 @@ public class IndexerControllerContext implements ControllerContext
       QueryContextParameters.MAX_THREADS.getName(),
       MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS,
       Tasks.STORE_EMPTY_COLUMNS_KEY,
+      Tasks.BUILD_V10_KEY,
       QueryContextParameters.QUERY_ID.getName(),
       QueryContextParameters.SQL_QUERY_ID.getName(),
       QueryContextParameters.DEBUG.getName()

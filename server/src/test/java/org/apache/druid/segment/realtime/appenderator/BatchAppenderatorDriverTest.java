@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -142,6 +143,47 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
     );
 
     Assertions.assertNull(published.getCommitMetadata());
+  }
+
+  @Test
+  public void testSuccessfulDeduplicatedPublishCleansUnadoptedGeneration() throws Exception
+  {
+    Assertions.assertNull(driver.startJob(null));
+    for (InputRow row : ROWS) {
+      Assertions.assertTrue(driver.add(row, "dummy").isOk());
+    }
+
+    driver.pushAllAndClear(TIMEOUT);
+    final List<DataSegment> uploadedSegments = List.copyOf(appenderatorTester.getPushedSegments());
+    Assertions.assertFalse(uploadedSegments.isEmpty());
+
+    // Simulate an existing metadata row with the same SegmentId but a different, authoritative loadSpec.
+    appenderatorTester.getPushedSegments().replaceAll(
+        segment -> segment.withLoadSpec(ImmutableMap.of("generation", "authoritative"))
+    );
+
+    final List<DataSegment> killedSegments = new ArrayList<>();
+    EasyMock.resetToDefault(dataSegmentKiller);
+    dataSegmentKiller.killQuietly(EasyMock.anyObject(DataSegment.class));
+    EasyMock.expectLastCall().andAnswer(() -> {
+      killedSegments.add((DataSegment) EasyMock.getCurrentArguments()[0]);
+      return null;
+    }).times(uploadedSegments.size());
+    EasyMock.replay(dataSegmentKiller);
+
+    final SegmentsAndCommitMetadata published = driver.publishAll(
+        null,
+        Collections.emptySet(),
+        makeOkPublisher(),
+        Function.identity(),
+        null
+    ).get(TIMEOUT, TimeUnit.MILLISECONDS);
+
+    Assertions.assertEquals(uploadedSegments.size(), published.getSegments().size());
+    Assertions.assertEquals(
+        uploadedSegments.stream().map(DataSegment::getId).collect(Collectors.toSet()),
+        killedSegments.stream().map(DataSegment::getId).collect(Collectors.toSet())
+    );
   }
 
   @Test

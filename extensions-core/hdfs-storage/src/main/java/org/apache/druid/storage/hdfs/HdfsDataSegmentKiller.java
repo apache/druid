@@ -85,23 +85,21 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
 
     try (final FileSystem fs = segmentPath.getFileSystem(config)) {
       final String filename = segmentPath.getName();
-      final CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(filename);
-
-      final String nameWithoutExtension = compressionFormat == null
-        ? filename
-        : filename.substring(0, filename.length() - compressionFormat.getSuffix().length());
-
-      final boolean hasSupportedCompressionFormat =
-        compressionFormat == CompressionUtils.Format.ZIP
-          || compressionFormat == CompressionUtils.Format.LZ4;
-
-      final boolean hasNoExtension = compressionFormat == null;
-
-      if (!hasNoExtension && !hasSupportedCompressionFormat) {
-        throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
+      final CompressionUtils.Format compressionFormat;
+      final String nameWithoutExtension;
+      if (filename.endsWith(CompressionUtils.Format.ZIP.getSuffix())) {
+        compressionFormat = CompressionUtils.Format.ZIP;
+        nameWithoutExtension = filename.substring(0, filename.length() - compressionFormat.getSuffix().length());
+      } else if (filename.endsWith(CompressionUtils.Format.LZ4.getSuffix())) {
+        compressionFormat = CompressionUtils.Format.LZ4;
+        nameWithoutExtension = filename.substring(0, filename.length() - compressionFormat.getSuffix().length());
+      } else {
+        compressionFormat = null;
+        nameWithoutExtension = filename;
       }
 
-      if (hasNoExtension && !isUncompressedDirectorySegment(filename)) {
+      if (!isUncompressedDirectorySegment(nameWithoutExtension)
+          || (compressionFormat == null && filename.contains("."))) {
         throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
       }
 
@@ -110,18 +108,15 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
         return;
       }
 
-      final boolean isUncompressed = fs.getFileStatus(segmentPath).isDirectory();
-
-      if (isUncompressed) {
-        if (!isUncompressedDirectorySegment(nameWithoutExtension)) {
-          throw new SegmentLoadingException("Unknown directory segment path[%s]", segmentPath);
-        }
-      } else {
-        if ((compressionFormat != CompressionUtils.Format.ZIP && compressionFormat != CompressionUtils.Format.LZ4)) {
-          throw new SegmentLoadingException("Segment path [%s] is not a directory", segmentPath);
-        }
+      final boolean isDir = fs.getFileStatus(segmentPath).isDirectory();
+      if (compressionFormat == null && !isDir) {
+        throw new SegmentLoadingException("Segment path[%s] is not a directory", segmentPath);
       }
 
+      if (!fs.delete(segmentPath, isDir)) {
+        throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
+      }
+      log.debug("Successfully deleted segment representation at [%s]", segmentPath);
       // There are 3 supported path formats for each segment compression format:
       //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
       //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
@@ -146,10 +141,6 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
                 segmentParts.length == 2 ? "" : segmentParts[1] + "_"
             )
         );
-      }
-
-      if (!fs.delete(segmentPath, isUncompressed)) {
-        throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
       }
 
       // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored

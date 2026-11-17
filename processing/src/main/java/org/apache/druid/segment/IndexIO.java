@@ -1307,4 +1307,15 @@ public class IndexIO
   {
     return new File(dir, StringUtils.format("met_%s_%s.drd", metricName, order));
   }
+
+  /**
+   * Returns whether segments with the given binary version support external compression.
+   *
+   * @param version segment binary version
+   * @return true if external compression is supported
+   */
+  public static boolean isExternalCompressionSupported(int version)
+  {
+    return version != V10_VERSION;
+  }
 }

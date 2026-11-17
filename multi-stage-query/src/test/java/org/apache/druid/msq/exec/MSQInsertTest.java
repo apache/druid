@@ -41,6 +41,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -184,6 +185,28 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .verifyResults();
 
+  }
+
+  @Test
+  public void testBuildV10ContextGeneratesV10Segments()
+  {
+    final Map<String, Object> context = QueryContext.builder()
+                                                     .putAll(DEFAULT_MSQ_CONTEXT)
+                                                     .putAll(ImmutableMap.of(Tasks.BUILD_V10_KEY, true))
+                                                     .toMap();
+    testIngestQuery()
+        .setSql("insert into foo1 select __time, dim1, count(*) as cnt from foo group by 1, 2 PARTITIONED BY day")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(context)
+        .setExpectedSegments(expectedFooSegments())
+        .setExpectedBinaryVersion(10)
+        .setExpectedRowSignature(RowSignature.builder()
+                                               .add("__time", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .add("cnt", ColumnType.LONG)
+                                               .build())
+        .setExpectedResultRows(expectedFooRows())
+        .verifyResults();
   }
 
   @Override

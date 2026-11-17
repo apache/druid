@@ -842,6 +842,226 @@ public class HdfsDataSegmentKillerTest
     }
   }
 
+  @Test
+  public void testKillNoneSegmentRemovesAllSiblingRepresentations() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final FileSystem fs = FileSystem.get(config);
+
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+      config,
+      new HdfsDataSegmentPusherConfig()
+      {
+        @Override
+        public String getStorageDirectory()
+        {
+          return testRoot.getAbsolutePath();
+        }
+      }
+    );
+
+    final Path parent = new Path(testRoot.getAbsolutePath(), "dataSource/interval/v1");
+    final Path zipPath = new Path(parent, "0_index.zip");
+    final Path lz4Path = new Path(parent, "0_index.lz4");
+    final Path directoryPath = new Path(parent, "0_index");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(parent));
+      Assertions.assertTrue(fs.createNewFile(zipPath));
+      Assertions.assertTrue(fs.createNewFile(lz4Path));
+      Assertions.assertTrue(fs.mkdirs(directoryPath));
+      Assertions.assertTrue(fs.createNewFile(new Path(directoryPath, "version.bin")));
+
+      killer.kill(getSegmentWithPath(directoryPath.toString()));
+
+      Assertions.assertTrue(fs.exists(zipPath));
+      Assertions.assertTrue(fs.exists(lz4Path));
+      Assertions.assertFalse(fs.exists(directoryPath));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillZipSegmentRemovesAllSiblingRepresentations() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final FileSystem fs = FileSystem.get(config);
+
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+      config,
+      new HdfsDataSegmentPusherConfig()
+      {
+        @Override
+        public String getStorageDirectory()
+        {
+          return testRoot.getAbsolutePath();
+        }
+      }
+    );
+
+    final Path parent = new Path(testRoot.getAbsolutePath(), "dataSource/interval/v1");
+    final Path zipPath = new Path(parent, "0_index.zip");
+    final Path lz4Path = new Path(parent, "0_index.lz4");
+    final Path directoryPath = new Path(parent, "0_index");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(parent));
+      Assertions.assertTrue(fs.createNewFile(zipPath));
+      Assertions.assertTrue(fs.createNewFile(lz4Path));
+      Assertions.assertTrue(fs.mkdirs(directoryPath));
+      Assertions.assertTrue(fs.createNewFile(new Path(directoryPath, "version.bin")));
+
+      killer.kill(getSegmentWithPath(zipPath.toString()));
+
+      Assertions.assertFalse(fs.exists(zipPath));
+      Assertions.assertTrue(fs.exists(lz4Path));
+      Assertions.assertTrue(fs.exists(directoryPath));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillPartitionDoesNotDeleteAnotherPartitionSiblings() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final FileSystem fs = FileSystem.get(config);
+
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+      config,
+      new HdfsDataSegmentPusherConfig() {
+        @Override
+        public String getStorageDirectory()
+        {
+          return testRoot.getAbsolutePath();
+        }
+      }
+    );
+
+    final Path parent = new Path(testRoot.getAbsolutePath(), "dataSource/interval/v1");
+
+    final Path zipPath0 = new Path(parent, "0_index.zip");
+    final Path lz4Path0 = new Path(parent, "0_index.lz4");
+    final Path dirPath0 = new Path(parent, "0_index");
+
+    final Path zipPath1 = new Path(parent, "1_index.zip");
+    final Path lz4Path1 = new Path(parent, "1_index.lz4");
+    final Path dirPath1 = new Path(parent, "1_index");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(parent));
+      Assertions.assertTrue(fs.createNewFile(zipPath0));
+      Assertions.assertTrue(fs.createNewFile(lz4Path0));
+      Assertions.assertTrue(fs.mkdirs(dirPath0));
+      Assertions.assertTrue(fs.createNewFile(new Path(dirPath0, "version.bin")));
+      Assertions.assertTrue(fs.createNewFile(zipPath1));
+      Assertions.assertTrue(fs.createNewFile(lz4Path1));
+      Assertions.assertTrue(fs.mkdirs(dirPath1));
+      Assertions.assertTrue(fs.createNewFile(new Path(dirPath1, "version.bin")));
+
+      killer.kill(getSegmentWithPath(zipPath0.toString()));
+
+      Assertions.assertFalse(fs.exists(zipPath0));
+      Assertions.assertTrue(fs.exists(lz4Path0));
+      Assertions.assertTrue(fs.exists(dirPath0));
+      Assertions.assertTrue(fs.exists(zipPath1));
+      Assertions.assertTrue(fs.exists(lz4Path1));
+      Assertions.assertTrue(fs.exists(dirPath1));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillUniquePathSegmentRemovesAllSiblingRepresentations() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final FileSystem fs = FileSystem.get(config);
+
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+      config,
+      new HdfsDataSegmentPusherConfig() {
+        @Override
+        public String getStorageDirectory()
+        {
+          return testRoot.getAbsolutePath();
+        }
+      }
+    );
+
+    final Path parent = new Path(testRoot.getAbsolutePath(), "dataSource/interval/v1");
+    final String uuid = "550e8400-e29b-41d4-a716-446655440000";
+
+    final Path zipPath = new Path(parent, "0_" + uuid + "_index.zip");
+    final Path lz4Path = new Path(parent, "0_" + uuid + "_index.lz4");
+    final Path dirPath = new Path(parent, "0_" + uuid + "_index");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(parent));
+      Assertions.assertTrue(fs.createNewFile(zipPath));
+      Assertions.assertTrue(fs.createNewFile(lz4Path));
+      Assertions.assertTrue(fs.mkdirs(dirPath));
+      Assertions.assertTrue(fs.createNewFile(new Path(dirPath, "version.bin")));
+
+      killer.kill(getSegmentWithPath(dirPath.toString()));
+
+      Assertions.assertTrue(fs.exists(zipPath));
+      Assertions.assertTrue(fs.exists(lz4Path));
+      Assertions.assertFalse(fs.exists(dirPath));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillStaleLoadSpecDeletesNewerSiblingRepresentations() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final FileSystem fs = FileSystem.get(config);
+
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+      config,
+      new HdfsDataSegmentPusherConfig() {
+        @Override
+        public String getStorageDirectory()
+        {
+          return testRoot.getAbsolutePath();
+        }
+      }
+    );
+
+    final Path parent = new Path(testRoot.getAbsolutePath(), "dataSource/interval/v1");
+
+    final Path v9ZipPath = new Path(parent, "0_index.zip");
+
+    final Path v10DirPath = new Path(parent, "0_index");
+
+    try {
+      Assertions.assertTrue(fs.mkdirs(parent));
+      Assertions.assertTrue(fs.createNewFile(v9ZipPath));
+      Assertions.assertTrue(fs.mkdirs(v10DirPath));
+      Assertions.assertTrue(fs.createNewFile(new Path(v10DirPath, "version.bin")));
+
+      killer.kill(getSegmentWithPath(v9ZipPath.toString()));
+
+      Assertions.assertFalse(fs.exists(v9ZipPath));
+      Assertions.assertTrue(fs.exists(v10DirPath));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException
   {
     Assertions.assertTrue(fs.mkdirs(path));

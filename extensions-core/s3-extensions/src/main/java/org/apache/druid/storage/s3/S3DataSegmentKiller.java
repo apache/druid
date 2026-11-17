@@ -21,23 +21,23 @@ package org.apache.druid.storage.s3;
 
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -82,7 +82,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       return;
     }
     if (segments.size() == 1) {
-      kill(segments.get(0));
+      kill(segments.getFirst());
       return;
     }
 
@@ -95,18 +95,17 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       String path = MapUtils.getString(segment.getLoadSpec(), S3DataSegmentPuller.KEY);
       List<ObjectIdentifier> keysToDelete = bucketToKeysToDelete.computeIfAbsent(
           s3Bucket,
-          k -> new ArrayList<>()
+          ignored -> new ArrayList<>()
       );
       if (path.endsWith("/")) {
         // segment is not compressed, list objects and add them all to delete list
-        ListObjectsV2Request request = ListObjectsV2Request
-            .builder()
-            .bucket(s3Bucket)
-            .prefix(path)
-            .build();
-        final ListObjectsV2Response list = s3Client.listObjectsV2(request);
-        for (S3Object objectSummary : list.contents()) {
-          keysToDelete.add(ObjectIdentifier.builder().key(objectSummary.key()).build());
+        final Iterator<S3ObjectWithBucket> objects = S3Utils.objectSummaryIterator(
+            s3Client,
+            ImmutableList.of(new CloudObjectLocation(s3Bucket, path).toUri("s3")),
+            inputDataConfig.getMaxListingLength()
+        );
+        while (objects.hasNext()) {
+          keysToDelete.add(ObjectIdentifier.builder().key(objects.next().getKey()).build());
         }
       } else {
         keysToDelete.add(ObjectIdentifier.builder().key(path).build());
@@ -177,15 +176,15 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 
       if (s3Path.endsWith("/")) {
         // segment is not compressed, list objects and delete them all
-        ListObjectsV2Request request = ListObjectsV2Request
-            .builder()
-            .bucket(s3Bucket)
-            .prefix(s3Path)
-            .build();
-        final ListObjectsV2Response list = s3Client.listObjectsV2(request);
-        for (S3Object objectSummary : list.contents()) {
-          log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, objectSummary.key());
-          s3Client.deleteObject(s3Bucket, objectSummary.key());
+        final Iterator<S3ObjectWithBucket> objects = S3Utils.objectSummaryIterator(
+            s3Client,
+            ImmutableList.of(new CloudObjectLocation(s3Bucket, s3Path).toUri("s3")),
+            inputDataConfig.getMaxListingLength()
+        );
+        while (objects.hasNext()) {
+          final String objectKey = objects.next().getKey();
+          log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, objectKey);
+          s3Client.deleteObject(s3Bucket, objectKey);
         }
       } else {
         String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);

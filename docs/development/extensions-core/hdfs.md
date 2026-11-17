@@ -32,7 +32,7 @@ To use this Apache&circledR; Druid extension, [include](../../configuration/exte
 |--------|---------------|-----------|-------|
 |`druid.storage.type`|hdfs||Must be set.|
 |`druid.storage.storageDirectory`||Directory for storing segments.|Must be set.|
-|`druid.storage.compressionFormat`|`zip`, `lz4`, `none`|The compression format applied to segments in HDFS deep storage. Supported values are `zip` (ZIP-compressed segment archive), `lz4` (LZ4-compressed segment archive), and `none` (store segment files directly as a directory without creating an archive).|`zip`|
+|`druid.storage.compressionFormat`|`zip`, `lz4`, `none`|The compression format applied to V9 and earlier segments in HDFS deep storage. Supported values are `zip` (ZIP-compressed segment archive), `lz4` (LZ4-compressed segment archive), and `none` (store segment files directly as a directory without creating an archive). V10 segments are stored uncompressed regardless of this setting.|`zip`|
 |`druid.hadoop.security.kerberos.principal`|`druid@EXAMPLE.COM`| Principal user name |empty|
 |`druid.hadoop.security.kerberos.keytab`|`/etc/security/keytabs/druid.headlessUser.keytab`|Path to keytab file|empty|
 

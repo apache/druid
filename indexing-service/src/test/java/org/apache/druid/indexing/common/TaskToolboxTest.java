@@ -43,6 +43,8 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -71,6 +73,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.io.IOException;
+import java.util.Map;
 
 @SuppressWarnings("DoNotMock")
 public class TaskToolboxTest
@@ -79,7 +82,7 @@ public class TaskToolboxTest
   private TaskToolboxFactory taskToolbox = null;
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
-  private TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createMock(TaskActionClientFactory.class);
+  private final TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
   private ServiceEmitter mockEmitter = EasyMock.createMock(ServiceEmitter.class);
   private DataSegmentPusher mockSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);
   private DataSegmentKiller mockDataSegmentKiller = EasyMock.createMock(DataSegmentKiller.class);
@@ -94,10 +97,11 @@ public class TaskToolboxTest
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
   private QueryProcessingPool mockQueryProcessingPool = EasyMock.createMock(QueryProcessingPool.class);
   private ObjectMapper ObjectMapper = new ObjectMapper();
-  private SegmentCacheManagerFactory mockSegmentCacheManagerFactory = EasyMock.createMock(SegmentCacheManagerFactory.class);
+  private final SegmentCacheManagerFactory mockSegmentCacheManagerFactory = EasyMock.createNiceMock(SegmentCacheManagerFactory.class);
   private SegmentLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
   private IndexMergerV9Factory mockIndexMergerV9 = EasyMock.createMock(IndexMergerV9Factory.class);
+  private final IndexMergerV10Factory mockIndexMergerV10 = EasyMock.createMock(IndexMergerV10Factory.class);
   private IndexIO mockIndexIO = EasyMock.createMock(IndexIO.class);
   private Cache mockCache = EasyMock.createMock(Cache.class);
   private CacheConfig mockCacheConfig = EasyMock.createMock(CacheConfig.class);
@@ -113,14 +117,32 @@ public class TaskToolboxTest
             .andReturn(ImmutableMap.of(Tasks.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY, "false"))
             .anyTimes();
     IndexMergerV9 indexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
+    IndexMergerV10 indexMergerV10 = EasyMock.createMock(IndexMergerV10.class);
     EasyMock.expect(mockIndexMergerV9.create(true)).andReturn(indexMergerV9).anyTimes();
-    EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
+    EasyMock.expect(mockIndexMergerV10.create()).andReturn(indexMergerV10).anyTimes();
+    EasyMock.replay(
+        task,
+        mockHandoffNotifierFactory,
+        mockIndexMergerV9,
+        mockIndexMergerV10,
+        mockTaskActionClientFactory,
+        mockSegmentCacheManagerFactory
+    );
 
     TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(temporaryFolder.getRoot().toString())
         .build();
 
-    taskToolbox = new TaskToolboxFactory(
+    taskToolbox = createTaskToolbox(taskConfig, mockIndexMergerV9, mockIndexMergerV10);
+  }
+
+  private TaskToolboxFactory createTaskToolbox(
+      TaskConfig taskConfig,
+      IndexMergerV9Factory indexMergerV9Factory,
+      IndexMergerV10Factory indexMergerV10Factory
+  )
+  {
+    return new TaskToolboxFactory(
         segmentLoaderConfig,
         taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
@@ -144,8 +166,8 @@ public class TaskToolboxTest
         mockCache,
         mockCacheConfig,
         new CachePopulatorStats(),
-        mockIndexMergerV9,
-        null,
+        indexMergerV9Factory,
+        indexMergerV10Factory,
         null,
         null,
         null,
@@ -164,6 +186,39 @@ public class TaskToolboxTest
         "1",
         CentralizedDatasourceSchemaConfig.create(),
         JvmUtils.getRuntimeInfo()
+    );
+  }
+
+  @Test
+  public void testBuildV10TruthTable()
+  {
+    assertMerger(false, null, IndexMergerV9.class);
+    assertMerger(true, null, IndexMergerV10.class);
+    assertMerger(false, true, IndexMergerV10.class);
+    assertMerger(true, false, IndexMergerV9.class);
+  }
+
+  private void assertMerger(boolean globalBuildV10, Boolean contextBuildV10, Class<?> expectedClass)
+  {
+    final Task contextTask = EasyMock.createMock(Task.class);
+    EasyMock.expect(contextTask.getId()).andReturn("truth-table-task").anyTimes();
+    EasyMock.expect(contextTask.getDataSource()).andReturn("truth-table-ds").anyTimes();
+    EasyMock.expect(contextTask.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)).andReturn(true).anyTimes();
+    final Map<String, Object> context = contextBuildV10 == null
+                                        ? ImmutableMap.of(Tasks.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY, "false")
+                                        : ImmutableMap.of(
+                                            Tasks.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY, "false",
+                                            Tasks.BUILD_V10_KEY, contextBuildV10
+                                        );
+    EasyMock.expect(contextTask.getContext()).andReturn(context).anyTimes();
+    EasyMock.replay(contextTask);
+    final TaskConfig config = new TaskConfigBuilder()
+        .setBaseDir(temporaryFolder.getRoot().toString())
+        .setBuildV10(globalBuildV10)
+        .build();
+    Assertions.assertInstanceOf(
+        expectedClass,
+        createTaskToolbox(config, mockIndexMergerV9, mockIndexMergerV10).build(contextTask).getIndexMerger()
     );
   }
 

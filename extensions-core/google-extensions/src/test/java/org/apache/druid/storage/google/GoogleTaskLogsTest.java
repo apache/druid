@@ -50,7 +50,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   private static final String KEY_2 = "key2";
   private static final String BUCKET = "test";
   private static final String PREFIX = "test/log";
-  private static final URI PREFIX_URI = URI.create(StringUtils.format("gs://%s/%s", BUCKET, PREFIX));
+  private static final URI PREFIX_URI = URI.create(StringUtils.format("gs://%s/%s/", BUCKET, PREFIX));
   private static final String TASKID = "taskid";
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
