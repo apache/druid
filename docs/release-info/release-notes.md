@@ -128,6 +128,7 @@ This section contains detailed release notes separated by areas.
 
 - Added support for RE2/J regex for the `regex` input format [#19514](https://github.com/apache/druid/pull/19514)
 - Changed the S3 client to use the AWS-recommended standard retry policy. You can customize the retry strategy using `druid.s3.retryMode` and `druid.s3.maxAttempts` [#19892](https://github.com/apache/druid/pull/19892)
+- Protobuf ingestion now keeps the default value of `proto3` fields that are not marked optional. Previously an `int32` field holding `0` (or a string holding "", a `bool` holding false, an `enum` holding its first value) was ingested as null. Such fields now ingest as their actual value. [#20485](https://github.com/apache/druid/pull/20485)
 
 #### SQL-based ingestion
 
@@ -245,6 +246,14 @@ Druid uses the following logic
 - Use java
 
 [#19709](https://github.com/apache/druid/pull/19709)
+
+#### Add QoS filtering for Coordinator endpoints
+
+Added configurable QoS filtering to the Coordinator to prevent a burst of slow API requests from exhausting the thread pool and blocking health checks .
+Added a new configuration: `druid.coordinator.server.maxConcurrentRequests` (default: `max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))`, set <= 0 to disable).
+Leader-status endpoints are excluded from the cap so load balancers and monitors remain unaffected.
+
+[#19271](https://github.com/apache/druid/pull/19271)
 
 #### Other cluster management improvements
 
@@ -364,6 +373,17 @@ To keep the previous behavior, pin the old dimension list with `druid.emitter.st
 `SysMonitor` has been removed after being deprecated in Druid 27. Use `OshiSysMonitor` instead.
 
 [#20200](https://github.com/apache/druid/pull/20200)
+
+#### MariaDB Connector/J 3.x changes connection URI behavior
+
+The MariaDB JDBC connector has been upgraded from from 2.7.3 to 3.5.10, which has the following impact:
+
+- For `druid.metadata.storage.connector.connectURI` with `org.mariadb.jdbc.Driver`, use `jdbc:mariadb:`. A legacy `jdbc:mysql:` URI remains usable only if it includes `permitMysqlScheme`. For example, `jdbc:mysql://<host>/druid?permitMysqlScheme`, because metadata storage passes the URI directly to the driver.
+- For MariaDB-backed SQL input sources and JDBC lookups with the default `druid.access.jdbc.enforceAllowedProperties=true`, use `jdbc:mariadb:`. Druid's JDBC property validation does not route `jdbc:mysql:` to the Connector/J 3.x parser, and `permitMysqlScheme` is not in the default `druid.access.jdbc.allowedProperties`, Adding the option alone is not sufficient.
+- Users who continue supplying Connector/J 2.x do not need to change existing `jdbc:mysql:` or `jdbc:mariadb:` URIs. MySQL Connector/J users are unaffected.
+- Images rebuilt from distribution/docker/Dockerfile.mariadb now install Connector/J 3.5.10 and must follow the 3.x guidance above.
+
+[#20866](https://github.com/apache/druid/pull/20866)
 
 ### Developer notes
 
