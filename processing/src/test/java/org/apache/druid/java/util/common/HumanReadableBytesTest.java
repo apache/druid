@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import jakarta.validation.groups.Default;
 import org.apache.druid.utils.CollectionUtils;
 import org.junit.jupiter.api.Assertions;
@@ -31,9 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 public class HumanReadableBytesTest
 {
@@ -49,10 +49,97 @@ public class HumanReadableBytesTest
   }
 
   @Test
+  public void testUnitIsCaseInsensitive()
+  {
+    for (final String unit : new String[]{"k", "K"}) {
+      Assertions.assertEquals(1000, HumanReadableBytes.parse("1" + unit));
+    }
+    for (final String unit : new String[]{"m", "M"}) {
+      Assertions.assertEquals(1_000_000, HumanReadableBytes.parse("1" + unit));
+    }
+    for (final String unit : new String[]{"g", "G"}) {
+      Assertions.assertEquals(1_000_000_000L, HumanReadableBytes.parse("1" + unit));
+    }
+    for (final String unit : new String[]{"t", "T"}) {
+      Assertions.assertEquals(1_000_000_000_000L, HumanReadableBytes.parse("1" + unit));
+    }
+    for (final String unit : new String[]{"p", "P"}) {
+      Assertions.assertEquals(1_000_000_000_000_000L, HumanReadableBytes.parse("1" + unit));
+    }
+    for (final String unit : new String[]{"ki", "Ki", "kI", "KI", "kib", "KiB", "KIB", "kIb", "kiB", "Kib"}) {
+      Assertions.assertEquals(1024, HumanReadableBytes.parse("1" + unit), unit);
+    }
+    for (final String unit : new String[]{"mi", "MI", "mib", "MiB", "MIB"}) {
+      Assertions.assertEquals(1024 * 1024, HumanReadableBytes.parse("1" + unit), unit);
+    }
+    for (final String unit : new String[]{"gi", "GI", "gib", "GiB", "GIB"}) {
+      Assertions.assertEquals(1024L * 1024 * 1024, HumanReadableBytes.parse("1" + unit), unit);
+    }
+    for (final String unit : new String[]{"ti", "TI", "tib", "TiB", "TIB"}) {
+      Assertions.assertEquals(1024L * 1024 * 1024 * 1024, HumanReadableBytes.parse("1" + unit), unit);
+    }
+    for (final String unit : new String[]{"pi", "PI", "pib", "PiB", "PIB"}) {
+      Assertions.assertEquals(1024L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("1" + unit), unit);
+    }
+  }
+
+  @Test
+  public void testNegativeWhenAllowed()
+  {
+    final Function<String, Long> parseNegativeValue = v -> HumanReadableBytes.parse(v, true);
+
+    Assertions.assertEquals(-2000, parseNegativeValue.apply("-2K"));
+    Assertions.assertEquals(-2 * 1024 * 1024, parseNegativeValue.apply("-2 MiB"));
+    Assertions.assertEquals(-12345, parseNegativeValue.apply("-12345"));
+    Assertions.assertEquals(2000, parseNegativeValue.apply("2K"));
+
+    // A single minus sign, directly before the number
+    Assertions.assertThrows(IAE.class, () -> parseNegativeValue.apply("--2K"));
+    Assertions.assertThrows(IAE.class, () -> parseNegativeValue.apply("- 2K"));
+    Assertions.assertThrows(IAE.class, () -> parseNegativeValue.apply(" - 2 "));
+    Assertions.assertThrows(IAE.class, () -> parseNegativeValue.apply("-"));
+
+    // Messages show the input as given, including the minus sign
+    Assertions.assertEquals(
+        "Invalid format of number: - 256Di",
+        Assertions.assertThrows(IAE.class, () -> parseNegativeValue.apply("- 256Di")).getMessage()
+    );
+    Assertions.assertEquals(
+        "Invalid format of number: -256Di",
+        Assertions.assertThrows(IAE.class, () -> parseNegativeValue.apply("-256Di")).getMessage()
+    );
+    Assertions.assertEquals(
+        "Invalid format of number: --1K",
+        Assertions.assertThrows(IAE.class, () -> parseNegativeValue.apply("--1K")).getMessage()
+    );
+  }
+
+  @Test
+  public void testNegativeWhenNotAllowed()
+  {
+    Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("-2K"));
+    Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("-2K", false));
+  }
+
+  @Test
   public void testWithWhiteSpace()
   {
     Assertions.assertEquals(12345, HumanReadableBytes.parse(" 12345 "));
     Assertions.assertEquals(12345, HumanReadableBytes.parse("\t12345\t"));
+
+    // Between the number and the unit
+    Assertions.assertEquals(1024 * 1024, HumanReadableBytes.parse("1 MiB"));
+    Assertions.assertEquals(1024L * 1024 * 1024, HumanReadableBytes.parse("1   GiB"));
+    Assertions.assertEquals(10_000, HumanReadableBytes.parse("10 k"));
+    Assertions.assertEquals(2 * 1024, HumanReadableBytes.parse(" 2 Ki "));
+    Assertions.assertEquals(4_000_000_000L, HumanReadableBytes.parse("4 g"));
+
+    // Within the number or the unit
+    Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1 0K"));
+    Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1 M iB"));
+    Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("2 k i"));
+    Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("5 Mi B"));
+    Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(" MiB"));
   }
 
   @Test
@@ -196,20 +283,6 @@ public class HumanReadableBytesTest
   public void testInvalidFormat4()
   {
     final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1b"));
-    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
-  }
-
-  @Test
-  public void testInvalidFormatMiBExtraSpace()
-  {
-    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1 mib"));
-    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
-  }
-
-  @Test
-  public void testInvalidFormatMiExtraSpace()
-  {
-    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1 mi"));
     Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
@@ -364,6 +437,25 @@ public class HumanReadableBytesTest
   }
 
   @Test
+  public void testOverflowNegative()
+  {
+    // 18014398509481985 * 1024 is 2^64 + 1024, which wraps around to 1024 without an overflow check
+    final IAE exception = Assertions.assertThrows(
+        IAE.class,
+        () -> HumanReadableBytes.parse("-18014398509481985KiB", true)
+    );
+    Assertions.assertEquals("Number overflow: -18014398509481985KiB", exception.getMessage());
+  }
+
+  @Test
+  public void testLargestValueWithoutOverflow()
+  {
+    // 8192PiB overflows, see testOverflowPiB
+    Assertions.assertEquals(8191L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("8191PiB"));
+    Assertions.assertEquals(-8191L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("-8191PiB", true));
+  }
+
+  @Test
   public void testJSON() throws JsonProcessingException
   {
     ObjectMapper mapper = new ObjectMapper();
@@ -401,10 +493,10 @@ public class HumanReadableBytesTest
     Assertions.assertEquals("value must be in the range of [0, 5]", message);
 
     message = validate(new TestBytesRange(HumanReadableBytes.valueOf(0)));
-    Assertions.assertEquals(null, message);
+    Assertions.assertNull(message);
 
     message = validate(new TestBytesRange(HumanReadableBytes.valueOf(5)));
-    Assertions.assertEquals(null, message);
+    Assertions.assertNull(message);
 
     message = validate(new TestBytesRange(HumanReadableBytes.valueOf(6)));
     Assertions.assertEquals("value must be in the range of [0, 5]", message);
@@ -508,11 +600,11 @@ public class HumanReadableBytesTest
 
   private static <T> String validate(T obj)
   {
-    Validator validator = Validation.buildDefaultValidatorFactory()
-                                    .getValidator();
+    try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+      final Validator validator = factory.getValidator();
 
-    Map<String, StringBuilder> errorMap = new HashMap<>();
-    Set<ConstraintViolation<T>> set = validator.validate(obj, Default.class);
-    return CollectionUtils.isNullOrEmpty(set) ? null : set.stream().findFirst().get().getMessage();
+      final Set<ConstraintViolation<T>> set = validator.validate(obj, Default.class);
+      return CollectionUtils.isNullOrEmpty(set) ? null : set.stream().findFirst().get().getMessage();
+    }
   }
 }

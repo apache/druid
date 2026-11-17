@@ -161,7 +161,7 @@ The following parameters apply to native queries and, unless noted, to SQL queri
 
 | | |
 |---|---|
-|**Description**|Upper limit on the number of bytes a subquery can generate. Accepts `auto`, `disabled`, or a non-negative number of bytes. See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#guardrails-for-materialization-of-subqueries) for more details.|
+|**Description**|Upper limit on the number of bytes a subquery can generate. Accepts `auto`, `disabled`, or a non-negative number of bytes, which can be a [human-readable number](../configuration/human-readable-byte.md) such as `256 MiB`. See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#guardrails-for-materialization-of-subqueries) for more details.|
 |**Type**|String|
 |**Default**|`druid.server.http.maxSubqueryBytes`|
 |**Query**|JSON, SQL|
@@ -1046,7 +1046,7 @@ The following parameters apply to [GroupBy queries](groupbyquery.md).
 | | |
 |---|---|
 |**Description**|Overrides the value of `druid.query.groupBy.maxMergingDictionarySize`.|
-|**Type**|Number, or a [human-readable](../configuration/human-readable-byte.md) value such as `10K` or `256MiB`|
+|**Type**|Long in [0, 9223372036854775807]|
 |**Default**|`druid.query.groupBy.maxMergingDictionarySize`|
 |**Query**|JSON, SQL|
 |**Engine**|Native|
@@ -1058,7 +1058,7 @@ The following parameters apply to [GroupBy queries](groupbyquery.md).
 | | |
 |---|---|
 |**Description**|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
-|**Type**|Number, or a [human-readable](../configuration/human-readable-byte.md) value such as `10K` or `256MiB`|
+|**Type**|Long in [0, 9223372036854775807]|
 |**Default**|`druid.query.groupBy.defaultOnDiskStorage`|
 |**Query**|JSON, SQL|
 |**Engine**|Native|
@@ -1070,7 +1070,7 @@ The following parameters apply to [GroupBy queries](groupbyquery.md).
 | | |
 |---|---|
 |**Description**|Overrides the value of `druid.query.groupBy.maxSelectorDictionarySize`.|
-|**Type**|Number, or a [human-readable](../configuration/human-readable-byte.md) value such as `10K` or `256MiB`|
+|**Type**|Long in [0, 9223372036854775807]|
 |**Default**|`druid.query.groupBy.maxSelectorDictionarySize`|
 |**Query**|JSON, SQL|
 |**Engine**|Native, MSQ, Dart|
@@ -1106,7 +1106,7 @@ The following parameters apply to [GroupBy queries](groupbyquery.md).
 | | |
 |---|---|
 |**Description**|Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.|
-|**Type**|Number, or a [human-readable](../configuration/human-readable-byte.md) value such as `10K` or `256MiB`|
+|**Type**|Long in [0, 9223372036854775807]|
 |**Default**|`druid.query.groupBy.minSpillFileSize`|
 |**Query**|JSON, SQL|
 |**Engine**|Native|
