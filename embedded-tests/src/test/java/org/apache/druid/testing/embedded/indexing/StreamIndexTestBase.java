@@ -208,16 +208,16 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
   }
 
   /**
-   * Verifies that the row count in {@link #dataSource} matches the {@code expectedRowCount}.
+   * Waits up to 60 seconds for the row count in {@link #dataSource} to match the {@code expectedRowCount}.
    */
   protected void verifyRowCount(int expectedRowCount)
   {
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    cluster.callApi().verifySqlQuery(
-        "SELECT COUNT(*) FROM %s",
-        dataSource,
-        String.valueOf(expectedRowCount)
-    );
+    final String expected = String.valueOf(expectedRowCount);
+    cluster.callApi().waitForResult(
+        () -> cluster.callApi().runSql("SELECT COUNT(*) FROM %s", dataSource),
+        expected::equals
+    ).withTimeoutMillis(60_000).go();
   }
 
   protected int publish1kRecords(String topic, boolean useTransactions)
