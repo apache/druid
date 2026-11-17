@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -107,13 +108,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         && (((DefaultLimitSpec) queryToRun.getLimitSpec()).isLimited()
             || ((DefaultLimitSpec) queryToRun.getLimitSpec()).isOffset());
 
-    // Hash partitions are not in key order, so only queries without ORDER BY use them. Ingestion keeps the default
-    // shuffles, because they decide how segments are cut.
-    final boolean hashPartitionAggregation =
-        queryToRun.context().getOrDefault(QueryContextParameters.GROUP_BY_HASH_PARTITIONING)
-        && !hasOrderBy(queryToRun)
-        && !queryToRun.getContext().containsKey(QueryContextParameters.SQL_INSERT_SEGMENT_GRANULARITY.getName());
-
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
     boolean partitionBoost;
@@ -160,7 +154,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     } else {
       if (doLimitOrOffset || intermediateClusterBy.isEmpty()) {
         shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
-      } else if (hashPartitionAggregation) {
+      } else if (shouldHashPartitionAggregation(queryToRun, resultShuffleSpecFactory, intermediateClusterBy)) {
         // Each group's partial aggregates land in one partition, so the post-aggregation stage can finish the groups
         // on many workers. Its output keeps these partitions, which are not in key order.
         shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.hashWithTargetPartitions();
@@ -340,7 +334,34 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
   }
 
   /**
-   * Whether the query has an ORDER BY.
+   * Whether a query with no LIMIT or OFFSET should hash-partition its partial aggregates instead of using the result
+   * shuffle. True when the query has no ORDER BY, asks for more than one non-leaf worker, and the result shuffle would
+   * put every partial aggregate in one fixed partition, as SELECT destinations do, which leaves the whole aggregation
+   * to one worker. Hash partitions spread the aggregation across workers without key statistics, but are not in key
+   * order.
+   *
+   * Other result shuffles already spread the aggregation and are kept: subqueries get adjustable range partitions,
+   * and ingestion, export and durable-storage destinations get partitions of a target size.
+   */
+  private static boolean shouldHashPartitionAggregation(
+      final GroupByQuery query,
+      final ShuffleSpecFactory resultShuffleSpecFactory,
+      final ClusterBy intermediateClusterBy
+  )
+  {
+    if (query.context().getOrDefault(QueryContextParameters.MAX_NON_LEAF_WORKERS) <= 1 || hasOrderBy(query)) {
+      return false;
+    }
+
+    final ShuffleSpec resultShuffleSpec = resultShuffleSpecFactory.build(intermediateClusterBy, true);
+    return !resultShuffleSpec.isAdjustable()
+           && resultShuffleSpec instanceof GlobalSortMaxCountShuffleSpec
+           && ((GlobalSortMaxCountShuffleSpec) resultShuffleSpec).getMaxPartitions() == 1;
+  }
+
+  /**
+   * Whether the query has an ORDER BY. An ORDER BY that matches the GROUP BY order relies on the result shuffle's key
+   * order instead of sorting again.
    */
   private static boolean hasOrderBy(final GroupByQuery query)
   {

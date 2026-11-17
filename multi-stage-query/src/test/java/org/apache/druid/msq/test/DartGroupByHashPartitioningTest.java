@@ -60,7 +60,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Tests {@link QueryContextParameters#GROUP_BY_HASH_PARTITIONING} on Dart with several historicals, so the final
+ * Tests that a GROUP BY without ORDER BY hash-partitions its partial aggregates when
+ * {@link QueryContextParameters#MAX_NON_LEAF_WORKERS} is above 1. Runs Dart with several historicals, so the final
  * aggregation can run on several workers.
  */
 @SqlTestFrameworkConfig.ComponentSupplier(DartGroupByHashPartitioningTest.MultiHistoricalDartComponentSupplier.class)
@@ -164,9 +165,9 @@ public class DartGroupByHashPartitioningTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDefaultSendsPartialAggregatesToOnePartition()
+  public void testOneNonLeafWorkerKeepsOnePartition()
   {
-    run(GROUP_BY, false);
+    run(GROUP_BY, 1);
 
     final List<MSQStagesReport.Stage> stages = lastQueryStages();
     Assertions.assertEquals(2, stages.size());
@@ -178,8 +179,8 @@ public class DartGroupByHashPartitioningTest extends BaseCalciteQueryTest
   @Test
   public void testNoOrderBy()
   {
-    final List<List<Object>> expected = run(GROUP_BY, false);
-    final List<List<Object>> actual = run(GROUP_BY, true);
+    final List<List<Object>> expected = run(GROUP_BY, 1);
+    final List<List<Object>> actual = run(GROUP_BY, MAX_NON_LEAF_WORKERS);
     Assertions.assertEquals(expected.size(), actual.size());
     Assertions.assertEquals(new HashSet<>(expected), new HashSet<>(actual));
 
@@ -192,30 +193,37 @@ public class DartGroupByHashPartitioningTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByKeepsDefaultPlan()
+  public void testOrderByKeepsRangePartitioning()
   {
-    assertFlagDoesNotChangePlan(GROUP_BY + " ORDER BY \"number\", label");
+    final String sql = GROUP_BY + " ORDER BY \"number\", label";
+    final List<List<Object>> expected = run(sql, 1);
+    final List<List<Object>> actual = run(sql, MAX_NON_LEAF_WORKERS);
+    Assertions.assertEquals(expected, actual);
+
+    final StageDefinition stageDef = lastQueryStages().get(0).getStageDefinition();
+    Assertions.assertEquals(ShuffleKind.GLOBAL_SORT, stageDef.getShuffleSpec().kind());
+    Assertions.assertTrue(stageDef.mustGatherResultKeyStatistics());
   }
 
   @Test
-  public void testOrderByMatchingGroupByKeepsDefaultPlan()
+  public void testOrderByMatchingGroupByKeepsOnePartition()
   {
     // This plan relies on the shuffle's key order instead of sorting again, so it must not use hash partitions.
-    assertFlagDoesNotChangePlan(GROUP_BY + " ORDER BY label, \"number\"");
+    assertOnePartition(GROUP_BY + " ORDER BY label, \"number\"");
   }
 
   @Test
-  public void testLimitWithoutOrderByKeepsDefaultPlan()
+  public void testLimitWithoutOrderByKeepsOnePartition()
   {
-    assertFlagDoesNotChangePlan(GROUP_BY + " LIMIT 3");
+    assertOnePartition(GROUP_BY + " LIMIT 3");
   }
 
   @Test
-  public void testSubqueryKeepsDefaultPartitioning()
+  public void testSubqueryKeepsRangePartitioning()
   {
     final String sql = "SELECT label, COUNT(*) AS n FROM (" + GROUP_BY + ") GROUP BY label";
-    final List<List<Object>> expected = run(sql, false);
-    final List<List<Object>> actual = run(sql, true);
+    final List<List<Object>> expected = run(sql, 1);
+    final List<List<Object>> actual = run(sql, MAX_NON_LEAF_WORKERS);
     Assertions.assertEquals(new HashSet<>(expected), new HashSet<>(actual));
 
     // Stages 0 and 1 are the subquery; stages 2 and 3 are the outer query.
@@ -226,32 +234,18 @@ public class DartGroupByHashPartitioningTest extends BaseCalciteQueryTest
   }
 
   /**
-   * Runs the query with and without the flag, and checks that results and each stage's shuffle, worker count and
-   * partition count are the same.
+   * Checks that, with several non-leaf workers, the query still sends its partial aggregates to one partition and
+   * returns the same rows in the same order as with one.
    */
-  private void assertFlagDoesNotChangePlan(final String sql)
+  private void assertOnePartition(final String sql)
   {
-    final List<List<Object>> expected = run(sql, false);
-    final List<List<Object>> expectedPlan = planShape(lastQueryStages());
-    final List<List<Object>> actual = run(sql, true);
+    final List<List<Object>> expected = run(sql, 1);
+    final List<List<Object>> actual = run(sql, MAX_NON_LEAF_WORKERS);
     Assertions.assertEquals(expected, actual);
-    Assertions.assertEquals(expectedPlan, planShape(lastQueryStages()));
-  }
 
-  private static List<List<Object>> planShape(final List<MSQStagesReport.Stage> stages)
-  {
-    final List<List<Object>> shape = new ArrayList<>();
-    for (final MSQStagesReport.Stage stage : stages) {
-      final StageDefinition stageDef = stage.getStageDefinition();
-      shape.add(
-          Arrays.asList(
-              stageDef.doesShuffle() ? stageDef.getShuffleSpec() : null,
-              stage.getWorkerCount(),
-              stage.getPartitionCount()
-          )
-      );
-    }
-    return shape;
+    final MSQStagesReport.Stage stage = lastQueryStages().get(0);
+    Assertions.assertEquals(ShuffleKind.GLOBAL_SORT, stage.getStageDefinition().getShuffleSpec().kind());
+    Assertions.assertEquals(1, stage.getPartitionCount());
   }
 
   private static void assertHashPartitioned(final MSQStagesReport.Stage stage)
@@ -262,14 +256,13 @@ public class DartGroupByHashPartitioningTest extends BaseCalciteQueryTest
     Assertions.assertEquals(MAX_NON_LEAF_WORKERS * TARGET_PARTITIONS_PER_WORKER, stage.getPartitionCount());
   }
 
-  private List<List<Object>> run(final String sql, final boolean hashPartitioning)
+  private List<List<Object>> run(final String sql, final int maxNonLeafWorkers)
   {
     final Map<String, Object> context = new HashMap<>();
     context.put(QueryContextParameters.PLANNER_STRATEGY.getName(), QueryContexts.PlannerStrategy.COUPLED.name());
-    context.put(QueryContextParameters.MAX_NON_LEAF_WORKERS.getName(), MAX_NON_LEAF_WORKERS);
+    context.put(QueryContextParameters.MAX_NON_LEAF_WORKERS.getName(), maxNonLeafWorkers);
     context.put(QueryContextParameters.TARGET_PARTITIONS_PER_WORKER.getName(), TARGET_PARTITIONS_PER_WORKER);
     context.put(QueryContextParameters.USE_COMBINER.getName(), true);
-    context.put(QueryContextParameters.GROUP_BY_HASH_PARTITIONING.getName(), hashPartitioning);
 
     final QueryTestRunner.QueryResults results = testBuilder().sql(sql).queryContext(context).results();
     if (results.exception != null) {

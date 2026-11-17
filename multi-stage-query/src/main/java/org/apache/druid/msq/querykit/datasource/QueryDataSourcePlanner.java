@@ -28,7 +28,6 @@ import org.apache.druid.msq.querykit.DataSourcePlanner;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -69,7 +68,7 @@ public class QueryDataSourcePlanner implements DataSourcePlanner<QueryDataSource
         queryKitSpec,
         // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
         // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
-        withoutHashPartitioning(dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY)),
+        dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
         ShuffleSpecFactories.globalSortWithTargetPartitions(),
         minStageNumber
     );
@@ -82,17 +81,5 @@ public class QueryDataSourcePlanner implements DataSourcePlanner<QueryDataSource
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         QueryDefinition.builder(subQueryDef)
     );
-  }
-
-  /**
-   * Turns off {@link QueryContextParameters#GROUP_BY_HASH_PARTITIONING} for a subquery, because the parent query may
-   * need the subquery's results in key order. Leaves the context alone when the parameter isn't on.
-   */
-  private static Query<?> withoutHashPartitioning(final Query<?> query)
-  {
-    if (query.context().getOrDefault(QueryContextParameters.GROUP_BY_HASH_PARTITIONING)) {
-      return query.withOverriddenContext(Map.of(QueryContextParameters.GROUP_BY_HASH_PARTITIONING.getName(), false));
-    }
-    return query;
   }
 }
