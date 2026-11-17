@@ -20,11 +20,11 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -38,10 +38,10 @@ import java.util.Set;
 public class SegmentPublishUtilsTest
 {
   private static final SegmentId SEGMENT_ID = SegmentId.of(
-      "datasource",
-      new Interval("2020-01-01/2020-01-02"),
-      "version",
-      0
+    "datasource",
+    Intervals.of("2020-01-01/2020-01-02"),
+    "version",
+    0
   );
 
   @Test
@@ -54,7 +54,7 @@ public class SegmentPublishUtilsTest
         () -> SegmentPublishUtils.cleanupSegmentsNotAdoptedBySuccessfulPublish(
             Set.of(uploaded),
             Set.of(uploaded),
-            ids -> {
+            ignored -> {
               throw new AssertionError("authoritative metadata must not be queried for an adopted generation");
             },
             killer
@@ -110,7 +110,7 @@ public class SegmentPublishUtilsTest
         () -> SegmentPublishUtils.cleanupSegmentsNotAdoptedBySuccessfulPublish(
             Set.of(uploaded),
             Collections.emptySet(),
-            ids -> {
+            ignored -> {
               throw new IOException("metadata unavailable");
             },
             killer
@@ -138,7 +138,7 @@ public class SegmentPublishUtilsTest
     SegmentPublishUtils.cleanupSegmentsNotAdoptedBySuccessfulPublish(
         uploaded,
         transactionResult,
-        ids -> authoritative,
+        ignored -> authoritative,
         killer
     );
     return killed;
