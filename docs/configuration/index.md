@@ -436,7 +436,7 @@ This deep storage is used to interface with HDFS. You must load the `druid-hdfs-
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.storage.storageDirectory`|HDFS directory to use as deep storage.|none|
-|`druid.storage.compressionFormat`|The compression format applied to segments uploaded to HDFS. Supports `zip`, `lz4`, and `none` (uncompressed directory layout).|zip|
+|`druid.storage.compressionFormat`|The compression format applied to V9 and earlier segments uploaded to HDFS. Supports `zip`, `lz4`, and `none` (uncompressed directory layout). V10 segments are stored uncompressed regardless of this setting.|zip|
 
 #### Cassandra deep storage
 
@@ -1429,6 +1429,7 @@ Additional Peon configs include:
 |`druid.indexer.task.directoryLockTimeout`|Wait this long for zombie Peons to exit before giving up on their replacements.|PT10M|
 |`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on Middle Manager restart for restorable tasks to gracefully exit.|PT5M|
 |`druid.indexer.task.restoreTasksOnRestart`|If true, Middle Managers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
+|`druid.indexer.task.buildV10`|Whether tasks build segments using the V10 segment format. This is the fallback for the [`buildV10`](../ingestion/tasks.md#context-parameters) task context parameter.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/input-sources.md) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
 |`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). If you use the string-based schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](../ingestion/ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest placeholder data for empty columns or else not query on empty columns.<br/><br/>You can overwrite this configuration  by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true|
 |`druid.indexer.task.tmpStorageBytesPerTask`|Maximum number of bytes per task to be used to store temporary files on disk. This config is generally intended for internal usage. Attempts to set it are very likely to be overwritten by the TaskRunner that executes the task, so be sure of what you expect to happen before directly adjusting this configuration parameter. The config is documented here primarily to provide an understanding of what it means if/when someone sees that it has been set. A value of -1 disables this limit.  |-1|
@@ -1492,6 +1493,7 @@ For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-ta
 |`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/tasks`|
 |`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on Indexer restart for restorable tasks to gracefully exit.|`PT5M`|
 |`druid.indexer.task.restoreTasksOnRestart`|If true, the Indexer will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
+|`druid.indexer.task.buildV10`|Whether tasks build segments using the V10 segment format. This is the fallback for the [`buildV10`](../ingestion/tasks.md#context-parameters) task context parameter.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/input-sources.md) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
 |`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). <br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest placeholder data for empty columns or else not query on empty columns.<br/><br/>You can overwrite this configuration by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true|
 |`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|`PT5S`|
